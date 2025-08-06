@@ -1,9 +1,21 @@
-[tool.poetry]
+[project]
 name = "arxlang"
 version = "0.1.1"  # semantic-release
 description = "Arx is a compiler built with llvm"
-authors = ["Ivan Ogasawara <ivan.ogasawara@gmail.com>"]
+readme = "docs/index.md"
+authors = [
+  {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
+]
 license = "Apache Software License 2.0"
+requires-python = ">=3.10,<4"
+dependencies = [
+  "pyyaml >=4",
+  "astx ==0.22.0",
+  "pyirx ==1.3.0",
+  "types-pyyaml (>=6.0.12.20250516,<7.0.0.0)"
+]
+
+[tool.poetry]
 include = [
   "src/arx",
 ]
@@ -18,56 +30,52 @@ packages = [
 [tool.poetry.scripts]
 "arx" = "arx.__main__:app"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pyyaml = ">=4"
-astx = "0.9.1"
-pyirx = "1.1.0"
-
 [tool.poetry.group.dev.dependencies]
-pytest = ">=7"
-pytest-cov = ">=4"
-coverage = ">=7"
-pre-commit = ">=3"
-ruff = ">=0.3.0"
-mypy = ">=1.6"
+pytest = ">=7.3.2"
+pytest-cov = ">=4.1.0"
+coverage = ">=7.2.7"
+pre-commit = ">=3.3.2"
+ruff = ">=0.1.5"
+mypy = ">=1.5.0"
 bandit = ">=1.7.5"
-vulture = ">=2.7"
+vulture = ">=2.9.1"
 mccabe = ">=0.6.1"
+ipython = ">=7"
+ipykernel = ">=6.0.0"
 mkdocs = ">=1.4.3"
 mkdocs-exclude = ">=1.0.2"
 mkdocs-jupyter = ">=0.24.7"
 mkdocs-literate-nav = ">=0.6.0"
 mkdocs-macros-plugin = ">=0.7.0,<1"
 mkdocs-material = ">=9.1.15"
-mkdocstrings = ">=0.21.2"
-mkdocstrings-python = ">=1.1.2"
-makim = "1.15.0"
-pytkdocs = {extras = ["numpy-style"], version = ">=0.16.1"}
-pdbpp = ">=0.10.3"
+mkdocstrings = {version=">=0.24.3", extras=["python"]}
+makim = "1.27.0"
+jupyterlab = ">=4.0.7"
+mkdocs-gen-files = ">=0.5.0"
+nbmake = ">=1.5.3"
 
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
 ]
-
-[tool.mypy]
-python_version = "3.10"
-check_untyped_defs = true
-ignore_missing_imports = true
-no_strict_optional = false
-strict = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-
-[[tool.mypy.overrides]]
-module = [
-  "llvmlite",
-  "llvmlite.binding",
-  "yaml",
+filterwarnings = [
+    "error::RuntimeWarning",
+    "error::typeguard.TypeHintWarning",
 ]
-ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+targets = "./"
+
+[tool.vulture]
+exclude = ["tests"]
+ignore_decorators = ["abc.abstractmethod"]
+ignore_names = []
+make_whitelist = true
+min_confidence = 80
+paths = ["./"]
+sort_by_size = true
+verbose = false
 
 [tool.ruff]
 line-length = 79
@@ -75,24 +83,27 @@ force-exclude = true
 src = ["./"]
 exclude = [
   'docs',
-  'tests',
 ]
 fix = true
 
 [tool.ruff.lint]
+ignore = [
+  "F811",  # redefined-while-unused
+  "PLR0911",  # Too many return statements
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments in a function definition
+  "RUF012",  # mutable-class-default
+  "PLR0915",  # Too many statements
+  "PLR2004",  # Magic value used in comparison
+]
 select = [
   "E",   # pycodestyle
   "F",   # pyflakes
   "D",   # pydocstyle
   "YTT", # flake8-2020
-  # "PL",  # PL
+  "PL",  # PL
   "RUF", # Ruff-specific rules
   "I001", # isort
-]
-ignore = [
-  "F811",
-  "PLR0911",  # Too many return statements
-  "PLR0912",  # Too many branches
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -105,17 +116,13 @@ lines-between-types = 1
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.bandit]
-exclude_dirs = ["tests"]
-targets = "src/arx"
-
-
-[tool.vulture]
-exclude = ["tests"]
-ignore_decorators = []
-ignore_names = []
-make_whitelist = true
-min_confidence = 80
-paths = ["src/arx"]
-sort_by_size = true
-verbose = false
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+show_error_codes = true
+exclude = ["scripts/"]

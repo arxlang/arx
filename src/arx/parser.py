@@ -12,7 +12,7 @@ INDENT_SIZE = 2
 class Parser:
     """Parser class."""
 
-    bin_op_precedence: Dict[str, int] = {}  # noqa: RUF012
+    bin_op_precedence: Dict[str, int] = {}
     indent_level: int = 0
     tokens: TokenList
 
