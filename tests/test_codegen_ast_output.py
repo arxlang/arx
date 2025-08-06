@@ -2,7 +2,8 @@
 
 import pytest
 
-from arx.codegen.ast_output import ASTtoOutput
+from irx.builders.llvmliteir import LLVMLiteIR
+
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -21,9 +22,10 @@ def test_ast_to_output(code: str) -> None:
     """Test AST to output."""
     lexer = Lexer()
     parser = Parser()
-    printer = ASTtoOutput()
+    ir = LLVMLiteIR()
 
     ArxIO.string_to_buffer(code)
 
     module_ast = parser.parse(lexer.lex())
-    printer.emit_ast(module_ast)
+
+    print(ir.translator.translate(module_ast))

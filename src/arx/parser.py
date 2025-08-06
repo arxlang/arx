@@ -2,9 +2,11 @@
 
 from typing import Dict, List, Tuple
 
-from arx import ast
+from astx import SourceLocation
+
+import astx
 from arx.exceptions import ParserException
-from arx.lexer import SourceLocation, Token, TokenKind, TokenList
+from arx.lexer import Token, TokenKind, TokenList
 
 INDENT_SIZE = 2
 
@@ -38,19 +40,19 @@ class Parser:
 
     def parse(
         self, tokens: TokenList, module_name: str = "main"
-    ) -> ast.BlockAST:
+    ) -> astx.Block:
         """
         Parse the input code.
 
         Returns
         -------
-        ast.BlockAST
+        astx.Block
             The parsed abstract syntax tree (AST), or None if parsing fails.
         """
         self.clean()
         self.tokens = tokens
 
-        tree: ast.ModuleAST = ast.ModuleAST(module_name)
+        tree: astx.Module = astx.Module(module_name)
         self.tokens.get_next_token()
 
         if self.tokens.cur_tok.kind == TokenKind.not_initialized:
@@ -84,39 +86,39 @@ class Parser:
         """
         return self.bin_op_precedence.get(self.tokens.cur_tok.value, -1)
 
-    def parse_function(self) -> ast.FunctionAST:
+    def parse_function(self) -> astx.FunctionDef:
         """
         Parse the function definition expression.
 
         Returns
         -------
-        ast.FunctionAST
+        astx.FunctionDef
             The parsed function definition, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat function.
-        proto: ast.PrototypeAST = self.parse_prototype()
-        return ast.FunctionAST(proto, self.parse_block())
+        proto: astx.FunctionPrototype = self.parse_prototype()
+        return astx.FunctionDef(proto, self.parse_block())
 
-    def parse_extern(self) -> ast.PrototypeAST:
+    def parse_extern(self) -> astx.FunctionPrototype:
         """
         Parse the extern expression.
 
         Returns
         -------
-        ast.PrototypeAST
+        astx.FunctionPrototype
             The parsed extern expression as a prototype, or None if parsing
             fails.
         """
         self.tokens.get_next_token()  # eat extern.
         return self.parse_extern_prototype()
 
-    def parse_primary(self) -> ast.ExprAST:
+    def parse_primary(self) -> astx.Expr:
         """
         Parse the primary expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed primary expression, or None if parsing fails.
         """
         if self.tokens.cur_tok.kind == TokenKind.identifier:
@@ -147,13 +149,13 @@ class Parser:
             self.tokens.get_next_token()  # eat unknown token
             raise Exception(msg)
 
-    def parse_block(self) -> ast.BlockAST:
+    def parse_block(self) -> astx.Block:
         """Parse a block of nodes."""
         cur_indent: int = self.tokens.cur_tok.value
 
         self.tokens.get_next_token()  # eat indentation
 
-        block: ast.BlockAST = ast.BlockAST()
+        block: astx.Block = astx.Block()
 
         if cur_indent == self.indent_level:
             raise ParserException("There is no new block to be parsed.")
@@ -163,7 +165,7 @@ class Parser:
 
             while expr := self.parse_expression():
                 block.nodes.append(expr)
-                # if isinstance(expr, ast.IfStmtAST):
+                # if isinstance(expr, astx.IfStmt):
                 #     breakpoint()
                 if self.tokens.cur_tok.kind != TokenKind.indent:
                     break
@@ -181,32 +183,32 @@ class Parser:
         self.indent_level -= INDENT_SIZE
         return block
 
-    def parse_expression(self) -> ast.ExprAST:
+    def parse_expression(self) -> astx.Expr:
         """
         Parse an expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed expression, or None if parsing fails.
         """
-        lhs: ast.ExprAST = self.parse_unary()
+        lhs: astx.Expr = self.parse_unary()
         return self.parse_bin_op_rhs(0, lhs)
 
-    def parse_if_stmt(self) -> ast.IfStmtAST:
+    def parse_if_stmt(self) -> astx.IfStmt:
         """
         Parse the `if` expression.
 
         Returns
         -------
-        ast.IfStmtAST
+        astx.IfStmt
             The parsed `if` expression, or None if parsing fails.
         """
         if_loc: SourceLocation = self.tokens.cur_tok.location
 
         self.tokens.get_next_token()  # eat the if.
 
-        cond: ast.ExprAST = self.parse_expression()
+        cond: astx.Expr = self.parse_expression()
 
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value=":"):
             msg = (
@@ -218,8 +220,8 @@ class Parser:
 
         self.tokens.get_next_token()  # eat the ':'
 
-        then_block: ast.BlockAST = ast.BlockAST()
-        else_block: ast.BlockAST = ast.BlockAST()
+        then_block: astx.Block = astx.Block()
+        else_block: astx.Block = astx.Block()
 
         then_block = self.parse_block()
 
@@ -242,28 +244,28 @@ class Parser:
             self.tokens.get_next_token()  # eat the ':'
             else_block = self.parse_block()
 
-        return ast.IfStmtAST(if_loc, cond, then_block, else_block)
+        return astx.IfStmt(if_loc, cond, then_block, else_block)
 
-    def parse_float_expr(self) -> ast.FloatExprAST:
+    def parse_float_expr(self) -> astx.LiteralFloat32:
         """
         Parse the number expression.
 
         Returns
         -------
-        ast.FloatExprAST
+        astx.LiteralFloat32
             The parsed float expression.
         """
-        result = ast.FloatExprAST(self.tokens.cur_tok.value)
+        result = astx.LiteralFloat32(self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # consume the number
         return result
 
-    def parse_paren_expr(self) -> ast.ExprAST:
+    def parse_paren_expr(self) -> astx.Expr:
         """
         Parse the parenthesis expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed expression.
         """
         self.tokens.get_next_token()  # eat (.
@@ -274,13 +276,13 @@ class Parser:
         self.tokens.get_next_token()  # eat ).
         return expr
 
-    def parse_identifier_expr(self) -> ast.ExprAST:
+    def parse_identifier_expr(self) -> astx.Expr:
         """
         Parse the identifier expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed expression, or None if parsing fails.
         """
         id_name: str = self.tokens.cur_tok.value
@@ -292,11 +294,11 @@ class Parser:
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             # Simple variable ref, not a function call
             # todo: we need to get the variable type from a specific scope
-            return ast.VariableExprAST(id_loc, id_name, "float")
+            return astx.Variable(id_loc, id_name, "float")
 
         # Call.
         self.tokens.get_next_token()  # eat (
-        args: List[ast.ExprAST] = []
+        args: List[astx.Expr] = []
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value=")"):
             while True:
                 args.append(self.parse_expression())
@@ -317,15 +319,15 @@ class Parser:
         # Eat the ')'.
         self.tokens.get_next_token()
 
-        return ast.CallExprAST(id_loc, id_name, args)
+        return astx.FunctionCall(id_loc, id_name, args)
 
-    def parse_for_stmt(self) -> ast.ForStmtAST:
+    def parse_for_stmt(self) -> astx.ForRangeLoopStmt:
         """
         Parse the `for` expression.
 
         Returns
         -------
-        ast.ForStmtAST
+        astx.ForRangeLoopStmt
             The parsed `for` expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat the for.
@@ -340,40 +342,40 @@ class Parser:
             raise Exception("Parser: Expected '=' after for")
         self.tokens.get_next_token()  # eat '='.
 
-        start: ast.ExprAST = self.parse_expression()
+        start: astx.Expr = self.parse_expression()
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value=","):
             raise Exception("Parser: Expected ',' after for start value")
         self.tokens.get_next_token()
 
-        end: ast.ExprAST = self.parse_expression()
+        end: astx.Expr = self.parse_expression()
 
         # The step value is optional
         if self.tokens.cur_tok == Token(kind=TokenKind.operator, value=","):
             self.tokens.get_next_token()
             step = self.parse_expression()
         else:
-            step = ast.FloatExprAST(1.0)
+            step = astx.LiteralFloat32(1.0)
 
         if self.tokens.cur_tok.kind != TokenKind.kw_in:  # type: ignore
             raise Exception("Parser: Expected 'in' after for")
         self.tokens.get_next_token()  # eat 'in'.
 
-        body_block: ast.BlockAST = ast.BlockAST()
+        body_block: astx.Block = astx.Block()
         body_block.nodes.append(self.parse_expression())
-        return ast.ForStmtAST(id_name, start, end, step, body_block)
+        return astx.ForRangeLoopStmt(id_name, start, end, step, body_block)
 
-    def parse_var_expr(self) -> ast.VarExprAST:
+    def parse_var_expr(self) -> astx.VariableDeclaration:
         """
         Parse the `var` declaration expression.
 
         Returns
         -------
-        ast.VarExprAST
+        astx.VariableDeclaration
             The parsed `var` expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat the var.
 
-        var_names: List[Tuple[str, ast.ExprAST]] = []
+        var_names: List[Tuple[str, astx.Expr]] = []
 
         # At least one variable name is required. #
         if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -384,7 +386,7 @@ class Parser:
             self.tokens.get_next_token()  # eat identifier.
 
             # Read the optional initializer. #
-            Init: ast.ExprAST
+            Init: astx.Expr
             if self.tokens.cur_tok == Token(
                 kind=TokenKind.operator, value="="
             ):
@@ -392,7 +394,7 @@ class Parser:
 
                 Init = self.parse_expression()
             else:
-                Init = ast.FloatExprAST(0.0)
+                Init = astx.LiteralFloat32(0.0)
 
             var_names.append((name, Init))
 
@@ -411,16 +413,16 @@ class Parser:
             raise Exception("Parser: Expected 'in' keyword after 'var'")
         self.tokens.get_next_token()  # eat 'in'.
 
-        body: ast.ExprAST = self.parse_expression()
-        return ast.VarExprAST(var_names, "float", body)
+        body: astx.Expr = self.parse_expression()
+        return astx.VariableDeclaration(var_names, "float", body)
 
-    def parse_unary(self) -> ast.ExprAST:
+    def parse_unary(self) -> astx.Expr:
         """
         Parse a unary expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed unary expression, or None if parsing fails.
         """
         # If the current token is not an operator, it must be a primary expr.
@@ -433,14 +435,14 @@ class Parser:
         # If this is a unary operator, read it.
         op_code: str = self.tokens.cur_tok.value
         self.tokens.get_next_token()
-        operand: ast.ExprAST = self.parse_unary()
-        return ast.UnaryExprAST(op_code, operand)
+        operand: astx.Expr = self.parse_unary()
+        return astx.UnaryOp(op_code, operand)
 
     def parse_bin_op_rhs(
         self,
         expr_prec: int,
-        lhs: ast.ExprAST,
-    ) -> ast.ExprAST:
+        lhs: astx.Expr,
+    ) -> astx.Expr:
         """
         Parse a binary expression.
 
@@ -448,12 +450,12 @@ class Parser:
         ----------
         expr_prec : int
             Expression precedence (deprecated).
-        lhs : ast.ExprAST
+        lhs : astx.Expr
             Left-hand side expression.
 
         Returns
         -------
-        ast.ExprAST
+        astx.Expr
             The parsed binary expression, or None if parsing fails.
         """
         # If this is a binop, find its precedence. #
@@ -471,7 +473,7 @@ class Parser:
             self.tokens.get_next_token()  # eat binop
 
             # Parse the unary expression after the binary operator.
-            rhs: ast.ExprAST = self.parse_unary()
+            rhs: astx.Expr = self.parse_unary()
 
             # If BinOp binds less tightly with rhs than the operator after
             # rhs, let the pending operator take rhs as its lhs
@@ -480,15 +482,15 @@ class Parser:
                 rhs = self.parse_bin_op_rhs(cur_prec + 1, rhs)
 
             # Merge lhs/rhs.
-            lhs = ast.BinaryExprAST(bin_loc, bin_op, lhs, rhs)
+            lhs = astx.BinaryOp(bin_op, lhs, rhs, bin_loc)
 
-    def parse_prototype(self) -> ast.PrototypeAST:
+    def parse_prototype(self) -> astx.FunctionPrototype:
         """
         Parse the prototype expression.
 
         Returns
         -------
-        ast.PrototypeAST
+        astx.FunctionPrototype
             The parsed prototype, or None if parsing fails.
         """
         fn_name: str
@@ -508,7 +510,7 @@ class Parser:
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             raise Exception("Parser: Expected '(' in the function definition.")
 
-        args: List[ast.VariableExprAST] = []
+        args: List[astx.Variable] = []
         while self.tokens.get_next_token().kind == TokenKind.identifier:
             # note: this is a workaround
             identifier_name = self.tokens.cur_tok.value
@@ -517,7 +519,7 @@ class Parser:
             var_typing = "float"
 
             args.append(
-                ast.VariableExprAST(cur_loc, identifier_name, var_typing)
+                astx.Variable(cur_loc, identifier_name, var_typing)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -538,15 +540,15 @@ class Parser:
 
         self.tokens.get_next_token()  # eat ':'.
 
-        return ast.PrototypeAST(fn_loc, fn_name, ret_typing, args)
+        return astx.FunctionPrototype(fn_loc, fn_name, ret_typing, args)
 
-    def parse_extern_prototype(self) -> ast.PrototypeAST:
+    def parse_extern_prototype(self) -> astx.FunctionPrototype:
         """
         Parse an extern prototype expression.
 
         Returns
         -------
-        ast.PrototypeAST
+        astx.FunctionPrototype
             The parsed extern prototype, or None if parsing fails.
         """
         fn_name: str
@@ -566,7 +568,7 @@ class Parser:
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             raise Exception("Parser: Expected '(' in the function definition.")
 
-        args: List[ast.VariableExprAST] = []
+        args: List[astx.Variable] = []
         while self.tokens.get_next_token().kind == TokenKind.identifier:
             # note: this is a workaround
             identifier_name = self.tokens.cur_tok.value
@@ -575,7 +577,7 @@ class Parser:
             var_typing = "float"
 
             args.append(
-                ast.VariableExprAST(cur_loc, identifier_name, var_typing)
+                astx.Variable(cur_loc, identifier_name, var_typing)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -591,16 +593,16 @@ class Parser:
 
         ret_typing = "float"
 
-        return ast.PrototypeAST(fn_loc, fn_name, ret_typing, args)
+        return astx.FunctionPrototype(fn_loc, fn_name, ret_typing, args)
 
-    def parse_return_function(self) -> ast.ReturnStmtAST:
+    def parse_return_function(self) -> astx.FunctionReturn:
         """
         Parse the return expression.
 
         Returns
         -------
-        ast.ReturnStmtAST
+        astx.FunctionReturn
             The parsed return expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat return
-        return ast.ReturnStmtAST(self.parse_expression())
+        return astx.FunctionReturn(self.parse_expression())

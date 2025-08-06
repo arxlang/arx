@@ -4,12 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from arx.codegen.file_object import ObjectGenerator
+from irx.builders.llvmliteir import LLVMLiteIR
+
 from arx.io import ArxIO
 from arx.lexer import Lexer, TokenList
 from arx.parser import Parser
 
-PROJECT_PATH = Path(__file__).parent.parent.resolve()
+TMP_PATH = Path("/tmp/arxtmp")
+TMP_PATH.mkdir(exist_ok=True)
 
 
 @pytest.mark.parametrize(
@@ -21,7 +23,6 @@ PROJECT_PATH = Path(__file__).parent.parent.resolve()
         "fn add_one(a):\n    a + 1\nadd_one(1)\n",
     ],
 )
-@pytest.mark.skip(reason="codegen with llvm is paused for now")
 def test_object_generation(code: str) -> None:
     """Test object generation."""
     lexer = Lexer()
@@ -34,7 +35,8 @@ def test_object_generation(code: str) -> None:
 
     ArxIO.string_to_buffer(code)
     ast = parser.parse(tokens)
-    objgen = ObjectGenerator()
-    objgen.evaluate(ast)
-    # remove temporary object file generated
-    (PROJECT_PATH / "tmp.o").unlink()
+    ir = LLVMLiteIR()
+
+    bin_path = TMP_PATH / "testtmp"
+    ir.build(ast, bin_path)
+    bin_path.unlink()
