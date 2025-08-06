@@ -1,3 +1,5 @@
+"""Test parser methods."""
+
 from arx import ast
 from arx.io import ArxIO
 from arx.lexer import Lexer
@@ -18,7 +20,7 @@ def test_binop_precedence() -> None:
 
 
 def test_parse_float_expr() -> None:
-    """Test gettok for main tokens"""
+    """Test gettok for main tokens."""
     ArxIO.string_to_buffer("1 2")
     lexer = Lexer()
     parser = Parser(lexer.lex())
@@ -37,7 +39,7 @@ def test_parse_float_expr() -> None:
     ArxIO.string_to_buffer("3")
     parser = Parser(lexer.lex())
 
-    tok = parser.tokens.get_next_token()
+    parser.tokens.get_next_token()
     expr = parser.parse_float_expr()
     assert expr
     assert isinstance(expr, ast.FloatExprAST)

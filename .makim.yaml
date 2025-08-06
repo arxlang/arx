@@ -1,7 +1,6 @@
-version: 1.0
 groups:
   default:
-    targets:
+    tasks:
       clean:
         help: remove build artifacts, compiled files, and cache
         run: |
@@ -19,7 +18,7 @@ groups:
           rm -fr .pytest_cache
 
   tests:
-    targets:
+    tasks:
       linter:
         help: run linter tools
         run: |
@@ -41,32 +40,34 @@ groups:
 
       smoke:
         help: run smoke tests
-        dependencies:
-          - target: examples.show-tokens
-            args:
-              examples: constant,average,fibonacci,print-star,sum
-          - target: examples.show-ast
-            args:
-              examples: constant,average,fibonacci,print-star,sum
-          # note: the development of the backend will be stopped for now
-          # - target: examples.show-llvm-ir
-          #   args:
-          #     examples: constant,average,fibonacci,print-star,sum
-          # - target: examples.emit-object
-          #   args:
-          #     examples: constant,average,fibonacci,print-star,sum
+        hooks:
+          pre-run:
+            - task: examples.show-tokens
+              args:
+                examples: constant,average,fibonacci,print-star,sum
+            - task: examples.show-ast
+              args:
+                examples: constant,average,fibonacci,print-star,sum
+            # note: the development of the backend will be stopped for now
+            # - task: examples.show-llvm-ir
+            #   args:
+            #     examples: constant,average,fibonacci,print-star,sum
+            # - task: examples.emit-object
+            #   args:
+            #     examples: constant,average,fibonacci,print-star,sum
         run: |
           arx --help
           arx --version
       ci:
         help: run the sames tests executed on CI
-        dependencies:
-          - target: tests.unit
-          - target: tests.smoke
-          - target: tests.linter
+        hooks:
+          pre-run:
+            - task: tests.unit
+            - task: tests.smoke
+            - task: tests.linter
 
   examples:
-    targets:
+    tasks:
       show-tokens:
         help: Emit tokens for input file
         args:
@@ -113,7 +114,7 @@ groups:
             arx examples/@(name).arx
 
   docs:
-    targets:
+    tasks:
       build:
         help: build documentation
         run: |
@@ -139,7 +140,7 @@ groups:
           -p "@google/semantic-release-replace-plugin" \
           semantic-release
 
-    targets:
+    tasks:
       ci:
         help: run semantic release on CI
         run: ${{ vars.app }} --ci

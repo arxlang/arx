@@ -138,7 +138,7 @@ class CodeGenLLVMBase(CodeGenBase):
     """ArxLLVM gathers all the main global variables for LLVM workflow."""
 
     # AllocaInst
-    named_values: Dict[str, Any] = {}  # noqa: RUF012
+    named_values: Dict[str, Any] = {}
     _llvm: VariablesLLVM
 
     def initialize(self) -> None:

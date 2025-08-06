@@ -4,10 +4,26 @@ repo_url: https://github.com/arxlang/arx
 docs_dir: ./docs
 site_dir: ./build
 
+nav:
+  - Home: index.md
+  - API Docs: api/
+  - Sponsor: sponsor.md
+  - Roadmap: roadmap.md
+  - Governance: governance.md
+  - Changelog: changelog.md
+  - Contributing Guide: contributing.md
+  - Partners: partners.md
+  - Code of Conduct: coc.md
+  - Community: discord.md
+  # from gen-files
+  # - Tutorials:
+  #     - Get Started: tutorials/get-started.ipynb
+
 theme:
   name: material
   features:
     - content.code.annotate
+    - content.code.copy
     - content.tabs.link
     - header.autohide
     - navigation.indexes
@@ -18,7 +34,7 @@ theme:
   icon:
     repo: fontawesome/brands/github
   logo: ./images/arx.png
-  favicon: ./favicon.ico
+  favicon: ./images/favicon.ico
   palette:
     # Palette toggle for light mode
     - scheme: default
@@ -36,69 +52,47 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
-nav:
-  - Home: "index.md"
-  - "API Docs": "/api/"
-  - Sponsor: "sponsor.md"
-  - Roadmap: "roadmap.md"
-  - Governance: "governance.md"
-  - Changelog: "changelog.md"
-  - "Contributing Guide": "contributing.md"
-  - Partners: "partners.md"
-  - Code of Conduct: "coc.md"
-
 plugins:
   - search
   - macros
-  # - autorefs
+  - autorefs
   # - exclude:
   #     glob:
   #       - backends/template.md
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_nav.py
+  - literate-nav:
+      nav_file: SUMMARY.md
   - mkdocstrings:
       enable_inventory: true
       handlers:
         python:
+          paths: [src]
+
           import:
             - https://docs.python.org/3/objects.inv
-          selection:
+          options:
+            docstring_options:
+              ignore_init_summary: true
+            docstring_section_style: list
             docstring_style: numpy
-            filters:
-              - "!^Bounds"
-              - "!^__class__"
-              - "!^_filter_with_like"
-              - "!^_find_backends"
-              - "!^_key$"
-              - "!^_literal_value_hash_key"
-              - "!^_log"
-              - "!^_nbytes"
-              - "!^_safe_name$"
-              - "!^_schema_from_csv"
-              - "!^_to_geodataframe"
-              - "!^_tuplize"
-              - "!^ast_schema"
-              - "!^backend_table_type"
-              - "!^bounds$"
-              - "!^column$"
-              - "!^compiler$"
-              - "!^context_class"
-              - "!^database_class"
-              - "!^do_connect"
-              - "!^fetch_from_cursor"
-              - "!^get_schema"
-              - "!^largest$"
-              - "!^reconnect"
-              - "!^select_builder_class"
-              - "!^select_class"
-              - "!^table_class$"
-              - "!^table_expr_class"
-              - "!^translator_class"
-              - "!^Options$"
-          rendering:
-            show_category_heading: true
+            filters: ["!^_"]
+            heading_level: 1
+            inherited_members: true
+            merge_init_into_class: true
+            separate_signature: true
+            # show_category_heading: true
+            # show_modules: true
             show_root_full_path: false
             show_root_heading: true
-            show_root_toc_entry: true
-            show_source: false
+            # show_root_toc_entry: true
+            show_signature_annotations: true
+            show_source: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
   - mkdocs-jupyter:
       execute: false
       ignore:
@@ -106,7 +100,6 @@ plugins:
         - ".ipynb_checkpoints/*"
       include_source: true
       include_requirejs: true
-  - literate-nav
 
 markdown_extensions:
   - admonition
@@ -116,8 +109,6 @@ markdown_extensions:
   - footnotes
   - md_in_html
   - meta
-  - pymdownx.tasklist:
-      custom_checkbox: true
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
@@ -125,8 +116,10 @@ markdown_extensions:
         custom_icons:
           - docs/static/icons
   - pymdownx.details
-  - pymdownx.highlight
-  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.inlinehilite:
+      style_plain_text: python
   - pymdownx.magiclink:
       provider: github
       repo_url_shortener: true
@@ -140,8 +133,7 @@ markdown_extensions:
       permalink: true
 
 extra:
-  project_name: "Arx"
-  homepage: https://arxlang.org
+  project_name: "IRx"
   team:
     - name: "Active maintainers"
       members:
@@ -153,11 +145,11 @@ extra:
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/xmnlab
     - icon: fontawesome/brands/github
-      link: https://github.com/arxlang/arx
+      link: https://github.com/arxlang/irx
   support_levels:
     supported:
       icon: :material-check-decagram:{ .verified }
-      description: Tested in CI. If this doesn't work for you, please [file an issue](https://github.com/arxlang/arx/issues/new).
+      description: Tested in CI. If this doesn't work for you, please [file an issue](https://github.com/arxlang/irx/issues/new).
     bug:
       icon: :material-bug:{ .bug }
       description: Should work but doesn't because upstream is broken. Supported on a best-effort basis.
@@ -165,4 +157,4 @@ extra:
       icon: :material-cancel:{ .cancel }
       description: Unlikely to ever be supported or no upstream support.
 
-copyright: "Copyright &copy; 2022, Arx Team"
+copyright: "Copyright &copy; 2022, IRx Team"

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sys
 
 from typing import Any, Dict, List, Union
 
@@ -31,7 +32,7 @@ class ObjectGenerator(CodeGenLLVMBase):
     output_file: str = ""
     input_file: str = ""
     is_lib: bool = True
-    result_stack: List[Union[ir.Value, ir.Function]] = []  # noqa: RUF012
+    result_stack: List[Union[ir.Value, ir.Function]] = []
 
     def __init__(
         self,
@@ -175,7 +176,7 @@ class ObjectGenerator(CodeGenLLVMBase):
 
         if compile_result != 0:
             llvm.errs() << "failed to compile and link object file"
-            exit(1)
+            sys.exit(1)
 
     def open_interactive(self) -> None:
         """

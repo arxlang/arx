@@ -1,3 +1,0 @@
-# Syntactical Analysis
-
-::: arx.parser

@@ -33,39 +33,39 @@ class SourceLocation:
 class TokenKind(Enum):
     """TokenKind enumeration for known variables returned by the lexer."""
 
-    eof: int = -1
+    eof = -1
 
     # function
-    kw_function: int = -2
-    kw_extern: int = -3
-    kw_return: int = -4
+    kw_function = -2
+    kw_extern = -3
+    kw_return = -4
 
     # data types
-    identifier: int = -10
-    float_literal: int = -11
+    identifier = -10
+    float_literal = -11
 
     # control flow
-    kw_if: int = -20
-    kw_then: int = -21
-    kw_else: int = -22
-    kw_for: int = -23
-    kw_in: int = -24
+    kw_if = -20
+    kw_then = -21
+    kw_else = -22
+    kw_for = -23
+    kw_in = -24
 
     # operators
-    binary_op: int = -30
-    unary_op: int = -31
-    operator: int = -32
+    binary_op = -30
+    unary_op = -31
+    operator = -32
 
     # variables
-    kw_var: int = -40
-    kw_const: int = -41
+    kw_var = -40
+    kw_const = -41
 
     # flow and structure control
     indent = -50
     dedent = -51
 
     # generic control
-    not_initialized: int = -9999
+    not_initialized = -9999
 
 
 MAP_NAME_TO_KW_TOKEN = {
@@ -120,6 +120,10 @@ class Token:
         self.kind = kind
         self.value = value
         self.location = copy.deepcopy(location)
+
+    def __hash__(self) -> int:
+        """Implement hash method for Token."""
+        return hash(f"{self.kind}{self.value}")
 
     def get_name(self) -> str:
         """
@@ -231,7 +235,7 @@ class Lexer:
     last_char: str = ""
     new_line: bool = True
 
-    _keyword_map: Dict[str, TokenKind] = {  # noqa: RUF012
+    _keyword_map: Dict[str, TokenKind] = {
         "fn": TokenKind.kw_function,
         "extern": TokenKind.kw_extern,
         "return": TokenKind.kw_return,
@@ -334,11 +338,7 @@ class Lexer:
 
         # Comment until end of line.
         if self.last_char == "#":
-            while (
-                self.last_char != EOF
-                and self.last_char != "\n"
-                and self.last_char != "\r"
-            ):
+            while self.last_char not in (EOF, "\n", "\r"):
                 self.last_char = self.advance()
 
             if self.last_char != EOF:
@@ -364,7 +364,7 @@ class Lexer:
         """
         last_char = ArxIO.get_char()
 
-        if last_char == "\n" or last_char == "\r":
+        if last_char in ("\n", "\r"):
             self.lex_loc.line += 1
             self.lex_loc.col = 0
         else:
