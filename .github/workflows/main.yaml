@@ -90,11 +90,12 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
-          environment-file: conda/ci.yaml
+          environment-file: conda/dev.yaml
           channels: conda-forge,nodefaults
           activate-environment: arx
           auto-update-conda: true
           conda-solver: libmamba
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
