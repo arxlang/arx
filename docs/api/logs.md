@@ -1,3 +1,0 @@
-# Logs
-
-::: arx.logs

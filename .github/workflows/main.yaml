@@ -16,7 +16,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -49,7 +49,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -72,8 +72,7 @@ jobs:
       - name: Run smoke tests
         run: makim tests.smoke
 
-  linter-and-docs:
-    needs: check-branch
+  linter:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -82,16 +81,16 @@ jobs:
         shell: bash -l {0}
 
     concurrency:
-      group: ci-linter-docs-${{ github.ref }}
+      group: ci-linter-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: "latest"
-          environment-file: conda/dev.yaml
+          environment-file: conda/ci.yaml
           channels: conda-forge,nodefaults
           activate-environment: arx
           auto-update-conda: true
@@ -102,11 +101,12 @@ jobs:
           poetry config virtualenvs.create false
           poetry install
 
-      - name: Test documentation generation
-        run: makim docs.build
-
       - name: Run style checks
         if: success() || failure()
         run: |
           pre-commit install
           makim tests.linter
+
+      - name: Setup tmate session
+        if: "${{ failure() && (contains(github.event.pull_request.labels.*.name, 'ci:enable-debugging')) }}"
+        uses: mxschmitt/action-tmate@v3

@@ -1,3 +1,0 @@
-# Lexical Analysis
-
-::: arx.lexer
