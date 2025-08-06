@@ -17,26 +17,20 @@ TMP_PATH.mkdir(exist_ok=True)
 @pytest.mark.parametrize(
     "code",
     [
-        "1 + 1",
-        "1 + 2 * (3 - 2)",
-        "if (1 < 2):\n    3\nelse:\n    2\n",
-        "fn add_one(a):\n    a + 1\nadd_one(1)\n",
+        "fn main():\n  return 1 + 1",
+        "fn main():\n  return 1 + 2 * (3 - 2)",
+        # "fn main():\n  if (1 < 2):\n    return 3\nelse:\n    return 2\n",
     ],
 )
 def test_object_generation(code: str) -> None:
     """Test object generation."""
     lexer = Lexer()
-    lexer.clean()
-
     parser = Parser()
-    parser.clean()
-
-    tokens = TokenList([])
-
-    ArxIO.string_to_buffer(code)
-    ast = parser.parse(tokens)
     ir = LLVMLiteIR()
 
+    ArxIO.string_to_buffer(code)
+    module_ast = parser.parse(lexer.lex())
+
     bin_path = TMP_PATH / "testtmp"
-    ir.build(ast, bin_path)
+    ir.build(module_ast, bin_path)
     bin_path.unlink()

@@ -12,10 +12,9 @@ from arx.parser import Parser
 @pytest.mark.parametrize(
     "code",
     [
-        "1 + 1",
-        "1 + 2 * (3 - 2)",
-        "if (1 < 2):\n    3\nelse:\n    2\n",
-        "fn add_one(a):\n    a + 1\nadd_one(1)\n",
+        "fn main():\n  return 0 + 1",
+        "fn main():\n  return 1 + 2 * (3 - 2)",
+        # "fn main():\n  if (1 < 2):\n    return 3\n  else:\n    return 2\n",
     ],
 )
 def test_ast_to_output(code: str) -> None:

@@ -244,7 +244,7 @@ class Parser:
             self.tokens.get_next_token()  # eat the ':'
             else_block = self.parse_block()
 
-        return astx.IfStmt(if_loc, cond, then_block, else_block)
+        return astx.IfStmt(cond, then_block, else_block, loc=if_loc)
 
     def parse_float_expr(self) -> astx.LiteralFloat32:
         """
@@ -291,10 +291,13 @@ class Parser:
 
         self.tokens.get_next_token()  # eat identifier.
 
+        # TODO: var type should be dynamic
+        var_type = astx.Float32()
+
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             # Simple variable ref, not a function call
             # todo: we need to get the variable type from a specific scope
-            return astx.Variable(id_loc, id_name, "float")
+            return astx.Variable(id_name, var_type, loc=id_loc)
 
         # Call.
         self.tokens.get_next_token()  # eat (
@@ -319,7 +322,7 @@ class Parser:
         # Eat the ')'.
         self.tokens.get_next_token()
 
-        return astx.FunctionCall(id_loc, id_name, args)
+        return astx.FunctionCall(id_name, args, loc=id_loc)
 
     def parse_for_stmt(self) -> astx.ForRangeLoopStmt:
         """
@@ -482,7 +485,7 @@ class Parser:
                 rhs = self.parse_bin_op_rhs(cur_prec + 1, rhs)
 
             # Merge lhs/rhs.
-            lhs = astx.BinaryOp(bin_op, lhs, rhs, bin_loc)
+            lhs = astx.BinaryOp(bin_op, lhs, rhs, loc=bin_loc)
 
     def parse_prototype(self) -> astx.FunctionPrototype:
         """
@@ -510,16 +513,17 @@ class Parser:
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             raise Exception("Parser: Expected '(' in the function definition.")
 
-        args: List[astx.Variable] = []
+        args = astx.Arguments()
         while self.tokens.get_next_token().kind == TokenKind.identifier:
             # note: this is a workaround
             identifier_name = self.tokens.cur_tok.value
             cur_loc = self.tokens.cur_tok.location
 
-            var_typing = "float"
+            # TODO: type should be dynamic
+            var_typing = astx.Float32()
 
             args.append(
-                astx.Variable(cur_loc, identifier_name, var_typing)
+                astx.Variable(identifier_name, var_typing, loc=cur_loc)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -533,14 +537,15 @@ class Parser:
         # success. #
         self.tokens.get_next_token()  # eat ')'.
 
-        ret_typing = "float"
+        # TODO: type should be dynamic
+        ret_typing = astx.Float32()
 
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value=":"):
             raise Exception("Parser: Expected ':' in the function definition")
 
         self.tokens.get_next_token()  # eat ':'.
 
-        return astx.FunctionPrototype(fn_loc, fn_name, ret_typing, args)
+        return astx.FunctionPrototype(fn_name, args, ret_typing, loc=fn_loc)
 
     def parse_extern_prototype(self) -> astx.FunctionPrototype:
         """
@@ -577,7 +582,7 @@ class Parser:
             var_typing = "float"
 
             args.append(
-                astx.Variable(cur_loc, identifier_name, var_typing)
+                astx.Variable(identifier_name, var_typing, loc=cur_loc)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -593,7 +598,7 @@ class Parser:
 
         ret_typing = "float"
 
-        return astx.FunctionPrototype(fn_loc, fn_name, ret_typing, args)
+        return astx.FunctionPrototype(fn_name, ret_typing, args, loc=fn_loc)
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
