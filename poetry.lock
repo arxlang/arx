@@ -212,14 +212,14 @@ test = ["astroid (>=2,<4)", "pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "astx"
-version = "0.22.0"
+version = "0.22.1"
 description = "ASTx is an agnostic expression structure for AST."
 optional = false
 python-versions = "<4,>=3.9"
 groups = ["main"]
 files = [
-    {file = "astx-0.22.0-py3-none-any.whl", hash = "sha256:ba261248fbed42b6c1fdf7344177bb44ebfdbd73b1146c037a0ee024e0155e8f"},
-    {file = "astx-0.22.0.tar.gz", hash = "sha256:3793b20fb1da3b00e2ff3c032400af3f7a67b1471bd71e487f54474e9c31fdf5"},
+    {file = "astx-0.22.1-py3-none-any.whl", hash = "sha256:7f67497eb881418df40743bb6cc8a60b72ff5aa39eeab9ce8cbd2ac5a47e4500"},
+    {file = "astx-0.22.1.tar.gz", hash = "sha256:beb70a6e42cf426c19e98cbfc5b640d8dbdce0c72069b9b4bff32b4abb9c131d"},
 ]
 
 [package.dependencies]
@@ -3057,18 +3057,18 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyirx"
-version = "1.3.0"
+version = "1.3.1"
 description = "IRx"
 optional = false
 python-versions = "<4,>=3.9"
 groups = ["main"]
 files = [
-    {file = "pyirx-1.3.0-py3-none-any.whl", hash = "sha256:0fde72b78db524591e04fe088fa3ded28803f1667f1ec42717c1e19921e0d26b"},
-    {file = "pyirx-1.3.0.tar.gz", hash = "sha256:5b17521ae829b87ade5ad014e7cacbee041f3e52d6365b77f284597d31dc7942"},
+    {file = "pyirx-1.3.1-py3-none-any.whl", hash = "sha256:43e54ea8a21afef717f8b073b015333cf0ceee29eedcbc58ced7fda8a4a0dac0"},
+    {file = "pyirx-1.3.1.tar.gz", hash = "sha256:16da7e3a5dedb8cc2d9abe56d5d03faebd7bcaf6035c9aae4e08233822ee93fa"},
 ]
 
 [package.dependencies]
-astx = ">=0.22.0"
+astx = ">=0.22.1"
 atpublic = ">=4.0"
 llvmlite = ">=0.41.1"
 plum-dispatch = ">=2.2.2"
@@ -4542,4 +4542,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "74edc4cb271f7afffa1ee49082537b068ce9c1bbe62dd16768a796677bd5a091"
+content-hash = "068cd25ddc6c6d4ec83cab1dd5494201ad7eb83ae764a68e7a72af0d8e2318a2"

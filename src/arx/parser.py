@@ -324,18 +324,7 @@ class Parser:
         # Eat the ')'.
         self.tokens.get_next_token()
 
-        # todo: FunctionCall should accept FunctionPrototype or str
-        proto_args = astx.Arguments()
-        for idx in range(len(args)):
-            proto_args.append(
-                astx.Argument(name=f"arg_{idx}", type_=astx.Float32())
-            )
-        proto = astx.FunctionPrototype(
-            id_name, args=proto_args, return_type=astx.Float32()
-        )
-        fn_def = astx.FunctionDef(proto, body=astx.Block())
-
-        return astx.FunctionCall(fn_def, args, loc=id_loc)
+        return astx.FunctionCall(id_name, args, loc=id_loc)
 
     def parse_for_stmt(self) -> astx.ForRangeLoopStmt:
         """
