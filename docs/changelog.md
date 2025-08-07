@@ -1,6 +1,21 @@
 # Release Notes
 ---
 
+# [0.2.0](https://github.com/arxlang/arx/compare/0.1.1...0.2.0) (2025-08-07)
+
+
+### Bug Fixes
+
+* Fix usage of FunctionCall ([#15](https://github.com/arxlang/arx/issues/15)) ([f7f61c0](https://github.com/arxlang/arx/commit/f7f61c014cc7f400ae6af2e89cbbf9f3907f9b3a))
+
+
+### Features
+
+* Add support for blocks of nodes ([#6](https://github.com/arxlang/arx/issues/6)) ([1fd099f](https://github.com/arxlang/arx/commit/1fd099fa7b505998e853b867039c6041005afe87))
+* Move the AST output to YAML format ([#7](https://github.com/arxlang/arx/issues/7)) ([6a8e10f](https://github.com/arxlang/arx/commit/6a8e10f8a3a7d49af466342483cc42849b263153))
+* Support multiple input files ([#8](https://github.com/arxlang/arx/issues/8)) ([ad31064](https://github.com/arxlang/arx/commit/ad31064baaf341a0a90da98016acc126c2e308e0))
+* Use ASTx and IRx as core libraries for AST and code generation ([#14](https://github.com/arxlang/arx/issues/14)) ([b730859](https://github.com/arxlang/arx/commit/b730859e98ecc1f3e09a346ba634377d777e6617))
+
 ## [0.1.1](https://github.com/arxlang/arx/compare/0.1.0...0.1.1) (2023-06-26)
 
 

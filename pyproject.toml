@@ -1,6 +1,6 @@
 [project]
 name = "arxlang"
-version = "0.1.1"  # semantic-release
+version = "0.2.0"  # semantic-release
 description = "Arx is a compiler built with llvm"
 readme = "docs/index.md"
 authors = [
