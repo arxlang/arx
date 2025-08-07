@@ -64,7 +64,7 @@ class ArxMain:
     def show_ast(self) -> None:
         """Print the AST for the given input file."""
         tree_ast = self._get_astx()
-        print(tree_ast)
+        print(repr(tree_ast))
 
     def show_tokens(self) -> None:
         """Print the AST for the given input file."""

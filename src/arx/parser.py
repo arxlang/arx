@@ -351,7 +351,11 @@ class Parser:
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise Exception("Parser: Expected identifier after for")
 
-        id_name: str = self.tokens.cur_tok.value
+        # TODO: type should be defined dynamic
+        inline_var = astx.InlineVariableDeclaration(
+            self.tokens.cur_tok.value,
+            astx.Float32(),
+        )
         self.tokens.get_next_token()  # eat identifier.
 
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="="):
@@ -378,7 +382,7 @@ class Parser:
 
         body_block: astx.Block = astx.Block()
         body_block.nodes.append(self.parse_expression())
-        return astx.ForRangeLoopStmt(id_name, start, end, step, body_block)
+        return astx.ForRangeLoopStmt(inline_var, start, end, step, body_block)
 
     def parse_var_expr(self) -> astx.VariableDeclaration:
         """
