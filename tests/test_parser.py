@@ -1,6 +1,7 @@
 """Test parser methods."""
 
 import astx
+
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser

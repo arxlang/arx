@@ -4,11 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from irx.builders.llvmliteir import LLVMLiteIR
-
 from arx.io import ArxIO
-from arx.lexer import Lexer, TokenList
+from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.builders.llvmliteir import LLVMLiteIR
 
 TMP_PATH = Path("/tmp/arxtmp")
 TMP_PATH.mkdir(exist_ok=True)
@@ -32,5 +31,5 @@ def test_object_generation(code: str) -> None:
     module_ast = parser.parse(lexer.lex())
 
     bin_path = TMP_PATH / "testtmp"
-    ir.build(module_ast, bin_path)
+    ir.build(module_ast, str(bin_path))
     bin_path.unlink()

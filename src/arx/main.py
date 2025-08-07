@@ -2,8 +2,8 @@
 
 import os
 
-from dataclasses import dataclass
-from typing import Any, List
+from dataclasses import dataclass, field
+from typing import Any
 
 import astx
 
@@ -23,9 +23,9 @@ def get_module_name_from_file_path(filepath: str) -> str:
 class ArxMain:
     """The main class for calling Arx compiler."""
 
-    input_files: List[str]
-    output_file: str
-    is_lib: bool
+    input_files: list[str] = field(default_factory=list)
+    output_file: str = ""
+    is_lib: bool = False
 
     def _get_astx(self) -> astx.Block:
         lexer = Lexer()

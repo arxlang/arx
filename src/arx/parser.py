@@ -1,10 +1,11 @@
 """parser module gather all functions and classes for parsing."""
 
-from typing import Dict, List, Tuple
+from typing import cast
+
+import astx
 
 from astx import SourceLocation
 
-import astx
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
 
@@ -14,13 +15,13 @@ INDENT_SIZE = 2
 class Parser:
     """Parser class."""
 
-    bin_op_precedence: Dict[str, int] = {}
+    bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     tokens: TokenList
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
         """Instantiate the Parser object."""
-        self.bin_op_precedence: Dict[str, int] = {
+        self.bin_op_precedence: dict[str, int] = {
             "=": 2,
             "<": 10,
             ">": 10,
@@ -112,7 +113,7 @@ class Parser:
         self.tokens.get_next_token()  # eat extern.
         return self.parse_extern_prototype()
 
-    def parse_primary(self) -> astx.Expr:
+    def parse_primary(self) -> astx.AST:
         """
         Parse the primary expression.
 
@@ -301,10 +302,11 @@ class Parser:
 
         # Call.
         self.tokens.get_next_token()  # eat (
-        args: List[astx.Expr] = []
+        args: list[astx.DataType] = []
+
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value=")"):
             while True:
-                args.append(self.parse_expression())
+                args.append(cast(astx.DataType, self.parse_expression()))
 
                 if self.tokens.cur_tok == Token(
                     kind=TokenKind.operator, value=")"
@@ -322,7 +324,18 @@ class Parser:
         # Eat the ')'.
         self.tokens.get_next_token()
 
-        return astx.FunctionCall(id_name, args, loc=id_loc)
+        # todo: FunctionCall should accept FunctionPrototype or str
+        proto_args = astx.Arguments()
+        for idx in range(len(args)):
+            proto_args.append(
+                astx.Argument(name=f"arg_{idx}", type_=astx.Float32())
+            )
+        proto = astx.FunctionPrototype(
+            id_name, args=proto_args, return_type=astx.Float32()
+        )
+        fn_def = astx.FunctionDef(proto, body=astx.Block())
+
+        return astx.FunctionCall(fn_def, args, loc=id_loc)
 
     def parse_for_stmt(self) -> astx.ForRangeLoopStmt:
         """
@@ -378,7 +391,7 @@ class Parser:
         """
         self.tokens.get_next_token()  # eat the var.
 
-        var_names: List[Tuple[str, astx.Expr]] = []
+        var_names: list[tuple[str, astx.Expr]] = []
 
         # At least one variable name is required. #
         if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -419,7 +432,7 @@ class Parser:
         body: astx.Expr = self.parse_expression()
         return astx.VariableDeclaration(var_names, "float", body)
 
-    def parse_unary(self) -> astx.Expr:
+    def parse_unary(self) -> astx.UnaryOp:
         """
         Parse a unary expression.
 
@@ -433,12 +446,12 @@ class Parser:
             self.tokens.cur_tok.kind != TokenKind.operator
             or self.tokens.cur_tok.value in ("(", ",")
         ):
-            return self.parse_primary()
+            return cast(astx.UnaryOp, self.parse_primary())
 
         # If this is a unary operator, read it.
         op_code: str = self.tokens.cur_tok.value
         self.tokens.get_next_token()
-        operand: astx.Expr = self.parse_unary()
+        operand = self.parse_unary()
         return astx.UnaryOp(op_code, operand)
 
     def parse_bin_op_rhs(
@@ -485,7 +498,12 @@ class Parser:
                 rhs = self.parse_bin_op_rhs(cur_prec + 1, rhs)
 
             # Merge lhs/rhs.
-            lhs = astx.BinaryOp(bin_op, lhs, rhs, loc=bin_loc)
+            lhs = astx.BinaryOp(
+                bin_op,
+                cast(astx.DataType, lhs),
+                cast(astx.DataType, rhs),
+                loc=bin_loc,
+            )
 
     def parse_prototype(self) -> astx.FunctionPrototype:
         """
@@ -497,8 +515,8 @@ class Parser:
             The parsed prototype, or None if parsing fails.
         """
         fn_name: str
-        var_typing: str
-        ret_typing: str
+        var_typing: astx.DataType
+        ret_typing: astx.DataType
         identifier_name: str
 
         cur_loc: SourceLocation
@@ -523,7 +541,7 @@ class Parser:
             var_typing = astx.Float32()
 
             args.append(
-                astx.Variable(identifier_name, var_typing, loc=cur_loc)
+                astx.Argument(identifier_name, var_typing, loc=cur_loc)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -557,8 +575,8 @@ class Parser:
             The parsed extern prototype, or None if parsing fails.
         """
         fn_name: str
-        var_typing: str
-        ret_typing: str
+        var_typing: astx.DataType
+        ret_typing: astx.DataType
         identifier_name: str
 
         cur_loc: SourceLocation
@@ -573,16 +591,17 @@ class Parser:
         if self.tokens.cur_tok != Token(kind=TokenKind.operator, value="("):
             raise Exception("Parser: Expected '(' in the function definition.")
 
-        args: List[astx.Variable] = []
+        args = astx.Arguments()
         while self.tokens.get_next_token().kind == TokenKind.identifier:
             # note: this is a workaround
             identifier_name = self.tokens.cur_tok.value
             cur_loc = self.tokens.cur_tok.location
 
-            var_typing = "float"
+            # TODO: type should be defined dynamic
+            var_typing = astx.Float32()
 
             args.append(
-                astx.Variable(identifier_name, var_typing, loc=cur_loc)
+                astx.Argument(identifier_name, var_typing, loc=cur_loc)
             )
 
             if self.tokens.get_next_token() != Token(
@@ -596,9 +615,9 @@ class Parser:
         # success. #
         self.tokens.get_next_token()  # eat ')'.
 
-        ret_typing = "float"
+        ret_typing = astx.Float32()
 
-        return astx.FunctionPrototype(fn_name, ret_typing, args, loc=fn_loc)
+        return astx.FunctionPrototype(fn_name, args, ret_typing, loc=fn_loc)
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
@@ -610,4 +629,6 @@ class Parser:
             The parsed return expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat return
-        return astx.FunctionReturn(self.parse_expression())
+        return astx.FunctionReturn(
+            cast(astx.DataType, self.parse_expression())
+        )

@@ -2,11 +2,10 @@
 
 import pytest
 
-from irx.builders.llvmliteir import LLVMLiteIR
-
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.builders.llvmliteir import LLVMLiteIR
 
 
 @pytest.mark.parametrize(
