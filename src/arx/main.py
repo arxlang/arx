@@ -2,11 +2,13 @@
 
 import os
 
-from typing import Any, List
+from dataclasses import dataclass, field
+from typing import Any
 
-from arx import ast
-from arx.codegen.ast_output import ASTtoOutput
-from arx.codegen.file_object import ObjectGenerator
+import astx
+
+from irx.builders.llvmliteir import LLVMLiteIR
+
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -17,12 +19,26 @@ def get_module_name_from_file_path(filepath: str) -> str:
     return filepath.split(os.sep)[-1].replace(".arx", "")
 
 
+@dataclass
 class ArxMain:
     """The main class for calling Arx compiler."""
 
-    input_files: List[str]
-    output_file: str
-    is_lib: bool
+    input_files: list[str] = field(default_factory=list)
+    output_file: str = ""
+    is_lib: bool = False
+
+    def _get_astx(self) -> astx.Block:
+        lexer = Lexer()
+        parser = Parser()
+        tree_ast = astx.Block()
+
+        for input_file in self.input_files:
+            ArxIO.file_to_buffer(input_file)
+            module_name = get_module_name_from_file_path(input_file)
+            module_ast = parser.parse(lexer.lex(), module_name)
+            tree_ast.nodes.append(module_ast)
+
+        return tree_ast
 
     def run(self, *args: Any, **kwargs: Any) -> None:
         """Compile the given source code."""
@@ -47,18 +63,8 @@ class ArxMain:
 
     def show_ast(self) -> None:
         """Print the AST for the given input file."""
-        lexer = Lexer()
-        parser = Parser()
-        tree_ast = ast.BlockAST()
-
-        for input_file in self.input_files:
-            ArxIO.file_to_buffer(input_file)
-            module_name = get_module_name_from_file_path(input_file)
-            module_ast = parser.parse(lexer.lex(), module_name)
-            tree_ast.nodes.append(module_ast)
-
-        printer = ASTtoOutput()
-        printer.emit_ast(tree_ast)
+        tree_ast = self._get_astx()
+        print(repr(tree_ast))
 
     def show_tokens(self) -> None:
         """Print the AST for the given input file."""
@@ -72,7 +78,9 @@ class ArxMain:
 
     def show_llvm_ir(self) -> None:
         """Compile into LLVM IR the given input file."""
-        self.compile(show_llvm_ir=True)
+        tree_ast = self._get_astx()
+        ir = LLVMLiteIR()
+        print(ir.translator.translate(tree_ast))
 
     def run_shell(self) -> None:
         """Open arx in shell mode."""
@@ -80,18 +88,6 @@ class ArxMain:
 
     def compile(self, show_llvm_ir: bool = False) -> None:
         """Compile the given input file."""
-        lexer = Lexer()
-        parser = Parser()
-
-        tree_ast: ast.BlockAST = ast.BlockAST()
-
-        for input_file in self.input_files:
-            ArxIO.file_to_buffer(input_file)
-            module_name = get_module_name_from_file_path(input_file)
-
-            module_ast = parser.parse(lexer.lex(), module_name)
-            tree_ast.nodes.append(module_ast)
-
-        # todo: now the object generator should work for all files together
-        obj_gen = ObjectGenerator("input_file", self.output_file, self.is_lib)
-        obj_gen.evaluate(tree_ast, show_llvm_ir)
+        tree_ast = self._get_astx()
+        ir = LLVMLiteIR()
+        ir.build(tree_ast, output_file=self.output_file)

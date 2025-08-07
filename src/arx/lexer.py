@@ -8,26 +8,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, cast
 
+from astx import SourceLocation
+
 from arx.io import ArxIO
 
 EOF = ""
-
-
-@dataclass
-class SourceLocation:
-    """
-    Represents the source location with line and column information.
-
-    Attributes
-    ----------
-    line : int
-        Line number.
-    col : int
-        Column number.
-    """
-
-    line: int = 0
-    col: int = 0
 
 
 class TokenKind(Enum):

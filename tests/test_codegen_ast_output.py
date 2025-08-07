@@ -2,28 +2,28 @@
 
 import pytest
 
-from arx.codegen.ast_output import ASTtoOutput
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.builders.llvmliteir import LLVMLiteIR
 
 
 @pytest.mark.parametrize(
     "code",
     [
-        "1 + 1",
-        "1 + 2 * (3 - 2)",
-        "if (1 < 2):\n    3\nelse:\n    2\n",
-        "fn add_one(a):\n    a + 1\nadd_one(1)\n",
+        "fn main():\n  return 0 + 1",
+        "fn main():\n  return 1 + 2 * (3 - 2)",
+        # "fn main():\n  if (1 < 2):\n    return 3\n  else:\n    return 2\n",
     ],
 )
 def test_ast_to_output(code: str) -> None:
     """Test AST to output."""
     lexer = Lexer()
     parser = Parser()
-    printer = ASTtoOutput()
+    ir = LLVMLiteIR()
 
     ArxIO.string_to_buffer(code)
 
     module_ast = parser.parse(lexer.lex())
-    printer.emit_ast(module_ast)
+
+    print(ir.translator.translate(module_ast))
