@@ -11,22 +11,22 @@
         <link rel="canonical" href="https://arxlang.org/api/io/">
       
       
-        <link rel="prev" href="../cli/">
+        <link rel="prev" href="../exceptions/">
       
       
         <link rel="next" href="../lexer/">
       
       
-      <link rel="icon" href="../../favicon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.17">
+      <link rel="icon" href="../../images/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
     
     
       
-        <title>IO - ArxLang</title>
+        <title>io - ArxLang</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.bcfcd587.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e37652d.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
@@ -50,7 +50,7 @@
     
       <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#io" class="md-skip">
+        <a href="#arx.io" class="md-skip">
           Skip to content
         </a>
       
@@ -92,14 +92,14 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://arxlang.org" title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../.." title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
   <img src="../../images/arx.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
     </label>
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              IO
+              <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> io
             
           </span>
         </div>
@@ -127,7 +127,7 @@
     <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="lime"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
       </label>
     
   
@@ -137,7 +137,7 @@
     <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="white" data-md-color-accent="lime"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
       </label>
     
   
@@ -145,35 +145,37 @@
       
     
     
-      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
     
     
     
-      <label class="md-header__button md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
           <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
             
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7 0-.24-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91 1.61 0 2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08Z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
           </a>
         
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
       
@@ -181,7 +183,7 @@
       
     </form>
     <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
         <div class="md-search-result" data-md-component="search-result">
           <div class="md-search-result__meta">
             Initializing search
@@ -192,13 +194,14 @@
     </div>
   </div>
 </div>
+      
     
     
       <div class="md-header__source">
         <a href="https://github.com/arxlang/arx" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -231,7 +234,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://arxlang.org" title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../.." title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
   <img src="../../images/arx.png" alt="logo">
 
@@ -243,7 +246,7 @@
       <a href="https://github.com/arxlang/arx" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -263,8 +266,10 @@
       <a href="../.." class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Home
+    
   </span>
   
 
@@ -286,22 +291,7 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
+    
     
     
     
@@ -315,8 +305,10 @@
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
+  
   <span class="md-ellipsis">
     API Docs
+    
   </span>
   
 
@@ -334,14 +326,87 @@
                 
   
   
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
   
   
     <li class="md-nav__item">
-      <a href="../ast/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    AST
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> cli
+    
   </span>
   
 
@@ -358,11 +423,13 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../exceptions/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    CLI
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> exceptions
+    
   </span>
   
 
@@ -391,8 +458,10 @@
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
   
+  
   <span class="md-ellipsis">
-    IO
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> io
+    
   </span>
   
 
@@ -402,8 +471,10 @@
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
+  
   <span class="md-ellipsis">
-    IO
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> io
+    
   </span>
   
 
@@ -425,37 +496,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#arx.io" class="md-nav__link">
-    <span class="md-ellipsis">
-      io
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxBuffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxBuffer
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxBuffer">
+    <nav class="md-nav" aria-label=" ArxBuffer">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxBuffer.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __init__
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.clean" class="md-nav__link">
     <span class="md-ellipsis">
-      clean
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;clean
     </span>
   </a>
   
@@ -464,7 +517,7 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.read" class="md-nav__link">
     <span class="md-ellipsis">
-      read
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read
     </span>
   </a>
   
@@ -473,7 +526,7 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.write" class="md-nav__link">
     <span class="md-ellipsis">
-      write
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;write
     </span>
   </a>
   
@@ -487,76 +540,28 @@
         <li class="md-nav__item">
   <a href="#arx.io.ArxFile" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxFile
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxFile
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxFile">
+    <nav class="md-nav" aria-label=" ArxFile">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxFile.create_tmp_file" class="md-nav__link">
     <span class="md-ellipsis">
-      create_tmp_file
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;create_tmp_file
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="create_tmp_file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.create_tmp_file--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.create_tmp_file--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxFile.delete_file" class="md-nav__link">
     <span class="md-ellipsis">
-      delete_file
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;delete_file
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="delete_file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.delete_file--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.delete_file--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -568,65 +573,35 @@
         <li class="md-nav__item">
   <a href="#arx.io.ArxIO" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxIO
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxIO
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxIO">
+    <nav class="md-nav" aria-label=" ArxIO">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.file_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      file_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;file_to_buffer
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="file_to_buffer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.file_to_buffer--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.get_char" class="md-nav__link">
     <span class="md-ellipsis">
-      get_char
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_char
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="get_char">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.get_char--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.load_input_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      load_input_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load_input_to_buffer
     </span>
   </a>
   
@@ -635,24 +610,9 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.string_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      string_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;string_to_buffer
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="string_to_buffer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.string_to_buffer--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -680,8 +640,10 @@
       <a href="../lexer/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    Lexical Analysis
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+    
   </span>
   
 
@@ -701,8 +663,10 @@
       <a href="../logs/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    Logs
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> logs
+    
   </span>
   
 
@@ -722,8 +686,10 @@
       <a href="../main/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    Main
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> main
+    
   </span>
   
 
@@ -743,8 +709,10 @@
       <a href="../parser/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
-    Syntactical Analysis
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> parser
+    
   </span>
   
 
@@ -764,91 +732,10 @@
       <a href="../semantic/" class="md-nav__link">
         
   
-  <span class="md-ellipsis">
-    Semantic Analysis
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
-            
   
   <span class="md-ellipsis">
-    Codegen
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_9">
-            <span class="md-nav__icon md-icon"></span>
-            Codegen
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../codegen/ast-output/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Emit AST
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../codegen/file-object/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    File Object
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> semantic
+    
   </span>
   
 
@@ -883,8 +770,10 @@
       <a href="../../sponsor/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Sponsor
+    
   </span>
   
 
@@ -903,8 +792,10 @@
       <a href="../../roadmap/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Roadmap
+    
   </span>
   
 
@@ -923,8 +814,10 @@
       <a href="../../governance/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Governance
+    
   </span>
   
 
@@ -943,8 +836,10 @@
       <a href="../../changelog/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Changelog
+    
   </span>
   
 
@@ -963,8 +858,10 @@
       <a href="../../contributing/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Contributing Guide
+    
   </span>
   
 
@@ -983,8 +880,10 @@
       <a href="../../partners/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Partners
+    
   </span>
   
 
@@ -1003,8 +902,32 @@
       <a href="../../coc/" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
     Code of Conduct
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../discord/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Community
+    
   </span>
   
 
@@ -1040,37 +963,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#arx.io" class="md-nav__link">
-    <span class="md-ellipsis">
-      io
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxBuffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxBuffer
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxBuffer">
+    <nav class="md-nav" aria-label=" ArxBuffer">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxBuffer.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __init__
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.clean" class="md-nav__link">
     <span class="md-ellipsis">
-      clean
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;clean
     </span>
   </a>
   
@@ -1079,7 +984,7 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.read" class="md-nav__link">
     <span class="md-ellipsis">
-      read
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read
     </span>
   </a>
   
@@ -1088,7 +993,7 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxBuffer.write" class="md-nav__link">
     <span class="md-ellipsis">
-      write
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;write
     </span>
   </a>
   
@@ -1102,76 +1007,28 @@
         <li class="md-nav__item">
   <a href="#arx.io.ArxFile" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxFile
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxFile
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxFile">
+    <nav class="md-nav" aria-label=" ArxFile">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxFile.create_tmp_file" class="md-nav__link">
     <span class="md-ellipsis">
-      create_tmp_file
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;create_tmp_file
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="create_tmp_file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.create_tmp_file--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.create_tmp_file--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxFile.delete_file" class="md-nav__link">
     <span class="md-ellipsis">
-      delete_file
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;delete_file
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="delete_file">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.delete_file--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxFile.delete_file--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1183,65 +1040,35 @@
         <li class="md-nav__item">
   <a href="#arx.io.ArxIO" class="md-nav__link">
     <span class="md-ellipsis">
-      ArxIO
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ArxIO
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ArxIO">
+    <nav class="md-nav" aria-label=" ArxIO">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.file_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      file_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;file_to_buffer
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="file_to_buffer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.file_to_buffer--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.get_char" class="md-nav__link">
     <span class="md-ellipsis">
-      get_char
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_char
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="get_char">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.get_char--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.load_input_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      load_input_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load_input_to_buffer
     </span>
   </a>
   
@@ -1250,24 +1077,9 @@
           <li class="md-nav__item">
   <a href="#arx.io.ArxIO.string_to_buffer" class="md-nav__link">
     <span class="md-ellipsis">
-      string_to_buffer
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;string_to_buffer
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="string_to_buffer">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#arx.io.ArxIO.string_to_buffer--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1290,23 +1102,62 @@
                 
                   
 
+
   
   
-
-
-<h1 id="io">IO<a class="headerlink" href="#io" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-module">
 
 
 
-<a id="arx.io"></a>
-  <div class="doc doc-contents first">
-  
-      <p>Module for handling the IO used by the compiler.</p>
+<h1 id="arx.io" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">io</span>
 
-  
+
+<a href="#arx.io" class="headerlink" title="Permanent link">&para;</a></h1>
+
+    <div class="doc doc-contents first">
+
+        <p>Module for handling the IO used by the compiler.</p>
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            ArxBuffer (arx.io.ArxBuffer)" href="#arx.io.ArxBuffer">ArxBuffer</a></code></b>
+          –
+          <div class="doc-md-description">
+            <p>ArxBuffer gathers function for handle the system buffer.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            ArxFile (arx.io.ArxFile)" href="#arx.io.ArxFile">ArxFile</a></code></b>
+          –
+          <div class="doc-md-description">
+            <p>ArxFile gathers function to handle files.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            ArxIO (arx.io.ArxIO)" href="#arx.io.ArxIO">ArxIO</a></code></b>
+          –
+          <div class="doc-md-description">
+            <p>Arx class for Input and Output operations.</p>
+          </div>
+        </li>
+    </ul>
+
+
+
+
+
+
 
   <div class="doc doc-children">
 
@@ -1322,78 +1173,65 @@
 
 
 <h2 id="arx.io.ArxBuffer" class="doc doc-heading">
-          <code>ArxBuffer</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ArxBuffer</span>
 
 
 <a href="#arx.io.ArxBuffer" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">ArxBuffer</span><span class="p">()</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
 
 
-  <div class="doc doc-contents ">
+        <p>ArxBuffer gathers function for handle the system buffer.</p>
 
-  
-      <p>ArxBuffer gathers function for handle the system buffer.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>src/arx/io.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            clean (arx.io.ArxBuffer.clean)" href="#arx.io.ArxBuffer.clean">clean</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Clean the buffer content.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            read (arx.io.ArxBuffer.read)" href="#arx.io.ArxBuffer.read">read</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Read the buffer content.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            write (arx.io.ArxBuffer.write)" href="#arx.io.ArxBuffer.write">write</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Write the given text to the buffer.</p>
+            </div>
+          </li>
+    </ul>
+
+
+
+                  <details class="quote">
+                    <summary>Source code in <code>src/arx/io.py</code></summary>
+                    <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ArxBuffer</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ArxBuffer gathers function for handle the system buffer.&quot;&quot;&quot;</span>
-
-    <span class="n">buffer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">position</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize ArxBuffer instance.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clean the buffer content.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the given text to the buffer.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">+=</span> <span class="n">text</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read the buffer content.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize ArxBuffer instance.&quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+                  </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1405,89 +1243,63 @@
 
 
 
-
 <div class="doc doc-object doc-function">
-
-
-
-<h3 id="arx.io.ArxBuffer.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
-
-<a href="#arx.io.ArxBuffer.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-  <div class="doc doc-contents ">
-  
-      <p>Initialize ArxBuffer instance.</p>
-
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize ArxBuffer instance.&quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
-</code></pre></div></td></tr></table></div>
-          </details>
-  </div>
-
-</div>
-
-
-<div class="doc doc-object doc-function">
-
 
 
 <h3 id="arx.io.ArxBuffer.clean" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">clean</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">clean</span>
+
 
 <a href="#arx.io.ArxBuffer.clean" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">clean</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Clean the buffer content.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Clean the buffer content.</p>
-
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Clean the buffer content.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxBuffer.read" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">read</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">read</span>
+
 
 <a href="#arx.io.ArxBuffer.read" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">read</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Read the buffer content.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Read the buffer content.</p>
-
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
 <span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
-<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the buffer content.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span>
@@ -1496,38 +1308,39 @@
     <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">&quot;&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxBuffer.write" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">write</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">write</span>
+
 
 <a href="#arx.io.ArxBuffer.write" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">write</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Write the given text to the buffer.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Write the given text to the buffer.</p>
-
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
 <span class="normal">24</span>
 <span class="normal">25</span>
-<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the given text to the buffer.&quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">+=</span> <span class="n">text</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1535,8 +1348,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1545,120 +1357,58 @@
 
 
 <h2 id="arx.io.ArxFile" class="doc doc-heading">
-          <code>ArxFile</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ArxFile</span>
 
 
 <a href="#arx.io.ArxFile" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
+
+
+        <p>ArxFile gathers function to handle files.</p>
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            create_tmp_file
+
 
   
-      <p>ArxFile gathers function to handle files.</p>
+      staticmethod
+   (arx.io.ArxFile.create_tmp_file)" href="#arx.io.ArxFile.create_tmp_file">create_tmp_file</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Create a temporary file with the given content.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            delete_file
 
-            <details class="quote">
-              <summary>Source code in <code>src/arx/io.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ArxFile</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ArxFile gathers function to handle files.&quot;&quot;&quot;</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">create_tmp_file</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a temporary file with the given content.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        content : str</span>
-<span class="sd">            The content of the temporary file.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        str</span>
-<span class="sd">            The name of the created temporary file.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Create a temporary file.</span>
-        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmpfile</span><span class="p">:</span>
-            <span class="n">tmpfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
-
-        <span class="c1"># Rename the temporary file with the .cpp extension.</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">tmpfile</span><span class="o">.</span><span class="n">name</span>
-        <span class="n">filename_ext</span> <span class="o">=</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.cpp&quot;</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">filename_ext</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">filename_ext</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Delete the specified file.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        filename : str</span>
-<span class="sd">            The name of the file to be deleted.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        int</span>
-<span class="sd">            Returns 0 on success, or -1 on failure.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-            <span class="k">return</span> <span class="mi">0</span>
-        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
-</code></pre></div></td></tr></table></div>
-            </details>
 
   
+      staticmethod
+   (arx.io.ArxFile.delete_file)" href="#arx.io.ArxFile.delete_file">delete_file</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Delete the specified file.</p>
+            </div>
+          </li>
+    </ul>
+
+
+
+
+
 
   <div class="doc doc-children">
 
@@ -1670,34 +1420,54 @@
 
 
 
-
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxFile.create_tmp_file" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">create_tmp_file</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">create_tmp_file</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxFile.create_tmp_file" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">create_tmp_file</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Create a temporary file with the given content.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Create a temporary file with the given content.</p>
-<h5 id="arx.io.ArxFile.create_tmp_file--parameters">Parameters<a class="headerlink" href="#arx.io.ArxFile.create_tmp_file--parameters" title="Permanent link">&para;</a></h5>
-<p>content : str
-    The content of the temporary file.</p>
-<h5 id="arx.io.ArxFile.create_tmp_file--returns">Returns<a class="headerlink" href="#arx.io.ArxFile.create_tmp_file--returns" title="Permanent link">&para;</a></h5>
-<p>str
-    The name of the created temporary file.</p>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>content</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The content of the temporary file.</p>
+          </div>
+        </li>
+    </ul>
 
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">104</span>
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+          –
+          <div class="doc-md-description">
+            <p>The name of the created temporary file.</p>
+          </div>
+        </li>
+    </ul>
+
+
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">104</span>
 <span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
@@ -1722,7 +1492,7 @@
 <span class="normal">126</span>
 <span class="normal">127</span>
 <span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">create_tmp_file</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_tmp_file</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create a temporary file with the given content.</span>
 
@@ -1747,39 +1517,59 @@
 
     <span class="k">return</span> <span class="n">filename_ext</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxFile.delete_file" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">delete_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">delete_file</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxFile.delete_file" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">delete_file</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Delete the specified file.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Delete the specified file.</p>
-<h5 id="arx.io.ArxFile.delete_file--parameters">Parameters<a class="headerlink" href="#arx.io.ArxFile.delete_file--parameters" title="Permanent link">&para;</a></h5>
-<p>filename : str
-    The name of the file to be deleted.</p>
-<h5 id="arx.io.ArxFile.delete_file--returns">Returns<a class="headerlink" href="#arx.io.ArxFile.delete_file--returns" title="Permanent link">&para;</a></h5>
-<p>int
-    Returns 0 on success, or -1 on failure.</p>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>filename</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The name of the file to be deleted.</p>
+          </div>
+        </li>
+    </ul>
 
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">130</span>
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+          –
+          <div class="doc-md-description">
+            <p>Returns 0 on success, or -1 on failure.</p>
+          </div>
+        </li>
+    </ul>
+
+
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">130</span>
 <span class="normal">131</span>
 <span class="normal">132</span>
 <span class="normal">133</span>
@@ -1799,7 +1589,7 @@
 <span class="normal">147</span>
 <span class="normal">148</span>
 <span class="normal">149</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">delete_file</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Delete the specified file.</span>
 
@@ -1819,8 +1609,8 @@
     <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1828,8 +1618,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1838,147 +1627,84 @@
 
 
 <h2 id="arx.io.ArxIO" class="doc doc-heading">
-          <code>ArxIO</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ArxIO</span>
 
 
 <a href="#arx.io.ArxIO" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
+
+
+        <p>Arx class for Input and Output operations.</p>
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            file_to_buffer
+
 
   
-      <p>Arx class for Input and Output operations.</p>
+      classmethod
+   (arx.io.ArxIO.file_to_buffer)" href="#arx.io.ArxIO.file_to_buffer">file_to_buffer</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Copy the file content to the buffer.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            get_char
 
-            <details class="quote">
-              <summary>Source code in <code>src/arx/io.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span>
-<span class="normal">84</span>
-<span class="normal">85</span>
-<span class="normal">86</span>
-<span class="normal">87</span>
-<span class="normal">88</span>
-<span class="normal">89</span>
-<span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span>
-<span class="normal">97</span>
-<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ArxIO</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Arx class for Input and Output operations.&quot;&quot;&quot;</span>
-
-    <span class="n">INPUT_FROM_STDIN</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">INPUT_FILE</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">EOF</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxunicode</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="n">buffer</span><span class="p">:</span> <span class="n">ArxBuffer</span> <span class="o">=</span> <span class="n">ArxBuffer</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_char</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get a char from the buffer or from the default input.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        str</span>
-<span class="sd">            A char from the buffer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">INPUT_FROM_STDIN</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">file_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Copy the file content to the buffer.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        filename : str</span>
-<span class="sd">            The name of the file to be copied to the buffer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">arxfile</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">arxfile</span><span class="p">:</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">string_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Copy the given string to the buffer.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        value : str</span>
-<span class="sd">            The string to be copied to the buffer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">load_input_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load the content file or the standard input to the buffer.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">INPUT_FILE</span><span class="p">:</span>
-            <span class="n">input_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">INPUT_FILE</span><span class="p">)</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">file_to_buffer</span><span class="p">(</span><span class="n">input_file_path</span><span class="p">)</span>
-            <span class="k">return</span>
-
-        <span class="n">file_content</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">file_content</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">string_to_buffer</span><span class="p">(</span><span class="n">file_content</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
 
   
+      classmethod
+   (arx.io.ArxIO.get_char)" href="#arx.io.ArxIO.get_char">get_char</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Get a char from the buffer or from the default input.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            load_input_to_buffer
+
+
+  
+      classmethod
+   (arx.io.ArxIO.load_input_to_buffer)" href="#arx.io.ArxIO.load_input_to_buffer">load_input_to_buffer</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Load the content file or the standard input to the buffer.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            string_to_buffer
+
+
+  
+      classmethod
+   (arx.io.ArxIO.string_to_buffer)" href="#arx.io.ArxIO.string_to_buffer">string_to_buffer</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Copy the given string to the buffer.</p>
+            </div>
+          </li>
+    </ul>
+
+
+
+
+
 
   <div class="doc doc-children">
-
 
 
 
@@ -1991,27 +1717,39 @@
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxIO.file_to_buffer" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">file_to_buffer</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">file_to_buffer</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxIO.file_to_buffer" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">file_to_buffer</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Copy the file content to the buffer.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Copy the file content to the buffer.</p>
-<h5 id="arx.io.ArxIO.file_to_buffer--parameters">Parameters<a class="headerlink" href="#arx.io.ArxIO.file_to_buffer--parameters" title="Permanent link">&para;</a></h5>
-<p>filename : str
-    The name of the file to be copied to the buffer.</p>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>filename</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The name of the file to be copied to the buffer.</p>
+          </div>
+        </li>
+    </ul>
 
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
@@ -2025,7 +1763,7 @@
 <span class="normal">71</span>
 <span class="normal">72</span>
 <span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">file_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">file_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Copy the file content to the buffer.</span>
 
@@ -2039,36 +1777,46 @@
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">arxfile</span><span class="p">:</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxIO.get_char" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get_char</span><span class="p">()</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_char</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxIO.get_char" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">get_char</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Get a char from the buffer or from the default input.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Get a char from the buffer or from the default input.</p>
-<h5 id="arx.io.ArxIO.get_char--returns">Returns<a class="headerlink" href="#arx.io.ArxIO.get_char--returns" title="Permanent link">&para;</a></h5>
-<p>str
-    A char from the buffer.</p>
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+          –
+          <div class="doc-md-description">
+            <p>A char from the buffer.</p>
+          </div>
+        </li>
+    </ul>
 
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
+
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
 <span class="normal">49</span>
@@ -2081,7 +1829,7 @@
 <span class="normal">56</span>
 <span class="normal">57</span>
 <span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">get_char</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_char</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get a char from the buffer or from the default input.</span>
 
@@ -2094,33 +1842,34 @@
         <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxIO.load_input_to_buffer" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">load_input_to_buffer</span><span class="p">()</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">load_input_to_buffer</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxIO.load_input_to_buffer" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">load_input_to_buffer</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Load the content file or the standard input to the buffer.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Load the content file or the standard input to the buffer.</p>
-
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">88</span>
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">88</span>
 <span class="normal">89</span>
 <span class="normal">90</span>
 <span class="normal">91</span>
@@ -2131,7 +1880,7 @@
 <span class="normal">96</span>
 <span class="normal">97</span>
 <span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">load_input_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_input_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the content file or the standard input to the buffer.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">INPUT_FILE</span><span class="p">:</span>
         <span class="n">input_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">INPUT_FILE</span><span class="p">)</span>
@@ -2142,36 +1891,47 @@
     <span class="k">if</span> <span class="n">file_content</span><span class="p">:</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">string_to_buffer</span><span class="p">(</span><span class="n">file_content</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="arx.io.ArxIO.string_to_buffer" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">string_to_buffer</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code>
-  
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">string_to_buffer</span>
+
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
 <a href="#arx.io.ArxIO.string_to_buffer" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">string_to_buffer</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Copy the given string to the buffer.</p>
 
 
-  <div class="doc doc-contents ">
-  
-      <p>Copy the given string to the buffer.</p>
-<h5 id="arx.io.ArxIO.string_to_buffer--parameters">Parameters<a class="headerlink" href="#arx.io.ArxIO.string_to_buffer--parameters" title="Permanent link">&para;</a></h5>
-<p>value : str
-    The string to be copied to the buffer.</p>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>value</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+          –
+          <div class="doc-md-description">
+            <p>The string to be copied to the buffer.</p>
+          </div>
+        </li>
+    </ul>
 
-          <details class="quote">
-            <summary>Source code in <code>src/arx/io.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
+
+            <details class="quote">
+              <summary>Source code in <code>src/arx/io.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span>
 <span class="normal">78</span>
@@ -2183,7 +1943,7 @@
 <span class="normal">84</span>
 <span class="normal">85</span>
 <span class="normal">86</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">string_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">string_to_buffer</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Copy the given string to the buffer.</span>
 
@@ -2195,8 +1955,8 @@
     <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
     <span class="bp">cls</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2204,8 +1964,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2214,7 +1973,7 @@
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 
@@ -2234,7 +1993,7 @@
             </div>
           
           
-  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var tab,labels=set.querySelector(".tabbed-labels");for(tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
 
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
@@ -2248,7 +2007,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2022, Arx Team
+      Copyright &copy; 2022, IRx Team
     </div>
   
   
@@ -2269,7 +2028,7 @@
       
     
     <a href="https://twitter.com/xmnlab" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M459.4 151.7c.3 4.5.3 9.1.3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53C87.4 130.8 165 172.4 252.1 176.9c-1.6-7.8-2.6-15.9-2.6-24C249.5 95.1 296.3 48 354.4 48c30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3"/></svg>
     </a>
   
     
@@ -2279,8 +2038,8 @@
       
       
     
-    <a href="https://github.com/arxlang/arx" target="_blank" rel="noopener" title="github.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <a href="https://github.com/arxlang/irx" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
     </a>
   
 </div>
@@ -2295,10 +2054,12 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.1e8ae164.min.js"></script>
+      <script src="../../assets/javascripts/bundle.50899def.min.js"></script>
       
     
   </body>

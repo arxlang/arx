@@ -2,97 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://arxlang.org/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/changelog/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/coc/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/contributing/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/discord/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/governance/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/partners/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/roadmap/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/sponsor/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
-         <loc>https://arxlang.org/api/ast/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <loc>https://arxlang.org/api/</loc>
+         <lastmod>2025-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/SUMMARY/</loc>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/cli/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/exceptions/</loc>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/io/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/lexer/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/logs/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/main/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/parser/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/semantic/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/codegen/ast-output/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/codegen/file-object/</loc>
-         <lastmod>2024-04-10</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2025-08-07</lastmod>
     </url>
 </urlset>
