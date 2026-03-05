@@ -385,3 +385,27 @@ class Lexer:
             cur_tok = self.get_token()
             tokens.append(cur_tok)
         return TokenList(tokens)
+
+    def _parse_operator(self) -> Token:
+        """Parse multi-character operators."""
+        location = copy.deepcopy(self.lex_loc)
+        op = self.last_char
+        self.last_char = self.advance()
+
+        two_char_ops = {
+            "==": "eq",
+            "!=": "ne",
+            ">=": "ge",
+            "<=": "le",
+            "->": "arrow",
+            "//": "comment",
+        }
+
+        if op + self.last_char in two_char_ops:
+            full_op = op + self.last_char
+            self.last_char = self.advance()
+            return Token(
+                kind=TokenKind.operator, value=full_op, location=location
+            )
+
+        return Token(kind=TokenKind.operator, value=op, location=location)
