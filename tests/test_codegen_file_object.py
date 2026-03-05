@@ -18,8 +18,8 @@ TMP_PATH.mkdir(exist_ok=True)
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main():\n  return 1 + 1",
-        "fn main():\n  return 1 + 2 * (3 - 2)",
+        "fn main():\n  return 1.0 + 1.0",
+        "fn main():\n  return 1.0 + 2.0 * (3.0 - 2.0)",
         # "fn main():\n  if (1 < 2):\n    return 3\nelse:\n    return 2\n",
     ],
 )

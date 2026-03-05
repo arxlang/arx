@@ -32,7 +32,12 @@ class TokenKind(Enum):
     # data types
     identifier = -10
     float_literal = -11
-    docstring = -12
+    int_literal = -12
+    string_literal = -13
+    char_literal = -14
+    bool_literal = -15
+    none_literal = -16
+    docstring = -17
 
     # control flow
     kw_if = -20
@@ -40,6 +45,7 @@ class TokenKind(Enum):
     kw_else = -22
     kw_for = -23
     kw_in = -24
+    kw_while = -25
 
     # operators
     binary_op = -30
@@ -66,6 +72,7 @@ MAP_NAME_TO_KW_TOKEN = {
     "else": TokenKind.kw_else,
     "for": TokenKind.kw_for,
     "in": TokenKind.kw_in,
+    "while": TokenKind.kw_while,
     "binary": TokenKind.binary_op,
     "unary": TokenKind.unary_op,
     "var": TokenKind.kw_var,
@@ -81,12 +88,18 @@ MAP_KW_TOKEN_TO_NAME: Dict[TokenKind, str] = {
     TokenKind.identifier: "identifier",
     TokenKind.indent: "indent",
     TokenKind.float_literal: "float",
+    TokenKind.int_literal: "int",
+    TokenKind.string_literal: "string",
+    TokenKind.char_literal: "char",
+    TokenKind.bool_literal: "bool",
+    TokenKind.none_literal: "none",
     TokenKind.docstring: "docstring",
     TokenKind.kw_if: "if",
     TokenKind.kw_then: "then",
     TokenKind.kw_else: "else",
     TokenKind.kw_for: "for",
     TokenKind.kw_in: "in",
+    TokenKind.kw_while: "while",
     # TokenKind.kw_binary_op: "binary",
     # TokenKind.kw_unary_op: "unary",
     TokenKind.kw_var: "var",
@@ -151,6 +164,16 @@ class Token:
             return "(" + str(self.value) + ")"
         elif self.kind == TokenKind.float_literal:
             return "(" + str(self.value) + ")"
+        elif self.kind == TokenKind.int_literal:
+            return "(" + str(self.value) + ")"
+        elif self.kind == TokenKind.string_literal:
+            return "(...)"
+        elif self.kind == TokenKind.char_literal:
+            return "(" + str(self.value) + ")"
+        elif self.kind == TokenKind.bool_literal:
+            return "(" + str(self.value) + ")"
+        elif self.kind == TokenKind.none_literal:
+            return ""
         elif self.kind == TokenKind.docstring:
             return "(...)"
         return ""
@@ -289,6 +312,7 @@ class Lexer:
         "else": TokenKind.kw_else,
         "for": TokenKind.kw_for,
         "in": TokenKind.kw_in,
+        "while": TokenKind.kw_while,
         "var": TokenKind.kw_var,
         "const": TokenKind.kw_const,
     }
@@ -355,6 +379,34 @@ class Lexer:
                 identifier += self.last_char
                 self.last_char = self.advance()
 
+            if identifier in ("and", "or"):
+                return Token(
+                    kind=TokenKind.operator,
+                    value=identifier,
+                    location=self.lex_loc,
+                )
+
+            if identifier == "true":
+                return Token(
+                    kind=TokenKind.bool_literal,
+                    value=True,
+                    location=self.lex_loc,
+                )
+
+            if identifier == "false":
+                return Token(
+                    kind=TokenKind.bool_literal,
+                    value=False,
+                    location=self.lex_loc,
+                )
+
+            if identifier == "none":
+                return Token(
+                    kind=TokenKind.none_literal,
+                    value=None,
+                    location=self.lex_loc,
+                )
+
             if identifier in self._keyword_map:
                 return Token(
                     kind=self._keyword_map[identifier],
@@ -384,11 +436,28 @@ class Lexer:
                 num_str += self.last_char
                 self.last_char = self.advance()
 
+            if num_str == ".":
+                return Token(
+                    kind=TokenKind.operator,
+                    value=".",
+                    location=self.lex_loc,
+                )
+
+            if dot_count == 0:
+                return Token(
+                    kind=TokenKind.int_literal,
+                    value=int(num_str),
+                    location=self.lex_loc,
+                )
+
             return Token(
                 kind=TokenKind.float_literal,
                 value=float(num_str),
                 location=self.lex_loc,
             )
+
+        if self.last_char in ('"', "'"):
+            return self._parse_quoted_literal()
 
         # Docstring: ```...```
         if self.last_char == "`":
@@ -401,6 +470,9 @@ class Lexer:
 
             if self.last_char != EOF:
                 return self.get_token()
+
+        if self.last_char in ("=", "!", "<", ">", "-", "&", "|", "+"):
+            return self._parse_operator()
 
         # Check for end of file. Don't eat the EOF.
         if self.last_char:
@@ -466,6 +538,58 @@ class Lexer:
                 location=doc_loc,
             )
 
+    def _parse_quoted_literal(self) -> Token:
+        """
+        title: Parse quoted string or character literals.
+        returns:
+          type: Token
+        """
+        literal_loc = copy.deepcopy(self.lex_loc)
+        quote = self.last_char
+        self.last_char = self.advance()
+        content = ""
+
+        while self.last_char not in (quote, EOF, "\n", "\r"):
+            if self.last_char == "\\":
+                self.last_char = self.advance()
+                escapes = {
+                    "n": "\n",
+                    "t": "\t",
+                    "r": "\r",
+                    "\\": "\\",
+                    "'": "'",
+                    '"': '"',
+                }
+                content += escapes.get(self.last_char, self.last_char)
+                self.last_char = self.advance()
+                continue
+
+            content += self.last_char
+            self.last_char = self.advance()
+
+        if self.last_char != quote:
+            raise LexerError("Unterminated quoted literal", literal_loc)
+
+        self.last_char = self.advance()
+
+        if quote == "'":
+            if len(content) != 1:
+                raise LexerError(
+                    "Character literals must contain exactly one character",
+                    literal_loc,
+                )
+            return Token(
+                kind=TokenKind.char_literal,
+                value=content,
+                location=literal_loc,
+            )
+
+        return Token(
+            kind=TokenKind.string_literal,
+            value=content,
+            location=literal_loc,
+        )
+
     def advance(self) -> str:
         """
         title: Advance the token from the buffer.
@@ -508,12 +632,15 @@ class Lexer:
         self.last_char = self.advance()
 
         two_char_ops = {
-            "==": "eq",
-            "!=": "ne",
-            ">=": "ge",
-            "<=": "le",
-            "->": "arrow",
-            "//": "comment",
+            "==": "==",
+            "!=": "!=",
+            ">=": ">=",
+            "<=": "<=",
+            "->": "->",
+            "&&": "&&",
+            "||": "||",
+            "++": "++",
+            "--": "--",
         }
 
         if op + self.last_char in two_char_ops:
