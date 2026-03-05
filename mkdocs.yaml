@@ -76,7 +76,7 @@ plugins:
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
-            docstring_style: numpy
+            docstring_style: google
             filters: ["!^_"]
             heading_level: 1
             inherited_members: true
@@ -133,7 +133,7 @@ markdown_extensions:
       permalink: true
 
 extra:
-  project_name: "IRx"
+  project_name: "Arx"
   team:
     - name: "Active maintainers"
       members:
@@ -145,11 +145,11 @@ extra:
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/xmnlab
     - icon: fontawesome/brands/github
-      link: https://github.com/arxlang/irx
+      link: https://github.com/arxlang/arx
   support_levels:
     supported:
       icon: :material-check-decagram:{ .verified }
-      description: Tested in CI. If this doesn't work for you, please [file an issue](https://github.com/arxlang/irx/issues/new).
+      description: Tested in CI. If this doesn't work for you, please [file an issue](https://github.com/arxlang/arx/issues/new).
     bug:
       icon: :material-bug:{ .bug }
       description: Should work but doesn't because upstream is broken. Supported on a best-effort basis.
@@ -157,4 +157,4 @@ extra:
       icon: :material-cancel:{ .cancel }
       description: Unlikely to ever be supported or no upstream support.
 
-copyright: "Copyright &copy; 2022, IRx Team"
+copyright: "Copyright &copy; 2022, ArxLang Team"
