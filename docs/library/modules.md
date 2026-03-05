@@ -5,10 +5,18 @@ statements such as function definitions and extern declarations.
 
 ## Module Layout
 
-```arx
-fn average(x, y):
-  return (x + y) * 0.5
+````arx
 ```
+title: Math module example
+summary: Module with one documented function.
+```
+fn average(x, y):
+  ```
+  title: average
+  summary: Returns the arithmetic mean of x and y.
+  ```
+  return (x + y) * 0.5
+````
 
 ## Module Docstring
 
@@ -34,6 +42,10 @@ Valid:
 title: Module docs
 ```
 fn main():
+  ```
+  title: main
+  summary: Entry point for the module.
+  ```
   return 1
 ````
 
@@ -41,9 +53,13 @@ Invalid (leading indentation before module docstring):
 
 ````text
   ```
-  Module docs
+  title: Module docs
   ```
 fn main():
+  ```
+  title: main
+  summary: Entry point for the module.
+  ```
   return 1
 ````
 

@@ -8,7 +8,8 @@ Docstrings are delimited by triple backticks:
 
 ````text
 ```
-Documentation text
+title: Example docstring
+summary: Optional summary value.
 ```
 ````
 
@@ -45,6 +46,10 @@ Valid:
 title: Module docs
 ```
 fn main():
+  ```
+  title: main
+  summary: Entry point for the module.
+  ```
   return 1
 ````
 
@@ -70,7 +75,8 @@ Invalid:
 fn main():
   return 1
   ```
-  Too late
+  title: Too late
+  summary: This docstring is valid Douki but in the wrong position.
   ```
 ````
 

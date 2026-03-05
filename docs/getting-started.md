@@ -35,10 +35,18 @@ arx --version
 
 Create a file called `hello.x`:
 
+````arx
+```
+title: Hello example
+summary: Minimal Arx program that adds two values.
 ```
 fn sum(a, b):
+  ```
+  title: sum
+  summary: Returns the sum of a and b.
+  ```
   return a + b
-```
+````
 
 ### View the tokens
 
@@ -70,42 +78,82 @@ The `examples/` directory contains several sample programs:
 
 ### Sum
 
+````arx
+```
+title: Sum example
+summary: Demonstrates a basic addition function.
 ```
 fn sum(a, b):
+  ```
+  title: sum
+  summary: Returns the sum of two values.
+  ```
   return a + b;
-```
+````
 
 ### Average
 
+````arx
+```
+title: Average example
+summary: Demonstrates a basic arithmetic average function.
 ```
 fn average(x, y):
+  ```
+  title: average
+  summary: Returns the arithmetic mean of x and y.
+  ```
   return (x + y) * 0.5;
-```
+````
 
 ### Fibonacci
 
+````arx
+```
+title: Fibonacci example
+summary: Computes Fibonacci numbers recursively.
 ```
 fn fib(x):
+  ```
+  title: fib
+  summary: Returns the Fibonacci number for the input index.
+  ```
   if x < 3:
     return 1
   else:
     return fib(x-1)+fib(x-2)
-```
+````
 
 ### Constant
 
+````arx
+```
+title: Constant example
+summary: Demonstrates a function that returns its argument unchanged.
 ```
 fn get_constant(x):
+  ```
+  title: get_constant
+  summary: Returns the provided value.
+  ```
   return x;
-```
+````
 
 ### Print Star
 
+````arx
+```
+title: Print star example
+summary: Emits star characters using an external output function.
 ```
 fn print_star(n):
+  ```
+  title: print_star
+  summary: Prints stars in a loop by calling putchard.
+  ```
   for i = 1, i < n, 1.0 in
     putchard(42);  # ascii 42 = '*'
-```
+````
 
 You can compile any example with:
 
@@ -138,48 +186,84 @@ Arx's syntax is influenced by Python with significant whitespace (indentation).
 Functions are defined with the `fn` keyword and use `:` plus indentation for the
 body:
 
+````arx
+```
+title: Function definition example
+summary: Shows a basic function declaration.
 ```
 fn add(x, y):
+  ```
+  title: add
+  summary: Returns x plus y.
+  ```
   return x + y
-```
+````
 
 ### Control Flow
 
 **If/else:**
 
+````arx
+```
+title: If/else example
+summary: Shows conditional branching in a function.
 ```
 fn abs(x):
+  ```
+  title: abs
+  summary: Returns the absolute value of x.
+  ```
   if x < 0:
     return 0 - x
   else:
     return x
-```
+````
 
 **For loop:**
 
+````arx
+```
+title: For loop example
+summary: Shows loop syntax with a range-like clause.
 ```
 fn count(n):
+  ```
+  title: count
+  summary: Iterates and prints star characters.
+  ```
   for i = 1, i < n, 1.0 in
     putchard(42)
-```
+````
 
 ### Variables
 
 Variables are declared with `var`:
 
+````arx
+```
+title: Variable example
+summary: Shows var binding inside a function.
 ```
 fn example():
+  ```
+  title: example
+  summary: Binds a variable and computes a result.
+  ```
   var a = 10 in
     a + 1
-```
+````
 
 ### Extern Functions
 
 External functions (e.g., from C) are declared with `extern`:
 
+````arx
+```
+title: Extern declaration example
+summary: Declares an external function symbol.
 ```
 extern putchard(x)
-```
+````
 
 ## Next Steps
 

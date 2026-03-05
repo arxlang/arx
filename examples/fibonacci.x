@@ -1,4 +1,12 @@
+```
+title: Fibonacci example
+summary: Computes Fibonacci numbers recursively.
+```
 fn fib(x):
+  ```
+  title: fib
+  summary: Returns the Fibonacci number for the input index.
+  ```
   if x < 3:
     return 1
   else:
