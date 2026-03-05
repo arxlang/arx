@@ -100,4 +100,4 @@ ENV/
 .idea/
 
 # arx
-*.arx.o
+*.x.o

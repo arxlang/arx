@@ -25,7 +25,7 @@ def get_module_name_from_file_path(filepath: str) -> str:
     returns:
       type: str
     """
-    return filepath.rsplit(os.sep, maxsplit=1)[-1].replace(".arx", "")
+    return filepath.rsplit(os.sep, maxsplit=1)[-1].replace(".x", "")
 
 
 @dataclass
@@ -58,13 +58,10 @@ class ArxMain:
 
         return tree_ast
 
-    def run(self, *args: Any, **kwargs: Any) -> None:
+    def run(self, **kwargs: Any) -> None:
         """
         title: Compile the given source code.
         parameters:
-          args:
-            type: Any
-            variadic: positional
           kwargs:
             type: Any
             variadic: keyword

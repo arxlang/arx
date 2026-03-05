@@ -78,7 +78,7 @@ groups:
         run: |
           for name in "${{ args.examples }}".split(","):
             print(f" show tokens: {name} ".center(80, "="))
-            arx --show-tokens examples/@(name).arx
+            arx --show-tokens examples/@(name).x
       show-ast:
         help: Emit ast for input file
         args:
@@ -89,7 +89,7 @@ groups:
         run: |
           for name in "${{ args.examples }}".split(","):
             print(f" show ast: {name} ".center(80, "="))
-            arx --show-ast examples/@(name).arx
+            arx --show-ast examples/@(name).x
       show-llvm-ir:
         help: Emit ast for input file
         args:
@@ -100,7 +100,7 @@ groups:
         run: |
           for name in "${{ args.examples }}".split(","):
             print(f" show llvm ir: {name} ".center(80, "="))
-            arx --show-llvm-ir examples/@(name).arx
+            arx --show-llvm-ir examples/@(name).x
       emit-object:
         help: Emit ast for input file
         args:
@@ -111,7 +111,7 @@ groups:
         run: |
           for name in "${{ args.examples }}".split(","):
             print(f" emit object: {name} ".center(80, "="))
-            arx examples/@(name).arx
+            arx examples/@(name).x
 
   docs:
     tasks:
