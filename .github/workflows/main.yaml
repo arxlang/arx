@@ -74,6 +74,9 @@ jobs:
       - name: Run smoke tests
         run: makim tests.smoke
 
+      - name: Run syntax tests
+        run: makim tests.syntax
+
   linter:
     runs-on: ubuntu-latest
     timeout-minutes: 10

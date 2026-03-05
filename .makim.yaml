@@ -38,6 +38,11 @@ groups:
             default: "-vv"
         run: pytest ${{ args.path }} ${{ args.params }}
 
+      syntax:
+        help: run syntax tests
+        run: |
+          python -m json.tool syntax/arx.syntax.json
+
       smoke:
         help: run smoke tests
         hooks:
