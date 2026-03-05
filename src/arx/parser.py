@@ -8,6 +8,7 @@ import astx
 
 from astx import SourceLocation
 
+from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
 
@@ -81,20 +82,44 @@ class Parser:
         if self.tokens.cur_tok.kind == TokenKind.not_initialized:
             self.tokens.get_next_token()
 
+        allow_module_docstring = True
         while True:
             if self.tokens.cur_tok.kind == TokenKind.eof:
                 break
+            elif self.tokens.cur_tok.kind == TokenKind.docstring:
+                if (
+                    allow_module_docstring
+                    and self.tokens.cur_tok.location.line == 0
+                    and self.tokens.cur_tok.location.col == 1
+                ):
+                    try:
+                        validate_docstring(self.tokens.cur_tok.value)
+                    except ValueError as err:
+                        raise ParserException(
+                            f"Invalid module docstring: {err}"
+                        ) from err
+                    self.tokens.get_next_token()
+                    allow_module_docstring = False
+                    continue
+                raise ParserException(
+                    "Module docstrings are only allowed as the first "
+                    "statement starting at line 1, column 1."
+                )
             elif self.tokens.cur_tok == Token(
                 kind=TokenKind.operator, value=";"
             ):
                 # ignore top-level semicolons.
                 self.tokens.get_next_token()
+                allow_module_docstring = False
             elif self.tokens.cur_tok.kind == TokenKind.kw_function:
                 tree.nodes.append(self.parse_function())
+                allow_module_docstring = False
             elif self.tokens.cur_tok.kind == TokenKind.kw_extern:
                 tree.nodes.append(self.parse_extern())
+                allow_module_docstring = False
             else:
                 tree.nodes.append(self.parse_expression())
+                allow_module_docstring = False
 
         return tree
 
@@ -117,7 +142,7 @@ class Parser:
         """
         self.tokens.get_next_token()  # eat function.
         proto: astx.FunctionPrototype = self.parse_prototype()
-        return astx.FunctionDef(proto, self.parse_block())
+        return astx.FunctionDef(proto, self.parse_block(allow_docstring=True))
 
     def parse_extern(self) -> astx.FunctionPrototype:
         """
@@ -158,6 +183,11 @@ class Parser:
             return self.parse_return_function()
         elif self.tokens.cur_tok.kind == TokenKind.indent:
             return self.parse_block()
+        elif self.tokens.cur_tok.kind == TokenKind.docstring:
+            raise ParserException(
+                "Docstrings are only allowed at module start or as the "
+                "first statement inside a function body."
+            )
         else:
             msg: str = (
                 "Parser: Unknown token when expecting an expression:"
@@ -166,13 +196,20 @@ class Parser:
             self.tokens.get_next_token()  # eat unknown token
             raise Exception(msg)
 
-    def parse_block(self) -> astx.Block:
+    def parse_block(self, allow_docstring: bool = False) -> astx.Block:
         """
         title: Parse a block of nodes.
+        parameters:
+          allow_docstring:
+            type: bool
         returns:
           type: astx.Block
         """
-        cur_indent: int = self.tokens.cur_tok.value
+        start_token = self.tokens.cur_tok
+        if start_token.kind != TokenKind.indent:
+            raise ParserException("Expected indentation to start a block.")
+
+        cur_indent: int = start_token.value
 
         self.tokens.get_next_token()  # eat indentation
 
@@ -184,10 +221,27 @@ class Parser:
         if cur_indent > self.indent_level:
             self.indent_level = cur_indent
 
-            while expr := self.parse_expression():
-                block.nodes.append(expr)
-                # if isinstance(expr, astx.IfStmt):
-                #     breakpoint()
+            docstring_allowed_here = allow_docstring
+            while True:
+                if self.tokens.cur_tok.kind == TokenKind.docstring:
+                    if not docstring_allowed_here:
+                        raise ParserException(
+                            "Docstrings are only allowed as the first "
+                            "statement inside a function body."
+                        )
+                    try:
+                        validate_docstring(self.tokens.cur_tok.value)
+                    except ValueError as err:
+                        raise ParserException(
+                            f"Invalid function docstring: {err}"
+                        ) from err
+                    self.tokens.get_next_token()  # eat docstring token
+                    docstring_allowed_here = False
+                else:
+                    expr = self.parse_expression()
+                    block.nodes.append(expr)
+                    docstring_allowed_here = False
+
                 if self.tokens.cur_tok.kind != TokenKind.indent:
                     break
 

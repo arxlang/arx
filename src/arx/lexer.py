@@ -32,6 +32,7 @@ class TokenKind(Enum):
     # data types
     identifier = -10
     float_literal = -11
+    docstring = -12
 
     # control flow
     kw_if = -20
@@ -80,6 +81,7 @@ MAP_KW_TOKEN_TO_NAME: Dict[TokenKind, str] = {
     TokenKind.identifier: "identifier",
     TokenKind.indent: "indent",
     TokenKind.float_literal: "float",
+    TokenKind.docstring: "docstring",
     TokenKind.kw_if: "if",
     TokenKind.kw_then: "then",
     TokenKind.kw_else: "else",
@@ -149,6 +151,8 @@ class Token:
             return "(" + str(self.value) + ")"
         elif self.kind == TokenKind.float_literal:
             return "(" + str(self.value) + ")"
+        elif self.kind == TokenKind.docstring:
+            return "(...)"
         return ""
 
     def __eq__(self, other: object) -> bool:
@@ -386,6 +390,10 @@ class Lexer:
                 location=self.lex_loc,
             )
 
+        # Docstring: ```...```
+        if self.last_char == "`":
+            return self._parse_docstring()
+
         # Comment until end of line.
         if self.last_char == "#":
             while self.last_char not in (EOF, "\n", "\r"):
@@ -402,6 +410,61 @@ class Lexer:
                 kind=TokenKind.operator, value=this_char, location=self.lex_loc
             )
         return Token(kind=TokenKind.eof, value="", location=self.lex_loc)
+
+    def _parse_docstring(self) -> Token:
+        """
+        title: Parse docstrings delimited by triple backticks.
+        returns:
+          type: Token
+        """
+        doc_loc = copy.deepcopy(self.lex_loc)
+
+        # Consume opening delimiter.
+        self.last_char = self.advance()
+        if self.last_char != "`":
+            raise LexerError(
+                "Invalid docstring delimiter. Expected ```",
+                doc_loc,
+            )
+
+        self.last_char = self.advance()
+        if self.last_char != "`":
+            raise LexerError(
+                "Invalid docstring delimiter. Expected ```",
+                doc_loc,
+            )
+
+        # Move after opening delimiter.
+        self.last_char = self.advance()
+        content = ""
+
+        while True:
+            if self.last_char == EOF:
+                raise LexerError("Unterminated docstring block", doc_loc)
+
+            if self.last_char != "`":
+                content += self.last_char
+                self.last_char = self.advance()
+                continue
+
+            # We found a backtick. Check whether it starts the closing ```.
+            self.last_char = self.advance()
+            if self.last_char != "`":
+                content += "`"
+                continue
+
+            self.last_char = self.advance()
+            if self.last_char != "`":
+                content += "``"
+                continue
+
+            # Closing delimiter consumed. Move to next character.
+            self.last_char = self.advance()
+            return Token(
+                kind=TokenKind.docstring,
+                value=content,
+                location=doc_loc,
+            )
 
     def advance(self) -> str:
         """

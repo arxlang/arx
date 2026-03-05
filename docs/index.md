@@ -11,17 +11,25 @@ computing.
 
 ## Quick Example
 
+````arx
+```
+title: Quick average example
+summary: Demonstrates a function with module and function docstrings.
 ```
 fn average(x, y):
+  ```
+  title: average
+  summary: Returns the arithmetic mean of x and y.
+  ```
   return (x + y) * 0.5
-```
+````
 
 ```bash
 arx --show-llvm-ir examples/average.x
 ```
 
 See the [Getting Started](getting-started.md) guide for installation and more
-examples.
+examples. For language details, see the [Library Reference](library/index.md).
 
 ## Key Features
 

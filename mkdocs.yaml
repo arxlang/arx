@@ -6,6 +6,12 @@ site_dir: ./build
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
+  - Library:
+      - Overview: library/index.md
+      - Modules: library/modules.md
+      - Functions: library/functions.md
+      - Docstrings: library/docstrings.md
   - API Docs: api/
   - Sponsor: sponsor.md
   - Roadmap: roadmap.md
