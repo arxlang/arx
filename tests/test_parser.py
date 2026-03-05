@@ -3,7 +3,9 @@ title: Test parser methods.
 """
 
 import astx
+import pytest
 
+from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -122,3 +124,65 @@ def test_parse_fn() -> None:
     assert isinstance(expr.body.nodes[1], astx.FunctionReturn)
     assert isinstance(expr.body.nodes[1].value, astx.Variable)
     assert expr.body.nodes[1].value.name == "a"
+
+
+def test_parse_module_docstring() -> None:
+    """
+    title: Test module docstring placement and parser ignore behavior.
+    """
+    ArxIO.string_to_buffer("```\nModule docs\n```\nfn main():\n  return 1\n")
+
+    lexer = Lexer()
+    parser = Parser()
+    tree = parser.parse(lexer.lex())
+
+    assert isinstance(tree, astx.Block)
+    assert len(tree.nodes) == 1
+    assert isinstance(tree.nodes[0], astx.FunctionDef)
+
+
+def test_parse_module_docstring_must_start_first_line() -> None:
+    """
+    title: Test module docstring must start at line 1, column 1.
+    """
+    ArxIO.string_to_buffer("  ```\nmodule docs\n```\nfn main():\n  return 1\n")
+
+    lexer = Lexer()
+    parser = Parser()
+
+    with pytest.raises(ParserException):
+        parser.parse(lexer.lex())
+
+
+def test_parse_function_docstring() -> None:
+    """
+    title: Test function docstring as first body statement.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n  ```\n  function docs\n  ```\n  return 1\n"
+    )
+
+    lexer = Lexer()
+    parser = Parser(lexer.lex())
+
+    parser.tokens.get_next_token()
+    expr = parser.parse_function()
+
+    assert isinstance(expr, astx.FunctionDef)
+    assert len(expr.body.nodes) == 1
+    assert isinstance(expr.body.nodes[0], astx.FunctionReturn)
+
+
+def test_parse_function_docstring_must_be_first_stmt() -> None:
+    """
+    title: Test function docstring invalid placement after expressions.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n  return 1\n  ```\n  function docs\n  ```\n"
+    )
+
+    lexer = Lexer()
+    parser = Parser()
+
+    with pytest.raises(ParserException):
+        parser.parse(lexer.lex())
