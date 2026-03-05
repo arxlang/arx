@@ -1,4 +1,6 @@
-"""Module for handling the IO used by the compiler."""
+"""
+title: Module for handling the IO used by the compiler.
+"""
 
 import os
 import sys
@@ -6,27 +8,47 @@ import tempfile
 
 
 class ArxBuffer:
-    """ArxBuffer gathers function for handle the system buffer."""
+    """
+    title: ArxBuffer gathers function for handle the system buffer.
+    attributes:
+      buffer:
+        type: str
+      position:
+        type: int
+    """
 
     buffer: str = ""
     position: int = 0
 
     def __init__(self) -> None:
-        """Initialize ArxBuffer instance."""
+        """
+        title: Initialize ArxBuffer instance.
+        """
         self.clean()
 
     def clean(self) -> None:
-        """Clean the buffer content."""
+        """
+        title: Clean the buffer content.
+        """
         self.position = 0
         self.buffer = ""
 
     def write(self, text: str) -> None:
-        """Write the given text to the buffer."""
+        """
+        title: Write the given text to the buffer.
+        parameters:
+          text:
+            type: str
+        """
         self.buffer += text
         self.position = 0
 
     def read(self) -> str:
-        """Read the buffer content."""
+        """
+        title: Read the buffer content.
+        returns:
+          type: str
+        """
         try:
             i = self.position
             self.position += 1
@@ -36,7 +58,18 @@ class ArxBuffer:
 
 
 class ArxIO:
-    """Arx class for Input and Output operations."""
+    """
+    title: Arx class for Input and Output operations.
+    attributes:
+      INPUT_FROM_STDIN:
+        type: bool
+      INPUT_FILE:
+        type: str
+      EOF:
+        type: int
+      buffer:
+        type: ArxBuffer
+    """
 
     INPUT_FROM_STDIN: bool = False
     INPUT_FILE: str = ""
@@ -46,12 +79,10 @@ class ArxIO:
     @classmethod
     def get_char(cls) -> str:
         """
-        Get a char from the buffer or from the default input.
-
-        Returns
-        -------
-        str
-            A char from the buffer.
+        title: Get a char from the buffer or from the default input.
+        returns:
+          type: str
+          description: A char from the buffer.
         """
         if cls.INPUT_FROM_STDIN:
             return sys.stdin.read(1)
@@ -60,12 +91,11 @@ class ArxIO:
     @classmethod
     def file_to_buffer(cls, filename: str) -> None:
         """
-        Copy the file content to the buffer.
-
-        Parameters
-        ----------
-        filename : str
-            The name of the file to be copied to the buffer.
+        title: Copy the file content to the buffer.
+        parameters:
+          filename:
+            type: str
+            description: The name of the file to be copied to the buffer.
         """
         with open(filename, "r") as arxfile:
             cls.buffer.clean()
@@ -75,19 +105,20 @@ class ArxIO:
     @classmethod
     def string_to_buffer(cls, value: str) -> None:
         """
-        Copy the given string to the buffer.
-
-        Parameters
-        ----------
-        value : str
-            The string to be copied to the buffer.
+        title: Copy the given string to the buffer.
+        parameters:
+          value:
+            type: str
+            description: The string to be copied to the buffer.
         """
         cls.buffer.clean()
         cls.buffer.write(value)
 
     @classmethod
     def load_input_to_buffer(cls) -> None:
-        """Load the content file or the standard input to the buffer."""
+        """
+        title: Load the content file or the standard input to the buffer.
+        """
         if cls.INPUT_FILE:
             input_file_path = os.path.abspath(cls.INPUT_FILE)
             cls.file_to_buffer(input_file_path)
@@ -99,22 +130,21 @@ class ArxIO:
 
 
 class ArxFile:
-    """ArxFile gathers function to handle files."""
+    """
+    title: ArxFile gathers function to handle files.
+    """
 
     @staticmethod
     def create_tmp_file(content: str) -> str:
         """
-        Create a temporary file with the given content.
-
-        Parameters
-        ----------
-        content : str
-            The content of the temporary file.
-
-        Returns
-        -------
-        str
-            The name of the created temporary file.
+        title: Create a temporary file with the given content.
+        parameters:
+          content:
+            type: str
+            description: The content of the temporary file.
+        returns:
+          type: str
+          description: The name of the created temporary file.
         """
         # Create a temporary file.
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
@@ -130,17 +160,14 @@ class ArxFile:
     @staticmethod
     def delete_file(filename: str) -> int:
         """
-        Delete the specified file.
-
-        Parameters
-        ----------
-        filename : str
-            The name of the file to be deleted.
-
-        Returns
-        -------
-        int
-            Returns 0 on success, or -1 on failure.
+        title: Delete the specified file.
+        parameters:
+          filename:
+            type: str
+            description: The name of the file to be deleted.
+        returns:
+          type: int
+          description: Returns 0 on success, or -1 on failure.
         """
         try:
             os.remove(filename)

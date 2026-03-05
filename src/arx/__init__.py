@@ -1,10 +1,16 @@
-"""Arx is a compiler create with llvm."""
+"""
+title: Arx is a compiler create with llvm.
+"""
 
 from importlib import metadata as importlib_metadata
 
 
 def get_version() -> str:
-    """Return the program version."""
+    """
+    title: Return the program version.
+    returns:
+      type: str
+    """
     try:
         return importlib_metadata.version(__name__)
     except importlib_metadata.PackageNotFoundError:  # pragma: no cover

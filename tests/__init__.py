@@ -1,1 +1,3 @@
-"""Unit test package for arx."""
+"""
+title: Unit test package for arx.
+"""

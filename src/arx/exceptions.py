@@ -1,17 +1,33 @@
-"""Define custom Exceptions to improve error message."""
+"""
+title: Define custom Exceptions to improve error message.
+"""
 
 
 class ParserException(Exception):
-    """Handle exceptions for the Parser phase."""
+    """
+    title: Handle exceptions for the Parser phase.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ParserException."""
+        """
+        title: Initialize ParserException.
+        parameters:
+          message:
+            type: str
+        """
         super().__init__(f"ParserError: {message}")
 
 
 class CodeGenException(Exception):
-    """Handle exceptions for the CodeGen phase."""
+    """
+    title: Handle exceptions for the CodeGen phase.
+    """
 
     def __init__(self, message: str) -> None:
-        """Initialize ParserException."""
+        """
+        title: Initialize ParserException.
+        parameters:
+          message:
+            type: str
+        """
         super().__init__(f"CodeGenError: {message}")

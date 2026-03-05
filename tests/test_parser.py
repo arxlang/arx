@@ -1,4 +1,6 @@
-"""Test parser methods."""
+"""
+title: Test parser methods.
+"""
 
 import astx
 
@@ -8,7 +10,9 @@ from arx.parser import Parser
 
 
 def test_binop_precedence() -> None:
-    """Test BinOp precedence."""
+    """
+    title: Test BinOp precedence.
+    """
     lexer = Lexer()
     parser = Parser(lexer.lex())
 
@@ -21,7 +25,9 @@ def test_binop_precedence() -> None:
 
 
 def test_parse_float_expr() -> None:
-    """Test gettok for main tokens."""
+    """
+    title: Test gettok for main tokens.
+    """
     ArxIO.string_to_buffer("1 2")
     lexer = Lexer()
     parser = Parser(lexer.lex())
@@ -48,7 +54,9 @@ def test_parse_float_expr() -> None:
 
 
 def test_parse() -> None:
-    """Test gettok for main tokens."""
+    """
+    title: Test gettok for main tokens.
+    """
     ArxIO.string_to_buffer(
         "if 1 > 2:\n" + "  a = 1\n" + "else:\n" + "  a = 2\n"
     )
@@ -61,7 +69,9 @@ def test_parse() -> None:
 
 
 def test_parse_if_stmt() -> None:
-    """Test gettok for main tokens."""
+    """
+    title: Test gettok for main tokens.
+    """
     ArxIO.string_to_buffer(
         "if 1 > 2:\n" + "  a = 1\n" + "else:\n" + "  a = 2\n"
     )
@@ -81,7 +91,9 @@ def test_parse_if_stmt() -> None:
 
 
 def test_parse_fn() -> None:
-    """Test gettok for main tokens."""
+    """
+    title: Test gettok for main tokens.
+    """
     ArxIO.string_to_buffer(
         "fn math(x):\n"
         + "  if 1 > 2:\n"

@@ -1,4 +1,6 @@
-"""Test code generation to file object."""
+"""
+title: Test code generation to file object.
+"""
 
 from pathlib import Path
 
@@ -22,7 +24,12 @@ TMP_PATH.mkdir(exist_ok=True)
     ],
 )
 def test_object_generation(code: str) -> None:
-    """Test object generation."""
+    """
+    title: Test object generation.
+    parameters:
+      code:
+        type: str
+    """
     lexer = Lexer()
     parser = Parser()
     ir = LLVMLiteIR()

@@ -1,8 +1,12 @@
-"""Test logs."""
+"""
+title: Test logs.
+"""
 
 from arx.logs import LogError
 
 
 def test_log_error() -> None:
-    """Test LogError."""
+    """
+    title: Test LogError.
+    """
     LogError("Test")

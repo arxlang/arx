@@ -1,4 +1,6 @@
-"""Test code generation AST output."""
+"""
+title: Test code generation AST output.
+"""
 
 import pytest
 
@@ -17,7 +19,12 @@ from irx.builders.llvmliteir import LLVMLiteIR
     ],
 )
 def test_ast_to_output(code: str) -> None:
-    """Test AST to output."""
+    """
+    title: Test AST to output.
+    parameters:
+      code:
+        type: str
+    """
     lexer = Lexer()
     parser = Parser()
     ir = LLVMLiteIR()

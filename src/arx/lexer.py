@@ -1,4 +1,6 @@
-"""Module for handling the lexer analysis."""
+"""
+title: Module for handling the lexer analysis.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +18,9 @@ EOF = ""
 
 
 class TokenKind(Enum):
-    """TokenKind enumeration for known variables returned by the lexer."""
+    """
+    title: TokenKind enumeration for known variables returned by the lexer.
+    """
 
     eof = -1
 
@@ -90,7 +94,16 @@ MAP_KW_TOKEN_TO_NAME: Dict[TokenKind, str] = {
 
 @dataclass
 class Token:
-    """Token class store the kind and the value of the token."""
+    """
+    title: Token class store the kind and the value of the token.
+    attributes:
+      kind:
+        type: TokenKind
+      value:
+        type: Any
+      location:
+        type: SourceLocation
+    """
 
     kind: TokenKind
     value: Any
@@ -107,32 +120,28 @@ class Token:
         self.location = copy.deepcopy(location)
 
     def __hash__(self) -> int:
-        """Implement hash method for Token."""
+        """
+        title: Implement hash method for Token.
+        returns:
+          type: int
+        """
         return hash(f"{self.kind}{self.value}")
 
     def get_name(self) -> str:
         """
-        Get the name of the specified token.
-
-        Parameters
-        ----------
-        tok : int
-            TokenKind value.
-
-        Returns
-        -------
-        str
-            Name of the token.
+        title: Get the name of the specified token.
+        returns:
+          type: str
+          description: Name of the token.
         """
         return MAP_KW_TOKEN_TO_NAME.get(self.kind, str(self.value))
 
     def get_display_value(self) -> str:
         """
-        Return the string representation of a token value.
-
-        Returns
-        -------
-            str: The string representation of the token value.
+        title: Return the string representation of a token value.
+        returns:
+          type: str
+          description: The string representation of the token value.
         """
         if self.kind == TokenKind.identifier:
             return "(" + str(self.value) + ")"
@@ -143,47 +152,78 @@ class Token:
         return ""
 
     def __eq__(self, other: object) -> bool:
-        """Overload __eq__ operator."""
+        """
+        title: Overload __eq__ operator.
+        parameters:
+          other:
+            type: object
+        returns:
+          type: bool
+        """
         tok_other = cast(Token, other)
         return (self.kind, self.value) == (tok_other.kind, tok_other.value)
 
     def __str__(self) -> str:
-        """Display the token in a readable way."""
+        """
+        title: Display the token in a readable way.
+        returns:
+          type: str
+        """
         return f"{self.get_name()}{self.get_display_value()}"
 
 
 class TokenList:
-    """Class for handle a List of tokens."""
+    """
+    title: Class for handle a List of tokens.
+    attributes:
+      tokens:
+        type: List[Token]
+      position:
+        type: int
+      cur_tok:
+        type: Token
+    """
 
     tokens: List[Token]
     position: int = 0
     cur_tok: Token
 
     def __init__(self, tokens: List[Token]) -> None:
-        """Instantiate a TokenList object."""
+        """
+        title: Instantiate a TokenList object.
+        parameters:
+          tokens:
+            type: List[Token]
+        """
         self.tokens = tokens
         self.position = 0
         self.cur_tok: Token = Token(kind=TokenKind.not_initialized, value="")
 
     def __iter__(self) -> TokenList:
-        """Overload the iterator operation."""
+        """
+        title: Overload the iterator operation.
+        returns:
+          type: TokenList
+        """
         self.position = 0
         return self
 
     def __next__(self) -> Token:
-        """Overload the next method used by the iteration."""
+        """
+        title: Overload the next method used by the iteration.
+        returns:
+          type: Token
+        """
         if self.position == len(self.tokens):
             raise StopIteration
         return self.get_token()
 
     def get_token(self) -> Token:
         """
-        Get the next token.
-
-        Returns
-        -------
-        int
-            The next token from standard input.
+        title: Get the next token.
+        returns:
+          type: Token
+          description: The next token from standard input.
         """
         tok = self.tokens[self.position]
         self.position += 1
@@ -191,21 +231,24 @@ class TokenList:
 
     def get_next_token(self) -> Token:
         """
-        Provide a simple token buffer.
-
-        Returns
-        -------
-        int
-            The current token the parser is looking at.
-            Reads another token from the lexer and updates
-            cur_tok with its results.
+        title: Provide a simple token buffer.
+        returns:
+          type: Token
+          description: >-
+            The current token the parser is looking at. Reads another token
+            from the lexer and updates cur_tok with its results.
         """
         self.cur_tok = self.get_token()
         return self.cur_tok
 
 
 class LexerError(Exception):
-    """Custom exception for lexer errors."""
+    """
+    title: Custom exception for lexer errors.
+    attributes:
+      location:
+        description: The source location where the error occurred.
+    """
 
     def __init__(self, message: str, location: SourceLocation):
         super().__init__(
@@ -216,14 +259,17 @@ class LexerError(Exception):
 
 class Lexer:
     """
-    Lexer class for tokenizing known variables.
-
-    Attributes
-    ----------
-    cur_loc : SourceLocation
-        Current source location.
-    lex_loc : SourceLocation
-        Source location for lexer.
+    title: Lexer class for tokenizing known variables.
+    attributes:
+      lex_loc:
+        type: SourceLocation
+        description: Source location for lexer.
+      last_char:
+        type: str
+      new_line:
+        type: bool
+      _keyword_map:
+        type: Dict[str, TokenKind]
     """
 
     lex_loc: SourceLocation = SourceLocation(0, 0)
@@ -254,7 +300,9 @@ class Lexer:
         )
 
     def clean(self) -> None:
-        """Reset the Lexer attributes."""
+        """
+        title: Reset the Lexer attributes.
+        """
         # self.cur_loc = SourceLocation(0, 0)
         self.lex_loc = SourceLocation(0, 0)
         self.last_char = ""
@@ -262,12 +310,10 @@ class Lexer:
 
     def get_token(self) -> Token:
         """
-        Get the next token.
-
-        Returns
-        -------
-        int
-            The next token from standard input.
+        title: Get the next token.
+        returns:
+          type: Token
+          description: The next token from standard input.
         """
         if self.last_char == "":
             self.new_line = True
@@ -359,12 +405,10 @@ class Lexer:
 
     def advance(self) -> str:
         """
-        Advance the token from the buffer.
-
-        Returns
-        -------
-        int
-            TokenKind in integer form.
+        title: Advance the token from the buffer.
+        returns:
+          type: str
+          description: TokenKind in integer form.
         """
         last_char = ArxIO.get_char()
 
@@ -377,7 +421,11 @@ class Lexer:
         return last_char
 
     def lex(self) -> TokenList:
-        """Create a list of tokens from input source."""
+        """
+        title: Create a list of tokens from input source.
+        returns:
+          type: TokenList
+        """
         self.clean()
         cur_tok = Token(kind=TokenKind.not_initialized, value="")
         tokens: List[Token] = []
@@ -387,7 +435,11 @@ class Lexer:
         return TokenList(tokens)
 
     def _parse_operator(self) -> Token:
-        """Parse multi-character operators."""
+        """
+        title: Parse multi-character operators.
+        returns:
+          type: Token
+        """
         location = copy.deepcopy(self.lex_loc)
         op = self.last_char
         self.last_char = self.advance()
