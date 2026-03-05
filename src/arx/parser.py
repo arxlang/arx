@@ -8,6 +8,7 @@ import astx
 
 from astx import SourceLocation
 
+from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
 
@@ -91,6 +92,12 @@ class Parser:
                     and self.tokens.cur_tok.location.line == 0
                     and self.tokens.cur_tok.location.col == 1
                 ):
+                    try:
+                        validate_docstring(self.tokens.cur_tok.value)
+                    except ValueError as err:
+                        raise ParserException(
+                            f"Invalid module docstring: {err}"
+                        ) from err
                     self.tokens.get_next_token()
                     allow_module_docstring = False
                     continue
@@ -222,6 +229,12 @@ class Parser:
                             "Docstrings are only allowed as the first "
                             "statement inside a function body."
                         )
+                    try:
+                        validate_docstring(self.tokens.cur_tok.value)
+                    except ValueError as err:
+                        raise ParserException(
+                            f"Invalid function docstring: {err}"
+                        ) from err
                     self.tokens.get_next_token()  # eat docstring token
                     docstring_allowed_here = False
                 else:

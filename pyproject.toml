@@ -12,6 +12,7 @@ dependencies = [
   "pyyaml >=4",
   "astx (>=0.23.1)",
   "pyirx (==1.6.0)",
+  "jsonschema (>=4.0.0)",
   "types-pyyaml (>=6.0.12.20250516)"
 ]
 

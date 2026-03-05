@@ -21,7 +21,7 @@ arx --show-llvm-ir examples/average.x
 ```
 
 See the [Getting Started](getting-started.md) guide for installation and more
-examples.
+examples. For language details, see the [Library Reference](library/index.md).
 
 ## Key Features
 

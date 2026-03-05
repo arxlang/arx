@@ -184,6 +184,7 @@ extern putchard(x)
 ## Next Steps
 
 - Check the [Roadmap](roadmap.md) for planned features
+- Read the [Library Reference](library/index.md) for language feature details
 - Read the [Contributing Guide](contributing.md) to help develop Arx
-- Browse the [API Docs](api/) for the compiler internals
+- Browse the [API Docs](api/index.md) for the compiler internals
 - Join the [Community](discord.md) on Discord
