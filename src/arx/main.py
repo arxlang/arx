@@ -1,4 +1,6 @@
-"""Arx main module."""
+"""
+title: Arx main module.
+"""
 
 import os
 
@@ -15,13 +17,29 @@ from arx.parser import Parser
 
 
 def get_module_name_from_file_path(filepath: str) -> str:
-    """Return the module name from the source file name."""
-    return filepath.split(os.sep)[-1].replace(".arx", "")
+    """
+    title: Return the module name from the source file name.
+    parameters:
+      filepath:
+        type: str
+    returns:
+      type: str
+    """
+    return filepath.rsplit(os.sep, maxsplit=1)[-1].replace(".arx", "")
 
 
 @dataclass
 class ArxMain:
-    """The main class for calling Arx compiler."""
+    """
+    title: The main class for calling Arx compiler.
+    attributes:
+      input_files:
+        type: list[str]
+      output_file:
+        type: str
+      is_lib:
+        type: bool
+    """
 
     input_files: list[str] = field(default_factory=list)
     output_file: str = ""
@@ -41,7 +59,16 @@ class ArxMain:
         return tree_ast
 
     def run(self, *args: Any, **kwargs: Any) -> None:
-        """Compile the given source code."""
+        """
+        title: Compile the given source code.
+        parameters:
+          args:
+            type: Any
+            variadic: positional
+          kwargs:
+            type: Any
+            variadic: keyword
+        """
         self.input_files = kwargs.get("input_files", [])
         self.output_file = kwargs.get("output_file", "")
         # is_lib now is the only available option
@@ -62,12 +89,16 @@ class ArxMain:
         self.compile()
 
     def show_ast(self) -> None:
-        """Print the AST for the given input file."""
+        """
+        title: Print the AST for the given input file.
+        """
         tree_ast = self._get_astx()
         print(repr(tree_ast))
 
     def show_tokens(self) -> None:
-        """Print the AST for the given input file."""
+        """
+        title: Print the AST for the given input file.
+        """
         lexer = Lexer()
 
         for input_file in self.input_files:
@@ -77,17 +108,26 @@ class ArxMain:
                 print(token)
 
     def show_llvm_ir(self) -> None:
-        """Compile into LLVM IR the given input file."""
+        """
+        title: Compile into LLVM IR the given input file.
+        """
         tree_ast = self._get_astx()
         ir = LLVMLiteIR()
         print(ir.translator.translate(tree_ast))
 
     def run_shell(self) -> None:
-        """Open arx in shell mode."""
+        """
+        title: Open arx in shell mode.
+        """
         raise Exception("Arx Shell is not implemented yet.")
 
     def compile(self, show_llvm_ir: bool = False) -> None:
-        """Compile the given input file."""
+        """
+        title: Compile the given input file.
+        parameters:
+          show_llvm_ir:
+            type: bool
+        """
         tree_ast = self._get_astx()
         ir = LLVMLiteIR()
         ir.build(tree_ast, output_file=self.output_file)

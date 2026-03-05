@@ -1,4 +1,6 @@
-"""parser module gather all functions and classes for parsing."""
+"""
+title: parser module gather all functions and classes for parsing.
+"""
 
 from typing import cast
 
@@ -13,14 +15,28 @@ INDENT_SIZE = 2
 
 
 class Parser:
-    """Parser class."""
+    """
+    title: Parser class.
+    attributes:
+      bin_op_precedence:
+        type: dict[str, int]
+      indent_level:
+        type: int
+      tokens:
+        type: TokenList
+    """
 
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     tokens: TokenList
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
-        """Instantiate the Parser object."""
+        """
+        title: Instantiate the Parser object.
+        parameters:
+          tokens:
+            type: TokenList
+        """
         self.bin_op_precedence: dict[str, int] = {
             "=": 2,
             "<": 10,
@@ -35,7 +51,9 @@ class Parser:
         self.tokens: TokenList = tokens
 
     def clean(self) -> None:
-        """Reset the Parser static variables."""
+        """
+        title: Reset the Parser static variables.
+        """
         self.indent_level = 0
         self.tokens: TokenList = TokenList([])
 
@@ -43,11 +61,15 @@ class Parser:
         self, tokens: TokenList, module_name: str = "main"
     ) -> astx.Block:
         """
-        Parse the input code.
-
-        Returns
-        -------
-        astx.Block
+        title: Parse the input code.
+        parameters:
+          tokens:
+            type: TokenList
+          module_name:
+            type: str
+        returns:
+          type: astx.Block
+          description: >-
             The parsed abstract syntax tree (AST), or None if parsing fails.
         """
         self.clean()
@@ -78,22 +100,19 @@ class Parser:
 
     def get_tok_precedence(self) -> int:
         """
-        Get the precedence of the pending binary operator token.
-
-        Returns
-        -------
-        int
-            The token precedence.
+        title: Get the precedence of the pending binary operator token.
+        returns:
+          type: int
+          description: The token precedence.
         """
         return self.bin_op_precedence.get(self.tokens.cur_tok.value, -1)
 
     def parse_function(self) -> astx.FunctionDef:
         """
-        Parse the function definition expression.
-
-        Returns
-        -------
-        astx.FunctionDef
+        title: Parse the function definition expression.
+        returns:
+          type: astx.FunctionDef
+          description: >-
             The parsed function definition, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat function.
@@ -102,11 +121,10 @@ class Parser:
 
     def parse_extern(self) -> astx.FunctionPrototype:
         """
-        Parse the extern expression.
-
-        Returns
-        -------
-        astx.FunctionPrototype
+        title: Parse the extern expression.
+        returns:
+          type: astx.FunctionPrototype
+          description: >-
             The parsed extern expression as a prototype, or None if parsing
             fails.
         """
@@ -115,12 +133,10 @@ class Parser:
 
     def parse_primary(self) -> astx.AST:
         """
-        Parse the primary expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed primary expression, or None if parsing fails.
+        title: Parse the primary expression.
+        returns:
+          type: astx.AST
+          description: The parsed primary expression, or None if parsing fails.
         """
         if self.tokens.cur_tok.kind == TokenKind.identifier:
             return self.parse_identifier_expr()
@@ -151,7 +167,11 @@ class Parser:
             raise Exception(msg)
 
     def parse_block(self) -> astx.Block:
-        """Parse a block of nodes."""
+        """
+        title: Parse a block of nodes.
+        returns:
+          type: astx.Block
+        """
         cur_indent: int = self.tokens.cur_tok.value
 
         self.tokens.get_next_token()  # eat indentation
@@ -186,24 +206,20 @@ class Parser:
 
     def parse_expression(self) -> astx.Expr:
         """
-        Parse an expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed expression, or None if parsing fails.
+        title: Parse an expression.
+        returns:
+          type: astx.Expr
+          description: The parsed expression, or None if parsing fails.
         """
         lhs: astx.Expr = self.parse_unary()
         return self.parse_bin_op_rhs(0, lhs)
 
     def parse_if_stmt(self) -> astx.IfStmt:
         """
-        Parse the `if` expression.
-
-        Returns
-        -------
-        astx.IfStmt
-            The parsed `if` expression, or None if parsing fails.
+        title: Parse the `if` expression.
+        returns:
+          type: astx.IfStmt
+          description: The parsed `if` expression, or None if parsing fails.
         """
         if_loc: SourceLocation = self.tokens.cur_tok.location
 
@@ -249,12 +265,10 @@ class Parser:
 
     def parse_float_expr(self) -> astx.LiteralFloat32:
         """
-        Parse the number expression.
-
-        Returns
-        -------
-        astx.LiteralFloat32
-            The parsed float expression.
+        title: Parse the number expression.
+        returns:
+          type: astx.LiteralFloat32
+          description: The parsed float expression.
         """
         result = astx.LiteralFloat32(self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # consume the number
@@ -262,12 +276,10 @@ class Parser:
 
     def parse_paren_expr(self) -> astx.Expr:
         """
-        Parse the parenthesis expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed expression.
+        title: Parse the parenthesis expression.
+        returns:
+          type: astx.Expr
+          description: The parsed expression.
         """
         self.tokens.get_next_token()  # eat (.
         expr = self.parse_expression()
@@ -279,12 +291,10 @@ class Parser:
 
     def parse_identifier_expr(self) -> astx.Expr:
         """
-        Parse the identifier expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed expression, or None if parsing fails.
+        title: Parse the identifier expression.
+        returns:
+          type: astx.Expr
+          description: The parsed expression, or None if parsing fails.
         """
         id_name: str = self.tokens.cur_tok.value
 
@@ -328,12 +338,10 @@ class Parser:
 
     def parse_for_stmt(self) -> astx.ForRangeLoopStmt:
         """
-        Parse the `for` expression.
-
-        Returns
-        -------
-        astx.ForRangeLoopStmt
-            The parsed `for` expression, or None if parsing fails.
+        title: Parse the `for` expression.
+        returns:
+          type: astx.ForRangeLoopStmt
+          description: The parsed `for` expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat the for.
 
@@ -375,12 +383,10 @@ class Parser:
 
     def parse_var_expr(self) -> astx.VariableDeclaration:
         """
-        Parse the `var` declaration expression.
-
-        Returns
-        -------
-        astx.VariableDeclaration
-            The parsed `var` expression, or None if parsing fails.
+        title: Parse the `var` declaration expression.
+        returns:
+          type: astx.VariableDeclaration
+          description: The parsed `var` expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat the var.
 
@@ -427,12 +433,10 @@ class Parser:
 
     def parse_unary(self) -> astx.UnaryOp:
         """
-        Parse a unary expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed unary expression, or None if parsing fails.
+        title: Parse a unary expression.
+        returns:
+          type: astx.UnaryOp
+          description: The parsed unary expression, or None if parsing fails.
         """
         # If the current token is not an operator, it must be a primary expr.
         if (
@@ -453,19 +457,17 @@ class Parser:
         lhs: astx.Expr,
     ) -> astx.Expr:
         """
-        Parse a binary expression.
-
-        Parameters
-        ----------
-        expr_prec : int
-            Expression precedence (deprecated).
-        lhs : astx.Expr
-            Left-hand side expression.
-
-        Returns
-        -------
-        astx.Expr
-            The parsed binary expression, or None if parsing fails.
+        title: Parse a binary expression.
+        parameters:
+          expr_prec:
+            type: int
+            description: Expression precedence (deprecated).
+          lhs:
+            type: astx.Expr
+            description: Left-hand side expression.
+        returns:
+          type: astx.Expr
+          description: The parsed binary expression, or None if parsing fails.
         """
         # If this is a binop, find its precedence. #
         while True:
@@ -500,12 +502,10 @@ class Parser:
 
     def parse_prototype(self) -> astx.FunctionPrototype:
         """
-        Parse the prototype expression.
-
-        Returns
-        -------
-        astx.FunctionPrototype
-            The parsed prototype, or None if parsing fails.
+        title: Parse the prototype expression.
+        returns:
+          type: astx.FunctionPrototype
+          description: The parsed prototype, or None if parsing fails.
         """
         fn_name: str
         var_typing: astx.DataType
@@ -560,12 +560,10 @@ class Parser:
 
     def parse_extern_prototype(self) -> astx.FunctionPrototype:
         """
-        Parse an extern prototype expression.
-
-        Returns
-        -------
-        astx.FunctionPrototype
-            The parsed extern prototype, or None if parsing fails.
+        title: Parse an extern prototype expression.
+        returns:
+          type: astx.FunctionPrototype
+          description: The parsed extern prototype, or None if parsing fails.
         """
         fn_name: str
         var_typing: astx.DataType
@@ -614,12 +612,10 @@ class Parser:
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
-        Parse the return expression.
-
-        Returns
-        -------
-        astx.FunctionReturn
-            The parsed return expression, or None if parsing fails.
+        title: Parse the return expression.
+        returns:
+          type: astx.FunctionReturn
+          description: The parsed return expression, or None if parsing fails.
         """
         self.tokens.get_next_token()  # eat return
         return astx.FunctionReturn(

@@ -1,4 +1,6 @@
-"""Functions and classes for handling the CLI call."""
+"""
+title: Functions and classes for handling the CLI call.
+"""
 
 import argparse
 
@@ -9,10 +11,11 @@ from arx.main import ArxMain
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
-    """Formatter for generating usage messages and argument help strings.
-
-    Only the name of this class is considered a public API. All the methods
-    provided by the class are considered an implementation detail.
+    """
+    title: Formatter for generating usage messages and argument help strings.
+    summary: >-
+      Only the name of this class is considered a public API. All the methods
+      provided by the class are considered an implementation detail.
     """
 
     def __init__(
@@ -33,7 +36,11 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
 
 
 def get_args() -> argparse.ArgumentParser:
-    """Get the CLI arguments."""
+    """
+    title: Get the CLI arguments.
+    returns:
+      type: argparse.ArgumentParser
+    """
     parser = argparse.ArgumentParser(
         prog="arx",
         description=(
@@ -100,12 +107,16 @@ def get_args() -> argparse.ArgumentParser:
 
 
 def show_version() -> None:
-    """Show the application version."""
+    """
+    title: Show the application version.
+    """
     print(__version__)
 
 
 def app() -> None:
-    """Run the application."""
+    """
+    title: Run the application.
+    """
     args_parser = get_args()
     args = args_parser.parse_args()
 

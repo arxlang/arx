@@ -1,4 +1,6 @@
-"""Tests for `arx`.`lexer`."""
+"""
+title: Tests for `arx`.`lexer`.
+"""
 
 import pytest
 
@@ -7,7 +9,9 @@ from arx.lexer import Lexer, Token, TokenKind
 
 
 def test_token_name() -> None:
-    """Test token name."""
+    """
+    title: Test token name.
+    """
     assert Token(kind=TokenKind.eof, value="").get_name() == "eof"
     assert Token(kind=TokenKind.kw_function, value="").get_name() == "function"
     assert Token(kind=TokenKind.kw_return, value="").get_name() == "return"
@@ -22,7 +26,12 @@ def test_token_name() -> None:
 
 @pytest.mark.parametrize("value", ["123", "234", "345"])
 def test_advance(value: str) -> None:
-    """Test advance lexer method."""
+    """
+    title: Test advance lexer method.
+    parameters:
+      value:
+        type: str
+    """
     ArxIO.string_to_buffer(value)
     lexer = Lexer()
     assert lexer.advance() == value[0]
@@ -31,7 +40,9 @@ def test_advance(value: str) -> None:
 
 
 def test_get_tok_simple() -> None:
-    """Test get_token."""
+    """
+    title: Test get_token.
+    """
     ArxIO.string_to_buffer("11")
     lexer = Lexer()
     assert lexer.get_token() == Token(kind=TokenKind.float_literal, value=11.0)
@@ -44,7 +55,9 @@ def test_get_tok_simple() -> None:
 
 
 def test_get_next_token_simple() -> None:
-    """Test get_next_token."""
+    """
+    title: Test get_next_token.
+    """
     lexer = Lexer()
     ArxIO.string_to_buffer("11")
     tokens = lexer.lex()
@@ -66,7 +79,9 @@ def test_get_next_token_simple() -> None:
 
 
 def test_get_tok() -> None:
-    """Test gettok for main tokens."""
+    """
+    title: Test gettok for main tokens.
+    """
     ArxIO.string_to_buffer(
         "fn math(x):\n"
         "  if x > 10:\n"

@@ -1,1 +1,3 @@
-"""Semantic analysis module."""
+"""
+title: Semantic analysis module.
+"""
