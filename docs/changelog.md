@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+## [0.3.2](https://github.com/arxlang/arx/compare/0.3.1...0.3.2) (2026-03-06)
+
+
+### Bug Fixes
+
+* Fix compilation issues with PIE ([#34](https://github.com/arxlang/arx/issues/34)) ([4d043b2](https://github.com/arxlang/arx/commit/4d043b20f9d175e29d0469e563b543ccc1eff536))
+* Returning type is now required ([#33](https://github.com/arxlang/arx/issues/33)) ([938a8b1](https://github.com/arxlang/arx/commit/938a8b1b847983fea06576e88324785c090f0c19))
+
 ## [0.3.1](https://github.com/arxlang/arx/compare/0.3.0...0.3.1) (2026-03-06)
 
 
