@@ -253,6 +253,18 @@ class Parser:
         docstring_allowed_here = allow_docstring
 
         while True:
+            # Indentation tokens are line markers. Consume same-level markers
+            # (including comment/blank lines), stop on dedent, and reject
+            # unexpected over-indentation at this parsing level.
+            if self.tokens.cur_tok.kind == TokenKind.indent:
+                new_indent = self.tokens.cur_tok.value
+                if new_indent < cur_indent:
+                    break
+                if new_indent > cur_indent:
+                    raise ParserException("Indentation not allowed here.")
+                self.tokens.get_next_token()  # eat same-level indentation
+                continue
+
             if self.tokens.cur_tok.kind == TokenKind.docstring:
                 if not docstring_allowed_here:
                     raise ParserException(
@@ -272,16 +284,12 @@ class Parser:
                 block.nodes.append(node)
                 docstring_allowed_here = False
 
-            if self.tokens.cur_tok.kind != TokenKind.indent:
+            next_kind: TokenKind = self.tokens.cur_tok.kind
+            if next_kind not in {
+                TokenKind.indent,
+                TokenKind.docstring,
+            }:
                 break
-
-            new_indent = self.tokens.cur_tok.value
-            if new_indent < cur_indent:
-                break
-            if new_indent > cur_indent:
-                raise ParserException("Indentation not allowed here.")
-
-            self.tokens.get_next_token()  # eat same-level indentation
 
         self.indent_level = prev_indent
         return block
@@ -675,6 +683,10 @@ class Parser:
         returns:
           type: astx.DataType
         """
+        if self.tokens.cur_tok.kind == TokenKind.none_literal:
+            self.tokens.get_next_token()  # eat none
+            return astx.NoneType()
+
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected a type name")
 
@@ -716,14 +728,19 @@ class Parser:
         """
         if (
             self.tokens.cur_tok.kind != TokenKind.operator
-            or self.tokens.cur_tok.value in ("(", ",", ":", ")", "]", ";")
+            or self.tokens.cur_tok.value in ("(", "[", ",", ":", ")", "]", ";")
         ):
             return self.parse_primary()
 
         op_code = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()
         operand = self.parse_unary()
-        return astx.UnaryOp(op_code, cast(astx.DataType, operand))
+        unary = astx.UnaryOp(op_code, cast(astx.DataType, operand))
+        unary.type_ = cast(
+            astx.ExprType,
+            getattr(operand, "type_", astx.ExprType()),
+        )
+        return unary
 
     def parse_bin_op_rhs(self, expr_prec: int, lhs: astx.AST) -> astx.AST:
         """

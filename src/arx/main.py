@@ -90,7 +90,11 @@ class ArxMain:
         title: Print the AST for the given input file.
         """
         tree_ast = self._get_astx()
-        print(repr(tree_ast))
+        try:
+            print(repr(tree_ast))
+        except Exception:
+            # Fallback for nodes whose repr visualizer path is not supported.
+            print(str(tree_ast))
 
     def show_tokens(self) -> None:
         """

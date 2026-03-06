@@ -353,3 +353,25 @@ def test_parse_builtin_cast_and_print() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.body.nodes[1], system.PrintExpr)
+
+
+def test_parse_block_with_comment_and_blank_lines() -> None:
+    """
+    title: Test block parsing across comment/blank lines.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n"
+        "  # section A\n"
+        "\n"
+        "  var a: i32 = 1\n"
+        "  # section B\n"
+        "  return a\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[0], astx.VariableDeclaration)
+    assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
