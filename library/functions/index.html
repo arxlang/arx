@@ -14,7 +14,7 @@
         <link rel="prev" href="../modules/">
       
       
-        <link rel="next" href="../docstrings/">
+        <link rel="next" href="../datatypes/">
       
       
         
@@ -333,6 +333,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -536,6 +540,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../datatypes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../control-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../docstrings/" class="md-nav__link">
         
   
@@ -626,6 +686,8 @@
       
         
           
+        
+      
         
       
         
@@ -740,6 +802,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/codegen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> codegen
   
 
     
@@ -1306,7 +1396,7 @@
 title: Function definition
 summary: Shows the structure of a function declaration.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -&gt; i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -1318,7 +1408,7 @@ fn add(x, y):
 title: Function call example
 summary: Defines a helper function and calls it from main.
 ```
-fn double(v):
+fn double(v: i32) -&gt; i32:
   ```
   title: double
   summary: Returns v multiplied by two.
@@ -1345,7 +1435,7 @@ fn main():
 title: Function docstring placement
 summary: Function docstring appears as the first body element.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -&gt; i32:
   ```
   title: Add two numbers
   summary: Returns x + y.
@@ -1358,7 +1448,7 @@ fn add(x, y):
 title: Extern prototype example
 summary: Declares an external function signature.
 ```
-extern putchard(x)
+extern putchard(x: i32) -&gt; i32
 </code></pre></div>
 
 

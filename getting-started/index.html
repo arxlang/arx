@@ -616,6 +616,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -708,6 +712,62 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/datatypes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/control-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Flow
   
 
     
@@ -840,6 +900,8 @@
       
         
       
+        
+      
     
     
     
@@ -932,6 +994,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/codegen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> codegen
   
 
     
@@ -1717,7 +1807,7 @@ poetry<span class="w"> </span>install
 title: Hello example
 summary: Minimal Arx program that adds two values.
 ```
-fn sum(a, b):
+fn sum(a: i32, b: i32) -&gt; i32:
   ```
   title: sum
   summary: Returns the sum of a and b.
@@ -1743,7 +1833,7 @@ fn sum(a, b):
 title: Sum example
 summary: Demonstrates a basic addition function.
 ```
-fn sum(a, b):
+fn sum(a: i32, b: i32) -&gt; i32:
   ```
   title: sum
   summary: Returns the sum of two values.
@@ -1755,7 +1845,7 @@ fn sum(a, b):
 title: Average example
 summary: Demonstrates a basic arithmetic average function.
 ```
-fn average(x, y):
+fn average(x: f32, y: f32) -&gt; f32:
   ```
   title: average
   summary: Returns the arithmetic mean of x and y.
@@ -1767,7 +1857,7 @@ fn average(x, y):
 title: Fibonacci example
 summary: Computes Fibonacci numbers recursively.
 ```
-fn fib(x):
+fn fib(x: i32) -&gt; i32:
   ```
   title: fib
   summary: Returns the Fibonacci number for the input index.
@@ -1782,7 +1872,7 @@ fn fib(x):
 title: Constant example
 summary: Demonstrates a function that returns its argument unchanged.
 ```
-fn get_constant(x):
+fn get_constant(x: i32) -&gt; i32:
   ```
   title: get_constant
   summary: Returns the provided value.
@@ -1794,16 +1884,35 @@ fn get_constant(x):
 title: Print star example
 summary: Emits star characters using an external output function.
 ```
-fn print_star(n):
+fn print_star(n: i32) -&gt; none:
   ```
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
-  for i in (1:n:1):
+  for i in (0:n:1):
     putchard(42);  # ascii 42 = &#39;*&#39;
+  return none
+
+fn main() -&gt; i32:
+  ```
+  title: main
+  summary: Runs the print_star demo with a fixed size and exits with status 0.
+  ```
+  print_star(10)
+  return 0
 </code></pre></div>
+<p>Note: Arx entrypoint parameters currently follow the native C <code class="language-python highlight"><span class="n">main</span></code> ABI. A
+single <code class="language-python highlight"><span class="n">main</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">i32</span><span class="p">)</span></code> receives <code class="language-python highlight"><span class="n">argc</span></code>, not the numeric value from <code class="language-python highlight"><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></code>.
+When using <code class="language-python highlight"><span class="o">--</span><span class="n">run</span></code>, prefer <code class="language-python highlight"><span class="n">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">i32</span></code> and <code class="language-python highlight"><span class="k">return</span> <span class="mi">0</span></code> for a stable success
+exit code.</p>
 <p>You can compile any example with:</p>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>examples/sum.x<span class="w"> </span>--show-llvm-ir
+</code></pre></div>
+<p>Or compile and run in one command:</p>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--run<span class="w"> </span>examples/print-star.x
+</code></pre></div>
+<p>Alias form is also available:</p>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>run<span class="w"> </span>examples/print-star.x
 </code></pre></div>
 <h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>arx [input_files] [options]
@@ -1841,6 +1950,10 @@ fn print_star(n):
 <td>Print the LLVM IR for the input source</td>
 </tr>
 <tr>
+<td><code class="language-python highlight"><span class="o">--</span><span class="n">run</span></code></td>
+<td>Build and execute the compiled binary</td>
+</tr>
+<tr>
 <td><code class="language-python highlight"><span class="o">--</span><span class="n">shell</span></code></td>
 <td>Open Arx in a shell prompt (not yet implemented)</td>
 </tr>
@@ -1855,7 +1968,7 @@ body:</p>
 title: Function definition example
 summary: Shows a basic function declaration.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -&gt; i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -1868,7 +1981,7 @@ fn add(x, y):
 title: If/else example
 summary: Shows conditional branching in a function.
 ```
-fn abs(x):
+fn abs(x: i32) -&gt; i32:
   ```
   title: abs
   summary: Returns the absolute value of x.
@@ -1883,7 +1996,7 @@ fn abs(x):
 title: For loop example
 summary: Shows loop syntax with a slice-like range clause.
 ```
-fn count(n):
+fn count(n: i32) -&gt; none:
   ```
   title: count
   summary: Iterates and prints star characters.
@@ -1912,7 +2025,7 @@ fn example():
 title: Extern declaration example
 summary: Declares an external function symbol.
 ```
-extern putchard(x)
+extern putchard(x: i32) -&gt; i32
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

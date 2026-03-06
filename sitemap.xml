@@ -57,6 +57,10 @@
          <lastmod>2026-03-06</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/codegen/</loc>
+         <lastmod>2026-03-06</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/docstrings/</loc>
          <lastmod>2026-03-06</lastmod>
     </url>
@@ -90,6 +94,14 @@
     </url>
     <url>
          <loc>https://arxlang.org/library/</loc>
+         <lastmod>2026-03-06</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/library/control-flow/</loc>
+         <lastmod>2026-03-06</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/library/datatypes/</loc>
          <lastmod>2026-03-06</lastmod>
     </url>
     <url>

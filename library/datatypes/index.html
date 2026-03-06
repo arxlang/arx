@@ -8,31 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://arxlang.org/library/">
+        <link rel="canonical" href="https://arxlang.org/library/datatypes/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../functions/">
       
       
-        <link rel="next" href="modules/">
+        <link rel="next" href="../control-flow/">
       
       
         
       
       
-      <link rel="icon" href="../images/favicon.ico">
+      <link rel="icon" href="../../images/favicon.ico">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
-        <title>Overview - ArxLang</title>
+        <title>Data Types - ArxLang</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +51,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#library-reference" class="md-skip">
+        <a href="#data-types" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../.." title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
-  <img src="../images/arx.png" alt="logo">
+  <img src="../../images/arx.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Data Types
             
           </span>
         </div>
@@ -236,9 +236,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../.." title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
-  <img src="../images/arx.png" alt="logo">
+  <img src="../../images/arx.png" alt="logo">
 
     </a>
     ArxLang
@@ -265,7 +265,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -292,7 +292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -349,7 +349,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -367,7 +367,7 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -393,7 +393,7 @@
   
   
     <li class="md-nav__item">
-      <a href="modules/" class="md-nav__link">
+      <a href="../modules/" class="md-nav__link">
         
   
   
@@ -421,7 +421,7 @@
   
   
     <li class="md-nav__item">
-      <a href="functions/" class="md-nav__link">
+      <a href="../functions/" class="md-nav__link">
         
   
   
@@ -446,10 +446,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="datatypes/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Types
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -465,6 +492,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#type-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Annotations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strings-and-characters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strings And Characters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#date-and-time-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date And Time Literals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#casting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Casting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -477,7 +590,7 @@
   
   
     <li class="md-nav__item">
-      <a href="control-flow/" class="md-nav__link">
+      <a href="../control-flow/" class="md-nav__link">
         
   
   
@@ -505,7 +618,7 @@
   
   
     <li class="md-nav__item">
-      <a href="docstrings/" class="md-nav__link">
+      <a href="../docstrings/" class="md-nav__link">
         
   
   
@@ -631,7 +744,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../api/" class="md-nav__link ">
+            <a href="../../api/" class="md-nav__link ">
               
   
   
@@ -675,7 +788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/builtins/" class="md-nav__link">
+      <a href="../../api/builtins/" class="md-nav__link">
         
   
   
@@ -703,7 +816,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/cli/" class="md-nav__link">
+      <a href="../../api/cli/" class="md-nav__link">
         
   
   
@@ -731,7 +844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/codegen/" class="md-nav__link">
+      <a href="../../api/codegen/" class="md-nav__link">
         
   
   
@@ -759,7 +872,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/docstrings/" class="md-nav__link">
+      <a href="../../api/docstrings/" class="md-nav__link">
         
   
   
@@ -787,7 +900,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/exceptions/" class="md-nav__link">
+      <a href="../../api/exceptions/" class="md-nav__link">
         
   
   
@@ -815,7 +928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/io/" class="md-nav__link">
+      <a href="../../api/io/" class="md-nav__link">
         
   
   
@@ -843,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/lexer/" class="md-nav__link">
+      <a href="../../api/lexer/" class="md-nav__link">
         
   
   
@@ -871,7 +984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/logs/" class="md-nav__link">
+      <a href="../../api/logs/" class="md-nav__link">
         
   
   
@@ -899,7 +1012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/main/" class="md-nav__link">
+      <a href="../../api/main/" class="md-nav__link">
         
   
   
@@ -927,7 +1040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/parser/" class="md-nav__link">
+      <a href="../../api/parser/" class="md-nav__link">
         
   
   
@@ -955,7 +1068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/semantic/" class="md-nav__link">
+      <a href="../../api/semantic/" class="md-nav__link">
         
   
   
@@ -998,7 +1111,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sponsor/" class="md-nav__link">
+      <a href="../../sponsor/" class="md-nav__link">
         
   
   
@@ -1025,7 +1138,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../roadmap/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
@@ -1052,7 +1165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../governance/" class="md-nav__link">
+      <a href="../../governance/" class="md-nav__link">
         
   
   
@@ -1079,7 +1192,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -1106,7 +1219,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -1133,7 +1246,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../partners/" class="md-nav__link">
+      <a href="../../partners/" class="md-nav__link">
         
   
   
@@ -1160,7 +1273,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../coc/" class="md-nav__link">
+      <a href="../../coc/" class="md-nav__link">
         
   
   
@@ -1187,7 +1300,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../discord/" class="md-nav__link">
+      <a href="../../discord/" class="md-nav__link">
         
   
   
@@ -1234,10 +1347,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#available-references" class="md-nav__link">
+  <a href="#type-annotations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Available References
+        Type Annotations
       
     </span>
   </a>
@@ -1245,10 +1358,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scope-current-prototype" class="md-nav__link">
+  <a href="#built-in-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scope (Current Prototype)
+        Built-in Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strings-and-characters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strings And Characters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#date-and-time-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date And Time Literals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#casting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Casting
       
     </span>
   </a>
@@ -1275,28 +1432,160 @@
   
 
 
-<h1 id="library-reference">Library Reference<a class="headerlink" href="#library-reference" title="Permanent link">&para;</a></h1>
-<p>The <strong>Library</strong> section is the language reference for Arx features, inspired by
-the structure of <code class="language-python highlight"><span class="n">docs</span><span class="o">.</span><span class="n">python</span><span class="o">.</span><span class="n">org</span></code>.</p>
-<p>Start here when you need exact syntax and placement rules.</p>
-<h2 id="available-references">Available References<a class="headerlink" href="#available-references" title="Permanent link">&para;</a></h2>
+<h1 id="data-types">Data Types<a class="headerlink" href="#data-types" title="Permanent link">&para;</a></h1>
+<p>Arx uses explicit type annotations for variables, function parameters, and
+optional function return types.</p>
+<h2 id="type-annotations">Type Annotations<a class="headerlink" href="#type-annotations" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="modules/">Modules</a></li>
-<li><a href="functions/">Functions</a></li>
-<li><a href="datatypes/">Data Types</a></li>
-<li><a href="control-flow/">Control Flow</a></li>
-<li><a href="docstrings/">Docstrings</a></li>
+<li>Function parameters must always be typed.</li>
+<li>Function return type is optional. If omitted, current parser default is <code class="language-python highlight"><span class="n">f32</span></code>.</li>
+<li>Variable declarations can include an explicit type with <code class="language-python highlight"><span class="n">var</span> <span class="n">name</span><span class="p">:</span> <span class="nb">type</span></code>.</li>
 </ul>
-<h2 id="scope-current-prototype">Scope (Current Prototype)<a class="headerlink" href="#scope-current-prototype" title="Permanent link">&para;</a></h2>
-<p>This reference currently focuses on:</p>
-<ul>
-<li>module structure</li>
-<li>function definitions and calls</li>
-<li>type system and annotations</li>
-<li>control-flow syntax</li>
-<li>docstring placement rules</li>
-</ul>
-<p>More feature pages can be added here as the language grows.</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Typed function signature
+summary: Demonstrates required parameter annotations.
+```
+fn add(a: i32, b: i32) -&gt; i32:
+  ```
+  title: add
+  summary: Returns a + b.
+  ```
+  return a + b
+</code></pre></div>
+<h2 id="built-in-types">Built-in Types<a class="headerlink" href="#built-in-types" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="language-python highlight"><span class="n">i8</span></code></td>
+<td>8-bit integer</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">a</span><span class="p">:</span> <span class="n">i8</span> <span class="o">=</span> <span class="mi">8</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">i16</span></code></td>
+<td>16-bit integer</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">b</span><span class="p">:</span> <span class="n">i16</span> <span class="o">=</span> <span class="mi">16</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">i32</span></code></td>
+<td>32-bit integer</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">c</span><span class="p">:</span> <span class="n">i32</span> <span class="o">=</span> <span class="mi">32</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">i64</span></code></td>
+<td>64-bit integer</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">d</span><span class="p">:</span> <span class="n">i64</span> <span class="o">=</span> <span class="mi">64</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">f16</span></code></td>
+<td>16-bit float</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">x</span><span class="p">:</span> <span class="n">f16</span> <span class="o">=</span> <span class="mf">1.5</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">f32</span></code></td>
+<td>32-bit float</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">y</span><span class="p">:</span> <span class="n">f32</span> <span class="o">=</span> <span class="mf">3.25</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="nb">bool</span></code></td>
+<td>Boolean</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">ok</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">true</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">none</span></code></td>
+<td>No value</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">n</span><span class="p">:</span> <span class="n">none</span> <span class="o">=</span> <span class="n">none</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="nb">str</span></code></td>
+<td>String</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">s</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hi&quot;</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">char</span></code></td>
+<td>Character (mapped to <code class="language-python highlight"><span class="n">i8</span></code>)</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">ch</span><span class="p">:</span> <span class="n">char</span> <span class="o">=</span> <span class="s1">&#39;A&#39;</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">datetime</span></code></td>
+<td>Date/time literal</td>
+<td><code class="language-python highlight"><span class="n">datetime</span><span class="p">(</span><span class="s2">&quot;...&quot;</span><span class="p">)</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">timestamp</span></code></td>
+<td>Timestamp literal</td>
+<td><code class="language-python highlight"><span class="n">timestamp</span><span class="p">(</span><span class="s2">&quot;...&quot;</span><span class="p">)</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">T</span><span class="p">]</span></code></td>
+<td>List type</td>
+<td><code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span></code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="strings-and-characters">Strings And Characters<a class="headerlink" href="#strings-and-characters" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code>```
+title: String and char types
+summary: Declares string and char variables.
+```
+fn text_demo() -&gt; none:
+  ```
+  title: text_demo
+  summary: Uses string and char literals.
+  ```
+  var greeting: str = &quot;hello&quot;
+  var initial: char = &#39;A&#39;
+  return none
+</code></pre></div>
+<h2 id="date-and-time-literals">Date And Time Literals<a class="headerlink" href="#date-and-time-literals" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Datetime and timestamp literals
+summary: Creates date/time values from string literals.
+```
+fn time_demo() -&gt; none:
+  ```
+  title: time_demo
+  summary: Demonstrates datetime/timestamp constructors.
+  ```
+  var dt: datetime = datetime(&quot;2026-03-05T12:30:59&quot;)
+  var ts: timestamp = timestamp(&quot;2026-03-05T12:30:59.123456789&quot;)
+  return none
+</code></pre></div>
+<h2 id="lists">Lists<a class="headerlink" href="#lists" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code>```
+title: List type example
+summary: Declares list variables.
+```
+fn list_demo() -&gt; none:
+  ```
+  title: list_demo
+  summary: Declares populated and empty lists.
+  ```
+  var ids: list[i32] = [1, 2, 3, 4]
+  var empty_ids: list[i32] = []
+  return none
+</code></pre></div>
+<p>Current limitation: list code generation is still limited to empty or
+homogeneous integer constant lists.</p>
+<h2 id="casting">Casting<a class="headerlink" href="#casting" title="Permanent link">&para;</a></h2>
+<p>Use the built-in <code class="language-python highlight"><span class="n">cast</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> to convert values:</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Casting example
+summary: Converts between numeric and string-compatible forms.
+```
+fn cast_demo(a: i32) -&gt; str:
+  ```
+  title: cast_demo
+  summary: Returns string representation of an integer.
+  ```
+  return cast(a, str)
+</code></pre></div>
 
 
 
@@ -1379,10 +1668,10 @@ the structure of <code class="language-python highlight"><span class="n">docs</s
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
