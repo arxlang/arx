@@ -10,8 +10,8 @@ license = "Apache Software License 2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
-  "astx (>=0.23.1)",
-  "pyirx (==1.8.0)",
+  "astx (>=0.24.0)",
+  "pyirx (==1.8.1)",
   "jsonschema (>=4.0.0)",
   "types-pyyaml (>=6.0.12.20250516)"
 ]
