@@ -11,6 +11,8 @@ nav:
       - Overview: library/index.md
       - Modules: library/modules.md
       - Functions: library/functions.md
+      - Data Types: library/datatypes.md
+      - Control Flow: library/control-flow.md
       - Docstrings: library/docstrings.md
   - API Docs: api/
   - Sponsor: sponsor.md
