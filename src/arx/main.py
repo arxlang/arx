@@ -7,7 +7,7 @@ import subprocess
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 import astx
 
@@ -40,11 +40,14 @@ class ArxMain:
         type: str
       is_lib:
         type: bool
+      link_mode:
+        type: Literal[auto, pie, no-pie]
     """
 
     input_files: list[str] = field(default_factory=list)
     output_file: str = ""
     is_lib: bool = False
+    link_mode: Literal["auto", "pie", "no-pie"] = "auto"
 
     def _format_ast_fallback(self, node: object) -> str:
         lines: list[str] = []
@@ -181,6 +184,15 @@ class ArxMain:
         output_file = kwargs.get("output_file")
         self.output_file = output_file.strip() if output_file else ""
         self.is_lib = kwargs.get("is_lib", False)
+        link_mode = str(kwargs.get("link_mode", "auto")).strip().lower()
+        if link_mode not in {"auto", "pie", "no-pie"}:
+            raise ValueError(
+                "Invalid link mode. Expected one of: auto, pie, no-pie."
+            )
+        self.link_mode = cast(
+            Literal["auto", "pie", "no-pie"],
+            link_mode,
+        )
 
         if kwargs.get("show_ast"):
             return self.show_ast()
@@ -278,5 +290,6 @@ class ArxMain:
             tree_ast,
             output_file=self.output_file,
             link=emits_executable,
+            link_mode=self.link_mode,
         )
         return emits_executable

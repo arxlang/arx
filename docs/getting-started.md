@@ -72,6 +72,14 @@ arx --show-llvm-ir hello.x
 arx hello.x --output-file hello
 ```
 
+### Control executable link mode
+
+```bash
+arx examples/print-star.x --link-mode auto
+arx examples/print-star.x --link-mode pie
+arx examples/print-star.x --link-mode no-pie
+```
+
 ## Examples
 
 The `examples/` directory contains several sample programs:
@@ -193,16 +201,40 @@ arx run examples/print-star.x
 arx [input_files] [options]
 ```
 
-| Option           | Description                                      |
-| ---------------- | ------------------------------------------------ |
-| `--version`      | Show the installed version                       |
-| `--output-file`  | Specify the output file path                     |
-| `--lib`          | Build source code as a library                   |
-| `--show-ast`     | Print the AST for the input source code          |
-| `--show-tokens`  | Print the tokens for the input source            |
-| `--show-llvm-ir` | Print the LLVM IR for the input source           |
-| `--run`          | Build and execute the compiled binary            |
-| `--shell`        | Open Arx in a shell prompt (not yet implemented) |
+| Option           | Description                                       |
+| ---------------- | ------------------------------------------------- |
+| `--version`      | Show the installed version                        |
+| `--output-file`  | Specify the output file path                      |
+| `--lib`          | Build source code as a library                    |
+| `--show-ast`     | Print the AST for the input source code           |
+| `--show-tokens`  | Print the tokens for the input source             |
+| `--show-llvm-ir` | Print the LLVM IR for the input source            |
+| `--run`          | Build and execute the compiled binary             |
+| `--shell`        | Open Arx in a shell prompt (not yet implemented)  |
+| `--link-mode`    | Set executable link mode: `auto`, `pie`, `no-pie` |
+
+## Troubleshooting
+
+### PIE linker error in Colab or Conda
+
+If the build fails with an error similar to:
+
+```text
+relocation R_X86_64_32 against `.rodata' can not be used when making a PIE object
+```
+
+run the compile step with:
+
+```bash
+arx average.x --link-mode no-pie
+```
+
+If you need a manual fallback:
+
+```bash
+arx --lib average.x --output-file average.o
+clang -no-pie average.o -o average
+```
 
 ## Language Basics
 
