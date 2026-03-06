@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [0.3.1](https://github.com/arxlang/arx/compare/0.3.0...0.3.1) (2026-03-06)
+
+
+### Bug Fixes
+
+* Fix typing, tests, print, system; add more tests ([#32](https://github.com/arxlang/arx/issues/32)) ([21e4639](https://github.com/arxlang/arx/commit/21e4639c416666f3cf09a345350c1da9ab5e090e))
+
 # [0.3.0](https://github.com/arxlang/arx/compare/0.2.0...0.3.0) (2026-03-06)
 
 
