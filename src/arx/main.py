@@ -11,8 +11,7 @@ from typing import Any
 
 import astx
 
-from irx.builders.llvmliteir import LLVMLiteIR
-
+from arx.codegen import LLVMLiteIR
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
