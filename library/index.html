@@ -8,11 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://arxlang.org/discord/">
+        <link rel="canonical" href="https://arxlang.org/library/">
       
       
-        <link rel="prev" href="../coc/">
+        <link rel="prev" href="../getting-started/">
       
+      
+        <link rel="next" href="modules/">
       
       
         
@@ -23,7 +25,7 @@
     
     
       
-        <title>Community - ArxLang</title>
+        <title>Overview - ArxLang</title>
       
     
     
@@ -75,6 +77,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#library-reference" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -106,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Community
+              Overview
             
           </span>
         </div>
@@ -309,6 +316,8 @@
       
   
   
+    
+  
   
   
     
@@ -328,15 +337,15 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../library/" class="md-nav__link ">
+            <a href="./" class="md-nav__link md-nav__link--active">
               
   
   
@@ -354,13 +363,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link md-nav__link--active" for="__nav_3" id="__nav_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -380,7 +389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../library/modules/" class="md-nav__link">
+      <a href="modules/" class="md-nav__link">
         
   
   
@@ -408,7 +417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../library/functions/" class="md-nav__link">
+      <a href="functions/" class="md-nav__link">
         
   
   
@@ -436,7 +445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../library/docstrings/" class="md-nav__link">
+      <a href="docstrings/" class="md-nav__link">
         
   
   
@@ -1085,17 +1094,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../discord/" class="md-nav__link">
         
   
   
@@ -1111,7 +1113,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1133,6 +1134,38 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-current-prototype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope (Current Prototype)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1152,11 +1185,24 @@
   
 
 
-  <h1>Community</h1>
-
-<script>
-    window.location.href = "https://discord.gg/CjSr6GNgp7";
-</script>
+<h1 id="library-reference">Library Reference<a class="headerlink" href="#library-reference" title="Permanent link">&para;</a></h1>
+<p>The <strong>Library</strong> section is the language reference for Arx features, inspired by
+the structure of <code class="language-python highlight"><span class="n">docs</span><span class="o">.</span><span class="n">python</span><span class="o">.</span><span class="n">org</span></code>.</p>
+<p>Start here when you need exact syntax and placement rules.</p>
+<h2 id="available-references">Available References<a class="headerlink" href="#available-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="modules/">Modules</a></li>
+<li><a href="functions/">Functions</a></li>
+<li><a href="docstrings/">Docstrings</a></li>
+</ul>
+<h2 id="scope-current-prototype">Scope (Current Prototype)<a class="headerlink" href="#scope-current-prototype" title="Permanent link">&para;</a></h2>
+<p>This reference currently focuses on:</p>
+<ul>
+<li>module structure</li>
+<li>function definitions and calls</li>
+<li>docstring placement rules</li>
+</ul>
+<p>More feature pages can be added here as the language grows.</p>
 
 
 
