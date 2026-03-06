@@ -10,7 +10,7 @@ statements such as function definitions and extern declarations.
 title: Math module example
 summary: Module with one documented function.
 ```
-fn average(x, y):
+fn average(x: f32, y: f32) -> f32:
   ```
   title: average
   summary: Returns the arithmetic mean of x and y.

@@ -215,6 +215,12 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     with pytest.raises(ParserException, match="Expected argument name"):
         parser.parse_prototype(expect_colon=False)
 
+    ArxIO.string_to_buffer("f(x)")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="Expected type annotation"):
+        parser.parse_prototype(expect_colon=False)
+
 
 def test_parse_block_error_paths() -> None:
     """

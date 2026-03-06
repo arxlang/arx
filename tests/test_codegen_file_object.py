@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
+from arx.codegen import LLVMLiteIR
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from irx.builders.llvmliteir import LLVMLiteIR
 
 TMP_PATH = Path("/tmp/arxtmp")
 TMP_PATH.mkdir(exist_ok=True)

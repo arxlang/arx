@@ -117,7 +117,7 @@ def test_parse_fn() -> None:
     title: Test gettok for main tokens.
     """
     ArxIO.string_to_buffer(
-        "fn math(x):\n"
+        "fn math(x: i32):\n"
         + "  if 1 > 2:\n"
         + "    a = 1\n"
         + "  else:\n"
@@ -134,6 +134,7 @@ def test_parse_fn() -> None:
     assert isinstance(expr, astx.FunctionDef)
     assert isinstance(expr.prototype, astx.FunctionPrototype)
     assert isinstance(expr.prototype.args[0], astx.Argument)
+    assert isinstance(expr.prototype.args[0].type_, astx.Int32)
     assert isinstance(expr.body, astx.Block)
     assert isinstance(expr.body.nodes[0], astx.IfStmt)
     assert isinstance(expr.body.nodes[0].condition, astx.BinaryOp)

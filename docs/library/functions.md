@@ -10,7 +10,7 @@ Functions are defined with `fn`, a name, parameters in `()`, and a body after
 title: Function definition
 summary: Shows the structure of a function declaration.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -> i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -25,7 +25,7 @@ fn add(x, y):
 title: Function call example
 summary: Defines a helper function and calls it from main.
 ```
-fn double(v):
+fn double(v: i32) -> i32:
   ```
   title: double
   summary: Returns v multiplied by two.
@@ -55,7 +55,7 @@ Example:
 title: Function docstring placement
 summary: Function docstring appears as the first body element.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -> i32:
   ```
   title: Add two numbers
   summary: Returns x + y.
@@ -72,5 +72,5 @@ Arx also supports external function declarations:
 title: Extern prototype example
 summary: Declares an external function signature.
 ```
-extern putchard(x)
+extern putchard(x: i32) -> i32
 ````
