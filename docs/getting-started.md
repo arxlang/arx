@@ -273,13 +273,13 @@ Variables are declared with `var`:
 title: Variable example
 summary: Shows var binding inside a function.
 ```
-fn example():
+fn example() -> i32:
   ```
   title: example
   summary: Binds a variable and computes a result.
   ```
-  var a = 10 in
-    a + 1
+  var a: i32 = 10
+  return a + 1
 ````
 
 ### Extern Functions

@@ -13,8 +13,8 @@ from arx.parser import Parser
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main():\n  return 0.0 + 1.0",
-        "fn main():\n  return 1.0 + 2.0 * (3.0 - 2.0)",
+        "fn main() -> f32:\n  return 0.0 + 1.0",
+        "fn main() -> f32:\n  return 1.0 + 2.0 * (3.0 - 2.0)",
         "fn main() -> i32:\n  print(42)\n  return 0",
         "fn main() -> i32:\n  print(3.5)\n  return 0",
         (

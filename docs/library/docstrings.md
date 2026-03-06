@@ -45,7 +45,7 @@ Valid:
 ```
 title: Module docs
 ```
-fn main():
+fn main() -> i32:
   ```
   title: main
   summary: Entry point for the module.
@@ -61,7 +61,7 @@ after `:` and the required newline/indentation.
 Valid:
 
 ````text
-fn main():
+fn main() -> i32:
   ```
   title: Function docs
   summary: Function summary
@@ -72,7 +72,7 @@ fn main():
 Invalid:
 
 ````text
-fn main():
+fn main() -> i32:
   return 1
   ```
   title: Too late

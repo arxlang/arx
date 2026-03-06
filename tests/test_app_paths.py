@@ -105,7 +105,7 @@ def test_arxio_file_and_stdin_loaders(
         type: Path
     """
     sample = tmp_path / "sample.x"
-    sample.write_text("fn main():\n  return 1\n", encoding="utf-8")
+    sample.write_text("fn main() -> i32:\n  return 1\n", encoding="utf-8")
     ArxIO.file_to_buffer(str(sample))
     assert "fn main()" in ArxIO.buffer.buffer
 

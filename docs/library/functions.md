@@ -32,7 +32,7 @@ fn double(v: i32) -> i32:
   ```
   return v * 2
 
-fn main():
+fn main() -> i32:
   ```
   title: main
   summary: Calls double with a constant input.

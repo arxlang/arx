@@ -596,10 +596,14 @@ class Parser:
         name = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # eat identifier
 
-        var_type: astx.DataType = astx.Float32()
-        if self._is_operator(":"):
-            self._consume_operator(":")
-            var_type = self.parse_type()
+        if not self._is_operator(":"):
+            raise ParserException(
+                "Parser: Expected type annotation for inline variable "
+                f"'{name}'."
+            )
+
+        self._consume_operator(":")
+        var_type = self.parse_type()
 
         self._consume_operator("=")
         value = self.parse_expression()
@@ -626,10 +630,13 @@ class Parser:
         name = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # eat identifier
 
-        var_type: astx.DataType = astx.Float32()
-        if self._is_operator(":"):
-            self._consume_operator(":")
-            var_type = self.parse_type()
+        if not self._is_operator(":"):
+            raise ParserException(
+                f"Parser: Expected type annotation for variable '{name}'."
+            )
+
+        self._consume_operator(":")
+        var_type = self.parse_type()
 
         value: astx.Expr | None = None
         if self._is_operator("="):
@@ -824,10 +831,13 @@ class Parser:
 
         self._consume_operator(")")
 
-        ret_type: astx.DataType = astx.Float32()
-        if self._is_operator("->"):
-            self._consume_operator("->")
-            ret_type = self.parse_type()
+        if not self._is_operator("->"):
+            raise ParserException(
+                "Parser: Expected return type annotation with '->'."
+            )
+
+        self._consume_operator("->")
+        ret_type = self.parse_type()
 
         if expect_colon:
             self._consume_operator(":")
