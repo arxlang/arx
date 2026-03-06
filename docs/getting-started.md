@@ -40,7 +40,7 @@ Create a file called `hello.x`:
 title: Hello example
 summary: Minimal Arx program that adds two values.
 ```
-fn sum(a, b):
+fn sum(a: i32, b: i32) -> i32:
   ```
   title: sum
   summary: Returns the sum of a and b.
@@ -83,7 +83,7 @@ The `examples/` directory contains several sample programs:
 title: Sum example
 summary: Demonstrates a basic addition function.
 ```
-fn sum(a, b):
+fn sum(a: i32, b: i32) -> i32:
   ```
   title: sum
   summary: Returns the sum of two values.
@@ -98,7 +98,7 @@ fn sum(a, b):
 title: Average example
 summary: Demonstrates a basic arithmetic average function.
 ```
-fn average(x, y):
+fn average(x: f32, y: f32) -> f32:
   ```
   title: average
   summary: Returns the arithmetic mean of x and y.
@@ -113,7 +113,7 @@ fn average(x, y):
 title: Fibonacci example
 summary: Computes Fibonacci numbers recursively.
 ```
-fn fib(x):
+fn fib(x: i32) -> i32:
   ```
   title: fib
   summary: Returns the Fibonacci number for the input index.
@@ -131,7 +131,7 @@ fn fib(x):
 title: Constant example
 summary: Demonstrates a function that returns its argument unchanged.
 ```
-fn get_constant(x):
+fn get_constant(x: i32) -> i32:
   ```
   title: get_constant
   summary: Returns the provided value.
@@ -146,19 +146,45 @@ fn get_constant(x):
 title: Print star example
 summary: Emits star characters using an external output function.
 ```
-fn print_star(n):
+fn print_star(n: i32) -> none:
   ```
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
-  for i in (1:n:1):
+  for i in (0:n:1):
     putchard(42);  # ascii 42 = '*'
+  return none
+
+fn main() -> i32:
+  ```
+  title: main
+  summary: Runs the print_star demo with a fixed size and exits with status 0.
+  ```
+  print_star(10)
+  return 0
 ````
+
+Note: Arx entrypoint parameters currently follow the native C `main` ABI. A
+single `main(n: i32)` receives `argc`, not the numeric value from `argv[1]`.
+When using `--run`, prefer `main() -> i32` and `return 0` for a stable success
+exit code.
 
 You can compile any example with:
 
 ```bash
 arx examples/sum.x --show-llvm-ir
+```
+
+Or compile and run in one command:
+
+```bash
+arx --run examples/print-star.x
+```
+
+Alias form is also available:
+
+```bash
+arx run examples/print-star.x
 ```
 
 ## CLI Reference
@@ -175,6 +201,7 @@ arx [input_files] [options]
 | `--show-ast`     | Print the AST for the input source code          |
 | `--show-tokens`  | Print the tokens for the input source            |
 | `--show-llvm-ir` | Print the LLVM IR for the input source           |
+| `--run`          | Build and execute the compiled binary            |
 | `--shell`        | Open Arx in a shell prompt (not yet implemented) |
 
 ## Language Basics
@@ -191,7 +218,7 @@ body:
 title: Function definition example
 summary: Shows a basic function declaration.
 ```
-fn add(x, y):
+fn add(x: i32, y: i32) -> i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -208,7 +235,7 @@ fn add(x, y):
 title: If/else example
 summary: Shows conditional branching in a function.
 ```
-fn abs(x):
+fn abs(x: i32) -> i32:
   ```
   title: abs
   summary: Returns the absolute value of x.
@@ -226,7 +253,7 @@ fn abs(x):
 title: For loop example
 summary: Shows loop syntax with a slice-like range clause.
 ```
-fn count(n):
+fn count(n: i32) -> none:
   ```
   title: count
   summary: Iterates and prints star characters.
@@ -264,7 +291,7 @@ External functions (e.g., from C) are declared with `extern`:
 title: Extern declaration example
 summary: Declares an external function symbol.
 ```
-extern putchard(x)
+extern putchard(x: i32) -> i32
 ````
 
 ## Next Steps

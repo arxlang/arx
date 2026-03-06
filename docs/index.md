@@ -16,7 +16,7 @@ computing.
 title: Quick average example
 summary: Demonstrates a function with module and function docstrings.
 ```
-fn average(x, y):
+fn average(x: f32, y: f32) -> f32:
   ```
   title: average
   summary: Returns the arithmetic mean of x and y.

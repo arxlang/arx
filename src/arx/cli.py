@@ -103,6 +103,12 @@ def get_args() -> argparse.ArgumentParser:
         help="Open Arx in a shell prompt",
     )
 
+    parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Build and run the compiled binary.",
+    )
+
     return parser
 
 
@@ -119,6 +125,10 @@ def app() -> None:
     """
     args_parser = get_args()
     args = args_parser.parse_args()
+
+    if args.input_files and args.input_files[0] == "run":
+        args.run = True
+        args.input_files = args.input_files[1:]
 
     if args.version:
         return show_version()

@@ -805,10 +805,14 @@ class Parser:
                 arg_loc = self.tokens.cur_tok.location
                 self.tokens.get_next_token()  # eat arg name
 
-                arg_type: astx.DataType = astx.Float32()
-                if self._is_operator(":"):
-                    self._consume_operator(":")
-                    arg_type = self.parse_type()
+                if not self._is_operator(":"):
+                    raise ParserException(
+                        "Parser: Expected type annotation for argument "
+                        f"'{arg_name}'."
+                    )
+
+                self._consume_operator(":")
+                arg_type = self.parse_type()
 
                 args.append(astx.Argument(arg_name, arg_type, loc=arg_loc))
 

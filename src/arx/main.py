@@ -3,8 +3,10 @@ title: Arx main module.
 """
 
 import os
+import subprocess
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import astx
@@ -45,6 +47,18 @@ class ArxMain:
     output_file: str = ""
     is_lib: bool = False
 
+    def _resolve_output_file(self) -> str:
+        """
+        title: Resolve the final compiler output path.
+        returns:
+          type: str
+        """
+        if self.output_file:
+            return self.output_file
+        if not self.input_files:
+            return "a.out"
+        return Path(self.input_files[0]).stem or "a.out"
+
     def _get_astx(self) -> astx.Block:
         lexer = Lexer()
         parser = Parser()
@@ -67,7 +81,8 @@ class ArxMain:
             variadic: keyword
         """
         self.input_files = kwargs.get("input_files", [])
-        self.output_file = kwargs.get("output_file", "")
+        output_file = kwargs.get("output_file")
+        self.output_file = output_file.strip() if output_file else ""
         # is_lib now is the only available option
         self.is_lib = kwargs.get("is_lib", True) or True
 
@@ -84,6 +99,8 @@ class ArxMain:
             return self.run_shell()
 
         self.compile()
+        if kwargs.get("run"):
+            self.run_binary()
 
     def show_ast(self) -> None:
         """
@@ -122,6 +139,17 @@ class ArxMain:
         """
         raise Exception("Arx Shell is not implemented yet.")
 
+    def run_binary(self) -> None:
+        """
+        title: Run the generated binary.
+        """
+        binary_path = Path(self.output_file)
+        if not binary_path.is_absolute():
+            binary_path = Path.cwd() / binary_path
+        result = subprocess.run([str(binary_path)], check=False)
+        if result.returncode != 0:
+            raise SystemExit(result.returncode)
+
     def compile(self, show_llvm_ir: bool = False) -> None:
         """
         title: Compile the given input file.
@@ -131,4 +159,5 @@ class ArxMain:
         """
         tree_ast = self._get_astx()
         ir = LLVMLiteIR()
+        self.output_file = self._resolve_output_file()
         ir.build(tree_ast, output_file=self.output_file)

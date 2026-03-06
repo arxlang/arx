@@ -58,13 +58,12 @@ groups:
             - task: examples.show-ast
               args:
                 examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
-            # note: the development of the backend will be stopped for now
-            # - task: examples.show-llvm-ir
-            #   args:
-            #     examples: constant,average,fibonacci,print-star,sum
-            # - task: examples.emit-object
-            #   args:
-            #     examples: constant,average,fibonacci,print-star,sum
+            - task: examples.show-llvm-ir
+              args:
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
+            - task: examples.emit-object
+              args:
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
         run: |
           arx --help
           arx --version

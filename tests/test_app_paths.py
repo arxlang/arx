@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import runpy
+import subprocess
 import sys
 
 from argparse import Namespace
@@ -164,6 +165,7 @@ def test_cli_get_args_parsing() -> None:
     assert args.output_file == "out.o"
     assert args.is_lib is True
     assert args.show_tokens is True
+    assert args.run is False
 
 
 def test_cli_show_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -196,6 +198,7 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
                 show_tokens=False,
                 show_llvm_ir=False,
                 shell=False,
+                run=False,
             )
 
     called: dict[str, bool] = {"version": False}
@@ -232,6 +235,7 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
                 show_tokens=True,
                 show_llvm_ir=False,
                 shell=False,
+                run=False,
             )
 
     class DummyMain:
@@ -249,6 +253,45 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     cli_module.app()
     assert DummyMain.called_kwargs["input_files"] == ["a.x"]
     assert DummyMain.called_kwargs["show_tokens"] is True
+
+
+def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    title: Test CLI app run alias dispatch.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    class DummyParser:
+        def parse_args(self) -> Namespace:
+            return Namespace(
+                input_files=["run", "prog.x"],
+                version=False,
+                output_file="",
+                is_lib=True,
+                show_ast=False,
+                show_tokens=False,
+                show_llvm_ir=False,
+                shell=False,
+                run=False,
+            )
+
+    class DummyMain:
+        called_kwargs: dict[str, object] = {}
+
+        def run(self, **kwargs: object) -> None:
+            DummyMain.called_kwargs = kwargs
+
+    def fake_get_args() -> DummyParser:
+        return DummyParser()
+
+    monkeypatch.setattr(cli_module, "get_args", fake_get_args)
+    monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
+
+    cli_module.app()
+    assert DummyMain.called_kwargs["input_files"] == ["prog.x"]
+    assert DummyMain.called_kwargs["run"] is True
 
 
 def test_python_m_entrypoint_calls_cli_app(
@@ -340,6 +383,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
         "tokens": False,
         "llvm": False,
         "shell": False,
+        "run_binary": False,
     }
 
     def fake_show_ast() -> None:
@@ -354,10 +398,14 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_shell() -> None:
         called["shell"] = True
 
+    def fake_run_binary() -> None:
+        called["run_binary"] = True
+
     monkeypatch.setattr(app, "show_ast", fake_show_ast)
     monkeypatch.setattr(app, "show_tokens", fake_show_tokens)
     monkeypatch.setattr(app, "show_llvm_ir", fake_show_llvm_ir)
     monkeypatch.setattr(app, "run_shell", fake_run_shell)
+    monkeypatch.setattr(app, "run_binary", fake_run_binary)
 
     compiled: dict[str, bool] = {"called": False}
 
@@ -375,6 +423,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     app.run(show_tokens=True)
     app.run(show_llvm_ir=True)
     app.run(shell=True)
+    app.run(run=True)
 
     app.run()
     assert compiled["called"] is True
@@ -382,6 +431,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     assert called["tokens"] is True
     assert called["llvm"] is True
     assert called["shell"] is True
+    assert called["run_binary"] is True
     assert app.is_lib is True
 
 
@@ -465,6 +515,94 @@ def test_arxmain_show_methods_and_compile(
     app.compile()
     assert DummyIRBuild.built_tree is not None
     assert DummyIRBuild.built_out == "out.o"
+
+
+def test_arxmain_compile_default_output_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test compile default output file resolution.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    app = main_module.ArxMain(input_files=["examples/print-star.x"])
+
+    def fake_get_astx_tree() -> object:
+        return object()
+
+    class DummyIRBuild:
+        built_out: str | None = None
+
+        def build(self, tree: object, output_file: str = "") -> None:
+            del tree
+            DummyIRBuild.built_out = output_file
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
+    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
+
+    app.compile()
+
+    assert DummyIRBuild.built_out == "print-star"
+    assert app.output_file == "print-star"
+
+
+def test_arxmain_run_binary_uses_absolute_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """
+    title: Test run_binary executes resolved absolute path.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    app = main_module.ArxMain(output_file="print-star")
+
+    recorded: dict[str, object] = {}
+
+    def fake_subprocess_run(
+        cmd: list[str], check: bool
+    ) -> subprocess.CompletedProcess[str]:
+        recorded["cmd"] = cmd
+        recorded["check"] = check
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
+
+    app.run_binary()
+
+    assert recorded["check"] is False
+    assert recorded["cmd"] == [str(tmp_path / "print-star")]
+
+
+def test_arxmain_run_binary_nonzero_exits(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """
+    title: Test run_binary exits with child return code on failure.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    app = main_module.ArxMain(output_file="print-star")
+
+    def fake_subprocess_run(
+        cmd: list[str], check: bool
+    ) -> subprocess.CompletedProcess[str]:
+        del cmd
+        del check
+        return subprocess.CompletedProcess(["print-star"], 112)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit, match="112"):
+        app.run_binary()
 
 
 def test_arxmain_run_shell_not_implemented() -> None:

@@ -2,7 +2,7 @@
 title: Fibonacci example
 summary: Computes Fibonacci numbers recursively.
 ```
-fn fib(x):
+fn fib(x: i32) -> i32:
   ```
   title: fib
   summary: Returns the Fibonacci number for the input index.
