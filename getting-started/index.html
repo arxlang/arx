@@ -429,6 +429,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#control-executable-link-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control executable link mode
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -514,6 +525,34 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pie-linker-error-in-colab-or-conda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PIE linker error in Colab or Conda
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1594,6 +1633,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#control-executable-link-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control executable link mode
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1679,6 +1729,34 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pie-linker-error-in-colab-or-conda" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PIE linker error in Colab or Conda
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1826,6 +1904,11 @@ fn sum(a: i32, b: i32) -&gt; i32:
 <h3 id="compile-to-an-object-file">Compile to an object file<a class="headerlink" href="#compile-to-an-object-file" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>hello.x<span class="w"> </span>--output-file<span class="w"> </span>hello
 </code></pre></div>
+<h3 id="control-executable-link-mode">Control executable link mode<a class="headerlink" href="#control-executable-link-mode" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>auto
+arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>pie
+arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>no-pie
+</code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <p>The <code class="language-python highlight"><span class="n">examples</span><span class="o">/</span></code> directory contains several sample programs:</p>
 <h3 id="sum">Sum<a class="headerlink" href="#sum" title="Permanent link">&para;</a></h3>
@@ -1957,8 +2040,24 @@ exit code.</p>
 <td><code class="language-python highlight"><span class="o">--</span><span class="n">shell</span></code></td>
 <td>Open Arx in a shell prompt (not yet implemented)</td>
 </tr>
+<tr>
+<td><code class="language-python highlight"><span class="o">--</span><span class="n">link</span><span class="o">-</span><span class="n">mode</span></code></td>
+<td>Set executable link mode: <code class="language-python highlight"><span class="n">auto</span></code>, <code class="language-python highlight"><span class="n">pie</span></code>, <code class="language-python highlight"><span class="n">no</span><span class="o">-</span><span class="n">pie</span></code></td>
+</tr>
 </tbody>
 </table>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="pie-linker-error-in-colab-or-conda">PIE linker error in Colab or Conda<a class="headerlink" href="#pie-linker-error-in-colab-or-conda" title="Permanent link">&para;</a></h3>
+<p>If the build fails with an error similar to:</p>
+<div class="language-text highlight"><pre><span></span><code>relocation R_X86_64_32 against `.rodata&#39; can not be used when making a PIE object
+</code></pre></div>
+<p>run the compile step with:</p>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>average.x<span class="w"> </span>--link-mode<span class="w"> </span>no-pie
+</code></pre></div>
+<p>If you need a manual fallback:</p>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--lib<span class="w"> </span>average.x<span class="w"> </span>--output-file<span class="w"> </span>average.o
+clang<span class="w"> </span>-no-pie<span class="w"> </span>average.o<span class="w"> </span>-o<span class="w"> </span>average
+</code></pre></div>
 <h2 id="language-basics">Language Basics<a class="headerlink" href="#language-basics" title="Permanent link">&para;</a></h2>
 <p>Arx's syntax is influenced by Python with significant whitespace (indentation).</p>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
@@ -2011,13 +2110,13 @@ fn count(n: i32) -&gt; none:
 title: Variable example
 summary: Shows var binding inside a function.
 ```
-fn example():
+fn example() -&gt; i32:
   ```
   title: example
   summary: Binds a variable and computes a result.
   ```
-  var a = 10 in
-    a + 1
+  var a: i32 = 10
+  return a + 1
 </code></pre></div>
 <h3 id="extern-functions">Extern Functions<a class="headerlink" href="#extern-functions" title="Permanent link">&para;</a></h3>
 <p>External functions (e.g., from C) are declared with <code class="language-python highlight"><span class="n">extern</span></code>:</p>

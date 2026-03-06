@@ -1434,12 +1434,12 @@
 
 <h1 id="data-types">Data Types<a class="headerlink" href="#data-types" title="Permanent link">&para;</a></h1>
 <p>Arx uses explicit type annotations for variables, function parameters, and
-optional function return types.</p>
+function return types.</p>
 <h2 id="type-annotations">Type Annotations<a class="headerlink" href="#type-annotations" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Function parameters must always be typed.</li>
-<li>Function return type is optional. If omitted, current parser default is <code class="language-python highlight"><span class="n">f32</span></code>.</li>
-<li>Variable declarations can include an explicit type with <code class="language-python highlight"><span class="n">var</span> <span class="n">name</span><span class="p">:</span> <span class="nb">type</span></code>.</li>
+<li>Function return type must always be explicit with <code class="language-python highlight"><span class="o">-&gt;</span> <span class="nb">type</span></code>.</li>
+<li>Variable declarations must include an explicit type with <code class="language-python highlight"><span class="n">var</span> <span class="n">name</span><span class="p">:</span> <span class="nb">type</span></code>.</li>
 </ul>
 <div class="language-text highlight"><pre><span></span><code>```
 title: Typed function signature

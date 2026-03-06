@@ -1445,7 +1445,7 @@ title: Add two numbers
 <div class="language-text highlight"><pre><span></span><code>```
 title: Module docs
 ```
-fn main():
+fn main() -&gt; i32:
   ```
   title: main
   summary: Entry point for the module.
@@ -1456,7 +1456,7 @@ fn main():
 <p>A function docstring must be the first statement in the function body, right
 after <code class="language-python highlight"><span class="p">:</span></code> and the required newline/indentation.</p>
 <p>Valid:</p>
-<div class="language-text highlight"><pre><span></span><code>fn main():
+<div class="language-text highlight"><pre><span></span><code>fn main() -&gt; i32:
   ```
   title: Function docs
   summary: Function summary
@@ -1464,7 +1464,7 @@ after <code class="language-python highlight"><span class="p">:</span></code> an
   return 1
 </code></pre></div>
 <p>Invalid:</p>
-<div class="language-text highlight"><pre><span></span><code>fn main():
+<div class="language-text highlight"><pre><span></span><code>fn main() -&gt; i32:
   return 1
   ```
   title: Too late
