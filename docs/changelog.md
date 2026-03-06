@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+# [0.3.0](https://github.com/arxlang/arx/compare/0.2.0...0.3.0) (2026-03-06)
+
+
+### Features
+
+* Add support for loops, cast, print, datatypes, etc ([#31](https://github.com/arxlang/arx/issues/31)) ([3b9b27a](https://github.com/arxlang/arx/commit/3b9b27ab068ed5cd8eeafbae79d5d11372bc63c3))
+* **syntax:** Support for Docstring syntax ([#29](https://github.com/arxlang/arx/issues/29)) ([2bb1f8b](https://github.com/arxlang/arx/commit/2bb1f8b0a784efe221d2ad890edc0a55014e741e))
+
 # [0.2.0](https://github.com/arxlang/arx/compare/0.1.1...0.2.0) (2025-08-07)
 
 
