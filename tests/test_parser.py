@@ -9,6 +9,7 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx import system
 
 
 def test_binop_precedence() -> None:
@@ -21,16 +22,21 @@ def test_binop_precedence() -> None:
     assert parser.bin_op_precedence["="] == 2
     assert parser.bin_op_precedence["<"] == 10
     assert parser.bin_op_precedence[">"] == 10
+    assert parser.bin_op_precedence["<="] == 10
+    assert parser.bin_op_precedence[">="] == 10
+    assert parser.bin_op_precedence["=="] == 10
+    assert parser.bin_op_precedence["!="] == 10
     assert parser.bin_op_precedence["+"] == 20
     assert parser.bin_op_precedence["-"] == 20
     assert parser.bin_op_precedence["*"] == 40
+    assert parser.bin_op_precedence["/"] == 40
 
 
 def test_parse_float_expr() -> None:
     """
     title: Test gettok for main tokens.
     """
-    ArxIO.string_to_buffer("1 2")
+    ArxIO.string_to_buffer("1.0 2.5")
     lexer = Lexer()
     parser = Parser(lexer.lex())
 
@@ -43,16 +49,30 @@ def test_parse_float_expr() -> None:
     expr = parser.parse_float_expr()
     assert expr
     assert isinstance(expr, astx.LiteralFloat32)
-    assert expr.value == 2
+    assert expr.value == 2.5
 
-    ArxIO.string_to_buffer("3")
+    ArxIO.string_to_buffer("3.25")
     parser = Parser(lexer.lex())
 
     parser.tokens.get_next_token()
     expr = parser.parse_float_expr()
     assert expr
     assert isinstance(expr, astx.LiteralFloat32)
-    assert expr.value == 3
+    assert expr.value == 3.25
+
+
+def test_parse_int_expr() -> None:
+    """
+    title: Test integer literal parsing.
+    """
+    ArxIO.string_to_buffer("7")
+    lexer = Lexer()
+    parser = Parser(lexer.lex())
+
+    parser.tokens.get_next_token()
+    expr = parser.parse_int_expr()
+    assert isinstance(expr, astx.LiteralInt32)
+    assert expr.value == 7
 
 
 def test_parse() -> None:
@@ -113,7 +133,7 @@ def test_parse_fn() -> None:
     assert expr
     assert isinstance(expr, astx.FunctionDef)
     assert isinstance(expr.prototype, astx.FunctionPrototype)
-    assert isinstance(expr.prototype.args[0], astx.Variable)
+    assert isinstance(expr.prototype.args[0], astx.Argument)
     assert isinstance(expr.body, astx.Block)
     assert isinstance(expr.body.nodes[0], astx.IfStmt)
     assert isinstance(expr.body.nodes[0].condition, astx.BinaryOp)
@@ -122,7 +142,7 @@ def test_parse_fn() -> None:
     assert isinstance(expr.body.nodes[0].else_, astx.Block)
     assert isinstance(expr.body.nodes[0].else_.nodes[0], astx.BinaryOp)
     assert isinstance(expr.body.nodes[1], astx.FunctionReturn)
-    assert isinstance(expr.body.nodes[1].value, astx.Variable)
+    assert isinstance(expr.body.nodes[1].value, astx.Identifier)
     assert expr.body.nodes[1].value.name == "a"
 
 
@@ -234,3 +254,124 @@ def test_parse_function_docstring_invalid_douki_schema() -> None:
 
     with pytest.raises(ParserException, match="Invalid function docstring"):
         parser.parse(lexer.lex())
+
+
+def test_parse_typed_function_signature() -> None:
+    """
+    title: Test typed function signature parsing.
+    """
+    ArxIO.string_to_buffer(
+        "fn main(arg1: i32, arg2: str) -> i32:\n  return arg1\n"
+    )
+    lexer = Lexer()
+    parser = Parser(lexer.lex())
+
+    parser.tokens.get_next_token()
+    fn = parser.parse_function()
+
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.prototype.args[0], astx.Argument)
+    assert fn.prototype.args[0].name == "arg1"
+    assert isinstance(fn.prototype.args[0].type_, astx.Int32)
+    assert isinstance(fn.prototype.args[1].type_, astx.String)
+    assert isinstance(fn.prototype.return_type, astx.Int32)
+
+
+def test_parse_while_stmt() -> None:
+    """
+    title: Test while statement parsing.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n"
+        "  var a: i32 = 0\n"
+        "  while a < 10:\n"
+        "    a = a + 1\n"
+        "  return a\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[1], astx.WhileStmt)
+
+
+def test_parse_for_count_stmt() -> None:
+    """
+    title: Test count-style for parsing.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n  for var i: i32 = 0; i < 5; i = i + 1:\n    return i\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[0], astx.ForCountLoopStmt)
+
+
+def test_parse_for_range_slice_style() -> None:
+    """
+    title: Test range-style for parsing with colon-separated bounds.
+    """
+    ArxIO.string_to_buffer("fn main():\n  for j in (0:5:1):\n    return j\n")
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+
+
+def test_parse_for_range_tuple_style_is_rejected() -> None:
+    """
+    title: Tuple-style for range must be rejected.
+    """
+    ArxIO.string_to_buffer("fn main():\n  for j in (0, 5, 1):\n    return j\n")
+    lexer = Lexer()
+    parser = Parser()
+
+    with pytest.raises(ParserException):
+        parser.parse(lexer.lex())
+
+
+def test_parse_builtin_cast_and_print() -> None:
+    """
+    title: Test builtin cast and print node generation.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n  var a: i32 = 1\n  print(cast(a, str))\n  return a\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[1], system.PrintExpr)
+
+
+def test_parse_block_with_comment_and_blank_lines() -> None:
+    """
+    title: Test block parsing across comment/blank lines.
+    """
+    ArxIO.string_to_buffer(
+        "fn main():\n"
+        "  # section A\n"
+        "\n"
+        "  var a: i32 = 1\n"
+        "  # section B\n"
+        "  return a\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[0], astx.VariableDeclaration)
+    assert isinstance(fn.body.nodes[1], astx.FunctionReturn)

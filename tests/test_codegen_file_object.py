@@ -2,6 +2,8 @@
 title: Test code generation to file object.
 """
 
+import shutil
+
 from pathlib import Path
 
 import pytest
@@ -13,16 +15,18 @@ from irx.builders.llvmliteir import LLVMLiteIR
 
 TMP_PATH = Path("/tmp/arxtmp")
 TMP_PATH.mkdir(exist_ok=True)
+HAS_CLANG = shutil.which("clang") is not None
 
 
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main():\n  return 1 + 1",
-        "fn main():\n  return 1 + 2 * (3 - 2)",
+        "fn main():\n  return 1.0 + 1.0",
+        "fn main():\n  return 1.0 + 2.0 * (3.0 - 2.0)",
         # "fn main():\n  if (1 < 2):\n    return 3\nelse:\n    return 2\n",
     ],
 )
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
 def test_object_generation(code: str) -> None:
     """
     title: Test object generation.

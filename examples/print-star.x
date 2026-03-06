@@ -7,5 +7,5 @@ fn print_star(n):
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
-  for i = 1, i < n, 1.0 in
+  for i in (1:n:1):
     putchard(42);  # ascii 42 = '*'

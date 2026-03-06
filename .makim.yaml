@@ -36,7 +36,12 @@ groups:
             help: Specify parameters to be used for tests
             type: string
             default: "-vv"
-        run: pytest ${{ args.path }} ${{ args.params }}
+        run: |
+          pytest \
+            --cov=arx \
+            --cov-fail-under=90 \
+            --cov-report term-missing \
+            --no-cov-on-fail ${{ args.path }} ${{ args.params }}
 
       syntax:
         help: run syntax tests
@@ -49,10 +54,10 @@ groups:
           pre-run:
             - task: examples.show-tokens
               args:
-                examples: constant,average,fibonacci,print-star,sum
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
             - task: examples.show-ast
               args:
-                examples: constant,average,fibonacci,print-star,sum
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
             # note: the development of the backend will be stopped for now
             # - task: examples.show-llvm-ir
             #   args:

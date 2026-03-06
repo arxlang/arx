@@ -13,8 +13,8 @@ from irx.builders.llvmliteir import LLVMLiteIR
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main():\n  return 0 + 1",
-        "fn main():\n  return 1 + 2 * (3 - 2)",
+        "fn main():\n  return 0.0 + 1.0",
+        "fn main():\n  return 1.0 + 2.0 * (3.0 - 2.0)",
         # "fn main():\n  if (1 < 2):\n    return 3\n  else:\n    return 2\n",
     ],
 )

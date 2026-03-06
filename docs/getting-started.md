@@ -151,7 +151,7 @@ fn print_star(n):
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
-  for i = 1, i < n, 1.0 in
+  for i in (1:n:1):
     putchard(42);  # ascii 42 = '*'
 ````
 
@@ -224,16 +224,18 @@ fn abs(x):
 ````arx
 ```
 title: For loop example
-summary: Shows loop syntax with a range-like clause.
+summary: Shows loop syntax with a slice-like range clause.
 ```
 fn count(n):
   ```
   title: count
   summary: Iterates and prints star characters.
   ```
-  for i = 1, i < n, 1.0 in
+  for i in (1:n:1):
     putchard(42)
 ````
+
+The range header uses `(start:end:step)` and is intentionally slice-like.
 
 ### Variables
 
