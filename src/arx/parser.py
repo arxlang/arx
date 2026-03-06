@@ -71,7 +71,7 @@ class Parser:
 
     def parse(
         self, tokens: TokenList, module_name: str = "main"
-    ) -> astx.Block:
+    ) -> astx.Module:
         """
         title: Parse the input code.
         parameters:
@@ -80,7 +80,7 @@ class Parser:
           module_name:
             type: str
         returns:
-          type: astx.Block
+          type: astx.Module
         """
         self.clean()
         self.tokens = tokens

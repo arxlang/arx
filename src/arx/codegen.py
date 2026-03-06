@@ -44,7 +44,9 @@ class LLVMLiteIR(BaseLLVMLiteIR):
         super().__init__()
         self.translator: ArxLLVMLiteIRVisitor = ArxLLVMLiteIRVisitor()
 
-    def build(self, node: astx.AST, output_file: str) -> None:
+    def build(
+        self, node: astx.AST, output_file: str, link: bool = True
+    ) -> None:
         """
         title: >-
           Transpile the ASTx to LLVM-IR and build it to an executable file.
@@ -53,6 +55,8 @@ class LLVMLiteIR(BaseLLVMLiteIR):
             type: astx.AST
           output_file:
             type: str
+          link:
+            type: bool
         """
         self.translator = ArxLLVMLiteIRVisitor()
         result = self.translator.translate(node)
@@ -68,6 +72,11 @@ class LLVMLiteIR(BaseLLVMLiteIR):
             file_handler.write(result_object)
 
         self.output_file = output_file
+
+        if not link:
+            with open(self.output_file, "wb") as file_handler:
+                file_handler.write(result_object)
+            return
 
         # fix xh typing
         clang: Callable[..., Any] = xh.clang

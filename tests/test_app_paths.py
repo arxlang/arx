@@ -366,6 +366,7 @@ def test_arxmain_get_astx_uses_all_inputs(
 
     assert loaded_files == ["/tmp/demo/a.x", "/tmp/demo/b.x"]
     assert parsed_modules == ["a", "b"]
+    assert isinstance(tree, astx.Block)
     assert len(tree.nodes) == 2
 
 
@@ -409,8 +410,9 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
 
     compiled: dict[str, bool] = {"called": False}
 
-    def fake_compile() -> None:
+    def fake_compile() -> bool:
         compiled["called"] = True
+        return True
 
     monkeypatch.setattr(app, "compile", fake_compile)
 
@@ -432,7 +434,7 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     assert called["llvm"] is True
     assert called["shell"] is True
     assert called["run_binary"] is True
-    assert app.is_lib is True
+    assert app.is_lib is False
 
 
 def test_arxmain_show_methods_and_compile(
@@ -505,16 +507,24 @@ def test_arxmain_show_methods_and_compile(
     class DummyIRBuild:
         built_tree: object | None = None
         built_out: str | None = None
+        built_link: bool | None = None
 
-        def build(self, tree: object, output_file: str = "") -> None:
+        def build(
+            self,
+            tree: object,
+            output_file: str = "",
+            link: bool = True,
+        ) -> None:
             DummyIRBuild.built_tree = tree
             DummyIRBuild.built_out = output_file
+            DummyIRBuild.built_link = link
 
     monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     app.compile()
     assert DummyIRBuild.built_tree is not None
     assert DummyIRBuild.built_out == "out.o"
+    assert DummyIRBuild.built_link is False
 
 
 def test_arxmain_compile_default_output_name(
@@ -533,10 +543,17 @@ def test_arxmain_compile_default_output_name(
 
     class DummyIRBuild:
         built_out: str | None = None
+        built_link: bool | None = None
 
-        def build(self, tree: object, output_file: str = "") -> None:
+        def build(
+            self,
+            tree: object,
+            output_file: str = "",
+            link: bool = True,
+        ) -> None:
             del tree
             DummyIRBuild.built_out = output_file
+            DummyIRBuild.built_link = link
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
@@ -544,7 +561,67 @@ def test_arxmain_compile_default_output_name(
     app.compile()
 
     assert DummyIRBuild.built_out == "print-star"
+    assert DummyIRBuild.built_link is False
     assert app.output_file == "print-star"
+
+
+def test_arxmain_compile_links_when_main_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test compile links output when module has main.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    app = main_module.ArxMain(input_files=["examples/fibonacci.x"])
+
+    def fake_get_astx_tree() -> object:
+        return object()
+
+    class DummyIRBuild:
+        built_link: bool | None = None
+
+        def build(
+            self,
+            tree: object,
+            output_file: str = "",
+            link: bool = True,
+        ) -> None:
+            del tree, output_file
+            DummyIRBuild.built_link = link
+
+    def fake_has_main_entry(node: object) -> bool:
+        del node
+        return True
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
+    monkeypatch.setattr(app, "_has_main_entry", fake_has_main_entry)
+    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
+
+    app.compile()
+
+    assert DummyIRBuild.built_link is True
+
+
+def test_arxmain_run_requires_executable_for_run_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test run flag fails when compile does not produce executable.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    app = main_module.ArxMain()
+
+    def fake_compile() -> bool:
+        return False
+
+    monkeypatch.setattr(app, "compile", fake_compile)
+
+    with pytest.raises(ValueError, match="--run"):
+        app.run(run=True)
 
 
 def test_arxmain_run_binary_uses_absolute_path(
