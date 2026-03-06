@@ -158,6 +158,8 @@ def test_cli_get_args_parsing() -> None:
             "out.o",
             "--lib",
             "--show-tokens",
+            "--link-mode",
+            "no-pie",
         ]
     )
 
@@ -165,6 +167,7 @@ def test_cli_get_args_parsing() -> None:
     assert args.output_file == "out.o"
     assert args.is_lib is True
     assert args.show_tokens is True
+    assert args.link_mode == "no-pie"
     assert args.run is False
 
 
@@ -194,6 +197,7 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
                 version=True,
                 output_file="",
                 is_lib=False,
+                link_mode="auto",
                 show_ast=False,
                 show_tokens=False,
                 show_llvm_ir=False,
@@ -231,6 +235,7 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
                 version=False,
                 output_file="out.o",
                 is_lib=True,
+                link_mode="auto",
                 show_ast=False,
                 show_tokens=True,
                 show_llvm_ir=False,
@@ -270,6 +275,7 @@ def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
                 version=False,
                 output_file="",
                 is_lib=True,
+                link_mode="auto",
                 show_ast=False,
                 show_tokens=False,
                 show_llvm_ir=False,
@@ -508,16 +514,19 @@ def test_arxmain_show_methods_and_compile(
         built_tree: object | None = None
         built_out: str | None = None
         built_link: bool | None = None
+        built_link_mode: str | None = None
 
         def build(
             self,
             tree: object,
             output_file: str = "",
             link: bool = True,
+            link_mode: str = "auto",
         ) -> None:
             DummyIRBuild.built_tree = tree
             DummyIRBuild.built_out = output_file
             DummyIRBuild.built_link = link
+            DummyIRBuild.built_link_mode = link_mode
 
     monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
@@ -525,6 +534,7 @@ def test_arxmain_show_methods_and_compile(
     assert DummyIRBuild.built_tree is not None
     assert DummyIRBuild.built_out == "out.o"
     assert DummyIRBuild.built_link is False
+    assert DummyIRBuild.built_link_mode == "auto"
 
 
 def test_arxmain_compile_default_output_name(
@@ -544,16 +554,19 @@ def test_arxmain_compile_default_output_name(
     class DummyIRBuild:
         built_out: str | None = None
         built_link: bool | None = None
+        built_link_mode: str | None = None
 
         def build(
             self,
             tree: object,
             output_file: str = "",
             link: bool = True,
+            link_mode: str = "auto",
         ) -> None:
             del tree
             DummyIRBuild.built_out = output_file
             DummyIRBuild.built_link = link
+            DummyIRBuild.built_link_mode = link_mode
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
@@ -562,6 +575,7 @@ def test_arxmain_compile_default_output_name(
 
     assert DummyIRBuild.built_out == "print-star"
     assert DummyIRBuild.built_link is False
+    assert DummyIRBuild.built_link_mode == "auto"
     assert app.output_file == "print-star"
 
 
@@ -581,15 +595,18 @@ def test_arxmain_compile_links_when_main_present(
 
     class DummyIRBuild:
         built_link: bool | None = None
+        built_link_mode: str | None = None
 
         def build(
             self,
             tree: object,
             output_file: str = "",
             link: bool = True,
+            link_mode: str = "auto",
         ) -> None:
             del tree, output_file
             DummyIRBuild.built_link = link
+            DummyIRBuild.built_link_mode = link_mode
 
     def fake_has_main_entry(node: object) -> bool:
         del node
@@ -602,6 +619,7 @@ def test_arxmain_compile_links_when_main_present(
     app.compile()
 
     assert DummyIRBuild.built_link is True
+    assert DummyIRBuild.built_link_mode == "auto"
 
 
 def test_arxmain_run_requires_executable_for_run_flag(

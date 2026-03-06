@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import tempfile
 
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import astx
 import xh
@@ -37,6 +37,8 @@ class LLVMLiteIR(BaseLLVMLiteIR):
         type: ArxLLVMLiteIRVisitor
     """
 
+    LINK_MODES = {"auto", "pie", "no-pie"}
+
     def __init__(self) -> None:
         """
         title: Initialize LLVMIR.
@@ -45,7 +47,11 @@ class LLVMLiteIR(BaseLLVMLiteIR):
         self.translator: ArxLLVMLiteIRVisitor = ArxLLVMLiteIRVisitor()
 
     def build(
-        self, node: astx.AST, output_file: str, link: bool = True
+        self,
+        node: astx.AST,
+        output_file: str,
+        link: bool = True,
+        link_mode: Literal["auto", "pie", "no-pie"] = "auto",
     ) -> None:
         """
         title: >-
@@ -57,6 +63,8 @@ class LLVMLiteIR(BaseLLVMLiteIR):
             type: str
           link:
             type: bool
+          link_mode:
+            type: Literal[auto, pie, no-pie]
         """
         self.translator = ArxLLVMLiteIRVisitor()
         result = self.translator.translate(node)
@@ -78,11 +86,18 @@ class LLVMLiteIR(BaseLLVMLiteIR):
                 file_handler.write(result_object)
             return
 
+        if link_mode not in self.LINK_MODES:
+            raise ValueError(
+                "Invalid link mode. Expected one of: auto, pie, no-pie."
+            )
+
         # fix xh typing
         clang: Callable[..., Any] = xh.clang
-        clang(
-            file_path_o,
-            "-o",
-            self.output_file,
-        )
+        clang_args = [file_path_o]
+        if link_mode == "pie":
+            clang_args.append("-pie")
+        elif link_mode == "no-pie":
+            clang_args.append("-no-pie")
+        clang_args.extend(["-o", self.output_file])
+        clang(*clang_args)
         os.chmod(self.output_file, 0o755)

@@ -108,6 +108,16 @@ def get_args() -> argparse.ArgumentParser:
         action="store_true",
         help="Build and run the compiled binary.",
     )
+    parser.add_argument(
+        "--link-mode",
+        type=str,
+        choices=("auto", "pie", "no-pie"),
+        default="auto",
+        help=(
+            "Set executable link mode: auto (toolchain default), "
+            "pie, or no-pie."
+        ),
+    )
 
     return parser
 
