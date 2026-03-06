@@ -41,7 +41,7 @@ Valid:
 ```
 title: Module docs
 ```
-fn main():
+fn main() -> i32:
   ```
   title: main
   summary: Entry point for the module.
@@ -55,7 +55,7 @@ Invalid (leading indentation before module docstring):
   ```
   title: Module docs
   ```
-fn main():
+fn main() -> i32:
   ```
   title: main
   summary: Entry point for the module.

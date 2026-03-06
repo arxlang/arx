@@ -13,7 +13,7 @@ from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
 
 
-def _parse(code: str) -> astx.Block:
+def _parse(code: str) -> astx.Module:
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
 
@@ -23,7 +23,7 @@ def test_parse_literal_kinds_and_list_literal() -> None:
     title: Parse string/char/bool/none and list literals.
     """
     tree = _parse(
-        "fn main():\n"
+        "fn main() -> list[i32]:\n"
         '  var s: str = "abc"\n'
         "  var c: char = 'A'\n"
         "  var b: bool = true\n"
@@ -49,7 +49,7 @@ def test_parse_list_literal_rejects_non_literal_elements() -> None:
             r"Unknown token when expecting an expression)"
         ),
     ):
-        _parse("fn main():\n  return [foo]\n")
+        _parse("fn main() -> list[i32]:\n  return [foo]\n")
 
 
 def test_parse_datetime_and_timestamp_builtins() -> None:
@@ -57,9 +57,9 @@ def test_parse_datetime_and_timestamp_builtins() -> None:
     title: Parse datetime/timestamp builtin literals.
     """
     tree = _parse(
-        "fn dt():\n"
+        "fn dt() -> datetime:\n"
         '  return datetime("2026-01-01T00:00:00")\n'
-        "fn ts():\n"
+        "fn ts() -> timestamp:\n"
         '  return timestamp("2026-01-01T00:00:00Z")\n'
     )
 
@@ -78,14 +78,20 @@ def test_parse_datetime_requires_string_literal() -> None:
     title: Datetime builtin expects a string literal.
     """
     with pytest.raises(ParserException, match="expects a string literal"):
-        _parse("fn main():\n  return datetime(1)\n")
+        _parse("fn main() -> datetime:\n  return datetime(1)\n")
 
 
 @pytest.mark.parametrize(
     "code, expected",
     [
-        ("fn main():\n  for 1 in (0:1:1):\n    return 1\n", "identifier"),
-        ("fn main():\n  for i (0:1:1):\n    return i\n", "Expected 'in'"),
+        (
+            "fn main() -> i32:\n  for 1 in (0:1:1):\n    return 1\n",
+            "identifier",
+        ),
+        (
+            "fn main() -> i32:\n  for i (0:1:1):\n    return i\n",
+            "Expected 'in'",
+        ),
     ],
 )
 def test_parse_for_error_paths(code: str, expected: str) -> None:
@@ -117,6 +123,12 @@ def test_parse_inline_var_declaration_error_paths() -> None:
     with pytest.raises(ParserException, match="identifier after var"):
         parser.parse_inline_var_declaration()
 
+    ArxIO.string_to_buffer("var i = 0")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="type annotation"):
+        parser.parse_inline_var_declaration()
+
 
 def test_parse_var_expr_error_paths() -> None:
     """
@@ -128,10 +140,16 @@ def test_parse_var_expr_error_paths() -> None:
     with pytest.raises(ParserException, match="identifier after var"):
         parser.parse_var_expr()
 
-    ArxIO.string_to_buffer("var a in")
+    ArxIO.string_to_buffer("var a: i32 in")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="Legacy 'var"):
+        parser.parse_var_expr()
+
+    ArxIO.string_to_buffer("var a = 1")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="type annotation"):
         parser.parse_var_expr()
 
 
@@ -221,6 +239,12 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     with pytest.raises(ParserException, match="Expected type annotation"):
         parser.parse_prototype(expect_colon=False)
 
+    ArxIO.string_to_buffer("f(x: i32)")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="Expected return type"):
+        parser.parse_prototype(expect_colon=False)
+
 
 def test_parse_block_error_paths() -> None:
     """
@@ -241,7 +265,7 @@ def test_parse_block_error_paths() -> None:
         parser.parse_block()
 
     with pytest.raises(ParserException, match="Indentation not allowed here"):
-        _parse("fn main():\n  a = 1\n    b = 2\n")
+        _parse("fn main() -> i32:\n  a = 1\n    b = 2\n")
 
 
 def test_parse_primary_unknown_token_branch() -> None:

@@ -87,7 +87,7 @@ def test_parse() -> None:
 
     expr = parser.parse(lexer.lex())
     assert expr
-    assert isinstance(expr, astx.Block)
+    assert isinstance(expr, astx.Module)
 
 
 def test_parse_if_stmt() -> None:
@@ -117,7 +117,7 @@ def test_parse_fn() -> None:
     title: Test gettok for main tokens.
     """
     ArxIO.string_to_buffer(
-        "fn math(x: i32):\n"
+        "fn math(x: i32) -> i32:\n"
         + "  if 1 > 2:\n"
         + "    a = 1\n"
         + "  else:\n"
@@ -156,7 +156,7 @@ def test_parse_module_docstring() -> None:
         "title: Module docs\n"
         "summary: Main module reference\n"
         "```\n"
-        "fn main():\n"
+        "fn main() -> i32:\n"
         "  return 1\n"
     )
 
@@ -164,7 +164,7 @@ def test_parse_module_docstring() -> None:
     parser = Parser()
     tree = parser.parse(lexer.lex())
 
-    assert isinstance(tree, astx.Block)
+    assert isinstance(tree, astx.Module)
     assert len(tree.nodes) == 1
     assert isinstance(tree.nodes[0], astx.FunctionDef)
 
@@ -174,7 +174,7 @@ def test_parse_module_docstring_must_start_first_line() -> None:
     title: Test module docstring must start at line 1, column 1.
     """
     ArxIO.string_to_buffer(
-        "  ```\n  title: module docs\n  ```\nfn main():\n  return 1\n"
+        "  ```\n  title: module docs\n  ```\nfn main() -> i32:\n  return 1\n"
     )
 
     lexer = Lexer()
@@ -189,7 +189,7 @@ def test_parse_function_docstring() -> None:
     title: Test function docstring as first body statement.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n"
+        "fn main() -> i32:\n"
         "  ```\n"
         "  title: Function docs\n"
         "  summary: Function summary\n"
@@ -213,7 +213,7 @@ def test_parse_function_docstring_must_be_first_stmt() -> None:
     title: Test function docstring invalid placement after expressions.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n  return 1\n  ```\n  title: Function docs\n  ```\n"
+        "fn main() -> i32:\n  return 1\n  ```\n  title: Function docs\n  ```\n"
     )
 
     lexer = Lexer()
@@ -228,7 +228,9 @@ def test_parse_module_docstring_invalid_douki_schema() -> None:
     title: Test module docstring validation against Douki schema.
     """
     ArxIO.string_to_buffer(
-        "```\nsummary: Missing required title\n```\nfn main():\n  return 1\n"
+        "```\nsummary: Missing required title\n```\n"
+        "fn main() -> i32:\n"
+        "  return 1\n"
     )
 
     lexer = Lexer()
@@ -243,7 +245,7 @@ def test_parse_function_docstring_invalid_douki_schema() -> None:
     title: Test function docstring validation against Douki schema.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n"
+        "fn main() -> i32:\n"
         "  ```\n"
         "  bad_field: this is not allowed by schema\n"
         "  ```\n"
@@ -283,7 +285,7 @@ def test_parse_while_stmt() -> None:
     title: Test while statement parsing.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n"
+        "fn main() -> i32:\n"
         "  var a: i32 = 0\n"
         "  while a < 10:\n"
         "    a = a + 1\n"
@@ -303,7 +305,9 @@ def test_parse_for_count_stmt() -> None:
     title: Test count-style for parsing.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n  for var i: i32 = 0; i < 5; i = i + 1:\n    return i\n"
+        "fn main() -> i32:\n"
+        "  for var i: i32 = 0; i < 5; i = i + 1:\n"
+        "    return i\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -318,7 +322,9 @@ def test_parse_for_range_slice_style() -> None:
     """
     title: Test range-style for parsing with colon-separated bounds.
     """
-    ArxIO.string_to_buffer("fn main():\n  for j in (0:5:1):\n    return j\n")
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
+    )
     lexer = Lexer()
     parser = Parser()
 
@@ -332,7 +338,9 @@ def test_parse_for_range_tuple_style_is_rejected() -> None:
     """
     title: Tuple-style for range must be rejected.
     """
-    ArxIO.string_to_buffer("fn main():\n  for j in (0, 5, 1):\n    return j\n")
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n  for j in (0, 5, 1):\n    return j\n"
+    )
     lexer = Lexer()
     parser = Parser()
 
@@ -345,7 +353,10 @@ def test_parse_builtin_cast_and_print() -> None:
     title: Test builtin cast and print node generation.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n  var a: i32 = 1\n  print(cast(a, str))\n  return a\n"
+        "fn main() -> i32:\n"
+        "  var a: i32 = 1\n"
+        "  print(cast(a, str))\n"
+        "  return a\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -361,7 +372,7 @@ def test_parse_block_with_comment_and_blank_lines() -> None:
     title: Test block parsing across comment/blank lines.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n"
+        "fn main() -> i32:\n"
         "  # section A\n"
         "\n"
         "  var a: i32 = 1\n"

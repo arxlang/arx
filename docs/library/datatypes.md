@@ -1,13 +1,13 @@
 # Data Types
 
 Arx uses explicit type annotations for variables, function parameters, and
-optional function return types.
+function return types.
 
 ## Type Annotations
 
 - Function parameters must always be typed.
-- Function return type is optional. If omitted, current parser default is `f32`.
-- Variable declarations can include an explicit type with `var name: type`.
+- Function return type must always be explicit with `-> type`.
+- Variable declarations must include an explicit type with `var name: type`.
 
 ````arx
 ```

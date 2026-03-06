@@ -94,9 +94,11 @@ Current language behavior (from parser/lexer/tests/syntax manifest):
 - Numeric literals: decimal integer/float (single `.` max)
 - String/char/bool/none literals are supported
 - Comments: `#` line comments
-- Function definitions: `fn name(arg: type, ...)` followed by indented block
+- Function definitions: `fn name(arg: type, ...) -> type` followed by indented
+  block
 - Function arguments must be explicitly typed
-- Extern definitions: `extern name(arg: type, ...)`
+- Variable declarations must be explicitly typed (`var name: type`)
+- Extern definitions: `extern name(arg: type, ...) -> type`
 - Control flow: `if/else`, `while`, `for ... in (...)`, count-style `for`
 - Range-style for header is `(start:end:step)` (tuple-style is rejected)
 - Builtins: `cast(value, type)` and `print(expr)`
