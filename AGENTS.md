@@ -71,11 +71,19 @@ Use this guidance for any change inside the Arx compiler repository:
 - Loads schema from `src/arx/douki_schema.json`.
 - Enforces non-empty YAML object and schema conformance.
 
+### `src/arx/codegen.py`
+
+- Contains Arx-specific LLVM lowering overrides on top of IRx.
+- `ArxLLVMLiteIRVisitor` is the compatibility layer for Arx semantics.
+- Keep this layer minimal and explicit; prefer upstream fixes in IRx when
+  changes are generic.
+
 ### `src/arx/main.py` and `src/arx/cli.py`
 
 - CLI argument handling and execution modes (`--show-tokens`, `--show-ast`,
-  `--show-llvm-ir`, compile).
+  `--show-llvm-ir`, compile, `--run`).
 - `ArxMain._get_astx()` orchestrates parse flow over input files.
+- `ArxMain` uses `arx.codegen.LLVMLiteIR` for Arx-specific codegen behavior.
 
 ## Language Rules You Must Preserve
 
@@ -84,11 +92,14 @@ Current language behavior (from parser/lexer/tests/syntax manifest):
 - Significant indentation, 2-space unit
 - Keywords: `fn`, `extern`, `return`, `if`, `else`, `for`, `in`, `var`, `const`
 - Numeric literals: decimal integer/float (single `.` max)
+- String/char/bool/none literals are supported
 - Comments: `#` line comments
-- Function definitions: `fn name(args):` followed by indented block
-- Extern definitions: `extern name(args)`
-- Control flow: `if/else`, `for ... in`
-- No string literal support yet
+- Function definitions: `fn name(arg: type, ...)` followed by indented block
+- Function arguments must be explicitly typed
+- Extern definitions: `extern name(arg: type, ...)`
+- Control flow: `if/else`, `while`, `for ... in (...)`, count-style `for`
+- Range-style for header is `(start:end:step)` (tuple-style is rejected)
+- Builtins: `cast(value, type)` and `print(expr)`
 
 If you extend language syntax, update all affected surfaces:
 
@@ -97,6 +108,20 @@ If you extend language syntax, update all affected surfaces:
 3. tests
 4. `syntax/arx.syntax.json`
 5. docs and examples
+
+## Codegen Invariants (Arx + IRx)
+
+When changing `src/arx/codegen.py`, preserve these invariants:
+
+- `result_stack` discipline:
+  - never assume a value exists after statement-only or terminating branches
+  - only push values that are semantically produced
+- Terminator safety:
+  - do not emit instructions after a block terminator
+  - for `if` merges, create PHI nodes only when both incoming paths fall through
+    and types match
+- Build output must remain parseable by LLVM (`llvm.parse_assembly`)
+- Arx compatibility workarounds should stay local, small, and test-covered
 
 ## Docstring Standard (Mandatory)
 
@@ -131,6 +156,15 @@ Current behavior:
 - docstrings are ignored in AST/IR output for now
 
 ## Code Style And Standards
+
+### Design Principles
+
+- Apply SOLID principles where they improve clarity, testability, and change
+  safety.
+- Prefer a never-nest style: use guard clauses and early returns to keep control
+  flow flat when possible.
+- Avoid unnecessary or obvious comments; comment only non-trivial intent or
+  decisions that are not clear from code itself.
 
 ### Formatting and static quality
 
@@ -191,6 +225,16 @@ makim tests.ci
 mkdocs build --config-file mkdocs.yaml
 ```
 
+Codegen-focused checks:
+
+```bash
+# translate-path regressions (no linker required)
+pytest -q tests/test_codegen_ast_output.py
+
+# build/run-path checks (requires clang)
+pytest -q tests/test_codegen_file_object.py
+```
+
 Smoke examples:
 
 ```bash
@@ -221,6 +265,16 @@ When behavior changes, update docs in same PR:
 
 If embedding Arx docstrings inside Markdown code examples, prefer quadruple
 fences around the code block to safely include inner triple backticks.
+
+## Testing Contract
+
+- Prefer targeted tests near changed behavior.
+- For parser or syntax changes: add/adjust parser tests and at least one
+  example.
+- For codegen/control-flow changes:
+  - add at least one translate-path test (`tests/test_codegen_ast_output.py`)
+  - add build/run assertions when behavior depends on linked execution and
+    toolchain is available.
 
 ## Examples Contract
 
