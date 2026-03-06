@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [0.3.3](https://github.com/arxlang/arx/compare/0.3.2...0.3.3) (2026-03-06)
+
+
+### Bug Fixes
+
+* Update astx and irx; mermaid is optional now ([#35](https://github.com/arxlang/arx/issues/35)) ([37b3415](https://github.com/arxlang/arx/commit/37b341539eb4dd6989721dc43beb0d1d0e4d2327))
+
 ## [0.3.2](https://github.com/arxlang/arx/compare/0.3.1...0.3.2) (2026-03-06)
 
 
