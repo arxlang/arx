@@ -206,9 +206,23 @@ def test_parse_type_list_and_default_values() -> None:
     )
     assert isinstance(
         parser._default_value_for_type(astx.DateTime()),
-        astx.LiteralInt32,
+        astx.LiteralDateTime
+    )
+    assert isinstance(
+        parser._default_value_for_type(astx.Timestamp()),
+        astx.LiteralTimestamp
+    )
+    assert isinstance(
+        parser._default_value_for_type(astx.Date()),
+        astx.LiteralDate
+    )
+    assert isinstance(
+        parser._default_value_for_type(astx.Time()), 
+        astx.LiteralTime
     )
 
+    with pytest.raises(ParserException):
+        parser._default_value_for_type(astx.ListType([astx.Int32()]))
 
 def test_parse_unary_and_prototype_error_paths() -> None:
     """
