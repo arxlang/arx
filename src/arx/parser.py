@@ -696,7 +696,7 @@ class Parser:
             f"'{type(data_type).__name__}'. "
             f"An explicit initializer is required."
         )
-    
+
     def parse_type(self) -> astx.DataType:
         """
         title: Parse a type annotation.
