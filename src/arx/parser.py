@@ -682,7 +682,20 @@ class Parser:
             return astx.LiteralString("")
         if isinstance(data_type, astx.NoneType):
             return astx.LiteralNone()
-        return astx.LiteralInt32(0)
+        if isinstance(data_type, astx.DateTime):
+            return astx.LiteralDateTime("1970-01-01T00:00:00")
+        if isinstance(data_type, astx.Timestamp):
+            return astx.LiteralTimestamp("1970-01-01T00:00:00")
+        if isinstance(data_type, astx.Date):
+            return astx.LiteralDate("1970-01-01")
+        if isinstance(data_type, astx.Time):
+            return astx.LiteralTime("00:00:00")
+
+        raise ParserException(
+            f"Parser: No default value defined for type "
+            f"'{type(data_type).__name__}'. "
+            f"An explicit initializer is required."
+        )
 
     def parse_type(self) -> astx.DataType:
         """
