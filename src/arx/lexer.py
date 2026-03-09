@@ -252,6 +252,13 @@ class TokenList:
           type: Token
           description: The next token from standard input.
         """
+        if self.position >= len(self.tokens):
+            last_loc = (
+                self.tokens[-1].location
+                if self.tokens
+                else SourceLocation(0, 0)
+            )
+            return Token(kind=TokenKind.eof, value="", location=last_loc)
         tok = self.tokens[self.position]
         self.position += 1
         return tok
