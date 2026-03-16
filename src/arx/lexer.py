@@ -8,7 +8,7 @@ import copy
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, cast
+from typing import Any, cast
 
 from astx import SourceLocation
 
@@ -80,7 +80,7 @@ MAP_NAME_TO_KW_TOKEN = {
 }
 
 
-MAP_KW_TOKEN_TO_NAME: Dict[TokenKind, str] = {
+MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.eof: "eof",
     TokenKind.kw_function: "function",
     TokenKind.kw_return: "return",
@@ -204,23 +204,23 @@ class TokenList:
     title: Class for handle a List of tokens.
     attributes:
       tokens:
-        type: List[Token]
+        type: list[Token]
       position:
         type: int
       cur_tok:
         type: Token
     """
 
-    tokens: List[Token]
+    tokens: list[Token]
     position: int = 0
     cur_tok: Token
 
-    def __init__(self, tokens: List[Token]) -> None:
+    def __init__(self, tokens: list[Token]) -> None:
         """
         title: Instantiate a TokenList object.
         parameters:
           tokens:
-            type: List[Token]
+            type: list[Token]
         """
         self.tokens = tokens
         self.position = 0
@@ -296,14 +296,14 @@ class Lexer:
       new_line:
         type: bool
       _keyword_map:
-        type: Dict[str, TokenKind]
+        type: dict[str, TokenKind]
     """
 
     lex_loc: SourceLocation = SourceLocation(0, 0)
     last_char: str = ""
     new_line: bool = True
 
-    _keyword_map: Dict[str, TokenKind] = {
+    _keyword_map: dict[str, TokenKind] = {
         "fn": TokenKind.kw_function,
         "extern": TokenKind.kw_extern,
         "return": TokenKind.kw_return,
@@ -323,7 +323,7 @@ class Lexer:
         self.last_char: str = ""
         self.new_line: bool = True
 
-        self._keyword_map: Dict[str, TokenKind] = copy.deepcopy(
+        self._keyword_map: dict[str, TokenKind] = copy.deepcopy(
             self._keyword_map
         )
 
@@ -615,7 +615,7 @@ class Lexer:
         """
         self.clean()
         cur_tok = Token(kind=TokenKind.not_initialized, value="")
-        tokens: List[Token] = []
+        tokens: list[Token] = []
         while cur_tok.kind != TokenKind.eof:
             cur_tok = self.get_token()
             tokens.append(cur_tok)
