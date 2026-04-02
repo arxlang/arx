@@ -11,7 +11,7 @@ from typing import Any, Literal, cast
 
 import astx
 
-from arx.codegen import LLVMLiteIR
+from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -50,6 +50,14 @@ class ArxMain:
     link_mode: Literal["auto", "pie", "no-pie"] = "auto"
 
     def _format_ast_fallback(self, node: object) -> str:
+        """
+        title: Format a fallback AST representation.
+        parameters:
+          node:
+            type: object
+        returns:
+          type: str
+        """
         lines: list[str] = []
         seen: set[int] = set()
         self._walk_ast_node(node, lines, depth=0, seen=seen)
@@ -58,6 +66,18 @@ class ArxMain:
     def _walk_ast_node(
         self, node: object, lines: list[str], depth: int, seen: set[int]
     ) -> None:
+        """
+        title: Walk one AST node for fallback formatting.
+        parameters:
+          node:
+            type: object
+          lines:
+            type: list[str]
+          depth:
+            type: int
+          seen:
+            type: set[int]
+        """
         prefix = "  " * depth
         if not isinstance(node, astx.AST):
             lines.append(f"{prefix}{node!r}")
@@ -90,6 +110,20 @@ class ArxMain:
         depth: int,
         seen: set[int],
     ) -> None:
+        """
+        title: Walk one AST field for fallback formatting.
+        parameters:
+          key:
+            type: str
+          value:
+            type: object
+          lines:
+            type: list[str]
+          depth:
+            type: int
+          seen:
+            type: set[int]
+        """
         prefix = "  " * depth
         if isinstance(value, astx.AST):
             lines.append(f"{prefix}{key}:")
@@ -121,6 +155,11 @@ class ArxMain:
         return Path(self.input_files[0]).stem or "a.out"
 
     def _get_astx(self) -> astx.AST:
+        """
+        title: Build the parsed AST for the current input files.
+        returns:
+          type: astx.AST
+        """
         lexer = Lexer()
         parser = Parser()
         modules: list[astx.Module] = []
@@ -139,6 +178,11 @@ class ArxMain:
         return tree_ast
 
     def _get_codegen_astx(self) -> astx.AST:
+        """
+        title: Build the AST used for code generation.
+        returns:
+          type: astx.AST
+        """
         tree_ast = self._get_astx()
         if (
             isinstance(tree_ast, astx.Block)
@@ -152,6 +196,14 @@ class ArxMain:
         return tree_ast
 
     def _has_main_entry(self, node: astx.AST) -> bool:
+        """
+        title: Check whether the AST contains a main entry point.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: bool
+        """
         modules: list[astx.Module] = []
 
         if isinstance(node, astx.Module):
@@ -253,7 +305,7 @@ class ArxMain:
         title: Compile into LLVM IR the given input file.
         """
         tree_ast = self._get_codegen_astx()
-        ir = LLVMLiteIR()
+        ir = ArxBuilder()
         print(ir.translator.translate(tree_ast))
 
     def run_shell(self) -> None:
@@ -283,7 +335,7 @@ class ArxMain:
           type: bool
         """
         tree_ast = self._get_codegen_astx()
-        ir = LLVMLiteIR()
+        ir = ArxBuilder()
         self.output_file = self._resolve_output_file()
         emits_executable = not self.is_lib and self._has_main_entry(tree_ast)
         ir.build(

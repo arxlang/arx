@@ -14,6 +14,14 @@ from arx.parser import Parser
 
 
 def _parse(code: str) -> astx.Module:
+    """
+    title: Parse source text into an AST module.
+    parameters:
+      code:
+        type: str
+    returns:
+      type: astx.Module
+    """
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
 
@@ -79,6 +87,25 @@ def test_parse_datetime_requires_string_literal() -> None:
     """
     with pytest.raises(ParserException, match="expects a string literal"):
         _parse("fn main() -> datetime:\n  return datetime(1)\n")
+
+
+def test_parse_block_keeps_return_after_loop_semicolon() -> None:
+    """
+    title: Loop body semicolons do not eject following statements from blocks.
+    """
+    tree = _parse(
+        "fn print_star(n: i32) -> none:\n"
+        "  for i in (0:n:1):\n"
+        '    print("*");\n'
+        "  return none\n"
+    )
+
+    assert len(tree.nodes) == 1
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert len(fn.body.nodes) == 2
+    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+    assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
 
 
 @pytest.mark.parametrize(

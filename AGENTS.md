@@ -29,7 +29,7 @@ Use this guidance for any change inside the Arx compiler repository:
 - Main architecture: `source -> lexer -> parser -> astx -> irx/LLVM`
 - Key dependencies:
   - `astx` for AST nodes
-  - `pyirx` for IR/codegen
+  - `irx` for IR/codegen
   - `jsonschema` + `pyyaml` for Douki docstring validation
 - Docs stack: MkDocs + Material + mkdocstrings
 
@@ -74,7 +74,8 @@ Use this guidance for any change inside the Arx compiler repository:
 ### `src/arx/codegen.py`
 
 - Contains Arx-specific LLVM lowering overrides on top of IRx.
-- `ArxLLVMLiteIRVisitor` is the compatibility layer for Arx semantics.
+- `ArxVisitor` extends `irx.builders.llvmliteir.Visitor`.
+- `ArxBuilder` extends `irx.builders.llvmliteir.Builder`.
 - Keep this layer minimal and explicit; prefer upstream fixes in IRx when
   changes are generic.
 
@@ -83,7 +84,7 @@ Use this guidance for any change inside the Arx compiler repository:
 - CLI argument handling and execution modes (`--show-tokens`, `--show-ast`,
   `--show-llvm-ir`, compile, `--run`).
 - `ArxMain._get_astx()` orchestrates parse flow over input files.
-- `ArxMain` uses `arx.codegen.LLVMLiteIR` for Arx-specific codegen behavior.
+- `ArxMain` uses `arx.codegen.ArxBuilder` for Arx-specific codegen behavior.
 
 ## Language Rules You Must Preserve
 

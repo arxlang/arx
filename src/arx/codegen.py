@@ -12,39 +12,45 @@ from typing import Any, Callable, Literal
 import astx
 import xh
 
-from irx.builders.llvmliteir import (
-    LLVMLiteIR as BaseLLVMLiteIR,
-)
-from irx.builders.llvmliteir import (
-    LLVMLiteIRVisitor,
-)
+from irx.builders.llvmliteir import Builder as LLVMBuilder
+from irx.builders.llvmliteir import Visitor as LLVMVisitor
 from llvmlite import binding as llvm
 
 
-class ArxLLVMLiteIRVisitor(LLVMLiteIRVisitor):
+class ArxVisitor(LLVMVisitor):
     """
-    title: Arx-specific LLVM-IR visitor customizations.
+    title: Arx-specific backend visitor customizations.
     """
 
     ...
 
 
-class LLVMLiteIR(BaseLLVMLiteIR):
+class ArxBuilder(LLVMBuilder):
     """
-    title: LLVM-IR transpiler and compiler with Arx overrides.
+    title: Arx backend builder with Arx overrides.
     attributes:
       translator:
-        type: ArxLLVMLiteIRVisitor
+        type: ArxVisitor
     """
 
     LINK_MODES = {"auto", "pie", "no-pie"}
 
     def __init__(self) -> None:
         """
-        title: Initialize LLVMIR.
+        title: Initialize ArxBuilder.
         """
         super().__init__()
-        self.translator: ArxLLVMLiteIRVisitor = ArxLLVMLiteIRVisitor()
+        self.translator: ArxVisitor = self._new_translator()
+
+    def _new_translator(self) -> ArxVisitor:
+        """
+        title: Create the Arx visitor.
+        returns:
+          type: ArxVisitor
+        """
+        return ArxVisitor(
+            active_runtime_features=set(self.runtime_feature_names)
+        )
 
     def build(
         self,
@@ -66,8 +72,7 @@ class LLVMLiteIR(BaseLLVMLiteIR):
           link_mode:
             type: Literal[auto, pie, no-pie]
         """
-        self.translator = ArxLLVMLiteIRVisitor()
-        result = self.translator.translate(node)
+        result = self.translate(node)
 
         result_mod = llvm.parse_assembly(result)
         result_object = self.translator.target_machine.emit_object(result_mod)

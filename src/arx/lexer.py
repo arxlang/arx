@@ -130,6 +130,16 @@ class Token:
         value: Any,
         location: SourceLocation = SourceLocation(0, 0),
     ) -> None:
+        """
+        title: Initialize Token.
+        parameters:
+          kind:
+            type: TokenKind
+          value:
+            type: Any
+          location:
+            type: SourceLocation
+        """
         self.kind = kind
         self.value = value
         self.location = copy.deepcopy(location)
@@ -278,6 +288,14 @@ class LexerError(Exception):
     """
 
     def __init__(self, message: str, location: SourceLocation):
+        """
+        title: Initialize LexerError.
+        parameters:
+          message:
+            type: str
+          location:
+            type: SourceLocation
+        """
         super().__init__(
             f"{message} at line {location.line}, col {location.col}"
         )
@@ -318,6 +336,9 @@ class Lexer:
     }
 
     def __init__(self) -> None:
+        """
+        title: Initialize Lexer.
+        """
         # self.cur_loc: SourceLocation = SourceLocation(0, 0)
         self.lex_loc: SourceLocation = SourceLocation(0, 0)
         self.last_char: str = ""

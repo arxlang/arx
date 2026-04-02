@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from arx.codegen import LLVMLiteIR
+from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -36,7 +36,7 @@ def test_object_generation(code: str) -> None:
     """
     lexer = Lexer()
     parser = Parser()
-    ir = LLVMLiteIR()
+    ir = ArxBuilder()
 
     ArxIO.string_to_buffer(code)
     module_ast = parser.parse(lexer.lex())

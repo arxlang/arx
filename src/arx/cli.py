@@ -26,6 +26,21 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
         width: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
+        """
+        title: Initialize CustomHelpFormatter.
+        parameters:
+          prog:
+            type: str
+          indent_increment:
+            type: int
+          max_help_position:
+            type: int
+          width:
+            type: Optional[int]
+          kwargs:
+            type: Any
+            variadic: keyword
+        """
         super().__init__(
             prog,
             indent_increment=indent_increment,

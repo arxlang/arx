@@ -136,11 +136,25 @@ class Parser:
         return tree
 
     def _is_operator(self, value: str) -> bool:
+        """
+        title: Check whether the current token matches an operator.
+        parameters:
+          value:
+            type: str
+        returns:
+          type: bool
+        """
         return self.tokens.cur_tok == Token(
             kind=TokenKind.operator, value=value
         )
 
     def _consume_operator(self, value: str) -> None:
+        """
+        title: Consume the expected operator token.
+        parameters:
+          value:
+            type: str
+        """
         if not self._is_operator(value):
             raise ParserException(
                 f"Expected operator '{value}', got '{self.tokens.cur_tok}'."
@@ -283,6 +297,9 @@ class Parser:
                 node = self.parse_expression()
                 block.nodes.append(node)
                 docstring_allowed_here = False
+
+            while self._is_operator(";"):
+                self.tokens.get_next_token()
 
             next_kind: TokenKind = self.tokens.cur_tok.kind
             if next_kind not in {
