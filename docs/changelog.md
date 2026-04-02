@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+## [0.3.4](https://github.com/arxlang/arx/compare/0.3.3...0.3.4) (2026-04-02)
+
+
+### Bug Fixes
+
+* correct _default_value_for_type for temporal and unsupported types ([#36](https://github.com/arxlang/arx/issues/36)) ([93d7b13](https://github.com/arxlang/arx/commit/93d7b13fdd4626c75cd7c722ea473392b2f3e650))
+* **refactor:** Update irx and update its usage; rename classes ([#39](https://github.com/arxlang/arx/issues/39)) ([c95c47c](https://github.com/arxlang/arx/commit/c95c47ce320069759a022623a6b1064280d0459b))
+
 ## [0.3.3](https://github.com/arxlang/arx/compare/0.3.2...0.3.3) (2026-03-06)
 
 
