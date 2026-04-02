@@ -3,13 +3,13 @@ title: Test parser methods.
 """
 
 import astx
+import irx.astx as irx_astx
 import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from irx import system
 
 
 def test_binop_precedence() -> None:
@@ -364,7 +364,7 @@ def test_parse_builtin_cast_and_print() -> None:
     tree = parser.parse(lexer.lex())
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.body.nodes[1], system.PrintExpr)
+    assert isinstance(fn.body.nodes[1], irx_astx.PrintExpr)
 
 
 def test_parse_block_with_comment_and_blank_lines() -> None:

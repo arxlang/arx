@@ -15,13 +15,13 @@ from pathlib import Path
 import arx.cli as cli_module
 import arx.main as main_module
 import astx
+import irx.astx as irx_astx
 import pytest
 
 from arx import __version__, builtins
 from arx.docstrings import validate_docstring
 from arx.exceptions import CodeGenException, ParserException
 from arx.io import ArxBuffer, ArxFile, ArxIO
-from irx import system
 
 
 def test_builtins_helpers() -> None:
@@ -34,8 +34,8 @@ def test_builtins_helpers() -> None:
 
     cast_node = builtins.build_cast(astx.LiteralInt32(1), astx.Float32())
     print_node = builtins.build_print(astx.LiteralString("hello"))
-    assert isinstance(cast_node, system.Cast)
-    assert isinstance(print_node, system.PrintExpr)
+    assert isinstance(cast_node, irx_astx.Cast)
+    assert isinstance(print_node, irx_astx.PrintExpr)
 
 
 def test_custom_exceptions_prefixes() -> None:
@@ -112,6 +112,14 @@ def test_arxio_file_and_stdin_loaders(
     calls: dict[str, str] = {}
 
     def fake_file_to_buffer(cls: type[ArxIO], filename: str) -> None:
+        """
+        title: Fake file-to-buffer loader.
+        parameters:
+          cls:
+            type: type[ArxIO]
+          filename:
+            type: str
+        """
         calls["filename"] = filename
 
     monkeypatch.setattr(
@@ -192,6 +200,11 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class DummyParser:
         def parse_args(self) -> Namespace:
+            """
+            title: Return CLI args for the version branch.
+            returns:
+              type: Namespace
+            """
             return Namespace(
                 input_files=[],
                 version=True,
@@ -208,9 +221,17 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     called: dict[str, bool] = {"version": False}
 
     def fake_show_version() -> None:
+        """
+        title: Record that show_version was called.
+        """
         called["version"] = True
 
     def fake_get_args() -> DummyParser:
+        """
+        title: Return a dummy CLI parser.
+        returns:
+          type: DummyParser
+        """
         return DummyParser()
 
     monkeypatch.setattr(cli_module, "get_args", fake_get_args)
@@ -230,6 +251,11 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class DummyParser:
         def parse_args(self) -> Namespace:
+            """
+            title: Return CLI args for the run branch.
+            returns:
+              type: Namespace
+            """
             return Namespace(
                 input_files=["a.x"],
                 version=False,
@@ -247,9 +273,21 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
         called_kwargs: dict[str, object] = {}
 
         def run(self, **kwargs: object) -> None:
+            """
+            title: Record forwarded CLI kwargs.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
             DummyMain.called_kwargs = kwargs
 
     def fake_get_args() -> DummyParser:
+        """
+        title: Return a dummy CLI parser.
+        returns:
+          type: DummyParser
+        """
         return DummyParser()
 
     monkeypatch.setattr(cli_module, "get_args", fake_get_args)
@@ -270,6 +308,11 @@ def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class DummyParser:
         def parse_args(self) -> Namespace:
+            """
+            title: Return CLI args for the run alias branch.
+            returns:
+              type: Namespace
+            """
             return Namespace(
                 input_files=["run", "prog.x"],
                 version=False,
@@ -287,9 +330,21 @@ def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
         called_kwargs: dict[str, object] = {}
 
         def run(self, **kwargs: object) -> None:
+            """
+            title: Record forwarded CLI kwargs.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
             DummyMain.called_kwargs = kwargs
 
     def fake_get_args() -> DummyParser:
+        """
+        title: Return a dummy CLI parser.
+        returns:
+          type: DummyParser
+        """
         return DummyParser()
 
     monkeypatch.setattr(cli_module, "get_args", fake_get_args)
@@ -312,6 +367,9 @@ def test_python_m_entrypoint_calls_cli_app(
     called: dict[str, bool] = {"app": False}
 
     def fake_app() -> None:
+        """
+        title: Record that the CLI app was invoked.
+        """
         called["app"] = True
 
     monkeypatch.setattr(cli_module, "app", fake_app)
@@ -345,17 +403,40 @@ def test_arxmain_get_astx_uses_all_inputs(
 
     class DummyLexer:
         def lex(self) -> list[str]:
+            """
+            title: Return placeholder lexer tokens.
+            returns:
+              type: list[str]
+            """
             return ["TOKENS"]
 
     class DummyParser:
         def parse(
             self, tokens: list[str], module_name: str = "main"
         ) -> astx.Module:
+            """
+            title: Return a module for the requested name.
+            parameters:
+              tokens:
+                type: list[str]
+              module_name:
+                type: str
+            returns:
+              type: astx.Module
+            """
             assert tokens == ["TOKENS"]
             parsed_modules.append(module_name)
             return astx.Module(module_name)
 
     def fake_file_to_buffer(cls: type[ArxIO], filename: str) -> None:
+        """
+        title: Record file loading requests.
+        parameters:
+          cls:
+            type: type[ArxIO]
+          filename:
+            type: str
+        """
         loaded_files.append(filename)
 
     monkeypatch.setattr(main_module, "Lexer", DummyLexer)
@@ -394,18 +475,33 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     }
 
     def fake_show_ast() -> None:
+        """
+        title: Record show_ast dispatch.
+        """
         called["ast"] = True
 
     def fake_show_tokens() -> None:
+        """
+        title: Record show_tokens dispatch.
+        """
         called["tokens"] = True
 
     def fake_show_llvm_ir() -> None:
+        """
+        title: Record show_llvm_ir dispatch.
+        """
         called["llvm"] = True
 
     def fake_run_shell() -> None:
+        """
+        title: Record run_shell dispatch.
+        """
         called["shell"] = True
 
     def fake_run_binary() -> None:
+        """
+        title: Record run_binary dispatch.
+        """
         called["run_binary"] = True
 
     monkeypatch.setattr(app, "show_ast", fake_show_ast)
@@ -417,6 +513,11 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     compiled: dict[str, bool] = {"called": False}
 
     def fake_compile() -> bool:
+        """
+        title: Record compile dispatch.
+        returns:
+          type: bool
+        """
         compiled["called"] = True
         return True
 
@@ -458,9 +559,19 @@ def test_arxmain_show_methods_and_compile(
 
     class ReprTree:
         def __repr__(self) -> str:
+            """
+            title: Return a stable repr string.
+            returns:
+              type: str
+            """
             return "TREE"
 
     def fake_get_astx_tree() -> ReprTree:
+        """
+        title: Return a tree with a stable repr.
+        returns:
+          type: ReprTree
+        """
         return ReprTree()
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
@@ -469,12 +580,27 @@ def test_arxmain_show_methods_and_compile(
 
     class ReprFailTree:
         def __repr__(self) -> str:
+            """
+            title: Raise when repr is requested.
+            returns:
+              type: str
+            """
             raise RuntimeError("repr failure")
 
         def __str__(self) -> str:
+            """
+            title: Return a fallback string form.
+            returns:
+              type: str
+            """
             return "TREE_FALLBACK"
 
     def fake_get_astx_tree_fallback() -> ReprFailTree:
+        """
+        title: Return a tree with a failing repr.
+        returns:
+          type: ReprFailTree
+        """
         return ReprFailTree()
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree_fallback)
@@ -483,9 +609,22 @@ def test_arxmain_show_methods_and_compile(
 
     class DummyLexer:
         def lex(self) -> list[str]:
+            """
+            title: Return placeholder tokens for show_tokens.
+            returns:
+              type: list[str]
+            """
             return ["tok-a", "tok-b"]
 
     def fake_file_to_buffer(cls: type[ArxIO], filename: str) -> None:
+        """
+        title: Validate the requested source filename.
+        parameters:
+          cls:
+            type: type[ArxIO]
+          filename:
+            type: str
+        """
         assert filename == "sample.x"
 
     monkeypatch.setattr(main_module, "Lexer", DummyLexer)
@@ -499,13 +638,24 @@ def test_arxmain_show_methods_and_compile(
 
     class DummyTranslator:
         def translate(self, tree: object) -> str:
+            """
+            title: Return placeholder LLVM IR text.
+            parameters:
+              tree:
+                type: object
+            returns:
+              type: str
+            """
             return f"IR<{tree}>"
 
     class DummyIRShow:
         def __init__(self) -> None:
+            """
+            title: Initialize the dummy IR show facade.
+            """
             self.translator = DummyTranslator()
 
-    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRShow)
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRShow)
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     app.show_llvm_ir()
     assert "IR<TREE>" in capsys.readouterr().out
@@ -523,12 +673,24 @@ def test_arxmain_show_methods_and_compile(
             link: bool = True,
             link_mode: str = "auto",
         ) -> None:
+            """
+            title: Record build arguments.
+            parameters:
+              tree:
+                type: object
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
             DummyIRBuild.built_tree = tree
             DummyIRBuild.built_out = output_file
             DummyIRBuild.built_link = link
             DummyIRBuild.built_link_mode = link_mode
 
-    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRBuild)
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     app.compile()
     assert DummyIRBuild.built_tree is not None
@@ -549,6 +711,11 @@ def test_arxmain_compile_default_output_name(
     app = main_module.ArxMain(input_files=["examples/print-star.x"])
 
     def fake_get_astx_tree() -> object:
+        """
+        title: Return a placeholder AST object.
+        returns:
+          type: object
+        """
         return object()
 
     class DummyIRBuild:
@@ -563,13 +730,25 @@ def test_arxmain_compile_default_output_name(
             link: bool = True,
             link_mode: str = "auto",
         ) -> None:
+            """
+            title: Record build arguments.
+            parameters:
+              tree:
+                type: object
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
             del tree
             DummyIRBuild.built_out = output_file
             DummyIRBuild.built_link = link
             DummyIRBuild.built_link_mode = link_mode
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
-    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRBuild)
 
     app.compile()
 
@@ -591,6 +770,11 @@ def test_arxmain_compile_links_when_main_present(
     app = main_module.ArxMain(input_files=["examples/fibonacci.x"])
 
     def fake_get_astx_tree() -> object:
+        """
+        title: Return a placeholder AST object.
+        returns:
+          type: object
+        """
         return object()
 
     class DummyIRBuild:
@@ -604,17 +788,37 @@ def test_arxmain_compile_links_when_main_present(
             link: bool = True,
             link_mode: str = "auto",
         ) -> None:
+            """
+            title: Record build arguments.
+            parameters:
+              tree:
+                type: object
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
             del tree, output_file
             DummyIRBuild.built_link = link
             DummyIRBuild.built_link_mode = link_mode
 
     def fake_has_main_entry(node: object) -> bool:
+        """
+        title: Pretend that the AST contains main.
+        parameters:
+          node:
+            type: object
+        returns:
+          type: bool
+        """
         del node
         return True
 
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
     monkeypatch.setattr(app, "_has_main_entry", fake_has_main_entry)
-    monkeypatch.setattr(main_module, "LLVMLiteIR", DummyIRBuild)
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRBuild)
 
     app.compile()
 
@@ -634,6 +838,11 @@ def test_arxmain_run_requires_executable_for_run_flag(
     app = main_module.ArxMain()
 
     def fake_compile() -> bool:
+        """
+        title: Pretend that compile produced no executable.
+        returns:
+          type: bool
+        """
         return False
 
     monkeypatch.setattr(app, "compile", fake_compile)
@@ -660,6 +869,16 @@ def test_arxmain_run_binary_uses_absolute_path(
     def fake_subprocess_run(
         cmd: list[str], check: bool
     ) -> subprocess.CompletedProcess[str]:
+        """
+        title: Record subprocess execution arguments.
+        parameters:
+          cmd:
+            type: list[str]
+          check:
+            type: bool
+        returns:
+          type: subprocess.CompletedProcess[str]
+        """
         recorded["cmd"] = cmd
         recorded["check"] = check
         return subprocess.CompletedProcess(cmd, 0)
@@ -689,6 +908,16 @@ def test_arxmain_run_binary_nonzero_exits(
     def fake_subprocess_run(
         cmd: list[str], check: bool
     ) -> subprocess.CompletedProcess[str]:
+        """
+        title: Return a failing subprocess result.
+        parameters:
+          cmd:
+            type: list[str]
+          check:
+            type: bool
+        returns:
+          type: subprocess.CompletedProcess[str]
+        """
         del cmd
         del check
         return subprocess.CompletedProcess(["print-star"], 112)

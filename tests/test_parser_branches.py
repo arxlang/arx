@@ -14,6 +14,14 @@ from arx.parser import Parser
 
 
 def _parse(code: str) -> astx.Module:
+    """
+    title: Parse source text into an AST module.
+    parameters:
+      code:
+        type: str
+    returns:
+      type: astx.Module
+    """
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
 

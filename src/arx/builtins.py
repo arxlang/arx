@@ -5,8 +5,7 @@ title: Built-in function handlers for Arx parser lowering.
 from __future__ import annotations
 
 import astx
-
-from irx import system
+import irx.astx as irx_astx
 
 BUILTIN_CAST = "cast"
 BUILTIN_PRINT = "print"
@@ -24,7 +23,7 @@ def is_builtin(name: str) -> bool:
     return name in {BUILTIN_CAST, BUILTIN_PRINT}
 
 
-def build_cast(value: astx.AST, target_type: astx.DataType) -> system.Cast:
+def build_cast(value: astx.AST, target_type: astx.DataType) -> irx_astx.Cast:
     """
     title: Build an IRX Cast node.
     parameters:
@@ -33,18 +32,18 @@ def build_cast(value: astx.AST, target_type: astx.DataType) -> system.Cast:
       target_type:
         type: astx.DataType
     returns:
-      type: system.Cast
+      type: irx_astx.Cast
     """
-    return system.Cast(value=value, target_type=target_type)
+    return irx_astx.Cast(value=value, target_type=target_type)
 
 
-def build_print(message: astx.Expr) -> system.PrintExpr:
+def build_print(message: astx.Expr) -> irx_astx.PrintExpr:
     """
     title: Build an IRX PrintExpr node.
     parameters:
       message:
         type: astx.Expr
     returns:
-      type: system.PrintExpr
+      type: irx_astx.PrintExpr
     """
-    return system.PrintExpr(message=message)
+    return irx_astx.PrintExpr(message=message)
