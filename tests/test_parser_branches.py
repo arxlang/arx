@@ -89,6 +89,25 @@ def test_parse_datetime_requires_string_literal() -> None:
         _parse("fn main() -> datetime:\n  return datetime(1)\n")
 
 
+def test_parse_block_keeps_return_after_loop_semicolon() -> None:
+    """
+    title: Loop body semicolons do not eject following statements from blocks.
+    """
+    tree = _parse(
+        "fn print_star(n: i32) -> none:\n"
+        "  for i in (0:n:1):\n"
+        '    print("*");\n'
+        "  return none\n"
+    )
+
+    assert len(tree.nodes) == 1
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert len(fn.body.nodes) == 2
+    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+    assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
+
+
 @pytest.mark.parametrize(
     "code, expected",
     [

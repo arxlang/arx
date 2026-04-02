@@ -298,6 +298,9 @@ class Parser:
                 block.nodes.append(node)
                 docstring_allowed_here = False
 
+            while self._is_operator(";"):
+                self.tokens.get_next_token()
+
             next_kind: TokenKind = self.tokens.cur_tok.kind
             if next_kind not in {
                 TokenKind.indent,
