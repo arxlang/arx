@@ -5,7 +5,8 @@ title: Tests for `arx`.`lexer`.
 import pytest
 
 from arx.io import ArxIO
-from arx.lexer import Lexer, Token, TokenKind
+from arx.lexer import Lexer, LexerError, Token, TokenKind, TokenList
+from astx import SourceLocation
 
 
 def test_token_name() -> None:
@@ -225,3 +226,194 @@ def test_skip_hash_comments() -> None:
     assert lexer.get_token() == Token(TokenKind.identifier, "b")
     assert lexer.get_token() == Token(TokenKind.operator, "=")
     assert lexer.get_token() == Token(TokenKind.int_literal, 2)
+
+
+def test_token_hash_and_display_value() -> None:
+    """
+    title: Token is stable for hashing and get_display_value branches.
+    """
+    loc = SourceLocation(0, 0)
+    int_tok = Token(TokenKind.int_literal, 7, location=loc)
+    assert hash(int_tok) == hash(f"{TokenKind.int_literal}{7}")
+    assert int_tok.get_display_value() == "(7)"
+
+    ident = Token(TokenKind.identifier, "id", location=loc)
+    assert ident.get_display_value() == "(id)"
+
+    ind = Token(TokenKind.indent, 4, location=loc)
+    assert ind.get_display_value() == "(4)"
+
+    fl = Token(TokenKind.float_literal, 1.5, location=loc)
+    assert fl.get_display_value() == "(1.5)"
+
+    st = Token(TokenKind.string_literal, "x", location=loc)
+    assert st.get_display_value() == "(...)"
+
+    ch = Token(TokenKind.char_literal, "Z", location=loc)
+    assert ch.get_display_value() == "(Z)"
+
+    bl = Token(TokenKind.bool_literal, False, location=loc)
+    assert bl.get_display_value() == "(False)"
+
+    nl = Token(TokenKind.none_literal, None, location=loc)
+    assert nl.get_display_value() == ""
+
+    doc = Token(TokenKind.docstring, "d", location=loc)
+    assert doc.get_display_value() == "(...)"
+
+    op = Token(TokenKind.operator, "+", location=loc)
+    assert op.get_display_value() == ""
+    assert str(op) == "+"
+
+
+def test_token_list_iteration() -> None:
+    """
+    title: TokenList supports iteration and StopIteration.
+    """
+    items = [
+        Token(TokenKind.identifier, "a"),
+        Token(TokenKind.eof, ""),
+    ]
+    token_list = TokenList(items)
+    assert list(token_list) == items
+
+    again = TokenList([Token(TokenKind.int_literal, 1)])
+    it = iter(again)
+    assert next(it) == Token(TokenKind.int_literal, 1)
+    with pytest.raises(StopIteration):
+        next(it)
+
+
+def test_lexer_error_message_includes_location() -> None:
+    """
+    title: LexerError formats line and column into the message.
+    """
+    loc = SourceLocation(3, 12)
+    err = LexerError("bad token", loc)
+    assert "at line 3, col 12" in str(err)
+    assert err.location.line == loc.line and err.location.col == loc.col
+
+
+def test_lexer_boolean_false_and_logical_operators() -> None:
+    """
+    title: Lexer emits false literal and treats and/or as operators.
+    """
+    ArxIO.string_to_buffer("false and x or y\n")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.bool_literal, False)
+    assert lexer.get_token() == Token(TokenKind.operator, "and")
+    assert lexer.get_token() == Token(TokenKind.identifier, "x")
+    assert lexer.get_token() == Token(TokenKind.operator, "or")
+    assert lexer.get_token() == Token(TokenKind.identifier, "y")
+
+
+def test_lexer_dot_as_operator_alone() -> None:
+    """
+    title: A lone dot is an operator token, not a float.
+    """
+    ArxIO.string_to_buffer(". +\n")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.operator, ".")
+    assert lexer.get_token() == Token(TokenKind.operator, "+")
+
+
+def test_lexer_rejects_multiple_decimal_points() -> None:
+    """
+    title: Multiple dots in one numeric lexeme raise LexerError.
+    """
+    ArxIO.string_to_buffer("3.14.15\n")
+    lexer = Lexer()
+    with pytest.raises(LexerError, match="multiple decimal points"):
+        lexer.get_token()
+
+
+def test_lexer_docstring_bad_opening_delimiter() -> None:
+    """
+    title: Docstring must open with triple backticks.
+    """
+    ArxIO.string_to_buffer("` \n")
+    lexer = Lexer()
+    with pytest.raises(LexerError, match="Invalid docstring delimiter"):
+        lexer.get_token()
+
+
+def test_lexer_docstring_only_two_ticks_before_content() -> None:
+    """
+    title: Opening fence requires three consecutive backticks.
+    """
+    ArxIO.string_to_buffer("``x\n")
+    lexer = Lexer()
+    with pytest.raises(LexerError, match="Invalid docstring delimiter"):
+        lexer.get_token()
+
+
+def test_lexer_float_literal_round_trip() -> None:
+    """
+    title: Decimal numeric lexemes become float tokens.
+    """
+    ArxIO.string_to_buffer("0.25\n")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.float_literal, 0.25)
+
+
+def test_lexer_docstring_unterminated() -> None:
+    """
+    title: Unterminated docstring raises LexerError.
+    """
+    ArxIO.string_to_buffer("```\nno closing fence\n")
+    lexer = Lexer()
+    with pytest.raises(LexerError, match="Unterminated docstring"):
+        lexer.get_token()
+
+
+def test_lexer_docstring_embedded_backticks_in_content() -> None:
+    """
+    title: Single and double backticks in body extend content correctly.
+    """
+    ArxIO.string_to_buffer("```\none` two`` tail\n```\n")
+    lexer = Lexer()
+    doc = lexer.get_token()
+    assert doc.kind == TokenKind.docstring
+    assert "`" in doc.value
+    assert "``" in doc.value
+
+
+def test_lexer_string_escape_sequences() -> None:
+    """
+    title: String literals honor common backslash escapes and pass-through.
+    """
+    ArxIO.string_to_buffer('"line\\n\\t\\\\\\"end"\n')
+    lexer = Lexer()
+    tok = lexer.get_token()
+    assert tok == Token(TokenKind.string_literal, 'line\n\t\\"end')
+
+
+def test_lexer_unknown_escape_passthrough_in_string() -> None:
+    """
+    title: Unknown escape sequences keep the escaped character.
+    """
+    ArxIO.string_to_buffer('"\\z"\n')
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.string_literal, "z")
+
+
+def test_lexer_unterminated_double_quoted_string() -> None:
+    """
+    title: Missing closing quote before newline errors.
+    """
+    ArxIO.string_to_buffer('"hello\n')
+    lexer = Lexer()
+    with pytest.raises(LexerError, match="Unterminated quoted literal"):
+        lexer.get_token()
+
+
+def test_lexer_char_literal_empty_invalid() -> None:
+    """
+    title: Empty character literal is rejected.
+    """
+    ArxIO.string_to_buffer("''\n")
+    lexer = Lexer()
+    with pytest.raises(
+        LexerError, match="Character literals must contain exactly one"
+    ):
+        lexer.get_token()
