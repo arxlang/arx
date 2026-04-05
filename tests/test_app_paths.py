@@ -433,7 +433,7 @@ def test_arxmain_get_codegen_rejects_multi_module_block() -> None:
         """
         return bundle
 
-    app._get_astx = fake_get_astx  # type: ignore[method-assign]
+    app._get_astx = fake_get_astx
 
     with pytest.raises(ValueError, match="multiple input files"):
         app._get_codegen_astx()
@@ -537,12 +537,16 @@ def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
             """
             raise RuntimeError("repr unavailable")
 
-        def to_json(self) -> str:
+        def to_json(self, simplified: bool = False) -> str:
             """
             title: Return deterministic JSON text.
+            parameters:
+              simplified:
+                type: bool
             returns:
               type: str
             """
+            del simplified
             return '{"via": "json"}'
 
     def fake_get_astx_json() -> JsonTree:
@@ -590,12 +594,16 @@ def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
             """
             raise RuntimeError("repr broken")
 
-        def to_json(self) -> str:
+        def to_json(self, simplified: bool = False) -> str:
             """
             title: Force the JSON path to fail after repr fails.
+            parameters:
+              simplified:
+                type: bool
             returns:
               type: str
             """
+            del simplified
             raise RuntimeError("json also broken")
 
     def fake_get_astx_badrepr() -> BadReprModule:
