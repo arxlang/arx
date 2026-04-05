@@ -22,6 +22,8 @@ from arx import __version__, builtins
 from arx.docstrings import validate_docstring
 from arx.exceptions import CodeGenException, ParserException
 from arx.io import ArxBuffer, ArxFile, ArxIO
+from arx.lexer import Lexer
+from arx.parser import Parser
 
 
 def test_builtins_helpers() -> None:
@@ -387,6 +389,235 @@ def test_main_module_name_helper() -> None:
         )
         == "sample"
     )
+
+
+def test_arxmain_resolve_output_file_empty_inputs() -> None:
+    """
+    title: Default output base is a.out when no inputs and no output set.
+    """
+    app = main_module.ArxMain(input_files=[], output_file="")
+    assert app._resolve_output_file() == "a.out"
+
+
+def test_arxmain_get_astx_single_file_returns_module(tmp_path: Path) -> None:
+    """
+    title: Single input file yields an astx.Module from _get_astx.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    src = tmp_path / "one.x"
+    src.write_text(
+        "```\ntitle: One\n```\nfn main() -> i32:\n  return 0\n",
+        encoding="utf-8",
+    )
+    app = main_module.ArxMain(input_files=[str(src)])
+    tree = app._get_astx()
+    assert isinstance(tree, astx.Module)
+    assert tree.name == "one"
+
+
+def test_arxmain_get_codegen_rejects_multi_module_block() -> None:
+    """
+    title: Codegen entry rejects a Block with multiple modules.
+    """
+    app = main_module.ArxMain()
+    bundle = astx.Block()
+    bundle.nodes.extend([astx.Module("a"), astx.Module("b")])
+
+    def fake_get_astx() -> astx.AST:
+        """
+        title: Return a multi-module block.
+        returns:
+          type: astx.AST
+        """
+        return bundle
+
+    setattr(app, "_get_astx", fake_get_astx)
+
+    with pytest.raises(ValueError, match="multiple input files"):
+        app._get_codegen_astx()
+
+
+def test_arxmain_run_invalid_link_mode() -> None:
+    """
+    title: run() rejects unknown link_mode values.
+    """
+    app = main_module.ArxMain()
+    with pytest.raises(ValueError, match="Invalid link mode"):
+        app.run(input_files=[], link_mode="bogus")
+
+
+def test_arxmain_has_main_entry_block_of_modules() -> None:
+    """
+    title: _has_main_entry finds main inside a Block of Module nodes.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: M\n```\nfn main() -> i32:\n  return 0\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+    mod = parser.parse(lexer.lex(), "boxed")
+
+    app = main_module.ArxMain()
+    assert app._has_main_entry(mod) is True
+
+    block = astx.Block()
+    block.nodes.append(mod)
+    assert app._has_main_entry(block) is True
+
+    empty = astx.Block()
+    empty.nodes.append(astx.Module("empty"))
+    assert app._has_main_entry(empty) is False
+
+
+def test_arxmain_format_ast_fallback_walks_simple_values() -> None:
+    """
+    title: Fallback AST formatter handles non-AST roots and simple fields.
+    """
+    app = main_module.ArxMain()
+    assert "42" in app._format_ast_fallback(42)
+
+
+def test_arxmain_format_ast_fallback_cycle_and_exotic_fields() -> None:
+    """
+    title: Fallback walker reports cycles and unknown field value types.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: M\n```\nfn main() -> i32:\n  return 0\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+    mod = parser.parse(lexer.lex(), "walk")
+
+    outer = astx.Block()
+    inner = astx.Block()
+    outer.nodes.append(inner)
+    inner.nodes.append(outer)
+
+    app = main_module.ArxMain()
+    out = app._format_ast_fallback(outer)
+    assert "cycle" in out
+
+    setattr(mod, "meta", object())
+    meta_out = app._format_ast_fallback(mod)
+    assert "meta" in meta_out
+    assert "object" in meta_out
+
+
+def test_arxmain_show_ast_prefers_to_json_when_repr_fails(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    title: show_ast prints to_json when repr fails but to_json works.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    app = main_module.ArxMain(input_files=["irrelevant.x"])
+
+    class JsonTree(astx.Module):
+        """
+        title: Module-like node with failing repr and working to_json.
+        """
+
+        def __init__(self) -> None:
+            """
+            title: Initialize the synthetic tree root.
+            """
+            super().__init__("j")
+
+        def __repr__(self) -> str:
+            """
+            title: Force repr failure.
+            returns:
+              type: str
+            """
+            raise RuntimeError("repr unavailable")
+
+        def to_json(self, simplified: bool = False) -> str:
+            """
+            title: Return deterministic JSON text.
+            parameters:
+              simplified:
+                type: bool
+            returns:
+              type: str
+            """
+            del simplified
+            return '{"via": "json"}'
+
+    def fake_get_astx_json() -> JsonTree:
+        """
+        title: Supply JsonTree for show_ast coverage.
+        returns:
+          type: JsonTree
+        """
+        return JsonTree()
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_json)
+    app.show_ast()
+    assert '{"via": "json"}' in capsys.readouterr().out
+
+
+def test_arxmain_show_ast_fallback_tree_formatter_when_repr_fails(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    title: show_ast uses _format_ast_fallback when repr and to_json fail.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    app = main_module.ArxMain(input_files=["irrelevant.x"])
+
+    class BadReprModule(astx.Module):
+        """
+        title: Real AST node with broken repr and failing to_json.
+        """
+
+        def __init__(self) -> None:
+            """
+            title: Initialize the synthetic module node.
+            """
+            super().__init__("badrepr")
+
+        def __repr__(self) -> str:
+            """
+            title: Force repr failure for AST nodes.
+            returns:
+              type: str
+            """
+            raise RuntimeError("repr broken")
+
+        def to_json(self, simplified: bool = False) -> str:
+            """
+            title: Force the JSON path to fail after repr fails.
+            parameters:
+              simplified:
+                type: bool
+            returns:
+              type: str
+            """
+            del simplified
+            raise RuntimeError("json also broken")
+
+    def fake_get_astx_badrepr() -> BadReprModule:
+        """
+        title: Supply BadReprModule for fallback formatter coverage.
+        returns:
+          type: BadReprModule
+        """
+        return BadReprModule()
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_badrepr)
+    app.show_ast()
+    out = capsys.readouterr().out
+    assert "Module" in out or "badrepr" in out
 
 
 def test_arxmain_get_astx_uses_all_inputs(
