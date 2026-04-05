@@ -425,15 +425,15 @@ def test_arxmain_get_codegen_rejects_multi_module_block() -> None:
     bundle = astx.Block()
     bundle.nodes.extend([astx.Module("a"), astx.Module("b")])
 
-    def fake_get_astx() -> astx.Block:
+    def fake_get_astx() -> astx.AST:
         """
         title: Return a multi-module block.
         returns:
-          type: astx.Block
+          type: astx.AST
         """
         return bundle
 
-    app._get_astx = fake_get_astx
+    setattr(app, "_get_astx", fake_get_astx)
 
     with pytest.raises(ValueError, match="multiple input files"):
         app._get_codegen_astx()
