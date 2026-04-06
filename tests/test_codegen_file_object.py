@@ -136,6 +136,9 @@ def test_build_passes_explicit_link_flags(
           args:
             type: object
             variadic: positional
+          _kwargs:
+            type: object
+            variadic: keyword
         """
         recorded["args"] = args
         Path(str(args[-1])).write_bytes(b"")
