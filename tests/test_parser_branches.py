@@ -11,6 +11,7 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
+from astx import SourceLocation
 
 
 def _parse(code: str) -> astx.Module:
@@ -23,7 +24,9 @@ def _parse(code: str) -> astx.Module:
       type: astx.Module
     """
     ArxIO.string_to_buffer(code)
-    return Parser().parse(Lexer().lex())
+    tree = Parser().parse(Lexer().lex())
+    assert isinstance(tree, astx.Module)
+    return tree
 
 
 def test_parse_literal_kinds_and_list_literal() -> None:
@@ -322,3 +325,123 @@ def test_parse_primary_unknown_token_branch() -> None:
 
     with pytest.raises(ParserException, match="Unknown token"):
         parser.parse_primary()
+
+
+def test_parse_consumes_leading_not_initialized_token() -> None:
+    """
+    title: Parser skips a stray not_initialized token at the stream start.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: M\n```\nfn main() -> i32:\n  return 0\n"
+    )
+    token_list = Lexer().lex()
+    token_list.tokens.insert(
+        0,
+        Token(
+            TokenKind.not_initialized,
+            "",
+            location=SourceLocation(0, 0),
+        ),
+    )
+    token_list.position = 0
+    token_list.cur_tok = Token(TokenKind.not_initialized, "")
+    tree = Parser().parse(token_list)
+    assert isinstance(tree, astx.Module)
+    assert tree.nodes
+
+
+def test_parse_rejects_second_module_docstring() -> None:
+    """
+    title: Only the first module-level docstring may appear at column one.
+    """
+    with pytest.raises(
+        ParserException,
+        match="Module docstrings are only allowed",
+    ):
+        _parse(
+            "```\ntitle: First\n```\n"
+            "```\n"
+            "title: Second\n"
+            "```\n"
+            "fn main() -> i32:\n"
+            "  return 0\n"
+        )
+
+
+def test_parse_top_level_empty_statement_semicolon() -> None:
+    """
+    title: A bare semicolon at module scope is accepted before other items.
+    """
+    tree = _parse("```\ntitle: M\n```\n;\nfn main() -> i32:\n  return 0\n")
+    assert len(tree.nodes) == 1
+    assert isinstance(tree.nodes[0], astx.FunctionDef)
+
+
+def test_parse_extern_prototype() -> None:
+    """
+    title: Parse an extern declaration into the module tree.
+    """
+    tree = _parse(
+        "```\ntitle: M\n```\n"
+        "extern acos(x: f32) -> f32\n"
+        "fn main() -> i32:\n"
+        "  return 0\n"
+    )
+    assert len(tree.nodes) == 2
+    extern = tree.nodes[0]
+    main_fn = tree.nodes[1]
+    assert isinstance(extern, astx.FunctionPrototype)
+    assert extern.name == "acos"
+    assert isinstance(main_fn, astx.FunctionDef)
+
+
+def test_parse_primary_skips_leading_semicolon() -> None:
+    """
+    title: Expression parser may skip a leading semicolon in odd fragments.
+    """
+    ArxIO.string_to_buffer("; 1")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    node = parser.parse_primary()
+    assert isinstance(node, astx.LiteralInt32)
+    assert node.value == 1
+
+
+def test_parse_primary_rejects_docstring_in_expression() -> None:
+    """
+    title: Docstring token is rejected when parsing a primary expression.
+    """
+    parser = Parser(
+        TokenList(
+            [
+                Token(
+                    TokenKind.docstring,
+                    "title: Bad\n",
+                    location=SourceLocation(0, 0),
+                ),
+                Token(TokenKind.eof, ""),
+            ]
+        )
+    )
+    parser.tokens.get_next_token()
+    with pytest.raises(
+        ParserException,
+        match="Docstrings are only allowed at module start",
+    ):
+        parser.parse_primary()
+
+
+def test_parse_var_without_initializer_gets_default() -> None:
+    """
+    title: Typed var without `=` receives the type default value.
+    """
+    tree = _parse(
+        "```\ntitle: M\n```\nfn main() -> i32:\n  var y: i32\n  return y\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    decl = fn.body.nodes[0]
+    assert isinstance(decl, astx.VariableDeclaration)
+    assert decl.name == "y"
+    assert isinstance(decl.value, astx.LiteralInt32)
+    assert decl.value.value == 0
