@@ -334,6 +334,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#architecture-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -412,6 +423,8 @@
       
         
           
+        
+      
         
       
         
@@ -516,6 +529,34 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="library/classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
   
 
     
@@ -1332,6 +1373,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#architecture-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1408,6 +1460,12 @@ fn average(x: f32, y: f32) -&gt; f32:
 </code></pre></div>
 <p>See the <a href="getting-started/">Getting Started</a> guide for installation and more
 examples. For language details, see the <a href="library/">Library Reference</a>.</p>
+<h2 id="architecture-boundary">Architecture Boundary<a class="headerlink" href="#architecture-boundary" title="Permanent link">&para;</a></h2>
+<p>Arx is the surface-language front end. It owns source syntax, lexing, parsing,
+CLI flow, tests, examples, and docs. IRx owns the AST model (<code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span></code>),
+semantic analysis, lowering, and backend code generation. When a new feature
+needs AST or lowering support, that support should be added in IRx first and
+then consumed from Arx.</p>
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>LLVM-powered</strong> -- compiles to native machine code via LLVM</li>

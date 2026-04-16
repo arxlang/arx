@@ -335,6 +335,8 @@
       
         
       
+        
+      
     
     
     
@@ -427,6 +429,34 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
   
 
     
@@ -1451,7 +1481,7 @@
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><span title="irx.builders.llvmliteir.Builder">Builder</span></code></p>
+              Bases: <code><span title="irx.builder.Builder">Builder</span></code></p>
 
 
 
@@ -1483,12 +1513,12 @@
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>src/arx/codegen.py</code></summary>
-                    <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
-<span class="normal">39</span>
+                    <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">43</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Initialize ArxBuilder.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1540,8 +1570,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/arx/codegen.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 55</span>
-<span class="normal"> 56</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 56</span>
 <span class="normal"> 57</span>
 <span class="normal"> 58</span>
 <span class="normal"> 59</span>
@@ -1593,7 +1622,14 @@
 <span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
-<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span>
     <span class="n">output_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1618,13 +1654,6 @@
     <span class="n">result_mod</span> <span class="o">=</span> <span class="n">llvm</span><span class="o">.</span><span class="n">parse_assembly</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
     <span class="n">result_object</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">translator</span><span class="o">.</span><span class="n">target_machine</span><span class="o">.</span><span class="n">emit_object</span><span class="p">(</span><span class="n">result_mod</span><span class="p">)</span>
 
-    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp_file</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tmp_path</span> <span class="o">=</span> <span class="n">temp_file</span><span class="o">.</span><span class="n">name</span>
-
-    <span class="n">file_path_o</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_path</span><span class="si">}</span><span class="s2">.o&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path_o</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_handler</span><span class="p">:</span>
-        <span class="n">file_handler</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">result_object</span><span class="p">)</span>
-
     <span class="bp">self</span><span class="o">.</span><span class="n">output_file</span> <span class="o">=</span> <span class="n">output_file</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">link</span><span class="p">:</span>
@@ -1637,15 +1666,28 @@
             <span class="s2">&quot;Invalid link mode. Expected one of: auto, pie, no-pie.&quot;</span>
         <span class="p">)</span>
 
-    <span class="c1"># fix xh typing</span>
-    <span class="n">clang</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">xh</span><span class="o">.</span><span class="n">clang</span>
-    <span class="n">clang_args</span> <span class="o">=</span> <span class="p">[</span><span class="n">file_path_o</span><span class="p">]</span>
+    <span class="n">extra_linker_flags</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
     <span class="k">if</span> <span class="n">link_mode</span> <span class="o">==</span> <span class="s2">&quot;pie&quot;</span><span class="p">:</span>
-        <span class="n">clang_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-pie&quot;</span><span class="p">)</span>
+        <span class="n">extra_linker_flags</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;-pie&quot;</span><span class="p">,)</span>
     <span class="k">elif</span> <span class="n">link_mode</span> <span class="o">==</span> <span class="s2">&quot;no-pie&quot;</span><span class="p">:</span>
-        <span class="n">clang_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-no-pie&quot;</span><span class="p">)</span>
-    <span class="n">clang_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_file</span><span class="p">])</span>
-    <span class="n">clang</span><span class="p">(</span><span class="o">*</span><span class="n">clang_args</span><span class="p">)</span>
+        <span class="n">extra_linker_flags</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;-no-pie&quot;</span><span class="p">,)</span>
+
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">temp_dir</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmp_path</span> <span class="o">=</span> <span class="n">temp_dir</span>
+        <span class="n">file_path_o</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;arx_module.o&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path_o</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_handler</span><span class="p">:</span>
+            <span class="n">file_handler</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">result_object</span><span class="p">)</span>
+
+        <span class="n">link_executable</span><span class="p">(</span>
+            <span class="n">primary_object</span><span class="o">=</span><span class="n">file_path_o</span><span class="p">,</span>
+            <span class="n">output_file</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_file</span><span class="p">),</span>
+            <span class="n">artifacts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">translator</span><span class="o">.</span><span class="n">runtime_features</span><span class="o">.</span><span class="n">native_artifacts</span><span class="p">(),</span>
+            <span class="n">linker_flags</span><span class="o">=</span><span class="p">(</span>
+                <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">translator</span><span class="o">.</span><span class="n">runtime_features</span><span class="o">.</span><span class="n">linker_flags</span><span class="p">(),</span>
+                <span class="o">*</span><span class="n">extra_linker_flags</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
     <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_file</span><span class="p">,</span> <span class="mo">0o755</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1674,7 +1716,7 @@
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><span title="irx.builders.llvmliteir.Visitor">Visitor</span></code></p>
+              Bases: <code><span title="irx.builder.Visitor">Visitor</span></code></p>
 
 
 

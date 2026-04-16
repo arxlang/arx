@@ -335,6 +335,8 @@
       
         
       
+        
+      
     
     
     
@@ -427,6 +429,34 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
   
 
     
@@ -1441,7 +1471,7 @@
 
 
 <a href="#arx.builtins.build_cast" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">build_cast</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n"><span title="astx.AST">AST</span></span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n"><span title="astx.DataType">DataType</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="irx.astx.Cast">Cast</span></span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">build_cast</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n"><span title="astx.DataType">DataType</span></span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n"><span title="astx.DataType">DataType</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="irx.astx.Cast">Cast</span></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -1462,12 +1492,16 @@
 <span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
-<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_cast</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">Cast</span><span class="p">:</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_cast</span><span class="p">(</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">Cast</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Build an IRX Cast node.</span>
 <span class="sd">    parameters:</span>
 <span class="sd">      value:</span>
-<span class="sd">        type: astx.AST</span>
+<span class="sd">        type: astx.DataType</span>
 <span class="sd">      target_type:</span>
 <span class="sd">        type: astx.DataType</span>
 <span class="sd">    returns:</span>
@@ -1498,16 +1532,16 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/arx/builtins.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">42</span>
 <span class="normal">43</span>
 <span class="normal">44</span>
 <span class="normal">45</span>
 <span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_print</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">Expr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">:</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_print</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">Expr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Build an IRX PrintExpr node.</span>
 <span class="sd">    parameters:</span>

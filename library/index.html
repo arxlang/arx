@@ -337,6 +337,8 @@
       
         
       
+        
+      
     
     
     
@@ -429,6 +431,34 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
   
 
     
@@ -1279,10 +1309,14 @@
 <p>The <strong>Library</strong> section is the language reference for Arx features, inspired by
 the structure of <code class="language-python highlight"><span class="n">docs</span><span class="o">.</span><span class="n">python</span><span class="o">.</span><span class="n">org</span></code>.</p>
 <p>Start here when you need exact syntax and placement rules.</p>
+<p>Arx documents the surface language here, but the AST and lowering boundary comes
+from IRx: parser output should use <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span></code>, and new lowering behavior should
+land in IRx rather than in Arx-local code.</p>
 <h2 id="available-references">Available References<a class="headerlink" href="#available-references" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="modules/">Modules</a></li>
 <li><a href="functions/">Functions</a></li>
+<li><a href="classes/">Classes</a></li>
 <li><a href="datatypes/">Data Types</a></li>
 <li><a href="control-flow/">Control Flow</a></li>
 <li><a href="docstrings/">Docstrings</a></li>
@@ -1293,6 +1327,7 @@ the structure of <code class="language-python highlight"><span class="n">docs</s
 <li>module structure</li>
 <li>function definitions and calls</li>
 <li>type system and annotations</li>
+<li>class declarations and member modifiers</li>
 <li>control-flow syntax</li>
 <li>docstring placement rules</li>
 </ul>

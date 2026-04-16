@@ -335,6 +335,8 @@
       
         
       
+        
+      
     
     
     
@@ -427,6 +429,34 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
   
 
     
@@ -1247,6 +1277,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#configuration-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Style
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pull-request-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1495,6 +1536,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#configuration-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Style
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pull-request-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1644,6 +1696,16 @@ $<span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>
 <ol>
 <li>Submit a pull request through the GitHub website.</li>
 </ol>
+<h2 id="configuration-style">Configuration Style<a class="headerlink" href="#configuration-style" title="Permanent link">&para;</a></h2>
+<p>When editing YAML-backed configuration in this repo, keep command bodies simple
+and avoid heredocs.</p>
+<ul>
+<li>Never use heredocs inside any YAML file.</li>
+<li>This includes CI configuration and local automation such as
+  <code class="language-python highlight"><span class="o">.</span><span class="n">github</span><span class="o">/</span><span class="n">workflows</span><span class="o">/*.</span><span class="n">yaml</span></code> and <code class="language-python highlight"><span class="o">.</span><span class="n">makim</span><span class="o">.</span><span class="n">yaml</span></code>.</li>
+<li>Prefer direct Python/xonsh statements or straightforward shell commands that
+  fit naturally inside the YAML block.</li>
+</ul>
 <h2 id="pull-request-guidelines">Pull Request Guidelines<a class="headerlink" href="#pull-request-guidelines" title="Permanent link">&para;</a></h2>
 <p>Before you submit a pull request, check that it meets these guidelines:</p>
 <ol>
@@ -1651,6 +1713,8 @@ $<span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>
 <li>If the pull request adds functionality, the docs should be updated. Put your
    new functionality into a function with a docstring, and add the feature to
    the list in README.md.</li>
+<li>YAML configuration changes should avoid heredocs and follow the repo's
+   plain-command style for files such as <code class="language-python highlight"><span class="o">.</span><span class="n">makim</span><span class="o">.</span><span class="n">yaml</span></code> and CI workflows.</li>
 <li>The pull request should work for Python &gt;= 3.10.</li>
 </ol>
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
