@@ -97,6 +97,17 @@ $ git push origin name-of-your-bugfix-or-feature
 
 8.  Submit a pull request through the GitHub website.
 
+## Configuration Style
+
+When editing YAML-backed configuration in this repo, keep command bodies simple
+and avoid heredocs.
+
+- Never use heredocs inside any YAML file.
+- This includes CI configuration and local automation such as
+  `.github/workflows/*.yaml` and `.makim.yaml`.
+- Prefer direct Python/xonsh statements or straightforward shell commands that
+  fit naturally inside the YAML block.
+
 ## Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
@@ -105,7 +116,9 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put your
    new functionality into a function with a docstring, and add the feature to
    the list in README.md.
-3. The pull request should work for Python >= 3.10.
+3. YAML configuration changes should avoid heredocs and follow the repo's
+   plain-command style for files such as `.makim.yaml` and CI workflows.
+4. The pull request should work for Python >= 3.10.
 
 ## Tips
 

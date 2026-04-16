@@ -197,6 +197,14 @@ Current behavior:
 - Security/dead code gates in pre-commit:
   - `bandit`, `vulture`, `mccabe`
 
+### YAML configuration rule
+
+- Never use heredocs inside YAML files in this repository.
+- This applies to CI and automation configs such as `.github/workflows/*.yaml`
+  and `.makim.yaml`.
+- In YAML-backed task/config files, prefer plain shell commands or direct
+  Python/xonsh statements instead of embedded `<<EOF` / `<<'PY'` blocks.
+
 ### Python docstring convention in this repo
 
 - Python docstrings are Douki-style content blocks (for example `title: ...`).
@@ -349,6 +357,8 @@ Before submitting final output, verify:
 ## Non-Goals / Avoid
 
 - Do not invent unsupported syntax in examples.
+- Do not use heredocs inside YAML files such as CI workflows or Makim
+  configuration.
 - Do not create Arx-owned AST/ASTx node types.
 - Do not add new lowering or LLVM feature logic directly in `arx`; upstream it
   to IRx.
