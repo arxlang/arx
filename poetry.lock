@@ -3239,14 +3239,14 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyirx"
-version = "1.9.0"
+version = "1.10.0"
 description = "IRx"
 optional = false
 python-versions = "<4,>=3.10"
 groups = ["main"]
 files = [
-    {file = "pyirx-1.9.0-py3-none-any.whl", hash = "sha256:d2b5b13357ead8244a12832a47ae58471068e8e50b9b731dc2081a17daf270e3"},
-    {file = "pyirx-1.9.0.tar.gz", hash = "sha256:f8a0d5d97ba21fe25eb7c98ad5d40243d8fa2f48b579570ebdb8ae10912b1b93"},
+    {file = "pyirx-1.10.0-py3-none-any.whl", hash = "sha256:48c04abdbf2f63507609e260c3a9c44a80903137dd4e9e1e3baaf5ecbaf99f89"},
+    {file = "pyirx-1.10.0.tar.gz", hash = "sha256:5fb27703903e7b02e5af9ce40f72e2d8a1658f0e574256927bd8da1800411602"},
 ]
 
 [package.dependencies]
@@ -4755,4 +4755,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "f5e6c068b8603e7f2f331b385f624f7dfad7f0666e6879450e18c53901557e2e"
+content-hash = "97bf9defc22ef4c4891cd32b842fa514ead65043c36be3d9f9e5beeb2c828fd4"

@@ -23,12 +23,14 @@ def is_builtin(name: str) -> bool:
     return name in {BUILTIN_CAST, BUILTIN_PRINT}
 
 
-def build_cast(value: astx.AST, target_type: astx.DataType) -> irx_astx.Cast:
+def build_cast(
+    value: astx.DataType, target_type: astx.DataType
+) -> irx_astx.Cast:
     """
     title: Build an IRX Cast node.
     parameters:
       value:
-        type: astx.AST
+        type: astx.DataType
       target_type:
         type: astx.DataType
     returns:

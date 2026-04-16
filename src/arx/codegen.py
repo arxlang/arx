@@ -7,13 +7,14 @@ from __future__ import annotations
 import os
 import tempfile
 
-from typing import Any, Callable, Literal
+from pathlib import Path
+from typing import Literal
 
 import astx
-import xh
 
-from irx.builders.llvmliteir import Builder as LLVMBuilder
-from irx.builders.llvmliteir import Visitor as LLVMVisitor
+from irx.builder import Builder as LLVMBuilder
+from irx.builder import Visitor as LLVMVisitor
+from irx.builder.runtime.linking import link_executable
 from llvmlite import binding as llvm
 
 
@@ -77,13 +78,6 @@ class ArxBuilder(LLVMBuilder):
         result_mod = llvm.parse_assembly(result)
         result_object = self.translator.target_machine.emit_object(result_mod)
 
-        with tempfile.NamedTemporaryFile(suffix="", delete=True) as temp_file:
-            self.tmp_path = temp_file.name
-
-        file_path_o = f"{self.tmp_path}.o"
-        with open(file_path_o, "wb") as file_handler:
-            file_handler.write(result_object)
-
         self.output_file = output_file
 
         if not link:
@@ -96,13 +90,26 @@ class ArxBuilder(LLVMBuilder):
                 "Invalid link mode. Expected one of: auto, pie, no-pie."
             )
 
-        # fix xh typing
-        clang: Callable[..., Any] = xh.clang
-        clang_args = [file_path_o]
+        extra_linker_flags: tuple[str, ...] = ()
         if link_mode == "pie":
-            clang_args.append("-pie")
+            extra_linker_flags = ("-pie",)
         elif link_mode == "no-pie":
-            clang_args.append("-no-pie")
-        clang_args.extend(["-o", self.output_file])
-        clang(*clang_args)
+            extra_linker_flags = ("-no-pie",)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.tmp_path = temp_dir
+            file_path_o = Path(temp_dir) / "arx_module.o"
+            with open(file_path_o, "wb") as file_handler:
+                file_handler.write(result_object)
+
+            link_executable(
+                primary_object=file_path_o,
+                output_file=Path(self.output_file),
+                artifacts=self.translator.runtime_features.native_artifacts(),
+                linker_flags=(
+                    *self.translator.runtime_features.linker_flags(),
+                    *extra_linker_flags,
+                ),
+            )
+
         os.chmod(self.output_file, 0o755)

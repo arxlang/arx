@@ -867,7 +867,7 @@ def test_arxmain_show_methods_and_compile(
     assert "tok-a" in out
     assert "tok-b" in out
 
-    class DummyTranslator:
+    class DummyIRShow:
         def translate(self, tree: object) -> str:
             """
             title: Return placeholder LLVM IR text.
@@ -878,13 +878,6 @@ def test_arxmain_show_methods_and_compile(
               type: str
             """
             return f"IR<{tree}>"
-
-    class DummyIRShow:
-        def __init__(self) -> None:
-            """
-            title: Initialize the dummy IR show facade.
-            """
-            self.translator = DummyTranslator()
 
     monkeypatch.setattr(main_module, "ArxBuilder", DummyIRShow)
     monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)

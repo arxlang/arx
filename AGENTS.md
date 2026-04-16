@@ -74,8 +74,8 @@ Use this guidance for any change inside the Arx compiler repository:
 ### `src/arx/codegen.py`
 
 - Contains Arx-specific LLVM lowering overrides on top of IRx.
-- `ArxVisitor` extends `irx.builders.llvmliteir.Visitor`.
-- `ArxBuilder` extends `irx.builders.llvmliteir.Builder`.
+- `ArxVisitor` extends `irx.builder.Visitor`.
+- `ArxBuilder` extends `irx.builder.Builder`.
 - Keep this layer minimal and explicit; prefer upstream fixes in IRx when
   changes are generic.
 
