@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.4.0](https://github.com/arxlang/arx/compare/0.3.4...0.4.0) (2026-04-16)
+
+
+### Features
+
+* Add support for  classes ([#49](https://github.com/arxlang/arx/issues/49)) ([7c8b073](https://github.com/arxlang/arx/commit/7c8b073a2aeb780b3601f683478c0a6b17511477))
+
 ## [0.3.4](https://github.com/arxlang/arx/compare/0.3.3...0.3.4) (2026-04-02)
 
 
