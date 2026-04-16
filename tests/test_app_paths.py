@@ -923,6 +923,188 @@ def test_arxmain_show_methods_and_compile(
     assert DummyIRBuild.built_link_mode == "auto"
 
 
+def test_arxmain_show_llvm_ir_uses_translate_modules_for_imports(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: show_llvm_ir should use IRx multi-module translation for imports.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    app = main_module.ArxMain(input_files=["app.x"])
+    module = astx.Module("app")
+    module.nodes.append(irx_astx.ImportStmt([irx_astx.AliasExpr("lib.math")]))
+    sentinel_root = object()
+    sentinel_resolver = object()
+
+    def fake_get_astx_tree() -> astx.AST:
+        """
+        title: Return a module containing imports.
+        returns:
+          type: astx.AST
+        """
+        return module
+
+    def fake_build_multimodule_context(
+        tree: astx.Module,
+    ) -> tuple[object, object]:
+        """
+        title: Return a sentinel multi-module context.
+        parameters:
+          tree:
+            type: astx.Module
+        returns:
+          type: tuple[object, object]
+        """
+        assert tree is module
+        return sentinel_root, sentinel_resolver
+
+    class DummyIRShow:
+        def translate(self, tree: object) -> str:
+            """
+            title: Single-module translation should not be used here.
+            parameters:
+              tree:
+                type: object
+            returns:
+              type: str
+            """
+            raise AssertionError(tree)
+
+        def translate_modules(self, root: object, resolver: object) -> str:
+            """
+            title: Record multi-module translation inputs.
+            parameters:
+              root:
+                type: object
+              resolver:
+                type: object
+            returns:
+              type: str
+            """
+            assert root is sentinel_root
+            assert resolver is sentinel_resolver
+            return "IR<MODULES>"
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
+    monkeypatch.setattr(
+        app,
+        "_build_multimodule_context",
+        fake_build_multimodule_context,
+    )
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRShow)
+
+    app.show_llvm_ir()
+
+    assert "IR<MODULES>" in capsys.readouterr().out
+
+
+def test_arxmain_compile_uses_build_modules_for_imports(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: compile should use IRx multi-module build for imports.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    app = main_module.ArxMain(input_files=["app.x"], output_file="out.o")
+    module = astx.Module("app")
+    module.nodes.append(irx_astx.ImportStmt([irx_astx.AliasExpr("lib.math")]))
+    sentinel_root = object()
+    sentinel_resolver = object()
+
+    def fake_get_astx_tree() -> astx.AST:
+        """
+        title: Return a module containing imports.
+        returns:
+          type: astx.AST
+        """
+        return module
+
+    def fake_build_multimodule_context(
+        tree: astx.Module,
+    ) -> tuple[object, object]:
+        """
+        title: Return a sentinel multi-module build context.
+        parameters:
+          tree:
+            type: astx.Module
+        returns:
+          type: tuple[object, object]
+        """
+        assert tree is module
+        return sentinel_root, sentinel_resolver
+
+    class DummyIRBuild:
+        built_root: object | None = None
+        built_resolver: object | None = None
+        built_out: str | None = None
+        built_link: bool | None = None
+        built_link_mode: str | None = None
+
+        def build(self, tree: object, **kwargs: object) -> None:
+            """
+            title: Single-module build should not be used here.
+            parameters:
+              tree:
+                type: object
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise AssertionError(tree)
+
+        def build_modules(
+            self,
+            root: object,
+            resolver: object,
+            output_file: str = "",
+            link: bool = True,
+            link_mode: str = "auto",
+        ) -> None:
+            """
+            title: Record multi-module build arguments.
+            parameters:
+              root:
+                type: object
+              resolver:
+                type: object
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
+            DummyIRBuild.built_root = root
+            DummyIRBuild.built_resolver = resolver
+            DummyIRBuild.built_out = output_file
+            DummyIRBuild.built_link = link
+            DummyIRBuild.built_link_mode = link_mode
+
+    monkeypatch.setattr(app, "_get_astx", fake_get_astx_tree)
+    monkeypatch.setattr(
+        app,
+        "_build_multimodule_context",
+        fake_build_multimodule_context,
+    )
+    monkeypatch.setattr(main_module, "ArxBuilder", DummyIRBuild)
+
+    app.compile()
+
+    assert DummyIRBuild.built_root is sentinel_root
+    assert DummyIRBuild.built_resolver is sentinel_resolver
+    assert DummyIRBuild.built_out == "out.o"
+    assert DummyIRBuild.built_link is False
+    assert DummyIRBuild.built_link_mode == "auto"
+
+
 def test_arxmain_compile_default_output_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -202,6 +202,11 @@ class Parser:
                 allow_module_docstring = False
                 continue
 
+            if self.tokens.cur_tok.kind == TokenKind.kw_import:
+                tree.nodes.append(self.parse_import_stmt())
+                allow_module_docstring = False
+                continue
+
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
                 tree.nodes.append(self.parse_function())
                 allow_module_docstring = False
@@ -321,6 +326,40 @@ class Parser:
             )
         self.tokens.get_next_token()
 
+    def _is_identifier_value(self, value: str) -> bool:
+        """
+        title: Return whether the current token matches one identifier value.
+        parameters:
+          value:
+            type: str
+        returns:
+          type: bool
+        """
+        return (
+            self.tokens.cur_tok.kind == TokenKind.identifier
+            and self.tokens.cur_tok.value == value
+        )
+
+    def _consume_identifier_value(self, value: str) -> None:
+        """
+        title: Consume one contextual identifier token.
+        parameters:
+          value:
+            type: str
+        """
+        if not self._is_identifier_value(value):
+            raise ParserException(
+                f"Expected '{value}', got '{self.tokens.cur_tok}'."
+            )
+        self.tokens.get_next_token()
+
+    def _skip_import_layout(self) -> None:
+        """
+        title: Consume indentation tokens used only for grouped imports.
+        """
+        while self.tokens.cur_tok.kind == TokenKind.indent:
+            self.tokens.get_next_token()
+
     def get_tok_precedence(self) -> int:
         """
         title: Get the precedence of the pending binary operator token.
@@ -353,6 +392,180 @@ class Parser:
         prototype = self.parse_prototype(expect_colon=False)
         setattr(prototype, "is_extern", True)
         return prototype
+
+    def parse_import_stmt(self) -> astx.ImportStmt | astx.ImportFromStmt:
+        """
+        title: Parse one import statement.
+        returns:
+          type: astx.ImportStmt | astx.ImportFromStmt
+        """
+        import_loc = self.tokens.cur_tok.location
+        self.tokens.get_next_token()  # eat import
+
+        if self._is_operator("("):
+            names = self.parse_grouped_import_names()
+            if not self._is_identifier_value("from"):
+                raise ParserException(
+                    "Grouped imports require 'from <module.path>'."
+                )
+            self._consume_identifier_value("from")
+            module_path = self.parse_module_path()
+            return astx.ImportFromStmt(
+                names=names,
+                module=module_path,
+                loc=import_loc,
+            )
+
+        if self._is_identifier_value("from"):
+            raise ParserException(
+                "Expected module path or imported name after 'import'."
+            )
+
+        if self._is_identifier_value("as"):
+            raise ParserException(
+                "alias requires an import target before 'as'"
+            )
+
+        if self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException(
+                "Expected module path or imported name after 'import'."
+            )
+
+        target_name = cast(str, self.tokens.cur_tok.value)
+        target_loc = self.tokens.cur_tok.location
+        self.tokens.get_next_token()
+
+        if self._is_operator("."):
+            module_path = self.parse_module_path(prefix=target_name)
+            alias_name = self.parse_import_alias()
+            if self._is_identifier_value("from"):
+                raise ParserException("Module imports do not use 'from'.")
+            return astx.ImportStmt(
+                [
+                    astx.AliasExpr(
+                        module_path,
+                        asname=alias_name,
+                        loc=target_loc,
+                    )
+                ],
+                loc=import_loc,
+            )
+
+        alias_name = self.parse_import_alias()
+        if self._is_identifier_value("from"):
+            self._consume_identifier_value("from")
+            module_path = self.parse_module_path()
+            return astx.ImportFromStmt(
+                names=[
+                    astx.AliasExpr(
+                        target_name,
+                        asname=alias_name,
+                        loc=target_loc,
+                    )
+                ],
+                module=module_path,
+                loc=import_loc,
+            )
+
+        if self._is_operator(","):
+            raise ParserException("Grouped imports require parentheses.")
+
+        if self._is_operator("("):
+            raise ParserException(
+                "Parentheses are only supported for grouped named imports."
+            )
+
+        return astx.ImportStmt(
+            [astx.AliasExpr(target_name, asname=alias_name, loc=target_loc)],
+            loc=import_loc,
+        )
+
+    def parse_grouped_import_names(self) -> list[astx.AliasExpr]:
+        """
+        title: Parse grouped named imports.
+        returns:
+          type: list[astx.AliasExpr]
+        """
+        self._consume_operator("(")
+        self._skip_import_layout()
+
+        if self._is_operator(")"):
+            raise ParserException("empty grouped imports are not allowed")
+
+        names: list[astx.AliasExpr] = []
+        while True:
+            if self._is_identifier_value("as"):
+                raise ParserException(
+                    "alias requires an import target before 'as'"
+                )
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Expected imported name in grouped import list."
+                )
+
+            name = cast(str, self.tokens.cur_tok.value)
+            name_loc = self.tokens.cur_tok.location
+            self.tokens.get_next_token()
+            alias_name = self.parse_import_alias()
+            names.append(astx.AliasExpr(name, asname=alias_name, loc=name_loc))
+
+            self._skip_import_layout()
+            if self._is_operator(")"):
+                break
+
+            self._consume_operator(",")
+            self._skip_import_layout()
+            if self._is_operator(")"):
+                break
+
+        self._consume_operator(")")
+        return names
+
+    def parse_import_alias(self) -> str:
+        """
+        title: Parse one optional import alias.
+        returns:
+          type: str
+        """
+        if not self._is_identifier_value("as"):
+            return ""
+
+        self._consume_identifier_value("as")
+        if self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException("Expected alias name after 'as'.")
+
+        alias_name = cast(str, self.tokens.cur_tok.value)
+        self.tokens.get_next_token()
+        return alias_name
+
+    def parse_module_path(self, prefix: str | None = None) -> str:
+        """
+        title: Parse one dotted module path.
+        parameters:
+          prefix:
+            type: str | None
+        returns:
+          type: str
+        """
+        parts: list[str] = []
+        if prefix is not None:
+            parts.append(prefix)
+        else:
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException("Expected module path.")
+            parts.append(cast(str, self.tokens.cur_tok.value))
+            self.tokens.get_next_token()
+
+        while self._is_operator("."):
+            self._consume_operator(".")
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Expected identifier after '.' in module path."
+                )
+            parts.append(cast(str, self.tokens.cur_tok.value))
+            self.tokens.get_next_token()
+
+        return ".".join(parts)
 
     def parse_class_decl(
         self,
@@ -955,6 +1168,10 @@ class Parser:
         if self.tokens.cur_tok.kind == TokenKind.kw_class:
             raise ParserException(
                 "Class declarations are only allowed at module scope."
+            )
+        if self.tokens.cur_tok.kind == TokenKind.kw_import:
+            raise ParserException(
+                "Import statements are only allowed at module scope."
             )
         if self.tokens.cur_tok.kind == TokenKind.identifier:
             return self.parse_identifier_expr()

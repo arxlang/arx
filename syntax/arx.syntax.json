@@ -13,12 +13,13 @@
       "fn",
       "for",
       "if",
+      "import",
       "in",
       "return",
       "then",
       "var"
     ],
-    "contextual": []
+    "contextual": ["as", "from"]
   },
   "literals": [],
   "comment": {
@@ -78,14 +79,15 @@
     "blank_lines": "ignored for indentation transitions"
   },
   "operators": {
-    "symbols": ["=", "<", ">", "+", "-", "*", "/", ":", ",", ";", "@"],
+    "symbols": ["=", "<", ">", "+", "-", "*", "/", ".", ":", ",", ";", "@"],
     "assignment": ["="],
     "comparison": ["<", ">"],
     "arithmetic": ["+", "-", "*", "/"],
-    "punctuation": ["@", ":", ",", ";"],
+    "punctuation": ["@", ":", ",", ";", "."],
     "notes": [
       "TODO(ARX-LEX-OPS-001): finalize multi-character operators (==, !=, <=, >=, ->).",
-      "Annotation lines use the token sequence '@[' modifier names separated by commas and closed by ']'."
+      "Annotation lines use the token sequence '@[' modifier names separated by commas and closed by ']'.",
+      "Grouped imports use parentheses, require 'from', and may include trailing commas."
     ]
   },
   "brackets": [

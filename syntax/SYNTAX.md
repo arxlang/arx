@@ -118,6 +118,7 @@ Reserved keywords:
 - `fn`
 - `for`
 - `if`
+- `import`
 - `in`
 - `return`
 - `then`
@@ -125,7 +126,8 @@ Reserved keywords:
 
 Contextual keywords:
 
-- none (empty list in `arx.syntax.json`)
+- `as`
+- `from`
 
 ### Edge Cases
 
@@ -137,7 +139,7 @@ Contextual keywords:
 Current operator/punctuation set for lexical highlighting:
 
 - Assignment/comparison/arithmetic: `=`, `<`, `>`, `+`, `-`, `*`, `/`
-- Structural punctuation: `@`, `:`, `,`, `;`
+- Structural punctuation: `.`, `@`, `:`, `,`, `;`
 
 Brackets:
 
@@ -150,6 +152,8 @@ Notes:
 - Multi-character operators are not finalized.
 - Annotation lines use `@[` followed by comma-separated modifier names and a
   closing `]`.
+- Grouped named imports use parentheses, require `from`, and allow trailing
+  commas.
 - TODO(ARX-LEX-OPS-001): decide on `==`, `!=`, `<=`, `>=`, `->`.
 
 ## 9) Canonical Lexical Examples
@@ -186,6 +190,24 @@ extern putchard(x)  # imported symbol
 class Math:
   @[public, constant]
   version: int32 = 1
+```
+
+### Imports
+
+```arx
+import std.math
+import std.math as math
+
+import sin from std.math
+import sin as sine from std.math
+
+import (sin, cos, tan as tangent) from std.math
+
+import (
+  sin,
+  cos,
+  tan as tangent,
+) from std.math
 ```
 
 ## 10) Lightweight Consistency Checks (Repo-Agnostic)

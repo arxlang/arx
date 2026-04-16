@@ -2,6 +2,8 @@
 title: Test parser methods.
 """
 
+from textwrap import dedent
+
 import astx
 import irx.astx as irx_astx
 import pytest
@@ -10,6 +12,23 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+
+
+def _parse_module(code: str, module_name: str = "main") -> astx.Module:
+    """
+    title: Parse one module-sized source snippet.
+    parameters:
+      code:
+        type: str
+      module_name:
+        type: str
+    returns:
+      type: astx.Module
+    """
+    ArxIO.string_to_buffer(code)
+    tree = Parser().parse(Lexer().lex(), module_name)
+    assert isinstance(tree, astx.Module)
+    return tree
 
 
 def test_binop_precedence() -> None:
@@ -278,6 +297,162 @@ def test_parse_typed_function_signature() -> None:
     assert isinstance(fn.prototype.args[0].type_, astx.Int32)
     assert isinstance(fn.prototype.args[1].type_, astx.String)
     assert isinstance(fn.prototype.return_type, astx.Int32)
+
+
+@pytest.mark.parametrize(
+    ("code", "stmt_type", "expected_module", "expected_names"),
+    [
+        (
+            "import std.math\n",
+            irx_astx.ImportStmt,
+            None,
+            [("std.math", "")],
+        ),
+        (
+            "import std.math as math\n",
+            irx_astx.ImportStmt,
+            None,
+            [("std.math", "math")],
+        ),
+        (
+            "import sin from std.math\n",
+            irx_astx.ImportFromStmt,
+            "std.math",
+            [("sin", "")],
+        ),
+        (
+            "import sin as sine from std.math\n",
+            irx_astx.ImportFromStmt,
+            "std.math",
+            [("sin", "sine")],
+        ),
+        (
+            "import (sin, cos) from std.math\n",
+            irx_astx.ImportFromStmt,
+            "std.math",
+            [("sin", ""), ("cos", "")],
+        ),
+        (
+            "import (sin, cos, tan as tangent) from std.math\n",
+            irx_astx.ImportFromStmt,
+            "std.math",
+            [("sin", ""), ("cos", ""), ("tan", "tangent")],
+        ),
+        (
+            dedent(
+                """
+                import (
+                  sin,
+                  cos,
+                  tan as tangent,
+                ) from std.math
+                """
+            ).lstrip(),
+            irx_astx.ImportFromStmt,
+            "std.math",
+            [("sin", ""), ("cos", ""), ("tan", "tangent")],
+        ),
+        (
+            dedent(
+                """
+                import (
+                  sin,
+                  cos,
+                ) from std.math.trig
+                """
+            ).lstrip(),
+            irx_astx.ImportFromStmt,
+            "std.math.trig",
+            [("sin", ""), ("cos", "")],
+        ),
+    ],
+)
+def test_parse_import_statements(
+    code: str,
+    stmt_type: type[astx.AST],
+    expected_module: str | None,
+    expected_names: list[tuple[str, str]],
+) -> None:
+    """
+    title: Import syntax should build the expected IRx AST nodes.
+    parameters:
+      code:
+        type: str
+      stmt_type:
+        type: type[astx.AST]
+      expected_module:
+        type: str | None
+      expected_names:
+        type: list[tuple[str, str]]
+    """
+    tree = _parse_module(code)
+
+    assert len(tree.nodes) == 1
+    node = tree.nodes[0]
+    assert isinstance(node, stmt_type)
+    assert isinstance(node, (irx_astx.ImportStmt, irx_astx.ImportFromStmt))
+    assert [
+        (alias.name, alias.asname) for alias in node.names
+    ] == expected_names
+
+    if isinstance(node, irx_astx.ImportFromStmt):
+        assert node.module == expected_module
+    else:
+        assert expected_module is None
+
+
+@pytest.mark.parametrize(
+    ("code", "match"),
+    [
+        (
+            "import () from std.math\n",
+            "empty grouped imports are not allowed",
+        ),
+        (
+            "import from std.math\n",
+            "Expected module path or imported name after 'import'.",
+        ),
+        (
+            "import as x from std.math\n",
+            "alias requires an import target before 'as'",
+        ),
+        (
+            "import (sin as) from std.math\n",
+            "Expected alias name after 'as'.",
+        ),
+        (
+            "import (sin, )\n",
+            "Grouped imports require 'from <module.path>'.",
+        ),
+        (
+            "import sin, cos from std.math\n",
+            "Grouped imports require parentheses.",
+        ),
+        (
+            "import std.\n",
+            "Expected identifier after '.' in module path.",
+        ),
+        (
+            "import std.math from other.module\n",
+            "Module imports do not use 'from'.",
+        ),
+        (
+            "fn main() -> i32:\n  import std.math\n  return 0\n",
+            "Import statements are only allowed at module scope.",
+        ),
+    ],
+)
+def test_parse_invalid_import_syntax(code: str, match: str) -> None:
+    """
+    title: Invalid import syntax should raise clear parser errors.
+    parameters:
+      code:
+        type: str
+      match:
+        type: str
+    """
+    with pytest.raises(ParserException, match=match):
+        _parse_module(code)
 
 
 def test_parse_while_stmt() -> None:

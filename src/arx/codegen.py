@@ -12,6 +12,7 @@ from typing import Literal
 
 import astx
 
+from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.runtime.linking import link_executable
@@ -53,19 +54,18 @@ class ArxBuilder(LLVMBuilder):
             active_runtime_features=set(self.runtime_feature_names)
         )
 
-    def build(
+    def _build_from_ir_result(
         self,
-        node: astx.AST,
+        result: str,
         output_file: str,
-        link: bool = True,
-        link_mode: Literal["auto", "pie", "no-pie"] = "auto",
+        link: bool,
+        link_mode: Literal["auto", "pie", "no-pie"],
     ) -> None:
         """
-        title: >-
-          Transpile the ASTx to LLVM-IR and build it to an executable file.
+        title: Materialize LLVM IR into either an object file or executable.
         parameters:
-          node:
-            type: astx.AST
+          result:
+            type: str
           output_file:
             type: str
           link:
@@ -73,8 +73,6 @@ class ArxBuilder(LLVMBuilder):
           link_mode:
             type: Literal[auto, pie, no-pie]
         """
-        result = self.translate(node)
-
         result_mod = llvm.parse_assembly(result)
         result_object = self.translator.target_machine.emit_object(result_mod)
 
@@ -113,3 +111,51 @@ class ArxBuilder(LLVMBuilder):
             )
 
         os.chmod(self.output_file, 0o755)
+
+    def build(
+        self,
+        node: astx.AST,
+        output_file: str,
+        link: bool = True,
+        link_mode: Literal["auto", "pie", "no-pie"] = "auto",
+    ) -> None:
+        """
+        title: >-
+          Transpile the ASTx to LLVM-IR and build it to an executable file.
+        parameters:
+          node:
+            type: astx.AST
+          output_file:
+            type: str
+          link:
+            type: bool
+          link_mode:
+            type: Literal[auto, pie, no-pie]
+        """
+        result = self.translate(node)
+        self._build_from_ir_result(result, output_file, link, link_mode)
+
+    def build_modules(
+        self,
+        root: ParsedModule,
+        resolver: ImportResolver,
+        output_file: str,
+        link: bool = True,
+        link_mode: Literal["auto", "pie", "no-pie"] = "auto",
+    ) -> None:
+        """
+        title: Build a reachable graph of parsed modules.
+        parameters:
+          root:
+            type: ParsedModule
+          resolver:
+            type: ImportResolver
+          output_file:
+            type: str
+          link:
+            type: bool
+          link_mode:
+            type: Literal[auto, pie, no-pie]
+        """
+        result = self.translate_modules(root, resolver)
+        self._build_from_ir_result(result, output_file, link, link_mode)
