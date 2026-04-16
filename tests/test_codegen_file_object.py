@@ -174,9 +174,9 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
 
             fn main() -> int32:
               var built: Counter = CounterFactory.make()
-              return (built.get() + built.value) + (
-                built.read_internal() + CounterFactory.version_value()
-              )
+              var version: int32 = CounterFactory.version_value()
+              var extra: int32 = built.read_internal() + version
+              return (built.get() + built.value) + extra
             """
         ).lstrip()
     )
