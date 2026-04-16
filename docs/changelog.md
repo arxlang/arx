@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.5.0](https://github.com/arxlang/arx/compare/0.4.0...0.5.0) (2026-04-16)
+
+
+### Features
+
+* Add support for import/import-from ([#50](https://github.com/arxlang/arx/issues/50)) ([08c53ab](https://github.com/arxlang/arx/commit/08c53ab1aed5c21399193f9387f9cd93f8bb91ae))
+
 # [0.4.0](https://github.com/arxlang/arx/compare/0.3.4...0.4.0) (2026-04-16)
 
 
