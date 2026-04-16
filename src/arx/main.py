@@ -306,7 +306,7 @@ class ArxMain:
         """
         tree_ast = self._get_codegen_astx()
         ir = ArxBuilder()
-        print(ir.translator.translate(tree_ast))
+        print(ir.translate(tree_ast))
 
     def run_shell(self) -> None:
         """

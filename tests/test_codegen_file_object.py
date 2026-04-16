@@ -2,29 +2,97 @@
 title: Test code generation to file object.
 """
 
+import os
 import shutil
 
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 import astx
 import pytest
 
-from arx.codegen import ArxBuilder
+from arx import codegen as codegen_module
+from arx.codegen import ArxBuilder, ArxVisitor
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.builder.runtime.registry import RuntimeFeatureState
+from llvmlite import binding as llvm
 
 TMP_PATH = Path("/tmp/arxtmp")
 TMP_PATH.mkdir(exist_ok=True)
 HAS_CLANG = shutil.which("clang") is not None
 
-_MIN_FLOAT_MAIN = "fn main() -> f32:\n  return 1.0 + 1.0\n"
+_MIN_MAIN = "fn main() -> i32:\n  return 0\n"
 
 
-def _parse_min_module(code: str = _MIN_FLOAT_MAIN) -> astx.Module:
+class DummyTargetMachine:
     """
-    title: Parse a minimal one-line main module for codegen tests.
+    title: Test double for LLVM target emission.
+    """
+
+    def emit_object(self, module: object) -> bytes:
+        """
+        title: Return a stable object payload for tests.
+        parameters:
+          module:
+            type: object
+        returns:
+          type: bytes
+        """
+        assert module == "parsed-module"
+        return b"OBJ"
+
+
+class DummyRuntimeFeatures:
+    """
+    title: Test double for runtime feature metadata.
+    """
+
+    def native_artifacts(self) -> tuple[str, ...]:
+        """
+        title: Return sentinel native artifacts.
+        returns:
+          type: tuple[str, Ellipsis]
+        """
+        return ("artifact",)
+
+    def linker_flags(self) -> tuple[str, ...]:
+        """
+        title: Return sentinel linker flags.
+        returns:
+          type: tuple[str, Ellipsis]
+        """
+        return ("-lm",)
+
+
+class DummyTranslator(ArxVisitor):
+    """
+    title: Test double for the IRx translator surface.
+    summary: >-
+      Supplies only the target machine and runtime-feature access used by
+      ArxBuilder build-path tests.
+    attributes:
+      target_machine:
+        type: DummyTargetMachine
+      runtime_features:
+        type: RuntimeFeatureState
+    """
+
+    def __init__(self) -> None:
+        """
+        title: Initialize the dummy translator.
+        """
+        self.target_machine: DummyTargetMachine = DummyTargetMachine()
+        self.runtime_features: RuntimeFeatureState = cast(
+            RuntimeFeatureState,
+            DummyRuntimeFeatures(),
+        )
+
+
+def _parse_min_module(code: str = _MIN_MAIN) -> astx.Module:
+    """
+    title: Parse a minimal module for codegen tests.
     parameters:
       code:
         type: str
@@ -40,8 +108,8 @@ def _parse_min_module(code: str = _MIN_FLOAT_MAIN) -> astx.Module:
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main() -> f32:\n  return 1.0 + 1.0",
-        "fn main() -> f32:\n  return 1.0 + 2.0 * (3.0 - 2.0)",
+        "fn main() -> i32:\n  print(1.0 + 1.0)\n  return 0",
+        "fn main() -> i32:\n  print(1.0 + 2.0 * (3.0 - 2.0))\n  return 0",
         # "fn main():\n  if (1 < 2):\n    return 3\nelse:\n    return 2\n",
     ],
 )
@@ -65,20 +133,58 @@ def test_object_generation(code: str) -> None:
     bin_path.unlink()
 
 
-def test_build_without_link_writes_object_bytes(
-    tmp_path: Path,
+def test_build_without_link_writes_object_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    title: link=False writes the LLVM object to output_file and skips clang.
+    title: Build should write raw object bytes when linking is disabled.
     parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
       tmp_path:
         type: Path
     """
-    module_ast = _parse_min_module()
-    out = tmp_path / "only.o"
-    ArxBuilder().build(module_ast, str(out), link=False)
-    assert out.is_file()
-    assert out.stat().st_size > 0
+    ir = ArxBuilder()
+    ir.translator = DummyTranslator()
+
+    monkeypatch.setattr(ir, "translate", lambda node: "llvm-ir")
+    monkeypatch.setattr(
+        llvm,
+        "parse_assembly",
+        lambda ir_text: "parsed-module",
+    )
+
+    link_calls: list[tuple[object, ...]] = []
+    chmod_calls: list[tuple[object, ...]] = []
+
+    def fake_link_executable(*args: object, **kwargs: object) -> None:
+        """
+        title: Fail if link_executable is called unexpectedly.
+        parameters:
+          args:
+            type: object
+            variadic: positional
+          kwargs:
+            type: object
+            variadic: keyword
+        """
+        link_calls.append((*args, kwargs))
+
+    monkeypatch.setattr(
+        codegen_module, "link_executable", fake_link_executable
+    )
+    monkeypatch.setattr(
+        os,
+        "chmod",
+        lambda *args: chmod_calls.append(args),
+    )
+
+    output_file = tmp_path / "module.o"
+    ir.build(astx.Module(), str(output_file), link=False)
+
+    assert output_file.read_bytes() == b"OBJ"
+    assert link_calls == []
+    assert chmod_calls == []
 
 
 def test_build_rejects_unknown_link_mode(tmp_path: Path) -> None:
@@ -89,67 +195,106 @@ def test_build_rejects_unknown_link_mode(tmp_path: Path) -> None:
         type: Path
     """
     module_ast = _parse_min_module()
-    invalid: Any = "not-a-link-mode"
+
     with pytest.raises(ValueError, match="Invalid link mode"):
         ArxBuilder().build(
             module_ast,
             str(tmp_path / "never"),
             link=True,
-            link_mode=invalid,
+            link_mode=cast(
+                Literal["auto", "pie", "no-pie"],
+                "not-a-link-mode",
+            ),
         )
 
 
 @pytest.mark.parametrize(
-    ("mode", "expect_flag"),
+    ("link_mode", "expected_flags"),
     [
-        ("pie", "-pie"),
-        ("no-pie", "-no-pie"),
+        ("auto", ("-lm",)),
+        ("pie", ("-lm", "-pie")),
+        ("no-pie", ("-lm", "-no-pie")),
     ],
 )
-@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
-def test_build_passes_explicit_link_flags(
-    tmp_path: Path,
+def test_linked_build_forwards_runtime_link_inputs(
+    link_mode: str,
+    expected_flags: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
-    mode: str,
-    expect_flag: str,
+    tmp_path: Path,
 ) -> None:
     """
-    title: pie and no-pie link modes forward the matching flag to clang.
+    title: Linked builds should forward runtime artifacts and link flags.
     parameters:
-      tmp_path:
-        type: Path
+      link_mode:
+        type: str
+      expected_flags:
+        type: tuple[str, Ellipsis]
       monkeypatch:
         type: pytest.MonkeyPatch
-      mode:
-        type: str
-      expect_flag:
-        type: str
+      tmp_path:
+        type: Path
     """
-    module_ast = _parse_min_module()
-    exe = tmp_path / f"out-{mode}"
-    recorded: dict[str, object] = {}
+    ir = ArxBuilder()
+    ir.translator = DummyTranslator()
 
-    def fake_clang(*args: object, **_kwargs: object) -> None:
+    monkeypatch.setattr(ir, "translate", lambda node: "llvm-ir")
+    monkeypatch.setattr(
+        llvm,
+        "parse_assembly",
+        lambda ir_text: "parsed-module",
+    )
+
+    captured: dict[str, object] = {}
+    chmod_calls: list[tuple[object, ...]] = []
+
+    def fake_link_executable(
+        primary_object: Path,
+        output_file: Path,
+        artifacts: tuple[str, ...],
+        linker_flags: tuple[str, ...],
+    ) -> None:
         """
-        title: Record clang argv and create the declared output artifact.
+        title: Record the linker inputs forwarded by ArxBuilder.
         parameters:
-          args:
-            type: object
-            variadic: positional
-          _kwargs:
-            type: object
-            variadic: keyword
+          primary_object:
+            type: Path
+          output_file:
+            type: Path
+          artifacts:
+            type: tuple[str, Ellipsis]
+          linker_flags:
+            type: tuple[str, Ellipsis]
         """
-        recorded["args"] = args
-        Path(str(args[-1])).write_bytes(b"")
+        captured["primary_object"] = primary_object
+        captured["output_file"] = output_file
+        captured["artifacts"] = artifacts
+        captured["linker_flags"] = linker_flags
+        output_file.write_bytes(b"BIN")
 
-    monkeypatch.setattr("arx.codegen.xh.clang", fake_clang)
+    monkeypatch.setattr(
+        codegen_module, "link_executable", fake_link_executable
+    )
+    monkeypatch.setattr(
+        os,
+        "chmod",
+        lambda *args: chmod_calls.append(args),
+    )
 
-    link_mode = cast(Literal["auto", "pie", "no-pie"], mode)
-    ArxBuilder().build(module_ast, str(exe), link=True, link_mode=link_mode)
+    output_file = tmp_path / "program"
+    ir.build(
+        astx.Module(),
+        str(output_file),
+        link=True,
+        link_mode=cast(
+            Literal["auto", "pie", "no-pie"],
+            link_mode,
+        ),
+    )
 
-    args_tuple = recorded["args"]
-    assert isinstance(args_tuple, tuple)
-    assert expect_flag in args_tuple
-    assert args_tuple[-1] == str(exe)
-    assert exe.is_file()
+    assert captured["artifacts"] == ("artifact",)
+    assert captured["linker_flags"] == expected_flags
+    assert isinstance(captured["primary_object"], Path)
+    assert captured["primary_object"].name == "arx_module.o"
+    assert captured["output_file"] == output_file
+    assert output_file.read_bytes() == b"BIN"
+    assert chmod_calls == [(str(output_file), 0o755)]

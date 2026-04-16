@@ -481,7 +481,9 @@ class Parser:
             self._consume_operator(",")
             target_type = self.parse_type()
             self._consume_operator(")")
-            return builtins.build_cast(value_expr, target_type)
+            return builtins.build_cast(
+                cast(astx.DataType, value_expr), target_type
+            )
 
         if id_name == builtins.BUILTIN_PRINT:
             message = self.parse_expression()
