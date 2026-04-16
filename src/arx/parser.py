@@ -79,12 +79,15 @@ class Parser:
         type: dict[str, int]
       indent_level:
         type: int
+      known_class_names:
+        type: set[str]
       tokens:
         type: TokenList
     """
 
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
+    known_class_names: set[str]
     tokens: TokenList
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
@@ -112,6 +115,7 @@ class Parser:
             "/": 40,
         }
         self.indent_level = 0
+        self.known_class_names = set()
         self.tokens = tokens
 
     def clean(self) -> None:
@@ -119,6 +123,7 @@ class Parser:
         title: Reset the Parser static variables.
         """
         self.indent_level = 0
+        self.known_class_names = set()
         self.tokens = TokenList([])
 
     def parse(
@@ -135,6 +140,7 @@ class Parser:
           type: astx.Module
         """
         self.clean()
+        self.known_class_names = self._collect_class_names(tokens)
         self.tokens = tokens
 
         tree: astx.Module = astx.Module(module_name)
@@ -210,6 +216,39 @@ class Parser:
             allow_module_docstring = False
 
         return tree
+
+    def _collect_class_names(self, tokens: TokenList) -> set[str]:
+        """
+        title: Collect declared class names from the token stream.
+        parameters:
+          tokens:
+            type: TokenList
+        returns:
+          type: set[str]
+        """
+        class_names: set[str] = set()
+        for index, token in enumerate(tokens.tokens[:-1]):
+            if token.kind != TokenKind.kw_class:
+                continue
+            next_token = tokens.tokens[index + 1]
+            if next_token.kind == TokenKind.identifier:
+                class_names.add(cast(str, next_token.value))
+        return class_names
+
+    def _class_name_from_expr(self, expr: astx.AST) -> str | None:
+        """
+        title: Return the referenced class name for static access candidates.
+        parameters:
+          expr:
+            type: astx.AST
+        returns:
+          type: str | None
+        """
+        if not isinstance(expr, astx.Identifier):
+            return None
+        if expr.name not in self.known_class_names:
+            return None
+        return cast(str, expr.name)
 
     def _is_operator(self, value: str) -> bool:
         """
@@ -935,14 +974,26 @@ class Parser:
                         self._consume_operator(",")
 
                 self._consume_operator(")")
-                expr = astx.MethodCall(
-                    expr,
-                    member_name,
-                    args,
-                )
+                class_name = self._class_name_from_expr(expr)
+                if class_name is not None:
+                    expr = astx.StaticMethodCall(
+                        class_name,
+                        member_name,
+                        args,
+                    )
+                else:
+                    expr = astx.MethodCall(
+                        expr,
+                        member_name,
+                        args,
+                    )
                 continue
 
-            expr = astx.FieldAccess(expr, member_name)
+            class_name = self._class_name_from_expr(expr)
+            if class_name is not None:
+                expr = astx.StaticFieldAccess(class_name, member_name)
+            else:
+                expr = astx.FieldAccess(expr, member_name)
 
         return expr
 
@@ -1217,6 +1268,12 @@ class Parser:
                 self._consume_operator(",")
 
         self._consume_operator(")")
+        if id_name in self.known_class_names:
+            if args:
+                raise ParserException(
+                    "class construction does not accept arguments"
+                )
+            return astx.ClassConstruct(id_name)
         return astx.FunctionCall(id_name, args, loc=id_loc)
 
     def parse_for_stmt(self) -> astx.AST:
@@ -1470,11 +1527,12 @@ class Parser:
             "time": astx.Time(),
         }
 
-        if type_name not in type_map:
-            raise ParserException(f"Parser: Unknown type '{type_name}'.")
-
         self.tokens.get_next_token()  # eat type identifier
-        return type_map[type_name]
+        if type_name in type_map:
+            return type_map[type_name]
+        if type_name in self.known_class_names:
+            return astx.ClassType(type_name)
+        raise ParserException(f"Parser: Unknown type '{type_name}'.")
 
     def parse_unary(self) -> astx.AST:
         """

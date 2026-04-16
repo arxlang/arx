@@ -79,6 +79,39 @@ fn get(self) -> int32:
   return self.value
 ```
 
+## Construction And Typed Class Values
+
+Declared classes can also be used directly in type annotations and default
+construction expressions.
+
+```arx
+class Counter:
+  @[public, static, constant]
+  version: int32 = 3
+
+  fn get(self) -> int32:
+    return 1
+
+class CounterFactory:
+  @[public, static]
+  fn make() -> Counter:
+    return Counter()
+
+fn take_counter(counter: Counter) -> int32:
+  return counter.get()
+
+fn main() -> int32:
+  var counter: Counter = CounterFactory.make()
+  return take_counter(counter) + Counter.version
+```
+
+This surface syntax maps directly onto IRx-owned class nodes:
+
+- `Counter` in annotations becomes `irx.astx.ClassType`
+- `Counter()` becomes `irx.astx.ClassConstruct`
+- `Counter.version` becomes `irx.astx.StaticFieldAccess`
+- `CounterFactory.make()` becomes `irx.astx.StaticMethodCall`
+
 ## IRx Alignment
 
 Arx now emits IRx/ASTx nodes directly instead of maintaining a separate Arx
