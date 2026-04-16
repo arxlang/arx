@@ -17,6 +17,7 @@ def test_token_name() -> None:
     assert Token(kind=TokenKind.kw_function, value="").get_name() == "function"
     assert Token(kind=TokenKind.kw_return, value="").get_name() == "return"
     assert Token(kind=TokenKind.kw_class, value="").get_name() == "class"
+    assert Token(kind=TokenKind.kw_import, value="").get_name() == "import"
     assert (
         Token(kind=TokenKind.identifier, value="").get_name() == "identifier"
     )
@@ -239,6 +240,37 @@ def test_get_tok_literals_and_keywords() -> None:
     assert lexer.get_token() == Token(TokenKind.identifier, "z")
     assert lexer.get_token() == Token(TokenKind.operator, "=")
     assert lexer.get_token() == Token(TokenKind.char_literal, "A")
+
+
+def test_get_tok_multiline_grouped_import() -> None:
+    """
+    title: Test tokenization for multiline grouped import syntax.
+    """
+    ArxIO.string_to_buffer(
+        "import (\n  sin,\n  cos as cosine,\n) from std.math\n"
+    )
+    lexer = Lexer()
+
+    expected = [
+        Token(TokenKind.kw_import, "import"),
+        Token(TokenKind.operator, "("),
+        Token(TokenKind.indent, 2),
+        Token(TokenKind.identifier, "sin"),
+        Token(TokenKind.operator, ","),
+        Token(TokenKind.indent, 2),
+        Token(TokenKind.identifier, "cos"),
+        Token(TokenKind.identifier, "as"),
+        Token(TokenKind.identifier, "cosine"),
+        Token(TokenKind.operator, ","),
+        Token(TokenKind.operator, ")"),
+        Token(TokenKind.identifier, "from"),
+        Token(TokenKind.identifier, "std"),
+        Token(TokenKind.operator, "."),
+        Token(TokenKind.identifier, "math"),
+    ]
+
+    for token in expected:
+        assert lexer.get_token() == token
 
 
 def test_skip_hash_comments() -> None:

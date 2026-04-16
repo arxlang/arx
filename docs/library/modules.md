@@ -1,7 +1,7 @@
 # Modules
 
 A module in Arx is a source file (for example, `math.x`) containing top-level
-statements such as function definitions and extern declarations.
+statements such as imports, function definitions, and extern declarations.
 
 ## Module Layout
 
@@ -17,6 +17,33 @@ fn average(x: f32, y: f32) -> f32:
   ```
   return (x + y) * 0.5
 ````
+
+## Import Syntax
+
+```arx
+import std.math
+import std.math as math
+
+import sin from std.math
+import sin as sine from std.math
+
+import (sin, cos, tan as tangent) from std.math
+
+import (
+  sin,
+  cos,
+  tan as tangent,
+) from std.math
+```
+
+Rules:
+
+- Import statements are module-level statements.
+- Grouped imports use parentheses.
+- Grouped imports require `from`.
+- Trailing commas are allowed in grouped imports.
+- Empty grouped imports are invalid.
+- Module paths use dotted notation.
 
 ## Module Docstring
 

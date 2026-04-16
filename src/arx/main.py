@@ -11,6 +11,8 @@ from typing import Any, Literal, cast
 
 import astx
 
+from irx.analysis.module_interfaces import ParsedModule
+
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
@@ -27,6 +29,110 @@ def get_module_name_from_file_path(filepath: str) -> str:
       type: str
     """
     return filepath.rsplit(os.sep, maxsplit=1)[-1].replace(".x", "")
+
+
+@dataclass
+class FileImportResolver:
+    """
+    title: Resolve import specifiers to Arx source files on disk.
+    attributes:
+      input_files:
+        type: tuple[str, Ellipsis]
+      cache:
+        type: dict[str, ParsedModule]
+    """
+
+    input_files: tuple[str, ...]
+    cache: dict[str, ParsedModule] = field(default_factory=dict)
+
+    def _candidate_roots(self) -> tuple[Path, ...]:
+        """
+        title: Build the ordered search roots for module resolution.
+        returns:
+          type: tuple[Path, Ellipsis]
+        """
+        roots: list[Path] = []
+        seen: set[Path] = set()
+
+        def add_root(path: Path) -> None:
+            """
+            title: Build the ordered search roots for module resolution.
+            parameters:
+              path:
+                type: Path
+            attributes:
+              path:
+                type: Path
+            """
+            resolved = path.resolve()
+            if resolved in seen:
+                return
+            seen.add(resolved)
+            roots.append(resolved)
+
+        add_root(Path.cwd())
+        for input_file in self.input_files:
+            current = Path(input_file).resolve().parent
+            while True:
+                add_root(current)
+                if current == current.parent:
+                    break
+                current = current.parent
+
+        return tuple(roots)
+
+    def _resolve_module_file(self, requested_specifier: str) -> Path:
+        """
+        title: Resolve one dotted module specifier to a source file.
+        parameters:
+          requested_specifier:
+            type: str
+        returns:
+          type: Path
+        """
+        relative_path = Path(*requested_specifier.split(".")).with_suffix(".x")
+        for root in self._candidate_roots():
+            candidate = root / relative_path
+            if candidate.is_file():
+                return candidate
+        raise LookupError(requested_specifier)
+
+    def __call__(
+        self,
+        requesting_module_key: str,
+        import_node: astx.ImportStmt | astx.ImportFromStmt,
+        requested_specifier: str,
+    ) -> ParsedModule:
+        """
+        title: Resolve one import request to a parsed source module.
+        parameters:
+          requesting_module_key:
+            type: str
+          import_node:
+            type: astx.ImportStmt | astx.ImportFromStmt
+          requested_specifier:
+            type: str
+        returns:
+          type: ParsedModule
+        """
+        _ = requesting_module_key
+        _ = import_node
+
+        cached = self.cache.get(requested_specifier)
+        if cached is not None:
+            return cached
+
+        module_file = self._resolve_module_file(requested_specifier)
+        ArxIO.file_to_buffer(str(module_file))
+        module_ast = Parser().parse(Lexer().lex(), requested_specifier)
+        parsed_module = ParsedModule(
+            key=requested_specifier,
+            ast=module_ast,
+            display_name=requested_specifier,
+            origin=str(module_file),
+        )
+        self.cache[requested_specifier] = parsed_module
+        return parsed_module
 
 
 @dataclass
@@ -195,6 +301,41 @@ class ArxMain:
             )
         return tree_ast
 
+    def _module_has_imports(self, module: astx.Module) -> bool:
+        """
+        title: Return whether one module contains import statements.
+        parameters:
+          module:
+            type: astx.Module
+        returns:
+          type: bool
+        """
+        return any(
+            isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
+            for node in module.nodes
+        )
+
+    def _build_multimodule_context(
+        self,
+        module: astx.Module,
+    ) -> tuple[ParsedModule, FileImportResolver]:
+        """
+        title: Build the IRx multi-module compilation context.
+        parameters:
+          module:
+            type: astx.Module
+        returns:
+          type: tuple[ParsedModule, FileImportResolver]
+        """
+        origin = self.input_files[0] if self.input_files else None
+        root = ParsedModule(
+            key=module.name,
+            ast=module,
+            display_name=module.name,
+            origin=origin,
+        )
+        return root, FileImportResolver(tuple(self.input_files))
+
     def _has_main_entry(self, node: astx.AST) -> bool:
         """
         title: Check whether the AST contains a main entry point.
@@ -306,6 +447,14 @@ class ArxMain:
         """
         tree_ast = self._get_codegen_astx()
         ir = ArxBuilder()
+
+        if isinstance(tree_ast, astx.Module) and self._module_has_imports(
+            tree_ast
+        ):
+            root, resolver = self._build_multimodule_context(tree_ast)
+            print(ir.translate_modules(root, resolver))
+            return
+
         print(ir.translate(tree_ast))
 
     def run_shell(self) -> None:
@@ -334,10 +483,25 @@ class ArxMain:
         returns:
           type: bool
         """
+        _ = show_llvm_ir
         tree_ast = self._get_codegen_astx()
         ir = ArxBuilder()
         self.output_file = self._resolve_output_file()
         emits_executable = not self.is_lib and self._has_main_entry(tree_ast)
+
+        if isinstance(tree_ast, astx.Module) and self._module_has_imports(
+            tree_ast
+        ):
+            root, resolver = self._build_multimodule_context(tree_ast)
+            ir.build_modules(
+                root,
+                resolver,
+                output_file=self.output_file,
+                link=emits_executable,
+                link_mode=self.link_mode,
+            )
+            return emits_executable
+
         ir.build(
             tree_ast,
             output_file=self.output_file,
