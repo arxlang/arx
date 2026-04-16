@@ -2,20 +2,13 @@
 title: Tests for annotation-based class parsing.
 """
 
-import astx
 import pytest
 
-from arx.class_ast import (
-    ClassDecl,
-    FieldDecl,
-    MemberAccessExpr,
-    MethodDecl,
-    ModifierKind,
-)
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx import astx
 
 
 def _parse_module(code: str) -> astx.Module:
@@ -33,7 +26,7 @@ def _parse_module(code: str) -> astx.Module:
 
 def test_parse_class_with_member_annotations_and_defaults() -> None:
     """
-    title: Parse class members with explicit modifiers and defaulted metadata.
+    title: Parse class members onto IRx/ASTx class nodes.
     """
     tree = _parse_module(
         "class Counter(BaseCounter, Audited):\n"
@@ -42,59 +35,64 @@ def test_parse_class_with_member_annotations_and_defaults() -> None:
         "\n"
         "  value: int32 = 0\n"
         "\n"
-        "  @[protected, override]\n"
+        "  @[protected]\n"
         "  fn process(self, x: int32) -> int32:\n"
         "    return self.value\n"
     )
 
     cls = tree.nodes[0]
-    assert isinstance(cls, ClassDecl)
+    assert isinstance(cls, astx.ClassDefStmt)
     assert cls.name == "Counter"
-    assert cls.bases == ("BaseCounter", "Audited")
-    assert [type(member) for member in cls.body] == [
-        FieldDecl,
-        FieldDecl,
-        MethodDecl,
+    assert [base.name for base in cls.bases.nodes] == [
+        "BaseCounter",
+        "Audited",
     ]
+    assert [field.name for field in cls.attributes.nodes] == [
+        "version",
+        "value",
+    ]
+    assert [method.name for method in cls.methods.nodes] == ["process"]
 
-    version = cls.body[0]
-    assert isinstance(version, FieldDecl)
-    assert version.modifiers is not None
-    assert version.modifiers.kinds == (
-        ModifierKind.PUBLIC,
-        ModifierKind.STATIC,
-        ModifierKind.CONSTANT,
+    version = cls.attributes.nodes[0]
+    assert version.visibility is astx.VisibilityKind.public
+    assert version.mutability is astx.MutabilityKind.constant
+    assert (
+        getattr(version, "explicit_visibility") is astx.VisibilityKind.public
     )
-    assert isinstance(version.initializer, astx.LiteralInt32)
-
-    value = cls.body[1]
-    assert isinstance(value, FieldDecl)
-    assert value.modifiers is None
-    assert value.resolved_visibility() is ModifierKind.PUBLIC
-    assert value.resolved_mutability() is ModifierKind.MUTABLE
-
-    method = cls.body[2]
-    assert isinstance(method, MethodDecl)
-    assert method.modifiers is not None
-    assert method.modifiers.kinds == (
-        ModifierKind.PROTECTED,
-        ModifierKind.OVERRIDE,
+    assert (
+        getattr(version, "explicit_mutability") is astx.MutabilityKind.constant
     )
-    assert method.params[0].name == "self"
-    assert method.params[0].is_self is True
-    assert method.params[0].type_ is None
-    assert method.params[1].name == "x"
-    assert isinstance(method.params[1].type_, astx.Int32)
-    assert isinstance(method.return_type, astx.Int32)
-    assert method.body is not None
+    assert getattr(version, "is_static", False) is True
+    assert isinstance(version.value, astx.LiteralInt32)
+
+    value = cls.attributes.nodes[1]
+    assert value.visibility is astx.VisibilityKind.public
+    assert value.mutability is astx.MutabilityKind.mutable
+    assert not hasattr(value, "explicit_visibility")
+    assert not hasattr(value, "explicit_mutability")
+    assert not getattr(value, "is_static", False)
+    assert isinstance(value.value, astx.LiteralInt32)
+
+    method = cls.methods.nodes[0]
+    assert isinstance(method, astx.FunctionDef)
+    assert method.prototype.visibility is astx.VisibilityKind.protected
+    assert getattr(method.prototype, "explicit_visibility") is (
+        astx.VisibilityKind.protected
+    )
+    assert len(method.prototype.args.nodes) == 1
+    assert method.prototype.args.nodes[0].name == "x"
+    assert isinstance(method.prototype.args.nodes[0].type_, astx.Int32)
+    assert isinstance(method.prototype.return_type, astx.Int32)
     assert isinstance(method.body.nodes[0], astx.FunctionReturn)
-    assert isinstance(method.body.nodes[0].value, MemberAccessExpr)
-    assert method.body.nodes[0].value.member_name == "value"
+    assert isinstance(method.body.nodes[0].value, astx.FieldAccess)
+    assert isinstance(method.body.nodes[0].value.value, astx.Identifier)
+    assert method.body.nodes[0].value.value.name == "self"
+    assert method.body.nodes[0].value.field_name == "value"
 
 
-def test_parse_class_level_annotations_and_abstract_method_decl() -> None:
+def test_parse_class_annotations_and_abstract_method_metadata() -> None:
     """
-    title: Parse optional class annotations and body-less abstract methods.
+    title: Parse class-level metadata onto direct IRx/ASTx nodes.
     """
     tree = _parse_module(
         "@[public, abstract]\n"
@@ -104,22 +102,21 @@ def test_parse_class_level_annotations_and_abstract_method_decl() -> None:
     )
 
     cls = tree.nodes[0]
-    assert isinstance(cls, ClassDecl)
-    assert cls.annotations is not None
-    assert cls.annotations.kinds == (
-        ModifierKind.PUBLIC,
-        ModifierKind.ABSTRACT,
+    assert isinstance(cls, astx.ClassDefStmt)
+    assert cls.visibility is astx.VisibilityKind.public
+    assert getattr(cls, "explicit_visibility") is astx.VisibilityKind.public
+    assert getattr(cls, "is_abstract", False) is True
+
+    method = cls.methods.nodes[0]
+    assert isinstance(method, astx.FunctionDef)
+    assert method.prototype.visibility is astx.VisibilityKind.public
+    assert getattr(method.prototype, "explicit_visibility") is (
+        astx.VisibilityKind.public
     )
-    method = cls.body[0]
-    assert isinstance(method, MethodDecl)
-    assert method.body is None
-    assert method.modifiers is not None
-    assert method.modifiers.kinds == (
-        ModifierKind.PUBLIC,
-        ModifierKind.ABSTRACT,
-    )
-    assert method.params[0].is_self is True
-    assert isinstance(method.return_type, astx.Float64)
+    assert getattr(method.prototype, "is_abstract", False) is True
+    assert method.prototype.args.nodes == []
+    assert isinstance(method.prototype.return_type, astx.Float64)
+    assert method.body.nodes == []
 
 
 @pytest.mark.parametrize(
@@ -142,12 +139,12 @@ def test_parse_class_level_annotations_and_abstract_method_decl() -> None:
             "conflicting mutability modifiers",
         ),
         (
-            "class Bad:\n  @[override]\n  value: int32 = 0\n",
-            "field cannot use 'override'",
+            "class Bad:\n  @[abstract]\n  value: int32 = 0\n",
+            "field cannot use 'abstract'",
         ),
         (
-            "class Bad:\n  @[mystery]\n  value: int32 = 0\n",
-            "unknown modifier 'mystery'",
+            "class Bad:\n  @[override]\n  value: int32 = 0\n",
+            "unknown modifier 'override'",
         ),
         (
             "class Bad:\n  @[public]\n",
@@ -161,6 +158,13 @@ def test_parse_class_level_annotations_and_abstract_method_decl() -> None:
             "class Bad:\n  fn area(self) -> float64\n",
             "method declaration without a body requires "
             "'abstract' or 'extern'",
+        ),
+        (
+            "class Bad:\n"
+            "  @[static]\n"
+            "  fn helper(self) -> int32:\n"
+            "    return 1\n",
+            "static method cannot declare implicit receiver 'self'",
         ),
     ],
 )

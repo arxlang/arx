@@ -18,7 +18,7 @@ class Counter(BaseCounter, Audited):
   fn get(self) -> int32:
     return self.value
 
-  @[protected, override]
+  @[protected]
   fn process(self, x: int32) -> int32:
     return x + 1
 ```
@@ -45,17 +45,21 @@ Supported modifiers:
 
 - Visibility: `public`, `private`, `protected`
 - Storage and mutability: `static`, `constant`, `mutable`
-- Dispatch and inheritance: `override`, `abstract`, `virtual`, `final`
-- Parse-and-preserve only: `inline`, `extern`, `sealed`, `readonly`
+- Declaration metadata: `abstract`, `extern`
+
+Not supported yet:
+
+- `override`, `virtual`, `final`, `sealed`, `readonly`, `inline`
 
 ## Defaults
 
-Defaults are applied during validation or semantic normalization, not injected
-into the parsed AST.
+Defaults are applied during parsing and normalization, not written back as
+implicit annotation lines.
 
 - Fields default to `public` visibility and `mutable` mutability.
 - Methods default to `public` visibility.
-- Only explicitly written modifiers are preserved in the surface AST.
+- Only explicitly written modifiers are preserved as explicit metadata on the
+  emitted IRx/ASTx nodes.
 
 For example, these declarations are equivalent semantically:
 
@@ -77,13 +81,18 @@ fn get(self) -> int32:
 
 ## IRx Alignment
 
-The surface AST preserves explicit modifier metadata structurally so a later
-lowering pass can map it directly onto IRx class members without re-reading raw
-syntax.
+Arx now emits IRx/ASTx nodes directly instead of maintaining a separate Arx
+class AST layer. This is a hard repository boundary: new AST node types or new
+lowering behavior for class features belong in IRx/ASTx, not in Arx.
 
-- `public` / `private` / `protected` map directly to IRx visibility.
-- `static` maps directly to class-static storage or dispatch.
-- `constant` and `mutable` map directly to IRx mutability.
-- `override` stays explicit for later override metadata and dispatch checks.
-- Base-class lists preserve declaration order so later semantic analysis can
-  apply IRx's class linearization rules.
+- `class` declarations lower into `irx.astx.ClassDefStmt`.
+- Base classes become `irx.astx.ClassType` entries.
+- Fields become `astx.VariableDeclaration` with visibility and mutability set
+  directly, plus `is_static` when present.
+- Methods become `astx.FunctionDef` plus `astx.FunctionPrototype`, with
+  visibility set directly and `is_static`, `is_abstract`, or `is_extern`
+  attached to the prototype when written.
+- Instance member syntax like `self.value` lowers into `irx.astx.FieldAccess`.
+
+This keeps Arx syntax aligned with the IRx semantic boundary while preserving
+explicit modifier intent on the same nodes that later lowering consumes.

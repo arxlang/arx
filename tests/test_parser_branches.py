@@ -4,13 +4,13 @@ title: Additional parser branch coverage tests.
 
 from __future__ import annotations
 
-import astx
 import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
+from irx import astx
 
 
 def _parse(code: str) -> astx.Module:

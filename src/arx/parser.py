@@ -4,35 +4,71 @@ title: parser module gather all functions and classes for parsing.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import cast
-
-import astx
 
 from astx import SourceLocation
 from astx.types import AnyType
+from irx import astx
 
 from arx import builtins
-from arx.class_ast import (
-    CLASS_ALLOWED_MODIFIERS,
-    FIELD_ALLOWED_MODIFIERS,
-    FIELD_MUTABILITY_MODIFIERS,
-    METHOD_ALLOWED_MODIFIERS,
-    MODIFIER_NAME_MAP,
-    VISIBILITY_MODIFIERS,
-    ClassDecl,
-    FieldDecl,
-    MemberAccessExpr,
-    MethodCallExpr,
-    MethodDecl,
-    MethodParam,
-    ModifierKind,
-    ModifierList,
-)
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
 
 INDENT_SIZE = 2
+
+
+@dataclass(frozen=True)
+class ParsedAnnotation:
+    """
+    title: Parsed modifier annotation attached to the next declaration.
+    attributes:
+      modifiers:
+        type: tuple[str, Ellipsis]
+      loc:
+        type: SourceLocation
+    """
+
+    modifiers: tuple[str, ...]
+    loc: SourceLocation
+
+
+SUPPORTED_MODIFIERS = frozenset(
+    {
+        "public",
+        "private",
+        "protected",
+        "static",
+        "constant",
+        "mutable",
+        "abstract",
+        "extern",
+    }
+)
+
+VISIBILITY_MODIFIERS = frozenset({"public", "private", "protected"})
+FIELD_MUTABILITY_MODIFIERS = frozenset({"constant", "mutable"})
+
+CLASS_ALLOWED_MODIFIERS = frozenset(
+    {"public", "private", "protected", "abstract"}
+)
+FIELD_ALLOWED_MODIFIERS = frozenset(
+    {"public", "private", "protected", "static", "constant", "mutable"}
+)
+METHOD_ALLOWED_MODIFIERS = frozenset(
+    {"public", "private", "protected", "static", "abstract", "extern"}
+)
+
+VISIBILITY_NAME_MAP = {
+    "public": astx.VisibilityKind.public,
+    "private": astx.VisibilityKind.private,
+    "protected": astx.VisibilityKind.protected,
+}
+MUTABILITY_NAME_MAP = {
+    "constant": astx.MutabilityKind.constant,
+    "mutable": astx.MutabilityKind.mutable,
+}
 
 
 class Parser:
@@ -227,19 +263,21 @@ class Parser:
           type: astx.FunctionPrototype
         """
         self.tokens.get_next_token()  # eat extern
-        return self.parse_prototype(expect_colon=False)
+        prototype = self.parse_prototype(expect_colon=False)
+        setattr(prototype, "is_extern", True)
+        return prototype
 
     def parse_class_decl(
         self,
-        annotations: ModifierList | None = None,
-    ) -> ClassDecl:
+        annotations: ParsedAnnotation | None = None,
+    ) -> astx.ClassDefStmt:
         """
         title: Parse one class declaration.
         parameters:
           annotations:
-            type: ModifierList | None
+            type: ParsedAnnotation | None
         returns:
-          type: ClassDecl
+          type: astx.ClassDefStmt
         """
         class_loc = self.tokens.cur_tok.location
         self._validate_modifier_target(
@@ -253,7 +291,7 @@ class Parser:
         class_name = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # eat class name
 
-        bases: list[str] = []
+        bases: list[astx.ClassType] = []
         if self._is_operator("("):
             self._consume_operator("(")
             if self._is_operator(")"):
@@ -262,7 +300,9 @@ class Parser:
             while True:
                 if self.tokens.cur_tok.kind != TokenKind.identifier:
                     raise ParserException("Parser: Expected base class name.")
-                bases.append(cast(str, self.tokens.cur_tok.value))
+                bases.append(
+                    astx.ClassType(cast(str, self.tokens.cur_tok.value))
+                )
                 self.tokens.get_next_token()
 
                 if self._is_operator(")"):
@@ -273,20 +313,25 @@ class Parser:
             self._consume_operator(")")
 
         self._consume_operator(":")
-        body = self.parse_class_body()
-        return ClassDecl(
-            name=class_name,
+        attributes, methods = self.parse_class_body()
+        declaration = astx.ClassDefStmt(
+            class_name,
             bases=bases,
-            body=body,
-            annotations=annotations,
+            attributes=attributes,
+            methods=methods,
+            visibility=self._resolve_visibility(annotations),
             loc=class_loc,
         )
+        self._apply_class_modifiers(declaration, annotations)
+        return declaration
 
-    def parse_class_body(self) -> list[FieldDecl | MethodDecl]:
+    def parse_class_body(
+        self,
+    ) -> tuple[list[astx.VariableDeclaration], list[astx.FunctionDef]]:
         """
         title: Parse a class body.
         returns:
-          type: list[FieldDecl | MethodDecl]
+          type: tuple[list[astx.VariableDeclaration], list[astx.FunctionDef]]
         """
         start_token = self.tokens.cur_tok
         if start_token.kind != TokenKind.indent:
@@ -303,7 +348,8 @@ class Parser:
         self.indent_level = cur_indent
         self.tokens.get_next_token()  # eat indentation
 
-        body: list[FieldDecl | MethodDecl] = []
+        attributes: list[astx.VariableDeclaration] = []
+        methods: list[astx.FunctionDef] = []
 
         while True:
             if self.tokens.cur_tok.kind == TokenKind.indent:
@@ -315,7 +361,7 @@ class Parser:
                 self.tokens.get_next_token()
                 continue
 
-            modifiers: ModifierList | None = None
+            modifiers: ParsedAnnotation | None = None
             if self._is_operator("@"):
                 modifiers = self.parse_modifier_list()
                 if cast(TokenKind, self.tokens.cur_tok.kind) == TokenKind.eof:
@@ -346,9 +392,9 @@ class Parser:
                 )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
-                body.append(self.parse_method_decl(modifiers))
+                methods.append(self.parse_method_decl(modifiers))
             elif self.tokens.cur_tok.kind == TokenKind.identifier:
-                body.append(self.parse_field_decl(modifiers))
+                attributes.append(self.parse_field_decl(modifiers))
             else:
                 if modifiers is not None:
                     raise ParserException(
@@ -365,19 +411,19 @@ class Parser:
                 break
 
         self.indent_level = prev_indent
-        return body
+        return attributes, methods
 
     def parse_field_decl(
         self,
-        modifiers: ModifierList | None = None,
-    ) -> FieldDecl:
+        modifiers: ParsedAnnotation | None = None,
+    ) -> astx.VariableDeclaration:
         """
         title: Parse one class field declaration.
         parameters:
           modifiers:
-            type: ModifierList | None
+            type: ParsedAnnotation | None
         returns:
-          type: FieldDecl
+          type: astx.VariableDeclaration
         """
         field_loc = self.tokens.cur_tok.location
         self._validate_modifier_target(
@@ -395,30 +441,38 @@ class Parser:
         self._consume_operator(":")
         field_type = self.parse_type()
 
-        initializer: astx.AST | None = None
+        initializer: astx.Expr | None = None
         if self._is_operator("="):
             self._consume_operator("=")
-            initializer = self.parse_expression()
+            initializer = cast(astx.Expr, self.parse_expression())
 
-        return FieldDecl(
-            name=name,
-            type_=field_type,
-            initializer=initializer,
-            modifiers=modifiers,
-            loc=field_loc,
+        field_kwargs: dict[str, object] = {
+            "mutability": self._resolve_field_mutability(modifiers),
+            "visibility": self._resolve_visibility(modifiers),
+            "loc": field_loc,
+        }
+        if initializer is not None:
+            field_kwargs["value"] = initializer
+
+        field = astx.VariableDeclaration(
+            name,
+            field_type,
+            **field_kwargs,
         )
+        self._apply_field_modifiers(field, modifiers)
+        return field
 
     def parse_method_decl(
         self,
-        modifiers: ModifierList | None = None,
-    ) -> MethodDecl:
+        modifiers: ParsedAnnotation | None = None,
+    ) -> astx.FunctionDef:
         """
         title: Parse one class method declaration.
         parameters:
           modifiers:
-            type: ModifierList | None
+            type: ParsedAnnotation | None
         returns:
-          type: MethodDecl
+          type: astx.FunctionDef
         """
         method_loc = self.tokens.cur_tok.location
         self._validate_modifier_target(
@@ -426,51 +480,55 @@ class Parser:
         )
         self.tokens.get_next_token()  # eat fn
 
-        name, params, return_type = self.parse_method_signature()
+        is_static = self._has_modifier(modifiers, "static")
+        prototype = self.parse_method_signature(allow_receiver=not is_static)
+        prototype.visibility = self._resolve_visibility(modifiers)
 
-        body: astx.Block | None = None
         if self._is_operator(":"):
-            if self._has_modifier(modifiers, ModifierKind.ABSTRACT):
+            if self._has_modifier(modifiers, "abstract"):
                 raise ParserException("abstract method cannot define a body")
-            if self._has_modifier(modifiers, ModifierKind.EXTERN):
+            if self._has_modifier(modifiers, "extern"):
                 raise ParserException("extern method cannot define a body")
             self._consume_operator(":")
             body = self.parse_block(allow_docstring=True)
         elif not (
-            self._has_modifier(modifiers, ModifierKind.ABSTRACT)
-            or self._has_modifier(modifiers, ModifierKind.EXTERN)
+            self._has_modifier(modifiers, "abstract")
+            or self._has_modifier(modifiers, "extern")
         ):
             raise ParserException(
                 "method declaration without a body requires "
                 "'abstract' or 'extern'"
             )
+        else:
+            body = astx.Block()
 
-        return MethodDecl(
-            name=name,
-            params=params,
-            return_type=return_type,
-            body=body,
-            modifiers=modifiers,
-            loc=method_loc,
-        )
+        method = astx.FunctionDef(prototype, body, loc=method_loc)
+        self._apply_method_modifiers(method, modifiers)
+        return method
 
     def parse_method_signature(
         self,
-    ) -> tuple[str, list[MethodParam], astx.DataType]:
+        *,
+        allow_receiver: bool,
+    ) -> astx.FunctionPrototype:
         """
         title: Parse one class method signature.
+        parameters:
+          allow_receiver:
+            type: bool
         returns:
-          type: tuple[str, list[MethodParam], astx.DataType]
+          type: astx.FunctionPrototype
         """
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected method name in prototype")
 
         method_name = cast(str, self.tokens.cur_tok.value)
+        method_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat method name
 
         self._consume_operator("(")
 
-        params: list[MethodParam] = []
+        args = astx.Arguments()
         index = 0
         if not self._is_operator(")"):
             while True:
@@ -486,14 +544,11 @@ class Parser:
                     and param_name == "self"
                     and not self._is_operator(":")
                 ):
-                    params.append(
-                        MethodParam(
-                            param_name,
-                            None,
-                            is_self=True,
-                            loc=param_loc,
+                    if not allow_receiver:
+                        raise ParserException(
+                            "static method cannot declare implicit receiver "
+                            "'self'"
                         )
-                    )
                 else:
                     if not self._is_operator(":"):
                         raise ParserException(
@@ -503,8 +558,8 @@ class Parser:
 
                     self._consume_operator(":")
                     param_type = self.parse_type()
-                    params.append(
-                        MethodParam(param_name, param_type, loc=param_loc)
+                    args.append(
+                        astx.Argument(param_name, param_type, loc=param_loc)
                     )
 
                 index += 1
@@ -524,13 +579,18 @@ class Parser:
 
         self._consume_operator("->")
         return_type = self.parse_type()
-        return method_name, params, return_type
+        return astx.FunctionPrototype(
+            method_name,
+            args,
+            cast(AnyType, return_type),
+            loc=method_loc,
+        )
 
-    def parse_modifier_list(self) -> ModifierList:
+    def parse_modifier_list(self) -> ParsedAnnotation:
         """
         title: Parse one annotation-line modifier list.
         returns:
-          type: ModifierList
+          type: ParsedAnnotation
         """
         annotation_loc = self.tokens.cur_tok.location
         self._consume_operator("@")
@@ -539,19 +599,18 @@ class Parser:
         if self._is_operator("]"):
             raise ParserException("empty annotation is not allowed")
 
-        modifiers: list[ModifierKind] = []
+        modifiers: list[str] = []
         while True:
             if self.tokens.cur_tok.kind != TokenKind.identifier:
                 raise ParserException("Parser: Expected modifier name.")
 
             modifier_name = cast(str, self.tokens.cur_tok.value)
-            modifier_kind = MODIFIER_NAME_MAP.get(modifier_name)
-            if modifier_kind is None:
+            if modifier_name not in SUPPORTED_MODIFIERS:
                 raise ParserException(f"unknown modifier '{modifier_name}'")
-            if modifier_kind in modifiers:
+            if modifier_name in modifiers:
                 raise ParserException(f"duplicate modifier '{modifier_name}'")
 
-            modifiers.append(modifier_kind)
+            modifiers.append(modifier_name)
             self.tokens.get_next_token()
 
             if self._is_operator("]"):
@@ -561,81 +620,226 @@ class Parser:
 
         self._consume_operator("]")
         self._validate_modifier_conflicts(modifiers)
-        return ModifierList(modifiers, loc=annotation_loc)
+        return ParsedAnnotation(tuple(modifiers), annotation_loc)
 
     def _validate_modifier_conflicts(
         self,
-        modifiers: list[ModifierKind],
+        modifiers: list[str],
     ) -> None:
         """
         title: Validate duplicate-group modifier conflicts.
         parameters:
           modifiers:
-            type: list[ModifierKind]
+            type: list[str]
         """
         visibility = [
-            kind for kind in modifiers if kind in VISIBILITY_MODIFIERS
+            name for name in modifiers if name in VISIBILITY_MODIFIERS
         ]
         if len(visibility) > 1:
             raise ParserException(
                 "conflicting visibility modifiers "
-                f"'{visibility[0].surface_name}' and "
-                f"'{visibility[1].surface_name}'"
+                f"'{visibility[0]}' and '{visibility[1]}'"
             )
 
         mutability = [
-            kind for kind in modifiers if kind in FIELD_MUTABILITY_MODIFIERS
+            name for name in modifiers if name in FIELD_MUTABILITY_MODIFIERS
         ]
         if len(mutability) > 1:
             raise ParserException(
                 "conflicting mutability modifiers "
-                f"'{mutability[0].surface_name}' and "
-                f"'{mutability[1].surface_name}'"
+                f"'{mutability[0]}' and '{mutability[1]}'"
             )
 
     def _validate_modifier_target(
         self,
-        modifiers: ModifierList | None,
-        allowed: frozenset[ModifierKind],
+        modifiers: ParsedAnnotation | None,
+        allowed: frozenset[str],
         target: str,
     ) -> None:
         """
         title: Validate one modifier list against a declaration target.
         parameters:
           modifiers:
-            type: ModifierList | None
+            type: ParsedAnnotation | None
           allowed:
-            type: frozenset[ModifierKind]
+            type: frozenset[str]
           target:
             type: str
         """
         if modifiers is None:
             return
 
-        for modifier in modifiers:
+        for modifier in modifiers.modifiers:
             if modifier not in allowed:
-                raise ParserException(
-                    f"{target} cannot use '{modifier.surface_name}'"
-                )
+                raise ParserException(f"{target} cannot use '{modifier}'")
 
     def _has_modifier(
         self,
-        modifiers: ModifierList | None,
-        expected: ModifierKind,
+        modifiers: ParsedAnnotation | None,
+        expected: str,
     ) -> bool:
         """
         title: Return whether one modifier is present.
         parameters:
           modifiers:
-            type: ModifierList | None
+            type: ParsedAnnotation | None
           expected:
-            type: ModifierKind
+            type: str
         returns:
           type: bool
         """
         if modifiers is None:
             return False
-        return expected in modifiers
+        return expected in modifiers.modifiers
+
+    def _resolve_visibility(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.VisibilityKind:
+        """
+        title: Resolve class/member visibility defaults.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.VisibilityKind
+        """
+        if modifiers is None:
+            return astx.VisibilityKind.public
+        for modifier in modifiers.modifiers:
+            if modifier in VISIBILITY_MODIFIERS:
+                return VISIBILITY_NAME_MAP[modifier]
+        return astx.VisibilityKind.public
+
+    def _explicit_visibility(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.VisibilityKind | None:
+        """
+        title: Return explicit visibility when one was written.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.VisibilityKind | None
+        """
+        if modifiers is None:
+            return None
+        for modifier in modifiers.modifiers:
+            if modifier in VISIBILITY_MODIFIERS:
+                return VISIBILITY_NAME_MAP[modifier]
+        return None
+
+    def _resolve_field_mutability(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.MutabilityKind:
+        """
+        title: Resolve field mutability defaults.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.MutabilityKind
+        """
+        if modifiers is None:
+            return astx.MutabilityKind.mutable
+        for modifier in modifiers.modifiers:
+            if modifier in FIELD_MUTABILITY_MODIFIERS:
+                return MUTABILITY_NAME_MAP[modifier]
+        return astx.MutabilityKind.mutable
+
+    def _explicit_field_mutability(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.MutabilityKind | None:
+        """
+        title: Return explicit field mutability when one was written.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.MutabilityKind | None
+        """
+        if modifiers is None:
+            return None
+        for modifier in modifiers.modifiers:
+            if modifier in FIELD_MUTABILITY_MODIFIERS:
+                return MUTABILITY_NAME_MAP[modifier]
+        return None
+
+    def _apply_class_modifiers(
+        self,
+        declaration: astx.ClassDefStmt,
+        modifiers: ParsedAnnotation | None,
+    ) -> None:
+        """
+        title: Attach explicit class modifier metadata to the IRx node.
+        parameters:
+          declaration:
+            type: astx.ClassDefStmt
+          modifiers:
+            type: ParsedAnnotation | None
+        """
+        explicit_visibility = self._explicit_visibility(modifiers)
+        if explicit_visibility is not None:
+            setattr(declaration, "explicit_visibility", explicit_visibility)
+        if self._has_modifier(modifiers, "abstract"):
+            setattr(declaration, "is_abstract", True)
+            setattr(declaration, "explicit_is_abstract", True)
+
+    def _apply_field_modifiers(
+        self,
+        declaration: astx.VariableDeclaration,
+        modifiers: ParsedAnnotation | None,
+    ) -> None:
+        """
+        title: Attach explicit field modifier metadata to the IRx node.
+        parameters:
+          declaration:
+            type: astx.VariableDeclaration
+          modifiers:
+            type: ParsedAnnotation | None
+        """
+        explicit_visibility = self._explicit_visibility(modifiers)
+        if explicit_visibility is not None:
+            setattr(declaration, "explicit_visibility", explicit_visibility)
+        explicit_mutability = self._explicit_field_mutability(modifiers)
+        if explicit_mutability is not None:
+            setattr(declaration, "explicit_mutability", explicit_mutability)
+        if self._has_modifier(modifiers, "static"):
+            setattr(declaration, "is_static", True)
+            setattr(declaration, "explicit_is_static", True)
+
+    def _apply_method_modifiers(
+        self,
+        declaration: astx.FunctionDef,
+        modifiers: ParsedAnnotation | None,
+    ) -> None:
+        """
+        title: Attach explicit method modifier metadata to the IRx node.
+        parameters:
+          declaration:
+            type: astx.FunctionDef
+          modifiers:
+            type: ParsedAnnotation | None
+        """
+        explicit_visibility = self._explicit_visibility(modifiers)
+        if explicit_visibility is not None:
+            setattr(
+                declaration.prototype,
+                "explicit_visibility",
+                explicit_visibility,
+            )
+        if self._has_modifier(modifiers, "static"):
+            setattr(declaration.prototype, "is_static", True)
+            setattr(declaration.prototype, "explicit_is_static", True)
+        if self._has_modifier(modifiers, "abstract"):
+            setattr(declaration.prototype, "is_abstract", True)
+            setattr(declaration.prototype, "explicit_is_abstract", True)
+        if self._has_modifier(modifiers, "extern"):
+            setattr(declaration.prototype, "is_extern", True)
+            setattr(declaration.prototype, "explicit_is_extern", True)
 
     def parse_primary(self) -> astx.AST:
         """
@@ -706,7 +910,6 @@ class Parser:
         expr = self.parse_primary()
 
         while self._is_operator("."):
-            dot_loc = self.tokens.cur_tok.location
             self._consume_operator(".")
 
             if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -719,10 +922,12 @@ class Parser:
 
             if self._is_operator("("):
                 self._consume_operator("(")
-                args: list[astx.AST] = []
+                args: list[astx.DataType] = []
                 if not self._is_operator(")"):
                     while True:
-                        args.append(self.parse_expression())
+                        args.append(
+                            cast(astx.DataType, self.parse_expression())
+                        )
 
                         if self._is_operator(")"):
                             break
@@ -730,10 +935,14 @@ class Parser:
                         self._consume_operator(",")
 
                 self._consume_operator(")")
-                expr = MethodCallExpr(expr, member_name, args, loc=dot_loc)
+                expr = astx.MethodCall(
+                    expr,
+                    member_name,
+                    args,
+                )
                 continue
 
-            expr = MemberAccessExpr(expr, member_name, loc=dot_loc)
+            expr = astx.FieldAccess(expr, member_name)
 
         return expr
 
