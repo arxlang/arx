@@ -12,6 +12,22 @@ from astx import SourceLocation
 from astx.types import AnyType
 
 from arx import builtins
+from arx.class_ast import (
+    CLASS_ALLOWED_MODIFIERS,
+    FIELD_ALLOWED_MODIFIERS,
+    FIELD_MUTABILITY_MODIFIERS,
+    METHOD_ALLOWED_MODIFIERS,
+    MODIFIER_NAME_MAP,
+    VISIBILITY_MODIFIERS,
+    ClassDecl,
+    FieldDecl,
+    MemberAccessExpr,
+    MethodCallExpr,
+    MethodDecl,
+    MethodParam,
+    ModifierKind,
+    ModifierList,
+)
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
@@ -120,6 +136,25 @@ class Parser:
                 allow_module_docstring = False
                 continue
 
+            if self._is_operator("@"):
+                annotations = self.parse_modifier_list()
+                if cast(TokenKind, self.tokens.cur_tok.kind) == TokenKind.eof:
+                    raise ParserException(
+                        "annotation must be followed by a declaration"
+                    )
+                if self.tokens.cur_tok.location.line == annotations.loc.line:
+                    raise ParserException(
+                        "annotation must appear on its own line "
+                        "before a declaration"
+                    )
+                if self.tokens.cur_tok.kind != TokenKind.kw_class:
+                    raise ParserException(
+                        "annotation must be followed by a declaration"
+                    )
+                tree.nodes.append(self.parse_class_decl(annotations))
+                allow_module_docstring = False
+                continue
+
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
                 tree.nodes.append(self.parse_function())
                 allow_module_docstring = False
@@ -127,6 +162,11 @@ class Parser:
 
             if self.tokens.cur_tok.kind == TokenKind.kw_extern:
                 tree.nodes.append(self.parse_extern())
+                allow_module_docstring = False
+                continue
+
+            if self.tokens.cur_tok.kind == TokenKind.kw_class:
+                tree.nodes.append(self.parse_class_decl())
                 allow_module_docstring = False
                 continue
 
@@ -189,12 +229,428 @@ class Parser:
         self.tokens.get_next_token()  # eat extern
         return self.parse_prototype(expect_colon=False)
 
+    def parse_class_decl(
+        self,
+        annotations: ModifierList | None = None,
+    ) -> ClassDecl:
+        """
+        title: Parse one class declaration.
+        parameters:
+          annotations:
+            type: ModifierList | None
+        returns:
+          type: ClassDecl
+        """
+        class_loc = self.tokens.cur_tok.location
+        self._validate_modifier_target(
+            annotations, CLASS_ALLOWED_MODIFIERS, "class"
+        )
+        self.tokens.get_next_token()  # eat class
+
+        if self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException("Parser: Expected class name after 'class'.")
+
+        class_name = cast(str, self.tokens.cur_tok.value)
+        self.tokens.get_next_token()  # eat class name
+
+        bases: list[str] = []
+        if self._is_operator("("):
+            self._consume_operator("(")
+            if self._is_operator(")"):
+                raise ParserException("Parser: Expected base class name.")
+
+            while True:
+                if self.tokens.cur_tok.kind != TokenKind.identifier:
+                    raise ParserException("Parser: Expected base class name.")
+                bases.append(cast(str, self.tokens.cur_tok.value))
+                self.tokens.get_next_token()
+
+                if self._is_operator(")"):
+                    break
+
+                self._consume_operator(",")
+
+            self._consume_operator(")")
+
+        self._consume_operator(":")
+        body = self.parse_class_body()
+        return ClassDecl(
+            name=class_name,
+            bases=bases,
+            body=body,
+            annotations=annotations,
+            loc=class_loc,
+        )
+
+    def parse_class_body(self) -> list[FieldDecl | MethodDecl]:
+        """
+        title: Parse a class body.
+        returns:
+          type: list[FieldDecl | MethodDecl]
+        """
+        start_token = self.tokens.cur_tok
+        if start_token.kind != TokenKind.indent:
+            raise ParserException(
+                "Expected indentation to start a class body."
+            )
+
+        cur_indent = start_token.value
+        prev_indent = self.indent_level
+
+        if cur_indent <= prev_indent:
+            raise ParserException("There is no new class body to be parsed.")
+
+        self.indent_level = cur_indent
+        self.tokens.get_next_token()  # eat indentation
+
+        body: list[FieldDecl | MethodDecl] = []
+
+        while True:
+            if self.tokens.cur_tok.kind == TokenKind.indent:
+                new_indent = self.tokens.cur_tok.value
+                if new_indent < cur_indent:
+                    break
+                if new_indent > cur_indent:
+                    raise ParserException("Indentation not allowed here.")
+                self.tokens.get_next_token()
+                continue
+
+            modifiers: ModifierList | None = None
+            if self._is_operator("@"):
+                modifiers = self.parse_modifier_list()
+                if cast(TokenKind, self.tokens.cur_tok.kind) == TokenKind.eof:
+                    raise ParserException(
+                        "annotation must be followed by a declaration"
+                    )
+                if self.tokens.cur_tok.location.line == modifiers.loc.line:
+                    raise ParserException(
+                        "annotation must appear on its own line "
+                        "before a declaration"
+                    )
+                if (
+                    cast(TokenKind, self.tokens.cur_tok.kind)
+                    == TokenKind.indent
+                ):
+                    next_indent = self.tokens.cur_tok.value
+                    if next_indent < cur_indent:
+                        raise ParserException(
+                            "annotation must be followed by a declaration"
+                        )
+                    if next_indent > cur_indent:
+                        raise ParserException("Indentation not allowed here.")
+                    self.tokens.get_next_token()
+
+            if self.tokens.cur_tok.kind == TokenKind.docstring:
+                raise ParserException(
+                    "Docstrings are not allowed in class bodies."
+                )
+
+            if self.tokens.cur_tok.kind == TokenKind.kw_function:
+                body.append(self.parse_method_decl(modifiers))
+            elif self.tokens.cur_tok.kind == TokenKind.identifier:
+                body.append(self.parse_field_decl(modifiers))
+            else:
+                if modifiers is not None:
+                    raise ParserException(
+                        "annotation must be followed by a declaration"
+                    )
+                raise ParserException(
+                    "Expected a field or method declaration in class body."
+                )
+
+            while self._is_operator(";"):
+                self.tokens.get_next_token()
+
+            if cast(TokenKind, self.tokens.cur_tok.kind) != TokenKind.indent:
+                break
+
+        self.indent_level = prev_indent
+        return body
+
+    def parse_field_decl(
+        self,
+        modifiers: ModifierList | None = None,
+    ) -> FieldDecl:
+        """
+        title: Parse one class field declaration.
+        parameters:
+          modifiers:
+            type: ModifierList | None
+        returns:
+          type: FieldDecl
+        """
+        field_loc = self.tokens.cur_tok.location
+        self._validate_modifier_target(
+            modifiers, FIELD_ALLOWED_MODIFIERS, "field"
+        )
+
+        name = cast(str, self.tokens.cur_tok.value)
+        self.tokens.get_next_token()  # eat field name
+
+        if not self._is_operator(":"):
+            raise ParserException(
+                f"Parser: Expected type annotation for field '{name}'."
+            )
+
+        self._consume_operator(":")
+        field_type = self.parse_type()
+
+        initializer: astx.AST | None = None
+        if self._is_operator("="):
+            self._consume_operator("=")
+            initializer = self.parse_expression()
+
+        return FieldDecl(
+            name=name,
+            type_=field_type,
+            initializer=initializer,
+            modifiers=modifiers,
+            loc=field_loc,
+        )
+
+    def parse_method_decl(
+        self,
+        modifiers: ModifierList | None = None,
+    ) -> MethodDecl:
+        """
+        title: Parse one class method declaration.
+        parameters:
+          modifiers:
+            type: ModifierList | None
+        returns:
+          type: MethodDecl
+        """
+        method_loc = self.tokens.cur_tok.location
+        self._validate_modifier_target(
+            modifiers, METHOD_ALLOWED_MODIFIERS, "method"
+        )
+        self.tokens.get_next_token()  # eat fn
+
+        name, params, return_type = self.parse_method_signature()
+
+        body: astx.Block | None = None
+        if self._is_operator(":"):
+            if self._has_modifier(modifiers, ModifierKind.ABSTRACT):
+                raise ParserException("abstract method cannot define a body")
+            if self._has_modifier(modifiers, ModifierKind.EXTERN):
+                raise ParserException("extern method cannot define a body")
+            self._consume_operator(":")
+            body = self.parse_block(allow_docstring=True)
+        elif not (
+            self._has_modifier(modifiers, ModifierKind.ABSTRACT)
+            or self._has_modifier(modifiers, ModifierKind.EXTERN)
+        ):
+            raise ParserException(
+                "method declaration without a body requires "
+                "'abstract' or 'extern'"
+            )
+
+        return MethodDecl(
+            name=name,
+            params=params,
+            return_type=return_type,
+            body=body,
+            modifiers=modifiers,
+            loc=method_loc,
+        )
+
+    def parse_method_signature(
+        self,
+    ) -> tuple[str, list[MethodParam], astx.DataType]:
+        """
+        title: Parse one class method signature.
+        returns:
+          type: tuple[str, list[MethodParam], astx.DataType]
+        """
+        if self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException("Parser: Expected method name in prototype")
+
+        method_name = cast(str, self.tokens.cur_tok.value)
+        self.tokens.get_next_token()  # eat method name
+
+        self._consume_operator("(")
+
+        params: list[MethodParam] = []
+        index = 0
+        if not self._is_operator(")"):
+            while True:
+                if self.tokens.cur_tok.kind != TokenKind.identifier:
+                    raise ParserException("Parser: Expected argument name")
+
+                param_name = cast(str, self.tokens.cur_tok.value)
+                param_loc = self.tokens.cur_tok.location
+                self.tokens.get_next_token()  # eat arg name
+
+                if (
+                    index == 0
+                    and param_name == "self"
+                    and not self._is_operator(":")
+                ):
+                    params.append(
+                        MethodParam(
+                            param_name,
+                            None,
+                            is_self=True,
+                            loc=param_loc,
+                        )
+                    )
+                else:
+                    if not self._is_operator(":"):
+                        raise ParserException(
+                            "Parser: Expected type annotation for argument "
+                            f"'{param_name}'."
+                        )
+
+                    self._consume_operator(":")
+                    param_type = self.parse_type()
+                    params.append(
+                        MethodParam(param_name, param_type, loc=param_loc)
+                    )
+
+                index += 1
+
+                if self._is_operator(","):
+                    self._consume_operator(",")
+                    continue
+
+                break
+
+        self._consume_operator(")")
+
+        if not self._is_operator("->"):
+            raise ParserException(
+                "Parser: Expected return type annotation with '->'."
+            )
+
+        self._consume_operator("->")
+        return_type = self.parse_type()
+        return method_name, params, return_type
+
+    def parse_modifier_list(self) -> ModifierList:
+        """
+        title: Parse one annotation-line modifier list.
+        returns:
+          type: ModifierList
+        """
+        annotation_loc = self.tokens.cur_tok.location
+        self._consume_operator("@")
+        self._consume_operator("[")
+
+        if self._is_operator("]"):
+            raise ParserException("empty annotation is not allowed")
+
+        modifiers: list[ModifierKind] = []
+        while True:
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException("Parser: Expected modifier name.")
+
+            modifier_name = cast(str, self.tokens.cur_tok.value)
+            modifier_kind = MODIFIER_NAME_MAP.get(modifier_name)
+            if modifier_kind is None:
+                raise ParserException(f"unknown modifier '{modifier_name}'")
+            if modifier_kind in modifiers:
+                raise ParserException(f"duplicate modifier '{modifier_name}'")
+
+            modifiers.append(modifier_kind)
+            self.tokens.get_next_token()
+
+            if self._is_operator("]"):
+                break
+
+            self._consume_operator(",")
+
+        self._consume_operator("]")
+        self._validate_modifier_conflicts(modifiers)
+        return ModifierList(modifiers, loc=annotation_loc)
+
+    def _validate_modifier_conflicts(
+        self,
+        modifiers: list[ModifierKind],
+    ) -> None:
+        """
+        title: Validate duplicate-group modifier conflicts.
+        parameters:
+          modifiers:
+            type: list[ModifierKind]
+        """
+        visibility = [
+            kind for kind in modifiers if kind in VISIBILITY_MODIFIERS
+        ]
+        if len(visibility) > 1:
+            raise ParserException(
+                "conflicting visibility modifiers "
+                f"'{visibility[0].surface_name}' and "
+                f"'{visibility[1].surface_name}'"
+            )
+
+        mutability = [
+            kind for kind in modifiers if kind in FIELD_MUTABILITY_MODIFIERS
+        ]
+        if len(mutability) > 1:
+            raise ParserException(
+                "conflicting mutability modifiers "
+                f"'{mutability[0].surface_name}' and "
+                f"'{mutability[1].surface_name}'"
+            )
+
+    def _validate_modifier_target(
+        self,
+        modifiers: ModifierList | None,
+        allowed: frozenset[ModifierKind],
+        target: str,
+    ) -> None:
+        """
+        title: Validate one modifier list against a declaration target.
+        parameters:
+          modifiers:
+            type: ModifierList | None
+          allowed:
+            type: frozenset[ModifierKind]
+          target:
+            type: str
+        """
+        if modifiers is None:
+            return
+
+        for modifier in modifiers:
+            if modifier not in allowed:
+                raise ParserException(
+                    f"{target} cannot use '{modifier.surface_name}'"
+                )
+
+    def _has_modifier(
+        self,
+        modifiers: ModifierList | None,
+        expected: ModifierKind,
+    ) -> bool:
+        """
+        title: Return whether one modifier is present.
+        parameters:
+          modifiers:
+            type: ModifierList | None
+          expected:
+            type: ModifierKind
+        returns:
+          type: bool
+        """
+        if modifiers is None:
+            return False
+        return expected in modifiers
+
     def parse_primary(self) -> astx.AST:
         """
         title: Parse the primary expression.
         returns:
           type: astx.AST
         """
+        if self._is_operator("@"):
+            raise ParserException(
+                "Annotations are only allowed before declarations."
+            )
+        if self.tokens.cur_tok.kind == TokenKind.kw_class:
+            raise ParserException(
+                "Class declarations are only allowed at module scope."
+            )
         if self.tokens.cur_tok.kind == TokenKind.identifier:
             return self.parse_identifier_expr()
         if self.tokens.cur_tok.kind == TokenKind.int_literal:
@@ -240,6 +696,46 @@ class Parser:
         )
         self.tokens.get_next_token()
         raise ParserException(msg)
+
+    def parse_postfix(self) -> astx.AST:
+        """
+        title: Parse postfix member access and method calls.
+        returns:
+          type: astx.AST
+        """
+        expr = self.parse_primary()
+
+        while self._is_operator("."):
+            dot_loc = self.tokens.cur_tok.location
+            self._consume_operator(".")
+
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Parser: Expected member name after '.'."
+                )
+
+            member_name = cast(str, self.tokens.cur_tok.value)
+            self.tokens.get_next_token()
+
+            if self._is_operator("("):
+                self._consume_operator("(")
+                args: list[astx.AST] = []
+                if not self._is_operator(")"):
+                    while True:
+                        args.append(self.parse_expression())
+
+                        if self._is_operator(")"):
+                            break
+
+                        self._consume_operator(",")
+
+                self._consume_operator(")")
+                expr = MethodCallExpr(expr, member_name, args, loc=dot_loc)
+                continue
+
+            expr = MemberAccessExpr(expr, member_name, loc=dot_loc)
+
+        return expr
 
     def parse_block(self, allow_docstring: bool = False) -> astx.Block:
         """
@@ -743,14 +1239,26 @@ class Parser:
             "i16": astx.Int16(),
             "i32": astx.Int32(),
             "i64": astx.Int64(),
+            "int8": astx.Int8(),
+            "int16": astx.Int16(),
+            "int32": astx.Int32(),
+            "int64": astx.Int64(),
             "f16": astx.Float16(),
             "f32": astx.Float32(),
+            "f64": astx.Float64(),
+            "float16": astx.Float16(),
+            "float32": astx.Float32(),
+            "float64": astx.Float64(),
             "bool": astx.Boolean(),
+            "boolean": astx.Boolean(),
             "none": astx.NoneType(),
             "str": astx.String(),
+            "string": astx.String(),
             "char": astx.Int8(),
             "datetime": astx.DateTime(),
             "timestamp": astx.Timestamp(),
+            "date": astx.Date(),
+            "time": astx.Time(),
         }
 
         if type_name not in type_map:
@@ -765,11 +1273,16 @@ class Parser:
         returns:
           type: astx.AST
         """
+        if self._is_operator("@"):
+            raise ParserException(
+                "Annotations are only allowed before declarations."
+            )
+
         if (
             self.tokens.cur_tok.kind != TokenKind.operator
             or self.tokens.cur_tok.value in ("(", "[", ",", ":", ")", "]", ";")
         ):
-            return self.parse_primary()
+            return self.parse_postfix()
 
         op_code = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()

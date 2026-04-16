@@ -28,6 +28,7 @@ class TokenKind(Enum):
     kw_function = -2
     kw_extern = -3
     kw_return = -4
+    kw_class = -5
 
     # data types
     identifier = -10
@@ -68,6 +69,7 @@ MAP_NAME_TO_KW_TOKEN = {
     "fn": TokenKind.kw_function,
     "return": TokenKind.kw_return,
     "extern": TokenKind.kw_extern,
+    "class": TokenKind.kw_class,
     "if": TokenKind.kw_if,
     "else": TokenKind.kw_else,
     "for": TokenKind.kw_for,
@@ -84,6 +86,7 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.eof: "eof",
     TokenKind.kw_function: "function",
     TokenKind.kw_return: "return",
+    TokenKind.kw_class: "class",
     TokenKind.kw_extern: "extern",
     TokenKind.identifier: "identifier",
     TokenKind.indent: "indent",
@@ -324,6 +327,7 @@ class Lexer:
     _keyword_map: dict[str, TokenKind] = {
         "fn": TokenKind.kw_function,
         "extern": TokenKind.kw_extern,
+        "class": TokenKind.kw_class,
         "return": TokenKind.kw_return,
         "if": TokenKind.kw_if,
         "then": TokenKind.kw_then,

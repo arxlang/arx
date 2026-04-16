@@ -111,6 +111,7 @@ Policy status:
 
 Reserved keywords:
 
+- `class`
 - `const`
 - `else`
 - `extern`
@@ -136,7 +137,7 @@ Contextual keywords:
 Current operator/punctuation set for lexical highlighting:
 
 - Assignment/comparison/arithmetic: `=`, `<`, `>`, `+`, `-`, `*`, `/`
-- Structural punctuation: `:`, `,`, `;`
+- Structural punctuation: `@`, `:`, `,`, `;`
 
 Brackets:
 
@@ -147,6 +148,8 @@ Brackets:
 Notes:
 
 - Multi-character operators are not finalized.
+- Annotation lines use `@[` followed by comma-separated modifier names and a
+  closing `]`.
 - TODO(ARX-LEX-OPS-001): decide on `==`, `!=`, `<=`, `>=`, `->`.
 
 ## 9) Canonical Lexical Examples
@@ -174,6 +177,15 @@ fn demo():
 
 ```arx
 extern putchard(x)  # imported symbol
+```
+
+### Annotation lines
+
+```arx
+@[public, static]
+class Math:
+  @[public, constant]
+  version: int32 = 1
 ```
 
 ## 10) Lightweight Consistency Checks (Repo-Agnostic)

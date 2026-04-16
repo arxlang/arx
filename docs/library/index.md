@@ -9,6 +9,7 @@ Start here when you need exact syntax and placement rules.
 
 - [Modules](modules.md)
 - [Functions](functions.md)
+- [Classes](classes.md)
 - [Data Types](datatypes.md)
 - [Control Flow](control-flow.md)
 - [Docstrings](docstrings.md)
@@ -20,6 +21,7 @@ This reference currently focuses on:
 - module structure
 - function definitions and calls
 - type system and annotations
+- class declarations and member modifiers
 - control-flow syntax
 - docstring placement rules
 
