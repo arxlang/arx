@@ -60,9 +60,6 @@ class FileImportResolver:
             parameters:
               path:
                 type: Path
-            attributes:
-              path:
-                type: Path
             """
             resolved = path.resolve()
             if resolved in seen:
