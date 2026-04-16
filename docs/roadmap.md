@@ -4,9 +4,10 @@ The roadmap document define the direction that the project is taking.
 
 The initial and decisive part of the project is the implementation of the Apache
 Arrow datatypes as the native datatypes. But in order to get to the point where
-we can implement that, we need first implement a bunch of small pieces to the
-compiler, in all the phases: lexer, parser, semantic analysis, and code
-generator.
+we can implement that, we need first implement a bunch of small pieces across
+the Arx + IRx stack. Arx owns the surface front end (lexer, parser, docs,
+examples), while IRx owns AST definitions, semantic analysis, lowering, and code
+generation.
 
 ## Improve the language structure
 

@@ -2,6 +2,8 @@
 title: Test code generation AST output.
 """
 
+from textwrap import dedent
+
 import pytest
 
 from arx.codegen import ArxBuilder
@@ -13,28 +15,103 @@ from arx.parser import Parser
 @pytest.mark.parametrize(
     "code",
     [
-        "fn main() -> i32:\n  print(0.0 + 1.0)\n  return 0",
-        "fn main() -> i32:\n  print(1.0 + 2.0 * (3.0 - 2.0))\n  return 0",
-        "fn main() -> i32:\n  print(42)\n  return 0",
-        "fn main() -> i32:\n  print(3.5)\n  return 0",
-        (
-            "fn average(x: f32, y: f32) -> f32:\n"
-            "  return (x + y) * 0.5\n"
-            "fn main() -> i32:\n"
-            "  print(average(10.0, 20.0))\n"
-            "  return 0"
-        ),
-        (
-            "fn fib(x: i32) -> i32:\n"
-            "  if x < 3:\n"
-            "    return 1\n"
-            "  else:\n"
-            "    return fib(x-1)+fib(x-2)\n"
-            "fn main() -> i32:\n"
-            "  print(fib(10))\n"
-            "  return 0"
-        ),
-        # "fn main():\n  if (1 < 2):\n    return 3\n  else:\n    return 2\n",
+        dedent(
+            """
+            fn main() -> i32:
+              print(0.0 + 1.0)
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            fn main() -> i32:
+              print(1.0 + 2.0 * (3.0 - 2.0))
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            fn main() -> i32:
+              print(42)
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            fn main() -> i32:
+              print(3.5)
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            fn average(x: f32, y: f32) -> f32:
+              return (x + y) * 0.5
+
+            fn main() -> i32:
+              print(average(10.0, 20.0))
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            fn fib(x: i32) -> i32:
+              if x < 3:
+                return 1
+              else:
+                return fib(x-1)+fib(x-2)
+
+            fn main() -> i32:
+              print(fib(10))
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
+            class BaseCounter:
+              @[public, mutable]
+              value: int32 = 41
+
+              @[protected]
+              fn read_seed(self) -> int32:
+                return self.value
+
+            class Counter(BaseCounter):
+              @[public, static, constant]
+              version: int32 = 3
+
+              @[private, mutable]
+              internal: int32 = 5
+
+              @[protected]
+              fn internal_total(self) -> int32:
+                return self.internal + self.value
+
+              fn get(self) -> int32:
+                return self.value
+
+              fn read_internal(self) -> int32:
+                return self.internal_total()
+
+            class CounterFactory:
+              @[public, static]
+              fn make() -> Counter:
+                return Counter()
+
+              @[public, static]
+              fn version_value() -> int32:
+                return Counter.version
+
+            fn take_counter(counter: Counter) -> int32:
+              return counter.get() + counter.value + counter.read_internal()
+
+            fn main() -> i32:
+              var direct: Counter = Counter()
+              var built: Counter = CounterFactory.make()
+              print(take_counter(direct) + built.get())
+              return CounterFactory.version_value() + Counter.version
+            """
+        ).lstrip(),
     ],
 )
 def test_ast_to_output(code: str) -> None:

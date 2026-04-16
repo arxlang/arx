@@ -4,8 +4,10 @@ title: Test code generation to file object.
 
 import os
 import shutil
+import subprocess
 
 from pathlib import Path
+from textwrap import dedent
 from typing import Literal, cast
 
 import astx
@@ -131,6 +133,67 @@ def test_object_generation(code: str) -> None:
     bin_path = TMP_PATH / "testtmp"
     ir.build(module_ast, str(bin_path))
     bin_path.unlink()
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_class_program_builds_and_runs(tmp_path: Path) -> None:
+    """
+    title: Class-heavy programs should survive full build and execution.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    module_ast = _parse_min_module(
+        dedent(
+            """
+            class BaseCounter:
+              @[public, mutable]
+              value: int32 = 4
+
+            class Counter(BaseCounter):
+              @[public, static, constant]
+              version: int32 = 3
+
+              @[private, mutable]
+              internal: int32 = 5
+
+              fn get(self) -> int32:
+                return self.value
+
+              fn read_internal(self) -> int32:
+                return self.internal
+
+            class CounterFactory:
+              @[public, static]
+              fn make() -> Counter:
+                return Counter()
+
+              @[public, static]
+              fn version_value() -> int32:
+                return Counter.version
+
+            fn main() -> int32:
+              var built: Counter = CounterFactory.make()
+              var version: int32 = CounterFactory.version_value()
+              var extra: int32 = built.read_internal() + version
+              return (built.get() + built.value) + extra
+            """
+        ).lstrip()
+    )
+
+    bin_path = tmp_path / "classes_program"
+    ArxBuilder().build(module_ast, str(bin_path))
+
+    result = subprocess.run(
+        [str(bin_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 16
+    assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_build_without_link_writes_object_file(

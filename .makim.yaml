@@ -54,16 +54,16 @@ groups:
           pre-run:
             - task: examples.show-tokens
               args:
-                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal,classes
             - task: examples.show-ast
               args:
-                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal
+                examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal,classes
             - task: examples.show-llvm-ir
               args:
-                examples: constant,average,fibonacci,print-star,sum
+                examples: constant,average,fibonacci,print-star,sum,classes
             - task: examples.emit-object
               args:
-                examples: constant,average,fibonacci,print-star,sum
+                examples: constant,average,fibonacci,print-star,sum,classes
         run: |
           arx --help
           arx --version

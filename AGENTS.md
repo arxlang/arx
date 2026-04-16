@@ -26,10 +26,12 @@ Use this guidance for any change inside the Arx compiler repository:
 
 - Package: `arxlang`
 - Runtime: Python `>=3.10,<4`
-- Main architecture: `source -> lexer -> parser -> astx -> irx/LLVM`
+- Main architecture:
+  `source -> lexer -> parser -> irx.astx -> irx analysis/lowering -> LLVM`
 - Key dependencies:
-  - `astx` for AST nodes
-  - `irx` for IR/codegen
+  - `irx.astx` as the AST facade Arx should emit
+  - `irx` for semantic analysis, lowering, and code generation
+  - `astx` as the upstream node library consumed through IRx
   - `jsonschema` + `pyyaml` for Douki docstring validation
 - Docs stack: MkDocs + Material + mkdocstrings
 
@@ -44,6 +46,17 @@ Use this guidance for any change inside the Arx compiler repository:
 - `.github/workflows/main.yaml`: CI pipeline
 
 ## Architecture And Responsibilities
+
+### Hard Boundary: Arx vs IRx
+
+- Arx owns surface syntax, lexing, parsing, CLI flow, tests, docs, and examples.
+- IRx owns the AST model, semantic analysis, lowering, and LLVM-facing codegen
+  behavior.
+- Do not add new AST or ASTx node classes in `arx`; use `irx.astx` nodes only.
+- Do not add new lowering logic in `arx` for language features; land that work
+  in IRx first, then consume it from Arx.
+- If a needed node or lowering hook does not exist, treat that as an IRx/ASTx
+  change request, not an Arx-local extension.
 
 ### `src/arx/io.py`
 
@@ -60,7 +73,7 @@ Use this guidance for any change inside the Arx compiler repository:
 
 ### `src/arx/parser.py`
 
-- Converts token stream into `astx` nodes.
+- Converts token stream into `irx.astx` nodes through the IRx facade.
 - Enforces indentation-based blocks (`INDENT_SIZE = 2`).
 - Handles module/function docstring placement and validation.
 - Raises `ParserException` for parser-specific errors.
@@ -73,11 +86,12 @@ Use this guidance for any change inside the Arx compiler repository:
 
 ### `src/arx/codegen.py`
 
-- Contains Arx-specific LLVM lowering overrides on top of IRx.
+- Contains the remaining Arx-specific builder adapter on top of IRx.
 - `ArxVisitor` extends `irx.builder.Visitor`.
 - `ArxBuilder` extends `irx.builder.Builder`.
-- Keep this layer minimal and explicit; prefer upstream fixes in IRx when
-  changes are generic.
+- Do not add new lowering behavior here for language features.
+- Prefer shrinking this layer over time by upstreaming generic or feature-level
+  lowering work into IRx.
 
 ### `src/arx/main.py` and `src/arx/cli.py`
 
@@ -182,6 +196,14 @@ Current behavior:
   - `mypy` is strict (`check_untyped_defs = true`, `strict = true`)
 - Security/dead code gates in pre-commit:
   - `bandit`, `vulture`, `mccabe`
+
+### YAML configuration rule
+
+- Never use heredocs inside YAML files in this repository.
+- This applies to CI and automation configs such as `.github/workflows/*.yaml`
+  and `.makim.yaml`.
+- In YAML-backed task/config files, prefer plain shell commands or direct
+  Python/xonsh statements instead of embedded `<<EOF` / `<<'PY'` blocks.
 
 ### Python docstring convention in this repo
 
@@ -298,10 +320,12 @@ fences around the code block to safely include inner triple backticks.
 ### Adding/changing parser rules
 
 1. Implement parse behavior in `parser.py`.
-2. Raise `ParserException` with clear messages.
-3. Add parser tests (`tests/test_parser.py`).
-4. Validate existing examples still parse.
-5. Update docs and examples.
+2. Emit only existing `irx.astx` nodes; if the node shape is missing, upstream
+   it to IRx/ASTx instead of inventing an Arx-local node.
+3. Raise `ParserException` with clear messages.
+4. Add parser tests (`tests/test_parser.py`).
+5. Validate existing examples still parse.
+6. Update docs and examples.
 
 ### Changing docstring behavior
 
@@ -333,6 +357,11 @@ Before submitting final output, verify:
 ## Non-Goals / Avoid
 
 - Do not invent unsupported syntax in examples.
+- Do not use heredocs inside YAML files such as CI workflows or Makim
+  configuration.
+- Do not create Arx-owned AST/ASTx node types.
+- Do not add new lowering or LLVM feature logic directly in `arx`; upstream it
+  to IRx.
 - Do not update unrelated files to "clean up" style.
 - Do not bypass schema validation for docstrings.
 - Do not leave parser, docs, and examples out of sync.

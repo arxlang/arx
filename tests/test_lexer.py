@@ -16,6 +16,7 @@ def test_token_name() -> None:
     assert Token(kind=TokenKind.eof, value="").get_name() == "eof"
     assert Token(kind=TokenKind.kw_function, value="").get_name() == "function"
     assert Token(kind=TokenKind.kw_return, value="").get_name() == "return"
+    assert Token(kind=TokenKind.kw_class, value="").get_name() == "class"
     assert (
         Token(kind=TokenKind.identifier, value="").get_name() == "identifier"
     )
@@ -152,6 +153,33 @@ def test_get_tok_function_docstring() -> None:
     assert lexer.get_token().kind == TokenKind.docstring
     assert lexer.get_token() == Token(kind=TokenKind.indent, value=2)
     assert lexer.get_token() == Token(kind=TokenKind.kw_return, value="return")
+
+
+def test_get_tok_class_annotation_line() -> None:
+    """
+    title: Test tokenization for class annotation lines.
+    """
+    ArxIO.string_to_buffer(
+        "@[public, static]\nclass Math:\n  value: int32 = 1\n"
+    )
+    lexer = Lexer()
+
+    expected = [
+        Token(TokenKind.operator, "@"),
+        Token(TokenKind.operator, "["),
+        Token(TokenKind.identifier, "public"),
+        Token(TokenKind.operator, ","),
+        Token(TokenKind.identifier, "static"),
+        Token(TokenKind.operator, "]"),
+        Token(TokenKind.kw_class, "class"),
+        Token(TokenKind.identifier, "Math"),
+        Token(TokenKind.operator, ":"),
+        Token(TokenKind.indent, 2),
+        Token(TokenKind.identifier, "value"),
+    ]
+
+    for token in expected:
+        assert lexer.get_token() == token
 
 
 def test_get_tok_multi_char_operators() -> None:
