@@ -466,6 +466,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#import-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Syntax
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-docstring" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1344,6 +1355,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#import-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Syntax
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-docstring" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1376,7 +1398,7 @@
 
 <h1 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h1>
 <p>A module in Arx is a source file (for example, <code class="language-python highlight"><span class="n">math</span><span class="o">.</span><span class="n">x</span></code>) containing top-level
-statements such as function definitions and extern declarations.</p>
+statements such as imports, function definitions, and extern declarations.</p>
 <h2 id="module-layout">Module Layout<a class="headerlink" href="#module-layout" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>```
 title: Math module example
@@ -1389,6 +1411,30 @@ fn average(x: f32, y: f32) -&gt; f32:
   ```
   return (x + y) * 0.5
 </code></pre></div>
+<h2 id="import-syntax">Import Syntax<a class="headerlink" href="#import-syntax" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code>import std.math
+import std.math as math
+
+import sin from std.math
+import sin as sine from std.math
+
+import (sin, cos, tan as tangent) from std.math
+
+import (
+  sin,
+  cos,
+  tan as tangent,
+) from std.math
+</code></pre></div>
+<p>Rules:</p>
+<ul>
+<li>Import statements are module-level statements.</li>
+<li>Grouped imports use parentheses.</li>
+<li>Grouped imports require <code class="language-python highlight"><span class="kn">from</span></code>.</li>
+<li>Trailing commas are allowed in grouped imports.</li>
+<li>Empty grouped imports are invalid.</li>
+<li>Module paths use dotted notation.</li>
+</ul>
 <h2 id="module-docstring">Module Docstring<a class="headerlink" href="#module-docstring" title="Permanent link">&para;</a></h2>
 <p>Arx supports module docstrings in Douki YAML format, delimited by triple
 backticks:</p>
