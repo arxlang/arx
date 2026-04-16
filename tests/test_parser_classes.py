@@ -293,6 +293,44 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
     assert main_return.value.rhs.field_name == "version"
 
 
+def test_parse_visible_local_names_shadow_class_expressions() -> None:
+    """
+    title: Visible locals prevent class-name parsing in expression position.
+    """
+    tree = _parse_module(
+        dedent(
+            """
+            class Counter:
+              @[public, static, constant]
+              version: int32 = 3
+
+              value: int32 = 0
+
+            fn main() -> int32:
+              var Counter: int32 = 1
+              var next: int32 = Counter()
+              return Counter.version
+            """
+        ).lstrip()
+    )
+
+    main_fn = tree.nodes[1]
+    assert isinstance(main_fn, astx.FunctionDef)
+
+    next_decl = main_fn.body.nodes[1]
+    assert isinstance(next_decl, astx.VariableDeclaration)
+    assert isinstance(next_decl.value, astx.FunctionCall)
+    assert next_decl.value.fn == "Counter"
+
+    result = main_fn.body.nodes[2]
+    assert isinstance(result, astx.FunctionReturn)
+    assert isinstance(result.value, astx.FieldAccess)
+    assert isinstance(result.value.value, astx.Identifier)
+    assert result.value.value.name == "Counter"
+    assert result.value.field_name == "version"
+    assert not isinstance(result.value, astx.StaticFieldAccess)
+
+
 @pytest.mark.parametrize(
     ("code", "message"),
     [

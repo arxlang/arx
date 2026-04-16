@@ -81,6 +81,8 @@ class Parser:
         type: int
       known_class_names:
         type: set[str]
+      value_scopes:
+        type: list[set[str]]
       tokens:
         type: TokenList
     """
@@ -88,6 +90,7 @@ class Parser:
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
+    value_scopes: list[set[str]]
     tokens: TokenList
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
@@ -116,6 +119,7 @@ class Parser:
         }
         self.indent_level = 0
         self.known_class_names = set()
+        self.value_scopes = [set()]
         self.tokens = tokens
 
     def clean(self) -> None:
@@ -124,6 +128,7 @@ class Parser:
         """
         self.indent_level = 0
         self.known_class_names = set()
+        self.value_scopes = [set()]
         self.tokens = TokenList([])
 
     def parse(
@@ -217,6 +222,44 @@ class Parser:
 
         return tree
 
+    def _push_value_scope(
+        self,
+        declared_names: tuple[str, ...] = (),
+    ) -> None:
+        """
+        title: Push one visible-name scope for expression disambiguation.
+        parameters:
+          declared_names:
+            type: tuple[str, Ellipsis]
+        """
+        self.value_scopes.append(set(declared_names))
+
+    def _pop_value_scope(self) -> None:
+        """
+        title: Pop the most recent visible-name scope.
+        """
+        self.value_scopes.pop()
+
+    def _declare_value_name(self, name: str) -> None:
+        """
+        title: Record one visible value name in the current scope.
+        parameters:
+          name:
+            type: str
+        """
+        self.value_scopes[-1].add(name)
+
+    def _name_is_shadowed(self, name: str) -> bool:
+        """
+        title: Return whether a visible value binding shadows a class name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        return any(name in scope for scope in reversed(self.value_scopes))
+
     def _collect_class_names(self, tokens: TokenList) -> set[str]:
         """
         title: Collect declared class names from the token stream.
@@ -247,6 +290,8 @@ class Parser:
         if not isinstance(expr, astx.Identifier):
             return None
         if expr.name not in self.known_class_names:
+            return None
+        if self._name_is_shadowed(expr.name):
             return None
         return cast(str, expr.name)
 
@@ -292,7 +337,10 @@ class Parser:
         """
         self.tokens.get_next_token()  # eat fn
         proto = self.parse_prototype(expect_colon=True)
-        body = self.parse_block(allow_docstring=True)
+        body = self.parse_block(
+            allow_docstring=True,
+            declared_names=tuple(arg.name for arg in proto.args.nodes),
+        )
         return astx.FunctionDef(proto, body)
 
     def parse_extern(self) -> astx.FunctionPrototype:
@@ -520,8 +568,14 @@ class Parser:
         self.tokens.get_next_token()  # eat fn
 
         is_static = self._has_modifier(modifiers, "static")
-        prototype = self.parse_method_signature(allow_receiver=not is_static)
+        prototype, receiver_name = self.parse_method_signature(
+            allow_receiver=not is_static
+        )
         prototype.visibility = self._resolve_visibility(modifiers)
+
+        declared_names = tuple(arg.name for arg in prototype.args.nodes)
+        if receiver_name is not None:
+            declared_names = (receiver_name, *declared_names)
 
         if self._is_operator(":"):
             if self._has_modifier(modifiers, "abstract"):
@@ -529,7 +583,10 @@ class Parser:
             if self._has_modifier(modifiers, "extern"):
                 raise ParserException("extern method cannot define a body")
             self._consume_operator(":")
-            body = self.parse_block(allow_docstring=True)
+            body = self.parse_block(
+                allow_docstring=True,
+                declared_names=declared_names,
+            )
         elif not (
             self._has_modifier(modifiers, "abstract")
             or self._has_modifier(modifiers, "extern")
@@ -549,14 +606,14 @@ class Parser:
         self,
         *,
         allow_receiver: bool,
-    ) -> astx.FunctionPrototype:
+    ) -> tuple[astx.FunctionPrototype, str | None]:
         """
         title: Parse one class method signature.
         parameters:
           allow_receiver:
             type: bool
         returns:
-          type: astx.FunctionPrototype
+          type: tuple[astx.FunctionPrototype, str | None]
         """
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected method name in prototype")
@@ -568,6 +625,7 @@ class Parser:
         self._consume_operator("(")
 
         args = astx.Arguments()
+        implicit_receiver_name: str | None = None
         index = 0
         if not self._is_operator(")"):
             while True:
@@ -588,6 +646,7 @@ class Parser:
                             "static method cannot declare implicit receiver "
                             "'self'"
                         )
+                    implicit_receiver_name = param_name
                 else:
                     if not self._is_operator(":"):
                         raise ParserException(
@@ -618,11 +677,14 @@ class Parser:
 
         self._consume_operator("->")
         return_type = self.parse_type()
-        return astx.FunctionPrototype(
-            method_name,
-            args,
-            cast(AnyType, return_type),
-            loc=method_loc,
+        return (
+            astx.FunctionPrototype(
+                method_name,
+                args,
+                cast(AnyType, return_type),
+                loc=method_loc,
+            ),
+            implicit_receiver_name,
         )
 
     def parse_modifier_list(self) -> ParsedAnnotation:
@@ -997,12 +1059,18 @@ class Parser:
 
         return expr
 
-    def parse_block(self, allow_docstring: bool = False) -> astx.Block:
+    def parse_block(
+        self,
+        allow_docstring: bool = False,
+        declared_names: tuple[str, ...] = (),
+    ) -> astx.Block:
         """
         title: Parse a block of nodes.
         parameters:
           allow_docstring:
             type: bool
+          declared_names:
+            type: tuple[str, Ellipsis]
         returns:
           type: astx.Block
         """
@@ -1018,53 +1086,58 @@ class Parser:
 
         self.indent_level = cur_indent
         self.tokens.get_next_token()  # eat indentation
+        self._push_value_scope(declared_names)
 
         block = astx.Block()
         docstring_allowed_here = allow_docstring
 
-        while True:
-            # Indentation tokens are line markers. Consume same-level markers
-            # (including comment/blank lines), stop on dedent, and reject
-            # unexpected over-indentation at this parsing level.
-            if self.tokens.cur_tok.kind == TokenKind.indent:
-                new_indent = self.tokens.cur_tok.value
-                if new_indent < cur_indent:
+        try:
+            while True:
+                # Indentation tokens are line markers. Consume same-level
+                # markers (including comment/blank lines), stop on dedent,
+                # and reject unexpected over-indentation at this parsing
+                # level.
+                if self.tokens.cur_tok.kind == TokenKind.indent:
+                    new_indent = self.tokens.cur_tok.value
+                    if new_indent < cur_indent:
+                        break
+                    if new_indent > cur_indent:
+                        raise ParserException("Indentation not allowed here.")
+                    self.tokens.get_next_token()
+                    continue
+
+                if self.tokens.cur_tok.kind == TokenKind.docstring:
+                    if not docstring_allowed_here:
+                        raise ParserException(
+                            "Docstrings are only allowed as the first "
+                            "statement inside a function body."
+                        )
+                    try:
+                        validate_docstring(self.tokens.cur_tok.value)
+                    except ValueError as err:
+                        raise ParserException(
+                            f"Invalid function docstring: {err}"
+                        ) from err
+                    self.tokens.get_next_token()
+                    docstring_allowed_here = False
+                else:
+                    node = self.parse_expression()
+                    block.nodes.append(node)
+                    docstring_allowed_here = False
+
+                while self._is_operator(";"):
+                    self.tokens.get_next_token()
+
+                next_kind: TokenKind = self.tokens.cur_tok.kind
+                if next_kind not in {
+                    TokenKind.indent,
+                    TokenKind.docstring,
+                }:
                     break
-                if new_indent > cur_indent:
-                    raise ParserException("Indentation not allowed here.")
-                self.tokens.get_next_token()  # eat same-level indentation
-                continue
+        finally:
+            self._pop_value_scope()
+            self.indent_level = prev_indent
 
-            if self.tokens.cur_tok.kind == TokenKind.docstring:
-                if not docstring_allowed_here:
-                    raise ParserException(
-                        "Docstrings are only allowed as the first statement "
-                        "inside a function body."
-                    )
-                try:
-                    validate_docstring(self.tokens.cur_tok.value)
-                except ValueError as err:
-                    raise ParserException(
-                        f"Invalid function docstring: {err}"
-                    ) from err
-                self.tokens.get_next_token()
-                docstring_allowed_here = False
-            else:
-                node = self.parse_expression()
-                block.nodes.append(node)
-                docstring_allowed_here = False
-
-            while self._is_operator(";"):
-                self.tokens.get_next_token()
-
-            next_kind: TokenKind = self.tokens.cur_tok.kind
-            if next_kind not in {
-                TokenKind.indent,
-                TokenKind.docstring,
-            }:
-                break
-
-        self.indent_level = prev_indent
         return block
 
     def parse_expression(self) -> astx.AST:
@@ -1268,7 +1341,9 @@ class Parser:
                 self._consume_operator(",")
 
         self._consume_operator(")")
-        if id_name in self.known_class_names:
+        if id_name in self.known_class_names and not self._name_is_shadowed(
+            id_name
+        ):
             if args:
                 raise ParserException(
                     "class construction does not accept arguments"
@@ -1313,7 +1388,7 @@ class Parser:
 
         self._consume_operator(")")
         self._consume_operator(":")
-        body = self.parse_block()
+        body = self.parse_block(declared_names=(var_name,))
 
         variable = astx.InlineVariableDeclaration(
             name=var_name,
@@ -1343,13 +1418,18 @@ class Parser:
         initializer = self.parse_inline_var_declaration()
         self._consume_operator(";")
 
-        condition = self.parse_expression()
-        self._consume_operator(";")
+        self._push_value_scope((initializer.name,))
+        try:
+            condition = self.parse_expression()
+            self._consume_operator(";")
 
-        update = self.parse_expression()
-        self._consume_operator(":")
+            update = self.parse_expression()
+            self._consume_operator(":")
 
-        body = self.parse_block()
+            body = self.parse_block()
+        finally:
+            self._pop_value_scope()
+
         return astx.ForCountLoopStmt(
             initializer,
             cast(astx.Expr, condition),
@@ -1433,12 +1513,14 @@ class Parser:
         if value is None:
             value = self._default_value_for_type(var_type)
 
-        return astx.VariableDeclaration(
+        declaration = astx.VariableDeclaration(
             name=name,
             type_=var_type,
             value=value,
             loc=var_loc,
         )
+        self._declare_value_name(name)
+        return declaration
 
     def _default_value_for_type(self, data_type: astx.DataType) -> astx.Expr:
         """

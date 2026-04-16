@@ -82,7 +82,8 @@ fn get(self) -> int32:
 ## Construction And Typed Class Values
 
 Declared classes can also be used directly in type annotations and default
-construction expressions.
+construction expressions. Construction is currently default-only, so `Counter()`
+does not accept constructor arguments yet.
 
 ```arx
 class Counter:
