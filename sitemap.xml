@@ -93,7 +93,15 @@
          <lastmod>2026-04-18</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/settings/</loc>
+         <lastmod>2026-04-18</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/testing/</loc>
+         <lastmod>2026-04-18</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/schema/</loc>
          <lastmod>2026-04-18</lastmod>
     </url>
     <url>
