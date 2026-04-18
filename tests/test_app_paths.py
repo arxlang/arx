@@ -465,7 +465,7 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    title: Unknown CLI tokens exit with code 2 and no traceback.
+    title: Test unknown subcommand tokens exit with code 2 and no traceback.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
@@ -480,8 +480,34 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
 
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
-    assert "unknown command or missing file" in err
-    assert "healthcheck" in err
+    assert "unknown command 'healthcheck'" in err
+    assert "known subcommands" in err
+    assert "test" in err
+
+
+def test_cli_app_missing_input_file_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test missing .x input file reports a precise file-not-found error.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as excinfo:
+        cli_module.app(["missing.x"])
+
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "input file not found: 'missing.x'" in err
+    assert "unknown command" not in err
 
 
 def test_python_m_entrypoint_calls_cli_app(

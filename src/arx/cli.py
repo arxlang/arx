@@ -3,6 +3,7 @@ title: Functions and classes for handling the CLI call.
 """
 
 import argparse
+import os
 import sys
 
 from pathlib import Path
@@ -10,6 +11,8 @@ from typing import Any, Optional, Sequence
 
 from arx import __version__
 from arx.main import ArxMain
+
+KNOWN_SUBCOMMANDS: tuple[str, ...] = ("test",)
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -202,6 +205,30 @@ def show_version() -> None:
     print(__version__)
 
 
+def _looks_like_subcommand_attempt(token: str) -> bool:
+    """
+    title: Return whether a leading token appears to be a subcommand attempt.
+    parameters:
+      token:
+        type: str
+    returns:
+      type: bool
+    """
+    if not token:
+        return False
+    if token.startswith("-"):
+        return False
+    if token == "run" or token in KNOWN_SUBCOMMANDS:
+        return False
+    if "/" in token or "\\" in token or os.sep in token:
+        return False
+    if "." in token:
+        return False
+    if Path(token).exists():
+        return False
+    return True
+
+
 def app(argv: Sequence[str] | None = None) -> None:
     """
     title: Run the application.
@@ -219,6 +246,15 @@ def app(argv: Sequence[str] | None = None) -> None:
         if exit_code != 0:
             raise SystemExit(exit_code)
         return None
+
+    if raw_args and _looks_like_subcommand_attempt(raw_args[0]):
+        known = ", ".join(KNOWN_SUBCOMMANDS)
+        print(
+            f"arx: unknown command '{raw_args[0]}' "
+            f"(known subcommands: {known})",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
 
     args_parser = get_args()
     args = (
@@ -240,7 +276,7 @@ def app(argv: Sequence[str] | None = None) -> None:
         ]
         if missing:
             print(
-                f"arx: unknown command or missing file: '{missing[0]}'",
+                f"arx: input file not found: '{missing[0]}'",
                 file=sys.stderr,
             )
             raise SystemExit(2)
