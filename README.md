@@ -62,4 +62,7 @@ arx test --keep-artifacts
 
 By default the runner looks for `tests/main.x`, discovers zero-argument `test_*`
 functions that return `none`, and executes each test in its own compiled
-subprocess.
+subprocess. In v1, shared top-level support is intentionally narrow: imports,
+extern declarations, class declarations, and helper functions are preserved,
+while module-scope variable declarations and other top-level executable code are
+not supported yet.

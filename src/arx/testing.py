@@ -33,6 +33,9 @@ ALLOWED_SHARED_TOP_LEVEL_NODES = (
     astx.ImportFromStmt,
     astx.ImportStmt,
 )
+SUPPORTED_SHARED_TOP_LEVEL_SUMMARY = (
+    "imports, extern declarations, class declarations, and helper functions"
+)
 
 LinkMode = Literal["auto", "pie", "no-pie"]
 
@@ -356,6 +359,24 @@ class ArxTestRunner:
         if not isinstance(node.prototype.return_type, astx.NoneType):
             raise TestRunError(f"test '{name}' must return none in v1")
 
+    def _top_level_node_error(self, node: astx.AST) -> str:
+        """
+        title: Build one runner error for an unsupported top-level node.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: str
+        """
+        if isinstance(node, astx.VariableDeclaration):
+            return (
+                "module-scope variable declaration "
+                f"'{node.name}' is not supported by `arx test` yet; "
+                "supported shared top-level items in v1 are "
+                f"{SUPPORTED_SHARED_TOP_LEVEL_SUMMARY}."
+            )
+        return "module-level executable code is not supported by `arx test`"
+
     def _discover_tests(
         self,
         module: astx.Module,
@@ -390,9 +411,7 @@ class ArxTestRunner:
             if isinstance(node, ALLOWED_SHARED_TOP_LEVEL_NODES):
                 continue
 
-            raise TestRunError(
-                "module-level executable code is not supported by `arx test`"
-            )
+            raise TestRunError(self._top_level_node_error(node))
 
         return tuple(discovered)
 
@@ -474,9 +493,7 @@ class ArxTestRunner:
                 wrapper.nodes.append(node)
                 continue
 
-            raise TestRunError(
-                "module-level executable code is not supported by `arx test`"
-            )
+            raise TestRunError(self._top_level_node_error(node))
 
         if not selected_found:
             raise TestRunError(f"unknown test '{test_name}'")

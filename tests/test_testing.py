@@ -88,6 +88,75 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     assert "must not accept parameters" in capsys.readouterr().err
 
 
+def test_arx_test_runner_rejects_module_scope_variable_declarations(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: >-
+      Test collection reports unsupported module-scope declarations clearly.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    entry = tmp_path / "main.x"
+    entry.write_text(
+        dedent(
+            """
+            var seed: i32 = 1
+
+            fn test_uses_seed() -> none:
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(entry_file=str(entry)).run()
+
+    err = capsys.readouterr().err
+    assert summary.exit_code == 2
+    assert "module-scope variable declaration 'seed'" in err
+    assert "supported shared top-level items in v1" in err
+
+
+def test_arx_test_runner_rejects_module_level_executable_code(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test collection still rejects true module-level executable code.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    entry = tmp_path / "main.x"
+    entry.write_text(
+        dedent(
+            """
+            fn helper() -> none:
+              return none
+
+            helper()
+
+            fn test_after() -> none:
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(entry_file=str(entry)).run()
+
+    err = capsys.readouterr().err
+    assert summary.exit_code == 2
+    assert "module-level executable code is not supported by `arx test`" in err
+
+
 def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -196,6 +265,132 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     expected = [
         ["helper", "test_first", "main"],
         ["helper", "test_second", "main"],
+    ]
+    assert captured_wrappers == expected
+
+
+def test_arx_test_runner_preserves_supported_shared_declarations(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: Test wrappers keep supported shared top-level declarations.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    entry = tmp_path / "main.x"
+    entry.write_text(
+        dedent(
+            """
+            extern putchard(value: i32) -> i32
+
+            fn helper() -> i32:
+              return 1
+
+            fn test_first() -> none:
+              helper()
+              return none
+
+            fn test_second() -> none:
+              helper()
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    captured_wrappers: list[list[str]] = []
+
+    def module_node_name(node: object) -> str:
+        """
+        title: Return one stable display name for a synthetic wrapper node.
+        parameters:
+          node:
+            type: object
+        returns:
+          type: str
+        """
+        prototype = getattr(node, "prototype", None)
+        if prototype is not None and hasattr(prototype, "name"):
+            return str(prototype.name)
+        name = getattr(node, "name", None)
+        if isinstance(name, str):
+            return name
+        return type(node).__name__
+
+    class DummyBuilder:
+        """
+        title: Dummy builder for declaration-preservation coverage.
+        """
+
+        output_file = ""
+
+        def build_modules(
+            self,
+            root: ParsedModule,
+            resolver: object,
+            output_file: str,
+            link: bool,
+            link_mode: str,
+        ) -> None:
+            """
+            title: Record synthetic wrapper contents with shared declarations.
+            parameters:
+              root:
+                type: ParsedModule
+              resolver:
+                type: object
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
+            del resolver
+            del link
+            del link_mode
+            self.output_file = output_file
+            captured_wrappers.append(
+                [module_node_name(node) for node in root.ast.nodes]
+            )
+
+        def run(
+            self,
+            *,
+            capture_stderr: bool = True,
+            raise_on_error: bool = True,
+        ) -> CommandResult:
+            """
+            title: Return a passing command result.
+            parameters:
+              capture_stderr:
+                type: bool
+              raise_on_error:
+                type: bool
+            returns:
+              type: CommandResult
+            """
+            del capture_stderr
+            del raise_on_error
+            return CommandResult(
+                stdout="",
+                stderr="",
+                returncode=0,
+                command=[self.output_file],
+            )
+
+    monkeypatch.setattr("arx.testing.ArxBuilder", DummyBuilder)
+
+    summary = ArxTestRunner(entry_file=str(entry)).run()
+
+    assert summary.exit_code == 0
+    expected = [
+        ["putchard", "helper", "test_first", "main"],
+        ["putchard", "helper", "test_second", "main"],
     ]
     assert captured_wrappers == expected
 
