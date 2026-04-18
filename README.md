@@ -63,8 +63,10 @@ arx test --exclude "tests/slow_*.x"
 
 By default the runner searches `tests/` for files matching `test_*.x`, discovers
 zero-argument `test_*` functions that return `none`, and executes each test in
-its own compiled subprocess. Test identifiers are shown as
-`<file_stem>::<function>` so tests split across multiple files stay distinct.
+its own compiled subprocess. Test identifiers use the cwd-relative path of the
+source file (without the `.x` suffix) joined to the function name via `::`, for
+example `tests/test_add::test_add`, so same-named files in parallel directories
+stay distinct.
 
 You can override discovery from `.arxproject.toml`:
 

@@ -149,6 +149,47 @@ def test_arx_test_runner_honors_custom_patterns(
     assert summary.exit_code == 0
 
 
+def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test same-stem files in different dirs produce distinct IDs.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    unit_dir = tmp_path / "unit"
+    integration_dir = tmp_path / "integration"
+    unit_dir.mkdir()
+    integration_dir.mkdir()
+    (unit_dir / "test_math.x").write_text(
+        "fn test_add() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+    (integration_dir / "test_math.x").write_text(
+        "fn test_mul() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    summary = ArxTestRunner(
+        paths=("unit", "integration"),
+        list_only=True,
+    ).run()
+
+    out = capsys.readouterr().out
+    assert "unit/test_math::test_add" in out
+    assert "integration/test_math::test_mul" in out
+    assert summary.exit_code == 0
+
+
 def test_arx_test_runner_rejects_invalid_test_signature(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

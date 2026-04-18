@@ -5,6 +5,7 @@ title: Arx main module.
 import importlib
 import os
 import subprocess
+import sys
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -432,7 +433,15 @@ class ArxMain:
 
         testing_module = importlib.import_module("arx.testing")
         runner_cls = testing_module.ArxTestRunner
-        runner_kwargs = self._build_test_runner_kwargs(kwargs)
+        settings_module = importlib.import_module("arx.settings")
+        try:
+            runner_kwargs = self._build_test_runner_kwargs(kwargs)
+        except settings_module.ArxProjectError as err:
+            print(
+                f"ERROR: invalid [tests] configuration: {err}",
+                file=sys.stderr,
+            )
+            return 2
 
         runner = runner_cls(
             **runner_kwargs,
@@ -508,10 +517,7 @@ class ArxMain:
         config_path = settings_module.find_config_file()
         if config_path is None:
             return None
-        try:
-            project = settings_module.load_settings(config_path)
-        except settings_module.ArxProjectError:
-            return None
+        project = settings_module.load_settings(config_path)
         return project.tests
 
     def show_ast(self) -> None:

@@ -359,6 +359,23 @@ class ArxTestRunner:
             )
         return module
 
+    def _display_path_prefix(self, file: Path) -> str:
+        """
+        title: Build a path-qualified display prefix for one test file.
+        parameters:
+          file:
+            type: Path
+        returns:
+          type: str
+        """
+        try:
+            rel = file.resolve().relative_to(Path.cwd().resolve())
+        except ValueError:
+            rel = Path(file)
+        if rel.suffix:
+            rel = rel.with_suffix("")
+        return rel.as_posix()
+
     def _match_exclude(self, candidate: Path) -> bool:
         """
         title: Return whether one candidate file matches an exclude glob.
@@ -462,7 +479,7 @@ class ArxTestRunner:
         """
         discovered: list[DiscoveredTestCase] = []
         seen_names: set[str] = set()
-        file_stem = file.stem
+        display_prefix = self._display_path_prefix(file)
 
         for node in module.nodes:
             if isinstance(node, astx.FunctionDef):
@@ -481,7 +498,7 @@ class ArxTestRunner:
                 seen_names.add(name)
                 discovered.append(
                     DiscoveredTestCase(
-                        name=f"{file_stem}::{name}",
+                        name=f"{display_prefix}::{name}",
                         function_name=name,
                         file=file,
                     )

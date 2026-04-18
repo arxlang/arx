@@ -460,6 +460,57 @@ def test_cli_app_test_cli_exclude_reaches_runner(
     assert captured_kwargs["exclude"] == ("slow_*.x", "wip_*.x")
 
 
+def test_cli_app_test_invalid_tests_config_exits_nonzero(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Invalid .arxproject.toml tests section exits 2 with an error.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    (tmp_path / ".arxproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.0.1"\n\n[tests]\npaths = 1\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    class BoomRunner:
+        def __init__(self, **kwargs: object) -> None:
+            """
+            title: Fail if the runner is ever constructed.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise AssertionError("runner must not be constructed")
+
+        def run(self) -> object:
+            """
+            title: Unreachable.
+            returns:
+              type: object
+            """
+            raise AssertionError("runner must not run")
+
+    monkeypatch.setattr(testing_module, "ArxTestRunner", BoomRunner)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_module.app(["test"])
+
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "ERROR: invalid [tests] configuration" in err
+
+
 def test_cli_app_run_branch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

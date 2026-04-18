@@ -243,8 +243,10 @@ function_pattern = "test_*"
 ```
 
 CLI arguments always take precedence over `[tests]` settings. Discovered tests
-are displayed as `<file_stem>::<function>` so you can distinguish tests that
-live in different files.
+are displayed using the cwd-relative path of the source file (without the `.x`
+suffix) joined to the function name via `::`, for example
+`tests/unit/test_math::test_add`, so same-named files in different directories
+stay unambiguous.
 
 The runner compiles each selected test into its own temporary executable and
 reports assertion failures from IRx's machine-readable runtime protocol. In v1,
