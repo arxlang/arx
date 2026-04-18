@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.7.0](https://github.com/arxlang/arx/compare/0.6.1...0.7.0) (2026-04-18)
+
+
+### Features
+
+* Improve unknown subcommand handling; add settings API ([#53](https://github.com/arxlang/arx/issues/53)) ([701bd78](https://github.com/arxlang/arx/commit/701bd7874f42081cc8adbffa76f5978b940af12f))
+
 ## [0.6.1](https://github.com/arxlang/arx/compare/0.6.0...0.6.1) (2026-04-18)
 
 
