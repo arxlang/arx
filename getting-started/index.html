@@ -2143,7 +2143,7 @@ exit code.</p>
 <p>Arx now supports fatal assertion statements and a compiled test runner. Test
 functions follow a simple v1 convention:</p>
 <ul>
-<li>file: <code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">main</span><span class="o">.</span><span class="n">x</span></code> by default</li>
+<li>files: any <code class="language-python highlight"><span class="n">test_</span><span class="o">*.</span><span class="n">x</span></code> under the <code class="language-python highlight"><span class="n">tests</span><span class="o">/</span></code> directory by default</li>
 <li>function names: <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code></li>
 <li>signature: zero arguments</li>
 <li>return type: <code class="language-python highlight"><span class="n">none</span></code></li>
@@ -2163,11 +2163,24 @@ fn test_add() -&gt; none:
 </code></pre></div>
 <p>Run the test suite with:</p>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span><span class="nb">test</span>
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/main.x<span class="w"> </span>--list
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/test_add.x<span class="w"> </span>--list
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-k<span class="w"> </span>add
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-x
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--keep-artifacts
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s2">&quot;tests/slow_*.x&quot;</span>
 </code></pre></div>
+<p>Test discovery can also be tuned from <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code>:</p>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[tests]</span>
+<span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;integration&quot;</span><span class="p">]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests/experimental_*.x&quot;</span><span class="p">]</span>
+<span class="n">file_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*.x&quot;</span>
+<span class="n">function_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*&quot;</span>
+</code></pre></div>
+<p>CLI arguments always take precedence over <code class="language-python highlight"><span class="p">[</span><span class="n">tests</span><span class="p">]</span></code> settings. Discovered tests
+are displayed using the cwd-relative path of the source file (without the <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code>
+suffix) joined to the function name via <code class="language-python highlight"><span class="p">::</span></code>, for example
+<code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">unit</span><span class="o">/</span><span class="n">test_math</span><span class="p">::</span><span class="n">test_add</span></code>, so same-named files in different directories
+stay unambiguous.</p>
 <p>The runner compiles each selected test into its own temporary executable and
 reports assertion failures from IRx's machine-readable runtime protocol. In v1,
 shared top-level support is limited to imports, extern declarations, class
@@ -2175,7 +2188,7 @@ declarations, and helper functions; module-scope variable declarations and other
 top-level executable code are rejected during collection.</p>
 <h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>arx [input_files] [options]
-arx test [input_file] [options]
+arx test [paths ...] [options]
 </code></pre></div>
 <table>
 <thead>
