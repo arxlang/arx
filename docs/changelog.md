@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.10.0](https://github.com/arxlang/arx/compare/0.9.0...0.10.0) (2026-04-18)
+
+
+### Features
+
+* **settings:** Add support for dependency-groups ([#57](https://github.com/arxlang/arx/issues/57)) ([926084b](https://github.com/arxlang/arx/commit/926084b69de8b7e640140af60fc9735d8609ad58))
+
 # [0.9.0](https://github.com/arxlang/arx/compare/0.8.0...0.9.0) (2026-04-18)
 
 
