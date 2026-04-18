@@ -81,7 +81,7 @@ Use this guidance for any change inside the Arx compiler repository:
 ### `src/arx/docstrings.py`
 
 - Validates docstring content as Douki YAML.
-- Loads schema from `src/arx/douki_schema.json`.
+- Loads schema from `src/arx/schema/douki.json`.
 - Enforces non-empty YAML object and schema conformance.
 
 ### `src/arx/codegen.py`

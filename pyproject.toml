@@ -13,12 +13,14 @@ dependencies = [
   "astx (>=0.24.0)",
   "pyirx (==1.11.0)",
   "jsonschema (>=4.0.0)",
-  "types-pyyaml (>=6.0.12.20250516)"
+  "types-pyyaml (>=6.0.12.20250516)",
+  "tomli >=2.0.0 ; python_version < \"3.11\""
 ]
 
 [tool.poetry]
 include = [
   "src/arx",
+  "src/arx/schema/*.json",
 ]
 exclude = [
   ".git/*",

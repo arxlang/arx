@@ -329,13 +329,21 @@ def test_cli_app_test_branch_nonzero_exit(
         cli_module.app(["test"])
 
 
-def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_app_run_branch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """
     title: Test CLI app run branch.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
     """
+    entry = tmp_path / "a.x"
+    entry.write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     class DummyParser:
         def parse_args(self) -> Namespace:
@@ -386,13 +394,21 @@ def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     assert DummyMain.called_kwargs["show_tokens"] is True
 
 
-def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_app_run_alias(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """
     title: Test CLI app run alias dispatch.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
     """
+    entry = tmp_path / "prog.x"
+    entry.write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     class DummyParser:
         def parse_args(self) -> Namespace:
@@ -441,6 +457,57 @@ def test_cli_app_run_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     cli_module.app()
     assert DummyMain.called_kwargs["input_files"] == ["prog.x"]
     assert DummyMain.called_kwargs["run"] is True
+
+
+def test_cli_app_unknown_subcommand_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test unknown subcommand tokens exit with code 2 and no traceback.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as excinfo:
+        cli_module.app(["healthcheck"])
+
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "unknown command 'healthcheck'" in err
+    assert "known subcommands" in err
+    assert "test" in err
+
+
+def test_cli_app_missing_input_file_exits_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test missing .x input file reports a precise file-not-found error.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as excinfo:
+        cli_module.app(["missing.x"])
+
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "input file not found: 'missing.x'" in err
+    assert "unknown command" not in err
 
 
 def test_python_m_entrypoint_calls_cli_app(
