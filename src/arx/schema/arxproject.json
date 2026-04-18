@@ -81,6 +81,22 @@
         "dependencies": { "$ref": "#/definitions/dependency_group" },
         "dependencies-dev": { "$ref": "#/definitions/dependency_group" }
       }
+    },
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "file_pattern": { "type": "string", "minLength": 1 },
+        "function_pattern": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

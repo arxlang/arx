@@ -154,11 +154,15 @@ def get_test_args() -> argparse.ArgumentParser:
         formatter_class=CustomHelpFormatter,
     )
     parser.add_argument(
-        "input_file",
-        nargs="?",
-        default="tests/main.x",
+        "paths",
+        nargs="*",
         type=str,
-        help="Test entry file (defaults to tests/main.x)",
+        help=(
+            "Test files or directories to discover tests in. "
+            "Directories are searched recursively for files matching the "
+            "configured file pattern. Defaults to `tests` (or the value "
+            "from [tests].paths in .arxproject.toml, if present)."
+        ),
     )
     parser.add_argument(
         "--list",
@@ -179,6 +183,31 @@ def get_test_args() -> argparse.ArgumentParser:
         dest="fail_fast",
         action="store_true",
         help="Stop after the first failing test",
+    )
+    parser.add_argument(
+        "--exclude",
+        dest="exclude",
+        action="append",
+        default=None,
+        type=str,
+        help=(
+            "Glob pattern to exclude from test discovery. Repeat the flag "
+            "to supply multiple patterns."
+        ),
+    )
+    parser.add_argument(
+        "--file-pattern",
+        dest="file_pattern",
+        default=None,
+        type=str,
+        help="Glob pattern for test file discovery (default: test_*.x)",
+    )
+    parser.add_argument(
+        "--function-pattern",
+        dest="function_pattern",
+        default=None,
+        type=str,
+        help="Glob pattern for test function names (default: test_*)",
     )
     parser.add_argument(
         "--keep-artifacts",

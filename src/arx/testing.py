@@ -23,7 +23,9 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver, get_module_name_from_file_path
 from arx.parser import Parser
 
-TEST_FUNCTION_PATTERN = "test_*"
+DEFAULT_TEST_PATHS: tuple[str, ...] = ("tests",)
+DEFAULT_TEST_FILE_PATTERN = "test_*.x"
+DEFAULT_TEST_FUNCTION_PATTERN = "test_*"
 ASSERT_FAILURE_PREFIX = "ARX_ASSERT_FAIL"
 ASSERT_FAILURE_FIELD_COUNT = 5
 
@@ -68,9 +70,15 @@ class DiscoveredTestCase:
     attributes:
       name:
         type: str
+      function_name:
+        type: str
+      file:
+        type: Path
     """
 
     name: str
+    function_name: str
+    file: Path
 
 
 @dataclass(frozen=True)
@@ -300,7 +308,13 @@ class ArxTestRunner:
     """
     title: Python-side compiled test runner for Arx.
     attributes:
-      entry_file:
+      paths:
+        type: tuple[str, Ellipsis]
+      exclude:
+        type: tuple[str, Ellipsis]
+      file_pattern:
+        type: str
+      function_pattern:
         type: str
       name_filter:
         type: str
@@ -314,37 +328,91 @@ class ArxTestRunner:
         type: LinkMode
     """
 
-    entry_file: str = "tests/main.x"
+    paths: tuple[str, ...] = DEFAULT_TEST_PATHS
+    exclude: tuple[str, ...] = ()
+    file_pattern: str = DEFAULT_TEST_FILE_PATTERN
+    function_pattern: str = DEFAULT_TEST_FUNCTION_PATTERN
     name_filter: str = ""
     fail_fast: bool = False
     keep_artifacts: bool = False
     list_only: bool = False
     link_mode: LinkMode = "auto"
 
-    def _entry_path(self) -> Path:
+    def _parse_module(self, file: Path) -> astx.Module:
         """
-        title: Return the test entry file as a Path object.
-        returns:
-          type: Path
-        """
-        return Path(self.entry_file)
-
-    def _parse_entry_module(self) -> astx.Module:
-        """
-        title: Parse the configured test entry file into one IRx-backed module.
+        title: Parse one test source file into an IRx-backed module.
+        parameters:
+          file:
+            type: Path
         returns:
           type: astx.Module
         """
-        entry_path = self._entry_path()
-        if not entry_path.is_file():
-            raise TestRunError(f"test entry file not found: {self.entry_file}")
+        if not file.is_file():
+            raise TestRunError(f"test entry file not found: {file}")
 
-        ArxIO.file_to_buffer(str(entry_path))
-        module_name = get_module_name_from_file_path(str(entry_path))
+        ArxIO.file_to_buffer(str(file))
+        module_name = get_module_name_from_file_path(str(file))
         module = Parser().parse(Lexer().lex(), module_name)
         if not isinstance(module, astx.Module):
-            raise TestRunError("test entry did not parse into a module")
+            raise TestRunError(
+                f"test file did not parse into a module: {file}"
+            )
         return module
+
+    def _match_exclude(self, candidate: Path) -> bool:
+        """
+        title: Return whether one candidate file matches an exclude glob.
+        parameters:
+          candidate:
+            type: Path
+        returns:
+          type: bool
+        """
+        if not self.exclude:
+            return False
+
+        candidates = {candidate.as_posix(), candidate.name}
+        try:
+            rel = candidate.resolve().relative_to(Path.cwd().resolve())
+        except ValueError:
+            rel = None
+        if rel is not None:
+            candidates.add(rel.as_posix())
+
+        for pattern in self.exclude:
+            for target in candidates:
+                if fnmatch.fnmatchcase(target, pattern):
+                    return True
+        return False
+
+    def _discover_test_files(self) -> tuple[Path, ...]:
+        """
+        title: Discover the ordered set of candidate test source files.
+        returns:
+          type: tuple[Path, Ellipsis]
+        """
+        discovered: list[Path] = []
+        seen: set[Path] = set()
+
+        for entry in self.paths:
+            entry_path = Path(entry)
+            if entry_path.is_file():
+                candidates: list[Path] = [entry_path]
+            elif entry_path.is_dir():
+                candidates = sorted(entry_path.rglob(self.file_pattern))
+            else:
+                raise TestRunError(f"test path not found: {entry}")
+
+            for candidate in candidates:
+                resolved = candidate.resolve()
+                if resolved in seen:
+                    continue
+                if self._match_exclude(candidate):
+                    continue
+                seen.add(resolved)
+                discovered.append(candidate)
+
+        return tuple(discovered)
 
     def _validate_test_function(self, node: astx.FunctionDef) -> None:
         """
@@ -380,17 +448,21 @@ class ArxTestRunner:
     def _discover_tests(
         self,
         module: astx.Module,
+        file: Path,
     ) -> tuple[DiscoveredTestCase, ...]:
         """
         title: Discover valid test functions from one parsed module.
         parameters:
           module:
             type: astx.Module
+          file:
+            type: Path
         returns:
           type: tuple[DiscoveredTestCase, Ellipsis]
         """
         discovered: list[DiscoveredTestCase] = []
         seen_names: set[str] = set()
+        file_stem = file.stem
 
         for node in module.nodes:
             if isinstance(node, astx.FunctionDef):
@@ -399,13 +471,21 @@ class ArxTestRunner:
                     raise TestRunError(
                         "`arx test` entry files must not define `main`."
                     )
-                if not fnmatch.fnmatchcase(name, TEST_FUNCTION_PATTERN):
+                if not fnmatch.fnmatchcase(name, self.function_pattern):
                     continue
                 if name in seen_names:
-                    raise TestRunError(f"duplicate test function '{name}'")
+                    raise TestRunError(
+                        f"duplicate test function '{name}' in {file}"
+                    )
                 self._validate_test_function(node)
                 seen_names.add(name)
-                discovered.append(DiscoveredTestCase(name=name))
+                discovered.append(
+                    DiscoveredTestCase(
+                        name=f"{file_stem}::{name}",
+                        function_name=name,
+                        file=file,
+                    )
+                )
                 continue
 
             if isinstance(node, ALLOWED_SHARED_TOP_LEVEL_NODES):
@@ -417,19 +497,34 @@ class ArxTestRunner:
 
     def collect_tests(self) -> tuple[DiscoveredTestCase, ...]:
         """
-        title: Collect and filter discovered tests for the configured entry.
+        title: Collect and filter discovered tests across configured paths.
         returns:
           type: tuple[DiscoveredTestCase, Ellipsis]
         """
-        discovered = self._discover_tests(self._parse_entry_module())
+        files = self._discover_test_files()
+        discovered: list[DiscoveredTestCase] = []
+        seen_display_names: set[str] = set()
+
+        for file in files:
+            module = self._parse_module(file)
+            for case in self._discover_tests(module, file):
+                if case.name in seen_display_names:
+                    raise TestRunError(
+                        f"duplicate test name '{case.name}' "
+                        f"across discovered files"
+                    )
+                seen_display_names.add(case.name)
+                discovered.append(case)
+
         if not discovered:
             raise TestRunError(
-                f"no tests matching '{TEST_FUNCTION_PATTERN}' were found "
-                f"in {self.entry_file}"
+                f"no tests matching '{self.function_pattern}' were found "
+                f"in paths {list(self.paths)} "
+                f"(file pattern: {self.file_pattern!r})"
             )
 
         if not self.name_filter:
-            return discovered
+            return tuple(discovered)
 
         filtered = tuple(
             test for test in discovered if self.name_filter in test.name
@@ -438,7 +533,8 @@ class ArxTestRunner:
             return filtered
 
         raise TestRunError(
-            f"no tests matched -k {self.name_filter!r} in {self.entry_file}"
+            f"no tests matched -k {self.name_filter!r} "
+            f"in paths {list(self.paths)}"
         )
 
     def _build_wrapper_main(self, test_name: str) -> astx.FunctionDef:
@@ -460,17 +556,25 @@ class ArxTestRunner:
         body.nodes.append(astx.FunctionReturn(astx.LiteralInt32(0)))
         return astx.FunctionDef(prototype, body)
 
-    def _build_wrapper_module(self, test_name: str) -> astx.Module:
+    def _build_wrapper_module(
+        self,
+        file: Path,
+        function_name: str,
+    ) -> astx.Module:
         """
         title: Build one synthetic module that runs exactly one selected test.
         parameters:
-          test_name:
+          file:
+            type: Path
+          function_name:
             type: str
         returns:
           type: astx.Module
         """
-        module = self._parse_entry_module()
-        wrapper_name = f"{module.name}__arx_test__{_sanitize_name(test_name)}"
+        module = self._parse_module(file)
+        wrapper_name = (
+            f"{module.name}__arx_test__{_sanitize_name(function_name)}"
+        )
         wrapper = astx.Module(wrapper_name)
         selected_found = False
 
@@ -481,9 +585,9 @@ class ArxTestRunner:
                     raise TestRunError(
                         "`arx test` entry files must not define `main`."
                     )
-                if fnmatch.fnmatchcase(name, TEST_FUNCTION_PATTERN):
+                if fnmatch.fnmatchcase(name, self.function_pattern):
                     self._validate_test_function(node)
-                    if name != test_name:
+                    if name != function_name:
                         continue
                     selected_found = True
                 wrapper.nodes.append(node)
@@ -496,9 +600,9 @@ class ArxTestRunner:
             raise TestRunError(self._top_level_node_error(node))
 
         if not selected_found:
-            raise TestRunError(f"unknown test '{test_name}'")
+            raise TestRunError(f"unknown test '{function_name}' in {file}")
 
-        wrapper.nodes.append(self._build_wrapper_main(test_name))
+        wrapper.nodes.append(self._build_wrapper_main(function_name))
         return wrapper
 
     def _write_wrapper_artifact(
@@ -553,7 +657,10 @@ class ArxTestRunner:
             artifact_dir = Path(temp_dir.name)
 
         try:
-            module = self._build_wrapper_module(test_case.name)
+            module = self._build_wrapper_module(
+                test_case.file,
+                test_case.function_name,
+            )
             self._write_wrapper_artifact(module, artifact_dir)
 
             output_file = artifact_dir / sanitized_name
@@ -561,10 +668,10 @@ class ArxTestRunner:
             root = ParsedModule(
                 key=module.name,
                 ast=module,
-                display_name=self.entry_file,
-                origin=str(self._entry_path().resolve()),
+                display_name=str(test_case.file),
+                origin=str(test_case.file.resolve()),
             )
-            resolver = FileImportResolver((self.entry_file,))
+            resolver = FileImportResolver((str(test_case.file),))
             builder.build_modules(
                 root,
                 resolver,

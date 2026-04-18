@@ -200,7 +200,7 @@ arx run examples/print-star.x
 Arx now supports fatal assertion statements and a compiled test runner. Test
 functions follow a simple v1 convention:
 
-- file: `tests/main.x` by default
+- files: any `test_*.x` under the `tests/` directory by default
 - function names: `test_*`
 - signature: zero arguments
 - return type: `none`
@@ -225,11 +225,26 @@ Run the test suite with:
 
 ```bash
 arx test
-arx test tests/main.x --list
+arx test tests/test_add.x --list
 arx test -k add
 arx test -x
 arx test --keep-artifacts
+arx test --exclude "tests/slow_*.x"
 ```
+
+Test discovery can also be tuned from `.arxproject.toml`:
+
+```toml
+[tests]
+paths = ["tests", "integration"]
+exclude = ["tests/experimental_*.x"]
+file_pattern = "test_*.x"
+function_pattern = "test_*"
+```
+
+CLI arguments always take precedence over `[tests]` settings. Discovered tests
+are displayed as `<file_stem>::<function>` so you can distinguish tests that
+live in different files.
 
 The runner compiles each selected test into its own temporary executable and
 reports assertion failures from IRx's machine-readable runtime protocol. In v1,
@@ -241,7 +256,7 @@ top-level executable code are rejected during collection.
 
 ```
 arx [input_files] [options]
-arx test [input_file] [options]
+arx test [paths ...] [options]
 ```
 
 | Option           | Description                                       |

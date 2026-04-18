@@ -14,6 +14,7 @@ from pathlib import Path
 
 import arx.cli as cli_module
 import arx.main as main_module
+import arx.testing as testing_module
 import astx
 import irx.astx as irx_astx
 import pytest
@@ -24,6 +25,7 @@ from arx.exceptions import CodeGenException, ParserException
 from arx.io import ArxBuffer, ArxFile, ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from arx.testing import TestRunSummary as _TestRunSummary
 
 
 def test_builtins_helpers() -> None:
@@ -188,22 +190,32 @@ def test_cli_get_test_args_parsing() -> None:
     parser = cli_module.get_test_args()
     args = parser.parse_args(
         [
-            "tests/main.x",
+            "tests/test_add.x",
+            "tests/integration",
             "--list",
             "-k",
             "fib",
             "-x",
             "--keep-artifacts",
+            "--exclude",
+            "tests/slow_*.x",
+            "--file-pattern",
+            "check_*.x",
+            "--function-pattern",
+            "check_*",
             "--link-mode",
             "no-pie",
         ]
     )
 
-    assert args.input_file == "tests/main.x"
+    assert args.paths == ["tests/test_add.x", "tests/integration"]
     assert args.list_only is True
     assert args.name_filter == "fib"
     assert args.fail_fast is True
     assert args.keep_artifacts is True
+    assert args.exclude == ["tests/slow_*.x"]
+    assert args.file_pattern == "check_*.x"
+    assert args.function_pattern == "check_*"
     assert args.link_mode == "no-pie"
 
 
@@ -294,10 +306,19 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
             return 0
 
     monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
-    cli_module.app(["test", "tests/main.x", "--list"])
+    cli_module.app(
+        [
+            "test",
+            "tests/test_add.x",
+            "--list",
+            "--exclude",
+            "tests/slow_*.x",
+        ]
+    )
 
-    assert DummyMain.called_kwargs["input_file"] == "tests/main.x"
+    assert DummyMain.called_kwargs["paths"] == ["tests/test_add.x"]
     assert DummyMain.called_kwargs["list_only"] is True
+    assert DummyMain.called_kwargs["exclude"] == ["tests/slow_*.x"]
 
 
 def test_cli_app_test_branch_nonzero_exit(
@@ -327,6 +348,116 @@ def test_cli_app_test_branch_nonzero_exit(
     monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
     with pytest.raises(SystemExit, match="1"):
         cli_module.app(["test"])
+
+
+def test_cli_app_test_autoloads_tests_settings(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: Auto-load tests settings from .arxproject.toml when present.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    (tmp_path / ".arxproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.0.1"\n\n'
+        '[tests]\npaths = ["custom"]\nexclude = ["custom/skip_*.x"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    captured_kwargs: dict[str, object] = {}
+
+    class DummyRunner:
+        def __init__(self, **kwargs: object) -> None:
+            """
+            title: Record runner kwargs.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            captured_kwargs.update(kwargs)
+
+        def run(self) -> object:
+            """
+            title: Return a passing summary placeholder.
+            returns:
+              type: object
+            """
+            return _TestRunSummary(
+                selected=0,
+                executed=0,
+                passed=0,
+                failed=0,
+                exit_code=0,
+                results=(),
+            )
+
+    monkeypatch.setattr(testing_module, "ArxTestRunner", DummyRunner)
+    cli_module.app(["test"])
+
+    assert captured_kwargs["paths"] == ("custom",)
+    assert captured_kwargs["exclude"] == ("custom/skip_*.x",)
+
+
+def test_cli_app_test_cli_exclude_reaches_runner(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: CLI `--exclude` flag forwards to the runner as a tuple.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    monkeypatch.chdir(tmp_path)
+
+    captured_kwargs: dict[str, object] = {}
+
+    class DummyRunner:
+        def __init__(self, **kwargs: object) -> None:
+            """
+            title: Record runner kwargs.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            captured_kwargs.update(kwargs)
+
+        def run(self) -> object:
+            """
+            title: Return a passing summary placeholder.
+            returns:
+              type: object
+            """
+            return _TestRunSummary(
+                selected=0,
+                executed=0,
+                passed=0,
+                failed=0,
+                exit_code=0,
+                results=(),
+            )
+
+    monkeypatch.setattr(testing_module, "ArxTestRunner", DummyRunner)
+    cli_module.app(
+        [
+            "test",
+            "--exclude",
+            "slow_*.x",
+            "--exclude",
+            "wip_*.x",
+        ]
+    )
+
+    assert captured_kwargs["exclude"] == ("slow_*.x", "wip_*.x")
 
 
 def test_cli_app_run_branch(

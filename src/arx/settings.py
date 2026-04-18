@@ -150,6 +150,27 @@ class Arxpm:
 
 
 @dataclass(frozen=True)
+class Tests:
+    """
+    title: Parsed tests section of .arxproject.toml.
+    attributes:
+      paths:
+        type: tuple[str, Ellipsis] | None
+      exclude:
+        type: tuple[str, Ellipsis] | None
+      file_pattern:
+        type: str | None
+      function_pattern:
+        type: str | None
+    """
+
+    paths: tuple[str, ...] | None = None
+    exclude: tuple[str, ...] | None = None
+    file_pattern: str | None = None
+    function_pattern: str | None = None
+
+
+@dataclass(frozen=True)
 class ArxProject:
     """
     title: Full parsed ``.arxproject.toml`` document.
@@ -164,6 +185,8 @@ class ArxProject:
         type: Toolchain | None
       arxpm:
         type: Arxpm | None
+      tests:
+        type: Tests | None
       source_path:
         type: Path | None
     """
@@ -173,6 +196,7 @@ class ArxProject:
     build: Build | None = None
     toolchain: Toolchain | None = None
     arxpm: Arxpm | None = None
+    tests: Tests | None = None
     source_path: Path | None = None
 
 
@@ -261,6 +285,27 @@ def _build_arxpm(data: dict[str, Any] | None) -> Arxpm | None:
     )
 
 
+def _build_tests(data: dict[str, Any] | None) -> Tests | None:
+    """
+    title: Build the Tests dataclass from its validated mapping.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+    returns:
+      type: Tests | None
+    """
+    if data is None:
+        return None
+    raw_paths = data.get("paths")
+    raw_exclude = data.get("exclude")
+    return Tests(
+        paths=tuple(raw_paths) if raw_paths is not None else None,
+        exclude=tuple(raw_exclude) if raw_exclude is not None else None,
+        file_pattern=data.get("file_pattern"),
+        function_pattern=data.get("function_pattern"),
+    )
+
+
 def _build_arx_project(
     data: dict[str, Any],
     source_path: Path | None,
@@ -290,6 +335,7 @@ def _build_arx_project(
             Toolchain(**toolchain_data) if toolchain_data is not None else None
         ),
         arxpm=_build_arxpm(data.get("arxpm")),
+        tests=_build_tests(data.get("tests")),
         source_path=source_path,
     )
 
