@@ -232,7 +232,10 @@ arx test --keep-artifacts
 ```
 
 The runner compiles each selected test into its own temporary executable and
-reports assertion failures from IRx's machine-readable runtime protocol.
+reports assertion failures from IRx's machine-readable runtime protocol. In v1,
+shared top-level support is limited to imports, extern declarations, class
+declarations, and helper functions; module-scope variable declarations and other
+top-level executable code are rejected during collection.
 
 ## CLI Reference
 
