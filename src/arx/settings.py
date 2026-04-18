@@ -5,6 +5,7 @@ title: Parse and validate ``.arxproject.toml`` project settings.
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 from dataclasses import dataclass, field
@@ -21,6 +22,9 @@ else:
     import tomli as tomllib
 
 DEFAULT_CONFIG_FILENAME = ".arxproject.toml"
+_DEPENDENCY_PATTERN = re.compile(
+    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)(?: @ (?P<location>\S+))?$"
+)
 
 
 class ArxProjectError(Exception):
@@ -61,6 +65,8 @@ class Project:
         type: str | None
       authors:
         type: tuple[Author, Ellipsis]
+      dependencies:
+        type: tuple[str, Ellipsis]
     """
 
     name: str
@@ -69,6 +75,7 @@ class Project:
     description: str | None = None
     license: str | None = None
     authors: tuple[Author, ...] = ()
+    dependencies: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -80,10 +87,13 @@ class Environment:
         type: str | None
       name:
         type: str | None
+      path:
+        type: str | None
     """
 
     kind: str | None = None
     name: str | None = None
+    path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -122,7 +132,7 @@ class Toolchain:
 @dataclass(frozen=True)
 class ArxpmDependencyGroup:
     """
-    title: One dependency group under ``[arxpm.*]``.
+    title: Legacy placeholder for removed ``[arxpm.*]`` sections.
     attributes:
       dependencies:
         type: tuple[str, Ellipsis]
@@ -134,7 +144,7 @@ class ArxpmDependencyGroup:
 @dataclass(frozen=True)
 class Arxpm:
     """
-    title: Parsed arxpm section plus known dependency subtables.
+    title: Legacy placeholder for the removed ``[arxpm]`` section.
     attributes:
       dependencies:
         type: ArxpmDependencyGroup | None
@@ -244,44 +254,7 @@ def _build_project(data: dict[str, Any]) -> Project:
         description=data.get("description"),
         license=data.get("license"),
         authors=authors,
-    )
-
-
-def _build_dependency_group(
-    data: dict[str, Any] | None,
-) -> ArxpmDependencyGroup | None:
-    """
-    title: Build one dependency group from its validated mapping.
-    parameters:
-      data:
-        type: dict[str, Any] | None
-    returns:
-      type: ArxpmDependencyGroup | None
-    """
-    if data is None:
-        return None
-    return ArxpmDependencyGroup(
         dependencies=tuple(data.get("dependencies", ())),
-    )
-
-
-def _build_arxpm(data: dict[str, Any] | None) -> Arxpm | None:
-    """
-    title: Build the Arxpm dataclass from its validated mapping.
-    parameters:
-      data:
-        type: dict[str, Any] | None
-    returns:
-      type: Arxpm | None
-    """
-    if data is None:
-        return None
-    known_keys = {"dependencies", "dependencies-dev"}
-    extras = {k: v for k, v in data.items() if k not in known_keys}
-    return Arxpm(
-        dependencies=_build_dependency_group(data.get("dependencies")),
-        dependencies_dev=_build_dependency_group(data.get("dependencies-dev")),
-        extras=extras,
     )
 
 
@@ -304,6 +277,114 @@ def _build_tests(data: dict[str, Any] | None) -> Tests | None:
         file_pattern=data.get("file_pattern"),
         function_pattern=data.get("function_pattern"),
     )
+
+
+def _reject_arxpm_sections(data: dict[str, Any]) -> None:
+    """
+    title: Reject removed ``[arxpm]`` manifest sections with a clear error.
+    parameters:
+      data:
+        type: dict[str, Any]
+    """
+    if "arxpm" not in data:
+        return
+    raise ArxProjectError(
+        ".arxproject.toml does not support [arxpm] sections. "
+        "Declare dependencies in [project] using "
+        'dependencies = ["name", "name @ ../path"].'
+    )
+
+
+def _validate_dependency(value: str, index: int) -> None:
+    """
+    title: Validate one dependency entry from ``[project].dependencies``.
+    parameters:
+      value:
+        type: str
+      index:
+        type: int
+    """
+    if _DEPENDENCY_PATTERN.fullmatch(value) is not None:
+        return
+    raise ArxProjectError(
+        ".arxproject.toml project.dependencies["
+        f"{index}"
+        '] must be either a package name like "http" or a direct '
+        'reference like "mylib @ ../mylib".'
+    )
+
+
+def _validate_project(data: dict[str, Any]) -> None:
+    """
+    title: Validate project-only settings rules after schema validation.
+    parameters:
+      data:
+        type: dict[str, Any]
+    """
+    for index, value in enumerate(data.get("dependencies", ())):
+        _validate_dependency(value, index)
+
+
+def _validate_environment(data: dict[str, Any] | None) -> None:
+    """
+    title: Validate environment-only settings rules after schema validation.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+    """
+    if data is None:
+        return
+
+    kind = data["kind"]
+    if kind == "managed-venv":
+        unsupported = [
+            field_name for field_name in ("name", "path") if field_name in data
+        ]
+        if not unsupported:
+            return
+        fields = ", ".join(f'"{field_name}"' for field_name in unsupported)
+        raise ArxProjectError(
+            f'[environment] kind="managed-venv" does not support {fields}.'
+        )
+
+    if kind == "existing-venv":
+        if "path" not in data:
+            raise ArxProjectError(
+                '[environment] kind="existing-venv" requires "path".'
+            )
+        if "name" not in data:
+            return
+        raise ArxProjectError(
+            '[environment] kind="existing-venv" does not support "name".'
+        )
+
+    if kind == "conda":
+        if "name" in data or "path" in data:
+            return
+        raise ArxProjectError(
+            '[environment] kind="conda" requires at least one of '
+            '"name" or "path".'
+        )
+
+
+def _validate_data(data: dict[str, Any]) -> None:
+    """
+    title: Validate parsed ``.arxproject.toml`` data before building models.
+    parameters:
+      data:
+        type: dict[str, Any]
+    """
+    _reject_arxpm_sections(data)
+
+    try:
+        validate(instance=data, schema=_schema())
+    except ValidationError as err:
+        raise ArxProjectError(
+            f".arxproject.toml failed schema validation: {err.message}"
+        ) from err
+
+    _validate_project(data["project"])
+    _validate_environment(data.get("environment"))
 
 
 def _build_arx_project(
@@ -334,10 +415,295 @@ def _build_arx_project(
         toolchain=(
             Toolchain(**toolchain_data) if toolchain_data is not None else None
         ),
-        arxpm=_build_arxpm(data.get("arxpm")),
         tests=_build_tests(data.get("tests")),
         source_path=source_path,
     )
+
+
+def _author_to_mapping(author: Author) -> dict[str, str]:
+    """
+    title: Convert one Author dataclass into a TOML-safe mapping.
+    parameters:
+      author:
+        type: Author
+    returns:
+      type: dict[str, str]
+    """
+    data = {"name": author.name}
+    if author.email is not None:
+        data["email"] = author.email
+    return data
+
+
+def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
+    """
+    title: Convert settings dataclasses into raw manifest data.
+    parameters:
+      settings:
+        type: ArxProject
+    returns:
+      type: dict[str, Any]
+    """
+    if settings.arxpm is not None:
+        raise ArxProjectError(
+            "ArxProject.arxpm is no longer supported. "
+            "Declare dependencies in project.dependencies instead."
+        )
+
+    project: dict[str, Any] = {
+        "name": settings.project.name,
+        "version": settings.project.version,
+    }
+    if settings.project.edition is not None:
+        project["edition"] = settings.project.edition
+    if settings.project.description is not None:
+        project["description"] = settings.project.description
+    if settings.project.license is not None:
+        project["license"] = settings.project.license
+    if settings.project.dependencies:
+        project["dependencies"] = list(settings.project.dependencies)
+    if settings.project.authors:
+        project["authors"] = [
+            _author_to_mapping(author) for author in settings.project.authors
+        ]
+
+    data: dict[str, Any] = {"project": project}
+
+    if settings.environment is not None:
+        environment: dict[str, Any] = {}
+        if settings.environment.kind is not None:
+            environment["kind"] = settings.environment.kind
+        if settings.environment.name is not None:
+            environment["name"] = settings.environment.name
+        if settings.environment.path is not None:
+            environment["path"] = settings.environment.path
+        data["environment"] = environment
+
+    if settings.build is not None:
+        build: dict[str, Any] = {}
+        if settings.build.src_dir is not None:
+            build["src_dir"] = settings.build.src_dir
+        if settings.build.entry is not None:
+            build["entry"] = settings.build.entry
+        if settings.build.out_dir is not None:
+            build["out_dir"] = settings.build.out_dir
+        data["build"] = build
+
+    if settings.toolchain is not None:
+        toolchain: dict[str, Any] = {}
+        if settings.toolchain.compiler is not None:
+            toolchain["compiler"] = settings.toolchain.compiler
+        if settings.toolchain.linker is not None:
+            toolchain["linker"] = settings.toolchain.linker
+        data["toolchain"] = toolchain
+
+    if settings.tests is not None:
+        tests: dict[str, Any] = {}
+        if settings.tests.paths is not None:
+            tests["paths"] = list(settings.tests.paths)
+        if settings.tests.exclude is not None:
+            tests["exclude"] = list(settings.tests.exclude)
+        if settings.tests.file_pattern is not None:
+            tests["file_pattern"] = settings.tests.file_pattern
+        if settings.tests.function_pattern is not None:
+            tests["function_pattern"] = settings.tests.function_pattern
+        data["tests"] = tests
+
+    return data
+
+
+def _format_toml_string(value: str) -> str:
+    """
+    title: Quote one TOML basic string with JSON-compatible escapes.
+    parameters:
+      value:
+        type: str
+    returns:
+      type: str
+    """
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _append_string_array(
+    lines: list[str],
+    key: str,
+    values: tuple[str, ...] | list[str],
+) -> None:
+    """
+    title: Append a canonical multiline string array to TOML output.
+    parameters:
+      lines:
+        type: list[str]
+      key:
+        type: str
+      values:
+        type: tuple[str, Ellipsis] | list[str]
+    """
+    lines.append(f"{key} = [")
+    for value in values:
+        lines.append(f"  {_format_toml_string(value)},")
+    lines.append("]")
+
+
+def _append_project(lines: list[str], project: Project) -> None:
+    """
+    title: Append the canonical ``[project]`` section.
+    parameters:
+      lines:
+        type: list[str]
+      project:
+        type: Project
+    """
+    lines.append("[project]")
+    lines.append(f"name = {_format_toml_string(project.name)}")
+    lines.append(f"version = {_format_toml_string(project.version)}")
+    if project.edition is not None:
+        lines.append(f"edition = {_format_toml_string(project.edition)}")
+    if project.description is not None:
+        lines.append(
+            f"description = {_format_toml_string(project.description)}"
+        )
+    if project.license is not None:
+        lines.append(f"license = {_format_toml_string(project.license)}")
+    if project.dependencies:
+        _append_string_array(lines, "dependencies", project.dependencies)
+    if project.authors:
+        lines.append("authors = [")
+        for author in project.authors:
+            entries = [f"name = {_format_toml_string(author.name)}"]
+            if author.email is not None:
+                entries.append(f"email = {_format_toml_string(author.email)}")
+            lines.append(f"  {{ {', '.join(entries)} }},")
+        lines.append("]")
+
+
+def _append_environment(
+    lines: list[str],
+    environment: Environment | None,
+) -> None:
+    """
+    title: Append the canonical ``[environment]`` section when present.
+    parameters:
+      lines:
+        type: list[str]
+      environment:
+        type: Environment | None
+    """
+    if environment is None:
+        return
+    lines.extend(("", "[environment]"))
+    if environment.kind is not None:
+        lines.append(f"kind = {_format_toml_string(environment.kind)}")
+    if environment.name is not None:
+        lines.append(f"name = {_format_toml_string(environment.name)}")
+    if environment.path is not None:
+        lines.append(f"path = {_format_toml_string(environment.path)}")
+
+
+def _append_build(lines: list[str], build: Build | None) -> None:
+    """
+    title: Append the canonical ``[build]`` section when present.
+    parameters:
+      lines:
+        type: list[str]
+      build:
+        type: Build | None
+    """
+    if build is None:
+        return
+    lines.extend(("", "[build]"))
+    if build.src_dir is not None:
+        lines.append(f"src_dir = {_format_toml_string(build.src_dir)}")
+    if build.entry is not None:
+        lines.append(f"entry = {_format_toml_string(build.entry)}")
+    if build.out_dir is not None:
+        lines.append(f"out_dir = {_format_toml_string(build.out_dir)}")
+
+
+def _append_toolchain(
+    lines: list[str],
+    toolchain: Toolchain | None,
+) -> None:
+    """
+    title: Append the canonical ``[toolchain]`` section when present.
+    parameters:
+      lines:
+        type: list[str]
+      toolchain:
+        type: Toolchain | None
+    """
+    if toolchain is None:
+        return
+    lines.extend(("", "[toolchain]"))
+    if toolchain.compiler is not None:
+        lines.append(f"compiler = {_format_toml_string(toolchain.compiler)}")
+    if toolchain.linker is not None:
+        lines.append(f"linker = {_format_toml_string(toolchain.linker)}")
+
+
+def _append_tests(lines: list[str], tests: Tests | None) -> None:
+    """
+    title: Append the canonical ``[tests]`` section when present.
+    parameters:
+      lines:
+        type: list[str]
+      tests:
+        type: Tests | None
+    """
+    if tests is None:
+        return
+    lines.extend(("", "[tests]"))
+    if tests.paths is not None:
+        _append_string_array(lines, "paths", tests.paths)
+    if tests.exclude is not None:
+        _append_string_array(lines, "exclude", tests.exclude)
+    if tests.file_pattern is not None:
+        lines.append(
+            f"file_pattern = {_format_toml_string(tests.file_pattern)}"
+        )
+    if tests.function_pattern is not None:
+        lines.append(
+            f"function_pattern = {_format_toml_string(tests.function_pattern)}"
+        )
+
+
+def dump_settings(settings: ArxProject) -> str:
+    """
+    title: Serialize settings into canonical ``.arxproject.toml`` text.
+    parameters:
+      settings:
+        type: ArxProject
+    returns:
+      type: str
+    """
+    _validate_data(_settings_to_data(settings))
+
+    lines: list[str] = []
+    _append_project(lines, settings.project)
+    _append_environment(lines, settings.environment)
+    _append_build(lines, settings.build)
+    _append_toolchain(lines, settings.toolchain)
+    _append_tests(lines, settings.tests)
+    return "\n".join(lines) + "\n"
+
+
+def write_settings(
+    settings: ArxProject,
+    path: str | Path = DEFAULT_CONFIG_FILENAME,
+) -> Path:
+    """
+    title: Write canonical ``.arxproject.toml`` text to disk.
+    parameters:
+      settings:
+        type: ArxProject
+      path:
+        type: str | Path
+    returns:
+      type: Path
+    """
+    target = Path(path)
+    target.write_text(dump_settings(settings), encoding="utf-8")
+    return target
 
 
 def find_config_file(start: Path | None = None) -> Path | None:
@@ -380,13 +746,7 @@ def load_settings_from_text(
             f"Invalid TOML in .arxproject.toml: {err}"
         ) from err
 
-    try:
-        validate(instance=data, schema=_schema())
-    except ValidationError as err:
-        raise ArxProjectError(
-            f".arxproject.toml failed schema validation: {err.message}"
-        ) from err
-
+    _validate_data(data)
     return _build_arx_project(data, source_path)
 
 
