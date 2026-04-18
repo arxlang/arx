@@ -5,6 +5,7 @@ title: Arx main module.
 import importlib
 import os
 import subprocess
+import sys
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -407,7 +408,7 @@ class ArxMain:
 
     def run_tests(self, **kwargs: Any) -> int:
         """
-        title: Collect and execute compiled tests from one Arx entry file.
+        title: Collect and execute compiled tests from configured paths.
         parameters:
           kwargs:
             type: Any
@@ -415,7 +416,6 @@ class ArxMain:
         returns:
           type: int
         """
-        entry_file = str(kwargs.get("input_file", "tests/main.x")).strip()
         name_filter = str(kwargs.get("name_filter", "")).strip()
         fail_fast = bool(kwargs.get("fail_fast", False))
         keep_artifacts = bool(kwargs.get("keep_artifacts", False))
@@ -433,9 +433,18 @@ class ArxMain:
 
         testing_module = importlib.import_module("arx.testing")
         runner_cls = testing_module.ArxTestRunner
+        settings_module = importlib.import_module("arx.settings")
+        try:
+            runner_kwargs = self._build_test_runner_kwargs(kwargs)
+        except settings_module.ArxProjectError as err:
+            print(
+                f"ERROR: invalid [tests] configuration: {err}",
+                file=sys.stderr,
+            )
+            return 2
 
         runner = runner_cls(
-            entry_file=entry_file,
+            **runner_kwargs,
             name_filter=name_filter,
             fail_fast=fail_fast,
             keep_artifacts=keep_artifacts,
@@ -444,6 +453,72 @@ class ArxMain:
         )
         summary = runner.run()
         return int(summary.exit_code)
+
+    def _build_test_runner_kwargs(
+        self,
+        cli_kwargs: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        title: Layer runner defaults, [tests] settings, and CLI args.
+        parameters:
+          cli_kwargs:
+            type: dict[str, Any]
+        returns:
+          type: dict[str, Any]
+        """
+        testing_module = importlib.import_module("arx.testing")
+        resolved: dict[str, Any] = {
+            "paths": testing_module.DEFAULT_TEST_PATHS,
+            "exclude": (),
+            "file_pattern": testing_module.DEFAULT_TEST_FILE_PATTERN,
+            "function_pattern": testing_module.DEFAULT_TEST_FUNCTION_PATTERN,
+        }
+
+        tests_settings = self._load_tests_settings()
+        if tests_settings is not None:
+            if tests_settings.paths is not None:
+                resolved["paths"] = tuple(tests_settings.paths)
+            if tests_settings.exclude is not None:
+                resolved["exclude"] = tuple(tests_settings.exclude)
+            if tests_settings.file_pattern is not None:
+                resolved["file_pattern"] = tests_settings.file_pattern
+            if tests_settings.function_pattern is not None:
+                resolved["function_pattern"] = tests_settings.function_pattern
+
+        cli_paths = cli_kwargs.get("paths")
+        if cli_paths:
+            resolved["paths"] = tuple(cli_paths)
+
+        cli_exclude = cli_kwargs.get("exclude")
+        if cli_exclude is not None:
+            resolved["exclude"] = tuple(cli_exclude)
+
+        cli_file_pattern = cli_kwargs.get("file_pattern")
+        if cli_file_pattern is not None:
+            resolved["file_pattern"] = cli_file_pattern
+
+        cli_function_pattern = cli_kwargs.get("function_pattern")
+        if cli_function_pattern is not None:
+            resolved["function_pattern"] = cli_function_pattern
+
+        return resolved
+
+    def _load_tests_settings(self) -> Any:
+        """
+        title: Load ``[tests]`` from ``.arxproject.toml`` if present.
+        returns:
+          type: Any
+        """
+        try:
+            settings_module = importlib.import_module("arx.settings")
+        except ImportError:
+            return None
+
+        config_path = settings_module.find_config_file()
+        if config_path is None:
+            return None
+        project = settings_module.load_settings(config_path)
+        return project.tests
 
     def show_ast(self) -> None:
         """

@@ -200,3 +200,39 @@ def test_unknown_top_level_section_raises() -> None:
         load_settings_from_text(
             '[project]\nname = "x"\nversion = "0.1.0"\n\n[unknown]\nkey = 1\n'
         )
+
+
+def test_tests_section_parses_all_fields() -> None:
+    """
+    title: Parse ``[tests]`` with all four supported fields.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "t"
+        version = "0.0.1"
+
+        [tests]
+        paths = ["tests", "integration"]
+        exclude = ["tests/slow_*.x"]
+        file_pattern = "check_*.x"
+        function_pattern = "check_*"
+        """
+    ).lstrip()
+
+    settings = load_settings_from_text(content)
+    assert settings.tests is not None
+    assert settings.tests.paths == ("tests", "integration")
+    assert settings.tests.exclude == ("tests/slow_*.x",)
+    assert settings.tests.file_pattern == "check_*.x"
+    assert settings.tests.function_pattern == "check_*"
+
+
+def test_tests_section_is_optional() -> None:
+    """
+    title: Tests section is optional and defaults to None on the dataclass.
+    """
+    settings = load_settings_from_text(
+        '[project]\nname = "t"\nversion = "0.0.1"\n'
+    )
+    assert settings.tests is None

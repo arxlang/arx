@@ -54,15 +54,31 @@ You can run compiled tests with the new `arx test` subcommand:
 
 ```bash
 arx test
-arx test tests/main.x --list
+arx test tests/test_add.x --list
 arx test -k fibonacci
 arx test -x
 arx test --keep-artifacts
+arx test --exclude "tests/slow_*.x"
 ```
 
-By default the runner looks for `tests/main.x`, discovers zero-argument `test_*`
-functions that return `none`, and executes each test in its own compiled
-subprocess. In v1, shared top-level support is intentionally narrow: imports,
-extern declarations, class declarations, and helper functions are preserved,
-while module-scope variable declarations and other top-level executable code are
-not supported yet.
+By default the runner searches `tests/` for files matching `test_*.x`, discovers
+zero-argument `test_*` functions that return `none`, and executes each test in
+its own compiled subprocess. Test identifiers use the cwd-relative path of the
+source file (without the `.x` suffix) joined to the function name via `::`, for
+example `tests/test_add::test_add`, so same-named files in parallel directories
+stay distinct.
+
+You can override discovery from `.arxproject.toml`:
+
+```toml
+[tests]
+paths = ["tests", "integration"]
+exclude = ["tests/experimental_*.x"]
+file_pattern = "test_*.x"
+function_pattern = "test_*"
+```
+
+CLI flags always win over `[tests]` settings. In v1, shared top-level support is
+intentionally narrow: imports, extern declarations, class declarations, and
+helper functions are preserved, while module-scope variable declarations and
+other top-level executable code are not supported yet.

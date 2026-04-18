@@ -18,28 +18,32 @@ from irx.builder.base import CommandResult
 HAS_CLANG = shutil.which("clang") is not None
 
 
-def test_arx_test_runner_lists_matching_tests(
+def test_arx_test_runner_lists_matching_tests_across_files(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    title: Test `--list` style discovery and substring filtering.
+    title: Test multi-file discovery with `--list` and -k filtering.
     parameters:
       tmp_path:
         type: Path
       capsys:
         type: pytest.CaptureFixture[str]
     """
-    entry = tmp_path / "main.x"
-    entry.write_text(
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_a.x").write_text(
         dedent(
             """
-            fn helper() -> i32:
-              return 1
-
             fn test_alpha() -> none:
               return none
-
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (tests_dir / "test_b.x").write_text(
+        dedent(
+            """
             fn test_beta() -> none:
               return none
             """
@@ -48,14 +52,141 @@ def test_arx_test_runner_lists_matching_tests(
     )
 
     summary = ArxTestRunner(
-        entry_file=str(entry),
+        paths=(str(tests_dir),),
+        list_only=True,
+    ).run()
+
+    out = capsys.readouterr().out
+    assert "test_a::test_alpha" in out
+    assert "test_b::test_beta" in out
+    assert summary.exit_code == 0
+
+    capsys.readouterr()
+    summary = ArxTestRunner(
+        paths=(str(tests_dir),),
         name_filter="alpha",
         list_only=True,
     ).run()
 
     out = capsys.readouterr().out
-    assert "test_alpha" in out
+    assert "test_a::test_alpha" in out
     assert "test_beta" not in out
+    assert summary.exit_code == 0
+
+
+def test_arx_test_runner_honors_exclude_glob(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test discovery honors ``exclude`` glob patterns.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_keep.x").write_text(
+        "fn test_keep_one() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+    (tests_dir / "test_skip.x").write_text(
+        "fn test_skip_one() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(
+        paths=(str(tests_dir),),
+        exclude=("*/test_skip.x",),
+        list_only=True,
+    ).run()
+
+    out = capsys.readouterr().out
+    assert "test_keep::test_keep_one" in out
+    assert "test_skip" not in out
+    assert summary.exit_code == 0
+
+
+def test_arx_test_runner_honors_custom_patterns(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test discovery honors custom file/function patterns.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    tests_dir = tmp_path / "checks"
+    tests_dir.mkdir()
+    (tests_dir / "check_math.x").write_text(
+        dedent(
+            """
+            fn check_add() -> none:
+              return none
+
+            fn ignored() -> none:
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(
+        paths=(str(tests_dir),),
+        file_pattern="check_*.x",
+        function_pattern="check_*",
+        list_only=True,
+    ).run()
+
+    out = capsys.readouterr().out
+    assert "check_math::check_add" in out
+    assert "ignored" not in out
+    assert summary.exit_code == 0
+
+
+def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test same-stem files in different dirs produce distinct IDs.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    unit_dir = tmp_path / "unit"
+    integration_dir = tmp_path / "integration"
+    unit_dir.mkdir()
+    integration_dir.mkdir()
+    (unit_dir / "test_math.x").write_text(
+        "fn test_add() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+    (integration_dir / "test_math.x").write_text(
+        "fn test_mul() -> none:\n  return none\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    summary = ArxTestRunner(
+        paths=("unit", "integration"),
+        list_only=True,
+    ).run()
+
+    out = capsys.readouterr().out
+    assert "unit/test_math::test_add" in out
+    assert "integration/test_math::test_mul" in out
     assert summary.exit_code == 0
 
 
@@ -82,7 +213,7 @@ def test_arx_test_runner_rejects_invalid_test_signature(
         encoding="utf-8",
     )
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 2
     assert "must not accept parameters" in capsys.readouterr().err
@@ -114,7 +245,7 @@ def test_arx_test_runner_rejects_module_scope_variable_declarations(
         encoding="utf-8",
     )
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     err = capsys.readouterr().err
     assert summary.exit_code == 2
@@ -150,7 +281,7 @@ def test_arx_test_runner_rejects_module_level_executable_code(
         encoding="utf-8",
     )
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     err = capsys.readouterr().err
     assert summary.exit_code == 2
@@ -258,7 +389,7 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
 
     monkeypatch.setattr("arx.testing.ArxBuilder", DummyBuilder)
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 0
     assert summary.passed == 2
@@ -385,7 +516,7 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
 
     monkeypatch.setattr("arx.testing.ArxBuilder", DummyBuilder)
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 0
     expected = [
@@ -486,7 +617,7 @@ def test_arx_test_runner_reports_machine_readable_failures(
 
     monkeypatch.setattr("arx.testing.ArxBuilder", DummyBuilder)
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     out = capsys.readouterr().out
     assert summary.exit_code == 1
@@ -524,7 +655,7 @@ def test_arx_test_runner_end_to_end_with_assertions(
         encoding="utf-8",
     )
 
-    summary = ArxTestRunner(entry_file=str(entry)).run()
+    summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 1
     assert summary.passed == 1
