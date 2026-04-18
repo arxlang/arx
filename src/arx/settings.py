@@ -26,6 +26,7 @@ _DEPENDENCY_PATTERN = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)(?: @ (?P<location>\S+))?$"
 )
 _DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_DEPENDENCY_GROUP_NORMALIZE_PATTERN = re.compile(r"[-_.]+")
 
 
 class ArxProjectError(Exception):
@@ -397,6 +398,43 @@ def _validate_dependency_group_name(name: str, location: str) -> None:
     )
 
 
+def _normalize_dependency_group_name(name: str) -> str:
+    """
+    title: Normalize one dependency-group name for semantic comparison.
+    parameters:
+      name:
+        type: str
+    returns:
+      type: str
+    """
+    return _DEPENDENCY_GROUP_NORMALIZE_PATTERN.sub("-", name).lower()
+
+
+def _dependency_group_name_mapping(
+    dependency_groups: dict[str, list[Any]],
+) -> dict[str, str]:
+    """
+    title: Map normalized dependency-group names to their declared names.
+    parameters:
+      dependency_groups:
+        type: dict[str, list[Any]]
+    returns:
+      type: dict[str, str]
+    """
+    normalized_names: dict[str, str] = {}
+    for name in dependency_groups:
+        normalized_name = _normalize_dependency_group_name(name)
+        existing_name = normalized_names.get(normalized_name)
+        if existing_name is not None:
+            raise ArxProjectError(
+                ".arxproject.toml [dependency-groups] names "
+                f'"{existing_name}" and "{name}" normalize to the '
+                f'same name "{normalized_name}".'
+            )
+        normalized_names[normalized_name] = name
+    return normalized_names
+
+
 def _dependency_group_includes(entries: list[Any]) -> tuple[str, ...]:
     """
     title: Collect included group names from raw dependency-group entries.
@@ -418,12 +456,15 @@ def _dependency_group_includes(entries: list[Any]) -> tuple[str, ...]:
 
 def _detect_dependency_group_cycles(
     dependency_groups: dict[str, list[Any]],
+    normalized_names: dict[str, str],
 ) -> None:
     """
     title: Reject dependency-group include cycles.
     parameters:
       dependency_groups:
         type: dict[str, list[Any]]
+      normalized_names:
+        type: dict[str, str]
     """
     visited: set[str] = set()
 
@@ -452,7 +493,10 @@ def _detect_dependency_group_cycles(
         for included_name in _dependency_group_includes(
             dependency_groups[name]
         ):
-            visit(included_name, ancestry)
+            resolved_name = normalized_names[
+                _normalize_dependency_group_name(included_name)
+            ]
+            visit(resolved_name, ancestry)
         ancestry.pop()
         visited.add(name)
 
@@ -472,14 +516,16 @@ def _validate_dependency_groups(data: dict[str, Any]) -> None:
         return
 
     dependency_groups = cast(dict[str, list[Any]], raw_dependency_groups)
-    group_names = set(dependency_groups)
 
-    for name, entries in dependency_groups.items():
+    for name in dependency_groups:
         _validate_dependency_group_name(
             name,
             f'[dependency-groups] key "{name}"',
         )
 
+    normalized_names = _dependency_group_name_mapping(dependency_groups)
+
+    for name, entries in dependency_groups.items():
         for index, entry in enumerate(entries):
             if isinstance(entry, str):
                 _validate_dependency(
@@ -515,14 +561,17 @@ def _validate_dependency_groups(data: dict[str, Any]) -> None:
                 (f"dependency-groups.{name}[{index}].include-group"),
             )
 
-            if include_group not in group_names:
+            normalized_include_group = _normalize_dependency_group_name(
+                include_group
+            )
+            if normalized_include_group not in normalized_names:
                 raise ArxProjectError(
                     ".arxproject.toml dependency-groups."
                     f"{name}[{index}] includes unknown group "
                     f'"{include_group}".'
                 )
 
-    _detect_dependency_group_cycles(dependency_groups)
+    _detect_dependency_group_cycles(dependency_groups, normalized_names)
 
 
 def _reject_legacy_environment_kind(data: dict[str, Any] | None) -> None:

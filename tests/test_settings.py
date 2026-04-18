@@ -301,6 +301,52 @@ def test_dependency_group_includes_parse() -> None:
     }
 
 
+def test_dependency_group_normalized_names_must_be_unique() -> None:
+    """
+    title: Reject dependency-group names that collide after normalization.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        dev-test = ["pytest"]
+        dev_test = ["ruff"]
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match="normalize to the same name"):
+        load_settings_from_text(content)
+
+
+def test_dependency_group_includes_resolve_normalized_names() -> None:
+    """
+    title: Resolve includes using normalized dependency-group names.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        Dev_Test = ["pytest"]
+        all = [
+          { include-group = "dev-test" },
+        ]
+        """
+    ).lstrip()
+
+    settings = load_settings_from_text(content)
+
+    assert settings.dependency_groups == {
+        "Dev_Test": ("pytest",),
+        "all": (DependencyGroupInclude("dev-test"),),
+    }
+
+
 def test_dependency_group_include_missing_group_raises() -> None:
     """
     title: Reject includes that reference an undefined dependency group.
@@ -343,6 +389,33 @@ def test_dependency_group_include_cycles_raise() -> None:
     ).lstrip()
 
     with pytest.raises(ArxProjectError, match="must not form cycles"):
+        load_settings_from_text(content)
+
+
+def test_dep_group_include_cycles_raise_through_normalized_aliases() -> None:
+    """
+    title: Reject cyclic includes when aliases differ only by normalization.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        Dev_Test = [
+          { include-group = "lint" },
+        ]
+        lint = [
+          { include-group = "dev-test" },
+        ]
+        """
+    ).lstrip()
+
+    with pytest.raises(
+        ArxProjectError,
+        match=r"Dev_Test -> lint -> Dev_Test",
+    ):
         load_settings_from_text(content)
 
 
