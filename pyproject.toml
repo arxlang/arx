@@ -21,6 +21,7 @@ dependencies = [
 include = [
   "src/arx",
   "src/arx/schema/*.json",
+  "src/arx/py.typed",
 ]
 exclude = [
   ".git/*",
