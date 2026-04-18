@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [0.6.1](https://github.com/arxlang/arx/compare/0.6.0...0.6.1) (2026-04-18)
+
+
+### Bug Fixes
+
+* Fix arx test implementation ([#52](https://github.com/arxlang/arx/issues/52)) ([4fe9e85](https://github.com/arxlang/arx/commit/4fe9e85c160fa1fd997b2e0a099a98d67b9dc174))
+
 # [0.6.0](https://github.com/arxlang/arx/compare/0.5.0...0.6.0) (2026-04-18)
 
 
