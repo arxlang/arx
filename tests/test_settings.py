@@ -204,6 +204,41 @@ def test_rejects_legacy_existing_venv_kind() -> None:
         load_settings_from_text(content)
 
 
+def test_system_environment_is_valid() -> None:
+    """
+    title: System environments remain supported without extra fields.
+    """
+    settings = load_settings_from_text(
+        _project_toml('\n[environment]\nkind = "system"\n')
+    )
+
+    assert settings.environment == Environment(kind="system")
+
+
+def test_system_environment_rejects_name() -> None:
+    """
+    title: System environments reject a name field.
+    """
+    content = _project_toml(
+        '\n[environment]\nkind = "system"\nname = "demo"\n'
+    )
+
+    with pytest.raises(ArxProjectError, match='kind="system"'):
+        load_settings_from_text(content)
+
+
+def test_system_environment_rejects_path() -> None:
+    """
+    title: System environments reject a path field.
+    """
+    content = _project_toml(
+        '\n[environment]\nkind = "system"\npath = "/usr/bin/python"\n'
+    )
+
+    with pytest.raises(ArxProjectError, match='kind="system"'):
+        load_settings_from_text(content)
+
+
 def test_conda_environment_with_name_is_valid() -> None:
     """
     title: Conda environments accept a name.

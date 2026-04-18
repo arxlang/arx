@@ -363,6 +363,17 @@ def _validate_environment(data: dict[str, Any] | None) -> None:
             '[environment] kind="venv" does not support "name".'
         )
 
+    if kind == "system":
+        unsupported = [
+            field_name for field_name in ("name", "path") if field_name in data
+        ]
+        if not unsupported:
+            return
+        fields = ", ".join(f'"{field_name}"' for field_name in unsupported)
+        raise ArxProjectError(
+            f'[environment] kind="system" does not support {fields}.'
+        )
+
     if kind == "conda":
         if "name" in data or "path" in data:
             return
