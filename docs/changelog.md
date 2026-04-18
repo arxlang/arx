@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+# [0.8.0](https://github.com/arxlang/arx/compare/0.7.0...0.8.0) (2026-04-18)
+
+
+### Features
+
+* Improve arx.settings to handle requirements fro arxpm ([#55](https://github.com/arxlang/arx/issues/55)) ([c18d52e](https://github.com/arxlang/arx/commit/c18d52e499e9c51fc1a5460161864e46f0c309b7))
+* Improve test configuration ([#54](https://github.com/arxlang/arx/issues/54)) ([b97c9eb](https://github.com/arxlang/arx/commit/b97c9eb6dc3287988b99f01b451e55dc06e1c3e0))
+
 # [0.7.0](https://github.com/arxlang/arx/compare/0.6.1...0.7.0) (2026-04-18)
 
 
