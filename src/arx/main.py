@@ -2,6 +2,7 @@
 title: Arx main module.
 """
 
+import importlib
 import os
 import subprocess
 
@@ -403,6 +404,46 @@ class ArxMain:
                     "`--run` requires `fn main` (or disable `--lib`)."
                 )
             self.run_binary()
+
+    def run_tests(self, **kwargs: Any) -> int:
+        """
+        title: Collect and execute compiled tests from one Arx entry file.
+        parameters:
+          kwargs:
+            type: Any
+            variadic: keyword
+        returns:
+          type: int
+        """
+        entry_file = str(kwargs.get("input_file", "tests/main.x")).strip()
+        name_filter = str(kwargs.get("name_filter", "")).strip()
+        fail_fast = bool(kwargs.get("fail_fast", False))
+        keep_artifacts = bool(kwargs.get("keep_artifacts", False))
+        list_only = bool(kwargs.get("list_only", False))
+
+        link_mode = str(kwargs.get("link_mode", "auto")).strip().lower()
+        if link_mode not in {"auto", "pie", "no-pie"}:
+            raise ValueError(
+                "Invalid link mode. Expected one of: auto, pie, no-pie."
+            )
+        self.link_mode = cast(
+            Literal["auto", "pie", "no-pie"],
+            link_mode,
+        )
+
+        testing_module = importlib.import_module("arx.testing")
+        runner_cls = testing_module.ArxTestRunner
+
+        runner = runner_cls(
+            entry_file=entry_file,
+            name_filter=name_filter,
+            fail_fast=fail_fast,
+            keep_artifacts=keep_artifacts,
+            list_only=list_only,
+            link_mode=self.link_mode,
+        )
+        summary = runner.run()
+        return int(summary.exit_code)
 
     def show_ast(self) -> None:
         """

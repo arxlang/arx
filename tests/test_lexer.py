@@ -18,6 +18,7 @@ def test_token_name() -> None:
     assert Token(kind=TokenKind.kw_return, value="").get_name() == "return"
     assert Token(kind=TokenKind.kw_class, value="").get_name() == "class"
     assert Token(kind=TokenKind.kw_import, value="").get_name() == "import"
+    assert Token(kind=TokenKind.kw_assert, value="").get_name() == "assert"
     assert (
         Token(kind=TokenKind.identifier, value="").get_name() == "identifier"
     )
@@ -240,6 +241,21 @@ def test_get_tok_literals_and_keywords() -> None:
     assert lexer.get_token() == Token(TokenKind.identifier, "z")
     assert lexer.get_token() == Token(TokenKind.operator, "=")
     assert lexer.get_token() == Token(TokenKind.char_literal, "A")
+
+
+def test_get_tok_assert_keyword() -> None:
+    """
+    title: Test tokenization of the assert keyword and string message.
+    """
+    ArxIO.string_to_buffer('assert x == 1, "ok"\n')
+    lexer = Lexer()
+
+    assert lexer.get_token() == Token(TokenKind.kw_assert, "assert")
+    assert lexer.get_token() == Token(TokenKind.identifier, "x")
+    assert lexer.get_token() == Token(TokenKind.operator, "==")
+    assert lexer.get_token() == Token(TokenKind.int_literal, 1)
+    assert lexer.get_token() == Token(TokenKind.operator, ",")
+    assert lexer.get_token() == Token(TokenKind.string_literal, "ok")
 
 
 def test_get_tok_multiline_grouped_import() -> None:

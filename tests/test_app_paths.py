@@ -181,6 +181,32 @@ def test_cli_get_args_parsing() -> None:
     assert args.run is False
 
 
+def test_cli_get_test_args_parsing() -> None:
+    """
+    title: Test `arx test` CLI parser options.
+    """
+    parser = cli_module.get_test_args()
+    args = parser.parse_args(
+        [
+            "tests/main.x",
+            "--list",
+            "-k",
+            "fib",
+            "-x",
+            "--keep-artifacts",
+            "--link-mode",
+            "no-pie",
+        ]
+    )
+
+    assert args.input_file == "tests/main.x"
+    assert args.list_only is True
+    assert args.name_filter == "fib"
+    assert args.fail_fast is True
+    assert args.keep_artifacts is True
+    assert args.link_mode == "no-pie"
+
+
 def test_cli_show_version(capsys: pytest.CaptureFixture[str]) -> None:
     """
     title: Test version output.
@@ -241,6 +267,66 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
 
     cli_module.app()
     assert called["version"] is True
+
+
+def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    title: Test CLI dispatch for the `arx test` subcommand.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    class DummyMain:
+        called_kwargs: dict[str, object] = {}
+
+        def run_tests(self, **kwargs: object) -> int:
+            """
+            title: Record forwarded test-runner kwargs.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            returns:
+              type: int
+            """
+            DummyMain.called_kwargs = kwargs
+            return 0
+
+    monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
+    cli_module.app(["test", "tests/main.x", "--list"])
+
+    assert DummyMain.called_kwargs["input_file"] == "tests/main.x"
+    assert DummyMain.called_kwargs["list_only"] is True
+
+
+def test_cli_app_test_branch_nonzero_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Test CLI exits nonzero when `arx test` reports failures.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    class DummyMain:
+        def run_tests(self, **kwargs: object) -> int:
+            """
+            title: Return a failing exit status for the test branch.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            returns:
+              type: int
+            """
+            del kwargs
+            return 1
+
+    monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
+    with pytest.raises(SystemExit, match="1"):
+        cli_module.app(["test"])
 
 
 def test_cli_app_run_branch(monkeypatch: pytest.MonkeyPatch) -> None:

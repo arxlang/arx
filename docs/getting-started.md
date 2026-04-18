@@ -195,10 +195,50 @@ Alias form is also available:
 arx run examples/print-star.x
 ```
 
+## Compiled Tests
+
+Arx now supports fatal assertion statements and a compiled test runner. Test
+functions follow a simple v1 convention:
+
+- file: `tests/main.x` by default
+- function names: `test_*`
+- signature: zero arguments
+- return type: `none`
+
+Example test module:
+
+````arx
+```
+title: Example tests
+summary: Demonstrates `assert` and `arx test`.
+```
+fn add(a: i32, b: i32) -> i32:
+  return a + b
+
+fn test_add() -> none:
+  assert add(1, 2) == 3
+  assert add(2, 2) == 4, "add(2, 2) should be 4"
+  return none
+````
+
+Run the test suite with:
+
+```bash
+arx test
+arx test tests/main.x --list
+arx test -k add
+arx test -x
+arx test --keep-artifacts
+```
+
+The runner compiles each selected test into its own temporary executable and
+reports assertion failures from IRx's machine-readable runtime protocol.
+
 ## CLI Reference
 
 ```
 arx [input_files] [options]
+arx test [input_file] [options]
 ```
 
 | Option           | Description                                       |
@@ -212,6 +252,7 @@ arx [input_files] [options]
 | `--run`          | Build and execute the compiled binary             |
 | `--shell`        | Open Arx in a shell prompt (not yet implemented)  |
 | `--link-mode`    | Set executable link mode: `auto`, `pie`, `no-pie` |
+| `test`           | Discover, compile, and run `test_*` functions     |
 
 ## Troubleshooting
 
