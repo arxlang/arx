@@ -25,6 +25,8 @@ DEFAULT_CONFIG_FILENAME = ".arxproject.toml"
 _DEPENDENCY_PATTERN = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)(?: @ (?P<location>\S+))?$"
 )
+_DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_DEPENDENCY_GROUP_NORMALIZE_PATTERN = re.compile(r"[-_.]+")
 
 
 class ArxProjectError(Exception):
@@ -76,6 +78,21 @@ class Project:
     license: str | None = None
     authors: tuple[Author, ...] = ()
     dependencies: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class DependencyGroupInclude:
+    """
+    title: Include one named dependency group inside another group.
+    attributes:
+      include_group:
+        type: str
+    """
+
+    include_group: str
+
+
+DependencyGroupEntry = str | DependencyGroupInclude
 
 
 @dataclass(frozen=True)
@@ -193,6 +210,8 @@ class ArxProject:
         type: Build | None
       toolchain:
         type: Toolchain | None
+      dependency_groups:
+        type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
       arxpm:
         type: Arxpm | None
       tests:
@@ -205,6 +224,9 @@ class ArxProject:
     environment: Environment | None = None
     build: Build | None = None
     toolchain: Toolchain | None = None
+    dependency_groups: dict[str, tuple[DependencyGroupEntry, ...]] = field(
+        default_factory=dict
+    )
     arxpm: Arxpm | None = None
     tests: Tests | None = None
     source_path: Path | None = None
@@ -258,6 +280,42 @@ def _build_project(data: dict[str, Any]) -> Project:
     )
 
 
+def _build_dependency_group_entry(
+    data: str | dict[str, Any],
+) -> DependencyGroupEntry:
+    """
+    title: Build one dependency-group entry from validated manifest data.
+    parameters:
+      data:
+        type: str | dict[str, Any]
+    returns:
+      type: DependencyGroupEntry
+    """
+    if isinstance(data, str):
+        return data
+    return DependencyGroupInclude(include_group=data["include-group"])
+
+
+def _build_dependency_groups(
+    data: dict[str, Any] | None,
+) -> dict[str, tuple[DependencyGroupEntry, ...]]:
+    """
+    title: Build dependency groups from their validated mapping.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+    returns:
+      type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
+    """
+    if data is None:
+        return {}
+
+    return {
+        name: tuple(_build_dependency_group_entry(entry) for entry in entries)
+        for name, entries in data.items()
+    }
+
+
 def _build_tests(data: dict[str, Any] | None) -> Tests | None:
     """
     title: Build the Tests dataclass from its validated mapping.
@@ -295,22 +353,20 @@ def _reject_arxpm_sections(data: dict[str, Any]) -> None:
     )
 
 
-def _validate_dependency(value: str, index: int) -> None:
+def _validate_dependency(value: str, location: str) -> None:
     """
-    title: Validate one dependency entry from ``[project].dependencies``.
+    title: Validate one dependency entry from ``.arxproject.toml``.
     parameters:
       value:
         type: str
-      index:
-        type: int
+      location:
+        type: str
     """
     if _DEPENDENCY_PATTERN.fullmatch(value) is not None:
         return
     raise ArxProjectError(
-        ".arxproject.toml project.dependencies["
-        f"{index}"
-        '] must be either a package name like "http" or a direct '
-        'reference like "mylib @ ../mylib".'
+        f".arxproject.toml {location} must be either a package name "
+        'like "http" or a direct reference like "mylib @ ../mylib".'
     )
 
 
@@ -322,7 +378,200 @@ def _validate_project(data: dict[str, Any]) -> None:
         type: dict[str, Any]
     """
     for index, value in enumerate(data.get("dependencies", ())):
-        _validate_dependency(value, index)
+        _validate_dependency(value, f"project.dependencies[{index}]")
+
+
+def _validate_dependency_group_name(name: str, location: str) -> None:
+    """
+    title: Validate one dependency-group name.
+    parameters:
+      name:
+        type: str
+      location:
+        type: str
+    """
+    if _DEPENDENCY_GROUP_NAME_PATTERN.fullmatch(name) is not None:
+        return
+    raise ArxProjectError(
+        f".arxproject.toml {location} must use only letters, numbers, "
+        '".", "_" or "-", and start with a letter or number.'
+    )
+
+
+def _normalize_dependency_group_name(name: str) -> str:
+    """
+    title: Normalize one dependency-group name for semantic comparison.
+    parameters:
+      name:
+        type: str
+    returns:
+      type: str
+    """
+    return _DEPENDENCY_GROUP_NORMALIZE_PATTERN.sub("-", name).lower()
+
+
+def _dependency_group_name_mapping(
+    dependency_groups: dict[str, list[Any]],
+) -> dict[str, str]:
+    """
+    title: Map normalized dependency-group names to their declared names.
+    parameters:
+      dependency_groups:
+        type: dict[str, list[Any]]
+    returns:
+      type: dict[str, str]
+    """
+    normalized_names: dict[str, str] = {}
+    for name in dependency_groups:
+        normalized_name = _normalize_dependency_group_name(name)
+        existing_name = normalized_names.get(normalized_name)
+        if existing_name is not None:
+            raise ArxProjectError(
+                ".arxproject.toml [dependency-groups] names "
+                f'"{existing_name}" and "{name}" normalize to the '
+                f'same name "{normalized_name}".'
+            )
+        normalized_names[normalized_name] = name
+    return normalized_names
+
+
+def _dependency_group_includes(entries: list[Any]) -> tuple[str, ...]:
+    """
+    title: Collect included group names from raw dependency-group entries.
+    parameters:
+      entries:
+        type: list[Any]
+    returns:
+      type: tuple[str, Ellipsis]
+    """
+    includes: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        include_group = entry.get("include-group")
+        if isinstance(include_group, str):
+            includes.append(include_group)
+    return tuple(includes)
+
+
+def _detect_dependency_group_cycles(
+    dependency_groups: dict[str, list[Any]],
+    normalized_names: dict[str, str],
+) -> None:
+    """
+    title: Reject dependency-group include cycles.
+    parameters:
+      dependency_groups:
+        type: dict[str, list[Any]]
+      normalized_names:
+        type: dict[str, str]
+    """
+    visited: set[str] = set()
+
+    def visit(name: str, ancestry: list[str]) -> None:
+        """
+        title: Visit one dependency group while checking for include cycles.
+        parameters:
+          name:
+            type: str
+          ancestry:
+            type: list[str]
+        """
+        if name in ancestry:
+            cycle_start = ancestry.index(name)
+            cycle = [*ancestry[cycle_start:], name]
+            cycle_text = " -> ".join(cycle)
+            raise ArxProjectError(
+                ".arxproject.toml dependency-groups includes must not "
+                f"form cycles ({cycle_text})."
+            )
+
+        if name in visited:
+            return
+
+        ancestry.append(name)
+        for included_name in _dependency_group_includes(
+            dependency_groups[name]
+        ):
+            resolved_name = normalized_names[
+                _normalize_dependency_group_name(included_name)
+            ]
+            visit(resolved_name, ancestry)
+        ancestry.pop()
+        visited.add(name)
+
+    for name in dependency_groups:
+        visit(name, [])
+
+
+def _validate_dependency_groups(data: dict[str, Any]) -> None:
+    """
+    title: Validate dependency-group rules after schema validation.
+    parameters:
+      data:
+        type: dict[str, Any]
+    """
+    raw_dependency_groups = data.get("dependency-groups")
+    if raw_dependency_groups is None:
+        return
+
+    dependency_groups = cast(dict[str, list[Any]], raw_dependency_groups)
+
+    for name in dependency_groups:
+        _validate_dependency_group_name(
+            name,
+            f'[dependency-groups] key "{name}"',
+        )
+
+    normalized_names = _dependency_group_name_mapping(dependency_groups)
+
+    for name, entries in dependency_groups.items():
+        for index, entry in enumerate(entries):
+            if isinstance(entry, str):
+                _validate_dependency(
+                    entry,
+                    f"dependency-groups.{name}[{index}]",
+                )
+                continue
+
+            if not isinstance(entry, dict):
+                raise ArxProjectError(
+                    ".arxproject.toml dependency-groups."
+                    f"{name}[{index}] must be a dependency string or "
+                    '{ include-group = "name" }.'
+                )
+
+            keys = set(entry)
+            if keys != {"include-group"}:
+                raise ArxProjectError(
+                    ".arxproject.toml dependency-groups."
+                    f"{name}[{index}] must be exactly "
+                    '{ include-group = "name" }.'
+                )
+
+            include_group = entry.get("include-group")
+            if not isinstance(include_group, str):
+                raise ArxProjectError(
+                    ".arxproject.toml dependency-groups."
+                    f"{name}[{index}].include-group must be a string."
+                )
+
+            _validate_dependency_group_name(
+                include_group,
+                (f"dependency-groups.{name}[{index}].include-group"),
+            )
+
+            normalized_include_group = _normalize_dependency_group_name(
+                include_group
+            )
+            if normalized_include_group not in normalized_names:
+                raise ArxProjectError(
+                    ".arxproject.toml dependency-groups."
+                    f"{name}[{index}] includes unknown group "
+                    f'"{include_group}".'
+                )
+
+    _detect_dependency_group_cycles(dependency_groups, normalized_names)
 
 
 def _reject_legacy_environment_kind(data: dict[str, Any] | None) -> None:
@@ -401,6 +650,7 @@ def _validate_data(data: dict[str, Any]) -> None:
         ) from err
 
     _validate_project(data["project"])
+    _validate_dependency_groups(data)
     _validate_environment(data.get("environment"))
 
 
@@ -431,6 +681,9 @@ def _build_arx_project(
         build=Build(**build_data) if build_data is not None else None,
         toolchain=(
             Toolchain(**toolchain_data) if toolchain_data is not None else None
+        ),
+        dependency_groups=_build_dependency_groups(
+            data.get("dependency-groups")
         ),
         tests=_build_tests(data.get("tests")),
         source_path=source_path,
@@ -485,6 +738,34 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
         ]
 
     data: dict[str, Any] = {"project": project}
+
+    if settings.dependency_groups:
+        dependency_groups: dict[str, list[str | dict[str, str]]] = {}
+        for group_name, entries in settings.dependency_groups.items():
+            if not isinstance(group_name, str):
+                raise ArxProjectError(
+                    "ArxProject.dependency_groups keys must be strings."
+                )
+
+            dependency_groups[group_name] = []
+            for index, entry in enumerate(entries):
+                if isinstance(entry, str):
+                    dependency_groups[group_name].append(entry)
+                    continue
+
+                if isinstance(entry, DependencyGroupInclude):
+                    dependency_groups[group_name].append(
+                        {"include-group": entry.include_group}
+                    )
+                    continue
+
+                raise ArxProjectError(
+                    "ArxProject.dependency_groups."
+                    f"{group_name}[{index}] must be a string or "
+                    "DependencyGroupInclude."
+                )
+
+        data["dependency-groups"] = dependency_groups
 
     if settings.environment is not None:
         environment: dict[str, Any] = {}
@@ -562,6 +843,34 @@ def _append_string_array(
     lines.append("]")
 
 
+def _append_dependency_group_array(
+    lines: list[str],
+    key: str,
+    values: tuple[DependencyGroupEntry, ...],
+) -> None:
+    """
+    title: Append one dependency-group entry array to TOML output.
+    parameters:
+      lines:
+        type: list[str]
+      key:
+        type: str
+      values:
+        type: tuple[DependencyGroupEntry, Ellipsis]
+    """
+    lines.append(f"{_format_toml_string(key)} = [")
+    for value in values:
+        if isinstance(value, str):
+            lines.append(f"  {_format_toml_string(value)},")
+            continue
+
+        lines.append(
+            "  { include-group = "
+            f"{_format_toml_string(value.include_group)} }},"
+        )
+    lines.append("]")
+
+
 def _append_project(lines: list[str], project: Project) -> None:
     """
     title: Append the canonical ``[project]`` section.
@@ -592,6 +901,26 @@ def _append_project(lines: list[str], project: Project) -> None:
                 entries.append(f"email = {_format_toml_string(author.email)}")
             lines.append(f"  {{ {', '.join(entries)} }},")
         lines.append("]")
+
+
+def _append_dependency_groups(
+    lines: list[str],
+    dependency_groups: dict[str, tuple[DependencyGroupEntry, ...]],
+) -> None:
+    """
+    title: Append the canonical ``[dependency-groups]`` section.
+    parameters:
+      lines:
+        type: list[str]
+      dependency_groups:
+        type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
+    """
+    if not dependency_groups:
+        return
+
+    lines.extend(("", "[dependency-groups]"))
+    for name, entries in dependency_groups.items():
+        _append_dependency_group_array(lines, name, entries)
 
 
 def _append_environment(
@@ -697,6 +1026,7 @@ def dump_settings(settings: ArxProject) -> str:
 
     lines: list[str] = []
     _append_project(lines, settings.project)
+    _append_dependency_groups(lines, settings.dependency_groups)
     _append_environment(lines, settings.environment)
     _append_build(lines, settings.build)
     _append_toolchain(lines, settings.toolchain)

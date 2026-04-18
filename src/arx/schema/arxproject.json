@@ -19,6 +19,31 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*( @ \\S+)?$"
+    },
+    "dependency_group_name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "dependency_group_include": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["include-group"],
+      "properties": {
+        "include-group": {
+          "$ref": "#/definitions/dependency_group_name"
+        }
+      }
+    },
+    "dependency_group_entry": {
+      "oneOf": [
+        { "$ref": "#/definitions/dependency" },
+        { "$ref": "#/definitions/dependency_group_include" }
+      ]
+    },
+    "dependency_group": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/dependency_group_entry" }
     }
   },
 
@@ -43,6 +68,15 @@
           "type": "array",
           "items": { "$ref": "#/definitions/dependency" }
         }
+      }
+    },
+    "dependency-groups": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/dependency_group_name"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/dependency_group"
       }
     },
     "environment": {
