@@ -518,6 +518,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compiled-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compiled Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cli-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -971,6 +982,8 @@
       
         
       
+        
+      
     
     
     
@@ -1315,6 +1328,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> semantic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> testing
   
 
     
@@ -1752,6 +1793,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#compiled-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compiled Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#cli-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2027,8 +2079,40 @@ exit code.</p>
 <p>Alias form is also available:</p>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>run<span class="w"> </span>examples/print-star.x
 </code></pre></div>
+<h2 id="compiled-tests">Compiled Tests<a class="headerlink" href="#compiled-tests" title="Permanent link">&para;</a></h2>
+<p>Arx now supports fatal assertion statements and a compiled test runner. Test
+functions follow a simple v1 convention:</p>
+<ul>
+<li>file: <code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">main</span><span class="o">.</span><span class="n">x</span></code> by default</li>
+<li>function names: <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code></li>
+<li>signature: zero arguments</li>
+<li>return type: <code class="language-python highlight"><span class="n">none</span></code></li>
+</ul>
+<p>Example test module:</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Example tests
+summary: Demonstrates `assert` and `arx test`.
+```
+fn add(a: i32, b: i32) -&gt; i32:
+  return a + b
+
+fn test_add() -&gt; none:
+  assert add(1, 2) == 3
+  assert add(2, 2) == 4, &quot;add(2, 2) should be 4&quot;
+  return none
+</code></pre></div>
+<p>Run the test suite with:</p>
+<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span><span class="nb">test</span>
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/main.x<span class="w"> </span>--list
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-k<span class="w"> </span>add
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-x
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--keep-artifacts
+</code></pre></div>
+<p>The runner compiles each selected test into its own temporary executable and
+reports assertion failures from IRx's machine-readable runtime protocol.</p>
 <h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>arx [input_files] [options]
+arx test [input_file] [options]
 </code></pre></div>
 <table>
 <thead>
@@ -2073,6 +2157,10 @@ exit code.</p>
 <tr>
 <td><code class="language-python highlight"><span class="o">--</span><span class="n">link</span><span class="o">-</span><span class="n">mode</span></code></td>
 <td>Set executable link mode: <code class="language-python highlight"><span class="n">auto</span></code>, <code class="language-python highlight"><span class="n">pie</span></code>, <code class="language-python highlight"><span class="n">no</span><span class="o">-</span><span class="n">pie</span></code></td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">test</span></code></td>
+<td>Discover, compile, and run <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code> functions</td>
 </tr>
 </tbody>
 </table>
