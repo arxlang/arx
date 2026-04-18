@@ -325,6 +325,26 @@ def _validate_project(data: dict[str, Any]) -> None:
         _validate_dependency(value, index)
 
 
+def _reject_legacy_environment_kind(data: dict[str, Any] | None) -> None:
+    """
+    title: Reject removed environment kinds with a migration hint.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+    """
+    if data is None:
+        return
+
+    kind = data.get("kind")
+    if kind not in {"managed-venv", "existing-venv"}:
+        return
+
+    raise ArxProjectError(
+        f'[environment] kind="{kind}" is no longer supported. '
+        'Use kind="venv" instead.'
+    )
+
+
 def _validate_environment(data: dict[str, Any] | None) -> None:
     """
     title: Validate environment-only settings rules after schema validation.
@@ -336,26 +356,11 @@ def _validate_environment(data: dict[str, Any] | None) -> None:
         return
 
     kind = data["kind"]
-    if kind == "managed-venv":
-        unsupported = [
-            field_name for field_name in ("name", "path") if field_name in data
-        ]
-        if not unsupported:
-            return
-        fields = ", ".join(f'"{field_name}"' for field_name in unsupported)
-        raise ArxProjectError(
-            f'[environment] kind="managed-venv" does not support {fields}.'
-        )
-
-    if kind == "existing-venv":
-        if "path" not in data:
-            raise ArxProjectError(
-                '[environment] kind="existing-venv" requires "path".'
-            )
+    if kind == "venv":
         if "name" not in data:
             return
         raise ArxProjectError(
-            '[environment] kind="existing-venv" does not support "name".'
+            '[environment] kind="venv" does not support "name".'
         )
 
     if kind == "conda":
@@ -375,6 +380,7 @@ def _validate_data(data: dict[str, Any]) -> None:
         type: dict[str, Any]
     """
     _reject_arxpm_sections(data)
+    _reject_legacy_environment_kind(data.get("environment"))
 
     try:
         validate(instance=data, schema=_schema())

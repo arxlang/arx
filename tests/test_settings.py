@@ -150,52 +150,57 @@ def test_project_dependencies_support_canonical_strings(
     assert settings.project.dependencies == (dependency,)
 
 
-def test_managed_venv_environment_is_valid() -> None:
+def test_venv_environment_without_path_is_valid() -> None:
     """
-    title: Managed virtual environments allow only the kind field.
+    title: Virtual environments allow the canonical kind without a path.
     """
     settings = load_settings_from_text(
-        _project_toml('\n[environment]\nkind = "managed-venv"\n')
+        _project_toml('\n[environment]\nkind = "venv"\n')
     )
 
-    assert settings.environment == Environment(kind="managed-venv")
+    assert settings.environment == Environment(kind="venv")
 
 
-def test_managed_venv_rejects_extra_fields() -> None:
+def test_venv_environment_with_path_is_valid() -> None:
     """
-    title: Managed virtual environments reject unsupported fields.
+    title: Virtual environments accept an explicit path.
     """
-    content = _project_toml(
-        '\n[environment]\nkind = "managed-venv"\nname = "demo"\n'
+    settings = load_settings_from_text(
+        _project_toml('\n[environment]\nkind = "venv"\npath = ".venv"\n')
     )
 
-    with pytest.raises(ArxProjectError, match="managed-venv"):
+    assert settings.environment == Environment(kind="venv", path=".venv")
+
+
+def test_venv_environment_rejects_name() -> None:
+    """
+    title: Virtual environments reject a conda-style name field.
+    """
+    content = _project_toml('\n[environment]\nkind = "venv"\nname = "demo"\n')
+
+    with pytest.raises(ArxProjectError, match='kind="venv"'):
         load_settings_from_text(content)
 
 
-def test_existing_venv_environment_is_valid() -> None:
+def test_rejects_legacy_managed_venv_kind() -> None:
     """
-    title: Existing virtual environments require a path.
+    title: The removed managed-venv kind points callers to the new venv kind.
     """
-    settings = load_settings_from_text(
-        _project_toml(
-            '\n[environment]\nkind = "existing-venv"\npath = ".venv"\n'
-        )
+    content = _project_toml('\n[environment]\nkind = "managed-venv"\n')
+
+    with pytest.raises(ArxProjectError, match='Use kind="venv" instead'):
+        load_settings_from_text(content)
+
+
+def test_rejects_legacy_existing_venv_kind() -> None:
+    """
+    title: The removed existing-venv kind points callers to the new venv kind.
+    """
+    content = _project_toml(
+        '\n[environment]\nkind = "existing-venv"\npath = ".venv"\n'
     )
 
-    assert settings.environment == Environment(
-        kind="existing-venv",
-        path=".venv",
-    )
-
-
-def test_existing_venv_missing_path_raises() -> None:
-    """
-    title: Existing virtual environments must declare a path.
-    """
-    content = _project_toml('\n[environment]\nkind = "existing-venv"\n')
-
-    with pytest.raises(ArxProjectError, match='requires "path"'):
+    with pytest.raises(ArxProjectError, match='Use kind="venv" instead'):
         load_settings_from_text(content)
 
 
@@ -276,7 +281,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
                 "utils @ git+https://example.com/utils.git",
             ),
         ),
-        environment=Environment(kind="conda", path=".conda/envs/demo"),
+        environment=Environment(kind="venv", path=".venv"),
         build=Build(src_dir="src", entry="main.x", out_dir="build"),
         toolchain=Toolchain(compiler="arx", linker="clang"),
         tests=SettingsTests(
@@ -290,6 +295,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
     rendered = dump_settings(settings)
     assert "[arxpm" not in rendered
     assert "dependencies = [" in rendered
+    assert 'kind = "venv"' in rendered
 
     written_path = write_settings(settings, path)
     assert written_path == path
