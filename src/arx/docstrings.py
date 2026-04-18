@@ -23,9 +23,11 @@ def _schema() -> dict[str, Any]:
     returns:
       type: dict[str, Any]
     """
-    with files("arx").joinpath("douki_schema.json").open(
-        encoding="utf-8"
-    ) as fh:
+    with (
+        files("arx.schema")
+        .joinpath("douki.json")
+        .open(encoding="utf-8") as fh
+    ):
         return cast(dict[str, Any], json.load(fh))
 
 

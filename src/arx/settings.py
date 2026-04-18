@@ -184,8 +184,8 @@ def _schema() -> dict[str, Any]:
       type: dict[str, Any]
     """
     with (
-        files("arx")
-        .joinpath("arxproject_schema.json")
+        files("arx.schema")
+        .joinpath("arxproject.json")
         .open(encoding="utf-8") as fh
     ):
         return cast(dict[str, Any], json.load(fh))
