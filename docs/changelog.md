@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.9.0](https://github.com/arxlang/arx/compare/0.8.0...0.9.0) (2026-04-18)
+
+
+### Features
+
+* Add typing support with py.typed ([#56](https://github.com/arxlang/arx/issues/56)) ([4045c41](https://github.com/arxlang/arx/commit/4045c41a0e9a6d7ff7bc6d8df8db820d066afc75))
+
 # [0.8.0](https://github.com/arxlang/arx/compare/0.7.0...0.8.0) (2026-04-18)
 
 
