@@ -5,6 +5,7 @@ title: Functions and classes for handling the CLI call.
 import argparse
 import sys
 
+from pathlib import Path
 from typing import Any, Optional, Sequence
 
 from arx import __version__
@@ -232,6 +233,17 @@ def app(argv: Sequence[str] | None = None) -> None:
 
     if args.version:
         return show_version()
+
+    if not args.shell and args.input_files:
+        missing = [
+            entry for entry in args.input_files if not Path(entry).is_file()
+        ]
+        if missing:
+            print(
+                f"arx: unknown command or missing file: '{missing[0]}'",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
 
     arx = ArxMain()
     return arx.run(**dict(args._get_kwargs()))
