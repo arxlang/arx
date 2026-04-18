@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.6.0](https://github.com/arxlang/arx/compare/0.5.0...0.6.0) (2026-04-18)
+
+
+### Features
+
+* **testing:** preserve shared top-level declarations in arx test wrappers; Add assert statement ([#51](https://github.com/arxlang/arx/issues/51)) ([83a6591](https://github.com/arxlang/arx/commit/83a6591c2317dc6d6ea52d12ad4a95096a5a8443))
+
 # [0.5.0](https://github.com/arxlang/arx/compare/0.4.0...0.5.0) (2026-04-16)
 
 
