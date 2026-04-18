@@ -3,8 +3,9 @@ title: Functions and classes for handling the CLI call.
 """
 
 import argparse
+import sys
 
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from arx import __version__
 from arx.main import ArxMain
@@ -137,6 +138,62 @@ def get_args() -> argparse.ArgumentParser:
     return parser
 
 
+def get_test_args() -> argparse.ArgumentParser:
+    """
+    title: Get the CLI arguments for `arx test`.
+    returns:
+      type: argparse.ArgumentParser
+    """
+    parser = argparse.ArgumentParser(
+        prog="arx test",
+        description="Discover, compile, and run Arx tests.",
+        formatter_class=CustomHelpFormatter,
+    )
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        default="tests/main.x",
+        type=str,
+        help="Test entry file (defaults to tests/main.x)",
+    )
+    parser.add_argument(
+        "--list",
+        dest="list_only",
+        action="store_true",
+        help="List discovered tests without running them",
+    )
+    parser.add_argument(
+        "-k",
+        dest="name_filter",
+        default="",
+        type=str,
+        help="Run only tests whose names contain the given substring",
+    )
+    parser.add_argument(
+        "-x",
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        help="Stop after the first failing test",
+    )
+    parser.add_argument(
+        "--keep-artifacts",
+        action="store_true",
+        help="Keep generated wrapper/debug artifacts and executables",
+    )
+    parser.add_argument(
+        "--link-mode",
+        type=str,
+        choices=("auto", "pie", "no-pie"),
+        default="auto",
+        help=(
+            "Set executable link mode for generated test binaries: "
+            "auto, pie, or no-pie."
+        ),
+    )
+    return parser
+
+
 def show_version() -> None:
     """
     title: Show the application version.
@@ -144,12 +201,30 @@ def show_version() -> None:
     print(__version__)
 
 
-def app() -> None:
+def app(argv: Sequence[str] | None = None) -> None:
     """
     title: Run the application.
+    parameters:
+      argv:
+        type: Sequence[str] | None
     """
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+
+    if raw_args and raw_args[0] == "test":
+        args_parser = get_test_args()
+        args = args_parser.parse_args(raw_args[1:])
+        arx = ArxMain()
+        exit_code = arx.run_tests(**dict(args._get_kwargs()))
+        if exit_code != 0:
+            raise SystemExit(exit_code)
+        return None
+
     args_parser = get_args()
-    args = args_parser.parse_args()
+    args = (
+        args_parser.parse_args()
+        if argv is None
+        else args_parser.parse_args(raw_args)
+    )
 
     if args.input_files and args.input_files[0] == "run":
         args.run = True

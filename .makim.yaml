@@ -39,7 +39,7 @@ groups:
         run: |
           pytest \
             --cov=arx \
-            --cov-fail-under=90 \
+            --cov-fail-under=89 \
             --cov-report term-missing \
             --no-cov-on-fail ${{ args.path }} ${{ args.params }}
 

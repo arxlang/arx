@@ -30,6 +30,7 @@ class TokenKind(Enum):
     kw_return = -4
     kw_class = -5
     kw_import = -6
+    kw_assert = -7
 
     # data types
     identifier = -10
@@ -77,6 +78,7 @@ MAP_NAME_TO_KW_TOKEN = {
     "for": TokenKind.kw_for,
     "in": TokenKind.kw_in,
     "while": TokenKind.kw_while,
+    "assert": TokenKind.kw_assert,
     "binary": TokenKind.binary_op,
     "unary": TokenKind.unary_op,
     "var": TokenKind.kw_var,
@@ -91,6 +93,7 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.kw_class: "class",
     TokenKind.kw_extern: "extern",
     TokenKind.kw_import: "import",
+    TokenKind.kw_assert: "assert",
     TokenKind.identifier: "identifier",
     TokenKind.indent: "indent",
     TokenKind.float_literal: "float",
@@ -339,6 +342,7 @@ class Lexer:
         "for": TokenKind.kw_for,
         "in": TokenKind.kw_in,
         "while": TokenKind.kw_while,
+        "assert": TokenKind.kw_assert,
         "var": TokenKind.kw_var,
         "const": TokenKind.kw_const,
     }

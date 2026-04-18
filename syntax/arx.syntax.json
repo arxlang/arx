@@ -6,6 +6,7 @@
   "file_extensions": [".x", ".arx"],
   "keywords": {
     "reserved": [
+      "assert",
       "class",
       "const",
       "else",

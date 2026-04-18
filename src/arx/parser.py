@@ -1199,6 +1199,8 @@ class Parser:
             return self.parse_for_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_var:
             return self.parse_var_expr()
+        if self.tokens.cur_tok.kind == TokenKind.kw_assert:
+            return self.parse_assert_stmt()
         if self._is_operator(";"):
             self.tokens.get_next_token()
             return self.parse_primary()
@@ -1955,6 +1957,38 @@ class Parser:
 
         return astx.FunctionPrototype(
             fn_name, args, cast(AnyType, ret_type), loc=fn_loc
+        )
+
+    def parse_assert_stmt(self) -> astx.AssertStmt:
+        """
+        title: Parse one fatal assertion statement.
+        returns:
+          type: astx.AssertStmt
+        """
+        assert_loc = self.tokens.cur_tok.location
+        self.tokens.get_next_token()  # eat assert
+        condition = cast(astx.Expr, self.parse_expression())
+
+        message: astx.Expr | None = None
+        if self._is_operator(","):
+            self._consume_operator(",")
+            if self.tokens.cur_tok.kind in {
+                TokenKind.eof,
+                TokenKind.indent,
+            }:
+                raise ParserException(
+                    "Expected string literal after ',' in assert statement."
+                )
+            message = cast(astx.Expr, self.parse_expression())
+            if not isinstance(message, astx.LiteralString):
+                raise ParserException(
+                    "Assertion messages must be string literals."
+                )
+
+        return astx.AssertStmt(
+            condition=condition,
+            message=message,
+            loc=assert_loc,
         )
 
     def parse_return_function(self) -> astx.FunctionReturn:

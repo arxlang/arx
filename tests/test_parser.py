@@ -166,6 +166,69 @@ def test_parse_fn() -> None:
     assert expr.body.nodes[1].value.name == "a"
 
 
+def test_parse_assert_stmt() -> None:
+    """
+    title: Test parsing `assert <expr>` into irx.astx.AssertStmt.
+    """
+    tree = _parse_module(
+        dedent(
+            """
+            fn test_ok() -> none:
+              assert 1 == 1
+              return none
+            """
+        ).lstrip()
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    statement = fn.body.nodes[0]
+    assert isinstance(statement, irx_astx.AssertStmt)
+    assert isinstance(statement.condition, astx.BinaryOp)
+    assert statement.message is None
+
+
+def test_parse_assert_stmt_with_string_message() -> None:
+    """
+    title: Test parsing `assert <expr>, <string>` messages.
+    """
+    tree = _parse_module(
+        dedent(
+            """
+            fn test_ok() -> none:
+              assert 1 == 1, "still ok"
+              return none
+            """
+        ).lstrip()
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    statement = fn.body.nodes[0]
+    assert isinstance(statement, irx_astx.AssertStmt)
+    assert isinstance(statement.message, astx.LiteralString)
+    assert statement.message.value == "still ok"
+
+
+def test_parse_assert_stmt_rejects_non_string_message() -> None:
+    """
+    title: Test assertion messages remain string-literal-only in Arx v1.
+    """
+    with pytest.raises(
+        ParserException,
+        match="Assertion messages must be string literals",
+    ):
+        _parse_module(
+            dedent(
+                """
+                fn test_bad() -> none:
+                  assert 1 == 1, 42
+                  return none
+                """
+            ).lstrip()
+        )
+
+
 def test_parse_module_docstring() -> None:
     """
     title: Test module docstring placement and parser ignore behavior.
