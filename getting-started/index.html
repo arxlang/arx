@@ -2109,7 +2109,10 @@ arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--keep-artifacts
 </code></pre></div>
 <p>The runner compiles each selected test into its own temporary executable and
-reports assertion failures from IRx's machine-readable runtime protocol.</p>
+reports assertion failures from IRx's machine-readable runtime protocol. In v1,
+shared top-level support is limited to imports, extern declarations, class
+declarations, and helper functions; module-scope variable declarations and other
+top-level executable code are rejected during collection.</p>
 <h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>arx [input_files] [options]
 arx test [input_file] [options]
