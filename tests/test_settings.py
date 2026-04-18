@@ -15,6 +15,7 @@ from arx.settings import (
     ArxProjectError,
     Author,
     Build,
+    DependencyGroupInclude,
     Environment,
     Project,
     Toolchain,
@@ -108,6 +109,7 @@ def test_load_settings_from_text_full_example() -> None:
     assert settings.tests is not None
     assert settings.tests.paths == ("tests",)
     assert settings.tests.exclude == ("tests/slow_*.x",)
+    assert settings.dependency_groups == {}
     assert settings.arxpm is None
 
 
@@ -122,6 +124,7 @@ def test_load_settings_from_text_minimal() -> None:
     assert settings.environment is None
     assert settings.build is None
     assert settings.toolchain is None
+    assert settings.dependency_groups == {}
     assert settings.arxpm is None
     assert settings.project.authors == ()
 
@@ -148,6 +151,199 @@ def test_project_dependencies_support_canonical_strings(
 
     settings = load_settings_from_text(content)
     assert settings.project.dependencies == (dependency,)
+    assert settings.dependency_groups == {}
+
+
+def test_dependency_groups_with_plain_string_entries_parse() -> None:
+    """
+    title: Parse non-runtime dependency groups from top-level settings.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        dev = [
+          "pytest",
+          "ruff",
+          "mypy",
+        ]
+        """
+    ).lstrip()
+
+    settings = load_settings_from_text(content)
+
+    assert settings.project.dependencies == ()
+    assert settings.dependency_groups == {
+        "dev": ("pytest", "ruff", "mypy"),
+    }
+
+
+def test_dependency_groups_support_multiple_named_groups() -> None:
+    """
+    title: Parse multiple named dependency groups without affecting runtime.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+        dependencies = ["http"]
+
+        [dependency-groups]
+        dev = ["pytest", "ruff", "mypy"]
+        test = ["pytest", "coverage"]
+        docs = ["mkdocs"]
+        """
+    ).lstrip()
+
+    settings = load_settings_from_text(content)
+
+    assert settings.project.dependencies == ("http",)
+    assert settings.dependency_groups == {
+        "dev": ("pytest", "ruff", "mypy"),
+        "test": ("pytest", "coverage"),
+        "docs": ("mkdocs",),
+    }
+
+
+def test_dependency_group_values_must_be_arrays() -> None:
+    """
+    title: Reject non-array values in ``[dependency-groups]``.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        dev = "pytest"
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match="schema validation"):
+        load_settings_from_text(content)
+
+
+def test_dependency_group_entries_reuse_dependency_string_rules() -> None:
+    """
+    title: Reject invalid dependency strings inside named dependency groups.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        dev = ["bad dep @"]
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match="schema validation"):
+        load_settings_from_text(content)
+
+
+def test_dependency_group_include_object_must_use_include_group_only() -> None:
+    """
+    title: Reject malformed include objects inside dependency groups.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        lint = ["ruff", "mypy"]
+        dev = [
+          { include-group = "lint", extra = "oops" },
+        ]
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match="schema validation"):
+        load_settings_from_text(content)
+
+
+def test_dependency_group_includes_parse() -> None:
+    """
+    title: Parse PEP-735-style include objects for named dependency groups.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        lint = ["ruff", "mypy"]
+        test = ["pytest", "coverage"]
+        dev = [
+          { include-group = "lint" },
+          { include-group = "test" },
+        ]
+        """
+    ).lstrip()
+
+    settings = load_settings_from_text(content)
+
+    assert settings.dependency_groups == {
+        "lint": ("ruff", "mypy"),
+        "test": ("pytest", "coverage"),
+        "dev": (
+            DependencyGroupInclude("lint"),
+            DependencyGroupInclude("test"),
+        ),
+    }
+
+
+def test_dependency_group_include_missing_group_raises() -> None:
+    """
+    title: Reject includes that reference an undefined dependency group.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        dev = [
+          { include-group = "lint" },
+        ]
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match='unknown group "lint"'):
+        load_settings_from_text(content)
+
+
+def test_dependency_group_include_cycles_raise() -> None:
+    """
+    title: Reject cyclic includes across dependency groups.
+    """
+    content = dedent(
+        """
+        [project]
+        name = "demo"
+        version = "0.1.0"
+
+        [dependency-groups]
+        lint = [
+          { include-group = "dev" },
+        ]
+        dev = [
+          { include-group = "lint" },
+        ]
+        """
+    ).lstrip()
+
+    with pytest.raises(ArxProjectError, match="must not form cycles"):
+        load_settings_from_text(content)
 
 
 def test_venv_environment_without_path_is_valid() -> None:
@@ -319,6 +515,14 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
         environment=Environment(kind="venv", path=".venv"),
         build=Build(src_dir="src", entry="main.x", out_dir="build"),
         toolchain=Toolchain(compiler="arx", linker="clang"),
+        dependency_groups={
+            "lint": ("ruff", "mypy"),
+            "test": ("pytest", "coverage"),
+            "dev": (
+                DependencyGroupInclude("lint"),
+                DependencyGroupInclude("test"),
+            ),
+        },
         tests=SettingsTests(
             paths=("tests",),
             exclude=("tests/slow_*.x",),
@@ -330,6 +534,8 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
     rendered = dump_settings(settings)
     assert "[arxpm" not in rendered
     assert "dependencies = [" in rendered
+    assert "[dependency-groups]" in rendered
+    assert '{ include-group = "lint" },' in rendered
     assert 'kind = "venv"' in rendered
 
     written_path = write_settings(settings, path)
@@ -341,6 +547,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
         environment=settings.environment,
         build=settings.build,
         toolchain=settings.toolchain,
+        dependency_groups=settings.dependency_groups,
         tests=settings.tests,
         source_path=path,
     )
