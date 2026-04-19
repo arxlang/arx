@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.11.0](https://github.com/arxlang/arx/compare/0.10.0...0.11.0) (2026-04-19)
+
+
+### Features
+
+* Improve usage of none type; fix tests ([#58](https://github.com/arxlang/arx/issues/58)) ([3e52e6e](https://github.com/arxlang/arx/commit/3e52e6e8c44f25601de264479ae15beaf159e728))
+
 # [0.10.0](https://github.com/arxlang/arx/compare/0.9.0...0.10.0) (2026-04-18)
 
 
