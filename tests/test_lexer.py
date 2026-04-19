@@ -219,10 +219,10 @@ def test_get_tok_multi_char_operators() -> None:
 
 def test_get_tok_literals_and_keywords() -> None:
     """
-    title: Test tokenization for string/char/bool/none and while keyword.
+    title: Test tokenization for string/char/bool/void and while keyword.
     """
     ArxIO.string_to_buffer(
-        "while true:\n  x = none\n  y = \"hello\"\n  z = 'A'\n"
+        "while true:\n  x = void\n  y = \"hello\"\n  z = 'A'\n"
     )
     lexer = Lexer()
 
@@ -232,7 +232,7 @@ def test_get_tok_literals_and_keywords() -> None:
     assert lexer.get_token() == Token(TokenKind.indent, 2)
     assert lexer.get_token() == Token(TokenKind.identifier, "x")
     assert lexer.get_token() == Token(TokenKind.operator, "=")
-    assert lexer.get_token() == Token(TokenKind.none_literal, None)
+    assert lexer.get_token() == Token(TokenKind.void_literal, None)
     assert lexer.get_token() == Token(TokenKind.indent, 2)
     assert lexer.get_token() == Token(TokenKind.identifier, "y")
     assert lexer.get_token() == Token(TokenKind.operator, "=")
@@ -331,7 +331,7 @@ def test_token_hash_and_display_value() -> None:
     bl = Token(TokenKind.bool_literal, False, location=loc)
     assert bl.get_display_value() == "(False)"
 
-    nl = Token(TokenKind.none_literal, None, location=loc)
+    nl = Token(TokenKind.void_literal, None, location=loc)
     assert nl.get_display_value() == ""
 
     doc = Token(TokenKind.docstring, "d", location=loc)
@@ -493,3 +493,25 @@ def test_lexer_char_literal_empty_invalid() -> None:
         LexerError, match="Character literals must contain exactly one"
     ):
         lexer.get_token()
+
+
+def test_lexer_none_is_plain_identifier_after_rename() -> None:
+    """
+    title: After the rename, ``none`` is tokenized as a regular identifier.
+    """
+    ArxIO.string_to_buffer("none\n")
+    lexer = Lexer()
+    tok = lexer.get_token()
+    assert tok.kind == TokenKind.identifier
+    assert tok.value == "none"
+
+
+def test_lexer_void_is_void_literal() -> None:
+    """
+    title: The void keyword is tokenized as the void literal.
+    """
+    ArxIO.string_to_buffer("void\n")
+    lexer = Lexer()
+    tok = lexer.get_token()
+    assert tok.kind == TokenKind.void_literal
+    assert tok.value is None

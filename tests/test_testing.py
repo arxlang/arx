@@ -35,8 +35,8 @@ def test_arx_test_runner_lists_matching_tests_across_files(
     (tests_dir / "test_a.x").write_text(
         dedent(
             """
-            fn test_alpha() -> none:
-              return none
+            fn test_alpha() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -44,8 +44,8 @@ def test_arx_test_runner_lists_matching_tests_across_files(
     (tests_dir / "test_b.x").write_text(
         dedent(
             """
-            fn test_beta() -> none:
-              return none
+            fn test_beta() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -89,11 +89,11 @@ def test_arx_test_runner_honors_exclude_glob(
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
     (tests_dir / "test_keep.x").write_text(
-        "fn test_keep_one() -> none:\n  return none\n",
+        "fn test_keep_one() -> void:\n  return void\n",
         encoding="utf-8",
     )
     (tests_dir / "test_skip.x").write_text(
-        "fn test_skip_one() -> none:\n  return none\n",
+        "fn test_skip_one() -> void:\n  return void\n",
         encoding="utf-8",
     )
 
@@ -126,11 +126,11 @@ def test_arx_test_runner_honors_custom_patterns(
     (tests_dir / "check_math.x").write_text(
         dedent(
             """
-            fn check_add() -> none:
-              return none
+            fn check_add() -> void:
+              return void
 
-            fn ignored() -> none:
-              return none
+            fn ignored() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -169,11 +169,11 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     unit_dir.mkdir()
     integration_dir.mkdir()
     (unit_dir / "test_math.x").write_text(
-        "fn test_add() -> none:\n  return none\n",
+        "fn test_add() -> void:\n  return void\n",
         encoding="utf-8",
     )
     (integration_dir / "test_math.x").write_text(
-        "fn test_mul() -> none:\n  return none\n",
+        "fn test_mul() -> void:\n  return void\n",
         encoding="utf-8",
     )
 
@@ -190,12 +190,53 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     assert summary.exit_code == 0
 
 
+def test_arx_test_runner_accepts_shorthand_test_signature(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Shorthand `fn test_name():` is accepted by test discovery.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_shorthand.x").write_text(
+        dedent(
+            """
+            fn test_no_arrow_no_return():
+              var x: i32 = 1
+
+            fn test_bare_return() -> void:
+              var x: i32 = 1
+              return
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    summary = ArxTestRunner(list_only=True).run()
+
+    out = capsys.readouterr().out
+    assert "tests/test_shorthand::test_no_arrow_no_return" in out
+    assert "tests/test_shorthand::test_bare_return" in out
+    assert summary.exit_code == 0
+
+
 def test_arx_test_runner_rejects_invalid_test_signature(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    title: Test collection rejects tests with parameters in v1.
+    title: Test collection rejects tests with parameters.
     parameters:
       tmp_path:
         type: Path
@@ -206,8 +247,8 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     entry.write_text(
         dedent(
             """
-            fn test_bad(value: i32) -> none:
-              return none
+            fn test_bad(value: i32) -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -216,7 +257,40 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 2
-    assert "must not accept parameters" in capsys.readouterr().err
+    assert "must take no parameters" in capsys.readouterr().err
+
+
+def test_arx_test_runner_rejects_non_void_return_type(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test collection rejects non-void return types with guidance.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    entry = tmp_path / "main.x"
+    entry.write_text(
+        dedent(
+            """
+            fn test_bad() -> i32:
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(paths=(str(entry),)).run()
+
+    err = capsys.readouterr().err
+    assert summary.exit_code == 2
+    assert "in v1" not in err
+    assert "must return void" in err
+    assert "fn test_bad():" in err
+    assert "fn test_bad() -> void:" in err
 
 
 def test_arx_test_runner_rejects_module_scope_variable_declarations(
@@ -238,8 +312,8 @@ def test_arx_test_runner_rejects_module_scope_variable_declarations(
             """
             var seed: i32 = 1
 
-            fn test_uses_seed() -> none:
-              return none
+            fn test_uses_seed() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -269,13 +343,13 @@ def test_arx_test_runner_rejects_module_level_executable_code(
     entry.write_text(
         dedent(
             """
-            fn helper() -> none:
-              return none
+            fn helper() -> void:
+              return void
 
             helper()
 
-            fn test_after() -> none:
-              return none
+            fn test_after() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -307,13 +381,13 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
             fn helper() -> i32:
               return 1
 
-            fn test_first() -> none:
+            fn test_first() -> void:
               helper()
-              return none
+              return void
 
-            fn test_second() -> none:
+            fn test_second() -> void:
               helper()
-              return none
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -421,13 +495,13 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
             fn helper() -> i32:
               return 1
 
-            fn test_first() -> none:
+            fn test_first() -> void:
               helper()
-              return none
+              return void
 
-            fn test_second() -> none:
+            fn test_second() -> void:
               helper()
-              return none
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -545,8 +619,8 @@ def test_arx_test_runner_reports_machine_readable_failures(
     entry.write_text(
         dedent(
             """
-            fn test_fail() -> none:
-              return none
+            fn test_fail() -> void:
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -643,13 +717,13 @@ def test_arx_test_runner_end_to_end_with_assertions(
             fn helper(value: i32) -> i32:
               return value
 
-            fn test_pass() -> none:
+            fn test_pass() -> void:
               assert helper(1) == 1
-              return none
+              return void
 
-            fn test_fail() -> none:
+            fn test_fail() -> void:
               assert helper(2) == 3, "bad\nmessage|with pipe\\slash"
-              return none
+              return void
             """
         ).lstrip(),
         encoding="utf-8",

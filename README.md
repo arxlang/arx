@@ -44,10 +44,9 @@ objects were not compiled in a PIE-compatible mode.
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx
-fn test_add() -> none:
+fn test_add():
   assert 1 + 1 == 2
   assert 2 + 2 == 4, "2 + 2 should be 4"
-  return none
 ```
 
 You can run compiled tests with the new `arx test` subcommand:

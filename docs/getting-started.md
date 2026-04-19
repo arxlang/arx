@@ -154,14 +154,14 @@ fn get_constant(x: i32) -> i32:
 title: Print star example
 summary: Emits star characters using an external output function.
 ```
-fn print_star(n: i32) -> none:
+fn print_star(n: i32) -> void:
   ```
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
   for i in (0:n:1):
     putchard(42);  # ascii 42 = '*'
-  return none
+  return void
 
 fn main() -> i32:
   ```
@@ -198,12 +198,16 @@ arx run examples/print-star.x
 ## Compiled Tests
 
 Arx now supports fatal assertion statements and a compiled test runner. Test
-functions follow a simple v1 convention:
+functions follow a simple convention:
 
 - files: any `test_*.x` under the `tests/` directory by default
 - function names: `test_*`
 - signature: zero arguments
-- return type: `none`
+- return type: `void` (the annotation is optional; `fn test_foo():` is the same
+  as `fn test_foo() -> void:`)
+
+Inside a `void` function you can end with a bare `return`, an explicit
+`return void`, or omit the return statement entirely.
 
 Example test module:
 
@@ -215,10 +219,9 @@ summary: Demonstrates `assert` and `arx test`.
 fn add(a: i32, b: i32) -> i32:
   return a + b
 
-fn test_add() -> none:
+fn test_add():
   assert add(1, 2) == 3
   assert add(2, 2) == 4, "add(2, 2) should be 4"
-  return none
 ````
 
 Run the test suite with:
@@ -346,7 +349,7 @@ fn abs(x: i32) -> i32:
 title: For loop example
 summary: Shows loop syntax with a slice-like range clause.
 ```
-fn count(n: i32) -> none:
+fn count(n: i32) -> void:
   ```
   title: count
   summary: Iterates and prints star characters.

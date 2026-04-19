@@ -1185,8 +1185,8 @@ class Parser:
             return self.parse_char_expr()
         if self.tokens.cur_tok.kind == TokenKind.bool_literal:
             return self.parse_bool_expr()
-        if self.tokens.cur_tok.kind == TokenKind.none_literal:
-            return self.parse_none_expr()
+        if self.tokens.cur_tok.kind == TokenKind.void_literal:
+            return self.parse_void_expr()
         if self._is_operator("("):
             return self.parse_paren_expr()
         if self._is_operator("["):
@@ -1460,9 +1460,9 @@ class Parser:
         self.tokens.get_next_token()
         return result
 
-    def parse_none_expr(self) -> astx.LiteralNone:
+    def parse_void_expr(self) -> astx.LiteralNone:
         """
-        title: Parse the none expression.
+        title: Parse the void expression.
         returns:
           type: astx.LiteralNone
         """
@@ -1785,8 +1785,8 @@ class Parser:
         returns:
           type: astx.DataType
         """
-        if self.tokens.cur_tok.kind == TokenKind.none_literal:
-            self.tokens.get_next_token()  # eat none
+        if self.tokens.cur_tok.kind == TokenKind.void_literal:
+            self.tokens.get_next_token()  # eat void
             return astx.NoneType()
 
         if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -1818,7 +1818,7 @@ class Parser:
             "float64": astx.Float64(),
             "bool": astx.Boolean(),
             "boolean": astx.Boolean(),
-            "none": astx.NoneType(),
+            "void": astx.NoneType(),
             "str": astx.String(),
             "string": astx.String(),
             "char": astx.Int8(),
@@ -1944,13 +1944,11 @@ class Parser:
 
         self._consume_operator(")")
 
-        if not self._is_operator("->"):
-            raise ParserException(
-                "Parser: Expected return type annotation with '->'."
-            )
-
-        self._consume_operator("->")
-        ret_type = self.parse_type()
+        if self._is_operator("->"):
+            self._consume_operator("->")
+            ret_type: astx.DataType = self.parse_type()
+        else:
+            ret_type = astx.NoneType()
 
         if expect_colon:
             self._consume_operator(":")
@@ -1999,5 +1997,20 @@ class Parser:
         """
         return_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat return
+
+        bare_return_terminators = {
+            TokenKind.indent,
+            TokenKind.eof,
+            TokenKind.kw_function,
+            TokenKind.kw_class,
+            TokenKind.kw_extern,
+            TokenKind.kw_import,
+        }
+        if (
+            self.tokens.cur_tok.kind in bare_return_terminators
+            or self._is_operator(";")
+        ):
+            return astx.FunctionReturn(astx.LiteralNone(), loc=return_loc)
+
         value = self.parse_expression()
         return astx.FunctionReturn(cast(astx.DataType, value), loc=return_loc)

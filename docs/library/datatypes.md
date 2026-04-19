@@ -6,7 +6,8 @@ function return types.
 ## Type Annotations
 
 - Function parameters must always be typed.
-- Function return type must always be explicit with `-> type`.
+- Function return type is declared with `-> type`. When omitted, the return type
+  defaults to `void`.
 - Variable declarations must include an explicit type with `var name: type`.
 
 ````arx
@@ -33,7 +34,7 @@ fn add(a: i32, b: i32) -> i32:
 | `f16`       | 16-bit float               | `var x: f16 = 1.5`    |
 | `f32`       | 32-bit float               | `var y: f32 = 3.25`   |
 | `bool`      | Boolean                    | `var ok: bool = true` |
-| `none`      | No value                   | `var n: none = none`  |
+| `void`      | No value                   | `var n: void = void`  |
 | `str`       | String                     | `var s: str = "hi"`   |
 | `char`      | Character (mapped to `i8`) | `var ch: char = 'A'`  |
 | `datetime`  | Date/time literal          | `datetime("...")`     |
@@ -47,14 +48,14 @@ fn add(a: i32, b: i32) -> i32:
 title: String and char types
 summary: Declares string and char variables.
 ```
-fn text_demo() -> none:
+fn text_demo() -> void:
   ```
   title: text_demo
   summary: Uses string and char literals.
   ```
   var greeting: str = "hello"
   var initial: char = 'A'
-  return none
+  return void
 ````
 
 ## Date And Time Literals
@@ -64,14 +65,14 @@ fn text_demo() -> none:
 title: Datetime and timestamp literals
 summary: Creates date/time values from string literals.
 ```
-fn time_demo() -> none:
+fn time_demo() -> void:
   ```
   title: time_demo
   summary: Demonstrates datetime/timestamp constructors.
   ```
   var dt: datetime = datetime("2026-03-05T12:30:59")
   var ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
-  return none
+  return void
 ````
 
 ## Lists
@@ -81,14 +82,14 @@ fn time_demo() -> none:
 title: List type example
 summary: Declares list variables.
 ```
-fn list_demo() -> none:
+fn list_demo() -> void:
   ```
   title: list_demo
   summary: Declares populated and empty lists.
   ```
   var ids: list[i32] = [1, 2, 3, 4]
   var empty_ids: list[i32] = []
-  return none
+  return void
 ````
 
 Current limitation: list code generation is still limited to empty or

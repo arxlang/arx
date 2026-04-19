@@ -42,7 +42,7 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   var f16v: f16 = 1.5
   var f32v: f32 = 3.25
   var ok: bool = true
-  var nothing: none = none
+  var nothing: void = void
 
   # strings/chars
   var ch: char = 'A'
