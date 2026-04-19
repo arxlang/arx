@@ -169,7 +169,7 @@ fn fnx(x):
 ### Numeric forms
 
 ```arx
-fn demo():
+fn demo() -> none:
   var a = 42 in
     var b = 3.14 in
       var c = .5 in

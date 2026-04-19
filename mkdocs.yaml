@@ -13,6 +13,7 @@ nav:
       - Functions: library/functions.md
       - Classes: library/classes.md
       - Data Types: library/datatypes.md
+      - Built-in Types: library/built-in-types.md
       - Control Flow: library/control-flow.md
       - Docstrings: library/docstrings.md
   - API Docs: api/

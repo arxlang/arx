@@ -190,12 +190,58 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     assert summary.exit_code == 0
 
 
+def test_arx_test_runner_accepts_none_test_signatures(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Bare and explicit none-return forms are both accepted.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_noneforms.x").write_text(
+        dedent(
+            """
+            fn test_no_return() -> none:
+              var x: i32 = 1
+
+            fn test_bare_return() -> none:
+              var x: i32 = 1
+              return
+
+            fn test_return_none() -> none:
+              var x: i32 = 1
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    summary = ArxTestRunner(list_only=True).run()
+
+    out = capsys.readouterr().out
+    assert "tests/test_noneforms::test_no_return" in out
+    assert "tests/test_noneforms::test_bare_return" in out
+    assert "tests/test_noneforms::test_return_none" in out
+    assert summary.exit_code == 0
+
+
 def test_arx_test_runner_rejects_invalid_test_signature(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    title: Test collection rejects tests with parameters in v1.
+    title: Test collection rejects tests with parameters.
     parameters:
       tmp_path:
         type: Path
@@ -216,7 +262,39 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     summary = ArxTestRunner(paths=(str(entry),)).run()
 
     assert summary.exit_code == 2
-    assert "must not accept parameters" in capsys.readouterr().err
+    assert "must take no parameters" in capsys.readouterr().err
+
+
+def test_arx_test_runner_rejects_non_none_return_type(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test collection rejects non-none return types with guidance.
+    parameters:
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    entry = tmp_path / "main.x"
+    entry.write_text(
+        dedent(
+            """
+            fn test_bad() -> i32:
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(paths=(str(entry),)).run()
+
+    err = capsys.readouterr().err
+    assert summary.exit_code == 2
+    assert "in v1" not in err
+    assert "must return none" in err
+    assert "fn test_bad() -> none:" in err
 
 
 def test_arx_test_runner_rejects_module_scope_variable_declarations(

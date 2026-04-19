@@ -1948,9 +1948,8 @@ class Parser:
             raise ParserException(
                 "Parser: Expected return type annotation with '->'."
             )
-
         self._consume_operator("->")
-        ret_type = self.parse_type()
+        ret_type: astx.DataType = self.parse_type()
 
         if expect_colon:
             self._consume_operator(":")
@@ -1999,5 +1998,20 @@ class Parser:
         """
         return_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()  # eat return
+
+        bare_return_terminators = {
+            TokenKind.indent,
+            TokenKind.eof,
+            TokenKind.kw_function,
+            TokenKind.kw_class,
+            TokenKind.kw_extern,
+            TokenKind.kw_import,
+        }
+        if (
+            self.tokens.cur_tok.kind in bare_return_terminators
+            or self._is_operator(";")
+        ):
+            return astx.FunctionReturn(astx.LiteralNone(), loc=return_loc)
+
         value = self.parse_expression()
         return astx.FunctionReturn(cast(astx.DataType, value), loc=return_loc)

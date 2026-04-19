@@ -283,6 +283,12 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     with pytest.raises(ParserException, match="Expected return type"):
         parser.parse_prototype(expect_colon=False)
 
+    ArxIO.string_to_buffer("f(x: i32) ->")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="Expected a type name"):
+        parser.parse_prototype(expect_colon=False)
+
 
 def test_parse_block_error_paths() -> None:
     """
@@ -322,3 +328,63 @@ def test_parse_primary_unknown_token_branch() -> None:
 
     with pytest.raises(ParserException, match="Unknown token"):
         parser.parse_primary()
+
+
+def test_parse_prototype_requires_explicit_return_type() -> None:
+    """
+    title: Omitting the return-type annotation is a parser error.
+    """
+    with pytest.raises(ParserException, match="Expected return type"):
+        _parse("fn do_nothing():\n  return\n")
+
+
+def test_parse_bare_return_produces_none_literal() -> None:
+    """
+    title: A bare `return` inside a none function emits LiteralNone.
+    """
+    tree = _parse("fn do_nothing() -> none:\n  return\n")
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    ret = fn.body.nodes[0]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.LiteralNone)
+
+
+def test_parse_function_without_return_statement() -> None:
+    """
+    title: A none-returning function may omit the `return` statement.
+    """
+    tree = _parse("fn do_nothing() -> none:\n  var x: i32 = 1\n")
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.prototype.return_type, astx.NoneType)
+    assert len(fn.body.nodes) == 1
+    assert not isinstance(fn.body.nodes[0], astx.FunctionReturn)
+
+
+def test_parse_explicit_return_none_value() -> None:
+    """
+    title: >-
+      Explicit return of the none literal emits FunctionReturn with
+      LiteralNone.
+    """
+    tree = _parse("fn do_nothing() -> none:\n  return none\n")
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    ret = fn.body.nodes[0]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.LiteralNone)
+
+
+def test_parse_none_type_is_recognized() -> None:
+    """
+    title: The none type name is recognized in function signatures.
+    """
+    tree = _parse("fn do_nothing() -> none:\n  return\n")
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.prototype.return_type, astx.NoneType)

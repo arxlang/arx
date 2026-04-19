@@ -15,6 +15,7 @@ land in IRx rather than in Arx-local code.
 - [Functions](functions.md)
 - [Classes](classes.md)
 - [Data Types](datatypes.md)
+- [Built-in Types](built-in-types.md)
 - [Control Flow](control-flow.md)
 - [Docstrings](docstrings.md)
 
@@ -25,6 +26,7 @@ This reference currently focuses on:
 - module structure
 - function definitions and calls
 - type system and annotations
+- built-in type reference
 - class declarations and member modifiers
 - control-flow syntax
 - docstring placement rules

@@ -198,12 +198,15 @@ arx run examples/print-star.x
 ## Compiled Tests
 
 Arx now supports fatal assertion statements and a compiled test runner. Test
-functions follow a simple v1 convention:
+functions follow a simple convention:
 
 - files: any `test_*.x` under the `tests/` directory by default
 - function names: `test_*`
 - signature: zero arguments
-- return type: `none`
+- return type: `none` (always declared explicitly as `-> none`)
+
+Inside a `none` function you can end with a bare `return`, an explicit
+`return none`, or omit the return statement entirely.
 
 Example test module:
 
@@ -218,7 +221,6 @@ fn add(a: i32, b: i32) -> i32:
 fn test_add() -> none:
   assert add(1, 2) == 3
   assert add(2, 2) == 4, "add(2, 2) should be 4"
-  return none
 ````
 
 Run the test suite with:
@@ -300,6 +302,16 @@ clang -no-pie average.o -o average
 ## Language Basics
 
 Arx's syntax is influenced by Python with significant whitespace (indentation).
+
+### Types
+
+Arx uses explicit type annotations for function parameters, variable
+declarations, and function return types. Return type annotations are always
+required, including `-> none`.
+
+For annotation rules, see [Data Types](library/datatypes.md). For the full
+catalog of built-in types and aliases, see
+[Built-in Types](library/built-in-types.md).
 
 ### Functions
 
@@ -391,6 +403,8 @@ extern putchard(x: i32) -> i32
 
 - Check the [Roadmap](roadmap.md) for planned features
 - Read the [Library Reference](library/index.md) for language feature details
+- Review [Built-in Types](library/built-in-types.md) for the canonical type
+  catalog
 - Read the [Contributing Guide](contributing.md) to help develop Arx
 - Browse the [API Docs](api/index.md) for the compiler internals
 - Join the [Community](discord.md) on Discord

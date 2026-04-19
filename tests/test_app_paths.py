@@ -1677,3 +1677,39 @@ def test_arxmain_run_shell_not_implemented() -> None:
     app = main_module.ArxMain()
     with pytest.raises(Exception, match="not implemented"):
         app.run_shell()
+
+
+def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
+    """
+    title: FileImportResolver consults [build].src_dir from .arxproject.toml.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "mypkg"
+    src_dir = project_root / "src"
+    tests_dir = project_root / "tests"
+    src_dir.mkdir(parents=True)
+    tests_dir.mkdir()
+
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "mypkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "mypkg.x"\n',
+        encoding="utf-8",
+    )
+    (src_dir / "mypkg.x").write_text(
+        "fn hello() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+    test_file = tests_dir / "test_mypkg.x"
+    test_file.write_text(
+        "fn test_noop() -> none:\n  return\n", encoding="utf-8"
+    )
+
+    resolver = main_module.FileImportResolver((str(test_file),))
+    roots = resolver._candidate_roots()
+
+    assert src_dir.resolve() in roots
+    resolved = resolver._resolve_module_file("mypkg")
+    assert resolved == (src_dir / "mypkg.x").resolve()

@@ -47,7 +47,6 @@ Arx now supports fatal assertion statements in the language surface:
 fn test_add() -> none:
   assert 1 + 1 == 2
   assert 2 + 2 == 4, "2 + 2 should be 4"
-  return none
 ```
 
 You can run compiled tests with the new `arx test` subcommand:

@@ -87,7 +87,8 @@ fn count_loop() -> i32:
 ## Return Statements
 
 - `return expr` returns a value from the current function.
-- `return none` is used for `none`-returning functions.
+- Inside `none`-returning functions, use a bare `return`, `return none`, or omit
+  the return statement entirely.
 
 ## Indentation Rules
 

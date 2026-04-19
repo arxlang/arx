@@ -433,16 +433,24 @@ class ArxTestRunner:
 
     def _validate_test_function(self, node: astx.FunctionDef) -> None:
         """
-        title: Validate the v1 test-function contract for one function.
+        title: Validate the test-function signature contract.
         parameters:
           node:
             type: astx.FunctionDef
         """
         name = str(node.prototype.name)
-        if len(node.prototype.args.nodes) != 0:
-            raise TestRunError(f"test '{name}' must not accept parameters")
-        if not isinstance(node.prototype.return_type, astx.NoneType):
-            raise TestRunError(f"test '{name}' must return none in v1")
+        arg_count = len(node.prototype.args.nodes)
+        if arg_count != 0:
+            raise TestRunError(
+                f"test '{name}' must take no parameters (got {arg_count})."
+            )
+        return_type = node.prototype.return_type
+        if not isinstance(return_type, astx.NoneType):
+            got = type(return_type).__name__
+            raise TestRunError(
+                f"test '{name}' must return none (got '{got}'); "
+                f"declare it as `fn {name}() -> none:`."
+            )
 
     def _top_level_node_error(self, node: astx.AST) -> str:
         """

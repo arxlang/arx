@@ -42,10 +42,39 @@ class FileImportResolver:
         type: tuple[str, Ellipsis]
       cache:
         type: dict[str, ParsedModule]
+      _src_dir_cache:
+        type: dict[Path, str | None]
     """
 
     input_files: tuple[str, ...]
     cache: dict[str, ParsedModule] = field(default_factory=dict)
+    _src_dir_cache: dict[Path, str | None] = field(default_factory=dict)
+
+    def _project_src_dir(self, directory: Path) -> str | None:
+        """
+        title: Look up ``[build].src_dir`` from an .arxproject.toml, if any.
+        parameters:
+          directory:
+            type: Path
+        returns:
+          type: str | None
+        """
+        if directory in self._src_dir_cache:
+            return self._src_dir_cache[directory]
+
+        config = directory / ".arxproject.toml"
+        result: str | None = None
+        if config.is_file():
+            settings_module = importlib.import_module("arx.settings")
+            try:
+                project = settings_module.load_settings(config)
+            except settings_module.ArxProjectError:
+                project = None
+            if project is not None and project.build is not None:
+                result = project.build.src_dir
+
+        self._src_dir_cache[directory] = result
+        return result
 
     def _candidate_roots(self) -> tuple[Path, ...]:
         """
@@ -68,6 +97,13 @@ class FileImportResolver:
                 return
             seen.add(resolved)
             roots.append(resolved)
+
+            src_dir = self._project_src_dir(resolved)
+            if src_dir:
+                src_path = (resolved / src_dir).resolve()
+                if src_path not in seen:
+                    seen.add(src_path)
+                    roots.append(src_path)
 
         add_root(Path.cwd())
         for input_file in self.input_files:
