@@ -337,6 +337,8 @@
       
         
       
+        
+      
     
     
     
@@ -485,6 +487,34 @@
     
   
     Data Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/built-in-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Built-in Types
   
 
     
@@ -3177,7 +3207,8 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/arx/parser.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1962</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1961</span>
+<span class="normal">1962</span>
 <span class="normal">1963</span>
 <span class="normal">1964</span>
 <span class="normal">1965</span>
@@ -3206,8 +3237,7 @@
 <span class="normal">1988</span>
 <span class="normal">1989</span>
 <span class="normal">1990</span>
-<span class="normal">1991</span>
-<span class="normal">1992</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_assert_stmt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">AssertStmt</span><span class="p">:</span>
+<span class="normal">1991</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_assert_stmt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">AssertStmt</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Parse one fatal assertion statement.</span>
 <span class="sd">    returns:</span>
@@ -6199,8 +6229,7 @@
 <span class="normal">1956</span>
 <span class="normal">1957</span>
 <span class="normal">1958</span>
-<span class="normal">1959</span>
-<span class="normal">1960</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_prototype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expect_colon</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span><span class="p">:</span>
+<span class="normal">1959</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_prototype</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expect_colon</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Parse function/extern prototypes.</span>
 <span class="sd">    parameters:</span>
@@ -6253,9 +6282,8 @@
         <span class="k">raise</span> <span class="n">ParserException</span><span class="p">(</span>
             <span class="s2">&quot;Parser: Expected return type annotation with &#39;-&gt;&#39;.&quot;</span>
         <span class="p">)</span>
-
     <span class="bp">self</span><span class="o">.</span><span class="n">_consume_operator</span><span class="p">(</span><span class="s2">&quot;-&gt;&quot;</span><span class="p">)</span>
-    <span class="n">ret_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_type</span><span class="p">()</span>
+    <span class="n">ret_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_type</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">expect_colon</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_consume_operator</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
@@ -6287,7 +6315,8 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/arx/parser.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1994</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1993</span>
+<span class="normal">1994</span>
 <span class="normal">1995</span>
 <span class="normal">1996</span>
 <span class="normal">1997</span>
@@ -6296,7 +6325,21 @@
 <span class="normal">2000</span>
 <span class="normal">2001</span>
 <span class="normal">2002</span>
-<span class="normal">2003</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_return_function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">:</span>
+<span class="normal">2003</span>
+<span class="normal">2004</span>
+<span class="normal">2005</span>
+<span class="normal">2006</span>
+<span class="normal">2007</span>
+<span class="normal">2008</span>
+<span class="normal">2009</span>
+<span class="normal">2010</span>
+<span class="normal">2011</span>
+<span class="normal">2012</span>
+<span class="normal">2013</span>
+<span class="normal">2014</span>
+<span class="normal">2015</span>
+<span class="normal">2016</span>
+<span class="normal">2017</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_return_function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    title: Parse the return expression.</span>
 <span class="sd">    returns:</span>
@@ -6304,6 +6347,21 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">return_loc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">cur_tok</span><span class="o">.</span><span class="n">location</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>  <span class="c1"># eat return</span>
+
+    <span class="n">bare_return_terminators</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">indent</span><span class="p">,</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">eof</span><span class="p">,</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">kw_function</span><span class="p">,</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">kw_class</span><span class="p">,</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">kw_extern</span><span class="p">,</span>
+        <span class="n">TokenKind</span><span class="o">.</span><span class="n">kw_import</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">cur_tok</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="n">bare_return_terminators</span>
+        <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_operator</span><span class="p">(</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">(</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralNone</span><span class="p">(),</span> <span class="n">loc</span><span class="o">=</span><span class="n">return_loc</span><span class="p">)</span>
+
     <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_expression</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="n">return_loc</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>

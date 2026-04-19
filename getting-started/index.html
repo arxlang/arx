@@ -580,6 +580,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -658,6 +669,8 @@
       
         
           
+        
+      
         
       
         
@@ -820,6 +833,34 @@
     
   
     Data Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../library/built-in-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Built-in Types
   
 
     
@@ -1915,6 +1956,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2141,13 +2193,15 @@ exit code.</p>
 </code></pre></div>
 <h2 id="compiled-tests">Compiled Tests<a class="headerlink" href="#compiled-tests" title="Permanent link">&para;</a></h2>
 <p>Arx now supports fatal assertion statements and a compiled test runner. Test
-functions follow a simple v1 convention:</p>
+functions follow a simple convention:</p>
 <ul>
 <li>files: any <code class="language-python highlight"><span class="n">test_</span><span class="o">*.</span><span class="n">x</span></code> under the <code class="language-python highlight"><span class="n">tests</span><span class="o">/</span></code> directory by default</li>
 <li>function names: <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code></li>
 <li>signature: zero arguments</li>
-<li>return type: <code class="language-python highlight"><span class="n">none</span></code></li>
+<li>return type: <code class="language-python highlight"><span class="n">none</span></code> (always declared explicitly as <code class="language-python highlight"><span class="o">-&gt;</span> <span class="n">none</span></code>)</li>
 </ul>
+<p>Inside a <code class="language-python highlight"><span class="n">none</span></code> function you can end with a bare <code class="language-python highlight"><span class="k">return</span></code>, an explicit
+<code class="language-python highlight"><span class="k">return</span> <span class="n">none</span></code>, or omit the return statement entirely.</p>
 <p>Example test module:</p>
 <div class="language-text highlight"><pre><span></span><code>```
 title: Example tests
@@ -2159,7 +2213,6 @@ fn add(a: i32, b: i32) -&gt; i32:
 fn test_add() -&gt; none:
   assert add(1, 2) == 3
   assert add(2, 2) == 4, &quot;add(2, 2) should be 4&quot;
-  return none
 </code></pre></div>
 <p>Run the test suite with:</p>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span><span class="nb">test</span>
@@ -2254,6 +2307,13 @@ clang<span class="w"> </span>-no-pie<span class="w"> </span>average.o<span class
 </code></pre></div>
 <h2 id="language-basics">Language Basics<a class="headerlink" href="#language-basics" title="Permanent link">&para;</a></h2>
 <p>Arx's syntax is influenced by Python with significant whitespace (indentation).</p>
+<h3 id="types">Types<a class="headerlink" href="#types" title="Permanent link">&para;</a></h3>
+<p>Arx uses explicit type annotations for function parameters, variable
+declarations, and function return types. Return type annotations are always
+required, including <code class="language-python highlight"><span class="o">-&gt;</span> <span class="n">none</span></code>.</p>
+<p>For annotation rules, see <a href="../library/datatypes/">Data Types</a>. For the full
+catalog of built-in types and aliases, see
+<a href="../library/built-in-types/">Built-in Types</a>.</p>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
 <p>Functions are defined with the <code class="language-python highlight"><span class="n">fn</span></code> keyword and use <code class="language-python highlight"><span class="p">:</span></code> plus indentation for the
 body:</p>
@@ -2324,6 +2384,8 @@ extern putchard(x: i32) -&gt; i32
 <ul>
 <li>Check the <a href="../roadmap/">Roadmap</a> for planned features</li>
 <li>Read the <a href="../library/">Library Reference</a> for language feature details</li>
+<li>Review <a href="../library/built-in-types/">Built-in Types</a> for the canonical type
+  catalog</li>
 <li>Read the <a href="../contributing/">Contributing Guide</a> to help develop Arx</li>
 <li>Browse the <a href="../api/">API Docs</a> for the compiler internals</li>
 <li>Join the <a href="../discord/">Community</a> on Discord</li>
