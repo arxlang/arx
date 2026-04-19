@@ -18,22 +18,48 @@ fn average(x: f32, y: f32) -> f32:
   return (x + y) * 0.5
 ````
 
+## Package Layout
+
+When a project declares `[build].src_dir`, Arx treats files under that source
+root as package modules addressed by dotted names.
+
+Example project layout:
+
+```text
+.
+├── .arxproject.toml
+├── src
+│   ├── geometry.x
+│   └── geometry
+│       ├── area.x
+│       └── helpers.x
+└── tests
+    └── test_area.x
+```
+
+With `[build].src_dir = "src"`:
+
+- `src/geometry.x` is module `geometry`
+- `src/geometry/area.x` is module `geometry.area`
+- `src/geometry/helpers.x` is module `geometry.helpers`
+
+The optional `src/geometry.x` file can act as a public facade that re-exports
+selected symbols from package submodules.
+
 ## Import Syntax
 
 ```arx
-import std.math
-import std.math as math
+import geometry.area
+import geometry.area as area
 
-import sin from std.math
-import sin as sine from std.math
+import circle_area from geometry.area
+import circle_area as area_of_circle from geometry.area
 
-import (sin, cos, tan as tangent) from std.math
+import (circle_area, square_area) from geometry.area
 
-import (
-  sin,
-  cos,
-  tan as tangent,
-) from std.math
+import radius_to_diameter from .helpers
+import (circle_area, square_area) from .area
+import clamp from ..shared.math
 ```
 
 Rules:
@@ -43,7 +69,29 @@ Rules:
 - Grouped imports require `from`.
 - Trailing commas are allowed in grouped imports.
 - Empty grouped imports are invalid.
-- Module paths use dotted notation.
+- Absolute module paths use dotted notation.
+- Relative imports are supported only with `from` imports.
+- Relative imports use one or more leading dots before the module path.
+- Plain relative module imports such as `import .area` are not supported yet.
+- For now, prefer `from` imports when you need callable declarations in user
+  code.
+
+### Absolute Imports
+
+Use absolute dotted paths for public imports across package boundaries:
+
+```arx
+import circle_area from geometry.area
+```
+
+### Relative Imports
+
+Use relative `from` imports for package-internal references:
+
+```arx
+import radius_to_diameter from .helpers
+import clamp from ..shared.math
+```
 
 ## Module Docstring
 

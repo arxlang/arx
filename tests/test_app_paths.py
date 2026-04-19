@@ -714,15 +714,49 @@ def test_python_m_entrypoint_calls_cli_app(
     assert called["app"] is True
 
 
-def test_main_module_name_helper() -> None:
+def test_main_module_name_helper(tmp_path: Path) -> None:
     """
-    title: Test module-name extraction helper.
+    title: Test module-name extraction helper outside project src_dir.
+    parameters:
+      tmp_path:
+        type: Path
     """
+    sample = tmp_path / "examples" / "sample.x"
+    sample.parent.mkdir()
+    sample.write_text(
+        "fn main() -> i32:\n  return 0\n",
+        encoding="utf-8",
+    )
+
+    assert main_module.get_module_name_from_file_path(str(sample)) == "sample"
+
+
+def test_main_module_name_helper_uses_src_relative_package_name(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Module-name extraction uses dotted names under [build].src_dir.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "workspace"
+    module_file = project_root / "src" / "samplepkg" / "core.x"
+    module_file.parent.mkdir(parents=True)
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        encoding="utf-8",
+    )
+    module_file.write_text(
+        "fn helper() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+
     assert (
-        main_module.get_module_name_from_file_path(
-            "/tmp/project/examples/sample.x"
-        )
-        == "sample"
+        main_module.get_module_name_from_file_path(str(module_file))
+        == "samplepkg.core"
     )
 
 
@@ -750,6 +784,35 @@ def test_arxmain_get_astx_single_file_returns_module(tmp_path: Path) -> None:
     tree = app._get_astx()
     assert isinstance(tree, astx.Module)
     assert tree.name == "one"
+
+
+def test_arxmain_get_astx_uses_src_relative_module_name(
+    tmp_path: Path,
+) -> None:
+    """
+    title: _get_astx uses dotted module names for package files.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "workspace"
+    src = project_root / "src" / "samplepkg" / "core.x"
+    src.parent.mkdir(parents=True)
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        encoding="utf-8",
+    )
+    src.write_text(
+        "```\ntitle: Core\n```\nfn main() -> i32:\n  return 0\n",
+        encoding="utf-8",
+    )
+
+    app = main_module.ArxMain(input_files=[str(src)])
+    tree = app._get_astx()
+    assert isinstance(tree, astx.Module)
+    assert tree.name == "samplepkg.core"
 
 
 def test_arxmain_get_codegen_rejects_multi_module_block() -> None:
@@ -1713,3 +1776,62 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     assert src_dir.resolve() in roots
     resolved = resolver._resolve_module_file("mypkg")
     assert resolved == (src_dir / "mypkg.x").resolve()
+
+
+def test_file_import_resolver_normalizes_relative_imports(
+    tmp_path: Path,
+) -> None:
+    """
+    title: FileImportResolver normalizes relative imports against package keys.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "samplepkg"
+    src_dir = project_root / "src"
+    package_dir = src_dir / "samplepkg"
+    package_dir.mkdir(parents=True)
+
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        encoding="utf-8",
+    )
+    (src_dir / "samplepkg.x").write_text(
+        "import helper from .core\n",
+        encoding="utf-8",
+    )
+    (package_dir / "core.x").write_text(
+        "import sum2 from .stats\nfn helper() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+    (package_dir / "stats.x").write_text(
+        "fn sum2() -> i32:\n  return 2\n",
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver((str(src_dir / "samplepkg.x"),))
+
+    relative_core = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("helper")],
+        module="core",
+        level=1,
+    )
+    parsed_core = resolver("samplepkg", relative_core, ".core")
+    assert parsed_core.key == "samplepkg.core"
+    assert parsed_core.origin is not None
+    assert Path(parsed_core.origin) == (package_dir / "core.x").resolve()
+
+    relative_stats = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("sum2")],
+        module="stats",
+        level=1,
+    )
+    parsed_stats = resolver("samplepkg.core", relative_stats, ".stats")
+    assert parsed_stats.key == "samplepkg.stats"
+    assert parsed_stats.origin is not None
+    assert Path(parsed_stats.origin) == (package_dir / "stats.x").resolve()
+
+    with pytest.raises(LookupError, match="top-level package"):
+        resolver("samplepkg.core", relative_stats, "..stats")

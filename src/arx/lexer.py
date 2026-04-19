@@ -453,10 +453,23 @@ class Lexer:
                 location=self.lex_loc,
             )
 
-        # Number: [0-9.]+
+        # Number: [0-9.]+ (with '.' alone kept as an operator)
         if self.last_char.isdigit() or self.last_char == ".":
             num_str = ""
             dot_count = 0
+
+            if self.last_char == ".":
+                next_char = self.advance()
+                if not next_char.isdigit():
+                    self.last_char = next_char
+                    return Token(
+                        kind=TokenKind.operator,
+                        value=".",
+                        location=self.lex_loc,
+                    )
+                num_str = "."
+                dot_count = 1
+                self.last_char = next_char
 
             while self.last_char.isdigit() or self.last_char == ".":
                 if self.last_char == ".":
@@ -468,13 +481,6 @@ class Lexer:
                         )
                 num_str += self.last_char
                 self.last_char = self.advance()
-
-            if num_str == ".":
-                return Token(
-                    kind=TokenKind.operator,
-                    value=".",
-                    location=self.lex_loc,
-                )
 
             if dot_count == 0:
                 return Token(

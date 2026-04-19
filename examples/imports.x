@@ -1,13 +1,15 @@
-import std.math
-import std.math as math
+```
+title: Import syntax examples
+summary: Demonstrates absolute and relative import forms.
+```
+import toolkit.math
+import toolkit.math as math
 
-import sin from std.math
-import sin as sine from std.math
+import sum from toolkit.math
+import sum as add from toolkit.math
 
-import (sin, cos, tan as tangent) from std.math
+import (sum, mean as average) from toolkit.math
 
-import (
-  sin,
-  cos,
-  tan as tangent,
-) from std.math
+import sum from .math
+import (sum, mean) from .stats
+import helper from ..shared.helpers

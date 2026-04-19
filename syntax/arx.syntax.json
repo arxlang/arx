@@ -88,7 +88,8 @@
     "notes": [
       "TODO(ARX-LEX-OPS-001): finalize multi-character operators (==, !=, <=, >=, ->).",
       "Annotation lines use the token sequence '@[' modifier names separated by commas and closed by ']'.",
-      "Grouped imports use parentheses, require 'from', and may include trailing commas."
+      "Grouped imports use parentheses, require 'from', and may include trailing commas.",
+      "Relative from-imports use one or more leading '.' tokens before the module path."
     ]
   },
   "brackets": [

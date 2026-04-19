@@ -363,42 +363,54 @@ def test_parse_typed_function_signature() -> None:
 
 
 @pytest.mark.parametrize(
-    ("code", "stmt_type", "expected_module", "expected_names"),
+    (
+        "code",
+        "stmt_type",
+        "expected_module",
+        "expected_level",
+        "expected_names",
+    ),
     [
         (
             "import std.math\n",
             irx_astx.ImportStmt,
             None,
+            0,
             [("std.math", "")],
         ),
         (
             "import std.math as math\n",
             irx_astx.ImportStmt,
             None,
+            0,
             [("std.math", "math")],
         ),
         (
             "import sin from std.math\n",
             irx_astx.ImportFromStmt,
             "std.math",
+            0,
             [("sin", "")],
         ),
         (
             "import sin as sine from std.math\n",
             irx_astx.ImportFromStmt,
             "std.math",
+            0,
             [("sin", "sine")],
         ),
         (
             "import (sin, cos) from std.math\n",
             irx_astx.ImportFromStmt,
             "std.math",
+            0,
             [("sin", ""), ("cos", "")],
         ),
         (
             "import (sin, cos, tan as tangent) from std.math\n",
             irx_astx.ImportFromStmt,
             "std.math",
+            0,
             [("sin", ""), ("cos", ""), ("tan", "tangent")],
         ),
         (
@@ -413,6 +425,7 @@ def test_parse_typed_function_signature() -> None:
             ).lstrip(),
             irx_astx.ImportFromStmt,
             "std.math",
+            0,
             [("sin", ""), ("cos", ""), ("tan", "tangent")],
         ),
         (
@@ -426,7 +439,22 @@ def test_parse_typed_function_signature() -> None:
             ).lstrip(),
             irx_astx.ImportFromStmt,
             "std.math.trig",
+            0,
             [("sin", ""), ("cos", "")],
+        ),
+        (
+            "import sum2 from .stats\n",
+            irx_astx.ImportFromStmt,
+            "stats",
+            1,
+            [("sum2", "")],
+        ),
+        (
+            "import (sum2, mean2) from ..math.stats\n",
+            irx_astx.ImportFromStmt,
+            "math.stats",
+            2,
+            [("sum2", ""), ("mean2", "")],
         ),
     ],
 )
@@ -434,6 +462,7 @@ def test_parse_import_statements(
     code: str,
     stmt_type: type[astx.AST],
     expected_module: str | None,
+    expected_level: int,
     expected_names: list[tuple[str, str]],
 ) -> None:
     """
@@ -445,6 +474,8 @@ def test_parse_import_statements(
         type: type[astx.AST]
       expected_module:
         type: str | None
+      expected_level:
+        type: int
       expected_names:
         type: list[tuple[str, str]]
     """
@@ -460,8 +491,10 @@ def test_parse_import_statements(
 
     if isinstance(node, irx_astx.ImportFromStmt):
         assert node.module == expected_module
+        assert node.level == expected_level
     else:
         assert expected_module is None
+        assert expected_level == 0
 
 
 @pytest.mark.parametrize(
@@ -498,6 +531,14 @@ def test_parse_import_statements(
         (
             "import std.math from other.module\n",
             "Module imports do not use 'from'.",
+        ),
+        (
+            "import sum2 from .\n",
+            "Relative imports require a module path after leading '.'.",
+        ),
+        (
+            "import sum2 from ..\n",
+            "Relative imports require a module path after leading '.'.",
         ),
         (
             "fn main() -> i32:\n  import std.math\n  return 0\n",
