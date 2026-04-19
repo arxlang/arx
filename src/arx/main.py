@@ -3,7 +3,6 @@ title: Arx main module.
 """
 
 import importlib
-import os
 import subprocess
 import sys
 
@@ -15,10 +14,68 @@ import astx
 
 from irx.analysis.module_interfaces import ParsedModule
 
+from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+
+
+def _find_project_source_root(start: Path) -> Path | None:
+    """
+    title: Find the configured project source root for a path.
+    parameters:
+      start:
+        type: Path
+    returns:
+      type: Path | None
+    """
+    config = arx_settings.find_config_file(start=start)
+    if config is None:
+        return None
+
+    try:
+        project = arx_settings.load_settings(config)
+    except arx_settings.ArxProjectError:
+        return None
+
+    if project.build is None or project.build.src_dir is None:
+        return None
+
+    src_dir = project.build.src_dir
+    return (config.parent / src_dir).resolve()
+
+
+def _module_name_from_source_root(
+    filepath: Path, source_root: Path
+) -> str | None:
+    """
+    title: Derive one dotted module name relative to a source root.
+    parameters:
+      filepath:
+        type: Path
+      source_root:
+        type: Path
+    returns:
+      type: str | None
+    """
+    resolved = filepath.resolve()
+    try:
+        relative_path = resolved.relative_to(source_root)
+    except ValueError:
+        return None
+
+    if relative_path.suffix != ".x":
+        return None
+
+    module_path = relative_path.with_suffix("")
+    if module_path.name == "__init__":
+        module_path = module_path.parent
+
+    if not module_path.parts:
+        return None
+
+    return ".".join(module_path.parts)
 
 
 def get_module_name_from_file_path(filepath: str) -> str:
@@ -30,7 +87,13 @@ def get_module_name_from_file_path(filepath: str) -> str:
     returns:
       type: str
     """
-    return filepath.rsplit(os.sep, maxsplit=1)[-1].replace(".x", "")
+    file_path = Path(filepath)
+    source_root = _find_project_source_root(file_path.parent)
+    if source_root is not None:
+        module_name = _module_name_from_source_root(file_path, source_root)
+        if module_name is not None:
+            return module_name
+    return file_path.stem
 
 
 @dataclass
@@ -125,12 +188,90 @@ class FileImportResolver:
         returns:
           type: Path
         """
-        relative_path = Path(*requested_specifier.split(".")).with_suffix(".x")
+        package_path = Path(*requested_specifier.split("."))
+        file_candidate = package_path.with_suffix(".x")
+        init_candidate = package_path / "__init__.x"
         for root in self._candidate_roots():
-            candidate = root / relative_path
-            if candidate.is_file():
-                return candidate
+            init_path = (root / init_candidate).resolve()
+            file_path = (root / file_candidate).resolve()
+            has_init = init_path.is_file()
+            has_file = file_path.is_file()
+            if has_init and has_file:
+                raise LookupError(
+                    "ambiguous module specifier "
+                    f"'{requested_specifier}': both "
+                    f"'{file_path}' and '{init_path}' exist"
+                )
+            if has_init:
+                return init_path
+            if has_file:
+                return file_path
         raise LookupError(requested_specifier)
+
+    def _current_package_parts(
+        self, requesting_module_key: str
+    ) -> tuple[str, ...]:
+        """
+        title: Resolve the current package path for relative imports.
+        parameters:
+          requesting_module_key:
+            type: str
+        returns:
+          type: tuple[str, Ellipsis]
+        """
+        module_file = self._resolve_module_file(requesting_module_key)
+        parts = tuple(
+            part for part in requesting_module_key.split(".") if part
+        )
+        if module_file.name == "__init__.x":
+            return parts
+        if len(parts) > 1:
+            return parts[:-1]
+        raise LookupError(
+            "relative imports require the requesting module to live inside "
+            "a package"
+        )
+
+    def _normalize_module_specifier(
+        self,
+        requesting_module_key: str,
+        requested_specifier: str,
+    ) -> str:
+        """
+        title: Normalize one requested module specifier to a dotted key.
+        parameters:
+          requesting_module_key:
+            type: str
+          requested_specifier:
+            type: str
+        returns:
+          type: str
+        """
+        if not requested_specifier.startswith("."):
+            return requested_specifier
+
+        level = len(requested_specifier) - len(requested_specifier.lstrip("."))
+        module_path = requested_specifier[level:]
+        if not module_path:
+            raise LookupError(
+                "relative imports require a module path after the leading dots"
+            )
+
+        package_parts = self._current_package_parts(requesting_module_key)
+        if level > len(package_parts):
+            raise LookupError(
+                "relative import climbs beyond the top-level package for "
+                f"module '{requesting_module_key}'"
+            )
+
+        base_parts = package_parts[: len(package_parts) - (level - 1)]
+        if not base_parts:
+            raise LookupError(
+                "relative import climbs beyond the top-level package for "
+                f"module '{requesting_module_key}'"
+            )
+
+        return ".".join([*base_parts, *module_path.split(".")])
 
     def __call__(
         self,
@@ -150,23 +291,27 @@ class FileImportResolver:
         returns:
           type: ParsedModule
         """
-        _ = requesting_module_key
         _ = import_node
 
-        cached = self.cache.get(requested_specifier)
+        resolved_specifier = self._normalize_module_specifier(
+            requesting_module_key,
+            requested_specifier,
+        )
+
+        cached = self.cache.get(resolved_specifier)
         if cached is not None:
             return cached
 
-        module_file = self._resolve_module_file(requested_specifier)
+        module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
-        module_ast = Parser().parse(Lexer().lex(), requested_specifier)
+        module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
         parsed_module = ParsedModule(
-            key=requested_specifier,
+            key=resolved_specifier,
             ast=module_ast,
-            display_name=requested_specifier,
+            display_name=resolved_specifier,
             origin=str(module_file),
         )
-        self.cache[requested_specifier] = parsed_module
+        self.cache[resolved_specifier] = parsed_module
         return parsed_module
 
 

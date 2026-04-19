@@ -12,7 +12,8 @@ from textwrap import dedent
 import pytest
 
 from arx.testing import ArxTestRunner
-from irx.analysis.module_interfaces import ParsedModule
+from irx import astx
+from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.builder.base import CommandResult
 
 HAS_CLANG = shutil.which("clang") is not None
@@ -409,7 +410,7 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
         def build_modules(
             self,
             root: ParsedModule,
-            resolver: object,
+            resolver: ImportResolver,
             output_file: str,
             link: bool,
             link_mode: str,
@@ -420,7 +421,7 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
               root:
                 type: ParsedModule
               resolver:
-                type: object
+                type: ImportResolver
               output_file:
                 type: str
               link:
@@ -540,7 +541,7 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
         def build_modules(
             self,
             root: ParsedModule,
-            resolver: object,
+            resolver: ImportResolver,
             output_file: str,
             link: bool,
             link_mode: str,
@@ -551,7 +552,7 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
               root:
                 type: ParsedModule
               resolver:
-                type: object
+                type: ImportResolver
               output_file:
                 type: str
               link:
@@ -604,6 +605,157 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
     assert captured_wrappers == expected
 
 
+def test_arx_test_runner_supports_package_relative_imports(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: Test runner build flow supports package files with relative imports.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    src_dir = tmp_path / "src"
+    package_dir = src_dir / "samplepkg"
+    tests_dir = tmp_path / "tests"
+    package_dir.mkdir(parents=True)
+    tests_dir.mkdir()
+
+    (tmp_path / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    (package_dir / "__init__.x").write_text(
+        dedent(
+            """
+            import addtwo from .core
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (package_dir / "stats.x").write_text(
+        dedent(
+            """
+            fn sum2() -> i32:
+              return 2
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (package_dir / "core.x").write_text(
+        dedent(
+            """
+            import sum2 from .stats
+
+            fn addtwo() -> i32:
+              return sum2()
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (tests_dir / "test_core.x").write_text(
+        dedent(
+            """
+            import addtwo from samplepkg.core
+
+            fn test_addtwo() -> none:
+              addtwo()
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    class DummyBuilder:
+        """
+        title: Dummy builder that validates package import resolution.
+        """
+
+        output_file = ""
+
+        def build_modules(
+            self,
+            root: ParsedModule,
+            resolver: ImportResolver,
+            output_file: str,
+            link: bool,
+            link_mode: str,
+        ) -> None:
+            """
+            title: Resolve package imports during test wrapper build.
+            parameters:
+              root:
+                type: ParsedModule
+              resolver:
+                type: ImportResolver
+              output_file:
+                type: str
+              link:
+                type: bool
+              link_mode:
+                type: str
+            """
+            del link
+            del link_mode
+            self.output_file = output_file
+            assert isinstance(root.ast, astx.Module)
+            root_import = next(
+                node
+                for node in root.ast.nodes
+                if isinstance(node, astx.ImportFromStmt)
+            )
+            resolved_core = resolver(root.key, root_import, "samplepkg.core")
+            assert resolved_core.key == "samplepkg.core"
+            nested_import = next(
+                node
+                for node in resolved_core.ast.nodes
+                if isinstance(node, astx.ImportFromStmt)
+            )
+            resolved_stats = resolver(
+                resolved_core.key,
+                nested_import,
+                ".stats",
+            )
+            assert resolved_stats.key == "samplepkg.stats"
+
+        def run(
+            self,
+            *,
+            capture_stderr: bool = True,
+            raise_on_error: bool = True,
+        ) -> CommandResult:
+            """
+            title: Return a passing command result.
+            parameters:
+              capture_stderr:
+                type: bool
+              raise_on_error:
+                type: bool
+            returns:
+              type: CommandResult
+            """
+            del capture_stderr
+            del raise_on_error
+            return CommandResult(
+                stdout="",
+                stderr="",
+                returncode=0,
+                command=[self.output_file],
+            )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("arx.testing.ArxBuilder", DummyBuilder)
+
+    summary = ArxTestRunner().run()
+
+    assert summary.exit_code == 0
+    assert summary.passed == 1
+
+
 def test_arx_test_runner_reports_machine_readable_failures(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -640,7 +792,7 @@ def test_arx_test_runner_reports_machine_readable_failures(
         def build_modules(
             self,
             root: object,
-            resolver: object,
+            resolver: ImportResolver,
             output_file: str,
             link: bool,
             link_mode: str,
@@ -651,7 +803,7 @@ def test_arx_test_runner_reports_machine_readable_failures(
               root:
                 type: object
               resolver:
-                type: object
+                type: ImportResolver
               output_file:
                 type: str
               link:

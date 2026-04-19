@@ -195,6 +195,71 @@ Alias form is also available:
 arx run examples/print-star.x
 ```
 
+## Packages and Imports
+
+When your project sets `[build].src_dir`, files under that directory are loaded
+as dotted package modules.
+
+Example layout:
+
+```text
+.
+├── .arxproject.toml
+├── src
+│   └── geometry
+│       ├── __init__.x
+│       ├── shared
+│       │   └── math.x
+│       └── shapes
+│           ├── area.x
+│           └── helpers.x
+└── tests
+    └── test_area.x
+```
+
+Example project manifest:
+
+```toml
+[project]
+name = "geometry"
+version = "0.1.0"
+
+[environment]
+kind = "conda"
+name = "geometry"
+
+[build]
+src_dir = "src"
+entry = "geometry/__init__.x"
+out_dir = "build"
+```
+
+Use `__init__.x` as the package root. Inside a nested module such as
+`geometry.shapes.area`, use relative `from` imports for nearby modules and
+parent-package modules:
+
+````arx
+```
+title: Geometry shapes area
+summary: Package-internal import example.
+```
+import radius_to_diameter from .helpers
+import clamp from ..shared.math
+````
+
+Outside the package, use absolute dotted imports:
+
+````arx
+```
+title: Geometry consumer
+summary: Public import example.
+```
+import circle_area from geometry.shapes.area
+````
+
+Current limitation: plain relative module imports such as `import .area` and
+module namespace calls such as `area.circle_area()` are not supported yet.
+
 ## Compiled Tests
 
 Arx now supports fatal assertion statements and a compiled test runner. Test

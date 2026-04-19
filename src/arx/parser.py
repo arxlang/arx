@@ -409,10 +409,11 @@ class Parser:
                     "Grouped imports require 'from <module.path>'."
                 )
             self._consume_identifier_value("from")
-            module_path = self.parse_module_path()
+            level, module_path = self.parse_import_from_module_path()
             return astx.ImportFromStmt(
                 names=names,
                 module=module_path,
+                level=level,
                 loc=import_loc,
             )
 
@@ -454,7 +455,7 @@ class Parser:
         alias_name = self.parse_import_alias()
         if self._is_identifier_value("from"):
             self._consume_identifier_value("from")
-            module_path = self.parse_module_path()
+            level, module_path = self.parse_import_from_module_path()
             return astx.ImportFromStmt(
                 names=[
                     astx.AliasExpr(
@@ -464,6 +465,7 @@ class Parser:
                     )
                 ],
                 module=module_path,
+                level=level,
                 loc=import_loc,
             )
 
@@ -566,6 +568,24 @@ class Parser:
             self.tokens.get_next_token()
 
         return ".".join(parts)
+
+    def parse_import_from_module_path(self) -> tuple[int, str]:
+        """
+        title: Parse one absolute or relative module path for from-imports.
+        returns:
+          type: tuple[int, str]
+        """
+        level = 0
+        while self._is_operator("."):
+            self._consume_operator(".")
+            level += 1
+
+        if level > 0 and self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException(
+                "Relative imports require a module path after leading '.'."
+            )
+
+        return level, self.parse_module_path()
 
     def parse_class_decl(
         self,

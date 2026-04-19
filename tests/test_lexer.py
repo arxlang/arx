@@ -293,6 +293,28 @@ def test_get_tok_multiline_grouped_import() -> None:
         assert lexer.get_token() == token
 
 
+def test_get_tok_relative_from_import() -> None:
+    """
+    title: Test tokenization for relative from-import syntax.
+    """
+    ArxIO.string_to_buffer("import sum2 from ..math.stats\n")
+    lexer = Lexer()
+
+    expected = [
+        Token(TokenKind.kw_import, "import"),
+        Token(TokenKind.identifier, "sum2"),
+        Token(TokenKind.identifier, "from"),
+        Token(TokenKind.operator, "."),
+        Token(TokenKind.operator, "."),
+        Token(TokenKind.identifier, "math"),
+        Token(TokenKind.operator, "."),
+        Token(TokenKind.identifier, "stats"),
+    ]
+
+    for token in expected:
+        assert lexer.get_token() == token
+
+
 def test_skip_hash_comments() -> None:
     """
     title: Test that hash comments are ignored by lexer.
