@@ -203,8 +203,7 @@ functions follow a simple convention:
 - files: any `test_*.x` under the `tests/` directory by default
 - function names: `test_*`
 - signature: zero arguments
-- return type: `void` (the annotation is optional; `fn test_foo():` is the same
-  as `fn test_foo() -> void:`)
+- return type: `void` (always declared explicitly as `-> void`)
 
 Inside a `void` function you can end with a bare `return`, an explicit
 `return void`, or omit the return statement entirely.
@@ -219,7 +218,7 @@ summary: Demonstrates `assert` and `arx test`.
 fn add(a: i32, b: i32) -> i32:
   return a + b
 
-fn test_add():
+fn test_add() -> void:
   assert add(1, 2) == 3
   assert add(2, 2) == 4, "add(2, 2) should be 4"
 ````

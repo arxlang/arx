@@ -190,13 +190,13 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     assert summary.exit_code == 0
 
 
-def test_arx_test_runner_accepts_shorthand_test_signature(
+def test_arx_test_runner_accepts_void_test_signatures(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: Shorthand `fn test_name():` is accepted by test discovery.
+    title: Bare and explicit void-return forms are both accepted.
     parameters:
       tmp_path:
         type: Path
@@ -207,15 +207,19 @@ def test_arx_test_runner_accepts_shorthand_test_signature(
     """
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
-    (tests_dir / "test_shorthand.x").write_text(
+    (tests_dir / "test_voidforms.x").write_text(
         dedent(
             """
-            fn test_no_arrow_no_return():
+            fn test_no_return() -> void:
               var x: i32 = 1
 
             fn test_bare_return() -> void:
               var x: i32 = 1
               return
+
+            fn test_return_void() -> void:
+              var x: i32 = 1
+              return void
             """
         ).lstrip(),
         encoding="utf-8",
@@ -226,8 +230,9 @@ def test_arx_test_runner_accepts_shorthand_test_signature(
     summary = ArxTestRunner(list_only=True).run()
 
     out = capsys.readouterr().out
-    assert "tests/test_shorthand::test_no_arrow_no_return" in out
-    assert "tests/test_shorthand::test_bare_return" in out
+    assert "tests/test_voidforms::test_no_return" in out
+    assert "tests/test_voidforms::test_bare_return" in out
+    assert "tests/test_voidforms::test_return_void" in out
     assert summary.exit_code == 0
 
 
@@ -289,7 +294,6 @@ def test_arx_test_runner_rejects_non_void_return_type(
     assert summary.exit_code == 2
     assert "in v1" not in err
     assert "must return void" in err
-    assert "fn test_bad():" in err
     assert "fn test_bad() -> void:" in err
 
 

@@ -1944,11 +1944,12 @@ class Parser:
 
         self._consume_operator(")")
 
-        if self._is_operator("->"):
-            self._consume_operator("->")
-            ret_type: astx.DataType = self.parse_type()
-        else:
-            ret_type = astx.NoneType()
+        if not self._is_operator("->"):
+            raise ParserException(
+                "Parser: Expected return type annotation with '->'."
+            )
+        self._consume_operator("->")
+        ret_type: astx.DataType = self.parse_type()
 
         if expect_colon:
             self._consume_operator(":")

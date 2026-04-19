@@ -280,8 +280,8 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     ArxIO.string_to_buffer("f(x: i32)")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    prototype = parser.parse_prototype(expect_colon=False)
-    assert isinstance(prototype.return_type, astx.NoneType)
+    with pytest.raises(ParserException, match="Expected return type"):
+        parser.parse_prototype(expect_colon=False)
 
     ArxIO.string_to_buffer("f(x: i32) ->")
     parser = Parser(Lexer().lex())
@@ -330,18 +330,12 @@ def test_parse_primary_unknown_token_branch() -> None:
         parser.parse_primary()
 
 
-def test_parse_prototype_with_implicit_void_return() -> None:
+def test_parse_prototype_requires_explicit_return_type() -> None:
     """
-    title: Omitted return-type annotation defaults to the void type.
+    title: Omitting the return-type annotation is a parser error.
     """
-    tree = _parse("fn do_nothing():\n  return\n")
-
-    fn = tree.nodes[0]
-    assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.prototype.return_type, astx.NoneType)
-    ret = fn.body.nodes[0]
-    assert isinstance(ret, astx.FunctionReturn)
-    assert isinstance(ret.value, astx.LiteralNone)
+    with pytest.raises(ParserException, match="Expected return type"):
+        _parse("fn do_nothing():\n  return\n")
 
 
 def test_parse_bare_return_produces_void_literal() -> None:
@@ -361,7 +355,7 @@ def test_parse_function_without_return_statement() -> None:
     """
     title: A void-returning function may omit the `return` statement.
     """
-    tree = _parse("fn do_nothing():\n  var x: i32 = 1\n")
+    tree = _parse("fn do_nothing() -> void:\n  var x: i32 = 1\n")
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)

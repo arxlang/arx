@@ -130,7 +130,9 @@ def test_get_tok_module_docstring() -> None:
     """
     title: Test tokenization of module docstrings.
     """
-    ArxIO.string_to_buffer("```\nmodule docs\n```\nfn main():\n  return 1\n")
+    ArxIO.string_to_buffer(
+        "```\nmodule docs\n```\nfn main() -> i32:\n  return 1\n"
+    )
     lexer = Lexer()
 
     assert lexer.get_token().kind == TokenKind.docstring
@@ -142,7 +144,7 @@ def test_get_tok_function_docstring() -> None:
     title: Test tokenization of function docstrings.
     """
     ArxIO.string_to_buffer(
-        "fn main():\n  ```\n  function docs\n  ```\n  return 1\n"
+        "fn main() -> i32:\n  ```\n  function docs\n  ```\n  return 1\n"
     )
     lexer = Lexer()
 
@@ -150,6 +152,8 @@ def test_get_tok_function_docstring() -> None:
     assert lexer.get_token() == Token(kind=TokenKind.identifier, value="main")
     assert lexer.get_token() == Token(kind=TokenKind.operator, value="(")
     assert lexer.get_token() == Token(kind=TokenKind.operator, value=")")
+    assert lexer.get_token() == Token(kind=TokenKind.operator, value="->")
+    assert lexer.get_token() == Token(kind=TokenKind.identifier, value="i32")
     assert lexer.get_token() == Token(kind=TokenKind.operator, value=":")
     assert lexer.get_token() == Token(kind=TokenKind.indent, value=2)
     assert lexer.get_token().kind == TokenKind.docstring

@@ -44,7 +44,7 @@ objects were not compiled in a PIE-compatible mode.
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx
-fn test_add():
+fn test_add() -> void:
   assert 1 + 1 == 2
   assert 2 + 2 == 4, "2 + 2 should be 4"
 ```
