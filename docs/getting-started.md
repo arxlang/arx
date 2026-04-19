@@ -206,8 +206,8 @@ Example layout:
 .
 ├── .arxproject.toml
 ├── src
-│   ├── geometry.x
 │   └── geometry
+│       ├── __init__.x
 │       ├── area.x
 │       └── helpers.x
 └── tests
@@ -227,11 +227,12 @@ name = "geometry"
 
 [build]
 src_dir = "src"
-entry = "geometry.x"
+entry = "geometry/__init__.x"
 out_dir = "build"
 ```
 
-Inside package modules, use relative `from` imports for nearby modules:
+Use `__init__.x` as the package root, and inside package modules use relative
+`from` imports for nearby modules:
 
 ````arx
 ```

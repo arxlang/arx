@@ -68,7 +68,14 @@ def _module_name_from_source_root(
     if relative_path.suffix != ".x":
         return None
 
-    return ".".join(relative_path.with_suffix("").parts)
+    module_path = relative_path.with_suffix("")
+    if module_path.name == "__init__":
+        module_path = module_path.parent
+
+    if not module_path.parts:
+        return None
+
+    return ".".join(module_path.parts)
 
 
 def get_module_name_from_file_path(filepath: str) -> str:
@@ -181,9 +188,14 @@ class FileImportResolver:
         returns:
           type: Path
         """
-        relative_path = Path(*requested_specifier.split(".")).with_suffix(".x")
+        package_path = Path(*requested_specifier.split("."))
+        file_candidate = package_path.with_suffix(".x")
+        init_candidate = package_path / "__init__.x"
         for root in self._candidate_roots():
-            candidate = root / relative_path
+            candidate = root / init_candidate
+            if candidate.is_file():
+                return candidate
+            candidate = root / file_candidate
             if candidate.is_file():
                 return candidate
         raise LookupError(requested_specifier)
@@ -200,11 +212,10 @@ class FileImportResolver:
           type: tuple[str, Ellipsis]
         """
         module_file = self._resolve_module_file(requesting_module_key)
-        package_dir = module_file.with_suffix("")
         parts = tuple(
             part for part in requesting_module_key.split(".") if part
         )
-        if package_dir.is_dir():
+        if module_file.name == "__init__.x":
             return parts
         if len(parts) > 1:
             return parts[:-1]

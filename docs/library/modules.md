@@ -29,8 +29,8 @@ Example project layout:
 .
 ├── .arxproject.toml
 ├── src
-│   ├── geometry.x
 │   └── geometry
+│       ├── __init__.x
 │       ├── area.x
 │       └── helpers.x
 └── tests
@@ -39,12 +39,12 @@ Example project layout:
 
 With `[build].src_dir = "src"`:
 
-- `src/geometry.x` is module `geometry`
+- `src/geometry/__init__.x` is module `geometry`
 - `src/geometry/area.x` is module `geometry.area`
 - `src/geometry/helpers.x` is module `geometry.helpers`
 
-The optional `src/geometry.x` file can act as a public facade that re-exports
-selected symbols from package submodules.
+Use `__init__.x` as the package entry point, following the same layout idea as
+Python packages.
 
 ## Import Syntax
 

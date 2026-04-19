@@ -731,6 +731,35 @@ def test_main_module_name_helper(tmp_path: Path) -> None:
     assert main_module.get_module_name_from_file_path(str(sample)) == "sample"
 
 
+def test_main_module_name_helper_uses_package_init_module_name(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Package __init__ files map to the package dotted name.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "workspace"
+    module_file = project_root / "src" / "samplepkg" / "__init__.x"
+    module_file.parent.mkdir(parents=True)
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    module_file.write_text(
+        "fn helper() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+
+    assert (
+        main_module.get_module_name_from_file_path(str(module_file))
+        == "samplepkg"
+    )
+
+
 def test_main_module_name_helper_uses_src_relative_package_name(
     tmp_path: Path,
 ) -> None:
@@ -746,7 +775,7 @@ def test_main_module_name_helper_uses_src_relative_package_name(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
         encoding="utf-8",
     )
     module_file.write_text(
@@ -786,6 +815,35 @@ def test_arxmain_get_astx_single_file_returns_module(tmp_path: Path) -> None:
     assert tree.name == "one"
 
 
+def test_arxmain_get_astx_uses_package_init_module_name(
+    tmp_path: Path,
+) -> None:
+    """
+    title: _get_astx maps package __init__ files to package names.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "workspace"
+    src = project_root / "src" / "samplepkg" / "__init__.x"
+    src.parent.mkdir(parents=True)
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    src.write_text(
+        "```\ntitle: Package\n```\nfn main() -> i32:\n  return 0\n",
+        encoding="utf-8",
+    )
+
+    app = main_module.ArxMain(input_files=[str(src)])
+    tree = app._get_astx()
+    assert isinstance(tree, astx.Module)
+    assert tree.name == "samplepkg"
+
+
 def test_arxmain_get_astx_uses_src_relative_module_name(
     tmp_path: Path,
 ) -> None:
@@ -801,7 +859,7 @@ def test_arxmain_get_astx_uses_src_relative_module_name(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
         encoding="utf-8",
     )
     src.write_text(
@@ -1758,10 +1816,13 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "mypkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "mypkg.x"\n',
+        '[build]\nsrc_dir = "src"\nentry = "mypkg/__init__.x"\n',
         encoding="utf-8",
     )
-    (src_dir / "mypkg.x").write_text(
+    (src_dir / "mypkg" / "__init__.x").parent.mkdir(
+        parents=True, exist_ok=True
+    )
+    (src_dir / "mypkg" / "__init__.x").write_text(
         "fn hello() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
@@ -1775,7 +1836,7 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
 
     assert src_dir.resolve() in roots
     resolved = resolver._resolve_module_file("mypkg")
-    assert resolved == (src_dir / "mypkg.x").resolve()
+    assert resolved == (src_dir / "mypkg" / "__init__.x").resolve()
 
 
 def test_file_import_resolver_normalizes_relative_imports(
@@ -1795,10 +1856,10 @@ def test_file_import_resolver_normalizes_relative_imports(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg.x"\n',
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
         encoding="utf-8",
     )
-    (src_dir / "samplepkg.x").write_text(
+    (package_dir / "__init__.x").write_text(
         "import helper from .core\n",
         encoding="utf-8",
     )
@@ -1811,7 +1872,9 @@ def test_file_import_resolver_normalizes_relative_imports(
         encoding="utf-8",
     )
 
-    resolver = main_module.FileImportResolver((str(src_dir / "samplepkg.x"),))
+    resolver = main_module.FileImportResolver(
+        (str(package_dir / "__init__.x"),)
+    )
 
     relative_core = irx_astx.ImportFromStmt(
         [irx_astx.AliasExpr("helper")],
