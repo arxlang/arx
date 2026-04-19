@@ -173,9 +173,9 @@ def test_parse_assert_stmt() -> None:
     tree = _parse_module(
         dedent(
             """
-            fn test_ok() -> void:
+            fn test_ok() -> none:
               assert 1 == 1
-              return void
+              return none
             """
         ).lstrip()
     )
@@ -195,9 +195,9 @@ def test_parse_assert_stmt_with_string_message() -> None:
     tree = _parse_module(
         dedent(
             """
-            fn test_ok() -> void:
+            fn test_ok() -> none:
               assert 1 == 1, "still ok"
-              return void
+              return none
             """
         ).lstrip()
     )
@@ -221,9 +221,9 @@ def test_parse_assert_stmt_rejects_non_string_message() -> None:
         _parse_module(
             dedent(
                 """
-                fn test_bad() -> void:
+                fn test_bad() -> none:
                   assert 1 == 1, 42
-                  return void
+                  return none
                 """
             ).lstrip()
         )

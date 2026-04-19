@@ -28,14 +28,14 @@ def _parse(code: str) -> astx.Module:
 
 def test_parse_literal_kinds_and_list_literal() -> None:
     """
-    title: Parse string/char/bool/void and list literals.
+    title: Parse string/char/bool/none and list literals.
     """
     tree = _parse(
         "fn main() -> list[i32]:\n"
         '  var s: str = "abc"\n'
         "  var c: char = 'A'\n"
         "  var b: bool = true\n"
-        "  var n: void = void\n"
+        "  var n: none = none\n"
         "  return [1, 2, 3]\n"
     )
 
@@ -94,10 +94,10 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     title: Loop body semicolons do not eject following statements from blocks.
     """
     tree = _parse(
-        "fn print_star(n: i32) -> void:\n"
+        "fn print_star(n: i32) -> none:\n"
         "  for i in (0:n:1):\n"
         '    print("*");\n'
-        "  return void\n"
+        "  return none\n"
     )
 
     assert len(tree.nodes) == 1
@@ -338,11 +338,11 @@ def test_parse_prototype_requires_explicit_return_type() -> None:
         _parse("fn do_nothing():\n  return\n")
 
 
-def test_parse_bare_return_produces_void_literal() -> None:
+def test_parse_bare_return_produces_none_literal() -> None:
     """
-    title: A bare `return` inside a void function emits LiteralNone.
+    title: A bare `return` inside a none function emits LiteralNone.
     """
-    tree = _parse("fn do_nothing() -> void:\n  return\n")
+    tree = _parse("fn do_nothing() -> none:\n  return\n")
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -353,9 +353,9 @@ def test_parse_bare_return_produces_void_literal() -> None:
 
 def test_parse_function_without_return_statement() -> None:
     """
-    title: A void-returning function may omit the `return` statement.
+    title: A none-returning function may omit the `return` statement.
     """
-    tree = _parse("fn do_nothing() -> void:\n  var x: i32 = 1\n")
+    tree = _parse("fn do_nothing() -> none:\n  var x: i32 = 1\n")
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -364,13 +364,13 @@ def test_parse_function_without_return_statement() -> None:
     assert not isinstance(fn.body.nodes[0], astx.FunctionReturn)
 
 
-def test_parse_explicit_return_void_value() -> None:
+def test_parse_explicit_return_none_value() -> None:
     """
     title: >-
-      Explicit return of the void literal emits FunctionReturn with
+      Explicit return of the none literal emits FunctionReturn with
       LiteralNone.
     """
-    tree = _parse("fn do_nothing() -> void:\n  return void\n")
+    tree = _parse("fn do_nothing() -> none:\n  return none\n")
 
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
@@ -379,9 +379,12 @@ def test_parse_explicit_return_void_value() -> None:
     assert isinstance(ret.value, astx.LiteralNone)
 
 
-def test_parse_none_type_is_no_longer_recognized() -> None:
+def test_parse_none_type_is_recognized() -> None:
     """
-    title: After the rename, ``none`` is no longer a recognized type name.
+    title: The none type name is recognized in function signatures.
     """
-    with pytest.raises(ParserException, match="Unknown type 'none'"):
-        _parse("fn do_nothing() -> none:\n  return\n")
+    tree = _parse("fn do_nothing() -> none:\n  return\n")
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.prototype.return_type, astx.NoneType)

@@ -1185,8 +1185,8 @@ class Parser:
             return self.parse_char_expr()
         if self.tokens.cur_tok.kind == TokenKind.bool_literal:
             return self.parse_bool_expr()
-        if self.tokens.cur_tok.kind == TokenKind.void_literal:
-            return self.parse_void_expr()
+        if self.tokens.cur_tok.kind == TokenKind.none_literal:
+            return self.parse_none_expr()
         if self._is_operator("("):
             return self.parse_paren_expr()
         if self._is_operator("["):
@@ -1460,9 +1460,9 @@ class Parser:
         self.tokens.get_next_token()
         return result
 
-    def parse_void_expr(self) -> astx.LiteralNone:
+    def parse_none_expr(self) -> astx.LiteralNone:
         """
-        title: Parse the void expression.
+        title: Parse the none expression.
         returns:
           type: astx.LiteralNone
         """
@@ -1785,8 +1785,8 @@ class Parser:
         returns:
           type: astx.DataType
         """
-        if self.tokens.cur_tok.kind == TokenKind.void_literal:
-            self.tokens.get_next_token()  # eat void
+        if self.tokens.cur_tok.kind == TokenKind.none_literal:
+            self.tokens.get_next_token()  # eat none
             return astx.NoneType()
 
         if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -1818,7 +1818,7 @@ class Parser:
             "float64": astx.Float64(),
             "bool": astx.Boolean(),
             "boolean": astx.Boolean(),
-            "void": astx.NoneType(),
+            "none": astx.NoneType(),
             "str": astx.String(),
             "string": astx.String(),
             "char": astx.Int8(),

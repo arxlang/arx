@@ -448,8 +448,8 @@ class ArxTestRunner:
         if not isinstance(return_type, astx.NoneType):
             got = type(return_type).__name__
             raise TestRunError(
-                f"test '{name}' must return void (got '{got}'); "
-                f"declare it as `fn {name}() -> void:`."
+                f"test '{name}' must return none (got '{got}'); "
+                f"declare it as `fn {name}() -> none:`."
             )
 
     def _top_level_node_error(self, node: astx.AST) -> str:

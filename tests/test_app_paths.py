@@ -1704,7 +1704,7 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     )
     test_file = tests_dir / "test_mypkg.x"
     test_file.write_text(
-        "fn test_noop() -> void:\n  return\n", encoding="utf-8"
+        "fn test_noop() -> none:\n  return\n", encoding="utf-8"
     )
 
     resolver = main_module.FileImportResolver((str(test_file),))

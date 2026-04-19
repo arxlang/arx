@@ -22,7 +22,7 @@
     ],
     "contextual": ["as", "from"]
   },
-  "literals": [],
+  "literals": ["true", "false", "none"],
   "comment": {
     "line": {
       "delimiters": ["#"]

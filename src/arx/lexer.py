@@ -39,7 +39,7 @@ class TokenKind(Enum):
     string_literal = -13
     char_literal = -14
     bool_literal = -15
-    void_literal = -16
+    none_literal = -16
     docstring = -17
 
     # control flow
@@ -101,7 +101,7 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.string_literal: "string",
     TokenKind.char_literal: "char",
     TokenKind.bool_literal: "bool",
-    TokenKind.void_literal: "void",
+    TokenKind.none_literal: "none",
     TokenKind.docstring: "docstring",
     TokenKind.kw_if: "if",
     TokenKind.kw_then: "then",
@@ -191,7 +191,7 @@ class Token:
             return "(" + str(self.value) + ")"
         elif self.kind == TokenKind.bool_literal:
             return "(" + str(self.value) + ")"
-        elif self.kind == TokenKind.void_literal:
+        elif self.kind == TokenKind.none_literal:
             return ""
         elif self.kind == TokenKind.docstring:
             return "(...)"
@@ -433,9 +433,9 @@ class Lexer:
                     location=self.lex_loc,
                 )
 
-            if identifier == "void":
+            if identifier == "none":
                 return Token(
-                    kind=TokenKind.void_literal,
+                    kind=TokenKind.none_literal,
                     value=None,
                     location=self.lex_loc,
                 )

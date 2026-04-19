@@ -154,14 +154,14 @@ fn get_constant(x: i32) -> i32:
 title: Print star example
 summary: Emits star characters using an external output function.
 ```
-fn print_star(n: i32) -> void:
+fn print_star(n: i32) -> none:
   ```
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
   for i in (0:n:1):
     putchard(42);  # ascii 42 = '*'
-  return void
+  return none
 
 fn main() -> i32:
   ```
@@ -203,10 +203,10 @@ functions follow a simple convention:
 - files: any `test_*.x` under the `tests/` directory by default
 - function names: `test_*`
 - signature: zero arguments
-- return type: `void` (always declared explicitly as `-> void`)
+- return type: `none` (always declared explicitly as `-> none`)
 
-Inside a `void` function you can end with a bare `return`, an explicit
-`return void`, or omit the return statement entirely.
+Inside a `none` function you can end with a bare `return`, an explicit
+`return none`, or omit the return statement entirely.
 
 Example test module:
 
@@ -218,7 +218,7 @@ summary: Demonstrates `assert` and `arx test`.
 fn add(a: i32, b: i32) -> i32:
   return a + b
 
-fn test_add() -> void:
+fn test_add() -> none:
   assert add(1, 2) == 3
   assert add(2, 2) == 4, "add(2, 2) should be 4"
 ````
@@ -348,7 +348,7 @@ fn abs(x: i32) -> i32:
 title: For loop example
 summary: Shows loop syntax with a slice-like range clause.
 ```
-fn count(n: i32) -> void:
+fn count(n: i32) -> none:
   ```
   title: count
   summary: Iterates and prints star characters.
