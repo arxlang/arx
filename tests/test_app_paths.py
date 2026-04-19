@@ -1800,6 +1800,47 @@ def test_arxmain_run_shell_not_implemented() -> None:
         app.run_shell()
 
 
+def test_file_import_resolver_rejects_ambiguous_package_and_module_paths(
+    tmp_path: Path,
+) -> None:
+    """
+    title: >-
+      Resolver rejects specifiers that match both pkg.x and pkg/__init__.x.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "ambiguous"
+    src_dir = project_root / "src"
+    package_dir = src_dir / "samplepkg"
+    package_dir.mkdir(parents=True)
+
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    (src_dir / "samplepkg.x").write_text(
+        "fn flat() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+    (package_dir / "__init__.x").write_text(
+        "fn packaged() -> i32:\n  return 2\n",
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver(
+        (str(package_dir / "__init__.x"),)
+    )
+
+    with pytest.raises(
+        LookupError,
+        match="ambiguous module specifier 'samplepkg'",
+    ):
+        resolver._resolve_module_file("samplepkg")
+
+
 def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     """
     title: FileImportResolver consults [build].src_dir from .arxproject.toml.
@@ -1837,6 +1878,118 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     assert src_dir.resolve() in roots
     resolved = resolver._resolve_module_file("mypkg")
     assert resolved == (src_dir / "mypkg" / "__init__.x").resolve()
+
+
+def test_file_import_resolver_supports_nested_relative_imports(
+    tmp_path: Path,
+) -> None:
+    """
+    title: >-
+      Nested package modules support same-level and parent relative imports.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "samplepkg"
+    src_dir = project_root / "src"
+    package_root = src_dir / "samplepkg"
+    shapes_dir = package_root / "shapes"
+    shared_dir = package_root / "shared"
+    shapes_dir.mkdir(parents=True)
+    shared_dir.mkdir(parents=True)
+
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    (package_root / "__init__.x").write_text(
+        "import area from .shapes.area\n",
+        encoding="utf-8",
+    )
+    (shapes_dir / "mod.x").write_text(
+        "import helper from .sibling\nimport clamp from ..shared.util\n",
+        encoding="utf-8",
+    )
+    (shapes_dir / "sibling.x").write_text(
+        "fn helper() -> i32:\n  return 1\n",
+        encoding="utf-8",
+    )
+    (shared_dir / "util.x").write_text(
+        "fn clamp() -> i32:\n  return 2\n",
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver(
+        (str(package_root / "__init__.x"),)
+    )
+
+    sibling_import = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("helper")],
+        module="sibling",
+        level=1,
+    )
+    resolved_sibling = resolver(
+        "samplepkg.shapes.mod",
+        sibling_import,
+        ".sibling",
+    )
+    assert resolved_sibling.key == "samplepkg.shapes.sibling"
+    assert resolved_sibling.origin is not None
+    assert (
+        Path(resolved_sibling.origin) == (shapes_dir / "sibling.x").resolve()
+    )
+
+    parent_import = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("clamp")],
+        module="shared.util",
+        level=2,
+    )
+    resolved_parent = resolver(
+        "samplepkg.shapes.mod",
+        parent_import,
+        "..shared.util",
+    )
+    assert resolved_parent.key == "samplepkg.shared.util"
+    assert resolved_parent.origin is not None
+    assert Path(resolved_parent.origin) == (shared_dir / "util.x").resolve()
+
+
+def test_file_import_resolver_rejects_top_level_parent_relative_import(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Top-level package modules cannot climb beyond the package root.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    project_root = tmp_path / "samplepkg"
+    src_dir = project_root / "src"
+    package_dir = src_dir / "samplepkg"
+    package_dir.mkdir(parents=True)
+
+    (project_root / ".arxproject.toml").write_text(
+        '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
+        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        encoding="utf-8",
+    )
+    (package_dir / "mod.x").write_text(
+        "import helper from ..shared.util\n",
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver((str(package_dir / "mod.x"),))
+    parent_import = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("helper")],
+        module="shared.util",
+        level=2,
+    )
+
+    with pytest.raises(LookupError, match="top-level package"):
+        resolver("samplepkg.mod", parent_import, "..shared.util")
 
 
 def test_file_import_resolver_normalizes_relative_imports(

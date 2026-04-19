@@ -208,8 +208,11 @@ Example layout:
 ├── src
 │   └── geometry
 │       ├── __init__.x
-│       ├── area.x
-│       └── helpers.x
+│       ├── shared
+│       │   └── math.x
+│       └── shapes
+│           ├── area.x
+│           └── helpers.x
 └── tests
     └── test_area.x
 ```
@@ -231,15 +234,17 @@ entry = "geometry/__init__.x"
 out_dir = "build"
 ```
 
-Use `__init__.x` as the package root, and inside package modules use relative
-`from` imports for nearby modules:
+Use `__init__.x` as the package root. Inside a nested module such as
+`geometry.shapes.area`, use relative `from` imports for nearby modules and
+parent-package modules:
 
 ````arx
 ```
-title: Geometry helpers
+title: Geometry shapes area
 summary: Package-internal import example.
 ```
 import radius_to_diameter from .helpers
+import clamp from ..shared.math
 ````
 
 Outside the package, use absolute dotted imports:
@@ -249,7 +254,7 @@ Outside the package, use absolute dotted imports:
 title: Geometry consumer
 summary: Public import example.
 ```
-import circle_area from geometry.area
+import circle_area from geometry.shapes.area
 ````
 
 Current limitation: plain relative module imports such as `import .area` and

@@ -31,8 +31,11 @@ Example project layout:
 ├── src
 │   └── geometry
 │       ├── __init__.x
-│       ├── area.x
-│       └── helpers.x
+│       ├── shared
+│       │   └── math.x
+│       └── shapes
+│           ├── area.x
+│           └── helpers.x
 └── tests
     └── test_area.x
 ```
@@ -40,8 +43,9 @@ Example project layout:
 With `[build].src_dir = "src"`:
 
 - `src/geometry/__init__.x` is module `geometry`
-- `src/geometry/area.x` is module `geometry.area`
-- `src/geometry/helpers.x` is module `geometry.helpers`
+- `src/geometry/shared/math.x` is module `geometry.shared.math`
+- `src/geometry/shapes/area.x` is module `geometry.shapes.area`
+- `src/geometry/shapes/helpers.x` is module `geometry.shapes.helpers`
 
 Use `__init__.x` as the package entry point, following the same layout idea as
 Python packages.
@@ -49,13 +53,13 @@ Python packages.
 ## Import Syntax
 
 ```arx
-import geometry.area
-import geometry.area as area
+import geometry.shapes.area
+import geometry.shapes.area as area
 
-import circle_area from geometry.area
-import circle_area as area_of_circle from geometry.area
+import circle_area from geometry.shapes.area
+import circle_area as area_of_circle from geometry.shapes.area
 
-import (circle_area, square_area) from geometry.area
+import (circle_area, square_area) from geometry.shapes.area
 
 import radius_to_diameter from .helpers
 import (circle_area, square_area) from .area
@@ -81,12 +85,13 @@ Rules:
 Use absolute dotted paths for public imports across package boundaries:
 
 ```arx
-import circle_area from geometry.area
+import circle_area from geometry.shapes.area
 ```
 
 ### Relative Imports
 
-Use relative `from` imports for package-internal references:
+Use relative `from` imports for package-internal references. For example, inside
+`geometry.shapes.area`:
 
 ```arx
 import radius_to_diameter from .helpers

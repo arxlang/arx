@@ -192,12 +192,20 @@ class FileImportResolver:
         file_candidate = package_path.with_suffix(".x")
         init_candidate = package_path / "__init__.x"
         for root in self._candidate_roots():
-            candidate = root / init_candidate
-            if candidate.is_file():
-                return candidate
-            candidate = root / file_candidate
-            if candidate.is_file():
-                return candidate
+            init_path = (root / init_candidate).resolve()
+            file_path = (root / file_candidate).resolve()
+            has_init = init_path.is_file()
+            has_file = file_path.is_file()
+            if has_init and has_file:
+                raise LookupError(
+                    "ambiguous module specifier "
+                    f"'{requested_specifier}': both "
+                    f"'{file_path}' and '{init_path}' exist"
+                )
+            if has_init:
+                return init_path
+            if has_file:
+                return file_path
         raise LookupError(requested_specifier)
 
     def _current_package_parts(
