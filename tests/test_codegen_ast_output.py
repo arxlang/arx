@@ -68,6 +68,18 @@ from arx.parser import Parser
         ).lstrip(),
         dedent(
             """
+            @<T: i32 | f64>
+            fn add(x: T, y: T) -> T:
+              return x + y
+
+            fn main() -> i32:
+              print(add(1, 2))
+              print(add<f64>(1.0, 2.0))
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
             class BaseCounter:
               @[public, mutable]
               value: int32 = 41

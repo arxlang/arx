@@ -147,6 +147,31 @@ fn get_constant(x: i32) -> i32:
   return x;
 ````
 
+### Template Functions
+
+````arx
+```
+title: Template example
+summary: Demonstrates compile-time specialization with inferred and explicit calls.
+```
+@<T: i32 | f64>
+fn add(x: T, y: T) -> T:
+  ```
+  title: add
+  summary: Adds two values with the same template-bound type.
+  ```
+  return x + y
+
+fn main() -> i32:
+  ```
+  title: main
+  summary: Calls both inferred and explicit template specializations.
+  ```
+  print(add(1, 2))
+  print(add<f64>(1.5, 2.5))
+  return 0
+````
+
 ### Print Star
 
 ````arx

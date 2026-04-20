@@ -188,6 +188,32 @@ def test_get_tok_class_annotation_line() -> None:
         assert lexer.get_token() == token
 
 
+def test_get_tok_template_parameter_block() -> None:
+    """
+    title: Test tokenization for template parameter blocks.
+    """
+    ArxIO.string_to_buffer(
+        "@<T: i32 | f64>\nfn add(value: T) -> T:\n  return value\n"
+    )
+    lexer = Lexer()
+
+    expected = [
+        Token(TokenKind.operator, "@"),
+        Token(TokenKind.operator, "<"),
+        Token(TokenKind.identifier, "T"),
+        Token(TokenKind.operator, ":"),
+        Token(TokenKind.identifier, "i32"),
+        Token(TokenKind.operator, "|"),
+        Token(TokenKind.identifier, "f64"),
+        Token(TokenKind.operator, ">"),
+        Token(TokenKind.kw_function, "fn"),
+        Token(TokenKind.identifier, "add"),
+    ]
+
+    for token in expected:
+        assert lexer.get_token() == token
+
+
 def test_get_tok_multi_char_operators() -> None:
     """
     title: Test tokenization of multi-character operators.

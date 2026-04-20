@@ -4,6 +4,8 @@ title: parser module gather all functions and classes for parsing.
 
 from __future__ import annotations
 
+import copy
+
 from dataclasses import dataclass
 from typing import cast
 
@@ -32,6 +34,27 @@ class ParsedAnnotation:
 
     modifiers: tuple[str, ...]
     loc: SourceLocation
+
+
+@dataclass
+class ParsedDeclarationPrefixes:
+    """
+    title: Parsed declaration prefixes attached to one declaration.
+    attributes:
+      modifiers:
+        type: ParsedAnnotation | None
+      template_params:
+        type: tuple[astx.TemplateParam, Ellipsis]
+      loc:
+        type: SourceLocation | None
+      description:
+        type: str
+    """
+
+    modifiers: ParsedAnnotation | None = None
+    template_params: tuple[astx.TemplateParam, ...] = ()
+    loc: SourceLocation | None = None
+    description: str = "declaration prefix"
 
 
 SUPPORTED_MODIFIERS = frozenset(
@@ -81,6 +104,8 @@ class Parser:
         type: int
       known_class_names:
         type: set[str]
+      template_type_scopes:
+        type: list[dict[str, astx.DataType]]
       value_scopes:
         type: list[set[str]]
       tokens:
@@ -90,6 +115,7 @@ class Parser:
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
+    template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList
 
@@ -119,6 +145,7 @@ class Parser:
         }
         self.indent_level = 0
         self.known_class_names = set()
+        self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = tokens
 
@@ -128,6 +155,7 @@ class Parser:
         """
         self.indent_level = 0
         self.known_class_names = set()
+        self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = TokenList([])
 
@@ -184,23 +212,38 @@ class Parser:
                 continue
 
             if self._is_operator("@"):
-                annotations = self.parse_modifier_list()
-                if cast(TokenKind, self.tokens.cur_tok.kind) == TokenKind.eof:
+                prefixes = self.parse_declaration_prefixes()
+                if self.tokens.cur_tok.kind == TokenKind.kw_class:
+                    if prefixes.template_params:
+                        raise ParserException(
+                            "template parameter blocks are only allowed "
+                            "before functions or methods"
+                        )
+                    tree.nodes.append(
+                        self.parse_class_decl(prefixes.modifiers)
+                    )
+                    allow_module_docstring = False
+                    continue
+
+                if prefixes.modifiers is not None:
                     raise ParserException(
                         "annotation must be followed by a declaration"
                     )
-                if self.tokens.cur_tok.location.line == annotations.loc.line:
-                    raise ParserException(
-                        "annotation must appear on its own line "
-                        "before a declaration"
+                if prefixes.template_params:
+                    if self.tokens.cur_tok.kind != TokenKind.kw_function:
+                        raise ParserException(
+                            "template parameter blocks are only allowed "
+                            "before functions or methods"
+                        )
+                    tree.nodes.append(
+                        self.parse_function(prefixes.template_params)
                     )
-                if self.tokens.cur_tok.kind != TokenKind.kw_class:
-                    raise ParserException(
-                        "annotation must be followed by a declaration"
-                    )
-                tree.nodes.append(self.parse_class_decl(annotations))
-                allow_module_docstring = False
-                continue
+                    allow_module_docstring = False
+                    continue
+
+                raise ParserException(
+                    "annotation must be followed by a declaration"
+                )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_import:
                 tree.nodes.append(self.parse_import_stmt())
@@ -264,6 +307,44 @@ class Parser:
           type: bool
         """
         return any(name in scope for scope in reversed(self.value_scopes))
+
+    def _push_template_scope(
+        self,
+        template_params: tuple[astx.TemplateParam, ...] = (),
+    ) -> None:
+        """
+        title: Push one template-type scope.
+        parameters:
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
+        """
+        self.template_type_scopes.append(
+            {
+                param.name: copy.deepcopy(param.bound)
+                for param in template_params
+            }
+        )
+
+    def _pop_template_scope(self) -> None:
+        """
+        title: Pop the most recent template-type scope.
+        """
+        self.template_type_scopes.pop()
+
+    def _lookup_template_bound(self, name: str) -> astx.DataType | None:
+        """
+        title: Look up one visible template-type bound by name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: astx.DataType | None
+        """
+        for scope in reversed(self.template_type_scopes):
+            bound = scope.get(name)
+            if bound is not None:
+                return copy.deepcopy(bound)
+        return None
 
     def _collect_class_names(self, tokens: TokenList) -> set[str]:
         """
@@ -360,6 +441,108 @@ class Parser:
         while self.tokens.cur_tok.kind == TokenKind.indent:
             self.tokens.get_next_token()
 
+    def _skip_template_layout(self) -> None:
+        """
+        title: Consume indentation tokens used only inside template blocks.
+        """
+        while self.tokens.cur_tok.kind == TokenKind.indent:
+            self.tokens.get_next_token()
+
+    def _peek_token(self, offset: int = 0) -> Token:
+        """
+        title: Peek one token ahead without consuming it.
+        parameters:
+          offset:
+            type: int
+        returns:
+          type: Token
+        """
+        index = self.tokens.position + offset
+        if index >= len(self.tokens.tokens):
+            return Token(TokenKind.eof, "")
+        return self.tokens.tokens[index]
+
+    def _token_starts_expression(self, token: Token) -> bool:
+        """
+        title: Return whether one token can start an expression.
+        parameters:
+          token:
+            type: Token
+        returns:
+          type: bool
+        """
+        if token.kind in {
+            TokenKind.identifier,
+            TokenKind.int_literal,
+            TokenKind.float_literal,
+            TokenKind.string_literal,
+            TokenKind.char_literal,
+            TokenKind.bool_literal,
+            TokenKind.none_literal,
+            TokenKind.kw_if,
+            TokenKind.kw_while,
+            TokenKind.kw_for,
+            TokenKind.kw_var,
+            TokenKind.kw_assert,
+            TokenKind.kw_return,
+        }:
+            return True
+
+        return token.kind == TokenKind.operator and token.value in {
+            "(",
+            "[",
+            "+",
+            "-",
+            "!",
+            "++",
+            "--",
+            ";",
+        }
+
+    def _lookahead_template_argument_call(
+        self,
+    ) -> tuple[tuple[astx.DataType, ...], Token] | None:
+        """
+        title: Speculatively parse one explicit template-argument list.
+        returns:
+          type: tuple[tuple[astx.DataType, Ellipsis], Token] | None
+        """
+        if not self._is_operator("<"):
+            return None
+
+        saved_position = self.tokens.position
+        saved_token = self.tokens.cur_tok
+        try:
+            template_args = self.parse_template_argument_list()
+            return template_args, self.tokens.cur_tok
+        except ParserException:
+            return None
+        finally:
+            self.tokens.position = saved_position
+            self.tokens.cur_tok = saved_token
+
+    def _parse_template_args_for_call(
+        self,
+    ) -> tuple[astx.DataType, ...] | None:
+        """
+        title: Parse explicit template arguments only for call syntax.
+        returns:
+          type: tuple[astx.DataType, Ellipsis] | None
+        """
+        lookahead = self._lookahead_template_argument_call()
+        if lookahead is None:
+            return None
+
+        _, follow_token = lookahead
+        if follow_token != Token(TokenKind.operator, "("):
+            if self._token_starts_expression(follow_token):
+                return None
+            raise ParserException(
+                "explicit template arguments are only allowed on call "
+                "expressions"
+            )
+        return self.parse_template_argument_list()
+
     def get_tok_precedence(self) -> int:
         """
         title: Get the precedence of the pending binary operator token.
@@ -368,19 +551,35 @@ class Parser:
         """
         return self.bin_op_precedence.get(self.tokens.cur_tok.value, -1)
 
-    def parse_function(self) -> astx.FunctionDef:
+    def parse_function(
+        self,
+        template_params: tuple[astx.TemplateParam, ...] = (),
+    ) -> astx.FunctionDef:
         """
         title: Parse the function definition expression.
+        parameters:
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
         returns:
           type: astx.FunctionDef
         """
         self.tokens.get_next_token()  # eat fn
-        proto = self.parse_prototype(expect_colon=True)
-        body = self.parse_block(
-            allow_docstring=True,
-            declared_names=tuple(arg.name for arg in proto.args.nodes),
-        )
-        return astx.FunctionDef(proto, body)
+        self._push_template_scope(template_params)
+        try:
+            proto = self.parse_prototype(expect_colon=True)
+            if template_params:
+                astx.set_template_params(proto, template_params)
+            body = self.parse_block(
+                allow_docstring=True,
+                declared_names=tuple(arg.name for arg in proto.args.nodes),
+            )
+        finally:
+            self._pop_template_scope()
+
+        function = astx.FunctionDef(proto, body)
+        if template_params:
+            astx.set_template_params(function, template_params)
+        return function
 
     def parse_extern(self) -> astx.FunctionPrototype:
         """
@@ -681,30 +880,11 @@ class Parser:
                 self.tokens.get_next_token()
                 continue
 
-            modifiers: ParsedAnnotation | None = None
+            prefixes = ParsedDeclarationPrefixes()
             if self._is_operator("@"):
-                modifiers = self.parse_modifier_list()
-                if cast(TokenKind, self.tokens.cur_tok.kind) == TokenKind.eof:
-                    raise ParserException(
-                        "annotation must be followed by a declaration"
-                    )
-                if self.tokens.cur_tok.location.line == modifiers.loc.line:
-                    raise ParserException(
-                        "annotation must appear on its own line "
-                        "before a declaration"
-                    )
-                if (
-                    cast(TokenKind, self.tokens.cur_tok.kind)
-                    == TokenKind.indent
-                ):
-                    next_indent = self.tokens.cur_tok.value
-                    if next_indent < cur_indent:
-                        raise ParserException(
-                            "annotation must be followed by a declaration"
-                        )
-                    if next_indent > cur_indent:
-                        raise ParserException("Indentation not allowed here.")
-                    self.tokens.get_next_token()
+                prefixes = self.parse_declaration_prefixes(
+                    body_indent=cur_indent
+                )
 
             if self.tokens.cur_tok.kind == TokenKind.docstring:
                 raise ParserException(
@@ -712,13 +892,28 @@ class Parser:
                 )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
-                methods.append(self.parse_method_decl(modifiers))
+                methods.append(
+                    self.parse_method_decl(
+                        prefixes.modifiers,
+                        prefixes.template_params,
+                    )
+                )
             elif self.tokens.cur_tok.kind == TokenKind.identifier:
-                attributes.append(self.parse_field_decl(modifiers))
+                if prefixes.template_params:
+                    raise ParserException(
+                        "template parameter blocks are only allowed "
+                        "before functions or methods"
+                    )
+                attributes.append(self.parse_field_decl(prefixes.modifiers))
             else:
-                if modifiers is not None:
+                if prefixes.modifiers is not None:
                     raise ParserException(
                         "annotation must be followed by a declaration"
+                    )
+                if prefixes.template_params:
+                    raise ParserException(
+                        "template parameter blocks are only allowed "
+                        "before functions or methods"
                     )
                 raise ParserException(
                     "Expected a field or method declaration in class body."
@@ -785,12 +980,15 @@ class Parser:
     def parse_method_decl(
         self,
         modifiers: ParsedAnnotation | None = None,
+        template_params: tuple[astx.TemplateParam, ...] = (),
     ) -> astx.FunctionDef:
         """
         title: Parse one class method declaration.
         parameters:
           modifiers:
             type: ParsedAnnotation | None
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
         returns:
           type: astx.FunctionDef
         """
@@ -800,38 +998,54 @@ class Parser:
         )
         self.tokens.get_next_token()  # eat fn
 
-        is_static = self._has_modifier(modifiers, "static")
-        prototype, receiver_name = self.parse_method_signature(
-            allow_receiver=not is_static
-        )
-        prototype.visibility = self._resolve_visibility(modifiers)
-
-        declared_names = tuple(arg.name for arg in prototype.args.nodes)
-        if receiver_name is not None:
-            declared_names = (receiver_name, *declared_names)
-
-        if self._is_operator(":"):
-            if self._has_modifier(modifiers, "abstract"):
-                raise ParserException("abstract method cannot define a body")
-            if self._has_modifier(modifiers, "extern"):
-                raise ParserException("extern method cannot define a body")
-            self._consume_operator(":")
-            body = self.parse_block(
-                allow_docstring=True,
-                declared_names=declared_names,
-            )
-        elif not (
+        if template_params and (
             self._has_modifier(modifiers, "abstract")
             or self._has_modifier(modifiers, "extern")
         ):
-            raise ParserException(
-                "method declaration without a body requires "
-                "'abstract' or 'extern'"
+            raise ParserException("template methods must define a body")
+
+        is_static = self._has_modifier(modifiers, "static")
+        self._push_template_scope(template_params)
+        try:
+            prototype, receiver_name = self.parse_method_signature(
+                allow_receiver=not is_static
             )
-        else:
-            body = astx.Block()
+            if template_params:
+                astx.set_template_params(prototype, template_params)
+            prototype.visibility = self._resolve_visibility(modifiers)
+
+            declared_names = tuple(arg.name for arg in prototype.args.nodes)
+            if receiver_name is not None:
+                declared_names = (receiver_name, *declared_names)
+
+            if self._is_operator(":"):
+                if self._has_modifier(modifiers, "abstract"):
+                    raise ParserException(
+                        "abstract method cannot define a body"
+                    )
+                if self._has_modifier(modifiers, "extern"):
+                    raise ParserException("extern method cannot define a body")
+                self._consume_operator(":")
+                body = self.parse_block(
+                    allow_docstring=True,
+                    declared_names=declared_names,
+                )
+            elif not (
+                self._has_modifier(modifiers, "abstract")
+                or self._has_modifier(modifiers, "extern")
+            ):
+                raise ParserException(
+                    "method declaration without a body requires "
+                    "'abstract' or 'extern'"
+                )
+            else:
+                body = astx.Block()
+        finally:
+            self._pop_template_scope()
 
         method = astx.FunctionDef(prototype, body, loc=method_loc)
+        if template_params:
+            astx.set_template_params(method, template_params)
         self._apply_method_modifiers(method, modifiers)
         return method
 
@@ -919,6 +1133,180 @@ class Parser:
             ),
             implicit_receiver_name,
         )
+
+    def parse_declaration_prefixes(
+        self,
+        *,
+        body_indent: int | None = None,
+    ) -> ParsedDeclarationPrefixes:
+        """
+        title: Parse declaration prefixes that precede one declaration.
+        parameters:
+          body_indent:
+            type: int | None
+        returns:
+          type: ParsedDeclarationPrefixes
+        """
+        prefixes = ParsedDeclarationPrefixes()
+
+        while self._is_operator("@"):
+            prefix = self.parse_declaration_prefix()
+            if prefix.modifiers is not None:
+                if prefixes.modifiers is not None:
+                    raise ParserException("duplicate annotation block")
+                prefixes.modifiers = prefix.modifiers
+            if prefix.template_params:
+                if prefixes.template_params:
+                    raise ParserException("duplicate template parameter block")
+                prefixes.template_params = prefix.template_params
+
+            prefixes.loc = prefix.loc
+            prefixes.description = prefix.description
+
+            if self.tokens.cur_tok.kind == TokenKind.eof:
+                raise ParserException(
+                    f"{prefix.description} must be followed by a declaration"
+                )
+            if prefix.loc is not None and (
+                self.tokens.cur_tok.location.line == prefix.loc.line
+            ):
+                raise ParserException(
+                    f"{prefix.description} must appear on its own line "
+                    "before a declaration"
+                )
+
+            if body_indent is None or (
+                self.tokens.cur_tok.kind != TokenKind.indent
+            ):
+                continue
+
+            next_indent = self.tokens.cur_tok.value
+            if next_indent < body_indent:
+                raise ParserException(
+                    f"{prefix.description} must be followed by a declaration"
+                )
+            if next_indent > body_indent:
+                raise ParserException("Indentation not allowed here.")
+            self.tokens.get_next_token()
+
+        return prefixes
+
+    def parse_declaration_prefix(self) -> ParsedDeclarationPrefixes:
+        """
+        title: Parse one declaration prefix.
+        returns:
+          type: ParsedDeclarationPrefixes
+        """
+        next_token = self._peek_token()
+        if next_token == Token(TokenKind.operator, "["):
+            annotation = self.parse_modifier_list()
+            return ParsedDeclarationPrefixes(
+                modifiers=annotation,
+                loc=annotation.loc,
+                description="annotation",
+            )
+
+        if next_token == Token(TokenKind.operator, "<"):
+            template_loc = self.tokens.cur_tok.location
+            return ParsedDeclarationPrefixes(
+                template_params=self.parse_template_param_block(),
+                loc=template_loc,
+                description="template parameter block",
+            )
+
+        raise ParserException("Expected '[' or '<' after '@'.")
+
+    def parse_template_param_block(
+        self,
+    ) -> tuple[astx.TemplateParam, ...]:
+        """
+        title: Parse one template-parameter block.
+        returns:
+          type: tuple[astx.TemplateParam, Ellipsis]
+        """
+        self._consume_operator("@")
+        self._consume_operator("<")
+        self._skip_template_layout()
+
+        if self._is_operator(">"):
+            raise ParserException(
+                "empty template parameter block is not allowed"
+            )
+
+        template_params: list[astx.TemplateParam] = []
+        seen_names: set[str] = set()
+        while True:
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Parser: Expected template parameter name."
+                )
+
+            param_name = cast(str, self.tokens.cur_tok.value)
+            param_loc = self.tokens.cur_tok.location
+            if param_name in seen_names:
+                raise ParserException(
+                    f"duplicate template parameter '{param_name}'"
+                )
+            seen_names.add(param_name)
+            self.tokens.get_next_token()
+
+            if not self._is_operator(":"):
+                raise ParserException(
+                    f"template parameter '{param_name}' must declare a bound"
+                )
+
+            self._consume_operator(":")
+            bound = self.parse_type(
+                allow_template_vars=False,
+                allow_union=True,
+            )
+            template_params.append(
+                astx.TemplateParam(param_name, bound, loc=param_loc)
+            )
+
+            self._skip_template_layout()
+            if self._is_operator(">"):
+                break
+
+            self._consume_operator(",")
+            self._skip_template_layout()
+            if self._is_operator(">"):
+                break
+
+        self._consume_operator(">")
+        return tuple(template_params)
+
+    def parse_template_argument_list(
+        self,
+    ) -> tuple[astx.DataType, ...]:
+        """
+        title: Parse one explicit template-argument list.
+        returns:
+          type: tuple[astx.DataType, Ellipsis]
+        """
+        self._consume_operator("<")
+
+        if self._is_operator(">"):
+            raise ParserException(
+                "empty template argument list is not allowed"
+            )
+
+        template_args: list[astx.DataType] = []
+        while True:
+            template_args.append(
+                self.parse_type(
+                    allow_template_vars=False,
+                    allow_union=False,
+                )
+            )
+
+            if self._is_operator(">"):
+                break
+
+            self._consume_operator(",")
+
+        self._consume_operator(">")
+        return tuple(template_args)
 
     def parse_modifier_list(self) -> ParsedAnnotation:
         """
@@ -1183,7 +1571,7 @@ class Parser:
         """
         if self._is_operator("@"):
             raise ParserException(
-                "Annotations are only allowed before declarations."
+                "Declaration prefixes are only allowed before declarations."
             )
         if self.tokens.cur_tok.kind == TokenKind.kw_class:
             raise ParserException(
@@ -1238,7 +1626,8 @@ class Parser:
             "Parser: Unknown token when expecting an expression: "
             f"'{self.tokens.cur_tok.get_name()}'."
         )
-        self.tokens.get_next_token()
+        if self.tokens.cur_tok.kind != TokenKind.eof:
+            self.tokens.get_next_token()
         raise ParserException(msg)
 
     def parse_postfix(self) -> astx.AST:
@@ -1259,6 +1648,8 @@ class Parser:
 
             member_name = cast(str, self.tokens.cur_tok.value)
             self.tokens.get_next_token()
+
+            template_args = self._parse_template_args_for_call()
 
             if self._is_operator("("):
                 self._consume_operator("(")
@@ -1288,6 +1679,8 @@ class Parser:
                         member_name,
                         args,
                     )
+                if template_args is not None:
+                    astx.set_template_args(expr, template_args)
                 continue
 
             class_name = self._class_name_from_expr(expr)
@@ -1539,12 +1932,18 @@ class Parser:
 
         self.tokens.get_next_token()  # eat identifier
 
+        template_args = self._parse_template_args_for_call()
+
         if not self._is_operator("("):
             return astx.Identifier(id_name, loc=id_loc)
 
         self._consume_operator("(")
 
         if id_name == builtins.BUILTIN_CAST:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
             value_expr = self.parse_expression()
             self._consume_operator(",")
             target_type = self.parse_type()
@@ -1554,11 +1953,19 @@ class Parser:
             )
 
         if id_name == builtins.BUILTIN_PRINT:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
             message = self.parse_expression()
             self._consume_operator(")")
             return builtins.build_print(cast(astx.Expr, message))
 
         if id_name in {"datetime", "timestamp"}:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
             arg = self.parse_expression()
             self._consume_operator(")")
             if not isinstance(arg, astx.LiteralString):
@@ -1583,12 +1990,20 @@ class Parser:
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name
         ):
+            if template_args is not None:
+                raise ParserException(
+                    "class construction does not accept template arguments"
+                )
             if args:
                 raise ParserException(
                     "class construction does not accept arguments"
                 )
             return astx.ClassConstruct(id_name)
-        return astx.FunctionCall(id_name, args, loc=id_loc)
+
+        call = astx.FunctionCall(id_name, args, loc=id_loc)
+        if template_args is not None:
+            astx.set_template_args(call, template_args)
+        return call
 
     def parse_for_stmt(self) -> astx.AST:
         """
@@ -1799,61 +2214,100 @@ class Parser:
             f"An explicit initializer is required."
         )
 
-    def parse_type(self) -> astx.DataType:
+    def parse_type(
+        self,
+        *,
+        allow_template_vars: bool = True,
+        allow_union: bool = False,
+    ) -> astx.DataType:
         """
         title: Parse a type annotation.
+        parameters:
+          allow_template_vars:
+            type: bool
+          allow_union:
+            type: bool
         returns:
           type: astx.DataType
         """
         if self.tokens.cur_tok.kind == TokenKind.none_literal:
             self.tokens.get_next_token()  # eat none
-            return astx.NoneType()
+            type_: astx.DataType = astx.NoneType()
+        else:
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException("Parser: Expected a type name")
 
-        if self.tokens.cur_tok.kind != TokenKind.identifier:
-            raise ParserException("Parser: Expected a type name")
+            type_name = cast(str, self.tokens.cur_tok.value)
+            template_bound = None
+            if allow_template_vars:
+                template_bound = self._lookup_template_bound(type_name)
 
-        type_name = cast(str, self.tokens.cur_tok.value)
+            if type_name == "list":
+                self.tokens.get_next_token()  # eat list
+                self._consume_operator("[")
+                elem_type = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=allow_union,
+                )
+                self._consume_operator("]")
+                type_ = astx.ListType([cast(astx.ExprType, elem_type)])
+            else:
+                type_map: dict[str, astx.DataType] = {
+                    "i8": astx.Int8(),
+                    "i16": astx.Int16(),
+                    "i32": astx.Int32(),
+                    "i64": astx.Int64(),
+                    "int8": astx.Int8(),
+                    "int16": astx.Int16(),
+                    "int32": astx.Int32(),
+                    "int64": astx.Int64(),
+                    "f16": astx.Float16(),
+                    "f32": astx.Float32(),
+                    "f64": astx.Float64(),
+                    "float16": astx.Float16(),
+                    "float32": astx.Float32(),
+                    "float64": astx.Float64(),
+                    "bool": astx.Boolean(),
+                    "boolean": astx.Boolean(),
+                    "none": astx.NoneType(),
+                    "str": astx.String(),
+                    "string": astx.String(),
+                    "char": astx.Int8(),
+                    "datetime": astx.DateTime(),
+                    "timestamp": astx.Timestamp(),
+                    "date": astx.Date(),
+                    "time": astx.Time(),
+                }
 
-        if type_name == "list":
-            self.tokens.get_next_token()  # eat list
-            self._consume_operator("[")
-            elem_type = self.parse_type()
-            self._consume_operator("]")
-            return astx.ListType([cast(astx.ExprType, elem_type)])
+                self.tokens.get_next_token()  # eat type identifier
+                if type_name in type_map:
+                    type_ = type_map[type_name]
+                elif template_bound is not None:
+                    type_ = astx.TemplateTypeVar(
+                        type_name,
+                        bound=template_bound,
+                    )
+                elif type_name in self.known_class_names:
+                    type_ = astx.ClassType(type_name)
+                else:
+                    raise ParserException(
+                        f"Parser: Unknown type '{type_name}'."
+                    )
 
-        type_map: dict[str, astx.DataType] = {
-            "i8": astx.Int8(),
-            "i16": astx.Int16(),
-            "i32": astx.Int32(),
-            "i64": astx.Int64(),
-            "int8": astx.Int8(),
-            "int16": astx.Int16(),
-            "int32": astx.Int32(),
-            "int64": astx.Int64(),
-            "f16": astx.Float16(),
-            "f32": astx.Float32(),
-            "f64": astx.Float64(),
-            "float16": astx.Float16(),
-            "float32": astx.Float32(),
-            "float64": astx.Float64(),
-            "bool": astx.Boolean(),
-            "boolean": astx.Boolean(),
-            "none": astx.NoneType(),
-            "str": astx.String(),
-            "string": astx.String(),
-            "char": astx.Int8(),
-            "datetime": astx.DateTime(),
-            "timestamp": astx.Timestamp(),
-            "date": astx.Date(),
-            "time": astx.Time(),
-        }
+        if not allow_union or not self._is_operator("|"):
+            return type_
 
-        self.tokens.get_next_token()  # eat type identifier
-        if type_name in type_map:
-            return type_map[type_name]
-        if type_name in self.known_class_names:
-            return astx.ClassType(type_name)
-        raise ParserException(f"Parser: Unknown type '{type_name}'.")
+        members = [type_]
+        while self._is_operator("|"):
+            self._consume_operator("|")
+            members.append(
+                self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=False,
+                )
+            )
+
+        return astx.UnionType(members)
 
     def parse_unary(self) -> astx.AST:
         """
@@ -1863,7 +2317,7 @@ class Parser:
         """
         if self._is_operator("@"):
             raise ParserException(
-                "Annotations are only allowed before declarations."
+                "Declaration prefixes are only allowed before declarations."
             )
 
         if (

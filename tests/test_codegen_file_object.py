@@ -269,6 +269,51 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
     assert result.stderr == ""
 
 
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_template_program_builds_and_runs(tmp_path: Path) -> None:
+    """
+    title: Template calls should survive full build and execution.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    module_ast = _parse_min_module(
+        dedent(
+            """
+            @<T: i32 | f64>
+            fn add(lhs: T, rhs: T) -> T:
+              return lhs + rhs
+
+            class Math:
+              @[public, static]
+              @<T: i32 | f64>
+              fn identity(value: T) -> T:
+                return value
+
+            fn main() -> int32:
+              var inferred: int32 = add(1, 2)
+              var explicit: int32 = add<int32>(3, 4)
+              var static_value: int32 = Math.identity<int32>(5)
+              return inferred + explicit + static_value
+            """
+        ).lstrip()
+    )
+
+    bin_path = tmp_path / "template_program"
+    ArxBuilder().build(module_ast, str(bin_path))
+
+    result = subprocess.run(
+        [str(bin_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 15
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
 def test_build_without_link_writes_object_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
