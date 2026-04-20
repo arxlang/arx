@@ -2240,11 +2240,10 @@ as dotted package modules.</p>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry&quot;</span>
 
 <span class="k">[build]</span>
-<span class="n">src_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src&quot;</span>
-<span class="n">entry</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry/__init__.x&quot;</span>
 <span class="n">out_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;build&quot;</span>
 </code></pre></div>
-<p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package root. Inside a nested module such as
+<p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package root. Arx uses <code class="language-python highlight"><span class="n">src</span><span class="o">/</span></code> as the default source root
+when <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code> is omitted. Inside a nested module such as
 <code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">area</span></code>, use relative <code class="language-python highlight"><span class="kn">from</span></code> imports for nearby modules and
 parent-package modules:</p>
 <div class="language-text highlight"><pre><span></span><code>```

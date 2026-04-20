@@ -1632,8 +1632,9 @@ fn average(x: f32, y: f32) -&gt; f32:
   return (x + y) * 0.5
 </code></pre></div>
 <h2 id="package-layout">Package Layout<a class="headerlink" href="#package-layout" title="Permanent link">&para;</a></h2>
-<p>When a project declares <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code>, Arx treats files under that source
-root as package modules addressed by dotted names.</p>
+<p>When a project uses the default <code class="language-python highlight"><span class="n">src</span><span class="o">/</span></code> source root, or declares
+<code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code>, Arx treats files under that source root as package modules
+addressed by dotted names.</p>
 <p>Example project layout:</p>
 <div class="language-text highlight"><pre><span></span><code>.
 ├── .arxproject.toml
@@ -1648,15 +1649,15 @@ root as package modules addressed by dotted names.</p>
 └── tests
     └── test_area.x
 </code></pre></div>
-<p>With <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span> <span class="o">=</span> <span class="s2">&quot;src&quot;</span></code>:</p>
+<p>With the default <code class="language-python highlight"><span class="n">src</span><span class="o">/</span></code> source root:</p>
 <ul>
 <li><code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">geometry</span><span class="o">/</span><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> is module <code class="language-python highlight"><span class="n">geometry</span></code></li>
 <li><code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">geometry</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">math</span><span class="o">.</span><span class="n">x</span></code> is module <code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shared</span><span class="o">.</span><span class="n">math</span></code></li>
 <li><code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">geometry</span><span class="o">/</span><span class="n">shapes</span><span class="o">/</span><span class="n">area</span><span class="o">.</span><span class="n">x</span></code> is module <code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">area</span></code></li>
 <li><code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">geometry</span><span class="o">/</span><span class="n">shapes</span><span class="o">/</span><span class="n">helpers</span><span class="o">.</span><span class="n">x</span></code> is module <code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">helpers</span></code></li>
 </ul>
-<p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package entry point, following the same layout idea as
-Python packages.</p>
+<p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package root, following the same layout idea as Python
+packages.</p>
 <h2 id="import-syntax">Import Syntax<a class="headerlink" href="#import-syntax" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code>import geometry.shapes.area
 import geometry.shapes.area as area
