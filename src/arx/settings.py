@@ -27,6 +27,7 @@ _DEPENDENCY_PATTERN = re.compile(
 )
 _DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _DEPENDENCY_GROUP_NORMALIZE_PATTERN = re.compile(r"[-_.]+")
+_DEFAULT_SRC_DIR = "src"
 
 
 class ArxProjectError(Exception):
@@ -120,15 +121,18 @@ class Build:
     attributes:
       src_dir:
         type: str | None
-      entry:
+      package:
         type: str | None
       out_dir:
+        type: str | None
+      mode:
         type: str | None
     """
 
     src_dir: str | None = None
-    entry: str | None = None
+    package: str | None = None
     out_dir: str | None = None
+    mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -335,6 +339,38 @@ def _build_tests(data: dict[str, Any] | None) -> Tests | None:
         file_pattern=data.get("file_pattern"),
         function_pattern=data.get("function_pattern"),
     )
+
+
+def _resolved_src_dir(build: Build | None) -> str:
+    """
+    title: Resolve the effective source directory for one project.
+    parameters:
+      build:
+        type: Build | None
+    returns:
+      type: str
+    """
+    if build is None or build.src_dir is None:
+        return _DEFAULT_SRC_DIR
+    return build.src_dir
+
+
+def resolve_source_root(project: ArxProject) -> Path:
+    """
+    title: Resolve the effective source root from manifest defaults.
+    parameters:
+      project:
+        type: ArxProject
+    returns:
+      type: Path
+    """
+    if project.source_path is None:
+        raise ArxProjectError(
+            "cannot resolve the project source root without a manifest path"
+        )
+    return (
+        project.source_path.parent / _resolved_src_dir(project.build)
+    ).resolve()
 
 
 def _reject_arxpm_sections(data: dict[str, Any]) -> None:
@@ -781,10 +817,12 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
         build: dict[str, Any] = {}
         if settings.build.src_dir is not None:
             build["src_dir"] = settings.build.src_dir
-        if settings.build.entry is not None:
-            build["entry"] = settings.build.entry
+        if settings.build.package is not None:
+            build["package"] = settings.build.package
         if settings.build.out_dir is not None:
             build["out_dir"] = settings.build.out_dir
+        if settings.build.mode is not None:
+            build["mode"] = settings.build.mode
         data["build"] = build
 
     if settings.toolchain is not None:
@@ -960,10 +998,12 @@ def _append_build(lines: list[str], build: Build | None) -> None:
     lines.extend(("", "[build]"))
     if build.src_dir is not None:
         lines.append(f"src_dir = {_format_toml_string(build.src_dir)}")
-    if build.entry is not None:
-        lines.append(f"entry = {_format_toml_string(build.entry)}")
+    if build.package is not None:
+        lines.append(f"package = {_format_toml_string(build.package)}")
     if build.out_dir is not None:
         lines.append(f"out_dir = {_format_toml_string(build.out_dir)}")
+    if build.mode is not None:
+        lines.append(f"mode = {_format_toml_string(build.mode)}")
 
 
 def _append_toolchain(

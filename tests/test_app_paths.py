@@ -745,8 +745,7 @@ def test_main_module_name_helper_uses_package_init_module_name(
     module_file.parent.mkdir(parents=True)
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
-        '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[environment]\nkind = "conda"\nname = "samplepkg"\n',
         encoding="utf-8",
     )
     module_file.write_text(
@@ -775,7 +774,7 @@ def test_main_module_name_helper_uses_src_relative_package_name(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     module_file.write_text(
@@ -830,7 +829,7 @@ def test_arxmain_get_astx_uses_package_init_module_name(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     src.write_text(
@@ -859,7 +858,7 @@ def test_arxmain_get_astx_uses_src_relative_module_name(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     src.write_text(
@@ -1818,7 +1817,7 @@ def test_file_import_resolver_rejects_ambiguous_package_and_module_paths(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     (src_dir / "samplepkg.x").write_text(
@@ -1849,7 +1848,7 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
         type: Path
     """
     project_root = tmp_path / "mypkg"
-    src_dir = project_root / "src"
+    src_dir = project_root / "sources"
     tests_dir = project_root / "tests"
     src_dir.mkdir(parents=True)
     tests_dir.mkdir()
@@ -1857,7 +1856,7 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "mypkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "mypkg/__init__.x"\n',
+        '[build]\nsrc_dir = "sources"\n\n',
         encoding="utf-8",
     )
     (src_dir / "mypkg" / "__init__.x").parent.mkdir(
@@ -1901,7 +1900,7 @@ def test_file_import_resolver_supports_nested_relative_imports(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     (package_root / "__init__.x").write_text(
@@ -1973,7 +1972,7 @@ def test_file_import_resolver_rejects_top_level_parent_relative_import(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     (package_dir / "mod.x").write_text(
@@ -2009,7 +2008,7 @@ def test_file_import_resolver_normalizes_relative_imports(
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     (package_dir / "__init__.x").write_text(

@@ -229,12 +229,11 @@ kind = "conda"
 name = "geometry"
 
 [build]
-src_dir = "src"
-entry = "geometry/__init__.x"
 out_dir = "build"
 ```
 
-Use `__init__.x` as the package root. Inside a nested module such as
+Use `__init__.x` as the package root. Arx uses `src/` as the default source root
+when `[build].src_dir` is omitted. Inside a nested module such as
 `geometry.shapes.area`, use relative `from` imports for nearby modules and
 parent-package modules:
 
