@@ -176,6 +176,18 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
             "template parameter blocks are only allowed "
             "before functions or methods",
         ),
+        (
+            "fn main() -> i32:\n  foo<i32>\n",
+            "explicit template arguments are only allowed on call expressions",
+        ),
+        (
+            "fn main() -> i32:\n  value.method<i32>\n",
+            "explicit template arguments are only allowed on call expressions",
+        ),
+        (
+            "fn main() -> i32:\n  Math.identity<f64>\n",
+            "explicit template arguments are only allowed on call expressions",
+        ),
     ],
 )
 def test_parse_template_error_paths(code: str, expected: str) -> None:
@@ -211,3 +223,11 @@ def test_parse_class_construction_rejects_template_arguments() -> None:
                 """
             ).lstrip()
         )
+
+
+def test_parse_incomplete_template_call_syntax_raises_parser_error() -> None:
+    """
+    title: Incomplete explicit template-call syntax must fail cleanly.
+    """
+    with pytest.raises(ParserException):
+        _parse("fn main() -> i32:\n  foo<\n")

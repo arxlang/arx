@@ -462,19 +462,22 @@ class Parser:
             return Token(TokenKind.eof, "")
         return self.tokens.tokens[index]
 
-    def _looks_like_template_argument_list(self) -> bool:
+    def _template_argument_list_follow_token(self) -> Token | None:
         """
-        title: Return whether the current token starts explicit template args.
+        title: Return the token that follows one explicit template-arg list.
         returns:
-          type: bool
+          type: Token | None
         """
         if not self._is_operator("<"):
-            return False
+            return None
 
         list_depth = 0
+        token_count = len(self.tokens.tokens)
         index = self.tokens.position
-        while index < len(self.tokens.tokens):
+        while index < token_count:
             token = self.tokens.tokens[index]
+            if token.kind == TokenKind.eof:
+                return None
             if token.kind == TokenKind.operator:
                 value = cast(str, token.value)
                 if value == "[":
@@ -482,11 +485,31 @@ class Parser:
                 elif value == "]" and list_depth > 0:
                     list_depth -= 1
                 elif value == ">" and list_depth == 0:
-                    next_token = self.tokens.tokens[index + 1]
-                    return next_token == Token(TokenKind.operator, "(")
+                    next_index = index + 1
+                    if next_index >= token_count:
+                        return Token(TokenKind.eof, "")
+                    return self.tokens.tokens[next_index]
             index += 1
 
-        return False
+        return None
+
+    def _parse_template_args_for_call(
+        self,
+    ) -> tuple[astx.DataType, ...] | None:
+        """
+        title: Parse explicit template arguments only for call syntax.
+        returns:
+          type: tuple[astx.DataType, Ellipsis] | None
+        """
+        follow_token = self._template_argument_list_follow_token()
+        if follow_token is None:
+            return None
+        if follow_token != Token(TokenKind.operator, "("):
+            raise ParserException(
+                "explicit template arguments are only allowed on call "
+                "expressions"
+            )
+        return self.parse_template_argument_list()
 
     def get_tok_precedence(self) -> int:
         """
@@ -1571,7 +1594,8 @@ class Parser:
             "Parser: Unknown token when expecting an expression: "
             f"'{self.tokens.cur_tok.get_name()}'."
         )
-        self.tokens.get_next_token()
+        if self.tokens.cur_tok.kind != TokenKind.eof:
+            self.tokens.get_next_token()
         raise ParserException(msg)
 
     def parse_postfix(self) -> astx.AST:
@@ -1593,9 +1617,7 @@ class Parser:
             member_name = cast(str, self.tokens.cur_tok.value)
             self.tokens.get_next_token()
 
-            template_args: tuple[astx.DataType, ...] | None = None
-            if self._looks_like_template_argument_list():
-                template_args = self.parse_template_argument_list()
+            template_args = self._parse_template_args_for_call()
 
             if self._is_operator("("):
                 self._consume_operator("(")
@@ -1878,9 +1900,7 @@ class Parser:
 
         self.tokens.get_next_token()  # eat identifier
 
-        template_args: tuple[astx.DataType, ...] | None = None
-        if self._looks_like_template_argument_list():
-            template_args = self.parse_template_argument_list()
+        template_args = self._parse_template_args_for_call()
 
         if not self._is_operator("("):
             return astx.Identifier(id_name, loc=id_loc)
