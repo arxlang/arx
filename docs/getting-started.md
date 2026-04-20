@@ -247,18 +247,33 @@ import radius_to_diameter from .helpers
 import clamp from ..shared.math
 ````
 
-Outside the package, use absolute dotted imports:
+Outside the package, use either direct symbol imports or a namespace alias:
 
 ````arx
 ```
 title: Geometry consumer
-summary: Public import example.
+summary: Public direct import example.
 ```
 import circle_area from geometry.shapes.area
 ````
 
-Current limitation: plain relative module imports such as `import .area` and
-module namespace calls such as `area.circle_area()` are not supported yet.
+````arx
+```
+title: Geometry namespace consumer
+summary: Public namespace import example.
+```
+import geometry.shapes.area as area
+
+fn main() -> f64:
+  ```
+  title: main
+  summary: Calls one function through a module namespace alias.
+  ```
+  return area.circle_area(10.0)
+````
+
+Current limitation: plain relative module imports such as `import .area` are not
+supported yet.
 
 ## Compiled Tests
 

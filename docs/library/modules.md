@@ -77,12 +77,37 @@ Rules:
 - Relative imports are supported only with `from` imports.
 - Relative imports use one or more leading dots before the module path.
 - Plain relative module imports such as `import .area` are not supported yet.
-- For now, prefer `from` imports when you need callable declarations in user
-  code.
+- Prefer `from` imports when you want callable declarations without a module
+  qualifier.
 
 ### Absolute Imports
 
 Use absolute dotted paths for public imports across package boundaries:
+
+```arx
+import circle_area from geometry.shapes.area
+```
+
+### Namespace Imports
+
+Use a module alias when you want to keep names grouped under a module namespace:
+
+````arx
+```
+title: Geometry namespace import
+summary: Call one module member through a namespace alias.
+```
+import geometry.shapes.area as area
+
+fn main() -> f64:
+  ```
+  title: main
+  summary: Demonstrates namespace member access.
+  ```
+  return area.circle_area(10.0)
+````
+
+Direct symbol imports remain available when you prefer shorter local names:
 
 ```arx
 import circle_area from geometry.shapes.area
