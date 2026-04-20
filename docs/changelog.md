@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.12.0](https://github.com/arxlang/arx/compare/0.11.0...0.12.0) (2026-04-20)
+
+
+### Features
+
+* Improve the import statement ([#59](https://github.com/arxlang/arx/issues/59)) ([7199c83](https://github.com/arxlang/arx/commit/7199c83558d0f6fe0ed55de2b2161c5995b31401))
+
 # [0.11.0](https://github.com/arxlang/arx/compare/0.10.0...0.11.0) (2026-04-19)
 
 
