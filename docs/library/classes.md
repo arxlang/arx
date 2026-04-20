@@ -32,6 +32,18 @@ class Shape:
   fn area(self) -> float64
 ```
 
+Template methods use the same `@<...>` prefix form as module functions. Method
+modifiers and template parameters may appear in either order as long as each
+prefix stays on its own line above the method declaration:
+
+```arx
+class Math:
+  @<T: i32 | f64>
+  @[public, static]
+  fn identity(value: T) -> T:
+    return value
+```
+
 ## Annotation Rules
 
 - Modifiers must be written as `@[...]` on the line immediately above the target

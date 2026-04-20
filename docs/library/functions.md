@@ -40,6 +40,36 @@ fn main() -> i32:
   return double(10)
 ````
 
+## Template Functions
+
+Function templates use an `@<...>` block on the line immediately before `fn`.
+Each template parameter must declare a bound, and bounds may be a single type or
+a `|` union of concrete types. Explicit template arguments are written between
+the callee name and `(`.
+
+````arx
+```
+title: Template function example
+summary: Uses one bounded template parameter with inferred and explicit calls.
+```
+@<T: i32 | f64>
+fn add(x: T, y: T) -> T:
+  ```
+  title: add
+  summary: Adds two values that share one template-bound type.
+  ```
+  return x + y
+
+fn main() -> i32:
+  ```
+  title: main
+  summary: Calls template specializations through inference and explicit args.
+  ```
+  print(add(1, 2))
+  print(add<f64>(1.5, 2.5))
+  return 0
+````
+
 ## Function Body Rules
 
 - The block starts after `:`.
