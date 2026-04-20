@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [0.13.0](https://github.com/arxlang/arx/compare/0.12.0...0.13.0) (2026-04-20)
+
+
+### Features
+
+* Improve arx settings for build ([#61](https://github.com/arxlang/arx/issues/61)) ([fba708a](https://github.com/arxlang/arx/commit/fba708aba980e2e7e2cf6a6bb40403a516132237))
+
 # [0.12.0](https://github.com/arxlang/arx/compare/0.11.0...0.12.0) (2026-04-20)
 
 
