@@ -559,6 +559,69 @@ def test_parse_invalid_import_syntax(code: str, match: str) -> None:
         _parse_module(code)
 
 
+def test_parse_module_namespace_member_reference() -> None:
+    """
+    title: Namespace-style member references parse as field access.
+    """
+    tree = _parse_module(
+        dedent(
+            """
+            import samplepkg.stats as stats
+
+            fn main() -> f64:
+              return stats.sum2
+            """
+        ).lstrip()
+    )
+
+    assert isinstance(tree.nodes[0], irx_astx.ImportStmt)
+    import_stmt = tree.nodes[0]
+    assert import_stmt.names[0].name == "samplepkg.stats"
+    assert import_stmt.names[0].asname == "stats"
+
+    fn = tree.nodes[1]
+    assert isinstance(fn, astx.FunctionDef)
+    result = fn.body.nodes[0]
+    assert isinstance(result, astx.FunctionReturn)
+    assert isinstance(result.value, irx_astx.FieldAccess)
+    assert isinstance(result.value.value, astx.Identifier)
+    assert result.value.value.name == "stats"
+    assert result.value.field_name == "sum2"
+
+
+def test_parse_module_namespace_member_call() -> None:
+    """
+    title: Namespace-style member calls parse as method calls.
+    """
+    tree = _parse_module(
+        dedent(
+            """
+            import samplepkg.stats as stats
+
+            fn main() -> f64:
+              return stats.sum2(1.0, 2.0)
+            """
+        ).lstrip()
+    )
+
+    assert isinstance(tree.nodes[0], irx_astx.ImportStmt)
+    import_stmt = tree.nodes[0]
+    assert import_stmt.names[0].name == "samplepkg.stats"
+    assert import_stmt.names[0].asname == "stats"
+
+    fn = tree.nodes[1]
+    assert isinstance(fn, astx.FunctionDef)
+    result = fn.body.nodes[0]
+    assert isinstance(result, astx.FunctionReturn)
+    assert isinstance(result.value, irx_astx.MethodCall)
+    assert isinstance(result.value.receiver, astx.Identifier)
+    assert result.value.receiver.name == "stats"
+    assert result.value.method_name == "sum2"
+    assert len(result.value.args) == 2
+    assert isinstance(result.value.args[0], astx.LiteralFloat32)
+    assert isinstance(result.value.args[1], astx.LiteralFloat32)
+
+
 def test_parse_while_stmt() -> None:
     """
     title: Test while statement parsing.
