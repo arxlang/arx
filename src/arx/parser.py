@@ -462,36 +462,64 @@ class Parser:
             return Token(TokenKind.eof, "")
         return self.tokens.tokens[index]
 
-    def _template_argument_list_follow_token(self) -> Token | None:
+    def _token_starts_expression(self, token: Token) -> bool:
         """
-        title: Return the token that follows one explicit template-arg list.
+        title: Return whether one token can start an expression.
+        parameters:
+          token:
+            type: Token
         returns:
-          type: Token | None
+          type: bool
+        """
+        if token.kind in {
+            TokenKind.identifier,
+            TokenKind.int_literal,
+            TokenKind.float_literal,
+            TokenKind.string_literal,
+            TokenKind.char_literal,
+            TokenKind.bool_literal,
+            TokenKind.none_literal,
+            TokenKind.kw_if,
+            TokenKind.kw_while,
+            TokenKind.kw_for,
+            TokenKind.kw_var,
+            TokenKind.kw_assert,
+            TokenKind.kw_return,
+        }:
+            return True
+
+        return token.kind == TokenKind.operator and token.value in {
+            "(",
+            "[",
+            "+",
+            "-",
+            "!",
+            "++",
+            "--",
+            ";",
+        }
+
+    def _lookahead_template_argument_call(
+        self,
+    ) -> tuple[tuple[astx.DataType, ...], Token] | None:
+        """
+        title: Speculatively parse one explicit template-argument list.
+        returns:
+          type: tuple[tuple[astx.DataType, Ellipsis], Token] | None
         """
         if not self._is_operator("<"):
             return None
 
-        list_depth = 0
-        token_count = len(self.tokens.tokens)
-        index = self.tokens.position
-        while index < token_count:
-            token = self.tokens.tokens[index]
-            if token.kind == TokenKind.eof:
-                return None
-            if token.kind == TokenKind.operator:
-                value = cast(str, token.value)
-                if value == "[":
-                    list_depth += 1
-                elif value == "]" and list_depth > 0:
-                    list_depth -= 1
-                elif value == ">" and list_depth == 0:
-                    next_index = index + 1
-                    if next_index >= token_count:
-                        return Token(TokenKind.eof, "")
-                    return self.tokens.tokens[next_index]
-            index += 1
-
-        return None
+        saved_position = self.tokens.position
+        saved_token = self.tokens.cur_tok
+        try:
+            template_args = self.parse_template_argument_list()
+            return template_args, self.tokens.cur_tok
+        except ParserException:
+            return None
+        finally:
+            self.tokens.position = saved_position
+            self.tokens.cur_tok = saved_token
 
     def _parse_template_args_for_call(
         self,
@@ -501,10 +529,14 @@ class Parser:
         returns:
           type: tuple[astx.DataType, Ellipsis] | None
         """
-        follow_token = self._template_argument_list_follow_token()
-        if follow_token is None:
+        lookahead = self._lookahead_template_argument_call()
+        if lookahead is None:
             return None
+
+        _, follow_token = lookahead
         if follow_token != Token(TokenKind.operator, "("):
+            if self._token_starts_expression(follow_token):
+                return None
             raise ParserException(
                 "explicit template arguments are only allowed on call "
                 "expressions"

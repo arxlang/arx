@@ -231,3 +231,21 @@ def test_parse_incomplete_template_call_syntax_raises_parser_error() -> None:
     """
     with pytest.raises(ParserException):
         _parse("fn main() -> i32:\n  foo<\n")
+
+
+def test_parse_comparisons_do_not_trigger_template_call_handling() -> None:
+    """
+    title: Comparison operators should not be mistaken for template calls.
+    """
+    tree = _parse(
+        dedent(
+            """
+            fn main() -> i32:
+              var a32: i32 = 32
+              var ok: bool = (a32 > 0) && (a32 < 100)
+              return 0
+            """
+        ).lstrip()
+    )
+
+    assert isinstance(tree.nodes[0], astx.FunctionDef)
