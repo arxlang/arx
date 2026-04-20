@@ -49,8 +49,9 @@ EXAMPLE_TOML = dedent(
 
     [build]
     src_dir = "src"
-    entry = "sciarx.x"
+    package = "sciarx"
     out_dir = "build"
+    mode = "lib"
 
     [toolchain]
     compiler = "arx"
@@ -99,8 +100,9 @@ def test_load_settings_from_text_full_example() -> None:
 
     assert settings.build is not None
     assert settings.build.src_dir == "src"
-    assert settings.build.entry == "sciarx.x"
+    assert settings.build.package == "sciarx"
     assert settings.build.out_dir == "build"
+    assert settings.build.mode == "lib"
 
     assert settings.toolchain is not None
     assert settings.toolchain.compiler == "arx"
@@ -127,6 +129,16 @@ def test_load_settings_from_text_minimal() -> None:
     assert settings.dependency_groups == {}
     assert settings.arxpm is None
     assert settings.project.authors == ()
+
+
+def test_load_settings_rejects_removed_build_entry_key() -> None:
+    """
+    title: Legacy ``[build].entry`` is rejected after the manifest redesign.
+    """
+    content = _project_toml('[build]\nentry = "main.x"\n')
+
+    with pytest.raises(ArxProjectError, match="Additional properties"):
+        load_settings_from_text(content)
 
 
 @pytest.mark.parametrize(
@@ -586,7 +598,12 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
             ),
         ),
         environment=Environment(kind="venv", path=".venv"),
-        build=Build(src_dir="src", entry="main.x", out_dir="build"),
+        build=Build(
+            src_dir="src",
+            package="demo_pkg",
+            out_dir="build",
+            mode="app",
+        ),
         toolchain=Toolchain(compiler="arx", linker="clang"),
         dependency_groups={
             "lint": ("ruff", "mypy"),
@@ -610,6 +627,8 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
     assert "[dependency-groups]" in rendered
     assert '{ include-group = "lint" },' in rendered
     assert 'kind = "venv"' in rendered
+    assert 'package = "demo_pkg"' in rendered
+    assert 'mode = "app"' in rendered
 
     written_path = write_settings(settings, path)
     assert written_path == path

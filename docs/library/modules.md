@@ -20,8 +20,9 @@ fn average(x: f32, y: f32) -> f32:
 
 ## Package Layout
 
-When a project declares `[build].src_dir`, Arx treats files under that source
-root as package modules addressed by dotted names.
+When a project uses the default `src/` source root, or declares
+`[build].src_dir`, Arx treats files under that source root as package modules
+addressed by dotted names.
 
 Example project layout:
 
@@ -40,15 +41,15 @@ Example project layout:
     └── test_area.x
 ```
 
-With `[build].src_dir = "src"`:
+With the default `src/` source root:
 
 - `src/geometry/__init__.x` is module `geometry`
 - `src/geometry/shared/math.x` is module `geometry.shared.math`
 - `src/geometry/shapes/area.x` is module `geometry.shapes.area`
 - `src/geometry/shapes/helpers.x` is module `geometry.shapes.helpers`
 
-Use `__init__.x` as the package entry point, following the same layout idea as
-Python packages.
+Use `__init__.x` as the package root, following the same layout idea as Python
+packages.
 
 ## Import Syntax
 

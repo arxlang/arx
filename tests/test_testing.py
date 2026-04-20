@@ -626,7 +626,7 @@ def test_arx_test_runner_supports_package_relative_imports(
     (tmp_path / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"\n',
+        '[build]\nsrc_dir = "src"\n\n',
         encoding="utf-8",
     )
     (package_dir / "__init__.x").write_text(

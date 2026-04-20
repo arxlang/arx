@@ -152,7 +152,7 @@ def test_namespace_import_program_builds_and_runs(tmp_path: Path) -> None:
     (project_root / ".arxproject.toml").write_text(
         '[project]\nname = "samplepkg"\nversion = "0.1.0"\n'
         '[environment]\nkind = "conda"\nname = "samplepkg"\n'
-        '[build]\nsrc_dir = "src"\nentry = "samplepkg/__init__.x"'
+        '[build]\nsrc_dir = "src"\n'
         '\nout_dir = "build"\n',
         encoding="utf-8",
     )
