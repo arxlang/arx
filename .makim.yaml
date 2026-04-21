@@ -46,7 +46,7 @@ groups:
       syntax:
         help: run syntax tests
         run: |
-          python -m json.tool syntax/arx.syntax.json
+          python -m json.tool src/arx/lexer/syntax.json
 
       smoke:
         help: run smoke tests

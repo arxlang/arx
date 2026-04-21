@@ -41,7 +41,7 @@ Use this guidance for any change inside the Arx compiler repository:
 - `tests/`: unit tests
 - `examples/`: runnable language samples (`.x`)
 - `docs/`: project and language documentation
-- `syntax/arx.syntax.json`: lexical source-of-truth for editor tooling
+- `src/arx/lexer/syntax.json`: lexical source-of-truth for editor tooling
 - `.makim.yaml`: local task runner definitions
 - `.github/workflows/main.yaml`: CI pipeline
 
@@ -123,7 +123,7 @@ If you extend language syntax, update all affected surfaces:
 1. lexer/token definitions
 2. parser behavior
 3. tests
-4. `syntax/arx.syntax.json`
+4. `src/arx/lexer/syntax.json`
 5. docs and examples
 
 ## Codegen Invariants (Arx + IRx)
@@ -314,7 +314,7 @@ fences around the code block to safely include inner triple backticks.
 1. Update `TokenKind` and keyword maps.
 2. Adjust lexing logic and location behavior.
 3. Add/adjust `tests/test_lexer.py` cases.
-4. Update `syntax/arx.syntax.json` if lexical spec changed.
+4. Update `src/arx/lexer/syntax.json` if lexical spec changed.
 5. Update docs/examples.
 
 ### Adding/changing parser rules

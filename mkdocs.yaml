@@ -17,17 +17,15 @@ nav:
       - Control Flow: library/control-flow.md
       - Docstrings: library/docstrings.md
   - API Docs: api/
-  - Sponsor: sponsor.md
+  - Syntax: syntax.md
   - Roadmap: roadmap.md
-  - Governance: governance.md
-  - Changelog: changelog.md
   - Contributing Guide: contributing.md
+  - Sponsor: sponsor.md
   - Partners: partners.md
   - Code of Conduct: coc.md
   - Community: discord.md
-  # from gen-files
-  # - Tutorials:
-  #     - Get Started: tutorials/get-started.ipynb
+  - Governance: governance.md
+  - Changelog: changelog.md
 
 theme:
   name: material
