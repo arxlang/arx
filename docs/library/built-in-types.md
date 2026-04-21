@@ -23,7 +23,7 @@ their canonical spellings, accepted aliases, and current surface syntax.
 | `timestamp`    | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")` | Constructor-style literal form           |
 | `date`         | —                | temporal   | `var d: date`                       | Recognized as a built-in type name       |
 | `time`         | —                | temporal   | `var t: time`                       | Recognized as a built-in type name       |
-| `list[T]`      | —                | collection | `var ids: list[i32] = [1, 2, 3]`    | Element type is written inside brackets  |
+| `array[T]`     | —                | collection | `var ids: array[i32] = [1, 2, 3]`   | Element type is written inside brackets  |
 
 ## Numeric Types
 
@@ -91,19 +91,19 @@ fn time_demo() -> none:
 The parser also recognizes `date` and `time` as built-in type names in
 annotations.
 
-## Lists
+## Arrays
 
-Use `list[T]` for typed lists.
+Use `array[T]` for typed arrays.
 
 ```arx
-fn list_demo() -> none:
-  var ids: list[i32] = [1, 2, 3, 4]
-  var empty_ids: list[i32] = []
+fn array_demo() -> none:
+  var ids: array[i32] = [1, 2, 3, 4]
+  var empty_ids: array[i32] = []
   return none
 ```
 
-Current limitation: list code generation is still limited to empty or
-homogeneous integer constant lists.
+Current limitation: array code generation is still limited to empty or
+homogeneous integer constant arrays.
 
 ## Casting
 

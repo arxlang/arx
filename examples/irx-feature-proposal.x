@@ -1,7 +1,7 @@
 ```
-title: IRX-backed syntax proposal for Arx
+title: IRx-backed syntax proposal for Arx
 summary: >-
-  Draft syntax file containing all IRX-supported features not fully available
+  Draft syntax file containing all IRx-supported features not fully available
   in Arx parser yet. Edit this file and send back your reviewed version.
 ```
 
@@ -18,8 +18,8 @@ summary: >-
 
 fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   ```
-  title: IRX feature proposal entrypoint
-  summary: Covers every new IRX-backed language feature candidate.
+  title: IRx feature proposal entrypoint
+  summary: Covers every new IRx-backed language feature candidate.
   parameters:
     arg1:
       type: i32
@@ -53,9 +53,9 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   var dt: datetime = datetime("2026-03-05T12:30:59")
   var ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
 
-  # list literal (IRX currently supports empty or homogeneous integer constants)
-  var ids: list[i32] = [1, 2, 3, 4]
-  var empty_ids: list[i32] = []
+  # array literal (IRx currently supports empty or homogeneous integer constants)
+  var ids: array[i32] = [1, 2, 3, 4]
+  var empty_ids: array[i32] = []
 
   # ---------------------------------------------------------------------------
   # B) ASSIGNMENT (new explicit statement semantics)
@@ -63,7 +63,7 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   a32 = a32 + 1
 
   # ---------------------------------------------------------------------------
-  # C) BINARY OPERATORS (new in parser, already handled by IRX)
+  # C) BINARY OPERATORS (new in parser, already handled by IRx)
   # ---------------------------------------------------------------------------
   var d1: i32 = a32 / 2
   var le: bool = a32 <= 100

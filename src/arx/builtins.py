@@ -27,7 +27,7 @@ def build_cast(
     value: astx.DataType, target_type: astx.DataType
 ) -> irx_astx.Cast:
     """
-    title: Build an IRX Cast node.
+    title: Build an IRx Cast node.
     parameters:
       value:
         type: astx.DataType
@@ -41,7 +41,7 @@ def build_cast(
 
 def build_print(message: astx.Expr) -> irx_astx.PrintExpr:
     """
-    title: Build an IRX PrintExpr node.
+    title: Build an IRx PrintExpr node.
     parameters:
       message:
         type: astx.Expr
