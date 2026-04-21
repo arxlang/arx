@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from dataclasses import dataclass
-from pathlib import Path
+from importlib import resources
 from typing import Any
 
 
@@ -93,7 +93,6 @@ def load_syntax_manifest() -> SyntaxManifest:
     returns:
       type: SyntaxManifest
     """
-    manifest_path = Path(__file__).parent / "syntax.json"
-    with manifest_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    manifest = resources.files("arx.lexer").joinpath("syntax.json")
+    data = json.loads(manifest.read_text(encoding="utf-8"))
     return SyntaxManifest(data)
