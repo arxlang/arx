@@ -1,6 +1,18 @@
 # Release Notes
 ---
 
+# [0.14.0](https://github.com/arxlang/arx/compare/0.13.0...0.14.0) (2026-04-21)
+
+
+### Bug Fixes
+
+* **parser:** harden template call parsing ([#62](https://github.com/arxlang/arx/issues/62)) ([8f1a5ff](https://github.com/arxlang/arx/commit/8f1a5ff263cd6cb42578c96f07d6eb929c50fb32))
+
+
+### Features
+
+* Split Parser into multiple files with mixin ([#63](https://github.com/arxlang/arx/issues/63)) ([e704fb6](https://github.com/arxlang/arx/commit/e704fb6e03aecdbc62d6aa36b6ea79f53f46561c))
+
 # [0.13.0](https://github.com/arxlang/arx/compare/0.12.0...0.13.0) (2026-04-20)
 
 
