@@ -13,8 +13,11 @@ from typing import Any, cast
 from astx import SourceLocation
 
 from arx.io import ArxIO
+from arx.lexer.syntax import load_syntax_manifest
 
 EOF = ""
+
+_MANIFEST = load_syntax_manifest()
 
 
 class TokenKind(Enum):
@@ -82,9 +85,10 @@ MAP_NAME_TO_KW_TOKEN = {
     "binary": TokenKind.binary_op,
     "unary": TokenKind.unary_op,
     "var": TokenKind.kw_var,
+    "const": TokenKind.kw_const,
     "operator": TokenKind.operator,
+    "then": TokenKind.kw_then,
 }
-
 
 MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.eof: "eof",
@@ -109,8 +113,6 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.kw_for: "for",
     TokenKind.kw_in: "in",
     TokenKind.kw_while: "while",
-    # TokenKind.kw_binary_op: "binary",
-    # TokenKind.kw_unary_op: "unary",
     TokenKind.kw_var: "var",
     TokenKind.kw_const: "const",
 }
@@ -324,13 +326,28 @@ class Lexer:
         type: bool
       _keyword_map:
         type: dict[str, TokenKind]
+      _line_comment_delims:
+        type: tuple[str, Ellipsis]
+      _multi_char_ops:
+        type: set[str]
+      _literal_keywords:
+        type: dict[str, Any]
+      _keyword_token_map:
+        type: dict[str, TokenKind]
     """
 
     lex_loc: SourceLocation = SourceLocation(0, 0)
     last_char: str = ""
     new_line: bool = True
+    _keyword_map: dict[str, TokenKind]
 
-    _keyword_map: dict[str, TokenKind] = {
+    # Manifest-driven shared tables.
+    _line_comment_delims: tuple[str, ...] = _MANIFEST.line_comment_delimiters
+    _multi_char_ops: set[str] = _MANIFEST.multi_char_operators
+    _literal_keywords: dict[str, Any] = _MANIFEST.literal_keywords
+
+    # Compiler-facing token mapping remains explicit.
+    _keyword_token_map: dict[str, TokenKind] = {
         "fn": TokenKind.kw_function,
         "extern": TokenKind.kw_extern,
         "class": TokenKind.kw_class,
@@ -345,26 +362,24 @@ class Lexer:
         "assert": TokenKind.kw_assert,
         "var": TokenKind.kw_var,
         "const": TokenKind.kw_const,
+        "binary": TokenKind.binary_op,
+        "unary": TokenKind.unary_op,
+        "operator": TokenKind.operator,
     }
 
     def __init__(self) -> None:
         """
         title: Initialize Lexer.
         """
-        # self.cur_loc: SourceLocation = SourceLocation(0, 0)
-        self.lex_loc: SourceLocation = SourceLocation(0, 0)
-        self.last_char: str = ""
-        self.new_line: bool = True
-
-        self._keyword_map: dict[str, TokenKind] = copy.deepcopy(
-            self._keyword_map
-        )
+        self.lex_loc = SourceLocation(0, 0)
+        self.last_char = ""
+        self.new_line = True
+        self._keyword_map = copy.deepcopy(self._keyword_token_map)
 
     def clean(self) -> None:
         """
         title: Reset the Lexer attributes.
         """
-        # self.cur_loc = SourceLocation(0, 0)
         self.lex_loc = SourceLocation(0, 0)
         self.last_char = ""
         self.new_line = True
@@ -380,31 +395,28 @@ class Lexer:
             self.new_line = True
             self.last_char = self.advance()
 
-        # Skip any whitespace.
         indent = 0
         while self.last_char.isspace():
-            if self.new_line:
-                indent += 1
-
             if self.last_char == "\n":
-                # note: if it is an empty line it is not necessary to keep
-                #       the record about the indentation
                 self.new_line = True
                 indent = 0
+            elif self.new_line:
+                indent += 1
 
             self.last_char = self.advance()
 
+        if indent:
+            token = Token(
+                kind=TokenKind.indent,
+                value=indent,
+                location=self.lex_loc,
+            )
+            self.new_line = False
+            return token
+
         self.new_line = False
 
-        if indent:
-            return Token(
-                kind=TokenKind.indent, value=indent, location=self.lex_loc
-            )
-
-        # self.cur_loc = self.lex_loc
-
         if self.last_char.isalpha() or self.last_char == "_":
-            # Identifier
             identifier = self.last_char
             self.last_char = self.advance()
 
@@ -419,24 +431,17 @@ class Lexer:
                     location=self.lex_loc,
                 )
 
-            if identifier == "true":
-                return Token(
-                    kind=TokenKind.bool_literal,
-                    value=True,
-                    location=self.lex_loc,
-                )
-
-            if identifier == "false":
-                return Token(
-                    kind=TokenKind.bool_literal,
-                    value=False,
-                    location=self.lex_loc,
-                )
-
-            if identifier == "none":
+            if identifier in self._literal_keywords:
+                value = self._literal_keywords[identifier]
+                if isinstance(value, bool):
+                    return Token(
+                        kind=TokenKind.bool_literal,
+                        value=value,
+                        location=self.lex_loc,
+                    )
                 return Token(
                     kind=TokenKind.none_literal,
-                    value=None,
+                    value=value,
                     location=self.lex_loc,
                 )
 
@@ -453,7 +458,6 @@ class Lexer:
                 location=self.lex_loc,
             )
 
-        # Number: [0-9.]+ (with '.' alone kept as an operator)
         if self.last_char.isdigit() or self.last_char == ".":
             num_str = ""
             dot_count = 0
@@ -498,28 +502,27 @@ class Lexer:
         if self.last_char in ('"', "'"):
             return self._parse_quoted_literal()
 
-        # Docstring: ```...```
         if self.last_char == "`":
             return self._parse_docstring()
 
-        # Comment until end of line.
-        if self.last_char == "#":
+        if self.last_char in self._line_comment_delims:
             while self.last_char not in (EOF, "\n", "\r"):
                 self.last_char = self.advance()
-
             if self.last_char != EOF:
                 return self.get_token()
 
         if self.last_char in ("=", "!", "<", ">", "-", "&", "|", "+"):
             return self._parse_operator()
 
-        # Check for end of file. Don't eat the EOF.
         if self.last_char:
             this_char = self.last_char
             self.last_char = self.advance()
             return Token(
-                kind=TokenKind.operator, value=this_char, location=self.lex_loc
+                kind=TokenKind.operator,
+                value=this_char,
+                location=self.lex_loc,
             )
+
         return Token(kind=TokenKind.eof, value="", location=self.lex_loc)
 
     def _parse_docstring(self) -> Token:
@@ -530,22 +533,18 @@ class Lexer:
         """
         doc_loc = copy.deepcopy(self.lex_loc)
 
-        # Consume opening delimiter.
         self.last_char = self.advance()
         if self.last_char != "`":
             raise LexerError(
-                "Invalid docstring delimiter. Expected ```",
-                doc_loc,
+                "Invalid docstring delimiter. Expected ```", doc_loc
             )
 
         self.last_char = self.advance()
         if self.last_char != "`":
             raise LexerError(
-                "Invalid docstring delimiter. Expected ```",
-                doc_loc,
+                "Invalid docstring delimiter. Expected ```", doc_loc
             )
 
-        # Move after opening delimiter.
         self.last_char = self.advance()
         content = ""
 
@@ -558,7 +557,6 @@ class Lexer:
                 self.last_char = self.advance()
                 continue
 
-            # We found a backtick. Check whether it starts the closing ```.
             self.last_char = self.advance()
             if self.last_char != "`":
                 content += "`"
@@ -569,7 +567,6 @@ class Lexer:
                 content += "``"
                 continue
 
-            # Closing delimiter consumed. Move to next character.
             self.last_char = self.advance()
             return Token(
                 kind=TokenKind.docstring,
@@ -637,13 +634,11 @@ class Lexer:
           description: TokenKind in integer form.
         """
         last_char = ArxIO.get_char()
-
         if last_char in ("\n", "\r"):
             self.lex_loc.line += 1
             self.lex_loc.col = 0
         else:
             self.lex_loc.col += 1
-
         return last_char
 
     def lex(self) -> TokenList:
@@ -655,9 +650,11 @@ class Lexer:
         self.clean()
         cur_tok = Token(kind=TokenKind.not_initialized, value="")
         tokens: list[Token] = []
+
         while cur_tok.kind != TokenKind.eof:
             cur_tok = self.get_token()
             tokens.append(cur_tok)
+
         return TokenList(tokens)
 
     def _parse_operator(self) -> Token:
@@ -670,23 +667,13 @@ class Lexer:
         op = self.last_char
         self.last_char = self.advance()
 
-        two_char_ops = {
-            "==": "==",
-            "!=": "!=",
-            ">=": ">=",
-            "<=": "<=",
-            "->": "->",
-            "&&": "&&",
-            "||": "||",
-            "++": "++",
-            "--": "--",
-        }
-
-        if op + self.last_char in two_char_ops:
+        if op + self.last_char in self._multi_char_ops:
             full_op = op + self.last_char
             self.last_char = self.advance()
             return Token(
-                kind=TokenKind.operator, value=full_op, location=location
+                kind=TokenKind.operator,
+                value=full_op,
+                location=location,
             )
 
         return Token(kind=TokenKind.operator, value=op, location=location)

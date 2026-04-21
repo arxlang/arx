@@ -1,0 +1,160 @@
+{
+  "syntax_pack_version": "0.2.0",
+  "language": "arx",
+  "status": "draft",
+  "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
+  "file_extensions": [".x", ".arx"],
+
+  "keywords": {
+    "reserved": [
+      "assert",
+      "class",
+      "const",
+      "else",
+      "extern",
+      "fn",
+      "for",
+      "if",
+      "import",
+      "in",
+      "return",
+      "then",
+      "var",
+      "while"
+    ],
+    "contextual": ["as", "from", "binary", "unary", "operator"]
+  },
+
+  "literals": {
+    "keywords": ["true", "false", "none"],
+    "booleans": {
+      "true": true,
+      "false": false
+    },
+    "none": {
+      "token_value": null
+    }
+  },
+
+  "comments": {
+    "line": {
+      "enabled": true,
+      "delimiters": ["#"]
+    },
+    "block": {
+      "enabled": false,
+      "open": "",
+      "close": "",
+      "nesting": false
+    }
+  },
+
+  "strings": {
+    "supported": true,
+    "quote_types": ["single", "double"],
+    "triple_quotes": false,
+    "raw_prefixes": [],
+    "escapes": ["\\\\", "\\n", "\\r", "\\t", "\\\"", "\\'"],
+    "interpolation": {
+      "enabled": false,
+      "start": "",
+      "end": ""
+    }
+  },
+
+  "docstrings": {
+    "supported": true,
+    "delimiter": "```",
+    "token_kind": "docstring"
+  },
+
+  "numbers": {
+    "formats": ["decimal_integer", "decimal_float"],
+    "bases": [10],
+    "underscores": { "allowed": false },
+    "suffixes": [],
+    "exponent": { "allowed": false, "forms": [] },
+    "leading_dot_float": true,
+    "trailing_dot_float": true,
+    "multiple_dots": "invalid"
+  },
+
+  "identifiers": {
+    "start": "Unicode letter or underscore",
+    "continue": "Unicode alphanumeric or underscore",
+    "pattern": "(?:[_\\p{L}])(?:[_\\p{L}\\p{N}])*",
+    "unicode_policy": "Current runtime behavior"
+  },
+
+  "whitespace": {
+    "indentation_significant": true,
+    "indent_unit": 2,
+    "indent_unit_kind": "spaces",
+    "tabs": "forbidden_or_error",
+    "newlines_significant": true,
+    "blank_lines": "ignored_for_indentation_transitions"
+  },
+
+  "operators": {
+    "single_char": [
+      "=",
+      "<",
+      ">",
+      "+",
+      "-",
+      "*",
+      "/",
+      ".",
+      ":",
+      ",",
+      ";",
+      "@",
+      "|",
+      "!",
+      "(",
+      ")",
+      "[",
+      "]",
+      "{",
+      "}"
+    ],
+    "multi_char": ["==", "!=", "<=", ">=", "->", "&&", "||", "++", "--"],
+    "word_operators": ["and", "or"],
+    "assignment": ["="],
+    "comparison": ["<", ">", "<=", ">=", "==", "!="],
+    "arithmetic": ["+", "-", "*", "/"],
+    "logical": ["&&", "||", "and", "or", "!"],
+    "type_union": ["|"],
+    "punctuation": ["@", ":", ",", ";", "."]
+  },
+
+  "structural_forms": {
+    "annotations": {
+      "start": "@[",
+      "separator": ",",
+      "end": "]"
+    },
+    "template_parameter_block": {
+      "start": "@<",
+      "separator": ",",
+      "end": ">"
+    },
+    "explicit_template_call": {
+      "uses_angle_brackets": true
+    },
+    "grouped_imports": {
+      "supported": true,
+      "requires_from": true,
+      "allows_trailing_comma": true
+    },
+    "relative_imports": {
+      "leading_dot_tokens": true
+    }
+  },
+
+  "brackets": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"]
+  ]
+}

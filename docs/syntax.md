@@ -4,13 +4,13 @@ Status: draft `0.1.0`
 
 This document defines Arx lexical/token-level behavior for editor tooling.
 
-Normative source: `syntax/arx.syntax.json`
+Normative source: `src/arx/lexer/syntax.json`
 
 Non-goal: full parsing or AST semantics.
 
 ## 1) Source of Truth
 
-- `arx.syntax.json` is canonical.
+- `syntax.json` is canonical.
 - Any derived editor grammar or tokenizer should be generated from, or manually
   validated against, that file.
 - If this Markdown and the JSON disagree, the JSON wins.
@@ -214,7 +214,7 @@ import (
 
 1. Canonical check:
 
-   - Parse `syntax/arx.syntax.json`.
+   - Parse `src/arx/lexer/syntax.json`.
    - Verify required keys exist (`keywords`, `comment`, `strings`, `numbers`,
      `identifiers`, `whitespace`, `brackets`).
 
@@ -230,5 +230,5 @@ import (
      to ensure each declared keyword/operator appears in at least one sample.
 
 4. Change discipline:
-   - Require PRs touching syntax tooling to update `arx.syntax.json` first, then
+   - Require PRs touching syntax tooling to update `syntax.json` first, then
      derived files.
