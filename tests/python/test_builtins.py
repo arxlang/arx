@@ -49,7 +49,7 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    title: Builtin imports resolve from packaged compiler resources.
+    title: Internal builtin resolution loads packaged compiler resources.
     parameters:
       tmp_path:
         type: Path
@@ -59,7 +59,7 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "main.x"
     source.write_text(
-        "import range from builtins.generators\n",
+        "fn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
 
@@ -85,11 +85,26 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     assert child.origin == "arx.builtins:generators.x"
 
 
-def test_arxmain_compiles_program_using_builtin_generators_and_stdlib(
+def test_ambient_builtin_imports_expose_range_by_default() -> None:
+    """
+    title: Ambient builtin imports expose range outside its source module.
+    """
+    implicit_imports = builtins.get_ambient_builtin_imports("main")
+    assert len(implicit_imports) == 1
+    assert implicit_imports[0].module == "builtins.generators"
+    assert [alias.name for alias in implicit_imports[0].names] == ["range"]
+
+    source_module_imports = builtins.get_ambient_builtin_imports(
+        "builtins.generators"
+    )
+    assert source_module_imports == ()
+
+
+def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
     tmp_path: Path,
 ) -> None:
     """
-    title: Builtins and stdlib remain distinct during compilation.
+    title: Ambient builtins and stdlib remain distinct during compilation.
     parameters:
       tmp_path:
         type: Path
@@ -98,7 +113,6 @@ def test_arxmain_compiles_program_using_builtin_generators_and_stdlib(
     source.write_text(
         dedent(
             """
-            import range from builtins.generators
             import math from stdlib
 
             fn main() -> i32:
@@ -147,10 +161,8 @@ def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
     source.write_text(
         dedent(
             """
-            import generators from builtins
-
             fn main() -> i32:
-              return generators.range(4)
+              return range(4)
             """
         ).lstrip(),
         encoding="utf-8",

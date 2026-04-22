@@ -110,8 +110,7 @@ fn main() -> i32:
 
 ## Bundled `builtins`
 
-Arx also ships compiler-provided builtin modules under the reserved `builtins`
-namespace.
+Arx also ships compiler-provided builtins backed by bundled Arx source modules.
 
 Builtins and stdlib are intentionally separate:
 
@@ -123,6 +122,8 @@ Builtins and stdlib are intentionally separate:
   installed `arx` Python package
 - bundled builtin sources are loaded from package resources at compile time and
   are not copied into user projects
+- builtin source modules are an internal compiler asset store, not a public
+  stdlib-like import surface
 - local user modules are not allowed to shadow the reserved `builtins` namespace
 
 The first builtin module is `generators`. It is intentionally generic so future
@@ -131,7 +132,7 @@ conceptual area.
 
 Current MVP:
 
-- import `range` from `builtins.generators`
+- `range` is available automatically without an import
 - supported callable shape: `range(stop)`
 - future callable shapes such as `range(start, stop)` and
   `range(start, stop, step)` remain planned work
@@ -139,8 +140,6 @@ Current MVP:
 Example:
 
 ```arx
-import range from builtins.generators
-
 fn main() -> i32:
   return range(4)
 ```

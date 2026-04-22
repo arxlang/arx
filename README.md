@@ -76,10 +76,10 @@ fn main() -> i32:
 Compiler-provided builtins stay separate from stdlib. Builtin sources live in
 `src/arx/builtins/*.x`, are bundled inside the installed `arx` package, and are
 resolved by dedicated compiler logic instead of user-project module lookup.
+Those bundled builtin modules are internal compiler assets, not a public
+stdlib-style import namespace.
 
 ```arx
-import range from builtins.generators
-
 fn main() -> i32:
   return range(4)
 ```

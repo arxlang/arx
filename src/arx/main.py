@@ -61,6 +61,72 @@ def _is_builtin_specifier(requested_specifier: str) -> bool:
     return arx_builtins.is_builtin_module_specifier(requested_specifier)
 
 
+def _has_imported_name(
+    module: astx.Module,
+    module_name: str,
+    binding_name: str,
+) -> bool:
+    """
+    title: Return whether one module already imports a binding by name.
+    parameters:
+      module:
+        type: astx.Module
+      module_name:
+        type: str
+      binding_name:
+        type: str
+    returns:
+      type: bool
+    """
+    for node in module.nodes:
+        if not isinstance(node, astx.ImportFromStmt):
+            continue
+        if node.level != 0 or node.module != module_name:
+            continue
+        for alias in node.names:
+            if alias.name == binding_name and alias.asname == "":
+                return True
+    return False
+
+
+def _inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
+    """
+    title: Inject compiler-provided builtin bindings into one module AST.
+    parameters:
+      module:
+        type: astx.Module
+    returns:
+      type: astx.Module
+    """
+    implicit_imports = arx_builtins.get_ambient_builtin_imports(module.name)
+    missing_imports: list[astx.ImportFromStmt] = []
+
+    for import_node in implicit_imports:
+        module_name = import_node.module
+        if module_name is None:
+            continue
+        names = tuple(
+            alias.name
+            for alias in import_node.names
+            if not _has_imported_name(module, module_name, alias.name)
+        )
+        if not names:
+            continue
+        aliases = [astx.AliasExpr(name) for name in names]
+        missing_imports.append(
+            astx.ImportFromStmt(
+                names=aliases,
+                module=module_name,
+                level=import_node.level,
+            )
+        )
+
+    if missing_imports:
+        module.nodes[:0] = missing_imports
+
+    return module
+
+
 def _find_project_source_root(start: Path) -> Path | None:
     """
     title: Find the configured project source root for a path.
@@ -377,6 +443,7 @@ class FileImportResolver:
         builtin_asset = arx_builtins.load_builtin_module(requested_specifier)
         ArxIO.string_to_buffer(builtin_asset.source)
         module_ast = Parser().parse(Lexer().lex(), requested_specifier)
+        module_ast = _inject_ambient_builtin_imports(module_ast)
         return ParsedModule(
             key=requested_specifier,
             ast=module_ast,
@@ -668,6 +735,8 @@ class ArxMain:
                 "Compiling multiple input files in a single invocation "
                 "is not supported yet."
             )
+        if isinstance(tree_ast, astx.Module):
+            return _inject_ambient_builtin_imports(tree_ast)
         return tree_ast
 
     def _module_has_imports(self, module: astx.Module) -> bool:
