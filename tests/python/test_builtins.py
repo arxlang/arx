@@ -34,9 +34,9 @@ def test_bundled_builtin_package_data_is_present() -> None:
 
     root_asset = builtins.load_builtin_module("builtins")
     child_asset = builtins.load_builtin_module("builtins.generators")
-    assert root_asset.origin == "arx.builtins:__init__.x"
+    assert root_asset.origin == "arx:builtins/__init__.x"
     assert root_asset.is_package is True
-    assert child_asset.origin == "arx.builtins:generators.x"
+    assert child_asset.origin == "arx:builtins/generators.x"
     assert child_asset.is_package is False
 
     pyproject = tomllib.loads(Path("pyproject.toml").read_text("utf-8"))
@@ -79,10 +79,10 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     child = resolver("main", child_import, "builtins.generators")
 
     assert parent.key == "builtins"
-    assert parent.origin == "arx.builtins:__init__.x"
+    assert parent.origin == "arx:builtins/__init__.x"
 
     assert child.key == "builtins.generators"
-    assert child.origin == "arx.builtins:generators.x"
+    assert child.origin == "arx:builtins/generators.x"
 
 
 def test_ambient_builtin_imports_expose_range_by_default() -> None:
