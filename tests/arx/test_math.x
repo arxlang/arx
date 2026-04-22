@@ -12,7 +12,6 @@ fn test_abs() -> none:
   ```
   assert math.abs(0 - 4) == 4
   assert math.abs(7) == 7
-  return none
 
 fn test_min_and_max() -> none:
   ```
@@ -21,7 +20,6 @@ fn test_min_and_max() -> none:
   ```
   assert math.min(3, 9) == 3
   assert math.max(3, 9) == 9
-  return none
 
 fn test_clamp() -> none:
   ```
@@ -31,7 +29,6 @@ fn test_clamp() -> none:
   assert math.clamp(0 - 3, 0, 2) == 0
   assert math.clamp(1, 0, 2) == 1
   assert math.clamp(9, 0, 2) == 2
-  return none
 
 fn test_square() -> none:
   ```
@@ -39,4 +36,3 @@ fn test_square() -> none:
   summary: Verifies squaring behavior for one integer input.
   ```
   assert math.square(5) == 25
-  return none
