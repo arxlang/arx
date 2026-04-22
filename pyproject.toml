@@ -20,6 +20,7 @@ dependencies = [
 [tool.poetry]
 include = [
   "src/arx",
+  "src/arx/builtins/**/*.x",
   "src/arx/schema/*.json",
   "src/arx/py.typed",
   "src/arx/lexer/syntax.json",

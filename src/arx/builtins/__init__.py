@@ -1,5 +1,5 @@
 """
-title: Built-in function handlers for Arx parser lowering.
+title: Compiler builtin helpers and bundled builtin-module loader.
 """
 
 from __future__ import annotations
@@ -7,8 +7,35 @@ from __future__ import annotations
 import astx
 import irx.astx as irx_astx
 
+from arx.builtins.loader import (
+    BUILTIN_NAMESPACE,
+    BUILTIN_SOURCE_EXTENSION,
+    BuiltinModuleAsset,
+    get_builtin_source,
+    is_builtin_module_specifier,
+    list_builtin_modules,
+    load_builtin_module,
+    resolve_builtin_resource,
+)
+
 BUILTIN_CAST = "cast"
 BUILTIN_PRINT = "print"
+
+__all__ = [
+    "BUILTIN_CAST",
+    "BUILTIN_NAMESPACE",
+    "BUILTIN_PRINT",
+    "BUILTIN_SOURCE_EXTENSION",
+    "BuiltinModuleAsset",
+    "build_cast",
+    "build_print",
+    "get_builtin_source",
+    "is_builtin",
+    "is_builtin_module_specifier",
+    "list_builtin_modules",
+    "load_builtin_module",
+    "resolve_builtin_resource",
+]
 
 
 def is_builtin(name: str) -> bool:

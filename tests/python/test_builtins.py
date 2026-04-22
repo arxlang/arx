@@ -1,0 +1,170 @@
+"""
+title: Bundled builtin-module loading and resolution tests.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from textwrap import dedent
+
+import pytest
+
+from arx import builtins
+from arx import main as main_module
+from irx import astx as irx_astx
+from irx.diagnostics import SemanticError
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib
+
+
+def test_bundled_builtin_package_data_is_present() -> None:
+    """
+    title: Bundled builtin sources are present in package resources.
+    """
+    assert builtins.list_builtin_modules() == ("generators",)
+    assert builtins.resolve_builtin_resource("generators").name == (
+        "generators.x"
+    )
+    assert "fn range(stop: i32) -> i32:" in builtins.get_builtin_source(
+        "generators"
+    )
+
+    root_asset = builtins.load_builtin_module("builtins")
+    child_asset = builtins.load_builtin_module("builtins.generators")
+    assert root_asset.origin == "arx.builtins:__init__.x"
+    assert root_asset.is_package is True
+    assert child_asset.origin == "arx.builtins:generators.x"
+    assert child_asset.is_package is False
+
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text("utf-8"))
+    includes = pyproject["tool"]["poetry"]["include"]
+    assert "src/arx/builtins/**/*.x" in includes
+
+
+def test_file_import_resolver_loads_builtins_from_packaged_resources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Builtin imports resolve from packaged compiler resources.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "main.x"
+    source.write_text(
+        "import range from builtins.generators\n",
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver((str(source),))
+    root_import = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("generators")],
+        module="builtins",
+        level=0,
+    )
+    child_import = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("range")],
+        module="builtins.generators",
+        level=0,
+    )
+
+    parent = resolver("main", root_import, "builtins")
+    child = resolver("main", child_import, "builtins.generators")
+
+    assert parent.key == "builtins"
+    assert parent.origin == "arx.builtins:__init__.x"
+
+    assert child.key == "builtins.generators"
+    assert child.origin == "arx.builtins:generators.x"
+
+
+def test_arxmain_compiles_program_using_builtin_generators_and_stdlib(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Builtins and stdlib remain distinct during compilation.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import range from builtins.generators
+            import math from stdlib
+
+            fn main() -> i32:
+              return math.square(range(4))
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
+def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
+    """
+    title: Local user modules cannot shadow the reserved builtin namespace.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    local_builtins = tmp_path / "builtins"
+    local_builtins.mkdir()
+    (local_builtins / "__init__.x").write_text(
+        dedent(
+            """
+            ```
+            title: Local shadow package
+            summary: Should never override compiler bundled builtins.
+            ```
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import generators from builtins
+
+            fn main() -> i32:
+              return generators.range(4)
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    with pytest.raises(
+        (SemanticError, ValueError),
+        match="reserved builtin namespace 'builtins' cannot be shadowed",
+    ):
+        app.compile()

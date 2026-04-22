@@ -73,6 +73,21 @@ fn main() -> i32:
   return math.square(4)
 ```
 
+Compiler-provided builtins stay separate from stdlib. Builtin sources live in
+`src/arx/builtins/*.x`, are bundled inside the installed `arx` package, and are
+resolved by dedicated compiler logic instead of user-project module lookup.
+
+```arx
+import range from builtins.generators
+
+fn main() -> i32:
+  return range(4)
+```
+
+The first builtin module is `generators`. Its current MVP exposes `range(stop)`,
+while future overloads and `yield`-backed generator semantics will grow in the
+same area.
+
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx
