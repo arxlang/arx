@@ -1,8 +1,8 @@
 # Arx
 
-Arx is a new programming language that uses the power of LLVM to provide a
-multi-architecture machine target code generation. Arx aims to provide a direct
-interface to Apache Arrow.
+Arx is a new programming language that uses the power of LLVM to provide
+multi-architecture machine target code generation. Arx aims to provide native
+array abstractions with an Apache Arrow-backed runtime.
 
 Arx is a prototype that should replace the current Arx compiler in c++.
 

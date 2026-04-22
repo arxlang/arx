@@ -26,12 +26,12 @@ def _parse(code: str) -> astx.Module:
     return Parser().parse(Lexer().lex())
 
 
-def test_parse_literal_kinds_and_list_literal() -> None:
+def test_parse_literal_kinds_and_array_literal() -> None:
     """
-    title: Parse string/char/bool/none and list literals.
+    title: Parse string/char/bool/none and array literals.
     """
     tree = _parse(
-        "fn main() -> list[i32]:\n"
+        "fn main() -> array[i32]:\n"
         '  var s: str = "abc"\n'
         "  var c: char = 'A'\n"
         "  var b: bool = true\n"
@@ -46,9 +46,9 @@ def test_parse_literal_kinds_and_list_literal() -> None:
     assert isinstance(ret.value, astx.LiteralList)
 
 
-def test_parse_list_literal_rejects_non_literal_elements() -> None:
+def test_parse_array_literal_rejects_non_literal_elements() -> None:
     """
-    title: List literals reject non-literal values.
+    title: Array literals reject non-literal values.
     """
     with pytest.raises(
         ParserException,
@@ -57,7 +57,7 @@ def test_parse_list_literal_rejects_non_literal_elements() -> None:
             r"Unknown token when expecting an expression)"
         ),
     ):
-        _parse("fn main() -> list[i32]:\n  return [foo]\n")
+        _parse("fn main() -> array[i32]:\n  return [foo]\n")
 
 
 def test_parse_datetime_and_timestamp_builtins() -> None:
@@ -197,11 +197,11 @@ def test_parse_type_error_paths() -> None:
         parser.parse_type()
 
 
-def test_parse_type_list_and_default_values() -> None:
+def test_parse_type_array_and_default_values() -> None:
     """
-    title: Parse list type and default-value helper branches.
+    title: Parse array type and default-value helper branches.
     """
-    tree = _parse("fn main(arg: list[i32]) -> i32:\n  return 1\n")
+    tree = _parse("fn main(arg: array[i32]) -> i32:\n  return 1\n")
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.prototype.args[0].type_, astx.ListType)

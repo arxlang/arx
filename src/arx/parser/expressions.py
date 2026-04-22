@@ -57,7 +57,7 @@ class ExpressionParserMixin(ParserMixinBase):
         if self._is_operator("("):
             return self.parse_paren_expr()
         if self._is_operator("["):
-            return self.parse_list_expr()
+            return self.parse_array_expr()
         if self.tokens.cur_tok.kind == TokenKind.kw_if:
             return self.parse_if_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_while:
@@ -230,9 +230,9 @@ class ExpressionParserMixin(ParserMixinBase):
         self._consume_operator(")")
         return expr
 
-    def parse_list_expr(self) -> astx.LiteralList:
+    def parse_array_expr(self) -> astx.LiteralList:
         """
-        title: Parse list literals.
+        title: Parse array literals.
         returns:
           type: astx.LiteralList
         """
@@ -244,7 +244,7 @@ class ExpressionParserMixin(ParserMixinBase):
                 elem = self.parse_expression()
                 if not isinstance(elem, astx.Literal):
                     raise ParserException(
-                        "List literals currently support only literal "
+                        "Array literals currently support only literal "
                         "elements."
                     )
                 elements.append(elem)

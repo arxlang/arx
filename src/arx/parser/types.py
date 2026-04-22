@@ -86,8 +86,8 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name == "list":
-                self.tokens.get_next_token()  # eat list
+            if type_name == "array":
+                self.tokens.get_next_token()  # eat array
                 self._consume_operator("[")
                 elem_type = self.parse_type(
                     allow_template_vars=allow_template_vars,
