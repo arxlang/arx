@@ -85,8 +85,8 @@ You can run compiled tests with the new `arx test` subcommand:
 
 ```bash
 arx test
-arx test tests/arx/test_add.x --list
-arx test -k fibonacci
+arx test tests/arx/test_math.x --list
+arx test -k square
 arx test -x
 arx test --keep-artifacts
 arx test --exclude "tests/arx/slow_*.x"
@@ -96,7 +96,7 @@ By default the runner searches `tests/` for files matching `test_*.x`, discovers
 zero-argument `test_*` functions that return `none`, and executes each test in
 its own compiled subprocess. Test identifiers use the cwd-relative path of the
 source file (without the `.x` suffix) joined to the function name via `::`, for
-example `tests/arx/test_add::test_add`, so same-named files in parallel
+example `tests/arx/test_math::test_square`, so same-named files in parallel
 directories stay distinct.
 
 You can override discovery from `.arxproject.toml`:

@@ -190,7 +190,7 @@ def test_cli_get_test_args_parsing() -> None:
     parser = cli_module.get_test_args()
     args = parser.parse_args(
         [
-            "tests/arx/test_add.x",
+            "tests/arx/test_math.x",
             "tests/arx/integration",
             "--list",
             "-k",
@@ -208,7 +208,7 @@ def test_cli_get_test_args_parsing() -> None:
         ]
     )
 
-    assert args.paths == ["tests/arx/test_add.x", "tests/arx/integration"]
+    assert args.paths == ["tests/arx/test_math.x", "tests/arx/integration"]
     assert args.list_only is True
     assert args.name_filter == "fib"
     assert args.fail_fast is True
@@ -309,14 +309,14 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     cli_module.app(
         [
             "test",
-            "tests/arx/test_add.x",
+            "tests/arx/test_math.x",
             "--list",
             "--exclude",
             "tests/arx/slow_*.x",
         ]
     )
 
-    assert DummyMain.called_kwargs["paths"] == ["tests/arx/test_add.x"]
+    assert DummyMain.called_kwargs["paths"] == ["tests/arx/test_math.x"]
     assert DummyMain.called_kwargs["list_only"] is True
     assert DummyMain.called_kwargs["exclude"] == ["tests/arx/slow_*.x"]
 
