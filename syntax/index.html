@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://arxlang.org/getting-started/">
+        <link rel="canonical" href="https://arxlang.org/syntax/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../api/testing/">
       
       
-        <link rel="next" href="../library/">
+        <link rel="next" href="../roadmap/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Getting Started - ArxLang</title>
+        <title>Syntax - ArxLang</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#getting-started" class="md-skip">
+        <a href="#arx-syntax-specification-lexical" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Getting Started
+              Syntax
             
           </span>
         </div>
@@ -289,37 +289,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   
@@ -335,347 +308,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#your-first-program" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Your First Program
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Your First Program">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#view-the-tokens" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View the tokens
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#view-the-ast" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View the AST
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#view-the-llvm-ir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View the LLVM IR
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#compile-to-an-object-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compile to an object file
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#control-executable-link-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Control executable link mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sum" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sum
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#average" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Average
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fibonacci" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fibonacci
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#constant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Constant
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#template-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Template Functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#print-star" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Print Star
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packages-and-imports" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packages and Imports
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#compiled-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compiled Tests
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pie-linker-error-in-colab-or-conda" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PIE linker error in Colab or Conda
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#language-basics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Language Basics
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Language Basics">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#control-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Control Flow
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Variables
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#extern-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extern Functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1865,10 +1497,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../syntax/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syntax
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1884,6 +1543,293 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-source-of-truth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1) Source of Truth
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-whitespace-and-newlines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2) Whitespace and Newlines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2) Whitespace and Newlines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3) Comments
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3) Comments">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edge-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-strings-and-escapes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4) Strings and Escapes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4) Strings and Escapes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#highlighter-guidance-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlighter Guidance (current)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5) Numbers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5) Numbers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edge-cases_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-identifiers-and-unicode-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6) Identifiers and Unicode Policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7) Keywords
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7) Keywords">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edge-cases_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-operators-and-punctuation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8) Operators and Punctuation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-canonical-lexical-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9) Canonical Lexical Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9) Canonical Lexical Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keywords-vs-identifiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keywords vs identifiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numeric-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numeric forms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotation-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Annotation lines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-lightweight-consistency-checks-repo-agnostic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10) Lightweight Consistency Checks (Repo-Agnostic)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2131,10 +2077,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#1-source-of-truth" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        1) Source of Truth
       
     </span>
   </a>
@@ -2142,77 +2088,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#2-whitespace-and-newlines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        2) Whitespace and Newlines
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#your-first-program" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Your First Program
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Your First Program">
+    <nav class="md-nav" aria-label="2) Whitespace and Newlines">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#view-the-tokens" class="md-nav__link">
+  <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        View the tokens
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#view-the-ast" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View the AST
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#view-the-llvm-ir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        View the LLVM IR
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#compile-to-an-object-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compile to an object file
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#control-executable-link-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Control executable link mode
+        Example
       
     </span>
   </a>
@@ -2225,22 +2116,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#3-comments" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Examples
+        3) Comments
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Examples">
+    <nav class="md-nav" aria-label="3) Comments">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sum" class="md-nav__link">
+  <a href="#example_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sum
+        Example
       
     </span>
   </a>
@@ -2248,54 +2139,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#average" class="md-nav__link">
+  <a href="#edge-cases" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Average
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#fibonacci" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fibonacci
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#constant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Constant
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#template-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Template Functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#print-star" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Print Star
+        Edge Cases
       
     </span>
   </a>
@@ -2308,55 +2155,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#packages-and-imports" class="md-nav__link">
+  <a href="#4-strings-and-escapes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packages and Imports
+        4) Strings and Escapes
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#compiled-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compiled Tests
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cli-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI Reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
+    <nav class="md-nav" aria-label="4) Strings and Escapes">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#pie-linker-error-in-colab-or-conda" class="md-nav__link">
+  <a href="#highlighter-guidance-current" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PIE linker error in Colab or Conda
+        Highlighter Guidance (current)
       
     </span>
   </a>
@@ -2369,66 +2183,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#language-basics" class="md-nav__link">
+  <a href="#5-numbers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Language Basics
+        5) Numbers
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Language Basics">
+    <nav class="md-nav" aria-label="5) Numbers">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#types" class="md-nav__link">
+  <a href="#edge-cases_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Types
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#control-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Control Flow
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Variables
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#extern-functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extern Functions
+        Edge Cases
       
     </span>
   </a>
@@ -2441,10 +2211,132 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#6-identifiers-and-unicode-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next Steps
+        6) Identifiers and Unicode Policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7) Keywords
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7) Keywords">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edge-cases_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edge Cases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-operators-and-punctuation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8) Operators and Punctuation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-canonical-lexical-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9) Canonical Lexical Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9) Canonical Lexical Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keywords-vs-identifiers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keywords vs identifiers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numeric-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numeric forms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotation-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Annotation lines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-lightweight-consistency-checks-repo-agnostic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10) Lightweight Consistency Checks (Repo-Agnostic)
       
     </span>
   </a>
@@ -2471,434 +2363,217 @@
   
 
 
-<h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
-<p>This guide walks you through installing Arx and compiling your first program.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<h1 id="arx-syntax-specification-lexical">Arx Syntax Specification (Lexical)<a class="headerlink" href="#arx-syntax-specification-lexical" title="Permanent link">&para;</a></h1>
+<p>Status: draft <code class="language-python highlight"><span class="mf">0.1.0</span></code></p>
+<p>This document defines Arx lexical/token-level behavior for editor tooling.</p>
+<p>Normative source: <code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">arx</span><span class="o">/</span><span class="n">lexer</span><span class="o">/</span><span class="n">syntax</span><span class="o">.</span><span class="n">json</span></code></p>
+<p>Non-goal: full parsing or AST semantics.</p>
+<h2 id="1-source-of-truth">1) Source of Truth<a class="headerlink" href="#1-source-of-truth" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://docs.conda.io/en/latest/">Conda</a> or
-  <a href="https://mamba.readthedocs.io/">Mamba</a> package manager</li>
-<li><a href="https://python-poetry.org/">Poetry</a> (installed via conda)</li>
+<li><code class="language-python highlight"><span class="n">syntax</span><span class="o">.</span><span class="n">json</span></code> is canonical.</li>
+<li>Any derived editor grammar or tokenizer should be generated from, or manually
+  validated against, that file.</li>
+<li>If this Markdown and the JSON disagree, the JSON wins.</li>
 </ul>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Clone the repository:</li>
-</ol>
-<div class="language-bash highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/arxlang/arx.git
-<span class="nb">cd</span><span class="w"> </span>arx
-</code></pre></div>
-<ol>
-<li>Create the conda environment and install dependencies:</li>
-</ol>
-<div class="language-bash highlight"><pre><span></span><code>mamba<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>--file<span class="w"> </span>conda/dev.yaml
-conda<span class="w"> </span>activate<span class="w"> </span>arx
-poetry<span class="w"> </span>install
-</code></pre></div>
-<ol>
-<li>Verify the installation:</li>
-</ol>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--version
-</code></pre></div>
-<h2 id="your-first-program">Your First Program<a class="headerlink" href="#your-first-program" title="Permanent link">&para;</a></h2>
-<p>Create a file called <code class="language-python highlight"><span class="n">hello</span><span class="o">.</span><span class="n">x</span></code>:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Hello example
-summary: Minimal Arx program that adds two values.
-```
-fn sum(a: i32, b: i32) -&gt; i32:
-  ```
-  title: sum
-  summary: Returns the sum of a and b.
-  ```
-  return a + b
-</code></pre></div>
-<h3 id="view-the-tokens">View the tokens<a class="headerlink" href="#view-the-tokens" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--show-tokens<span class="w"> </span>hello.x
-</code></pre></div>
-<h3 id="view-the-ast">View the AST<a class="headerlink" href="#view-the-ast" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--show-ast<span class="w"> </span>hello.x
-</code></pre></div>
-<h3 id="view-the-llvm-ir">View the LLVM IR<a class="headerlink" href="#view-the-llvm-ir" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--show-llvm-ir<span class="w"> </span>hello.x
-</code></pre></div>
-<h3 id="compile-to-an-object-file">Compile to an object file<a class="headerlink" href="#compile-to-an-object-file" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>hello.x<span class="w"> </span>--output-file<span class="w"> </span>hello
-</code></pre></div>
-<h3 id="control-executable-link-mode">Control executable link mode<a class="headerlink" href="#control-executable-link-mode" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>auto
-arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>pie
-arx<span class="w"> </span>examples/print-star.x<span class="w"> </span>--link-mode<span class="w"> </span>no-pie
-</code></pre></div>
-<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<p>The <code class="language-python highlight"><span class="n">examples</span><span class="o">/</span></code> directory contains several sample programs:</p>
-<h3 id="sum">Sum<a class="headerlink" href="#sum" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Sum example
-summary: Demonstrates a basic addition function.
-```
-fn sum(a: i32, b: i32) -&gt; i32:
-  ```
-  title: sum
-  summary: Returns the sum of two values.
-  ```
-  return a + b;
-</code></pre></div>
-<h3 id="average">Average<a class="headerlink" href="#average" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Average example
-summary: Demonstrates a basic arithmetic average function.
-```
-fn average(x: f32, y: f32) -&gt; f32:
-  ```
-  title: average
-  summary: Returns the arithmetic mean of x and y.
-  ```
-  return (x + y) * 0.5;
-</code></pre></div>
-<h3 id="fibonacci">Fibonacci<a class="headerlink" href="#fibonacci" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Fibonacci example
-summary: Computes Fibonacci numbers recursively.
-```
-fn fib(x: i32) -&gt; i32:
-  ```
-  title: fib
-  summary: Returns the Fibonacci number for the input index.
-  ```
-  if x &lt; 3:
-    return 1
-  else:
-    return fib(x-1)+fib(x-2)
-</code></pre></div>
-<h3 id="constant">Constant<a class="headerlink" href="#constant" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Constant example
-summary: Demonstrates a function that returns its argument unchanged.
-```
-fn get_constant(x: i32) -&gt; i32:
-  ```
-  title: get_constant
-  summary: Returns the provided value.
-  ```
-  return x;
-</code></pre></div>
-<h3 id="template-functions">Template Functions<a class="headerlink" href="#template-functions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Template example
-summary: Demonstrates compile-time specialization with inferred and explicit calls.
-```
-@&lt;T: i32 | f64&gt;
-fn add(x: T, y: T) -&gt; T:
-  ```
-  title: add
-  summary: Adds two values with the same template-bound type.
-  ```
-  return x + y
-
-fn main() -&gt; i32:
-  ```
-  title: main
-  summary: Calls both inferred and explicit template specializations.
-  ```
-  print(add(1, 2))
-  print(add&lt;f64&gt;(1.5, 2.5))
-  return 0
-</code></pre></div>
-<h3 id="print-star">Print Star<a class="headerlink" href="#print-star" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Print star example
-summary: Emits star characters using an external output function.
-```
-fn print_star(n: i32) -&gt; none:
-  ```
-  title: print_star
-  summary: Prints stars in a loop by calling putchard.
-  ```
-  for i in (0:n:1):
-    putchard(42);  # ascii 42 = &#39;*&#39;
-  return none
-
-fn main() -&gt; i32:
-  ```
-  title: main
-  summary: Runs the print_star demo with a fixed size and exits with status 0.
-  ```
-  print_star(10)
-  return 0
-</code></pre></div>
-<p>Note: Arx entrypoint parameters currently follow the native C <code class="language-python highlight"><span class="n">main</span></code> ABI. A
-single <code class="language-python highlight"><span class="n">main</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">i32</span><span class="p">)</span></code> receives <code class="language-python highlight"><span class="n">argc</span></code>, not the numeric value from <code class="language-python highlight"><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></code>.
-When using <code class="language-python highlight"><span class="o">--</span><span class="n">run</span></code>, prefer <code class="language-python highlight"><span class="n">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">i32</span></code> and <code class="language-python highlight"><span class="k">return</span> <span class="mi">0</span></code> for a stable success
-exit code.</p>
-<p>You can compile any example with:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>examples/sum.x<span class="w"> </span>--show-llvm-ir
-</code></pre></div>
-<p>Or compile and run in one command:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--run<span class="w"> </span>examples/print-star.x
-</code></pre></div>
-<p>Alias form is also available:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>run<span class="w"> </span>examples/print-star.x
-</code></pre></div>
-<h2 id="packages-and-imports">Packages and Imports<a class="headerlink" href="#packages-and-imports" title="Permanent link">&para;</a></h2>
-<p>When your project sets <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code>, files under that directory are loaded
-as dotted package modules.</p>
-<p>Example layout:</p>
-<div class="language-text highlight"><pre><span></span><code>.
-├── .arxproject.toml
-├── src
-│   └── geometry
-│       ├── __init__.x
-│       ├── shared
-│       │   └── math.x
-│       └── shapes
-│           ├── area.x
-│           └── helpers.x
-└── tests
-    └── test_area.x
-</code></pre></div>
-<p>Example project manifest:</p>
-<div class="language-toml highlight"><pre><span></span><code><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry&quot;</span>
-<span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span>
-
-<span class="k">[environment]</span>
-<span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;conda&quot;</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry&quot;</span>
-
-<span class="k">[build]</span>
-<span class="n">out_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;build&quot;</span>
-</code></pre></div>
-<p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package root. Arx uses <code class="language-python highlight"><span class="n">src</span><span class="o">/</span></code> as the default source root
-when <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code> is omitted. Inside a nested module such as
-<code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">area</span></code>, use relative <code class="language-python highlight"><span class="kn">from</span></code> imports for nearby modules and
-parent-package modules:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Geometry shapes area
-summary: Package-internal import example.
-```
-import radius_to_diameter from .helpers
-import clamp from ..shared.math
-</code></pre></div>
-<p>Outside the package, use either direct symbol imports or a namespace alias:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Geometry consumer
-summary: Public direct import example.
-```
-import circle_area from geometry.shapes.area
-</code></pre></div>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Geometry namespace consumer
-summary: Public namespace import example.
-```
-import geometry.shapes.area as area
-
-fn main() -&gt; f64:
-  ```
-  title: main
-  summary: Calls one function through a module namespace alias.
-  ```
-  return area.circle_area(10.0)
-</code></pre></div>
-<p>Current limitation: plain relative module imports such as <code class="language-python highlight"><span class="kn">import</span><span class="w"> </span><span class="nn">.area</span></code> are not
-supported yet.</p>
-<h2 id="compiled-tests">Compiled Tests<a class="headerlink" href="#compiled-tests" title="Permanent link">&para;</a></h2>
-<p>Arx now supports fatal assertion statements and a compiled test runner. Test
-functions follow a simple convention:</p>
+<h2 id="2-whitespace-and-newlines">2) Whitespace and Newlines<a class="headerlink" href="#2-whitespace-and-newlines" title="Permanent link">&para;</a></h2>
 <ul>
-<li>files: any <code class="language-python highlight"><span class="n">test_</span><span class="o">*.</span><span class="n">x</span></code> under the <code class="language-python highlight"><span class="n">tests</span><span class="o">/</span></code> directory by default</li>
-<li>function names: <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code></li>
-<li>signature: zero arguments</li>
-<li>return type: <code class="language-python highlight"><span class="n">none</span></code> (always declared explicitly as <code class="language-python highlight"><span class="o">-&gt;</span> <span class="n">none</span></code>)</li>
+<li>Indentation is significant.</li>
+<li>Canonical indentation unit is 2 spaces.</li>
+<li>Newlines are significant boundaries for indentation handling.</li>
+<li>Blank lines reset indentation tracking for that line.</li>
+<li>Tabs policy is not finalized.</li>
+<li>TODO(ARX-LEX-WS-001): decide whether tabs are forbidden or normalized.</li>
 </ul>
-<p>Inside a <code class="language-python highlight"><span class="n">none</span></code> function you can end with a bare <code class="language-python highlight"><span class="k">return</span></code>, an explicit
-<code class="language-python highlight"><span class="k">return</span> <span class="n">none</span></code>, or omit the return statement entirely.</p>
-<p>Example test module:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Example tests
-summary: Demonstrates `assert` and `arx test`.
-```
-fn add(a: i32, b: i32) -&gt; i32:
-  return a + b
-
-fn test_add() -&gt; none:
-  assert add(1, 2) == 3
-  assert add(2, 2) == 4, &quot;add(2, 2) should be 4&quot;
-</code></pre></div>
-<p>Run the test suite with:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span><span class="nb">test</span>
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/test_add.x<span class="w"> </span>--list
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-k<span class="w"> </span>add
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-x
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--keep-artifacts
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s2">&quot;tests/slow_*.x&quot;</span>
-</code></pre></div>
-<p>Test discovery can also be tuned from <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code>:</p>
-<div class="language-toml highlight"><pre><span></span><code><span class="k">[tests]</span>
-<span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;integration&quot;</span><span class="p">]</span>
-<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests/experimental_*.x&quot;</span><span class="p">]</span>
-<span class="n">file_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*.x&quot;</span>
-<span class="n">function_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test_*&quot;</span>
-</code></pre></div>
-<p>CLI arguments always take precedence over <code class="language-python highlight"><span class="p">[</span><span class="n">tests</span><span class="p">]</span></code> settings. Discovered tests
-are displayed using the cwd-relative path of the source file (without the <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code>
-suffix) joined to the function name via <code class="language-python highlight"><span class="p">::</span></code>, for example
-<code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">unit</span><span class="o">/</span><span class="n">test_math</span><span class="p">::</span><span class="n">test_add</span></code>, so same-named files in different directories
-stay unambiguous.</p>
-<p>The runner compiles each selected test into its own temporary executable and
-reports assertion failures from IRx's machine-readable runtime protocol. In v1,
-shared top-level support is limited to imports, extern declarations, class
-declarations, and helper functions; module-scope variable declarations and other
-top-level executable code are rejected during collection.</p>
-<h2 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code>arx [input_files] [options]
-arx test [paths ...] [options]
-</code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">version</span></code></td>
-<td>Show the installed version</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">output</span><span class="o">-</span><span class="n">file</span></code></td>
-<td>Specify the output file path</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">lib</span></code></td>
-<td>Build source code as a library</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">show</span><span class="o">-</span><span class="n">ast</span></code></td>
-<td>Print the AST for the input source code</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">show</span><span class="o">-</span><span class="n">tokens</span></code></td>
-<td>Print the tokens for the input source</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">show</span><span class="o">-</span><span class="n">llvm</span><span class="o">-</span><span class="n">ir</span></code></td>
-<td>Print the LLVM IR for the input source</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">run</span></code></td>
-<td>Build and execute the compiled binary</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">shell</span></code></td>
-<td>Open Arx in a shell prompt (not yet implemented)</td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="o">--</span><span class="n">link</span><span class="o">-</span><span class="n">mode</span></code></td>
-<td>Set executable link mode: <code class="language-python highlight"><span class="n">auto</span></code>, <code class="language-python highlight"><span class="n">pie</span></code>, <code class="language-python highlight"><span class="n">no</span><span class="o">-</span><span class="n">pie</span></code></td>
-</tr>
-<tr>
-<td><code class="language-python highlight"><span class="n">test</span></code></td>
-<td>Discover, compile, and run <code class="language-python highlight"><span class="n">test_</span><span class="o">*</span></code> functions</td>
-</tr>
-</tbody>
-</table>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="pie-linker-error-in-colab-or-conda">PIE linker error in Colab or Conda<a class="headerlink" href="#pie-linker-error-in-colab-or-conda" title="Permanent link">&para;</a></h3>
-<p>If the build fails with an error similar to:</p>
-<div class="language-text highlight"><pre><span></span><code>relocation R_X86_64_32 against `.rodata&#39; can not be used when making a PIE object
-</code></pre></div>
-<p>run the compile step with:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>average.x<span class="w"> </span>--link-mode<span class="w"> </span>no-pie
-</code></pre></div>
-<p>If you need a manual fallback:</p>
-<div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span>--lib<span class="w"> </span>average.x<span class="w"> </span>--output-file<span class="w"> </span>average.o
-clang<span class="w"> </span>-no-pie<span class="w"> </span>average.o<span class="w"> </span>-o<span class="w"> </span>average
-</code></pre></div>
-<h2 id="language-basics">Language Basics<a class="headerlink" href="#language-basics" title="Permanent link">&para;</a></h2>
-<p>Arx's syntax is influenced by Python with significant whitespace (indentation).</p>
-<h3 id="types">Types<a class="headerlink" href="#types" title="Permanent link">&para;</a></h3>
-<p>Arx uses explicit type annotations for function parameters, variable
-declarations, and function return types. Return type annotations are always
-required, including <code class="language-python highlight"><span class="o">-&gt;</span> <span class="n">none</span></code>.</p>
-<p>For annotation rules, see <a href="../library/datatypes/">Data Types</a>. For the full
-catalog of built-in types and aliases, see
-<a href="../library/built-in-types/">Built-in Types</a>.</p>
-<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
-<p>Functions are defined with the <code class="language-python highlight"><span class="n">fn</span></code> keyword and use <code class="language-python highlight"><span class="p">:</span></code> plus indentation for the
-body:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Function definition example
-summary: Shows a basic function declaration.
-```
-fn add(x: i32, y: i32) -&gt; i32:
-  ```
-  title: add
-  summary: Returns x plus y.
-  ```
-  return x + y
-</code></pre></div>
-<h3 id="control-flow">Control Flow<a class="headerlink" href="#control-flow" title="Permanent link">&para;</a></h3>
-<p><strong>If/else:</strong></p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: If/else example
-summary: Shows conditional branching in a function.
-```
-fn abs(x: i32) -&gt; i32:
-  ```
-  title: abs
-  summary: Returns the absolute value of x.
-  ```
+<h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>fn abs(x):
   if x &lt; 0:
     return 0 - x
   else:
     return x
 </code></pre></div>
-<p><strong>For loop:</strong></p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: For loop example
-summary: Shows loop syntax with a slice-like range clause.
-```
-fn count(n: i32) -&gt; none:
-  ```
-  title: count
-  summary: Iterates and prints star characters.
-  ```
-  for i in (1:n:1):
-    putchard(42)
-</code></pre></div>
-<p>The range header uses <code class="language-python highlight"><span class="p">(</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">:</span><span class="n">step</span><span class="p">)</span></code> and is intentionally slice-like.</p>
-<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
-<p>Variables are declared with <code class="language-python highlight"><span class="n">var</span></code>:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Variable example
-summary: Shows var binding inside a function.
-```
-fn example() -&gt; i32:
-  ```
-  title: example
-  summary: Binds a variable and computes a result.
-  ```
-  var a: i32 = 10
-  return a + 1
-</code></pre></div>
-<h3 id="extern-functions">Extern Functions<a class="headerlink" href="#extern-functions" title="Permanent link">&para;</a></h3>
-<p>External functions (e.g., from C) are declared with <code class="language-python highlight"><span class="n">extern</span></code>:</p>
-<div class="language-text highlight"><pre><span></span><code>```
-title: Extern declaration example
-summary: Declares an external function symbol.
-```
-extern putchard(x: i32) -&gt; i32
-</code></pre></div>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<h2 id="3-comments">3) Comments<a class="headerlink" href="#3-comments" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Check the <a href="../roadmap/">Roadmap</a> for planned features</li>
-<li>Read the <a href="../library/">Library Reference</a> for language feature details</li>
-<li>Review <a href="../library/built-in-types/">Built-in Types</a> for the canonical type
-  catalog</li>
-<li>Read the <a href="../contributing/">Contributing Guide</a> to help develop Arx</li>
-<li>Browse the <a href="../api/">API Docs</a> for the compiler internals</li>
-<li>Join the <a href="../discord/">Community</a> on Discord</li>
+<li>Line comments start with <code class="language-python highlight"><span class="c1">#</span></code> and continue to end of line.</li>
+<li>Block comments are not specified.</li>
 </ul>
+<h3 id="example_1">Example<a class="headerlink" href="#example_1" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>fn print_star(n):
+  putchard(42)  # ascii &#39;*&#39;
+</code></pre></div>
+<h3 id="edge-cases">Edge Cases<a class="headerlink" href="#edge-cases" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code class="language-python highlight"><span class="c1">#</span></code> inside future string syntax is undefined until strings are specified.</li>
+<li>TODO(ARX-LEX-COMMENT-002): decide whether <code class="language-python highlight"><span class="o">//</span></code> should become a comment
+  delimiter.</li>
+</ul>
+<h2 id="4-strings-and-escapes">4) Strings and Escapes<a class="headerlink" href="#4-strings-and-escapes" title="Permanent link">&para;</a></h2>
+<p>Current status: not yet specified for Arx lexical v0.1.0.</p>
+<ul>
+<li>No official quote delimiters.</li>
+<li>No official escape sequences.</li>
+<li>No triple-quoted or raw string prefixes.</li>
+<li>No string interpolation syntax.</li>
+</ul>
+<p>TODO(ARX-LEX-STRINGS-001): define <code class="language-python highlight"><span class="s2">&quot;...&quot;</span></code> / <code class="language-python highlight"><span class="s1">&#39;...&#39;</span></code> behavior and escapes.
+TODO(ARX-LEX-STRINGS-002): define raw strings and interpolation policy.</p>
+<h3 id="highlighter-guidance-current">Highlighter Guidance (current)<a class="headerlink" href="#highlighter-guidance-current" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Treat quote characters as plain punctuation/operators.</li>
+<li>Avoid speculative string scopes unless a tool explicitly opts into
+  future-preview rules.</li>
+</ul>
+<h2 id="5-numbers">5) Numbers<a class="headerlink" href="#5-numbers" title="Permanent link">&para;</a></h2>
+<p>Supported lexical number classes:</p>
+<ul>
+<li>Decimal integers (e.g., <code class="language-python highlight"><span class="mi">0</span></code>, <code class="language-python highlight"><span class="mi">42</span></code>)</li>
+<li>Decimal floats with one dot (e.g., <code class="language-python highlight"><span class="mf">3.14</span></code>, <code class="language-python highlight"><span class="mf">.5</span></code>, <code class="language-python highlight"><span class="mf">5.</span></code>)</li>
+</ul>
+<p>Not currently specified:</p>
+<ul>
+<li>Non-decimal bases (<code class="language-python highlight"><span class="mi">0</span><span class="n">x</span></code>, <code class="language-python highlight"><span class="mi">0</span><span class="n">b</span></code>, <code class="language-python highlight"><span class="mi">0</span><span class="n">o</span></code>)</li>
+<li>Exponent forms (<code class="language-python highlight"><span class="mf">1e9</span></code>)</li>
+<li>Numeric separators (<code class="language-python highlight"><span class="mi">1_000</span></code>)</li>
+<li>Type suffixes (<code class="language-python highlight"><span class="mi">42</span><span class="n">u32</span></code>, <code class="language-python highlight"><span class="mf">1.0</span><span class="n">f32</span></code>)</li>
+</ul>
+<h3 id="edge-cases_1">Edge Cases<a class="headerlink" href="#edge-cases_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code class="language-python highlight"><span class="mf">1.2.3</span></code> is invalid (multiple decimal points).</li>
+<li><code class="language-python highlight"><span class="o">.</span></code> alone is invalid as a numeric literal.</li>
+</ul>
+<h2 id="6-identifiers-and-unicode-policy">6) Identifiers and Unicode Policy<a class="headerlink" href="#6-identifiers-and-unicode-policy" title="Permanent link">&para;</a></h2>
+<p>Identifier shape:</p>
+<ul>
+<li>Start: Unicode letter or <code class="language-python highlight"><span class="n">_</span></code></li>
+<li>Continue: Unicode alphanumeric or <code class="language-python highlight"><span class="n">_</span></code></li>
+</ul>
+<p>Reference regex for tooling:</p>
+<div class="language-text highlight"><pre><span></span><code>(?:[_\p{L}])(?:[_\p{L}\p{N}])*
+</code></pre></div>
+<p>Policy status:</p>
+<ul>
+<li>Current behavior tracks host-runtime Unicode character categories.</li>
+<li>TODO(ARX-LEX-IDENT-001): lock policy to either XID_* classes or ASCII-only.</li>
+</ul>
+<h2 id="7-keywords">7) Keywords<a class="headerlink" href="#7-keywords" title="Permanent link">&para;</a></h2>
+<p>Reserved keywords:</p>
+<ul>
+<li><code class="language-python highlight"><span class="k">class</span></code></li>
+<li><code class="language-python highlight"><span class="n">const</span></code></li>
+<li><code class="language-python highlight"><span class="k">else</span></code></li>
+<li><code class="language-python highlight"><span class="n">extern</span></code></li>
+<li><code class="language-python highlight"><span class="n">fn</span></code></li>
+<li><code class="language-python highlight"><span class="k">for</span></code></li>
+<li><code class="language-python highlight"><span class="k">if</span></code></li>
+<li><code class="language-python highlight"><span class="kn">import</span></code></li>
+<li><code class="language-python highlight"><span class="ow">in</span></code></li>
+<li><code class="language-python highlight"><span class="k">return</span></code></li>
+<li><code class="language-python highlight"><span class="n">then</span></code></li>
+<li><code class="language-python highlight"><span class="n">var</span></code></li>
+</ul>
+<p>Contextual keywords:</p>
+<ul>
+<li><code class="language-python highlight"><span class="k">as</span></code></li>
+<li><code class="language-python highlight"><span class="kn">from</span></code></li>
+</ul>
+<h3 id="edge-cases_2">Edge Cases<a class="headerlink" href="#edge-cases_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code class="language-python highlight"><span class="n">fnx</span></code>, <code class="language-python highlight"><span class="n">if_else</span></code>, <code class="language-python highlight"><span class="n">returnValue</span></code> are identifiers, not keywords.</li>
+<li>Case-sensitive matching: <code class="language-python highlight"><span class="n">Fn</span></code> and <code class="language-python highlight"><span class="n">IF</span></code> are identifiers.</li>
+</ul>
+<h2 id="8-operators-and-punctuation">8) Operators and Punctuation<a class="headerlink" href="#8-operators-and-punctuation" title="Permanent link">&para;</a></h2>
+<p>Current operator/punctuation set for lexical highlighting:</p>
+<ul>
+<li>Assignment/comparison/arithmetic: <code class="language-python highlight"><span class="o">=</span></code>, <code class="language-python highlight"><span class="o">&lt;</span></code>, <code class="language-python highlight"><span class="o">&gt;</span></code>, <code class="language-python highlight"><span class="o">+</span></code>, <code class="language-python highlight"><span class="o">-</span></code>, <code class="language-python highlight"><span class="o">*</span></code>, <code class="language-python highlight"><span class="o">/</span></code></li>
+<li>Structural punctuation: <code class="language-python highlight"><span class="o">.</span></code>, <code class="language-python highlight"><span class="o">@</span></code>, <code class="language-python highlight"><span class="p">:</span></code>, <code class="language-python highlight"><span class="p">,</span></code>, <code class="language-python highlight"><span class="p">;</span></code></li>
+</ul>
+<p>Brackets:</p>
+<ul>
+<li><code class="language-python highlight"><span class="p">()</span></code></li>
+<li><code class="language-python highlight"><span class="p">[]</span></code></li>
+<li><code class="language-python highlight"><span class="p">{}</span></code></li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>Multi-character operators are not finalized.</li>
+<li>Annotation lines use <code class="language-python highlight"><span class="o">@</span><span class="p">[</span></code> followed by comma-separated modifier names and a
+  closing <code class="language-python highlight"><span class="p">]</span></code>.</li>
+<li>Grouped named imports use parentheses, require <code class="language-python highlight"><span class="kn">from</span></code>, and allow trailing
+  commas.</li>
+<li>TODO(ARX-LEX-OPS-001): decide on <code class="language-python highlight"><span class="o">==</span></code>, <code class="language-python highlight"><span class="o">!=</span></code>, <code class="language-python highlight"><span class="o">&lt;=</span></code>, <code class="language-python highlight"><span class="o">&gt;=</span></code>, <code class="language-python highlight"><span class="o">-&gt;</span></code>.</li>
+</ul>
+<h2 id="9-canonical-lexical-examples">9) Canonical Lexical Examples<a class="headerlink" href="#9-canonical-lexical-examples" title="Permanent link">&para;</a></h2>
+<h3 id="keywords-vs-identifiers">Keywords vs identifiers<a class="headerlink" href="#keywords-vs-identifiers" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>fn fnx(x):
+  var if_else = x in
+    return if_else
+</code></pre></div>
+<h3 id="numeric-forms">Numeric forms<a class="headerlink" href="#numeric-forms" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>fn demo() -&gt; none:
+  var a = 42 in
+    var b = 3.14 in
+      var c = .5 in
+        var d = 5. in
+          a + b + c + d
+</code></pre></div>
+<h3 id="comments">Comments<a class="headerlink" href="#comments" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>extern putchard(x)  # imported symbol
+</code></pre></div>
+<h3 id="annotation-lines">Annotation lines<a class="headerlink" href="#annotation-lines" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>@[public, static]
+class Math:
+  @[public, constant]
+  version: int32 = 1
+</code></pre></div>
+<h3 id="imports">Imports<a class="headerlink" href="#imports" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>import std.math
+import std.math as math
+
+import sin from std.math
+import sin as sine from std.math
+
+import (sin, cos, tan as tangent) from std.math
+
+import (
+  sin,
+  cos,
+  tan as tangent,
+) from std.math
+</code></pre></div>
+<h2 id="10-lightweight-consistency-checks-repo-agnostic">10) Lightweight Consistency Checks (Repo-Agnostic)<a class="headerlink" href="#10-lightweight-consistency-checks-repo-agnostic" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>Canonical check:</p>
+</li>
+<li>
+<p>Parse <code class="language-python highlight"><span class="n">src</span><span class="o">/</span><span class="n">arx</span><span class="o">/</span><span class="n">lexer</span><span class="o">/</span><span class="n">syntax</span><span class="o">.</span><span class="n">json</span></code>.</p>
+</li>
+<li>
+<p>Verify required keys exist (<code class="language-python highlight"><span class="n">keywords</span></code>, <code class="language-python highlight"><span class="n">comment</span></code>, <code class="language-python highlight"><span class="n">strings</span></code>, <code class="language-python highlight"><span class="n">numbers</span></code>,
+     <code class="language-python highlight"><span class="n">identifiers</span></code>, <code class="language-python highlight"><span class="n">whitespace</span></code>, <code class="language-python highlight"><span class="n">brackets</span></code>).</p>
+</li>
+<li>
+<p>Derived artifacts check:</p>
+</li>
+<li>
+<p>If/when an editor grammar exists, assert it was generated from or validated
+     against the JSON manifest.</p>
+</li>
+<li>
+<p>Fail CI if keyword arrays differ.</p>
+</li>
+<li>
+<p>Drift check:</p>
+</li>
+<li>
+<p>Add a simple script that loads JSON and scans corpus snippets (if present)
+     to ensure each declared keyword/operator appears in at least one sample.</p>
+</li>
+<li>
+<p>Change discipline:</p>
+</li>
+<li>Require PRs touching syntax tooling to update <code class="language-python highlight"><span class="n">syntax</span><span class="o">.</span><span class="n">json</span></code> first, then
+     derived files.</li>
+</ol>
 
 
 

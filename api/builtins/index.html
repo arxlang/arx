@@ -988,9 +988,31 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../lexer/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../lexer/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1004,7 +1026,87 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_1_8" id="__nav_4_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lexer/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> core
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lexer/syntax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1482,14 +1584,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sponsor/" class="md-nav__link">
+      <a href="../../syntax/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Sponsor
+    Syntax
   
 
     
@@ -1536,60 +1638,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../governance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Governance
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../changelog/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Changelog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../contributing/" class="md-nav__link">
         
   
@@ -1598,6 +1646,33 @@
     
   
     Contributing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sponsor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sponsor
   
 
     
@@ -1679,6 +1754,60 @@
     
   
     Community
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
   
 
     
@@ -1870,7 +1999,7 @@
     <span class="n">value</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">Cast</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    title: Build an IRX Cast node.</span>
+<span class="sd">    title: Build an IRx Cast node.</span>
 <span class="sd">    parameters:</span>
 <span class="sd">      value:</span>
 <span class="sd">        type: astx.DataType</span>
@@ -1915,7 +2044,7 @@
 <span class="normal">50</span>
 <span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_print</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">Expr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">irx_astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    title: Build an IRX PrintExpr node.</span>
+<span class="sd">    title: Build an IRx PrintExpr node.</span>
 <span class="sd">    parameters:</span>
 <span class="sd">      message:</span>
 <span class="sd">        type: astx.Expr</span>

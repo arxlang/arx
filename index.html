@@ -1004,9 +1004,31 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="api/lexer/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="api/lexer/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1020,7 +1042,87 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_1_8" id="__nav_4_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/lexer/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> core
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/lexer/syntax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1498,14 +1600,14 @@
   
   
     <li class="md-nav__item">
-      <a href="sponsor/" class="md-nav__link">
+      <a href="syntax/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Sponsor
+    Syntax
   
 
     
@@ -1552,60 +1654,6 @@
   
   
     <li class="md-nav__item">
-      <a href="governance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Governance
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Changelog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="contributing/" class="md-nav__link">
         
   
@@ -1614,6 +1662,33 @@
     
   
     Contributing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sponsor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sponsor
   
 
     
@@ -1695,6 +1770,60 @@
     
   
     Community
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
   
 
     
@@ -1809,10 +1938,10 @@
 
 
 <h1 id="arxlang">ArxLang<a class="headerlink" href="#arxlang" title="Permanent link">&para;</a></h1>
-<p>Arx is a multi-purpose compiler that aims to provide
-<a href="https://arrow.apache.org/">Apache Arrow</a> datatypes as native datatypes. It uses
-the power of <a href="https://llvm.org/">LLVM</a> to provide multi-architecture machine
-target code generation.</p>
+<p>Arx is a multi-purpose compiler that aims to provide native array abstractions
+with an <a href="https://arrow.apache.org/">Apache Arrow</a>-backed runtime. It uses the
+power of <a href="https://llvm.org/">LLVM</a> to provide multi-architecture machine target
+code generation.</p>
 <p>The language syntax is influenced by Python, C++, and YAML, featuring
 significant whitespace, static typing (planned), and a focus on data-oriented
 computing.</p>
@@ -1842,7 +1971,8 @@ then consumed from Arx.</p>
 <ul>
 <li><strong>LLVM-powered</strong> -- compiles to native machine code via LLVM</li>
 <li><strong>Python-like syntax</strong> -- indentation-based blocks, familiar keywords</li>
-<li><strong>Apache Arrow datatypes</strong> -- native Arrow type support (planned)</li>
+<li><strong>Native arrays</strong> -- builtin array-oriented types backed by Arrow internally
+  (planned)</li>
 <li><strong>Multiple output modes</strong> -- inspect tokens, AST, LLVM IR, or compile to
   object files</li>
 </ul>

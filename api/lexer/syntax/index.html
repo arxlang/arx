@@ -8,31 +8,31 @@
       
       
       
-        <link rel="canonical" href="https://arxlang.org/library/classes/">
+        <link rel="canonical" href="https://arxlang.org/api/lexer/syntax/">
       
       
-        <link rel="prev" href="../functions/">
+        <link rel="prev" href="../core/">
       
       
-        <link rel="next" href="../datatypes/">
+        <link rel="next" href="../../logs/">
       
       
         
       
       
-      <link rel="icon" href="../../images/favicon.ico">
+      <link rel="icon" href="../../../images/favicon.ico">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
-        <title>Classes - ArxLang</title>
+        <title>syntax - ArxLang</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +51,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#classes" class="md-skip">
+        <a href="#arx.lexer.syntax" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../../.." title="ArxLang" class="md-header__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
-  <img src="../../images/arx.png" alt="logo">
+  <img src="../../../images/arx.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Classes
+              <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
             
           </span>
         </div>
@@ -236,9 +236,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
+    <a href="../../.." title="ArxLang" class="md-nav__button md-logo" aria-label="ArxLang" data-md-component="logo">
       
-  <img src="../../images/arx.png" alt="logo">
+  <img src="../../../images/arx.png" alt="logo">
 
     </a>
     ArxLang
@@ -265,7 +265,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -292,7 +292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
+      <a href="../../../getting-started/" class="md-nav__link">
         
   
   
@@ -316,8 +316,6 @@
       
   
   
-    
-  
   
   
     
@@ -345,15 +343,15 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../../library/" class="md-nav__link ">
               
   
   
@@ -377,7 +375,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -397,7 +395,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../modules/" class="md-nav__link">
+      <a href="../../../library/modules/" class="md-nav__link">
         
   
   
@@ -425,7 +423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../functions/" class="md-nav__link">
+      <a href="../../../library/functions/" class="md-nav__link">
         
   
   
@@ -433,6 +431,560 @@
     
   
     Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../library/classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../library/datatypes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../library/built-in-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Built-in Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../library/control-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../library/docstrings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docstrings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../builtins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> builtins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../codegen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> codegen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../docstrings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> docstrings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_8" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_1_8" id="__nav_4_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> core
   
 
     
@@ -469,7 +1021,7 @@
   <span class="md-ellipsis">
     
   
-    Classes
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
   
 
     
@@ -487,7 +1039,7 @@
   <span class="md-ellipsis">
     
   
-    Classes
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
   
 
     
@@ -513,54 +1065,93 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#class-syntax" class="md-nav__link">
+  <a href="#arx.lexer.syntax.SyntaxManifest" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Class Syntax
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SyntaxManifest
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" SyntaxManifest">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.contextual_keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;contextual_keywords
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#annotation-rules" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.line_comment_delimiters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Annotation Rules
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;line_comment_delimiters
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#defaults" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.literal_keywords" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Defaults
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;literal_keywords
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#construction-and-typed-class-values" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.multi_char_operators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Construction And Typed Class Values
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;multi_char_operators
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#irx-alignment" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.operator_symbols" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IRx Alignment
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;operator_symbols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.reserved_keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;reserved_keywords
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.load_syntax_manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;load_syntax_manifest
       
     </span>
   </a>
@@ -576,554 +1167,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../datatypes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Data Types
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../built-in-types/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Built-in Types
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../control-flow/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Control Flow
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../docstrings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Docstrings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    API Docs
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    API Docs
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../api/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_1">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> arx
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/builtins/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> builtins
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/cli/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> cli
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/codegen/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> codegen
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/docstrings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> docstrings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/exceptions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> exceptions
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/io/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> io
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_8" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../api/lexer/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_4_1_8" id="__nav_4_1_8_label" tabindex="0">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_1_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/lexer/core/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> core
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/lexer/syntax/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -1139,7 +1182,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/logs/" class="md-nav__link">
+      <a href="../../logs/" class="md-nav__link">
         
   
   
@@ -1167,7 +1210,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/main/" class="md-nav__link">
+      <a href="../../main/" class="md-nav__link">
         
   
   
@@ -1229,7 +1272,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../api/parser/" class="md-nav__link ">
+            <a href="../../parser/" class="md-nav__link ">
               
   
   
@@ -1273,7 +1316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/base/" class="md-nav__link">
+      <a href="../../parser/base/" class="md-nav__link">
         
   
   
@@ -1301,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/control_flow/" class="md-nav__link">
+      <a href="../../parser/control_flow/" class="md-nav__link">
         
   
   
@@ -1329,7 +1372,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/core/" class="md-nav__link">
+      <a href="../../parser/core/" class="md-nav__link">
         
   
   
@@ -1357,7 +1400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/declarations/" class="md-nav__link">
+      <a href="../../parser/declarations/" class="md-nav__link">
         
   
   
@@ -1385,7 +1428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/expressions/" class="md-nav__link">
+      <a href="../../parser/expressions/" class="md-nav__link">
         
   
   
@@ -1413,7 +1456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/imports/" class="md-nav__link">
+      <a href="../../parser/imports/" class="md-nav__link">
         
   
   
@@ -1441,7 +1484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/state/" class="md-nav__link">
+      <a href="../../parser/state/" class="md-nav__link">
         
   
   
@@ -1469,7 +1512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/parser/types/" class="md-nav__link">
+      <a href="../../parser/types/" class="md-nav__link">
         
   
   
@@ -1505,7 +1548,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/schema/" class="md-nav__link">
+      <a href="../../schema/" class="md-nav__link">
         
   
   
@@ -1533,7 +1576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/settings/" class="md-nav__link">
+      <a href="../../settings/" class="md-nav__link">
         
   
   
@@ -1561,7 +1604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/testing/" class="md-nav__link">
+      <a href="../../testing/" class="md-nav__link">
         
   
   
@@ -1604,7 +1647,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../syntax/" class="md-nav__link">
+      <a href="../../../syntax/" class="md-nav__link">
         
   
   
@@ -1631,7 +1674,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
+      <a href="../../../roadmap/" class="md-nav__link">
         
   
   
@@ -1658,7 +1701,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -1685,7 +1728,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sponsor/" class="md-nav__link">
+      <a href="../../../sponsor/" class="md-nav__link">
         
   
   
@@ -1712,7 +1755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../partners/" class="md-nav__link">
+      <a href="../../../partners/" class="md-nav__link">
         
   
   
@@ -1739,7 +1782,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../coc/" class="md-nav__link">
+      <a href="../../../coc/" class="md-nav__link">
         
   
   
@@ -1766,7 +1809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../discord/" class="md-nav__link">
+      <a href="../../../discord/" class="md-nav__link">
         
   
   
@@ -1793,7 +1836,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../governance/" class="md-nav__link">
+      <a href="../../../governance/" class="md-nav__link">
         
   
   
@@ -1820,7 +1863,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../changelog/" class="md-nav__link">
+      <a href="../../../changelog/" class="md-nav__link">
         
   
   
@@ -1867,54 +1910,93 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#class-syntax" class="md-nav__link">
+  <a href="#arx.lexer.syntax.SyntaxManifest" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Class Syntax
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;SyntaxManifest
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" SyntaxManifest">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.contextual_keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;contextual_keywords
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#annotation-rules" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.line_comment_delimiters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Annotation Rules
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;line_comment_delimiters
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#defaults" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.literal_keywords" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Defaults
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;literal_keywords
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#construction-and-typed-class-values" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.multi_char_operators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Construction And Typed Class Values
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;multi_char_operators
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#irx-alignment" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.operator_symbols" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IRx Alignment
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;operator_symbols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.SyntaxManifest.reserved_keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;reserved_keywords
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arx.lexer.syntax.load_syntax_manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;load_syntax_manifest
       
     </span>
   </a>
@@ -1941,128 +2023,413 @@
   
 
 
-<h1 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">&para;</a></h1>
-<p>Arx class declarations use annotation lines for modifiers. Declaration lines
-stay minimal: a field starts with its name, and a method starts with <code class="language-python highlight"><span class="n">fn</span></code>.</p>
-<h2 id="class-syntax">Class Syntax<a class="headerlink" href="#class-syntax" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code>class Counter(BaseCounter, Audited):
-  @[public, static, constant]
-  version: int32 = 1
+<div class="doc doc-object doc-module">
 
-  value: int32 = 0
 
-  @[private]
-  internal: int32 = 1
 
-  fn get(self) -&gt; int32:
-    return self.value
+<h1 id="arx.lexer.syntax" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">syntax</span>
 
-  @[protected]
-  fn process(self, x: int32) -&gt; int32:
-    return x + 1
+
+<a href="#arx.lexer.syntax" class="headerlink" title="Permanent link">&para;</a></h1>
+
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Classes:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            SyntaxManifest
+
+
+  
+      dataclass
+   (arx.lexer.syntax.SyntaxManifest)" href="#arx.lexer.syntax.SyntaxManifest">SyntaxManifest</a></code></b>
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+    </ul>
+
+
+
+
+<p><span class="doc-section-title">Functions:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            load_syntax_manifest (arx.lexer.syntax.load_syntax_manifest)" href="#arx.lexer.syntax.load_syntax_manifest">load_syntax_manifest</a></code></b>
+            –
+            <div class="doc-md-description">
+              
+            </div>
+          </li>
+    </ul>
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="arx.lexer.syntax.SyntaxManifest" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">SyntaxManifest</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">SyntaxManifest</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">])</span>
 </code></pre></div>
-<p>Optional class-level annotations use the same surface form:</p>
-<div class="language-text highlight"><pre><span></span><code>@[public, abstract]
-class Shape:
-  @[public, abstract]
-  fn area(self) -&gt; float64
+
+    <div class="doc doc-contents ">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            contextual_keywords
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.contextual_keywords)" href="#arx.lexer.syntax.SyntaxManifest.contextual_keywords">contextual_keywords</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            line_comment_delimiters
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.line_comment_delimiters)" href="#arx.lexer.syntax.SyntaxManifest.line_comment_delimiters">line_comment_delimiters</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, ...]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            literal_keywords
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.literal_keywords)" href="#arx.lexer.syntax.SyntaxManifest.literal_keywords">literal_keywords</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>, <a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            multi_char_operators
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.multi_char_operators)" href="#arx.lexer.syntax.SyntaxManifest.multi_char_operators">multi_char_operators</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            operator_symbols
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.operator_symbols)" href="#arx.lexer.syntax.SyntaxManifest.operator_symbols">operator_symbols</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code><a class="autorefs autorefs-internal" title="            reserved_keywords
+
+
+  
+      property
+   (arx.lexer.syntax.SyntaxManifest.reserved_keywords)" href="#arx.lexer.syntax.SyntaxManifest.reserved_keywords">reserved_keywords</a></code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>)
+          –
+          <div class="doc-md-description">
+            
+          </div>
+        </li>
+    </ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.contextual_keywords" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">contextual_keywords</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.contextual_keywords" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">contextual_keywords</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">]</span>
 </code></pre></div>
-<p>Template methods use the same <code class="language-python highlight"><span class="o">@&lt;...&gt;</span></code> prefix form as module functions. Method
-modifiers and template parameters may appear in either order as long as each
-prefix stays on its own line above the method declaration:</p>
-<div class="language-text highlight"><pre><span></span><code>class Math:
-  @&lt;T: i32 | f64&gt;
-  @[public, static]
-  fn identity(value: T) -&gt; T:
-    return value
+
+    <div class="doc doc-contents ">
+
+        
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.line_comment_delimiters" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">line_comment_delimiters</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.line_comment_delimiters" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">line_comment_delimiters</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 </code></pre></div>
-<h2 id="annotation-rules">Annotation Rules<a class="headerlink" href="#annotation-rules" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Modifiers must be written as <code class="language-python highlight"><span class="o">@</span><span class="p">[</span><span class="o">...</span><span class="p">]</span></code> on the line immediately above the target
-  declaration.</li>
-<li>Modifiers never appear before the declaration name or before <code class="language-python highlight"><span class="n">fn</span></code>.</li>
-<li>Annotation lists are comma-separated and must not be empty.</li>
-<li>An annotation must be followed by exactly one declaration. Floating
-  annotations are rejected.</li>
-</ul>
-<p>Supported modifiers:</p>
-<ul>
-<li>Visibility: <code class="language-python highlight"><span class="n">public</span></code>, <code class="language-python highlight"><span class="n">private</span></code>, <code class="language-python highlight"><span class="n">protected</span></code></li>
-<li>Storage and mutability: <code class="language-python highlight"><span class="n">static</span></code>, <code class="language-python highlight"><span class="n">constant</span></code>, <code class="language-python highlight"><span class="n">mutable</span></code></li>
-<li>Declaration metadata: <code class="language-python highlight"><span class="n">abstract</span></code>, <code class="language-python highlight"><span class="n">extern</span></code></li>
-</ul>
-<p>Not supported yet:</p>
-<ul>
-<li><code class="language-python highlight"><span class="n">override</span></code>, <code class="language-python highlight"><span class="n">virtual</span></code>, <code class="language-python highlight"><span class="n">final</span></code>, <code class="language-python highlight"><span class="n">sealed</span></code>, <code class="language-python highlight"><span class="n">readonly</span></code>, <code class="language-python highlight"><span class="n">inline</span></code></li>
-</ul>
-<h2 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">&para;</a></h2>
-<p>Defaults are applied during parsing and normalization, not written back as
-implicit annotation lines.</p>
-<ul>
-<li>Fields default to <code class="language-python highlight"><span class="n">public</span></code> visibility and <code class="language-python highlight"><span class="n">mutable</span></code> mutability.</li>
-<li>Methods default to <code class="language-python highlight"><span class="n">public</span></code> visibility.</li>
-<li>Only explicitly written modifiers are preserved as explicit metadata on the
-  emitted IRx/ASTx nodes.</li>
-</ul>
-<p>For example, these declarations are equivalent semantically:</p>
-<div class="language-text highlight"><pre><span></span><code>value: int32 = 0
 
-fn get(self) -&gt; int32:
-  return self.value
+    <div class="doc doc-contents ">
+
+        
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.literal_keywords" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">literal_keywords</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.literal_keywords" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">literal_keywords</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></span><span class="p">]</span>
 </code></pre></div>
-<div class="language-text highlight"><pre><span></span><code>@[public, mutable]
-value: int32 = 0
 
-@[public]
-fn get(self) -&gt; int32:
-  return self.value
+    <div class="doc doc-contents ">
+
+        
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.multi_char_operators" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">multi_char_operators</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.multi_char_operators" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">multi_char_operators</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">]</span>
 </code></pre></div>
-<h2 id="construction-and-typed-class-values">Construction And Typed Class Values<a class="headerlink" href="#construction-and-typed-class-values" title="Permanent link">&para;</a></h2>
-<p>Declared classes can also be used directly in type annotations and default
-construction expressions. Construction is currently default-only, so <code class="language-python highlight"><span class="n">Counter</span><span class="p">()</span></code>
-does not accept constructor arguments yet.</p>
-<div class="language-text highlight"><pre><span></span><code>class Counter:
-  @[public, static, constant]
-  version: int32 = 3
 
-  fn get(self) -&gt; int32:
-    return 1
+    <div class="doc doc-contents ">
 
-class CounterFactory:
-  @[public, static]
-  fn make() -&gt; Counter:
-    return Counter()
 
-fn take_counter(counter: Counter) -&gt; int32:
-  return counter.get()
 
-fn main() -&gt; int32:
-  var counter: Counter = CounterFactory.make()
-  return take_counter(counter) + Counter.version
+<details class="title" open>
+  <summary><blockquote>
+<p>-</p>
+</blockquote></summary>
+  <p>Return the set of multi-character operators recognized by the lexer.</p>
+</details>        
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.operator_symbols" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">operator_symbols</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.operator_symbols" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">operator_symbols</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">]</span>
 </code></pre></div>
-<p>This surface syntax maps directly onto IRx-owned class nodes:</p>
-<ul>
-<li><code class="language-python highlight"><span class="n">Counter</span></code> in annotations becomes <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassType</span></code></li>
-<li><code class="language-python highlight"><span class="n">Counter</span><span class="p">()</span></code> becomes <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassConstruct</span></code></li>
-<li><code class="language-python highlight"><span class="n">Counter</span><span class="o">.</span><span class="n">version</span></code> becomes <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">StaticFieldAccess</span></code></li>
-<li><code class="language-python highlight"><span class="n">CounterFactory</span><span class="o">.</span><span class="n">make</span><span class="p">()</span></code> becomes <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">StaticMethodCall</span></code></li>
-</ul>
-<h2 id="irx-alignment">IRx Alignment<a class="headerlink" href="#irx-alignment" title="Permanent link">&para;</a></h2>
-<p>Arx now emits IRx/ASTx nodes directly instead of maintaining a separate Arx
-class AST layer. This is a hard repository boundary: new AST node types or new
-lowering behavior for class features belong in IRx/ASTx, not in Arx.</p>
-<ul>
-<li><code class="language-python highlight"><span class="k">class</span></code> declarations lower into <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassDefStmt</span></code>.</li>
-<li>Base classes become <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassType</span></code> entries.</li>
-<li>Fields become <code class="language-python highlight"><span class="n">astx</span><span class="o">.</span><span class="n">VariableDeclaration</span></code> with visibility and mutability set
-  directly, plus <code class="language-python highlight"><span class="n">is_static</span></code> when present.</li>
-<li>Methods become <code class="language-python highlight"><span class="n">astx</span><span class="o">.</span><span class="n">FunctionDef</span></code> plus <code class="language-python highlight"><span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span></code>, with
-  visibility set directly and <code class="language-python highlight"><span class="n">is_static</span></code>, <code class="language-python highlight"><span class="n">is_abstract</span></code>, or <code class="language-python highlight"><span class="n">is_extern</span></code>
-  attached to the prototype when written.</li>
-<li>Instance member syntax like <code class="language-python highlight"><span class="bp">self</span><span class="o">.</span><span class="n">value</span></code> lowers into <code class="language-python highlight"><span class="n">irx</span><span class="o">.</span><span class="n">astx</span><span class="o">.</span><span class="n">FieldAccess</span></code>.</li>
-</ul>
-<p>This keeps Arx syntax aligned with the IRx semantic boundary while preserving
-explicit modifier intent on the same nodes that later lowering consumes.</p>
+
+    <div class="doc doc-contents ">
+
+        
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="arx.lexer.syntax.SyntaxManifest.reserved_keywords" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">reserved_keywords</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#arx.lexer.syntax.SyntaxManifest.reserved_keywords" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="n">reserved_keywords</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#set">set</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="arx.lexer.syntax.load_syntax_manifest" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">load_syntax_manifest</span>
+
+
+<a href="#arx.lexer.syntax.load_syntax_manifest" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">load_syntax_manifest</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="            SyntaxManifest
+
+
+  
+      dataclass
+   (arx.lexer.syntax.SyntaxManifest)" href="#arx.lexer.syntax.SyntaxManifest">SyntaxManifest</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/arx/lexer/syntax.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span>
+<span class="normal">97</span>
+<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_syntax_manifest</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">SyntaxManifest</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    title: Load the lexer syntax manifest bundled with the package.</span>
+<span class="sd">    returns:</span>
+<span class="sd">      type: SyntaxManifest</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;arx.lexer&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;syntax.json&quot;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">manifest</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">SyntaxManifest</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 
@@ -2145,10 +2512,10 @@ explicit modifier intent on the same nodes that later lowering consumes.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["content.code.annotate", "content.code.copy", "content.tabs.link", "header.autohide", "navigation.indexes", "navigation.instant", "search.highlight", "search.share", "search.suggest"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

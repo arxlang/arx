@@ -908,9 +908,31 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../lexer/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../lexer/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -924,7 +946,87 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_1_8" id="__nav_4_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> lexer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lexer/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> core
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lexer/syntax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> syntax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1655,14 +1757,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sponsor/" class="md-nav__link">
+      <a href="../../../syntax/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Sponsor
+    Syntax
   
 
     
@@ -1709,60 +1811,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../governance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Governance
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../changelog/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Changelog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../contributing/" class="md-nav__link">
         
   
@@ -1771,6 +1819,33 @@
     
   
     Contributing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sponsor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sponsor
   
 
     
@@ -1852,6 +1927,60 @@
     
   
     Community
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
   
 
     
@@ -3099,8 +3228,8 @@
         <span class="k">if</span> <span class="n">allow_template_vars</span><span class="p">:</span>
             <span class="n">template_bound</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lookup_template_bound</span><span class="p">(</span><span class="n">type_name</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">type_name</span> <span class="o">==</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>  <span class="c1"># eat list</span>
+        <span class="k">if</span> <span class="n">type_name</span> <span class="o">==</span> <span class="s2">&quot;array&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tokens</span><span class="o">.</span><span class="n">get_next_token</span><span class="p">()</span>  <span class="c1"># eat array</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_consume_operator</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">)</span>
             <span class="n">elem_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_type</span><span class="p">(</span>
                 <span class="n">allow_template_vars</span><span class="o">=</span><span class="n">allow_template_vars</span><span class="p">,</span>
