@@ -63,6 +63,16 @@ Use:
 NDArray details stay user-facing in terms of element types, shape, dimensions,
 and indexing. IRx buffer-view lowering remains an internal backend detail.
 
+Arx also ships a bundled pure-Arx standard library under the reserved `stdlib`
+namespace:
+
+```arx
+import math from stdlib
+
+fn main() -> i32:
+  return math.square(4)
+```
+
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx

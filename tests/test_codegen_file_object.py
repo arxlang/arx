@@ -307,6 +307,62 @@ def test_ndarray_program_builds_and_runs(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_bundled_stdlib_math_program_builds_and_runs(tmp_path: Path) -> None:
+    """
+    title: Bundled stdlib math helpers should survive full build and run.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import math from stdlib
+
+            fn main() -> i32:
+              var a: i32 = math.abs(0 - 3)
+              var b: i32 = math.min(10, 5)
+              var c: i32 = math.max(2, 7)
+              var d: i32 = math.clamp(12, 0, 9)
+              var e: i32 = math.square(4)
+              return a + b + c + d + e
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    ArxIO.file_to_buffer(str(source))
+    module_ast = Parser().parse(
+        Lexer().lex(),
+        get_module_name_from_file_path(str(source)),
+    )
+    assert isinstance(module_ast, astx.Module)
+
+    root = ParsedModule(
+        key=module_ast.name,
+        ast=module_ast,
+        display_name=module_ast.name,
+        origin=str(source),
+    )
+    resolver = FileImportResolver((str(source),))
+
+    bin_path = tmp_path / "stdlib_math_program"
+    ArxBuilder().build_modules(root, resolver, str(bin_path))
+
+    result = subprocess.run(
+        [str(bin_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 40
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
 def test_template_program_builds_and_runs(tmp_path: Path) -> None:
     """
     title: Template calls should survive full build and execution.

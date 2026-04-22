@@ -89,6 +89,25 @@ Use absolute dotted paths for public imports across package boundaries:
 import circle_area from geometry.shapes.area
 ```
 
+## Bundled `stdlib`
+
+Arx ships a first-party standard library namespace called `stdlib`.
+
+- `stdlib` is bundled inside the installed `arx` Python package
+- stdlib modules are written in pure Arx source
+- stdlib modules are resolved from the installed package location, not from the
+  user project directory
+- local user modules are not allowed to shadow the reserved `stdlib` namespace
+
+Example:
+
+```arx
+import math from stdlib
+
+fn main() -> i32:
+  return math.square(4) + math.clamp(0 - 3, 0, 2)
+```
+
 ### Namespace Imports
 
 Use a module alias when you want to keep names grouped under a module namespace:

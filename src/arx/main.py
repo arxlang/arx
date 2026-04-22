@@ -20,6 +20,32 @@ from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
 
+STDLIB_NAMESPACE = "stdlib"
+
+
+def get_bundled_stdlib_root() -> Path:
+    """
+    title: Return the bundled stdlib root shipped inside the arx package.
+    returns:
+      type: Path
+    """
+    return (Path(__file__).resolve().parent / STDLIB_NAMESPACE).resolve()
+
+
+def _is_stdlib_specifier(requested_specifier: str) -> bool:
+    """
+    title: Return whether one import specifier targets the bundled stdlib.
+    parameters:
+      requested_specifier:
+        type: str
+    returns:
+      type: bool
+    """
+    return (
+        requested_specifier == STDLIB_NAMESPACE
+        or requested_specifier.startswith(f"{STDLIB_NAMESPACE}.")
+    )
+
 
 def _find_project_source_root(start: Path) -> Path | None:
     """
@@ -180,6 +206,9 @@ class FileImportResolver:
         returns:
           type: Path
         """
+        if _is_stdlib_specifier(requested_specifier):
+            return self._resolve_stdlib_module_file(requested_specifier)
+
         package_path = Path(*requested_specifier.split("."))
         file_candidate = package_path.with_suffix(".x")
         init_candidate = package_path / "__init__.x"
@@ -198,6 +227,71 @@ class FileImportResolver:
                 return init_path
             if has_file:
                 return file_path
+        raise LookupError(requested_specifier)
+
+    def _shadowing_stdlib_path(
+        self,
+        requested_specifier: str,
+    ) -> Path | None:
+        """
+        title: Return one local path that attempts to shadow the stdlib.
+        parameters:
+          requested_specifier:
+            type: str
+        returns:
+          type: Path | None
+        """
+        package_path = Path(*requested_specifier.split("."))
+        file_candidate = package_path.with_suffix(".x")
+        init_candidate = package_path / "__init__.x"
+        for root in self._candidate_roots():
+            init_path = (root / init_candidate).resolve()
+            file_path = (root / file_candidate).resolve()
+            if init_path.is_file():
+                return init_path
+            if file_path.is_file():
+                return file_path
+        return None
+
+    def _resolve_stdlib_module_file(self, requested_specifier: str) -> Path:
+        """
+        title: Resolve one stdlib module specifier from bundled package data.
+        parameters:
+          requested_specifier:
+            type: str
+        returns:
+          type: Path
+        """
+        shadowing_path = self._shadowing_stdlib_path(requested_specifier)
+        if shadowing_path is not None:
+            raise ValueError(
+                "reserved stdlib namespace 'stdlib' cannot be shadowed by "
+                f"local source file '{shadowing_path}'"
+            )
+
+        stdlib_root = get_bundled_stdlib_root()
+        relative_parts = requested_specifier.split(".")[1:]
+        if not relative_parts:
+            init_path = (stdlib_root / "__init__.x").resolve()
+            if init_path.is_file():
+                return init_path
+            raise LookupError(requested_specifier)
+
+        package_path = Path(*relative_parts)
+        file_path = (stdlib_root / package_path).with_suffix(".x").resolve()
+        init_path = (stdlib_root / package_path / "__init__.x").resolve()
+        has_init = init_path.is_file()
+        has_file = file_path.is_file()
+        if has_init and has_file:
+            raise LookupError(
+                "ambiguous module specifier "
+                f"'{requested_specifier}': both "
+                f"'{file_path}' and '{init_path}' exist"
+            )
+        if has_init:
+            return init_path
+        if has_file:
+            return file_path
         raise LookupError(requested_specifier)
 
     def _current_package_parts(
