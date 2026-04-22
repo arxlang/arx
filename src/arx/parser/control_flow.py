@@ -15,6 +15,11 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
+from arx.ndarray import (
+    NdarrayBinding,
+    binding_from_type,
+    coerce_expression,
+)
 from arx.parser.base import ParserMixinBase
 
 
@@ -27,6 +32,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
+        declared_ndarrays: dict[str, NdarrayBinding] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -35,6 +41,8 @@ class ControlFlowParserMixin(ParserMixinBase):
             type: bool
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_ndarrays:
+            type: dict[str, NdarrayBinding] | None
         returns:
           type: astx.Block
         """
@@ -50,7 +58,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         self.indent_level = cur_indent
         self.tokens.get_next_token()  # eat indentation
-        self._push_value_scope(declared_names)
+        self._push_value_scope(declared_names, declared_ndarrays)
 
         block = astx.Block()
         docstring_allowed_here = allow_docstring
@@ -262,12 +270,19 @@ class ControlFlowParserMixin(ParserMixinBase):
         var_type = self.parse_type()
 
         self._consume_operator("=")
-        value = self.parse_expression()
+        try:
+            value = coerce_expression(
+                cast(astx.Expr, self.parse_expression()),
+                var_type,
+                context=f"inline variable '{name}'",
+            )
+        except ValueError as err:
+            raise ParserException(str(err)) from err
 
         return astx.InlineVariableDeclaration(
             name=name,
             type_=var_type,
-            value=cast(astx.Expr, value),
+            value=value,
             loc=var_loc,
         )
 
@@ -297,7 +312,14 @@ class ControlFlowParserMixin(ParserMixinBase):
         value: astx.Expr | None = None
         if self._is_operator("="):
             self._consume_operator("=")
-            value = cast(astx.Expr, self.parse_expression())
+            try:
+                value = coerce_expression(
+                    cast(astx.Expr, self.parse_expression()),
+                    var_type,
+                    context=f"variable '{name}'",
+                )
+            except ValueError as err:
+                raise ParserException(str(err)) from err
 
         if self.tokens.cur_tok == Token(TokenKind.kw_in, "in"):
             raise ParserException(
@@ -315,6 +337,9 @@ class ControlFlowParserMixin(ParserMixinBase):
             loc=var_loc,
         )
         self._declare_value_name(name)
+        binding = binding_from_type(var_type)
+        if binding is not None:
+            self._declare_ndarray_name(name, binding)
         return declaration
 
     def parse_assert_stmt(self) -> astx.AssertStmt:
@@ -373,4 +398,14 @@ class ControlFlowParserMixin(ParserMixinBase):
             return astx.FunctionReturn(astx.LiteralNone(), loc=return_loc)
 
         value = self.parse_expression()
+        return_type = self._current_return_type()
+        if return_type is not None:
+            try:
+                value = coerce_expression(
+                    cast(astx.Expr, value),
+                    return_type,
+                    context="return value",
+                )
+            except ValueError as err:
+                raise ParserException(str(err)) from err
         return astx.FunctionReturn(cast(astx.DataType, value), loc=return_loc)

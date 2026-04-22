@@ -2,7 +2,7 @@
 
 Arx is a new programming language that uses the power of LLVM to provide
 multi-architecture machine target code generation. Arx aims to provide native
-array abstractions with an Apache Arrow-backed runtime.
+array and ndarray abstractions with a builtin runtime backed internally by IRx.
 
 Arx is a prototype that should replace the current Arx compiler in c++.
 
@@ -40,6 +40,22 @@ This typically happens on environments where the linker defaults to PIE while
 objects were not compiled in a PIE-compatible mode.
 
 ## Testing
+
+Arx now includes native shaped array and ndarray syntax:
+
+```arx
+fn pick(grid: ndarray[i32, 2, 2]) -> i32:
+  return grid[1, 0]
+
+fn main() -> i32:
+  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
+  var ids: array[i32, 4] = [5, 6, 7, 8]
+  return pick(grid) + ids[2]
+```
+
+Array and ndarray details stay user-facing in terms of element types, shape,
+dimensions, and indexing. Arrow remains an internal backend detail of the IRx
+runtime layer.
 
 Arx now supports fatal assertion statements in the language surface:
 

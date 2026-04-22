@@ -4,6 +4,8 @@ title: Additional parser branch coverage tests.
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from arx.exceptions import ParserException
@@ -246,6 +248,89 @@ def test_parse_type_array_and_default_values() -> None:
 
     with pytest.raises(ParserException):
         parser._default_value_for_type(astx.ListType([astx.Int32()]))
+
+
+def test_parse_ndarray_type_literal_and_indexing() -> None:
+    """
+    title: Parse ndarray declarations and multidimensional indexing.
+    """
+    tree = _parse(
+        "fn pick(grid: ndarray[i32, 2, 2]) -> i32:\n"
+        "  return grid[1, 0]\n"
+        "fn main() -> i32:\n"
+        "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+        "  var ids: array[i32, 4] = [1, 2, 3, 4]\n"
+        "  return pick(grid) + ids[2]\n"
+    )
+
+    pick_fn = tree.nodes[0]
+    main_fn = tree.nodes[1]
+    assert isinstance(pick_fn, astx.FunctionDef)
+    assert isinstance(main_fn, astx.FunctionDef)
+    assert isinstance(pick_fn.prototype.args[0].type_, astx.BufferViewType)
+    assert isinstance(main_fn.body.nodes[0], astx.VariableDeclaration)
+    assert isinstance(main_fn.body.nodes[0].type_, astx.BufferViewType)
+    assert isinstance(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[0]).value,
+        astx.BufferViewDescriptor,
+    )
+    assert isinstance(main_fn.body.nodes[1], astx.VariableDeclaration)
+    assert isinstance(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[1]).type_,
+        astx.BufferViewType,
+    )
+    assert isinstance(
+        cast(astx.FunctionReturn, pick_fn.body.nodes[0]).value,
+        astx.BufferViewIndex,
+    )
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3]]\n"
+            "  return 0\n",
+            "regular rectangular shape",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2, 3], [4, 5, 6]]\n"
+            "  return 0\n",
+            "declared ndarray shape",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  return grid[0]\n",
+            "expects 2 indices",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  return grid[2, 0]\n",
+            "out of bounds",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32] = [1, 2]\n"
+            "  return 0\n",
+            "require at least one dimension",
+        ),
+    ],
+)
+def test_parse_ndarray_error_paths(code: str, expected: str) -> None:
+    """
+    title: Ndarray parser diagnostics cover shape and indexing failures.
+    parameters:
+      code:
+        type: str
+      expected:
+        type: str
+    """
+    with pytest.raises(ParserException, match=expected):
+        _parse(code)
 
 
 def test_parse_unary_and_prototype_error_paths() -> None:

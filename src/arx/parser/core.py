@@ -16,6 +16,7 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
+from arx.ndarray import NdarrayBinding
 from arx.parser.base import ParserMixinBase
 
 
@@ -29,6 +30,10 @@ class ParserCore(ParserMixinBase):
         type: int
       known_class_names:
         type: set[str]
+      ndarray_scopes:
+        type: list[dict[str, NdarrayBinding]]
+      return_type_scopes:
+        type: list[astx.DataType]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
       value_scopes:
@@ -40,6 +45,8 @@ class ParserCore(ParserMixinBase):
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
+    ndarray_scopes: list[dict[str, NdarrayBinding]]
+    return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList
@@ -70,6 +77,8 @@ class ParserCore(ParserMixinBase):
         }
         self.indent_level = 0
         self.known_class_names = set()
+        self.ndarray_scopes = [{}]
+        self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = tokens
@@ -80,6 +89,8 @@ class ParserCore(ParserMixinBase):
         """
         self.indent_level = 0
         self.known_class_names = set()
+        self.ndarray_scopes = [{}]
+        self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = TokenList([])
@@ -198,20 +209,25 @@ class ParserCore(ParserMixinBase):
     def _push_value_scope(
         self,
         declared_names: tuple[str, ...] = (),
+        declared_ndarrays: dict[str, NdarrayBinding] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
         parameters:
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_ndarrays:
+            type: dict[str, NdarrayBinding] | None
         """
         self.value_scopes.append(set(declared_names))
+        self.ndarray_scopes.append(dict(declared_ndarrays or {}))
 
     def _pop_value_scope(self) -> None:
         """
         title: Pop the most recent visible-name scope.
         """
         self.value_scopes.pop()
+        self.ndarray_scopes.pop()
 
     def _declare_value_name(self, name: str) -> None:
         """
@@ -232,6 +248,36 @@ class ParserCore(ParserMixinBase):
           type: bool
         """
         return any(name in scope for scope in reversed(self.value_scopes))
+
+    def _declare_ndarray_name(
+        self,
+        name: str,
+        binding: NdarrayBinding,
+    ) -> None:
+        """
+        title: Record one visible ndarray binding in the current scope.
+        parameters:
+          name:
+            type: str
+          binding:
+            type: NdarrayBinding
+        """
+        self.ndarray_scopes[-1][name] = binding
+
+    def _lookup_ndarray_binding(self, name: str) -> NdarrayBinding | None:
+        """
+        title: Return one visible ndarray binding by name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: NdarrayBinding | None
+        """
+        for scope in reversed(self.ndarray_scopes):
+            binding = scope.get(name)
+            if binding is not None:
+                return binding
+        return None
 
     def _push_template_scope(
         self,
@@ -270,6 +316,31 @@ class ParserCore(ParserMixinBase):
             if bound is not None:
                 return copy.deepcopy(bound)
         return None
+
+    def _push_return_type_scope(self, return_type: astx.DataType) -> None:
+        """
+        title: Push one active function return type.
+        parameters:
+          return_type:
+            type: astx.DataType
+        """
+        self.return_type_scopes.append(return_type)
+
+    def _pop_return_type_scope(self) -> None:
+        """
+        title: Pop the most recent active function return type.
+        """
+        self.return_type_scopes.pop()
+
+    def _current_return_type(self) -> astx.DataType | None:
+        """
+        title: Return the active function return type when one exists.
+        returns:
+          type: astx.DataType | None
+        """
+        if not self.return_type_scopes:
+            return None
+        return self.return_type_scopes[-1]
 
     def _collect_class_names(self, tokens: TokenList) -> set[str]:
         """
