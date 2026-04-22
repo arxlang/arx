@@ -197,6 +197,26 @@ class FileImportResolver:
 
         return tuple(roots)
 
+    def _stdlib_shadow_roots(self) -> tuple[Path, ...]:
+        """
+        title: Build the local roots that may validly shadow stdlib.
+        returns:
+          type: tuple[Path, Ellipsis]
+        """
+        roots: list[Path] = []
+        seen: set[Path] = set()
+
+        for input_file in self.input_files:
+            input_root = Path(input_file).resolve().parent
+            source_root = _find_project_source_root(input_root)
+            root = source_root if source_root is not None else input_root
+            if root in seen:
+                continue
+            seen.add(root)
+            roots.append(root)
+
+        return tuple(roots)
+
     def _resolve_module_file(self, requested_specifier: str) -> Path:
         """
         title: Resolve one dotted module specifier to a source file.
@@ -244,7 +264,7 @@ class FileImportResolver:
         package_path = Path(*requested_specifier.split("."))
         file_candidate = package_path.with_suffix(".x")
         init_candidate = package_path / "__init__.x"
-        for root in self._candidate_roots():
+        for root in self._stdlib_shadow_roots():
             init_path = (root / init_candidate).resolve()
             file_path = (root / file_candidate).resolve()
             if init_path.is_file():

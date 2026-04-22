@@ -33,7 +33,7 @@ def test_bundled_stdlib_package_data_is_present() -> None:
 
     pyproject = tomllib.loads(Path("pyproject.toml").read_text("utf-8"))
     includes = pyproject["tool"]["poetry"]["include"]
-    assert "src/arx/stdlib/*.x" in includes
+    assert "src/arx/stdlib/**/*.x" in includes
 
 
 def test_file_import_resolver_loads_stdlib_from_bundled_package(

@@ -23,7 +23,7 @@ include = [
   "src/arx/schema/*.json",
   "src/arx/py.typed",
   "src/arx/lexer/syntax.json",
-  "src/arx/stdlib/*.x",
+  "src/arx/stdlib/**/*.x",
 ]
 exclude = [
   ".git/*",
