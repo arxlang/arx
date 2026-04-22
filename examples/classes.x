@@ -3,6 +3,10 @@ title: Classes example
 summary: Exercises inheritance, class construction, typed class values, and static plus instance access.
 ```
 class BaseCounter:
+  ```
+  title: BaseCounter
+  summary: Stores one inherited seed value for derived counters.
+  ```
   @[public, mutable]
   value: int32 = 41
 
@@ -15,6 +19,10 @@ class BaseCounter:
     return self.value
 
 class Counter(BaseCounter):
+  ```
+  title: Counter
+  summary: Extends BaseCounter with private state and helper methods.
+  ```
   @[public, static, constant]
   version: int32 = 3
 
@@ -44,6 +52,10 @@ class Counter(BaseCounter):
     return self.internal_total()
 
 class CounterFactory:
+  ```
+  title: CounterFactory
+  summary: Builds Counter instances and exposes static class metadata.
+  ```
   @[public, static]
   fn make() -> Counter:
     ```

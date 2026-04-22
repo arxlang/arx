@@ -105,6 +105,10 @@ summary: Short optional summary.
 If you add a function docstring inside a `.x` file, it must also use the same
 Douki YAML format and remain the first statement in that function body.
 
+When a `.x` file defines classes or methods, add Douki docstrings for those
+declarations too. Keep class-body docstrings inside the class block and keep
+method docstrings in valid parser-supported positions.
+
 7. Commit your changes and push your branch to GitHub:
 
 ```bash

@@ -160,8 +160,13 @@ Rules enforced by parser:
 - Module docstring:
   - first top-level statement only
   - starts at line 1, column 1 (no leading spaces)
+- Class or member docstring:
+  - may appear inside class bodies before declarations
+  - must use Douki YAML and valid triple-backtick docstring syntax
 - Function docstring:
   - first statement inside function block only
+  - abstract methods may use a docstring-only body so the docstring still lives
+    inside the method block
 
 Schema notes:
 
@@ -177,6 +182,8 @@ Repository policy:
 
 - Every committed `.x` file in this repository must start with a valid Douki
   module docstring.
+- Classes and methods in committed `.x` files should also carry valid Douki
+  docstrings where the syntax supports them.
 - If you add a function docstring, it must also use Douki YAML and remain the
   first statement in that function body.
 
