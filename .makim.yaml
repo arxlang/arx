@@ -43,6 +43,11 @@ groups:
             --cov-report term-missing \
             --no-cov-on-fail ${{ args.path }} ${{ args.params }}
 
+      arx:
+        help: run Arx compiled tests
+        run: |
+          arx test
+
       syntax:
         help: run syntax tests
         run: |
@@ -72,6 +77,7 @@ groups:
         hooks:
           pre-run:
             - task: tests.unit
+            - task: tests.arx
             - task: tests.smoke
             - task: tests.linter
 

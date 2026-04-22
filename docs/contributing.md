@@ -85,7 +85,29 @@ $ git checkout -b name-of-your-bugfix-or-feature
 ```bash
 $ makim tests.linter
 $ makim tests.unit
+$ makim tests.arx
 ```
+
+## Arx Source File Docstrings
+
+Every committed `.x` file in this repository must start with a valid Douki
+module docstring.
+
+Use triple backticks with a YAML mapping, for example:
+
+````text
+```
+title: Example source file
+summary: Short optional summary.
+```
+````
+
+If you add a function docstring inside a `.x` file, it must also use the same
+Douki YAML format and remain the first statement in that function body.
+
+When a `.x` file defines classes or methods, add Douki docstrings for those
+declarations too. Keep class-body docstrings inside the class block and keep
+method docstrings in valid parser-supported positions.
 
 7. Commit your changes and push your branch to GitHub:
 
@@ -118,14 +140,16 @@ Before you submit a pull request, check that it meets these guidelines:
    the list in README.md.
 3. YAML configuration changes should avoid heredocs and follow the repo's
    plain-command style for files such as `.makim.yaml` and CI workflows.
-4. The pull request should work for Python >= 3.10.
+4. New or updated `.x` files should include valid Douki docstrings.
+5. The pull request should work for Python >= 3.10.
 
 ## Tips
 
 To run a subset of tests:
 
 ```bash
-$ pytest tests/test_io.py
+$ pytest tests/python/test_io.py
+$ arx test tests/arx/test_math.x --list
 ```
 
 ## Release

@@ -63,6 +63,16 @@ Use:
 NDArray details stay user-facing in terms of element types, shape, dimensions,
 and indexing. IRx buffer-view lowering remains an internal backend detail.
 
+Arx also ships a bundled pure-Arx standard library under the reserved `stdlib`
+namespace:
+
+```arx
+import math from stdlib
+
+fn main() -> i32:
+  return math.square(4)
+```
+
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx
@@ -75,19 +85,19 @@ You can run compiled tests with the new `arx test` subcommand:
 
 ```bash
 arx test
-arx test tests/test_add.x --list
-arx test -k fibonacci
+arx test tests/arx/test_math.x --list
+arx test -k square
 arx test -x
 arx test --keep-artifacts
-arx test --exclude "tests/slow_*.x"
+arx test --exclude "tests/arx/slow_*.x"
 ```
 
 By default the runner searches `tests/` for files matching `test_*.x`, discovers
 zero-argument `test_*` functions that return `none`, and executes each test in
 its own compiled subprocess. Test identifiers use the cwd-relative path of the
 source file (without the `.x` suffix) joined to the function name via `::`, for
-example `tests/test_add::test_add`, so same-named files in parallel directories
-stay distinct.
+example `tests/arx/test_math::test_square`, so same-named files in parallel
+directories stay distinct.
 
 You can override discovery from `.arxproject.toml`:
 

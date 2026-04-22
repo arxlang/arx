@@ -684,6 +684,10 @@ def test_find_config_file_returns_none_when_absent(
         type: pytest.MonkeyPatch
     """
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "arx.settings.DEFAULT_CONFIG_FILENAME",
+        "missing.arxproject.toml",
+    )
     assert find_config_file(tmp_path) is None
 
 

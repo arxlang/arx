@@ -12,6 +12,7 @@ from typing import cast
 from astx.types import AnyType
 from irx import astx
 
+from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.ndarray import (
@@ -185,15 +186,20 @@ class DeclarationParserMixin(ParserMixinBase):
                 self.tokens.get_next_token()
                 continue
 
+            if self.tokens.cur_tok.kind == TokenKind.docstring:
+                try:
+                    validate_docstring(cast(str, self.tokens.cur_tok.value))
+                except ValueError as err:
+                    raise ParserException(
+                        f"Invalid class or member docstring: {err}"
+                    ) from err
+                self.tokens.get_next_token()
+                continue
+
             prefixes = ParsedDeclarationPrefixes()
             if self._is_operator("@"):
                 prefixes = self.parse_declaration_prefixes(
                     body_indent=cur_indent
-                )
-
-            if self.tokens.cur_tok.kind == TokenKind.docstring:
-                raise ParserException(
-                    "Docstrings are not allowed in class bodies."
                 )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
@@ -340,24 +346,33 @@ class DeclarationParserMixin(ParserMixinBase):
                 declared_names = (receiver_name, *declared_names)
 
             if self._is_operator(":"):
-                if self._has_modifier(modifiers, "abstract"):
-                    raise ParserException(
-                        "abstract method cannot define a body"
-                    )
                 if self._has_modifier(modifiers, "extern"):
                     raise ParserException("extern method cannot define a body")
                 self._consume_operator(":")
-                self._push_return_type_scope(
-                    cast(astx.DataType, prototype.return_type)
-                )
-                pushed_return_type = True
-                body = self.parse_block(
-                    allow_docstring=True,
-                    declared_names=declared_names,
-                    declared_ndarrays=self._ndarray_bindings_for_arguments(
-                        prototype.args.nodes
-                    ),
-                )
+                if self._has_modifier(modifiers, "abstract"):
+                    body = self.parse_block(
+                        allow_docstring=True,
+                        declared_names=declared_names,
+                        declared_ndarrays=self._ndarray_bindings_for_arguments(
+                            prototype.args.nodes
+                        ),
+                    )
+                    if body.nodes:
+                        raise ParserException(
+                            "abstract method body may only contain a docstring"
+                        )
+                else:
+                    self._push_return_type_scope(
+                        cast(astx.DataType, prototype.return_type)
+                    )
+                    pushed_return_type = True
+                    body = self.parse_block(
+                        allow_docstring=True,
+                        declared_names=declared_names,
+                        declared_ndarrays=self._ndarray_bindings_for_arguments(
+                            prototype.args.nodes
+                        ),
+                    )
             elif not (
                 self._has_modifier(modifiers, "abstract")
                 or self._has_modifier(modifiers, "extern")

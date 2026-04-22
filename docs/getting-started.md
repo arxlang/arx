@@ -316,26 +316,27 @@ Example test module:
 
 ````arx
 ```
-title: Example tests
-summary: Demonstrates `assert` and `arx test`.
+title: Example stdlib math tests
+summary: Demonstrates `assert`, `import`, and `arx test`.
 ```
-fn add(a: i32, b: i32) -> i32:
-  return a + b
+import math from stdlib
 
-fn test_add() -> none:
-  assert add(1, 2) == 3
-  assert add(2, 2) == 4, "add(2, 2) should be 4"
+fn test_square() -> none:
+  assert math.square(3) == 9
+
+fn test_clamp() -> none:
+  assert math.clamp(0 - 3, 0, 2) == 0
 ````
 
 Run the test suite with:
 
 ```bash
 arx test
-arx test tests/test_add.x --list
-arx test -k add
+arx test tests/arx/test_math.x --list
+arx test -k square
 arx test -x
 arx test --keep-artifacts
-arx test --exclude "tests/slow_*.x"
+arx test --exclude "tests/arx/slow_*.x"
 ```
 
 Test discovery can also be tuned from `.arxproject.toml`:
@@ -351,7 +352,7 @@ function_pattern = "test_*"
 CLI arguments always take precedence over `[tests]` settings. Discovered tests
 are displayed using the cwd-relative path of the source file (without the `.x`
 suffix) joined to the function name via `::`, for example
-`tests/unit/test_math::test_add`, so same-named files in different directories
+`tests/arx/test_math::test_square`, so same-named files in different directories
 stay unambiguous.
 
 The runner compiles each selected test into its own temporary executable and

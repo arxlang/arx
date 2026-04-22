@@ -35,18 +35,40 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
             """
             @[public, abstract]
             class Shape:
-              @[public, abstract]
-              fn area(self) -> int32
+              ```
+              title: Shape
+              summary: Declares one abstract area protocol for shape types.
+              ```
+              @[public]
+              fn area(self) -> int32:
+                ```
+                title: area
+                summary: >-
+                    Returns one placeholder area value for parser coverage.
+                ```
+                return 0
 
             class BaseCounter:
+              ```
+              title: BaseCounter
+              summary: Stores one inherited seed value for derived counters.
+              ```
               @[public, mutable]
               value: int32 = 41
 
               @[protected]
               fn read_seed(self) -> int32:
+                ```
+                title: read_seed
+                summary: Returns the inherited seed value.
+                ```
                 return self.value
 
             class Counter(BaseCounter):
+              ```
+              title: Counter
+              summary: Extends BaseCounter with private state and helpers.
+              ```
               @[public, static, constant]
               version: int32 = 3
 
@@ -55,29 +77,61 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
 
               @[protected]
               fn internal_total(self) -> int32:
+                ```
+                title: internal_total
+                summary: Combines private and inherited counter state.
+                ```
                 return self.internal + self.value
 
               @[public]
               fn get(self) -> int32:
+                ```
+                title: get
+                summary: Returns the inherited public counter value.
+                ```
                 return self.value
 
               @[public]
               fn read_internal(self) -> int32:
+                ```
+                title: read_internal
+                summary: Exposes the protected internal helper result.
+                ```
                 return self.internal_total()
 
             class CounterFactory:
+              ```
+              title: CounterFactory
+              summary: Builds counters and exposes static metadata.
+              ```
               @[public, static]
               fn make() -> Counter:
+                ```
+                title: make
+                summary: Constructs one default Counter instance.
+                ```
                 return Counter()
 
               @[public, static]
               fn version_value() -> int32:
+                ```
+                title: version_value
+                summary: Returns the static Counter version constant.
+                ```
                 return Counter.version
 
             fn take_counter(counter: Counter) -> int32:
+              ```
+              title: take_counter
+              summary: Combines method and attribute access on one counter.
+              ```
               return counter.get() + counter.value + counter.read_internal()
 
             fn main() -> int32:
+              ```
+              title: main
+              summary: Exercises class construction and static member access.
+              ```
               var direct: Counter = Counter()
               var built: Counter = CounterFactory.make()
               var total: int32 = take_counter(direct) + built.get()
@@ -101,8 +155,11 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
     assert area.prototype.name == "area"
     assert area.prototype.args.nodes == []
     assert isinstance(area.prototype.return_type, astx.Int32)
-    assert getattr(area.prototype, "is_abstract", False) is True
-    assert area.body.nodes == []
+    assert getattr(area.prototype, "is_abstract", False) is False
+    area_return = area.body.nodes[0]
+    assert isinstance(area_return, astx.FunctionReturn)
+    assert isinstance(area_return.value, astx.LiteralInt32)
+    assert area_return.value.value == 0
 
     base_counter = tree.nodes[1]
     assert isinstance(base_counter, astx.ClassDefStmt)
@@ -301,12 +358,20 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
         dedent(
             """
             class Counter:
+              ```
+              title: Counter
+              summary: Defines one simple counter type for expression tests.
+              ```
               @[public, static, constant]
               version: int32 = 3
 
               value: int32 = 0
 
             fn main() -> int32:
+              ```
+              title: main
+              summary: Checks that visible locals shadow class expressions.
+              ```
               var Counter: int32 = 1
               var next: int32 = Counter()
               return Counter.version
@@ -339,6 +404,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                 """
                 @[ ]
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one invalid annotation form for parser checks.
+                  ```
                   value: int32 = 0
                 """
             ).lstrip(),
@@ -348,6 +417,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one duplicate-visibility field declaration.
+                  ```
                   @[public, public]
                   value: int32 = 0
                 """
@@ -358,6 +431,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one conflicting-visibility field declaration.
+                  ```
                   @[public, private]
                   value: int32 = 0
                 """
@@ -368,6 +445,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one conflicting-mutability field declaration.
+                  ```
                   @[constant, mutable]
                   value: int32 = 0
                 """
@@ -378,6 +459,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one invalid abstract field declaration.
+                  ```
                   @[abstract]
                   value: int32 = 0
                 """
@@ -388,6 +473,11 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: >-
+                    Holds one field declaration with an unknown modifier.
+                  ```
                   @[override]
                   value: int32 = 0
                 """
@@ -398,6 +488,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one dangling annotation without a declaration.
+                  ```
                   @[public]
                 """
             ).lstrip(),
@@ -407,6 +501,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one inline annotation that should be rejected.
+                  ```
                   @[public] value: int32 = 0
                 """
             ).lstrip(),
@@ -416,6 +514,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one non-abstract method missing a body.
+                  ```
                   fn area(self) -> float64
                 """
             ).lstrip(),
@@ -426,8 +528,37 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Bad:
+                  ```
+                  title: Bad
+                  summary: >-
+                    Holds one abstract method with an invalid statement body.
+                  ```
+                  @[abstract]
+                  fn area(self) -> float64:
+                    ```
+                    title: area
+                    summary: >-
+                        Declares one abstract method with a non-docstring body.
+                    ```
+                    return 1
+                """
+            ).lstrip(),
+            "abstract method body may only contain a docstring",
+        ),
+        (
+            dedent(
+                """
+                class Bad:
+                  ```
+                  title: Bad
+                  summary: Holds one invalid static helper method declaration.
+                  ```
                   @[static]
                   fn helper(self) -> int32:
+                    ```
+                    title: helper
+                    summary: Returns one constant while violating static rules.
+                    ```
                     return 1
                 """
             ).lstrip(),
@@ -437,9 +568,17 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 class Counter:
+                  ```
+                  title: Counter
+                  summary: Defines one class used by construction error tests.
+                  ```
                   value: int32 = 0
 
                 fn main() -> int32:
+                  ```
+                  title: main
+                  summary: Triggers one invalid class-construction call.
+                  ```
                   var counter: Counter = Counter(1)
                   return 0
                 """
@@ -450,6 +589,10 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
             dedent(
                 """
                 fn main() -> int32:
+                  ```
+                  title: main
+                  summary: Triggers one missing-type parser error.
+                  ```
                   var counter: Missing = 0
                   return 0
                 """

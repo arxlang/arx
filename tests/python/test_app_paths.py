@@ -190,15 +190,15 @@ def test_cli_get_test_args_parsing() -> None:
     parser = cli_module.get_test_args()
     args = parser.parse_args(
         [
-            "tests/test_add.x",
-            "tests/integration",
+            "tests/arx/test_math.x",
+            "tests/arx/integration",
             "--list",
             "-k",
             "fib",
             "-x",
             "--keep-artifacts",
             "--exclude",
-            "tests/slow_*.x",
+            "tests/arx/slow_*.x",
             "--file-pattern",
             "check_*.x",
             "--function-pattern",
@@ -208,12 +208,12 @@ def test_cli_get_test_args_parsing() -> None:
         ]
     )
 
-    assert args.paths == ["tests/test_add.x", "tests/integration"]
+    assert args.paths == ["tests/arx/test_math.x", "tests/arx/integration"]
     assert args.list_only is True
     assert args.name_filter == "fib"
     assert args.fail_fast is True
     assert args.keep_artifacts is True
-    assert args.exclude == ["tests/slow_*.x"]
+    assert args.exclude == ["tests/arx/slow_*.x"]
     assert args.file_pattern == "check_*.x"
     assert args.function_pattern == "check_*"
     assert args.link_mode == "no-pie"
@@ -309,16 +309,16 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     cli_module.app(
         [
             "test",
-            "tests/test_add.x",
+            "tests/arx/test_math.x",
             "--list",
             "--exclude",
-            "tests/slow_*.x",
+            "tests/arx/slow_*.x",
         ]
     )
 
-    assert DummyMain.called_kwargs["paths"] == ["tests/test_add.x"]
+    assert DummyMain.called_kwargs["paths"] == ["tests/arx/test_math.x"]
     assert DummyMain.called_kwargs["list_only"] is True
-    assert DummyMain.called_kwargs["exclude"] == ["tests/slow_*.x"]
+    assert DummyMain.called_kwargs["exclude"] == ["tests/arx/slow_*.x"]
 
 
 def test_cli_app_test_branch_nonzero_exit(

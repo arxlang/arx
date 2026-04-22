@@ -38,7 +38,8 @@ Use this guidance for any change inside the Arx compiler repository:
 ## Repository Layout
 
 - `src/arx/`: compiler implementation
-- `tests/`: unit tests
+- `tests/python/`: Python `pytest` coverage
+- `tests/arx/`: compiled Arx tests run via `arx test`
 - `examples/`: runnable language samples (`.x`)
 - `docs/`: project and language documentation
 - `src/arx/lexer/syntax.json`: lexical source-of-truth for editor tooling
@@ -159,8 +160,13 @@ Rules enforced by parser:
 - Module docstring:
   - first top-level statement only
   - starts at line 1, column 1 (no leading spaces)
+- Class or member docstring:
+  - may appear inside class bodies before declarations
+  - must use Douki YAML and valid triple-backtick docstring syntax
 - Function docstring:
   - first statement inside function block only
+  - abstract methods may use a docstring-only body so the docstring still lives
+    inside the method block
 
 Schema notes:
 
@@ -171,6 +177,15 @@ Current behavior:
 
 - docstrings are lexed and validated
 - docstrings are ignored in AST/IR output for now
+
+Repository policy:
+
+- Every committed `.x` file in this repository must start with a valid Douki
+  module docstring.
+- Classes and methods in committed `.x` files should also carry valid Douki
+  docstrings where the syntax supports them.
+- If you add a function docstring, it must also use Douki YAML and remain the
+  first statement in that function body.
 
 ## Code Style And Standards
 
@@ -231,7 +246,9 @@ High-value commands:
 
 ```bash
 # tests
-pytest tests -q
+pytest tests/python -q
+arx test
+makim tests.arx
 
 # strict typing
 mypy src
@@ -254,10 +271,10 @@ Codegen-focused checks:
 
 ```bash
 # translate-path regressions (no linker required)
-pytest -q tests/test_codegen_ast_output.py
+pytest -q tests/python/test_codegen_ast_output.py
 
 # build/run-path checks (requires clang)
-pytest -q tests/test_codegen_file_object.py
+pytest -q tests/python/test_codegen_file_object.py
 ```
 
 Smoke examples:
@@ -296,8 +313,12 @@ fences around the code block to safely include inner triple backticks.
 - Prefer targeted tests near changed behavior.
 - For parser or syntax changes: add/adjust parser tests and at least one
   example.
+- Keep Python tests under `tests/python/` and compiled Arx tests under
+  `tests/arx/`.
+- New or updated `.x` tests must include valid Douki module docstrings.
 - For codegen/control-flow changes:
-  - add at least one translate-path test (`tests/test_codegen_ast_output.py`)
+  - add at least one translate-path test
+    (`tests/python/test_codegen_ast_output.py`)
   - add build/run assertions when behavior depends on linked execution and
     toolchain is available.
 

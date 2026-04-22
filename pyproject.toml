@@ -23,6 +23,7 @@ include = [
   "src/arx/schema/*.json",
   "src/arx/py.typed",
   "src/arx/lexer/syntax.json",
+  "src/arx/stdlib/**/*.x",
 ]
 exclude = [
   ".git/*",
@@ -63,7 +64,7 @@ douki = ">=0.12.1"
 
 [tool.pytest.ini_options]
 testpaths = [
-    "tests",
+    "tests/python",
 ]
 filterwarnings = [
     "error::RuntimeWarning",
