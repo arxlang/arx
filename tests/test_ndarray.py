@@ -36,7 +36,7 @@ from llvmlite import ir
 
 def _binding_for(data_type: astx.DataType) -> NdarrayBinding:
     """
-    title: Return a non-null ndarray binding for one declared ndarray type.
+    title: Return a non-null binding for one declared ndarray type.
     parameters:
       data_type:
         type: astx.DataType
@@ -230,14 +230,17 @@ def test_ndarray_surface_type_and_binding_round_trip() -> None:
     title: Ndarray surface types round-trip through shape and binding metadata.
     """
     target_type = ndarray_type(astx.Int16(), (2, 3))
+    dynamic_type = ndarray_type(astx.Int16())
     binding = _binding_for(target_type)
 
     assert is_ndarray_type(target_type) is True
+    assert is_ndarray_type(dynamic_type) is True
     assert ndarray_shape(target_type) == (2, 3)
+    assert ndarray_shape(dynamic_type) is None
     assert ndarray_shape(None) is None
     assert is_ndarray_type(astx.ListType([astx.Int16()])) is False
     assert binding_from_type(astx.ListType([astx.Int16()])) is None
-    assert binding_from_type(astx.BufferViewType(astx.Int16())) is None
+    assert binding_from_type(dynamic_type) is None
 
     assert binding.metadata.data.address == 1
     assert binding.metadata.owner.address is None
@@ -273,6 +276,9 @@ def test_zero_extent_binding_and_default_value_paths() -> None:
     assert all(isinstance(value, astx.LiteralFloat32) for value in values)
     assert all(value.value == 0.0 for value in values)
     assert values[0] is not values[1]
+
+    with pytest.raises(ValueError, match="shaped ndarray type"):
+        default_value(ndarray_type(astx.Int32()))
 
 
 def test_attach_binding_and_coerce_expression_cover_branch_paths() -> None:
@@ -334,6 +340,17 @@ def test_build_descriptor_and_infer_descriptor_round_trip() -> None:
     assert values is not None
     assert [value.value for value in values] == [1, 2, 3, 4]
     assert descriptor.metadata.shape == (2, 2)
+
+    unsized = build_descriptor_from_literal(
+        astx.LiteralList([astx.LiteralInt32(8), astx.LiteralInt32(9)]),
+        ndarray_type(astx.Int32()),
+        context="initializer",
+    )
+    unsized_values = literal_values(unsized)
+    assert unsized_values is not None
+    assert unsized.metadata.shape == (2,)
+    assert ndarray_shape(unsized.type_) == (2,)
+    assert [value.value for value in unsized_values] == [8, 9]
 
     inferred = infer_descriptor(_tuple_matrix_literal())
     inferred_values = literal_values(inferred)

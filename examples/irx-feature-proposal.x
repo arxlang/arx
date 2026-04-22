@@ -53,9 +53,9 @@ fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   var dt: datetime = datetime("2026-03-05T12:30:59")
   var ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
 
-  # array literal (IRx currently supports empty or homogeneous integer constants)
-  var ids: array[i32] = [1, 2, 3, 4]
-  var empty_ids: array[i32] = []
+  # list literal (IRx currently supports empty or homogeneous integer constants)
+  var ids: list[i32] = [1, 2, 3, 4]
+  var empty_ids: list[i32] = []
 
   # ---------------------------------------------------------------------------
   # B) ASSIGNMENT (new explicit statement semantics)

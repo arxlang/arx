@@ -166,7 +166,7 @@ class ArxVisitor(LLVMVisitor):
         llvm_element_type: ir.Type,
     ) -> ir.Constant:
         """
-        title: Convert one scalar literal into one LLVM constant.
+        title: Convert one ndarray scalar literal into one LLVM constant.
         parameters:
           value:
             type: irx_astx.Literal

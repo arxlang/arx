@@ -1,6 +1,6 @@
 # ArxLang
 
-Arx is a multi-purpose compiler that aims to provide native array and ndarray
+Arx is a multi-purpose compiler that aims to provide native list and ndarray
 abstractions backed internally by IRx runtime support. It uses the power of
 [LLVM](https://llvm.org/) to provide multi-architecture machine target code
 generation.
@@ -43,8 +43,8 @@ then consumed from Arx.
 
 - **LLVM-powered** -- compiles to native machine code via LLVM
 - **Python-like syntax** -- indentation-based blocks, familiar keywords
-- **Native arrays and ndarrays** -- builtin shaped array abstractions with
-  first-class indexing and compiler-known shapes
+- **Lists and ndarrays** -- generic collections plus Arrow-backed numeric arrays
+  with first-class indexing and compiler-known shapes
 - **Multiple output modes** -- inspect tokens, AST, LLVM IR, or compile to
   object files
 

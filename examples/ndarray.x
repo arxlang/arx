@@ -1,6 +1,6 @@
 ```
 title: Ndarray example
-summary: Demonstrates builtin shaped arrays and multidimensional indexing.
+summary: Demonstrates builtin ndarrays and multidimensional indexing.
 ```
 
 fn pick(grid: ndarray[i32, 2, 2]) -> i32:
@@ -13,8 +13,8 @@ fn pick(grid: ndarray[i32, 2, 2]) -> i32:
 fn main() -> i32:
   ```
   title: main
-  summary: Builds native array and ndarray values and indexes them.
+  summary: Builds fixed-shape ndarray values and indexes them.
   ```
   var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
-  var ids: array[i32, 4] = [5, 6, 7, 8]
+  var ids: ndarray[i32, 4] = [5, 6, 7, 8]
   return pick(grid) + ids[2]

@@ -961,7 +961,7 @@ class DeclarationParserMixin(ParserMixinBase):
         arguments: tuple[astx.Argument, ...] | list[astx.Argument],
     ) -> dict[str, NdarrayBinding]:
         """
-        title: Build one scope map for ndarray-typed function arguments.
+        title: Build one scope map for ndarray function arguments.
         parameters:
           arguments:
             type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]

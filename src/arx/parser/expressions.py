@@ -238,7 +238,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
     def parse_array_expr(self) -> astx.Literal:
         """
-        title: Parse array literals.
+        title: Parse list and ndarray literals.
         returns:
           type: astx.Literal
         """
@@ -250,8 +250,8 @@ class ExpressionParserMixin(ParserMixinBase):
                 elem = self.parse_expression()
                 if not isinstance(elem, astx.Literal):
                     raise ParserException(
-                        "Array and ndarray literals currently support "
-                        "only literal elements."
+                        "List and ndarray literals currently support only "
+                        "literal elements."
                     )
                 elements.append(elem)
 

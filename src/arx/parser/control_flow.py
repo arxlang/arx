@@ -338,6 +338,8 @@ class ControlFlowParserMixin(ParserMixinBase):
         )
         self._declare_value_name(name)
         binding = binding_from_type(var_type)
+        if binding is None and isinstance(value, astx.BufferViewDescriptor):
+            binding = binding_from_type(value.type_)
         if binding is not None:
             self._declare_ndarray_name(name, binding)
         return declaration

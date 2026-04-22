@@ -12,7 +12,12 @@ from irx import astx
 
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
-from arx.ndarray import default_value, is_ndarray_type, ndarray_type
+from arx.ndarray import (
+    binding_from_type,
+    default_value,
+    is_ndarray_type,
+    ndarray_type,
+)
 from arx.parser.base import ParserMixinBase
 
 
@@ -53,6 +58,11 @@ class TypeParserMixin(ParserMixinBase):
         if isinstance(data_type, astx.Time):
             return astx.LiteralTime("00:00:00")
         if is_ndarray_type(data_type):
+            if binding_from_type(data_type) is None:
+                raise ParserException(
+                    "Parser: No default value defined for unsized ndarray "
+                    "types. An explicit initializer is required."
+                )
             try:
                 return default_value(data_type)
             except ValueError as err:
@@ -92,8 +102,21 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name in {"array", "ndarray"}:
-                self.tokens.get_next_token()  # eat array
+            if type_name == "list":
+                self.tokens.get_next_token()  # eat list
+                self._consume_operator("[")
+                elem_type = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=allow_union,
+                )
+                if self._is_operator(","):
+                    raise ParserException(
+                        "List types accept exactly one element type."
+                    )
+                self._consume_operator("]")
+                type_ = astx.ListType([cast(astx.ExprType, elem_type)])
+            elif type_name == "ndarray":
+                self.tokens.get_next_token()  # eat ndarray
                 self._consume_operator("[")
                 elem_type = self.parse_type(
                     allow_template_vars=allow_template_vars,
@@ -111,17 +134,13 @@ class TypeParserMixin(ParserMixinBase):
                     self.tokens.get_next_token()
 
                 self._consume_operator("]")
-                if type_name == "array" and not shape:
-                    type_ = astx.ListType([cast(astx.ExprType, elem_type)])
-                else:
-                    if not shape:
-                        raise ParserException(
-                            "Ndarray types require at least one dimension."
-                        )
-                    try:
-                        type_ = ndarray_type(elem_type, tuple(shape))
-                    except ValueError as err:
-                        raise ParserException(str(err)) from err
+                try:
+                    type_ = ndarray_type(
+                        elem_type,
+                        tuple(shape) if shape else None,
+                    )
+                except ValueError as err:
+                    raise ParserException(str(err)) from err
             else:
                 type_map: dict[str, astx.DataType] = {
                     "i8": astx.Int8(),

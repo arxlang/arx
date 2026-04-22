@@ -23,9 +23,10 @@ their canonical spellings, accepted aliases, and current surface syntax.
 | `timestamp`       | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")`               | Constructor-style literal form           |
 | `date`            | —                | temporal   | `var d: date`                                     | Recognized as a built-in type name       |
 | `time`            | —                | temporal   | `var t: time`                                     | Recognized as a built-in type name       |
-| `array[T]`        | —                | collection | `var ids: array[i32] = [1, 2, 3]`                 | Legacy list-style spelling               |
-| `array[T, N]`     | —                | collection | `var ids: array[i32, 4] = [1, 2, 3, 4]`           | Builtin shaped 1D array                  |
-| `ndarray[T, ...]` | —                | collection | `var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]` | Builtin multidimensional array           |
+| `list[T]`         | —                | collection | `var ids: list[i32] = [1, 2, 3]`                  | Generic collection type                  |
+| `ndarray[T]`      | —                | collection | `var ids: ndarray[i32] = [1, 2, 3]`               | Dynamic / unsized numeric ndarray        |
+| `ndarray[T, N]`   | —                | collection | `var ids: ndarray[i32, 4] = [1, 2, 3, 4]`         | Fixed-shape 1D numeric ndarray           |
+| `ndarray[T, ...]` | —                | collection | `var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]` | Fixed-shape multidimensional ndarray     |
 
 ## Numeric Types
 
@@ -93,15 +94,21 @@ fn time_demo() -> none:
 The parser also recognizes `date` and `time` as built-in type names in
 annotations.
 
-## Arrays And Ndarrays
+## Collections and ndarrays
 
-Use `array[T, N]` for shaped 1D arrays and `ndarray[T, d0, d1, ...]` for
-multidimensional arrays.
+Arx exposes two public collection constructors:
+
+- `list[T]` for generic collection values
+- `ndarray[T]` for dynamic / unsized numeric ndarrays
+- `ndarray[T, N]` for fixed-shape 1D numeric ndarrays
+- `ndarray[T, d0, d1, ...]` for fixed-shape multidimensional ndarrays
 
 ```arx
-fn array_demo() -> none:
-  var ids: array[i32, 4] = [1, 2, 3, 4]
+fn ndarray_demo() -> none:
+  var names: list[str] = ["a", "b"]
+  var ids: ndarray[i32, 4] = [1, 2, 3, 4]
   var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
+  print(names[0])
   print(ids[2])
   print(grid[1, 0])
   return none
@@ -113,11 +120,7 @@ Current ndarray rules in this phase:
 - literals must be rectangular and match the declared shape
 - indexing uses one index per declared dimension
 - current lowering is read-only and is focused on literal/default-initialized
-  shaped arrays
-
-`array[T]` remains available as the older list-style spelling, but the native
-array/ndarray surface for shaped indexing uses `array[T, N]` and
-`ndarray[T, ...]`.
+  shaped ndarrays
 
 ## Casting
 
