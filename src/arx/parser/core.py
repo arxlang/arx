@@ -16,7 +16,7 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
-from arx.ndarray import NdarrayBinding
+from arx.ndarray import NDArrayBinding
 from arx.parser.base import ParserMixinBase
 
 
@@ -31,7 +31,7 @@ class ParserCore(ParserMixinBase):
       known_class_names:
         type: set[str]
       ndarray_scopes:
-        type: list[dict[str, NdarrayBinding]]
+        type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -45,7 +45,7 @@ class ParserCore(ParserMixinBase):
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
-    ndarray_scopes: list[dict[str, NdarrayBinding]]
+    ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -209,7 +209,7 @@ class ParserCore(ParserMixinBase):
     def _push_value_scope(
         self,
         declared_names: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NdarrayBinding] | None = None,
+        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
@@ -217,7 +217,7 @@ class ParserCore(ParserMixinBase):
           declared_names:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
-            type: dict[str, NdarrayBinding] | None
+            type: dict[str, NDArrayBinding | None] | None
         """
         self.value_scopes.append(set(declared_names))
         self.ndarray_scopes.append(dict(declared_ndarrays or {}))
@@ -252,7 +252,7 @@ class ParserCore(ParserMixinBase):
     def _declare_ndarray_name(
         self,
         name: str,
-        binding: NdarrayBinding,
+        binding: NDArrayBinding | None,
     ) -> None:
         """
         title: Record one visible ndarray binding in the current scope.
@@ -260,23 +260,33 @@ class ParserCore(ParserMixinBase):
           name:
             type: str
           binding:
-            type: NdarrayBinding
+            type: NDArrayBinding | None
         """
         self.ndarray_scopes[-1][name] = binding
 
-    def _lookup_ndarray_binding(self, name: str) -> NdarrayBinding | None:
+    def _is_ndarray_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as an ndarray.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        return any(name in scope for scope in reversed(self.ndarray_scopes))
+
+    def _lookup_ndarray_binding(self, name: str) -> NDArrayBinding | None:
         """
         title: Return one visible ndarray binding by name.
         parameters:
           name:
             type: str
         returns:
-          type: NdarrayBinding | None
+          type: NDArrayBinding | None
         """
         for scope in reversed(self.ndarray_scopes):
-            binding = scope.get(name)
-            if binding is not None:
-                return binding
+            if name in scope:
+                return scope[name]
         return None
 
     def _push_template_scope(

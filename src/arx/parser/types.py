@@ -128,7 +128,7 @@ class TypeParserMixin(ParserMixinBase):
                     dimension_token = self.tokens.cur_tok
                     if dimension_token.kind != TokenKind.int_literal:
                         raise ParserException(
-                            "Ndarray dimensions must be integer literals."
+                            "NDArray dimensions must be integer literals."
                         )
                     shape.append(cast(int, dimension_token.value))
                     self.tokens.get_next_token()

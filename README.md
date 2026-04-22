@@ -60,7 +60,7 @@ Use:
 - `ndarray[T]` for dynamic Arrow-backed numeric arrays
 - `ndarray[T, N]` and `ndarray[T, D1, D2, ...]` for fixed-shape numeric arrays
 
-Ndarray details stay user-facing in terms of element types, shape, dimensions,
+NDArray details stay user-facing in terms of element types, shape, dimensions,
 and indexing. IRx buffer-view lowering remains an internal backend detail.
 
 Arx now supports fatal assertion statements in the language surface:

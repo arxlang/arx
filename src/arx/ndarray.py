@@ -1,5 +1,5 @@
 """
-title: Ndarray surface helpers for Arx.
+title: NDArray surface helpers for Arx.
 summary: >-
   Adapt Arx surface ndarray syntax to the IRx buffer-view substrate while
   keeping user-facing shape and indexing rules local to Arx.
@@ -25,11 +25,12 @@ from irx.buffer import (
 )
 
 NDARRAY_SHAPE_ATTR = "_arx_ndarray_shape"
+NDARRAY_SURFACE_ATTR = "_arx_ndarray_surface"
 NDARRAY_VALUES_ATTR = "_arx_ndarray_values"
 
 
 @dataclass(frozen=True)
-class NdarrayBinding:
+class NDArrayBinding:
     """
     title: Static ndarray binding metadata.
     attributes:
@@ -67,7 +68,10 @@ def is_ndarray_type(data_type: astx.DataType | None) -> bool:
     returns:
       type: bool
     """
-    return isinstance(data_type, astx.BufferViewType)
+    return (
+        isinstance(data_type, astx.BufferViewType)
+        and getattr(data_type, NDARRAY_SURFACE_ATTR, False) is True
+    )
 
 
 def ndarray_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
@@ -99,33 +103,34 @@ def ndarray_type(
       type: astx.BufferViewType
     """
     _element_size_bytes(element_type)
+    result = astx.BufferViewType(element_type)
+    setattr(result, NDARRAY_SURFACE_ATTR, True)
     if shape is None:
-        return astx.BufferViewType(element_type)
+        return result
     if not shape:
         raise ValueError("ndarray shapes must include at least one dimension")
     if any(dim < 0 for dim in shape):
         raise ValueError("ndarray dimensions must be non-negative")
-    result = astx.BufferViewType(element_type)
     setattr(result, NDARRAY_SHAPE_ATTR, shape)
     return result
 
 
 def binding_from_type(
     data_type: astx.DataType | None,
-) -> NdarrayBinding | None:
+) -> NDArrayBinding | None:
     """
     title: Build one static ndarray binding from one declared type.
     parameters:
       data_type:
         type: astx.DataType | None
     returns:
-      type: NdarrayBinding | None
+      type: NDArrayBinding | None
     """
-    if not isinstance(data_type, astx.BufferViewType):
+    if not is_ndarray_type(data_type):
         return None
 
     shape = ndarray_shape(data_type)
-    element_type = data_type.element_type
+    element_type = cast(astx.BufferViewType, data_type).element_type
     if shape is None or element_type is None:
         return None
 
@@ -146,17 +151,17 @@ def binding_from_type(
             c_contiguous=True,
         ),
     )
-    return NdarrayBinding(element_type=element_type, metadata=metadata)
+    return NDArrayBinding(element_type=element_type, metadata=metadata)
 
 
-def attach_binding(node: astx.AST, binding: NdarrayBinding) -> None:
+def attach_binding(node: astx.AST, binding: NDArrayBinding) -> None:
     """
     title: Attach static ndarray metadata to one AST node.
     parameters:
       node:
         type: astx.AST
       binding:
-        type: NdarrayBinding
+        type: NDArrayBinding
     """
     info = cast(SemanticInfo | None, getattr(node, "semantic", None))
     if info is None or not isinstance(info, SemanticInfo):
@@ -234,9 +239,9 @@ def build_descriptor_from_literal(
     """
     binding = binding_from_type(target_type)
     if binding is None:
-        if not isinstance(target_type, astx.BufferViewType):
+        if not is_ndarray_type(target_type):
             raise ValueError("ndarray literal target must be an ndarray type")
-        element_type = target_type.element_type
+        element_type = cast(astx.BufferViewType, target_type).element_type
         if element_type is None:
             raise ValueError(
                 "ndarray literal target must declare an element type"
@@ -245,7 +250,7 @@ def build_descriptor_from_literal(
         for value in values:
             _validate_scalar_literal(value, element_type, context=context)
         inferred_binding = cast(
-            NdarrayBinding,
+            NDArrayBinding,
             binding_from_type(ndarray_type(element_type, shape)),
         )
         return _descriptor_from_values(inferred_binding, values)
@@ -287,7 +292,7 @@ def infer_descriptor(expr: astx.Literal) -> astx.BufferViewDescriptor:
         )
 
     binding = cast(
-        NdarrayBinding,
+        NDArrayBinding,
         binding_from_type(ndarray_type(element_type, shape)),
     )
     return _descriptor_from_values(binding, values)
@@ -313,14 +318,14 @@ def literal_values(
 
 
 def _descriptor_from_values(
-    binding: NdarrayBinding,
+    binding: NDArrayBinding,
     values: tuple[astx.Literal, ...],
 ) -> astx.BufferViewDescriptor:
     """
     title: Build one descriptor and attach its flattened scalar payload.
     parameters:
       binding:
-        type: NdarrayBinding
+        type: NDArrayBinding
       values:
         type: tuple[astx.Literal, Ellipsis]
     returns:
@@ -330,6 +335,7 @@ def _descriptor_from_values(
         binding.metadata,
         binding.element_type,
     )
+    setattr(descriptor.type_, NDARRAY_SURFACE_ATTR, True)
     setattr(descriptor.type_, NDARRAY_SHAPE_ATTR, binding.metadata.shape)
     setattr(descriptor, NDARRAY_VALUES_ATTR, values)
     attach_binding(descriptor, binding)
@@ -600,7 +606,7 @@ def _format_shape(shape: tuple[int, ...]) -> str:
 
 
 __all__ = [
-    "NdarrayBinding",
+    "NDArrayBinding",
     "attach_binding",
     "binding_from_type",
     "build_descriptor_from_literal",

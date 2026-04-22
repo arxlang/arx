@@ -410,9 +410,11 @@ class ExpressionParserMixin(ParserMixinBase):
 
         if isinstance(base, astx.Identifier):
             binding = self._lookup_ndarray_binding(base.name)
-            if binding is None:
+            if binding is not None:
+                attach_binding(base, binding)
+                return base
+            if not self._is_ndarray_name(base.name):
                 return None
-            attach_binding(base, binding)
             return base
 
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
@@ -448,7 +450,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
         if len(indices) != metadata.ndim:
             raise ParserException(
-                "Ndarray indexing expects "
+                "NDArray indexing expects "
                 f"{metadata.ndim} indices for shape "
                 f"{self._format_ndarray_shape(metadata.shape)}."
             )
@@ -459,7 +461,7 @@ class ExpressionParserMixin(ParserMixinBase):
             extent = metadata.shape[axis]
             if index.value < 0 or index.value >= extent:
                 raise ParserException(
-                    "Ndarray index "
+                    "NDArray index "
                     f"{index.value} is out of bounds for dimension {axis} "
                     f"with extent {extent}."
                 )

@@ -1,5 +1,5 @@
 ```
-title: Ndarray example
+title: NDArray example
 summary: Demonstrates builtin ndarrays and multidimensional indexing.
 ```
 

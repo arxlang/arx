@@ -272,7 +272,7 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
 def test_ndarray_program_builds_and_runs(tmp_path: Path) -> None:
     """
-    title: Ndarray literals and indexing should survive full build and run.
+    title: NDArray literals and indexing should survive full build and run.
     parameters:
       tmp_path:
         type: Path

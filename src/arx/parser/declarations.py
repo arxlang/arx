@@ -15,7 +15,7 @@ from irx import astx
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.ndarray import (
-    NdarrayBinding,
+    NDArrayBinding,
     binding_from_type,
     coerce_expression,
     is_ndarray_type,
@@ -959,19 +959,18 @@ class DeclarationParserMixin(ParserMixinBase):
     def _ndarray_bindings_for_arguments(
         self,
         arguments: tuple[astx.Argument, ...] | list[astx.Argument],
-    ) -> dict[str, NdarrayBinding]:
+    ) -> dict[str, NDArrayBinding | None]:
         """
-        title: Build one scope map for ndarray function arguments.
+        title: Build one ndarray scope map for function arguments.
         parameters:
           arguments:
             type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
         returns:
-          type: dict[str, NdarrayBinding]
+          type: dict[str, NDArrayBinding | None]
         """
-        bindings: dict[str, NdarrayBinding] = {}
+        bindings: dict[str, NDArrayBinding | None] = {}
         for argument in arguments:
-            binding = binding_from_type(argument.type_)
-            if binding is None:
+            if not is_ndarray_type(argument.type_):
                 continue
-            bindings[argument.name] = binding
+            bindings[argument.name] = binding_from_type(argument.type_)
         return bindings

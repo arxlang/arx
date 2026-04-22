@@ -11,7 +11,7 @@ import pytest
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
-from arx.ndarray import ndarray_shape
+from arx.ndarray import ndarray_shape, ndarray_type
 from arx.parser import Parser
 from irx import astx
 
@@ -209,7 +209,7 @@ def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
         "fn dynamic(arg: list[i32]) -> i32:\n"
         "  return 1\n"
         "fn vector(values: ndarray[i32]) -> i32:\n"
-        "  return 1\n"
+        "  return values[0]\n"
         "fn fixed(values: ndarray[i32, 4]) -> i32:\n"
         "  return values[0]\n"
         "fn grid(values: ndarray[i32, 2, 3]) -> i32:\n"
@@ -224,6 +224,10 @@ def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
     assert isinstance(vector_fn, astx.FunctionDef)
     assert isinstance(vector_fn.prototype.args[0].type_, astx.BufferViewType)
     assert ndarray_shape(vector_fn.prototype.args[0].type_) is None
+    assert isinstance(
+        cast(astx.FunctionReturn, vector_fn.body.nodes[0]).value,
+        astx.BufferViewIndex,
+    )
     assert isinstance(fixed_fn, astx.FunctionDef)
     assert isinstance(fixed_fn.prototype.args[0].type_, astx.BufferViewType)
     assert ndarray_shape(fixed_fn.prototype.args[0].type_) == (4,)
@@ -270,7 +274,7 @@ def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
     )
 
     with pytest.raises(ParserException, match="unsized ndarray"):
-        parser._default_value_for_type(astx.BufferViewType(astx.Int32()))
+        parser._default_value_for_type(ndarray_type(astx.Int32()))
 
     with pytest.raises(ParserException):
         parser._default_value_for_type(astx.ListType([astx.Int32()]))
@@ -342,7 +346,7 @@ def test_parse_ndarray_type_literal_and_indexing() -> None:
 
 def test_parse_unsized_ndarray_literal_init_and_indexing() -> None:
     """
-    title: Unsized ndarray declarations can infer literal shape for indexing.
+    title: Unsized ndarray declarations allow indexing without specialization.
     """
     tree = _parse(
         "fn main() -> i32:\n"
@@ -358,6 +362,23 @@ def test_parse_unsized_ndarray_literal_init_and_indexing() -> None:
     assert isinstance(declaration.value, astx.BufferViewDescriptor)
     assert ndarray_shape(declaration.value.type_) == (3,)
 
+    ret = fn.body.nodes[1]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.BufferViewIndex)
+
+
+def test_parse_unsized_ndarray_indexing_skips_static_bounds_checks() -> None:
+    """
+    title: >-
+      Unsized ndarray indexing does not perform shaped static bound checks.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var values: ndarray[i32] = [1, 2, 3]\n"
+        "  return values[99]\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
     ret = fn.body.nodes[1]
     assert isinstance(ret, astx.FunctionReturn)
     assert isinstance(ret.value, astx.BufferViewIndex)
@@ -400,7 +421,7 @@ def test_parse_unsized_ndarray_literal_init_and_indexing() -> None:
 )
 def test_parse_ndarray_error_paths(code: str, expected: str) -> None:
     """
-    title: Ndarray parser diagnostics cover shape and indexing failures.
+    title: NDArray parser diagnostics cover shape and indexing failures.
     parameters:
       code:
         type: str

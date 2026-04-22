@@ -11,7 +11,7 @@ from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.ndarray import (
-    NdarrayBinding,
+    NDArrayBinding,
     attach_binding,
     binding_from_type,
     build_descriptor_from_literal,
@@ -34,14 +34,14 @@ from irx.buffer import (
 from llvmlite import ir
 
 
-def _binding_for(data_type: astx.DataType) -> NdarrayBinding:
+def _binding_for(data_type: astx.DataType) -> NDArrayBinding:
     """
     title: Return a non-null binding for one declared ndarray type.
     parameters:
       data_type:
         type: astx.DataType
     returns:
-      type: NdarrayBinding
+      type: NDArrayBinding
     """
     binding = binding_from_type(data_type)
     assert binding is not None
@@ -227,7 +227,7 @@ def test_validate_scalar_literal_covers_success_and_error_paths() -> None:
 
 def test_ndarray_surface_type_and_binding_round_trip() -> None:
     """
-    title: Ndarray surface types round-trip through shape and binding metadata.
+    title: NDArray surface types round-trip through shape and binding metadata.
     """
     target_type = ndarray_type(astx.Int16(), (2, 3))
     dynamic_type = ndarray_type(astx.Int16())
@@ -235,6 +235,7 @@ def test_ndarray_surface_type_and_binding_round_trip() -> None:
 
     assert is_ndarray_type(target_type) is True
     assert is_ndarray_type(dynamic_type) is True
+    assert is_ndarray_type(astx.BufferViewType(astx.Int16())) is False
     assert ndarray_shape(target_type) == (2, 3)
     assert ndarray_shape(dynamic_type) is None
     assert ndarray_shape(None) is None
@@ -252,7 +253,7 @@ def test_ndarray_surface_type_and_binding_round_trip() -> None:
 
 def test_ndarray_type_rejects_invalid_shapes() -> None:
     """
-    title: Ndarray types reject empty and negative declared shapes.
+    title: NDArray types reject empty and negative declared shapes.
     """
     with pytest.raises(ValueError, match="at least one dimension"):
         ndarray_type(astx.Int32(), ())
@@ -351,6 +352,13 @@ def test_build_descriptor_and_infer_descriptor_round_trip() -> None:
     assert unsized.metadata.shape == (2,)
     assert ndarray_shape(unsized.type_) == (2,)
     assert [value.value for value in unsized_values] == [8, 9]
+
+    with pytest.raises(ValueError, match="ndarray literal target"):
+        build_descriptor_from_literal(
+            astx.LiteralList([astx.LiteralInt32(1)]),
+            astx.BufferViewType(astx.Int32()),
+            context="initializer",
+        )
 
     inferred = infer_descriptor(_tuple_matrix_literal())
     inferred_values = literal_values(inferred)
@@ -453,7 +461,7 @@ def test_ndarray_scalar_constant_branches(
     expected: int | float,
 ) -> None:
     """
-    title: Ndarray scalar lowering covers bool, char, int, and float branches.
+    title: NDArray scalar lowering covers bool, char, int, and float branches.
     parameters:
       literal:
         type: astx.Literal
@@ -470,7 +478,7 @@ def test_ndarray_scalar_constant_branches(
 
 def test_ndarray_scalar_constant_rejects_unsupported_literals() -> None:
     """
-    title: Ndarray scalar lowering rejects unsupported scalar literal kinds.
+    title: NDArray scalar lowering rejects unsupported scalar literal kinds.
     """
     visitor = ArxBuilder().translator
     with pytest.raises(TypeError, match="unsupported ndarray scalar literal"):

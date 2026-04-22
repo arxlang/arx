@@ -7,7 +7,7 @@ from __future__ import annotations
 from irx import astx
 
 from arx.lexer import TokenList
-from arx.ndarray import NdarrayBinding
+from arx.ndarray import NDArrayBinding
 from arx.parser.control_flow import ControlFlowParserMixin
 from arx.parser.core import ParserCore
 from arx.parser.declarations import DeclarationParserMixin
@@ -39,7 +39,7 @@ class Parser(
       known_class_names:
         type: set[str]
       ndarray_scopes:
-        type: list[dict[str, NdarrayBinding]]
+        type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -53,7 +53,7 @@ class Parser(
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
-    ndarray_scopes: list[dict[str, NdarrayBinding]]
+    ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]

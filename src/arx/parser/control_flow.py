@@ -16,9 +16,10 @@ from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.ndarray import (
-    NdarrayBinding,
+    NDArrayBinding,
     binding_from_type,
     coerce_expression,
+    is_ndarray_type,
 )
 from arx.parser.base import ParserMixinBase
 
@@ -32,7 +33,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NdarrayBinding] | None = None,
+        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -42,7 +43,7 @@ class ControlFlowParserMixin(ParserMixinBase):
           declared_names:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
-            type: dict[str, NdarrayBinding] | None
+            type: dict[str, NDArrayBinding | None] | None
         returns:
           type: astx.Block
         """
@@ -337,10 +338,8 @@ class ControlFlowParserMixin(ParserMixinBase):
             loc=var_loc,
         )
         self._declare_value_name(name)
-        binding = binding_from_type(var_type)
-        if binding is None and isinstance(value, astx.BufferViewDescriptor):
-            binding = binding_from_type(value.type_)
-        if binding is not None:
+        if is_ndarray_type(var_type):
+            binding = binding_from_type(var_type)
             self._declare_ndarray_name(name, binding)
         return declaration
 
