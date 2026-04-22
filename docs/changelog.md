@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+# [0.15.0](https://github.com/arxlang/arx/compare/0.14.0...0.15.0) (2026-04-22)
+
+
+### Features
+
+* align Arx surface syntax with IRx array-first naming ([#65](https://github.com/arxlang/arx/issues/65)) ([b7ae1b1](https://github.com/arxlang/arx/commit/b7ae1b1b8996cfbff908f24e133acbf509301cfa))
+* Improve lexer layout; Update syntax.json ([#64](https://github.com/arxlang/arx/issues/64)) ([a3e6285](https://github.com/arxlang/arx/commit/a3e6285c4b74fceb377cd24552ece09a3e5ca519))
+
 # [0.14.0](https://github.com/arxlang/arx/compare/0.13.0...0.14.0) (2026-04-21)
 
 
