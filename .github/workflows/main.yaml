@@ -72,6 +72,9 @@ jobs:
       - name: Run tests
         run: makim tests.unit
 
+      - name: Run Arx tests
+        run: makim tests.arx
+
       - name: Run smoke tests
         run: makim tests.smoke
 

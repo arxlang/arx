@@ -331,11 +331,11 @@ Run the test suite with:
 
 ```bash
 arx test
-arx test tests/test_add.x --list
+arx test tests/arx/test_add.x --list
 arx test -k add
 arx test -x
 arx test --keep-artifacts
-arx test --exclude "tests/slow_*.x"
+arx test --exclude "tests/arx/slow_*.x"
 ```
 
 Test discovery can also be tuned from `.arxproject.toml`:

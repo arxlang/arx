@@ -206,14 +206,39 @@ class FileImportResolver:
         roots: list[Path] = []
         seen: set[Path] = set()
 
+        def add_root(path: Path) -> None:
+            """
+            title: Add one unique root for stdlib shadow checks.
+            parameters:
+              path:
+                type: Path
+            """
+            resolved = path.resolve()
+            if resolved in seen:
+                return
+            seen.add(resolved)
+            roots.append(resolved)
+
+        add_root(Path.cwd())
         for input_file in self.input_files:
             input_root = Path(input_file).resolve().parent
-            source_root = _find_project_source_root(input_root)
-            root = source_root if source_root is not None else input_root
-            if root in seen:
+            add_root(input_root)
+
+            config = arx_settings.find_config_file(start=input_root)
+            if config is None:
                 continue
-            seen.add(root)
-            roots.append(root)
+
+            project_root = config.resolve().parent
+            current = input_root
+            while current != project_root:
+                current = current.parent
+                add_root(current)
+
+            try:
+                project = arx_settings.load_settings(config)
+                add_root(arx_settings.resolve_source_root(project))
+            except arx_settings.ArxProjectError:
+                continue
 
         return tuple(roots)
 

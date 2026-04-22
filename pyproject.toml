@@ -64,7 +64,7 @@ douki = ">=0.12.1"
 
 [tool.pytest.ini_options]
 testpaths = [
-    "tests",
+    "tests/python",
 ]
 filterwarnings = [
     "error::RuntimeWarning",
