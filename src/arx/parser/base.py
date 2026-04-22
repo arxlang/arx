@@ -10,6 +10,7 @@ from __future__ import annotations
 from irx import astx
 
 from arx.lexer import Token, TokenList
+from arx.ndarray import NDArrayBinding
 from arx.parser.state import ParsedAnnotation, ParsedDeclarationPrefixes
 
 
@@ -23,6 +24,10 @@ class ParserMixinBase:
         type: int
       known_class_names:
         type: set[str]
+      ndarray_scopes:
+        type: list[dict[str, NDArrayBinding | None]]
+      return_type_scopes:
+        type: list[astx.DataType]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
       value_scopes:
@@ -34,6 +39,8 @@ class ParserMixinBase:
     bin_op_precedence: dict[str, int]
     indent_level: int
     known_class_names: set[str]
+    ndarray_scopes: list[dict[str, NDArrayBinding | None]]
+    return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList
@@ -41,14 +48,18 @@ class ParserMixinBase:
     def _push_value_scope(
         self,
         declared_names: tuple[str, ...] = (),
+        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope.
         parameters:
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_ndarrays:
+            type: dict[str, NDArrayBinding | None] | None
         """
         del declared_names
+        del declared_ndarrays
         raise NotImplementedError
 
     def _pop_value_scope(self) -> None:
@@ -75,6 +86,47 @@ class ParserMixinBase:
             type: str
         returns:
           type: bool
+        """
+        del name
+        raise NotImplementedError
+
+    def _declare_ndarray_name(
+        self,
+        name: str,
+        binding: NDArrayBinding | None,
+    ) -> None:
+        """
+        title: Record one visible ndarray binding in the current scope.
+        parameters:
+          name:
+            type: str
+          binding:
+            type: NDArrayBinding | None
+        """
+        del name
+        del binding
+        raise NotImplementedError
+
+    def _is_ndarray_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as an ndarray.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        del name
+        raise NotImplementedError
+
+    def _lookup_ndarray_binding(self, name: str) -> NDArrayBinding | None:
+        """
+        title: Look up one visible ndarray binding by name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: NDArrayBinding | None
         """
         del name
         raise NotImplementedError
@@ -108,6 +160,30 @@ class ParserMixinBase:
           type: astx.DataType | None
         """
         del name
+        raise NotImplementedError
+
+    def _push_return_type_scope(self, return_type: astx.DataType) -> None:
+        """
+        title: Push one active function return type.
+        parameters:
+          return_type:
+            type: astx.DataType
+        """
+        del return_type
+        raise NotImplementedError
+
+    def _pop_return_type_scope(self) -> None:
+        """
+        title: Pop the most recent active function return type.
+        """
+        raise NotImplementedError
+
+    def _current_return_type(self) -> astx.DataType | None:
+        """
+        title: Return the active function return type when one exists.
+        returns:
+          type: astx.DataType | None
+        """
         raise NotImplementedError
 
     def _class_name_from_expr(self, expr: astx.AST) -> str | None:
@@ -242,6 +318,7 @@ class ParserMixinBase:
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
+        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse one block of nodes.
@@ -250,10 +327,12 @@ class ParserMixinBase:
             type: bool
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_ndarrays:
+            type: dict[str, NDArrayBinding | None] | None
         returns:
           type: astx.Block
         """
-        del allow_docstring, declared_names
+        del allow_docstring, declared_names, declared_ndarrays
         raise NotImplementedError
 
     def parse_type(

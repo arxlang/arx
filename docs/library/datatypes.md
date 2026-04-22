@@ -26,8 +26,10 @@ fn add(a: i32, b: i32) -> i32:
 ## Common Annotation Forms
 
 ```arx
-fn summarize(name: str, values: array[i32]) -> none:
+fn summarize(name: str, values: list[i32]) -> none:
+  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
   var count: i32 = 0
+  print(grid[0, 1])
   return
 ```
 
@@ -36,7 +38,10 @@ Common places where types appear:
 - function parameters: `fn add(a: i32, b: i32) -> i32:`
 - function return types: `fn test_add() -> none:`
 - variable declarations: `var total: i32 = 0`
-- generic-style element annotations: `array[i32]`
+- generic collection annotations: `list[i32]`
+- unsized ndarray annotations: `ndarray[i32]`
+- shaped ndarray annotations: `ndarray[i32, 4]`
+- multidimensional ndarray annotations: `ndarray[i32, 2, 2]`
 
 ## Built-in Type Reference
 
@@ -48,5 +53,5 @@ That page covers:
 - numeric types and aliases
 - `none` as the unit type and value
 - string, character, and temporal types
-- arrays and current limitations
+- lists, ndarrays, and current limitations
 - the `cast(value, type)` helper

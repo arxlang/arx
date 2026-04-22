@@ -6,24 +6,27 @@ their canonical spellings, accepted aliases, and current surface syntax.
 
 ## Overview
 
-| Canonical type | Accepted aliases | Category   | Example                             | Notes                                    |
-| -------------- | ---------------- | ---------- | ----------------------------------- | ---------------------------------------- |
-| `i8`           | `int8`           | integer    | `var a: i8 = 8`                     | 8-bit integer                            |
-| `i16`          | `int16`          | integer    | `var b: i16 = 16`                   | 16-bit integer                           |
-| `i32`          | `int32`          | integer    | `var c: i32 = 32`                   | 32-bit integer                           |
-| `i64`          | `int64`          | integer    | `var d: i64 = 64`                   | 64-bit integer                           |
-| `f16`          | `float16`        | float      | `var x: f16 = 1.5`                  | 16-bit float                             |
-| `f32`          | `float32`        | float      | `var y: f32 = 3.25`                 | 32-bit float                             |
-| `f64`          | `float64`        | float      | `var z: f64 = 9.5`                  | 64-bit float                             |
-| `bool`         | `boolean`        | boolean    | `var ok: bool = true`               | Uses `true` and `false` literals         |
-| `none`         | —                | unit       | `fn log() -> none:`                 | Also the single value of the `none` type |
-| `str`          | `string`         | text       | `var s: str = "hi"`                 | UTF-8 string                             |
-| `char`         | —                | text       | `var ch: char = 'A'`                | Currently mapped to `i8`                 |
-| `datetime`     | —                | temporal   | `datetime("2026-03-05T12:30:59")`   | Constructor-style literal form           |
-| `timestamp`    | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")` | Constructor-style literal form           |
-| `date`         | —                | temporal   | `var d: date`                       | Recognized as a built-in type name       |
-| `time`         | —                | temporal   | `var t: time`                       | Recognized as a built-in type name       |
-| `array[T]`     | —                | collection | `var ids: array[i32] = [1, 2, 3]`   | Element type is written inside brackets  |
+| Canonical type    | Accepted aliases | Category   | Example                                           | Notes                                    |
+| ----------------- | ---------------- | ---------- | ------------------------------------------------- | ---------------------------------------- |
+| `i8`              | `int8`           | integer    | `var a: i8 = 8`                                   | 8-bit integer                            |
+| `i16`             | `int16`          | integer    | `var b: i16 = 16`                                 | 16-bit integer                           |
+| `i32`             | `int32`          | integer    | `var c: i32 = 32`                                 | 32-bit integer                           |
+| `i64`             | `int64`          | integer    | `var d: i64 = 64`                                 | 64-bit integer                           |
+| `f16`             | `float16`        | float      | `var x: f16 = 1.5`                                | 16-bit float                             |
+| `f32`             | `float32`        | float      | `var y: f32 = 3.25`                               | 32-bit float                             |
+| `f64`             | `float64`        | float      | `var z: f64 = 9.5`                                | 64-bit float                             |
+| `bool`            | `boolean`        | boolean    | `var ok: bool = true`                             | Uses `true` and `false` literals         |
+| `none`            | —                | unit       | `fn log() -> none:`                               | Also the single value of the `none` type |
+| `str`             | `string`         | text       | `var s: str = "hi"`                               | UTF-8 string                             |
+| `char`            | —                | text       | `var ch: char = 'A'`                              | Currently mapped to `i8`                 |
+| `datetime`        | —                | temporal   | `datetime("2026-03-05T12:30:59")`                 | Constructor-style literal form           |
+| `timestamp`       | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")`               | Constructor-style literal form           |
+| `date`            | —                | temporal   | `var d: date`                                     | Recognized as a built-in type name       |
+| `time`            | —                | temporal   | `var t: time`                                     | Recognized as a built-in type name       |
+| `list[T]`         | —                | collection | `var ids: list[i32] = [1, 2, 3]`                  | Generic collection type                  |
+| `ndarray[T]`      | —                | collection | `var ids: ndarray[i32] = [1, 2, 3]`               | Dynamic / unsized numeric ndarray        |
+| `ndarray[T, N]`   | —                | collection | `var ids: ndarray[i32, 4] = [1, 2, 3, 4]`         | Fixed-shape 1D numeric ndarray           |
+| `ndarray[T, ...]` | —                | collection | `var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]` | Fixed-shape multidimensional ndarray     |
 
 ## Numeric Types
 
@@ -91,19 +94,33 @@ fn time_demo() -> none:
 The parser also recognizes `date` and `time` as built-in type names in
 annotations.
 
-## Arrays
+## Collections and ndarrays
 
-Use `array[T]` for typed arrays.
+Arx exposes two public collection constructors:
+
+- `list[T]` for generic collection values
+- `ndarray[T]` for dynamic / unsized numeric ndarrays
+- `ndarray[T, N]` for fixed-shape 1D numeric ndarrays
+- `ndarray[T, d0, d1, ...]` for fixed-shape multidimensional ndarrays
 
 ```arx
-fn array_demo() -> none:
-  var ids: array[i32] = [1, 2, 3, 4]
-  var empty_ids: array[i32] = []
+fn ndarray_demo() -> none:
+  var names: list[str] = ["a", "b"]
+  var ids: ndarray[i32, 4] = [1, 2, 3, 4]
+  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
+  print(names[0])
+  print(ids[2])
+  print(grid[1, 0])
   return none
 ```
 
-Current limitation: array code generation is still limited to empty or
-homogeneous integer constant arrays.
+Current ndarray rules in this phase:
+
+- shapes are declared in the type annotation
+- literals must be rectangular and match the declared shape
+- indexing uses one index per declared dimension
+- current lowering is read-only and is focused on literal/default-initialized
+  shaped ndarrays
 
 ## Casting
 

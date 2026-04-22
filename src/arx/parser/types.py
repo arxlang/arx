@@ -12,6 +12,12 @@ from irx import astx
 
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
+from arx.ndarray import (
+    binding_from_type,
+    default_value,
+    is_ndarray_type,
+    ndarray_type,
+)
 from arx.parser.base import ParserMixinBase
 
 
@@ -51,6 +57,16 @@ class TypeParserMixin(ParserMixinBase):
             return astx.LiteralDate("1970-01-01")
         if isinstance(data_type, astx.Time):
             return astx.LiteralTime("00:00:00")
+        if is_ndarray_type(data_type):
+            if binding_from_type(data_type) is None:
+                raise ParserException(
+                    "Parser: No default value defined for unsized ndarray "
+                    "types. An explicit initializer is required."
+                )
+            try:
+                return default_value(data_type)
+            except ValueError as err:
+                raise ParserException(str(err)) from err
 
         raise ParserException(
             f"Parser: No default value defined for type "
@@ -86,15 +102,45 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name == "array":
-                self.tokens.get_next_token()  # eat array
+            if type_name == "list":
+                self.tokens.get_next_token()  # eat list
                 self._consume_operator("[")
                 elem_type = self.parse_type(
                     allow_template_vars=allow_template_vars,
                     allow_union=allow_union,
                 )
+                if self._is_operator(","):
+                    raise ParserException(
+                        "List types accept exactly one element type."
+                    )
                 self._consume_operator("]")
                 type_ = astx.ListType([cast(astx.ExprType, elem_type)])
+            elif type_name == "ndarray":
+                self.tokens.get_next_token()  # eat ndarray
+                self._consume_operator("[")
+                elem_type = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=allow_union,
+                )
+                shape: list[int] = []
+                while self._is_operator(","):
+                    self._consume_operator(",")
+                    dimension_token = self.tokens.cur_tok
+                    if dimension_token.kind != TokenKind.int_literal:
+                        raise ParserException(
+                            "NDArray dimensions must be integer literals."
+                        )
+                    shape.append(cast(int, dimension_token.value))
+                    self.tokens.get_next_token()
+
+                self._consume_operator("]")
+                try:
+                    type_ = ndarray_type(
+                        elem_type,
+                        tuple(shape) if shape else None,
+                    )
+                except ValueError as err:
+                    raise ParserException(str(err)) from err
             else:
                 type_map: dict[str, astx.DataType] = {
                     "i8": astx.Int8(),

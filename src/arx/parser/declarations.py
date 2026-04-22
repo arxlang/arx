@@ -14,6 +14,12 @@ from irx import astx
 
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
+from arx.ndarray import (
+    NDArrayBinding,
+    binding_from_type,
+    coerce_expression,
+    is_ndarray_type,
+)
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import (
     CLASS_ALLOWED_MODIFIERS,
@@ -48,15 +54,25 @@ class DeclarationParserMixin(ParserMixinBase):
         """
         self.tokens.get_next_token()  # eat fn
         self._push_template_scope(template_params)
+        pushed_return_type = False
         try:
             proto = self.parse_prototype(expect_colon=True)
             if template_params:
                 astx.set_template_params(proto, template_params)
+            self._push_return_type_scope(
+                cast(astx.DataType, proto.return_type)
+            )
+            pushed_return_type = True
             body = self.parse_block(
                 allow_docstring=True,
                 declared_names=tuple(arg.name for arg in proto.args.nodes),
+                declared_ndarrays=self._ndarray_bindings_for_arguments(
+                    proto.args.nodes
+                ),
             )
         finally:
+            if pushed_return_type:
+                self._pop_return_type_scope()
             self._pop_template_scope()
 
         function = astx.FunctionDef(proto, body)
@@ -248,7 +264,22 @@ class DeclarationParserMixin(ParserMixinBase):
         initializer: astx.Expr | None = None
         if self._is_operator("="):
             self._consume_operator("=")
-            initializer = cast(astx.Expr, self.parse_expression())
+            try:
+                initializer = coerce_expression(
+                    cast(astx.Expr, self.parse_expression()),
+                    field_type,
+                    context=f"field '{name}'",
+                )
+            except ValueError as err:
+                raise ParserException(str(err)) from err
+        elif is_ndarray_type(field_type):
+            try:
+                initializer = cast(
+                    astx.Expr,
+                    self._default_value_for_type(field_type),
+                )
+            except ValueError as err:
+                raise ParserException(str(err)) from err
 
         field_kwargs: dict[str, object] = {
             "mutability": self._resolve_field_mutability(modifiers),
@@ -295,6 +326,7 @@ class DeclarationParserMixin(ParserMixinBase):
 
         is_static = self._has_modifier(modifiers, "static")
         self._push_template_scope(template_params)
+        pushed_return_type = False
         try:
             prototype, receiver_name = self.parse_method_signature(
                 allow_receiver=not is_static
@@ -315,9 +347,16 @@ class DeclarationParserMixin(ParserMixinBase):
                 if self._has_modifier(modifiers, "extern"):
                     raise ParserException("extern method cannot define a body")
                 self._consume_operator(":")
+                self._push_return_type_scope(
+                    cast(astx.DataType, prototype.return_type)
+                )
+                pushed_return_type = True
                 body = self.parse_block(
                     allow_docstring=True,
                     declared_names=declared_names,
+                    declared_ndarrays=self._ndarray_bindings_for_arguments(
+                        prototype.args.nodes
+                    ),
                 )
             elif not (
                 self._has_modifier(modifiers, "abstract")
@@ -330,6 +369,8 @@ class DeclarationParserMixin(ParserMixinBase):
             else:
                 body = astx.Block()
         finally:
+            if pushed_return_type:
+                self._pop_return_type_scope()
             self._pop_template_scope()
 
         method = astx.FunctionDef(prototype, body, loc=method_loc)
@@ -914,3 +955,22 @@ class DeclarationParserMixin(ParserMixinBase):
         return astx.FunctionPrototype(
             fn_name, args, cast(AnyType, ret_type), loc=fn_loc
         )
+
+    def _ndarray_bindings_for_arguments(
+        self,
+        arguments: tuple[astx.Argument, ...] | list[astx.Argument],
+    ) -> dict[str, NDArrayBinding | None]:
+        """
+        title: Build one ndarray scope map for function arguments.
+        parameters:
+          arguments:
+            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
+        returns:
+          type: dict[str, NDArrayBinding | None]
+        """
+        bindings: dict[str, NDArrayBinding | None] = {}
+        for argument in arguments:
+            if not is_ndarray_type(argument.type_):
+                continue
+            bindings[argument.name] = binding_from_type(argument.type_)
+        return bindings

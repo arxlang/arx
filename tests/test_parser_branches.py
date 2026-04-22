@@ -4,11 +4,14 @@ title: Additional parser branch coverage tests.
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
+from arx.ndarray import ndarray_shape, ndarray_type
 from arx.parser import Parser
 from irx import astx
 
@@ -26,12 +29,12 @@ def _parse(code: str) -> astx.Module:
     return Parser().parse(Lexer().lex())
 
 
-def test_parse_literal_kinds_and_array_literal() -> None:
+def test_parse_literal_kinds_and_list_literal() -> None:
     """
-    title: Parse string/char/bool/none and array literals.
+    title: Parse string/char/bool/none and list literals.
     """
     tree = _parse(
-        "fn main() -> array[i32]:\n"
+        "fn main() -> list[i32]:\n"
         '  var s: str = "abc"\n'
         "  var c: char = 'A'\n"
         "  var b: bool = true\n"
@@ -46,9 +49,9 @@ def test_parse_literal_kinds_and_array_literal() -> None:
     assert isinstance(ret.value, astx.LiteralList)
 
 
-def test_parse_array_literal_rejects_non_literal_elements() -> None:
+def test_parse_list_literal_rejects_non_literal_elements() -> None:
     """
-    title: Array literals reject non-literal values.
+    title: List literals reject non-literal values.
     """
     with pytest.raises(
         ParserException,
@@ -57,7 +60,7 @@ def test_parse_array_literal_rejects_non_literal_elements() -> None:
             r"Unknown token when expecting an expression)"
         ),
     ):
-        _parse("fn main() -> array[i32]:\n  return [foo]\n")
+        _parse("fn main() -> list[i32]:\n  return [foo]\n")
 
 
 def test_parse_datetime_and_timestamp_builtins() -> None:
@@ -197,14 +200,40 @@ def test_parse_type_error_paths() -> None:
         parser.parse_type()
 
 
-def test_parse_type_array_and_default_values() -> None:
+def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
     """
-    title: Parse array type and default-value helper branches.
+    title: >-
+      Parse list and ndarray type forms plus default-value helper branches.
     """
-    tree = _parse("fn main(arg: array[i32]) -> i32:\n  return 1\n")
-    fn = tree.nodes[0]
-    assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.prototype.args[0].type_, astx.ListType)
+    tree = _parse(
+        "fn dynamic(arg: list[i32]) -> i32:\n"
+        "  return 1\n"
+        "fn vector(values: ndarray[i32]) -> i32:\n"
+        "  return values[0]\n"
+        "fn fixed(values: ndarray[i32, 4]) -> i32:\n"
+        "  return values[0]\n"
+        "fn grid(values: ndarray[i32, 2, 3]) -> i32:\n"
+        "  return values[1, 2]\n"
+    )
+    dynamic_fn = tree.nodes[0]
+    vector_fn = tree.nodes[1]
+    fixed_fn = tree.nodes[2]
+    grid_fn = tree.nodes[3]
+    assert isinstance(dynamic_fn, astx.FunctionDef)
+    assert isinstance(dynamic_fn.prototype.args[0].type_, astx.ListType)
+    assert isinstance(vector_fn, astx.FunctionDef)
+    assert isinstance(vector_fn.prototype.args[0].type_, astx.BufferViewType)
+    assert ndarray_shape(vector_fn.prototype.args[0].type_) is None
+    assert isinstance(
+        cast(astx.FunctionReturn, vector_fn.body.nodes[0]).value,
+        astx.BufferViewIndex,
+    )
+    assert isinstance(fixed_fn, astx.FunctionDef)
+    assert isinstance(fixed_fn.prototype.args[0].type_, astx.BufferViewType)
+    assert ndarray_shape(fixed_fn.prototype.args[0].type_) == (4,)
+    assert isinstance(grid_fn, astx.FunctionDef)
+    assert isinstance(grid_fn.prototype.args[0].type_, astx.BufferViewType)
+    assert ndarray_shape(grid_fn.prototype.args[0].type_) == (2, 3)
 
     parser = Parser()
     assert isinstance(
@@ -244,8 +273,163 @@ def test_parse_type_array_and_default_values() -> None:
         parser._default_value_for_type(astx.Time()), astx.LiteralTime
     )
 
+    with pytest.raises(ParserException, match="unsized ndarray"):
+        parser._default_value_for_type(ndarray_type(astx.Int32()))
+
     with pytest.raises(ParserException):
         parser._default_value_for_type(astx.ListType([astx.Int32()]))
+
+
+def test_parse_list_types_reject_shape_dimensions() -> None:
+    """
+    title: List types reject ndarray-style shape dimensions.
+    """
+    ArxIO.string_to_buffer("list[i32, 4]")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="exactly one element type"):
+        parser.parse_type()
+
+
+def test_parse_array_type_is_rejected() -> None:
+    """
+    title: Legacy array type syntax is no longer accepted.
+    """
+    ArxIO.string_to_buffer("array[i32]")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="Unknown type 'array'"):
+        parser.parse_type()
+
+
+def test_parse_ndarray_type_literal_and_indexing() -> None:
+    """
+    title: Parse ndarray declarations and multidimensional indexing.
+    """
+    tree = _parse(
+        "fn pick(grid: ndarray[i32, 2, 2]) -> i32:\n"
+        "  return grid[1, 0]\n"
+        "fn main() -> i32:\n"
+        "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+        "  var ids: ndarray[i32, 4] = [1, 2, 3, 4]\n"
+        "  return pick(grid) + ids[2]\n"
+    )
+
+    pick_fn = tree.nodes[0]
+    main_fn = tree.nodes[1]
+    assert isinstance(pick_fn, astx.FunctionDef)
+    assert isinstance(main_fn, astx.FunctionDef)
+    assert isinstance(pick_fn.prototype.args[0].type_, astx.BufferViewType)
+    assert isinstance(main_fn.body.nodes[0], astx.VariableDeclaration)
+    assert isinstance(main_fn.body.nodes[0].type_, astx.BufferViewType)
+    assert isinstance(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[0]).value,
+        astx.BufferViewDescriptor,
+    )
+    assert isinstance(main_fn.body.nodes[1], astx.VariableDeclaration)
+    assert isinstance(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[1]).type_,
+        astx.BufferViewType,
+    )
+    assert isinstance(
+        cast(astx.FunctionReturn, pick_fn.body.nodes[0]).value,
+        astx.BufferViewIndex,
+    )
+    assert ndarray_shape(pick_fn.prototype.args[0].type_) == (2, 2)
+    assert ndarray_shape(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[0]).type_
+    ) == (2, 2)
+    assert ndarray_shape(
+        cast(astx.VariableDeclaration, main_fn.body.nodes[1]).type_
+    ) == (4,)
+
+
+def test_parse_unsized_ndarray_literal_init_and_indexing() -> None:
+    """
+    title: Unsized ndarray declarations allow indexing without specialization.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var values: ndarray[i32] = [1, 2, 3]\n"
+        "  return values[1]\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    declaration = fn.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert isinstance(declaration.type_, astx.BufferViewType)
+    assert ndarray_shape(declaration.type_) is None
+    assert isinstance(declaration.value, astx.BufferViewDescriptor)
+    assert ndarray_shape(declaration.value.type_) == (3,)
+
+    ret = fn.body.nodes[1]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.BufferViewIndex)
+
+
+def test_parse_unsized_ndarray_indexing_skips_static_bounds_checks() -> None:
+    """
+    title: >-
+      Unsized ndarray indexing does not perform shaped static bound checks.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var values: ndarray[i32] = [1, 2, 3]\n"
+        "  return values[99]\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    ret = fn.body.nodes[1]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.BufferViewIndex)
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3]]\n"
+            "  return 0\n",
+            "regular rectangular shape",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2, 3], [4, 5, 6]]\n"
+            "  return 0\n",
+            "declared ndarray shape",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  return grid[0]\n",
+            "expects 2 indices",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]\n"
+            "  return grid[2, 0]\n",
+            "out of bounds",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var grid: ndarray[i32, size] = [1, 2]\n"
+            "  return 0\n",
+            "integer literals",
+        ),
+    ],
+)
+def test_parse_ndarray_error_paths(code: str, expected: str) -> None:
+    """
+    title: NDArray parser diagnostics cover shape and indexing failures.
+    parameters:
+      code:
+        type: str
+      expected:
+        type: str
+    """
+    with pytest.raises(ParserException, match=expected):
+        _parse(code)
 
 
 def test_parse_unary_and_prototype_error_paths() -> None:

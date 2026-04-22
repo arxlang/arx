@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import cast
 
 from irx import astx
+from irx.buffer import BUFFER_VIEW_METADATA_EXTRA
 
 from arx import builtins
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
+from arx.ndarray import attach_binding, infer_descriptor
 from arx.parser.base import ParserMixinBase
 
 
@@ -97,7 +99,11 @@ class ExpressionParserMixin(ParserMixinBase):
         """
         expr = self.parse_primary()
 
-        while self._is_operator("."):
+        while self._is_operator("[") or self._is_operator("."):
+            if self._is_operator("["):
+                expr = self.parse_subscript_expr(expr)
+                continue
+
             self._consume_operator(".")
 
             if self.tokens.cur_tok.kind != TokenKind.identifier:
@@ -230,11 +236,11 @@ class ExpressionParserMixin(ParserMixinBase):
         self._consume_operator(")")
         return expr
 
-    def parse_array_expr(self) -> astx.LiteralList:
+    def parse_array_expr(self) -> astx.Literal:
         """
-        title: Parse array literals.
+        title: Parse list and ndarray literals.
         returns:
-          type: astx.LiteralList
+          type: astx.Literal
         """
         self._consume_operator("[")
 
@@ -244,8 +250,8 @@ class ExpressionParserMixin(ParserMixinBase):
                 elem = self.parse_expression()
                 if not isinstance(elem, astx.Literal):
                     raise ParserException(
-                        "Array literals currently support only literal "
-                        "elements."
+                        "List and ndarray literals currently support only "
+                        "literal elements."
                     )
                 elements.append(elem)
 
@@ -255,6 +261,11 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator(",")
 
         self._consume_operator("]")
+        if any(
+            isinstance(element, (astx.LiteralList, astx.LiteralTuple))
+            for element in elements
+        ):
+            return astx.LiteralTuple(tuple(elements))
         return astx.LiteralList(elements)
 
     def parse_identifier_expr(self) -> astx.AST:
@@ -271,7 +282,11 @@ class ExpressionParserMixin(ParserMixinBase):
         template_args = self._parse_template_args_for_call()
 
         if not self._is_operator("("):
-            return astx.Identifier(id_name, loc=id_loc)
+            identifier = astx.Identifier(id_name, loc=id_loc)
+            binding = self._lookup_ndarray_binding(id_name)
+            if binding is not None:
+                attach_binding(identifier, binding)
+            return identifier
 
         self._consume_operator("(")
 
@@ -340,6 +355,129 @@ class ExpressionParserMixin(ParserMixinBase):
         if template_args is not None:
             astx.set_template_args(call, template_args)
         return call
+
+    def parse_subscript_expr(self, base: astx.AST) -> astx.AST:
+        """
+        title: Parse one postfix subscript or ndarray index expression.
+        parameters:
+          base:
+            type: astx.AST
+        returns:
+          type: astx.AST
+        """
+        subscript_loc = self.tokens.cur_tok.location
+        self._consume_operator("[")
+
+        if self._is_operator("]"):
+            raise ParserException("Expected one index inside '[' and ']'.")
+
+        indices: list[astx.Expr] = []
+        while True:
+            indices.append(cast(astx.Expr, self.parse_expression()))
+            if self._is_operator("]"):
+                break
+            self._consume_operator(",")
+
+        self._consume_operator("]")
+
+        ndarray_base = self._coerce_ndarray_base(base)
+        if ndarray_base is None:
+            if len(indices) != 1:
+                raise ParserException(
+                    "Multidimensional indexing is only supported for "
+                    "ndarray values."
+                )
+            return astx.SubscriptExpr(
+                cast(astx.Expr, base),
+                indices[0],
+                loc=subscript_loc,
+            )
+
+        self._validate_ndarray_indices(ndarray_base, indices)
+        return astx.BufferViewIndex(ndarray_base, indices)
+
+    def _coerce_ndarray_base(self, base: astx.AST) -> astx.AST | None:
+        """
+        title: Return one ndarray-aware indexing base when available.
+        parameters:
+          base:
+            type: astx.AST
+        returns:
+          type: astx.AST | None
+        """
+        if isinstance(base, astx.BufferViewDescriptor):
+            return base
+
+        if isinstance(base, astx.Identifier):
+            binding = self._lookup_ndarray_binding(base.name)
+            if binding is not None:
+                attach_binding(base, binding)
+                return base
+            if not self._is_ndarray_name(base.name):
+                return None
+            return base
+
+        if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
+            try:
+                return infer_descriptor(base)
+            except ValueError:
+                return None
+
+        return None
+
+    def _validate_ndarray_indices(
+        self,
+        base: astx.AST,
+        indices: list[astx.Expr],
+    ) -> None:
+        """
+        title: Validate one ndarray index arity and static bounds.
+        parameters:
+          base:
+            type: astx.AST
+          indices:
+            type: list[astx.Expr]
+        """
+        metadata = getattr(
+            getattr(base, "semantic", None),
+            "extras",
+            {},
+        ).get(BUFFER_VIEW_METADATA_EXTRA)
+        if metadata is None and isinstance(base, astx.BufferViewDescriptor):
+            metadata = base.metadata
+        if metadata is None:
+            return
+
+        if len(indices) != metadata.ndim:
+            raise ParserException(
+                "NDArray indexing expects "
+                f"{metadata.ndim} indices for shape "
+                f"{self._format_ndarray_shape(metadata.shape)}."
+            )
+
+        for axis, index in enumerate(indices):
+            if not isinstance(index, astx.LiteralInt32):
+                continue
+            extent = metadata.shape[axis]
+            if index.value < 0 or index.value >= extent:
+                raise ParserException(
+                    "NDArray index "
+                    f"{index.value} is out of bounds for dimension {axis} "
+                    f"with extent {extent}."
+                )
+
+    def _format_ndarray_shape(self, shape: tuple[int, ...]) -> str:
+        """
+        title: Render one ndarray shape in parser diagnostics.
+        parameters:
+          shape:
+            type: tuple[int, Ellipsis]
+        returns:
+          type: str
+        """
+        if not shape:
+            return "()"
+        return "(" + ", ".join(str(dim) for dim in shape) + ")"
 
     def parse_unary(self) -> astx.AST:
         """
