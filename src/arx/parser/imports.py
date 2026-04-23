@@ -22,6 +22,33 @@ class ImportParserMixin(ParserMixinBase):
     title: Import parser mixin.
     """
 
+    def _register_from_import_aliases(
+        self,
+        module_path: str,
+        level: int,
+        names: list[astx.AliasExpr],
+    ) -> None:
+        """
+        title: Register parser-visible aliases from one from-import statement.
+        parameters:
+          module_path:
+            type: str
+          level:
+            type: int
+          names:
+            type: list[astx.AliasExpr]
+        """
+        if level != 0:
+            return
+
+        for alias in names:
+            visible_name = alias.asname or alias.name
+            full_path = f"{module_path}.{alias.name}"
+            if builtins.is_builtin_module_specifier(full_path):
+                self.module_namespace_aliases[visible_name] = full_path
+            if full_path == builtins.BUILTIN_RANGE_FULL_NAME:
+                self.builtin_function_aliases[visible_name] = full_path
+
     def parse_import_stmt(self) -> astx.ImportStmt | astx.ImportFromStmt:
         """
         title: Parse one import statement.
@@ -39,6 +66,11 @@ class ImportParserMixin(ParserMixinBase):
                 )
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
+            self._register_from_import_aliases(
+                module_path,
+                level,
+                names,
+            )
             return astx.ImportFromStmt(
                 names=names,
                 module=module_path,
@@ -88,20 +120,20 @@ class ImportParserMixin(ParserMixinBase):
         if self._is_identifier_value("from"):
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
-            full_path = f"{module_path}.{target_name}"
-            visible_name = alias_name or target_name
-            if level == 0 and builtins.is_builtin_module_specifier(full_path):
-                self.module_namespace_aliases[visible_name] = full_path
-            if level == 0 and full_path == builtins.BUILTIN_RANGE_FULL_NAME:
-                self.builtin_function_aliases[visible_name] = full_path
+            names = [
+                astx.AliasExpr(
+                    target_name,
+                    asname=alias_name,
+                    loc=target_loc,
+                )
+            ]
+            self._register_from_import_aliases(
+                module_path,
+                level,
+                names,
+            )
             return astx.ImportFromStmt(
-                names=[
-                    astx.AliasExpr(
-                        target_name,
-                        asname=alias_name,
-                        loc=target_loc,
-                    )
-                ],
+                names=names,
                 module=module_path,
                 level=level,
                 loc=import_loc,

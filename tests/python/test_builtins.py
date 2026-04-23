@@ -210,10 +210,14 @@ def test_arxmain_compiles_explicit_builtin_range_references_without_step(
             """
             import generators from builtins
             import range as rg from builtins.generators
+            import (generators as g) from builtins
+            import (range as grouped_rg) from builtins.generators
 
             fn main() -> i32:
               var via_namespace: list[i32] = generators.range(0, 4)
               var via_alias: list[i32] = rg(2, 6)
+              var via_grouped_namespace: list[i32] = g.range(4, 8)
+              var via_grouped_alias: list[i32] = grouped_rg(6, 10)
               return 0
             """
         ).lstrip(),
