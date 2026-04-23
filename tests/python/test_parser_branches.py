@@ -417,6 +417,50 @@ def test_parse_list_default_init_and_append() -> None:
     assert isinstance(ret.value, astx.Identifier)
 
 
+def test_parse_range_normalizes_optional_step() -> None:
+    """
+    title: Range calls require explicit start/stop and default step to one.
+    """
+    tree = _parse(
+        "fn first() -> none:\n"
+        "  var values: list[i32] = range(0, 4)\n"
+        "  return none\n"
+        "fn second() -> none:\n"
+        "  var values: list[i32] = range(2, 8, 2)\n"
+        "  return none\n"
+    )
+
+    first_fn = tree.nodes[0]
+    second_fn = tree.nodes[1]
+    assert isinstance(first_fn, astx.FunctionDef)
+    assert isinstance(second_fn, astx.FunctionDef)
+
+    first_decl = cast(astx.VariableDeclaration, first_fn.body.nodes[0])
+    assert isinstance(first_decl.value, astx.FunctionCall)
+    assert first_decl.value.fn == "range"
+    assert len(first_decl.value.args) == 3
+    assert isinstance(first_decl.value.args[2], astx.LiteralInt32)
+    assert first_decl.value.args[2].value == 1
+
+    second_decl = cast(astx.VariableDeclaration, second_fn.body.nodes[0])
+    assert isinstance(second_decl.value, astx.FunctionCall)
+    assert second_decl.value.fn == "range"
+    assert len(second_decl.value.args) == 3
+    assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
+    assert second_decl.value.args[2].value == 2
+
+
+def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:
+    """
+    title: Range calls reject the legacy single-argument form.
+    """
+    with pytest.raises(
+        ParserException,
+        match="expects explicit start and stop arguments",
+    ):
+        _parse("fn main() -> i32:\n  return range(4)[0]\n")
+
+
 @pytest.mark.parametrize(
     ("code", "expected"),
     [

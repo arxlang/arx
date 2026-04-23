@@ -81,12 +81,12 @@ stdlib-style import namespace.
 
 ```arx
 fn main() -> none:
-  print(range(4)[2])
+  print(range(0, 4)[2])
 ```
 
 The first builtin module is `generators`. Its current MVP exposes
-`range(stop) -> list[i32]`, while future overloads and `yield`-backed generator
-semantics will grow in the same area.
+`range(start, stop[, step]) -> list[i32]`, while future overloads and
+`yield`-backed generator semantics will grow in the same area.
 
 Arx now supports fatal assertion statements in the language surface:
 

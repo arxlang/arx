@@ -5,13 +5,14 @@ summary: >-
 ```
 
 # TODO: Expand this module when iterable generators and `yield` land.
-fn range(stop: i32) -> list[i32]:
+fn range(start: i32, stop: i32, step: i32) -> list[i32]:
   ```
   title: range
   summary: >-
-    Returns the integer values from zero up to but not including `stop`.
+    Returns the integer values from `start` up to but not including `stop`,
+    advancing by `step`.
   ```
   var values: list[i32]
-  for var current: i32 = 0; current < stop; current + 1:
+  for var current: i32 = start; current < stop; current + step:
     values.append(current)
   return values

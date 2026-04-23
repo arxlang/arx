@@ -353,6 +353,18 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator(",")
 
         self._consume_operator(")")
+        if id_name == "range":
+            if template_args is not None:
+                raise ParserException(
+                    "Builtin 'range' does not accept template arguments."
+                )
+            if len(args) == 2:
+                args.append(astx.LiteralInt32(1))
+            elif len(args) != 3:
+                raise ParserException(
+                    "Builtin 'range' expects explicit start and stop "
+                    "arguments, with an optional step."
+                )
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name
         ):
