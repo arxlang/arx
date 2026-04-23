@@ -138,6 +138,7 @@ Current MVP:
   - `range(start, stop, step) -> list[i32]`
 - `start` and `stop` are always explicit
 - `step` defaults to `1` when omitted
+- ambient builtin names such as `range` are reserved at module top level
 
 Example:
 

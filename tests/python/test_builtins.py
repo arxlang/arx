@@ -86,6 +86,58 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     assert child.origin == "arx:builtins/generators.x"
 
 
+def test_file_import_resolver_injects_ambient_range_for_user_modules(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Imported project modules receive the ambient range builtin.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import value from helper
+
+            fn main() -> i32:
+              return value()
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    helper = tmp_path / "helper.x"
+    helper.write_text(
+        dedent(
+            """
+            fn value() -> i32:
+              var values: list[i32] = range(0, 4)
+              return 2
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    resolver = main_module.FileImportResolver((str(source),))
+    import_node = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("value")],
+        module="helper",
+        level=0,
+    )
+
+    parsed = resolver("main", import_node, "helper")
+
+    assert parsed.key == "helper"
+    assert isinstance(parsed.ast.nodes[0], irx_astx.ImportFromStmt)
+    assert parsed.ast.nodes[0].module == "builtins.generators"
+    assert [alias.name for alias in parsed.ast.nodes[0].names] == ["range"]
+
+
 def test_ambient_builtin_imports_expose_range_by_default() -> None:
     """
     title: Ambient builtin imports expose range outside its source module.
@@ -135,6 +187,134 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
     assert emits_executable is False
     assert output_file.is_file()
     assert output_file.stat().st_size > 0
+
+
+def test_arxmain_compiles_imported_module_using_ambient_range(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Imported project modules can call ambient range without imports.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    helper = tmp_path / "helper.x"
+    helper.write_text(
+        dedent(
+            """
+            fn value() -> i32:
+              var values: list[i32] = range(0, 4)
+              return 2
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import value from helper
+
+            fn main() -> i32:
+              return value()
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
+def test_ambient_builtin_injection_rejects_local_range_definition(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Ambient range names are reserved against local top-level rebinding.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            fn range(start: i32, stop: i32) -> i32:
+              return stop
+
+            fn main() -> i32:
+              return range(0, 4)
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(tmp_path / "main.o"),
+        is_lib=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="ambient builtin name 'range' is reserved",
+    ):
+        app._get_codegen_astx()
+
+
+def test_ambient_builtin_injection_rejects_imported_range_binding(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Ambient range names are reserved against imported top-level names.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    helper = tmp_path / "helper.x"
+    helper.write_text(
+        dedent(
+            """
+            fn range(start: i32, stop: i32) -> i32:
+              return stop
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import range from helper
+
+            fn main() -> i32:
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(tmp_path / "main.o"),
+        is_lib=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="ambient builtin name 'range' is reserved",
+    ):
+        app._get_codegen_astx()
 
 
 def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:

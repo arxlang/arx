@@ -84,8 +84,59 @@ def _has_imported_name(
         if node.level != 0 or node.module != module_name:
             continue
         for alias in node.names:
-            if alias.name == binding_name and alias.asname == "":
+            local_name = alias.asname or alias.name
+            if alias.name == binding_name and local_name == binding_name:
                 return True
+    return False
+
+
+def _has_top_level_binding_name(
+    module: astx.Module,
+    binding_name: str,
+) -> bool:
+    """
+    title: Return whether one module already binds a top-level name.
+    parameters:
+      module:
+        type: astx.Module
+      binding_name:
+        type: str
+    returns:
+      type: bool
+    """
+    for node in module.nodes:
+        if isinstance(node, (astx.ImportStmt, astx.ImportFromStmt)):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                local_name = alias.asname or alias.name
+                if local_name == binding_name:
+                    return True
+            continue
+
+        if isinstance(node, astx.FunctionPrototype):
+            if node.name == binding_name:
+                return True
+            continue
+
+        if isinstance(node, astx.FunctionDef):
+            if node.prototype.name == binding_name:
+                return True
+            continue
+
+        if (
+            isinstance(
+                node,
+                (
+                    astx.StructDefStmt,
+                    astx.ClassDefStmt,
+                    astx.VariableDeclaration,
+                ),
+            )
+            and node.name == binding_name
+        ):
+            return True
+
     return False
 
 
@@ -105,6 +156,18 @@ def _inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
         module_name = import_node.module
         if module_name is None:
             continue
+        conflicting_names = tuple(
+            alias.name
+            for alias in import_node.names
+            if not _has_imported_name(module, module_name, alias.name)
+            and _has_top_level_binding_name(module, alias.name)
+        )
+        if conflicting_names:
+            conflict = conflicting_names[0]
+            raise ValueError(
+                f"ambient builtin name '{conflict}' is reserved and cannot "
+                "be rebound by a top-level declaration or import"
+            )
         names = tuple(
             alias.name
             for alias in import_node.names
@@ -561,6 +624,7 @@ class FileImportResolver:
         module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
         module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
+        module_ast = _inject_ambient_builtin_imports(module_ast)
         parsed_module = ParsedModule(
             key=resolved_specifier,
             ast=module_ast,
