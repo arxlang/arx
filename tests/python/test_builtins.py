@@ -4,6 +4,8 @@ title: Bundled builtin-module loading and resolution tests.
 
 from __future__ import annotations
 
+import shutil
+
 from pathlib import Path
 from textwrap import dedent
 
@@ -11,6 +13,7 @@ import pytest
 
 from arx import builtins
 from arx import main as main_module
+from arx.testing import ArxTestRunner
 from irx import astx as irx_astx
 from irx.diagnostics import SemanticError
 
@@ -18,6 +21,9 @@ try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib
+
+
+HAS_CLANG = shutil.which("clang") is not None
 
 
 def test_bundled_builtin_package_data_is_present() -> None:
@@ -362,3 +368,37 @@ def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
         match="reserved builtin namespace 'builtins' cannot be shadowed",
     ):
         app.compile()
+
+
+@pytest.mark.skipif(
+    not HAS_CLANG,
+    reason="clang is required for end-to-end range assertion checks",
+)
+def test_range_builtin_rejects_zero_step_at_runtime(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Zero step is rejected when executing the builtin range helper.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    entry = tmp_path / "test_range_zero_step.x"
+    entry.write_text(
+        dedent(
+            """
+            fn test_zero_step() -> none:
+              var values: list[i32] = range(0, 4, 0)
+              return none
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    summary = ArxTestRunner(paths=(str(entry),)).run()
+
+    assert summary.exit_code == 1
+    assert summary.failed == 1
+    failure = summary.results[0].assertion_failure
+    assert failure is not None
+    assert failure.message == "range() step must not be 0"

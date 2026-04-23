@@ -38,3 +38,20 @@ fn test_range_supports_custom_step() -> none:
   assert first == 2, "range(2, 8, 2)[0] should be 2"
   assert second == 4, "range(2, 8, 2)[1] should be 4"
   assert third == 6, "range(2, 8, 2)[2] should be 6"
+
+fn test_range_supports_descending_step() -> none:
+  ```
+  title: test_range_supports_descending_step
+  summary: Verifies that range(start, stop, step) supports negative steps.
+  ```
+  var values: list[i32] = range(5, 0, 0 - 1)
+  var first: i32 = values[0]
+  var second: i32 = values[1]
+  var third: i32 = values[2]
+  var fourth: i32 = values[3]
+  var fifth: i32 = values[4]
+  assert first == 5, "range(5, 0, -1)[0] should be 5"
+  assert second == 4, "range(5, 0, -1)[1] should be 4"
+  assert third == 3, "range(5, 0, -1)[2] should be 3"
+  assert fourth == 2, "range(5, 0, -1)[3] should be 2"
+  assert fifth == 1, "range(5, 0, -1)[4] should be 1"

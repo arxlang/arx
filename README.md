@@ -86,8 +86,9 @@ fn main() -> none:
 
 The first builtin module is `generators`. Its current MVP exposes
 `range(start, stop[, step]) -> list[i32]`, while future overloads and
-`yield`-backed generator semantics will grow in the same area. Ambient builtin
-names such as `range` are reserved at module top level.
+`yield`-backed generator semantics will grow in the same area. Positive steps
+count up, negative steps count down, and `step == 0` raises an assertion
+failure. Ambient builtin names such as `range` are reserved at module top level.
 
 Arx now supports fatal assertion statements in the language surface:
 
