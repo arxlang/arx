@@ -283,6 +283,45 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
     assert output_file.stat().st_size > 0
 
 
+def test_arxmain_compiles_range_list_creation_with_variable_stop(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Range list creation supports a non-literal stop expression.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            fn build(n: i32) -> none:
+              var xs: list[i32] = range(0, n)
+              return none
+
+            fn main() -> i32:
+              build(4)
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
 def test_ambient_builtin_injection_rejects_local_range_definition(
     tmp_path: Path,
 ) -> None:

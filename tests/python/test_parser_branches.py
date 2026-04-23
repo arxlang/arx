@@ -450,6 +450,31 @@ def test_parse_range_normalizes_optional_step() -> None:
     assert second_decl.value.args[2].value == 2
 
 
+def test_parse_range_normalizes_optional_step_with_variable_stop() -> None:
+    """
+    title: Range normalization also works when stop is a variable.
+    """
+    tree = _parse(
+        "fn build(n: i32) -> none:\n"
+        "  var xs: list[i32] = range(0, n)\n"
+        "  return none\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    decl = cast(astx.VariableDeclaration, fn.body.nodes[0])
+    assert isinstance(decl.value, astx.FunctionCall)
+    assert decl.value.fn == "range"
+    assert len(decl.value.args) == 3
+    assert isinstance(decl.value.args[0], astx.LiteralInt32)
+    assert decl.value.args[0].value == 0
+    assert isinstance(decl.value.args[1], astx.Identifier)
+    assert decl.value.args[1].name == "n"
+    assert isinstance(decl.value.args[2], astx.LiteralInt32)
+    assert decl.value.args[2].value == 1
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -472,6 +497,21 @@ def test_parse_builtin_imports_are_rejected(code: str) -> None:
         match="cannot be imported directly",
     ):
         _parse(code + "fn main() -> none:\n  return none\n")
+
+
+def test_parse_for_loop_rejects_namespaced_builtin_range_reference() -> None:
+    """
+    title: For-in loops require the bare builtin range call surface.
+    """
+    with pytest.raises(
+        ParserException,
+        match="For-in loops currently require",
+    ):
+        _parse(
+            "fn main() -> none:\n"
+            "  for i in generators.range(0, 4):\n"
+            "    return none\n"
+        )
 
 
 def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:
