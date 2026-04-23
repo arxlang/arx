@@ -131,6 +131,21 @@ class ExpressionParserMixin(ParserMixinBase):
                         self._consume_operator(",")
 
                 self._consume_operator(")")
+                if (
+                    member_name == "append"
+                    and isinstance(expr, astx.Identifier)
+                    and self._is_list_name(expr.name)
+                ):
+                    if template_args is not None:
+                        raise ParserException(
+                            "List append does not accept template arguments."
+                        )
+                    if len(args) != 1:
+                        raise ParserException(
+                            "List append expects exactly one argument."
+                        )
+                    expr = astx.ListAppend(expr, args[0])
+                    continue
                 class_name = self._class_name_from_expr(expr)
                 if class_name is not None:
                     expr = astx.StaticMethodCall(

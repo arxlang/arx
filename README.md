@@ -80,13 +80,13 @@ Those bundled builtin modules are internal compiler assets, not a public
 stdlib-style import namespace.
 
 ```arx
-fn main() -> i32:
-  return range(4)
+fn main() -> none:
+  print(range(4)[2])
 ```
 
-The first builtin module is `generators`. Its current MVP exposes `range(stop)`,
-while future overloads and `yield`-backed generator semantics will grow in the
-same area.
+The first builtin module is `generators`. Its current MVP exposes
+`range(stop) -> list[i32]`, while future overloads and `yield`-backed generator
+semantics will grow in the same area.
 
 Arx now supports fatal assertion statements in the language surface:
 

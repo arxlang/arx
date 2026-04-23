@@ -28,7 +28,7 @@ def test_bundled_builtin_package_data_is_present() -> None:
     assert builtins.resolve_builtin_resource("generators").name == (
         "generators.x"
     )
-    assert "fn range(stop: i32) -> i32:" in builtins.get_builtin_source(
+    assert "fn range(stop: i32) -> list[i32]:" in builtins.get_builtin_source(
         "generators"
     )
 
@@ -116,7 +116,7 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
             import math from stdlib
 
             fn main() -> i32:
-              return math.square(range(4))
+              return math.square(range(4)[2])
             """
         ).lstrip(),
         encoding="utf-8",
@@ -162,7 +162,8 @@ def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
         dedent(
             """
             fn main() -> i32:
-              return range(4)
+              print(range(4)[0])
+              return 0
             """
         ).lstrip(),
         encoding="utf-8",

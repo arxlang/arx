@@ -67,6 +67,9 @@ class DeclarationParserMixin(ParserMixinBase):
             body = self.parse_block(
                 allow_docstring=True,
                 declared_names=tuple(arg.name for arg in proto.args.nodes),
+                declared_lists=self._list_names_for_arguments(
+                    proto.args.nodes
+                ),
                 declared_ndarrays=self._ndarray_bindings_for_arguments(
                     proto.args.nodes
                 ),
@@ -353,6 +356,9 @@ class DeclarationParserMixin(ParserMixinBase):
                     body = self.parse_block(
                         allow_docstring=True,
                         declared_names=declared_names,
+                        declared_lists=self._list_names_for_arguments(
+                            prototype.args.nodes
+                        ),
                         declared_ndarrays=self._ndarray_bindings_for_arguments(
                             prototype.args.nodes
                         ),
@@ -369,6 +375,9 @@ class DeclarationParserMixin(ParserMixinBase):
                     body = self.parse_block(
                         allow_docstring=True,
                         declared_names=declared_names,
+                        declared_lists=self._list_names_for_arguments(
+                            prototype.args.nodes
+                        ),
                         declared_ndarrays=self._ndarray_bindings_for_arguments(
                             prototype.args.nodes
                         ),
@@ -989,3 +998,21 @@ class DeclarationParserMixin(ParserMixinBase):
                 continue
             bindings[argument.name] = binding_from_type(argument.type_)
         return bindings
+
+    def _list_names_for_arguments(
+        self,
+        arguments: tuple[astx.Argument, ...] | list[astx.Argument],
+    ) -> tuple[str, ...]:
+        """
+        title: Return visible list-typed argument names.
+        parameters:
+          arguments:
+            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
+        returns:
+          type: tuple[str, Ellipsis]
+        """
+        return tuple(
+            argument.name
+            for argument in arguments
+            if isinstance(argument.type_, astx.ListType)
+        )

@@ -33,6 +33,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
+        declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> astx.Block:
         """
@@ -41,6 +42,8 @@ class ControlFlowParserMixin(ParserMixinBase):
           allow_docstring:
             type: bool
           declared_names:
+            type: tuple[str, Ellipsis]
+          declared_lists:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
@@ -59,7 +62,11 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         self.indent_level = cur_indent
         self.tokens.get_next_token()  # eat indentation
-        self._push_value_scope(declared_names, declared_ndarrays)
+        self._push_value_scope(
+            declared_names,
+            declared_lists,
+            declared_ndarrays,
+        )
 
         block = astx.Block()
         docstring_allowed_here = allow_docstring
@@ -222,7 +229,14 @@ class ControlFlowParserMixin(ParserMixinBase):
         initializer = self.parse_inline_var_declaration()
         self._consume_operator(";")
 
-        self._push_value_scope((initializer.name,))
+        declared_lists: tuple[str, ...] = ()
+        if isinstance(initializer.type_, astx.ListType):
+            declared_lists = (initializer.name,)
+
+        self._push_value_scope(
+            (initializer.name,),
+            declared_lists,
+        )
         try:
             condition = self.parse_expression()
             self._consume_operator(";")
@@ -284,6 +298,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
+            mutability=astx.MutabilityKind.mutable,
             loc=var_loc,
         )
 
@@ -335,12 +350,15 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
+            mutability=astx.MutabilityKind.mutable,
             loc=var_loc,
         )
         self._declare_value_name(name)
         if is_ndarray_type(var_type):
             binding = binding_from_type(var_type)
             self._declare_ndarray_name(name, binding)
+        if isinstance(var_type, astx.ListType):
+            self._declare_list_name(name)
         return declaration
 
     def parse_assert_stmt(self) -> astx.AssertStmt:

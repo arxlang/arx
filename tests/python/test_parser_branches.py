@@ -276,8 +276,11 @@ def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
     with pytest.raises(ParserException, match="unsized ndarray"):
         parser._default_value_for_type(ndarray_type(astx.Int32()))
 
-    with pytest.raises(ParserException):
-        parser._default_value_for_type(astx.ListType([astx.Int32()]))
+    list_default = parser._default_value_for_type(
+        astx.ListType([astx.Int32()])
+    )
+    assert isinstance(list_default, astx.ListCreate)
+    assert isinstance(list_default.type_, astx.ListType)
 
 
 def test_parse_list_types_reject_shape_dimensions() -> None:
@@ -382,6 +385,36 @@ def test_parse_unsized_ndarray_indexing_skips_static_bounds_checks() -> None:
     ret = fn.body.nodes[1]
     assert isinstance(ret, astx.FunctionReturn)
     assert isinstance(ret.value, astx.BufferViewIndex)
+
+
+def test_parse_list_default_init_and_append() -> None:
+    """
+    title: List declarations default to ListCreate and lower append calls.
+    """
+    tree = _parse(
+        "fn build(stop: i32) -> list[i32]:\n"
+        "  var values: list[i32]\n"
+        "  for var current: i32 = 0; current < stop; current + 1:\n"
+        "    values.append(current)\n"
+        "  return values\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    declaration = fn.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert isinstance(declaration.type_, astx.ListType)
+    assert isinstance(declaration.value, astx.ListCreate)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert len(loop.body.nodes) == 1
+    assert isinstance(loop.body.nodes[0], astx.ListAppend)
+
+    ret = fn.body.nodes[2]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.Identifier)
 
 
 @pytest.mark.parametrize(

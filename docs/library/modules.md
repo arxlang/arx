@@ -133,15 +133,15 @@ conceptual area.
 Current MVP:
 
 - `range` is available automatically without an import
-- supported callable shape: `range(stop)`
+- supported callable shape: `range(stop) -> list[i32]`
 - future callable shapes such as `range(start, stop)` and
   `range(start, stop, step)` remain planned work
 
 Example:
 
 ```arx
-fn main() -> i32:
-  return range(4)
+fn main() -> none:
+  print(range(4)[2])
 ```
 
 ### Namespace Imports
