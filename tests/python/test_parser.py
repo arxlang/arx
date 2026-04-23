@@ -676,6 +676,33 @@ def test_parse_for_range_builtin_call() -> None:
     assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
 
 
+def test_parse_for_in_list_variable() -> None:
+    """
+    title: Test generic for-in parsing with one list variable.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[1], astx.ForCountLoopStmt)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.condition, astx.BinaryOp)
+    assert isinstance(loop.condition.rhs, irx_astx.ListLength)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, irx_astx.ListIndex)
+
+
 def test_parse_for_removed_colon_range_syntax_is_rejected() -> None:
     """
     title: Removed colon range syntax must be rejected with guidance.

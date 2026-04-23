@@ -22,6 +22,7 @@ from arx.ndarray import (
     is_ndarray_type,
 )
 from arx.parser.base import ParserMixinBase
+from arx.parser.state import SyntheticForInBinding
 
 
 class ControlFlowParserMixin(ParserMixinBase):
@@ -61,6 +62,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        synthetic_for_in: dict[str, SyntheticForInBinding] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -73,6 +75,8 @@ class ControlFlowParserMixin(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
+          synthetic_for_in:
+            type: dict[str, SyntheticForInBinding] | None
         returns:
           type: astx.Block
         """
@@ -92,6 +96,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             declared_names,
             declared_lists,
             declared_ndarrays,
+            synthetic_for_in,
         )
 
         block = astx.Block()
@@ -217,11 +222,14 @@ class ControlFlowParserMixin(ParserMixinBase):
                 "'range(start, stop[, step])' after 'in'."
             )
 
-        iterable = self.parse_expression()
+        iterable = cast(astx.Expr, self.parse_expression())
         range_args = self._builtin_range_call_args(iterable)
         if range_args is None:
-            raise ParserException(
-                "For-in loops currently require 'range(start, stop[, step])'."
+            return self._parse_for_iterable_stmt(
+                for_loc=for_loc,
+                loop_var_name=var_name,
+                loop_var_loc=var_loc,
+                iterable=iterable,
             )
 
         if len(range_args) == 2:
@@ -251,6 +259,66 @@ class ControlFlowParserMixin(ParserMixinBase):
             cast(astx.Expr, start),
             cast(astx.Expr, end),
             cast(astx.Expr, step),
+            body,
+            loc=for_loc,
+        )
+
+    def _parse_for_iterable_stmt(
+        self,
+        *,
+        for_loc: SourceLocation,
+        loop_var_name: str,
+        loop_var_loc: SourceLocation,
+        iterable: astx.Expr,
+    ) -> astx.ForCountLoopStmt:
+        """
+        title: Parse one generic for-in loop over a list-valued expression.
+        parameters:
+          for_loc:
+            type: SourceLocation
+          loop_var_name:
+            type: str
+          loop_var_loc:
+            type: SourceLocation
+          iterable:
+            type: astx.Expr
+        returns:
+          type: astx.ForCountLoopStmt
+        """
+        self._consume_operator(":")
+
+        index_name = self._fresh_internal_name("__arx_for_index")
+        element_binding = SyntheticForInBinding(
+            iterable=iterable,
+            index_name=index_name,
+        )
+        body = self.parse_block(
+            synthetic_for_in={loop_var_name: element_binding},
+        )
+
+        initializer = astx.InlineVariableDeclaration(
+            name=index_name,
+            type_=astx.Int32(),
+            value=astx.LiteralInt32(0),
+            mutability=astx.MutabilityKind.mutable,
+            loc=loop_var_loc,
+        )
+        condition = astx.BinaryOp(
+            "<",
+            astx.Identifier(index_name, loc=loop_var_loc),
+            element_binding.length_expr(),
+            loc=for_loc,
+        )
+        update = astx.BinaryOp(
+            "+",
+            astx.Identifier(index_name, loc=loop_var_loc),
+            astx.LiteralInt32(1),
+            loc=for_loc,
+        )
+        return astx.ForCountLoopStmt(
+            initializer,
+            cast(astx.Expr, condition),
+            cast(astx.Expr, update),
             body,
             loc=for_loc,
         )

@@ -7,6 +7,8 @@ summary: >-
 
 from __future__ import annotations
 
+import copy
+
 from dataclasses import dataclass
 
 from astx import SourceLocation
@@ -49,6 +51,47 @@ class ParsedDeclarationPrefixes:
     template_params: tuple[astx.TemplateParam, ...] = ()
     loc: SourceLocation | None = None
     description: str = "declaration prefix"
+
+
+@dataclass(frozen=True)
+class SyntheticForInBinding:
+    """
+    title: Synthetic for-in element binding.
+    summary: >-
+      Represent one parser-only loop variable that should read through a hidden
+      index into one iterable expression instead of allocating standalone
+      storage.
+    attributes:
+      iterable:
+        type: astx.Expr
+      index_name:
+        type: str
+    """
+
+    iterable: astx.Expr
+    index_name: str
+
+    def element_expr(self, loc: SourceLocation) -> astx.ListIndex:
+        """
+        title: Build one element access expression for the current index.
+        parameters:
+          loc:
+            type: SourceLocation
+        returns:
+          type: astx.ListIndex
+        """
+        return astx.ListIndex(
+            copy.deepcopy(self.iterable),
+            astx.Identifier(self.index_name, loc=loc),
+        )
+
+    def length_expr(self) -> astx.ListLength:
+        """
+        title: Build one list-length expression for the iterable.
+        returns:
+          type: astx.ListLength
+        """
+        return astx.ListLength(copy.deepcopy(self.iterable))
 
 
 SUPPORTED_MODIFIERS = frozenset(
@@ -99,4 +142,5 @@ __all__ = [
     "VISIBILITY_NAME_MAP",
     "ParsedAnnotation",
     "ParsedDeclarationPrefixes",
+    "SyntheticForInBinding",
 ]

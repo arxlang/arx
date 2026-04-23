@@ -341,6 +341,9 @@ class ExpressionParserMixin(ParserMixinBase):
         template_args = self._parse_template_args_for_call()
 
         if not self._is_operator("("):
+            synthetic_for_in = self._lookup_synthetic_for_in(id_name)
+            if synthetic_for_in is not None:
+                return synthetic_for_in.element_expr(id_loc)
             identifier = astx.Identifier(id_name, loc=id_loc)
             binding = self._lookup_ndarray_binding(id_name)
             if binding is not None:

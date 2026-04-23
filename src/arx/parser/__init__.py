@@ -17,6 +17,7 @@ from arx.parser.state import (
     INDENT_SIZE,
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
+    SyntheticForInBinding,
 )
 from arx.parser.types import TypeParserMixin
 
@@ -42,6 +43,8 @@ class Parser(
         type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
+      synthetic_for_in_scopes:
+        type: list[dict[str, SyntheticForInBinding]]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
       value_scopes:
@@ -55,6 +58,7 @@ class Parser(
     known_class_names: set[str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
+    synthetic_for_in_scopes: list[dict[str, SyntheticForInBinding]]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList

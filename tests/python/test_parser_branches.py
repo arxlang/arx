@@ -475,6 +475,75 @@ def test_parse_range_normalizes_optional_step_with_variable_stop() -> None:
     assert decl.value.args[2].value == 1
 
 
+def test_parse_for_in_list_literal_uses_generic_loop_lowering() -> None:
+    """
+    title: For-in over a list literal lowers through the generic list path.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  for value in [1, 2, 3]:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.condition, astx.BinaryOp)
+    assert isinstance(loop.condition.rhs, astx.ListLength)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.ListIndex)
+
+
+def test_parse_for_in_list_variable_uses_generic_loop_lowering() -> None:
+    """
+    title: For-in over a list variable lowers through the generic list path.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.condition, astx.BinaryOp)
+    assert isinstance(loop.condition.rhs, astx.ListLength)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.ListIndex)
+
+
+def test_parse_for_in_list_shadowing_keeps_inner_binding() -> None:
+    """
+    title: Inner declarations shadow synthetic for-in element bindings.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    var value: i32 = 9\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.body.nodes[0], astx.VariableDeclaration)
+    assert isinstance(loop.body.nodes[1], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[1].value, astx.Identifier)
+    assert loop.body.nodes[1].value.name == "value"
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -497,21 +566,6 @@ def test_parse_builtin_imports_are_rejected(code: str) -> None:
         match="cannot be imported directly",
     ):
         _parse(code + "fn main() -> none:\n  return none\n")
-
-
-def test_parse_for_loop_rejects_namespaced_builtin_range_reference() -> None:
-    """
-    title: For-in loops require the bare builtin range call surface.
-    """
-    with pytest.raises(
-        ParserException,
-        match="For-in loops currently require",
-    ):
-        _parse(
-            "fn main() -> none:\n"
-            "  for i in generators.range(0, 4):\n"
-            "    return none\n"
-        )
 
 
 def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:

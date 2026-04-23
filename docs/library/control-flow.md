@@ -38,11 +38,12 @@ fn count_to_ten() -> i32:
   return a
 ````
 
-## For Loop (Range Style)
+## For Loop (For-In Style)
 
-Range-style loops use the builtin `range(start, stop[, step])` call:
+For-in loops iterate over list-valued expressions, including builtin
+`range(start, stop[, step])`, list literals, and list variables:
 
-`for i in range(start, stop[, step]):`
+`for i in <list-expression>:`
 
 ````arx
 ```
@@ -60,7 +61,29 @@ fn range_loop(n: i32) -> i32:
   return total
 ````
 
-The old colon range header syntax was removed. Use builtin `range(...)` instead.
+You can also iterate over a list literal or a list variable:
+
+````arx
+```
+title: List for-in loop
+summary: Iterates over one list variable and one list literal.
+```
+fn list_loop() -> i32:
+  ```
+  title: list_loop
+  summary: Sums values from two list-valued loop inputs.
+  ```
+  var values: list[i32] = range(0, 3)
+  var total: i32 = 0
+  for value in values:
+    total = total + value
+  for value in [3, 4]:
+    total = total + value
+  return total
+````
+
+The old colon range header syntax was removed. Use builtin `range(...)` or any
+other list-valued expression instead.
 
 ## For Loop (Count Style)
 

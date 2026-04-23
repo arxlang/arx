@@ -472,7 +472,9 @@ fn count(n: i32) -> none:
     putchard(42)
 ````
 
-For-in loops use builtin `range(start, stop[, step])`.
+For-in loops iterate over list-valued expressions. Builtin
+`range(start, stop[, step])` is one common source, and list literals or list
+variables work too.
 
 ### Variables
 

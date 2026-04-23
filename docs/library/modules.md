@@ -141,6 +141,8 @@ Current MVP:
 - `step` defaults to `1` when omitted
 - `step > 0` counts up and `step < 0` counts down
 - `step == 0` is rejected with an assertion failure
+- for-in loops can iterate over `range(...)`, list literals, and list variables
+  because they consume list-valued expressions
 - ambient builtin names such as `range` are reserved at module top level
 
 Example:

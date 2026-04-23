@@ -322,6 +322,117 @@ def test_arxmain_compiles_range_list_creation_with_variable_stop(
     assert output_file.stat().st_size > 0
 
 
+def test_arxmain_compiles_for_in_over_list_variable(
+    tmp_path: Path,
+) -> None:
+    """
+    title: For-in loops compile over list variables produced by range.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            fn main() -> i32:
+              var xs: list[i32] = range(0, 4)
+              var total: i32 = 0
+              for value in xs:
+                total = total + value
+              return total
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
+def test_arxmain_compiles_for_in_over_list_literal(
+    tmp_path: Path,
+) -> None:
+    """
+    title: For-in loops compile over literal lists.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            fn main() -> i32:
+              var total: i32 = 0
+              for value in [1, 2, 3]:
+                total = total + value
+              return total
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
+def test_arxmain_rejects_namespaced_range_reference_in_for_loop(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Builtin range is still not available through a user namespace path.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            fn main() -> i32:
+              for value in generators.range(0, 4):
+                return value
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    with pytest.raises(
+        SemanticError,
+        match="cannot resolve name 'generators'",
+    ):
+        app.compile()
+
+
 def test_ambient_builtin_injection_rejects_local_range_definition(
     tmp_path: Path,
 ) -> None:

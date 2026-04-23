@@ -11,7 +11,11 @@ from irx import astx
 
 from arx.lexer import Token, TokenList
 from arx.ndarray import NDArrayBinding
-from arx.parser.state import ParsedAnnotation, ParsedDeclarationPrefixes
+from arx.parser.state import (
+    ParsedAnnotation,
+    ParsedDeclarationPrefixes,
+    SyntheticForInBinding,
+)
 
 
 class ParserMixinBase:
@@ -30,6 +34,8 @@ class ParserMixinBase:
         type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
+      synthetic_for_in_scopes:
+        type: list[dict[str, SyntheticForInBinding]]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
       value_scopes:
@@ -44,6 +50,7 @@ class ParserMixinBase:
     known_class_names: set[str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
+    synthetic_for_in_scopes: list[dict[str, SyntheticForInBinding]]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList
@@ -53,6 +60,7 @@ class ParserMixinBase:
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        synthetic_for_in: dict[str, SyntheticForInBinding] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope.
@@ -63,10 +71,13 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
+          synthetic_for_in:
+            type: dict[str, SyntheticForInBinding] | None
         """
         del declared_names
         del declared_lists
         del declared_ndarrays
+        del synthetic_for_in
         raise NotImplementedError
 
     def _pop_value_scope(self) -> None:
@@ -83,6 +94,33 @@ class ParserMixinBase:
             type: str
         """
         del name
+        raise NotImplementedError
+
+    def _lookup_synthetic_for_in(
+        self,
+        name: str,
+    ) -> SyntheticForInBinding | None:
+        """
+        title: Return one synthetic for-in binding when it is visible.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: SyntheticForInBinding | None
+        """
+        del name
+        raise NotImplementedError
+
+    def _fresh_internal_name(self, prefix: str) -> str:
+        """
+        title: Return one parser-generated internal name with no visible clash.
+        parameters:
+          prefix:
+            type: str
+        returns:
+          type: str
+        """
+        del prefix
         raise NotImplementedError
 
     def _name_is_shadowed(self, name: str) -> bool:
