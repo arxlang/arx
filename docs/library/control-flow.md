@@ -40,14 +40,14 @@ fn count_to_ten() -> i32:
 
 ## For Loop (Range Style)
 
-Range-style loops use the slice-like header:
+Range-style loops use the builtin `range(start, stop[, step])` call:
 
-`for i in (start:end:step):`
+`for i in range(start, stop[, step]):`
 
 ````arx
 ```
 title: Range-style for loop
-summary: Iterates from start to end with step.
+summary: Iterates from start to end with the builtin range helper.
 ```
 fn range_loop(n: i32) -> i32:
   ```
@@ -55,12 +55,12 @@ fn range_loop(n: i32) -> i32:
   summary: Sums values produced by a range loop.
   ```
   var total: i32 = 0
-  for i in (0:n:1):
+  for i in range(0, n):
     total = total + i
   return total
 ````
 
-Tuple-style range headers such as `(0, 5, 1)` are not supported.
+The old colon range header syntax was removed. Use builtin `range(...)` instead.
 
 ## For Loop (Count Style)
 

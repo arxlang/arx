@@ -24,6 +24,113 @@ class ExpressionParserMixin(ParserMixinBase):
     title: Expression parser mixin.
     """
 
+    def _normalize_builtin_range_args(
+        self,
+        args: list[astx.DataType],
+        template_args: tuple[astx.DataType, ...] | None,
+    ) -> None:
+        """
+        title: Normalize one builtin range call argument list.
+        parameters:
+          args:
+            type: list[astx.DataType]
+          template_args:
+            type: tuple[astx.DataType, Ellipsis] | None
+        """
+        if template_args is not None:
+            raise ParserException(
+                "Builtin 'range' does not accept template arguments."
+            )
+        if len(args) == 2:
+            args.append(astx.LiteralInt32(1))
+            return
+        if len(args) != 3:
+            raise ParserException(
+                "Builtin 'range' expects explicit start and stop "
+                "arguments, with an optional step."
+            )
+
+    def _is_builtin_range_function_name(self, name: str) -> bool:
+        """
+        title: Return whether one callable name refers to builtin range.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        if name == builtins.BUILTIN_RANGE:
+            return True
+        return (
+            self.builtin_function_aliases.get(name)
+            == builtins.BUILTIN_RANGE_FULL_NAME
+        )
+
+    def _module_namespace_path_from_expr(self, expr: astx.AST) -> str | None:
+        """
+        title: Resolve one parsed namespace expression to a module path.
+        parameters:
+          expr:
+            type: astx.AST
+        returns:
+          type: str | None
+        """
+        if isinstance(expr, astx.Identifier):
+            return self.module_namespace_aliases.get(expr.name)
+        if isinstance(expr, astx.FieldAccess):
+            base_path = self._module_namespace_path_from_expr(expr.value)
+            if base_path is None:
+                return None
+            return f"{base_path}.{expr.field_name}"
+        return None
+
+    def _is_builtin_range_namespace_call(
+        self,
+        receiver: astx.AST,
+        member_name: str,
+    ) -> bool:
+        """
+        title: Return whether one member call targets builtin range.
+        parameters:
+          receiver:
+            type: astx.AST
+          member_name:
+            type: str
+        returns:
+          type: bool
+        """
+        if member_name != builtins.BUILTIN_RANGE:
+            return False
+        return (
+            self._module_namespace_path_from_expr(receiver)
+            == builtins.BUILTIN_GENERATORS_MODULE
+        )
+
+    def _builtin_range_call_args(
+        self,
+        expr: astx.AST,
+    ) -> list[astx.Expr] | None:
+        """
+        title: Extract builtin range arguments from one parsed call expression.
+        parameters:
+          expr:
+            type: astx.AST
+        returns:
+          type: list[astx.Expr] | None
+        """
+        if isinstance(expr, astx.FunctionCall) and (
+            self._is_builtin_range_function_name(expr.fn)
+        ):
+            return [cast(astx.Expr, arg) for arg in expr.args]
+        if isinstance(expr, astx.MethodCall) and (
+            self._is_builtin_range_namespace_call(
+                expr.receiver,
+                expr.method_name,
+            )
+        ):
+            return [cast(astx.Expr, arg) for arg in expr.args]
+        return None
+
     def parse_primary(self) -> astx.AST:
         """
         title: Parse the primary expression.
@@ -131,6 +238,8 @@ class ExpressionParserMixin(ParserMixinBase):
                         self._consume_operator(",")
 
                 self._consume_operator(")")
+                if self._is_builtin_range_namespace_call(expr, member_name):
+                    self._normalize_builtin_range_args(args, template_args)
                 if (
                     member_name == "append"
                     and isinstance(expr, astx.Identifier)
@@ -353,18 +462,8 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator(",")
 
         self._consume_operator(")")
-        if id_name == "range":
-            if template_args is not None:
-                raise ParserException(
-                    "Builtin 'range' does not accept template arguments."
-                )
-            if len(args) == 2:
-                args.append(astx.LiteralInt32(1))
-            elif len(args) != 3:
-                raise ParserException(
-                    "Builtin 'range' expects explicit start and stop "
-                    "arguments, with an optional step."
-                )
+        if self._is_builtin_range_function_name(id_name):
+            self._normalize_builtin_range_args(args, template_args)
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name
         ):

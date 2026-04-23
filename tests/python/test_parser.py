@@ -660,12 +660,12 @@ def test_parse_for_count_stmt() -> None:
     assert isinstance(fn.body.nodes[0], astx.ForCountLoopStmt)
 
 
-def test_parse_for_range_slice_style() -> None:
+def test_parse_for_range_builtin_call() -> None:
     """
-    title: Test range-style for parsing with colon-separated bounds.
+    title: Test range-style for parsing with builtin range calls.
     """
     ArxIO.string_to_buffer(
-        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
+        "fn main() -> i32:\n  for j in range(0, 5):\n    return j\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -676,17 +676,20 @@ def test_parse_for_range_slice_style() -> None:
     assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
 
 
-def test_parse_for_range_tuple_style_is_rejected() -> None:
+def test_parse_for_removed_colon_range_syntax_is_rejected() -> None:
     """
-    title: Tuple-style for range must be rejected.
+    title: Removed colon range syntax must be rejected with guidance.
     """
     ArxIO.string_to_buffer(
-        "fn main() -> i32:\n  for j in (0, 5, 1):\n    return j\n"
+        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
     )
     lexer = Lexer()
     parser = Parser()
 
-    with pytest.raises(ParserException):
+    with pytest.raises(
+        ParserException,
+        match="Colon range syntax was removed",
+    ):
         parser.parse(lexer.lex())
 
 

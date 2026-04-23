@@ -195,6 +195,45 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
     assert output_file.stat().st_size > 0
 
 
+def test_arxmain_compiles_explicit_builtin_range_references_without_step(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Explicit builtin range references normalize the default step too.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "main.x"
+    source.write_text(
+        dedent(
+            """
+            import generators from builtins
+            import range as rg from builtins.generators
+
+            fn main() -> i32:
+              var via_namespace: list[i32] = generators.range(0, 4)
+              var via_alias: list[i32] = rg(2, 6)
+              return 0
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    output_file = tmp_path / "main.o"
+    app = main_module.ArxMain(
+        input_files=[str(source)],
+        output_file=str(output_file),
+        is_lib=True,
+    )
+
+    emits_executable = app.compile()
+
+    assert emits_executable is False
+    assert output_file.is_file()
+    assert output_file.stat().st_size > 0
+
+
 def test_arxmain_compiles_imported_module_using_ambient_range(
     tmp_path: Path,
 ) -> None:

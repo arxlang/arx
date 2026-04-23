@@ -29,6 +29,32 @@ class ControlFlowParserMixin(ParserMixinBase):
     title: Control-flow parser mixin.
     """
 
+    def _looks_like_removed_for_range_header(self) -> bool:
+        """
+        title: Return whether the current token begins the removed colon range.
+        returns:
+          type: bool
+        """
+        if not self._is_operator("("):
+            return False
+
+        depth = 0
+        current_index = self.tokens.position - 1
+        for token in self.tokens.tokens[current_index:]:
+            if token.kind != TokenKind.operator:
+                continue
+            if token.value == "(":
+                depth += 1
+                continue
+            if token.value == ")":
+                depth -= 1
+                if depth == 0:
+                    return False
+                continue
+            if token.value == ":" and depth == 1:
+                return True
+        return False
+
     def parse_block(
         self,
         allow_docstring: bool = False,
@@ -185,19 +211,33 @@ class ControlFlowParserMixin(ParserMixinBase):
             raise ParserException("Parser: Expected 'in' after loop variable.")
 
         self.tokens.get_next_token()  # eat in
-        self._consume_operator("(")
+        if self._looks_like_removed_for_range_header():
+            raise ParserException(
+                "Colon range syntax was removed; use "
+                "'range(start, stop[, step])' after 'in'."
+            )
 
-        # Slice-like range header: (start:end:step)
-        start = self.parse_expression()
-        self._consume_operator(":")
-        end = self.parse_expression()
+        iterable = self.parse_expression()
+        range_args = self._builtin_range_call_args(iterable)
+        if range_args is None:
+            raise ParserException(
+                "For-in loops currently require 'range(start, stop[, step])'."
+            )
 
-        step: astx.AST = astx.LiteralInt32(1)
-        if self._is_operator(":"):
-            self._consume_operator(":")
-            step = self.parse_expression()
+        if len(range_args) == 2:
+            start = range_args[0]
+            end = range_args[1]
+            step = astx.LiteralInt32(1)
+        elif len(range_args) == 3:
+            start = range_args[0]
+            end = range_args[1]
+            step = range_args[2]
+        else:
+            raise ParserException(
+                "Builtin 'range' expects explicit start and stop "
+                "arguments, with an optional step."
+            )
 
-        self._consume_operator(")")
         self._consume_operator(":")
         body = self.parse_block(declared_names=(var_name,))
 

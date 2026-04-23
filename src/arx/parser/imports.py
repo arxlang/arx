@@ -11,6 +11,7 @@ from typing import cast
 
 from irx import astx
 
+from arx import builtins
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
@@ -69,6 +70,9 @@ class ImportParserMixin(ParserMixinBase):
             alias_name = self.parse_import_alias()
             if self._is_identifier_value("from"):
                 raise ParserException("Module imports do not use 'from'.")
+            visible_name = alias_name or module_path.split(".")[0]
+            visible_path = module_path if alias_name else visible_name
+            self.module_namespace_aliases[visible_name] = visible_path
             return astx.ImportStmt(
                 [
                     astx.AliasExpr(
@@ -84,6 +88,12 @@ class ImportParserMixin(ParserMixinBase):
         if self._is_identifier_value("from"):
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
+            full_path = f"{module_path}.{target_name}"
+            visible_name = alias_name or target_name
+            if level == 0 and builtins.is_builtin_module_specifier(full_path):
+                self.module_namespace_aliases[visible_name] = full_path
+            if level == 0 and full_path == builtins.BUILTIN_RANGE_FULL_NAME:
+                self.builtin_function_aliases[visible_name] = full_path
             return astx.ImportFromStmt(
                 names=[
                     astx.AliasExpr(
@@ -105,6 +115,8 @@ class ImportParserMixin(ParserMixinBase):
                 "Parentheses are only supported for grouped named imports."
             )
 
+        visible_name = alias_name or target_name
+        self.module_namespace_aliases[visible_name] = target_name
         return astx.ImportStmt(
             [astx.AliasExpr(target_name, asname=alias_name, loc=target_loc)],
             loc=import_loc,

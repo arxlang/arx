@@ -98,7 +98,7 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     """
     tree = _parse(
         "fn print_star(n: i32) -> none:\n"
-        "  for i in (0:n:1):\n"
+        "  for i in range(0, n):\n"
         '    print("*");\n'
         "  return none\n"
     )
@@ -115,11 +115,11 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     "code, expected",
     [
         (
-            "fn main() -> i32:\n  for 1 in (0:1:1):\n    return 1\n",
+            "fn main() -> i32:\n  for 1 in range(0, 1):\n    return 1\n",
             "identifier",
         ),
         (
-            "fn main() -> i32:\n  for i (0:1:1):\n    return i\n",
+            "fn main() -> i32:\n  for i range(0, 1):\n    return i\n",
             "Expected 'in'",
         ),
     ],
@@ -448,6 +448,41 @@ def test_parse_range_normalizes_optional_step() -> None:
     assert len(second_decl.value.args) == 3
     assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
     assert second_decl.value.args[2].value == 2
+
+
+def test_parse_range_normalizes_optional_step_for_aliases() -> None:
+    """
+    title: Namespaced and aliased builtin range calls get default step one.
+    """
+    tree = _parse(
+        "import generators from builtins\n"
+        "import range as rg from builtins.generators\n"
+        "fn first() -> none:\n"
+        "  var values: list[i32] = generators.range(0, 4)\n"
+        "  return none\n"
+        "fn second() -> none:\n"
+        "  var values: list[i32] = rg(2, 8)\n"
+        "  return none\n"
+    )
+
+    first_fn = tree.nodes[2]
+    second_fn = tree.nodes[3]
+    assert isinstance(first_fn, astx.FunctionDef)
+    assert isinstance(second_fn, astx.FunctionDef)
+
+    first_decl = cast(astx.VariableDeclaration, first_fn.body.nodes[0])
+    assert isinstance(first_decl.value, astx.MethodCall)
+    assert first_decl.value.method_name == "range"
+    assert len(first_decl.value.args) == 3
+    assert isinstance(first_decl.value.args[2], astx.LiteralInt32)
+    assert first_decl.value.args[2].value == 1
+
+    second_decl = cast(astx.VariableDeclaration, second_fn.body.nodes[0])
+    assert isinstance(second_decl.value, astx.FunctionCall)
+    assert second_decl.value.fn == "rg"
+    assert len(second_decl.value.args) == 3
+    assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
+    assert second_decl.value.args[2].value == 1
 
 
 def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:

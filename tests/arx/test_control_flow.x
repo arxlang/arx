@@ -30,7 +30,7 @@ fn first_range_value(limit: i32) -> i32:
   title: first_range_value
   summary: Returns the first value produced by one range loop.
   ```
-  for i in (0:limit:1):
+  for i in range(0, limit):
     return i
   return limit
 
@@ -64,7 +64,7 @@ fn test_for_range_loop_asserts() -> none:
   title: test_for_range_loop_asserts
   summary: Executes one range loop and validates each yielded index.
   ```
-  for i in (0:4:1):
+  for i in range(0, 4):
     assert i < 4
   assert first_range_value(4) == 0
 

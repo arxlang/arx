@@ -19,7 +19,10 @@ _BUILTIN_RESOURCE_DIR = "builtins"
 
 BUILTIN_CAST = "cast"
 BUILTIN_PRINT = "print"
+BUILTIN_RANGE = "range"
 _GENERATORS_MODULE = f"{BUILTIN_NAMESPACE}.generators"
+BUILTIN_GENERATORS_MODULE = _GENERATORS_MODULE
+BUILTIN_RANGE_FULL_NAME = f"{_GENERATORS_MODULE}.{BUILTIN_RANGE}"
 
 
 @dataclass(frozen=True)
@@ -62,13 +65,16 @@ class AmbientBuiltinBinding:
 
 
 _AMBIENT_BUILTIN_BINDINGS = (
-    AmbientBuiltinBinding(name="range", module=_GENERATORS_MODULE),
+    AmbientBuiltinBinding(name=BUILTIN_RANGE, module=_GENERATORS_MODULE),
 )
 
 __all__ = [
     "BUILTIN_CAST",
+    "BUILTIN_GENERATORS_MODULE",
     "BUILTIN_NAMESPACE",
     "BUILTIN_PRINT",
+    "BUILTIN_RANGE",
+    "BUILTIN_RANGE_FULL_NAME",
     "BUILTIN_SOURCE_EXTENSION",
     "AmbientBuiltinBinding",
     "BuiltinModuleAsset",
