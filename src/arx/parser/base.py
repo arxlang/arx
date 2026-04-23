@@ -18,8 +18,6 @@ class ParserMixinBase:
     """
     title: Shared parser mixin contract.
     attributes:
-      builtin_function_aliases:
-        type: dict[str, str]
       bin_op_precedence:
         type: dict[str, int]
       indent_level:
@@ -28,8 +26,6 @@ class ParserMixinBase:
         type: list[set[str]]
       known_class_names:
         type: set[str]
-      module_namespace_aliases:
-        type: dict[str, str]
       ndarray_scopes:
         type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
@@ -42,12 +38,10 @@ class ParserMixinBase:
         type: TokenList
     """
 
-    builtin_function_aliases: dict[str, str]
     bin_op_precedence: dict[str, int]
     indent_level: int
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    module_namespace_aliases: dict[str, str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]

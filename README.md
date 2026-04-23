@@ -77,7 +77,8 @@ Compiler-provided builtins stay separate from stdlib. Builtin sources live in
 `src/arx/builtins/*.x`, are bundled inside the installed `arx` package, and are
 resolved by dedicated compiler logic instead of user-project module lookup.
 Those bundled builtin modules are internal compiler assets, not a public
-stdlib-style import namespace.
+stdlib-style import namespace. User code does not import `builtins`; builtin
+functions such as `range(...)` are available automatically.
 
 ```arx
 fn main() -> none:

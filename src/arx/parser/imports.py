@@ -22,32 +22,25 @@ class ImportParserMixin(ParserMixinBase):
     title: Import parser mixin.
     """
 
-    def _register_from_import_aliases(
+    def _reject_public_builtin_import(
         self,
         module_path: str,
         level: int,
-        names: list[astx.AliasExpr],
     ) -> None:
         """
-        title: Register parser-visible aliases from one from-import statement.
+        title: Reject user-facing imports from the internal builtin namespace.
         parameters:
           module_path:
             type: str
           level:
             type: int
-          names:
-            type: list[astx.AliasExpr]
         """
-        if level != 0:
+        if level != 0 or not builtins.is_builtin_module_specifier(module_path):
             return
-
-        for alias in names:
-            visible_name = alias.asname or alias.name
-            full_path = f"{module_path}.{alias.name}"
-            if builtins.is_builtin_module_specifier(full_path):
-                self.module_namespace_aliases[visible_name] = full_path
-            if full_path == builtins.BUILTIN_RANGE_FULL_NAME:
-                self.builtin_function_aliases[visible_name] = full_path
+        raise ParserException(
+            "Compiler builtins are available automatically and cannot "
+            "be imported directly."
+        )
 
     def parse_import_stmt(self) -> astx.ImportStmt | astx.ImportFromStmt:
         """
@@ -66,11 +59,7 @@ class ImportParserMixin(ParserMixinBase):
                 )
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
-            self._register_from_import_aliases(
-                module_path,
-                level,
-                names,
-            )
+            self._reject_public_builtin_import(module_path, level)
             return astx.ImportFromStmt(
                 names=names,
                 module=module_path,
@@ -102,9 +91,7 @@ class ImportParserMixin(ParserMixinBase):
             alias_name = self.parse_import_alias()
             if self._is_identifier_value("from"):
                 raise ParserException("Module imports do not use 'from'.")
-            visible_name = alias_name or module_path.split(".")[0]
-            visible_path = module_path if alias_name else visible_name
-            self.module_namespace_aliases[visible_name] = visible_path
+            self._reject_public_builtin_import(module_path, level=0)
             return astx.ImportStmt(
                 [
                     astx.AliasExpr(
@@ -120,20 +107,15 @@ class ImportParserMixin(ParserMixinBase):
         if self._is_identifier_value("from"):
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
-            names = [
-                astx.AliasExpr(
-                    target_name,
-                    asname=alias_name,
-                    loc=target_loc,
-                )
-            ]
-            self._register_from_import_aliases(
-                module_path,
-                level,
-                names,
-            )
+            self._reject_public_builtin_import(module_path, level)
             return astx.ImportFromStmt(
-                names=names,
+                names=[
+                    astx.AliasExpr(
+                        target_name,
+                        asname=alias_name,
+                        loc=target_loc,
+                    )
+                ],
                 module=module_path,
                 level=level,
                 loc=import_loc,
@@ -147,8 +129,7 @@ class ImportParserMixin(ParserMixinBase):
                 "Parentheses are only supported for grouped named imports."
             )
 
-        visible_name = alias_name or target_name
-        self.module_namespace_aliases[visible_name] = target_name
+        self._reject_public_builtin_import(target_name, level=0)
         return astx.ImportStmt(
             [astx.AliasExpr(target_name, asname=alias_name, loc=target_loc)],
             loc=import_loc,

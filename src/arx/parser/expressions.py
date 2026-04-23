@@ -50,62 +50,6 @@ class ExpressionParserMixin(ParserMixinBase):
                 "arguments, with an optional step."
             )
 
-    def _is_builtin_range_function_name(self, name: str) -> bool:
-        """
-        title: Return whether one callable name refers to builtin range.
-        parameters:
-          name:
-            type: str
-        returns:
-          type: bool
-        """
-        if name == builtins.BUILTIN_RANGE:
-            return True
-        return (
-            self.builtin_function_aliases.get(name)
-            == builtins.BUILTIN_RANGE_FULL_NAME
-        )
-
-    def _module_namespace_path_from_expr(self, expr: astx.AST) -> str | None:
-        """
-        title: Resolve one parsed namespace expression to a module path.
-        parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: str | None
-        """
-        if isinstance(expr, astx.Identifier):
-            return self.module_namespace_aliases.get(expr.name)
-        if isinstance(expr, astx.FieldAccess):
-            base_path = self._module_namespace_path_from_expr(expr.value)
-            if base_path is None:
-                return None
-            return f"{base_path}.{expr.field_name}"
-        return None
-
-    def _is_builtin_range_namespace_call(
-        self,
-        receiver: astx.AST,
-        member_name: str,
-    ) -> bool:
-        """
-        title: Return whether one member call targets builtin range.
-        parameters:
-          receiver:
-            type: astx.AST
-          member_name:
-            type: str
-        returns:
-          type: bool
-        """
-        if member_name != builtins.BUILTIN_RANGE:
-            return False
-        return (
-            self._module_namespace_path_from_expr(receiver)
-            == builtins.BUILTIN_GENERATORS_MODULE
-        )
-
     def _builtin_range_call_args(
         self,
         expr: astx.AST,
@@ -119,14 +63,7 @@ class ExpressionParserMixin(ParserMixinBase):
           type: list[astx.Expr] | None
         """
         if isinstance(expr, astx.FunctionCall) and (
-            self._is_builtin_range_function_name(expr.fn)
-        ):
-            return [cast(astx.Expr, arg) for arg in expr.args]
-        if isinstance(expr, astx.MethodCall) and (
-            self._is_builtin_range_namespace_call(
-                expr.receiver,
-                expr.method_name,
-            )
+            expr.fn == builtins.BUILTIN_RANGE
         ):
             return [cast(astx.Expr, arg) for arg in expr.args]
         return None
@@ -238,8 +175,6 @@ class ExpressionParserMixin(ParserMixinBase):
                         self._consume_operator(",")
 
                 self._consume_operator(")")
-                if self._is_builtin_range_namespace_call(expr, member_name):
-                    self._normalize_builtin_range_args(args, template_args)
                 if (
                     member_name == "append"
                     and isinstance(expr, astx.Identifier)
@@ -462,7 +397,7 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator(",")
 
         self._consume_operator(")")
-        if self._is_builtin_range_function_name(id_name):
+        if id_name == builtins.BUILTIN_RANGE:
             self._normalize_builtin_range_args(args, template_args)
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name

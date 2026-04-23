@@ -13,6 +13,7 @@ import pytest
 
 from arx import builtins
 from arx import main as main_module
+from arx.exceptions import ParserException
 from arx.testing import ArxTestRunner
 from irx import astx as irx_astx
 from irx.diagnostics import SemanticError
@@ -195,34 +196,34 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
     assert output_file.stat().st_size > 0
 
 
-def test_arxmain_compiles_explicit_builtin_range_references_without_step(
+@pytest.mark.parametrize(
+    "source_text",
+    [
+        "import generators from builtins\n\nfn main() -> i32:\n  return 0\n",
+        (
+            "import range as rg from builtins.generators\n\n"
+            "fn main() -> i32:\n  return 0\n"
+        ),
+        (
+            "import (range as rg) from builtins.generators\n\n"
+            "fn main() -> i32:\n  return 0\n"
+        ),
+    ],
+)
+def test_arxmain_rejects_public_builtin_imports(
     tmp_path: Path,
+    source_text: str,
 ) -> None:
     """
-    title: Explicit builtin range references normalize the default step too.
+    title: User modules cannot import internal compiler builtins directly.
     parameters:
       tmp_path:
         type: Path
+      source_text:
+        type: str
     """
     source = tmp_path / "main.x"
-    source.write_text(
-        dedent(
-            """
-            import generators from builtins
-            import range as rg from builtins.generators
-            import (generators as g) from builtins
-            import (range as grouped_rg) from builtins.generators
-
-            fn main() -> i32:
-              var via_namespace: list[i32] = generators.range(0, 4)
-              var via_alias: list[i32] = rg(2, 6)
-              var via_grouped_namespace: list[i32] = g.range(4, 8)
-              var via_grouped_alias: list[i32] = grouped_rg(6, 10)
-              return 0
-            """
-        ).lstrip(),
-        encoding="utf-8",
-    )
+    source.write_text(source_text, encoding="utf-8")
 
     output_file = tmp_path / "main.o"
     app = main_module.ArxMain(
@@ -231,11 +232,8 @@ def test_arxmain_compiles_explicit_builtin_range_references_without_step(
         is_lib=True,
     )
 
-    emits_executable = app.compile()
-
-    assert emits_executable is False
-    assert output_file.is_file()
-    assert output_file.stat().st_size > 0
+    with pytest.raises(ParserException, match="cannot be imported directly"):
+        app.compile()
 
 
 def test_arxmain_compiles_imported_module_using_ambient_range(

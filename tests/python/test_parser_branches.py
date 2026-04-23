@@ -450,65 +450,28 @@ def test_parse_range_normalizes_optional_step() -> None:
     assert second_decl.value.args[2].value == 2
 
 
-def test_parse_range_normalizes_optional_step_for_aliases() -> None:
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import generators from builtins\n",
+        "import builtins.generators as generators\n",
+        "import range as rg from builtins.generators\n",
+        "import (generators as g) from builtins\n",
+        "import (range as rg) from builtins.generators\n",
+    ],
+)
+def test_parse_builtin_imports_are_rejected(code: str) -> None:
     """
-    title: Namespaced and aliased builtin range calls get default step one.
+    title: User source cannot import internal builtin modules directly.
+    parameters:
+      code:
+        type: str
     """
-    tree = _parse(
-        "import generators from builtins\n"
-        "import range as rg from builtins.generators\n"
-        "import (generators as g) from builtins\n"
-        "import (range as grouped_rg) from builtins.generators\n"
-        "fn first() -> none:\n"
-        "  var values: list[i32] = generators.range(0, 4)\n"
-        "  return none\n"
-        "fn second() -> none:\n"
-        "  var values: list[i32] = rg(2, 8)\n"
-        "  return none\n"
-        "fn third() -> none:\n"
-        "  var values: list[i32] = g.range(4, 10)\n"
-        "  return none\n"
-        "fn fourth() -> none:\n"
-        "  var values: list[i32] = grouped_rg(6, 12)\n"
-        "  return none\n"
-    )
-
-    first_fn = tree.nodes[4]
-    second_fn = tree.nodes[5]
-    third_fn = tree.nodes[6]
-    fourth_fn = tree.nodes[7]
-    assert isinstance(first_fn, astx.FunctionDef)
-    assert isinstance(second_fn, astx.FunctionDef)
-    assert isinstance(third_fn, astx.FunctionDef)
-    assert isinstance(fourth_fn, astx.FunctionDef)
-
-    first_decl = cast(astx.VariableDeclaration, first_fn.body.nodes[0])
-    assert isinstance(first_decl.value, astx.MethodCall)
-    assert first_decl.value.method_name == "range"
-    assert len(first_decl.value.args) == 3
-    assert isinstance(first_decl.value.args[2], astx.LiteralInt32)
-    assert first_decl.value.args[2].value == 1
-
-    second_decl = cast(astx.VariableDeclaration, second_fn.body.nodes[0])
-    assert isinstance(second_decl.value, astx.FunctionCall)
-    assert second_decl.value.fn == "rg"
-    assert len(second_decl.value.args) == 3
-    assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
-    assert second_decl.value.args[2].value == 1
-
-    third_decl = cast(astx.VariableDeclaration, third_fn.body.nodes[0])
-    assert isinstance(third_decl.value, astx.MethodCall)
-    assert third_decl.value.method_name == "range"
-    assert len(third_decl.value.args) == 3
-    assert isinstance(third_decl.value.args[2], astx.LiteralInt32)
-    assert third_decl.value.args[2].value == 1
-
-    fourth_decl = cast(astx.VariableDeclaration, fourth_fn.body.nodes[0])
-    assert isinstance(fourth_decl.value, astx.FunctionCall)
-    assert fourth_decl.value.fn == "grouped_rg"
-    assert len(fourth_decl.value.args) == 3
-    assert isinstance(fourth_decl.value.args[2], astx.LiteralInt32)
-    assert fourth_decl.value.args[2].value == 1
+    with pytest.raises(
+        ParserException,
+        match="cannot be imported directly",
+    ):
+        _parse(code + "fn main() -> none:\n  return none\n")
 
 
 def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:

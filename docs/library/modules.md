@@ -124,6 +124,7 @@ Builtins and stdlib are intentionally separate:
   are not copied into user projects
 - builtin source modules are an internal compiler asset store, not a public
   stdlib-like import surface
+- user code cannot import the internal `builtins` namespace directly
 - local user modules are not allowed to shadow the reserved `builtins` namespace
 
 The first builtin module is `generators`. It is intentionally generic so future

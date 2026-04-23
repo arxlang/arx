@@ -24,8 +24,6 @@ class ParserCore(ParserMixinBase):
     """
     title: Shared parser state and orchestration.
     attributes:
-      builtin_function_aliases:
-        type: dict[str, str]
       bin_op_precedence:
         type: dict[str, int]
       indent_level:
@@ -34,8 +32,6 @@ class ParserCore(ParserMixinBase):
         type: list[set[str]]
       known_class_names:
         type: set[str]
-      module_namespace_aliases:
-        type: dict[str, str]
       ndarray_scopes:
         type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
@@ -48,12 +44,10 @@ class ParserCore(ParserMixinBase):
         type: TokenList
     """
 
-    builtin_function_aliases: dict[str, str]
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    module_namespace_aliases: dict[str, str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
@@ -87,11 +81,9 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
-        self.module_namespace_aliases = {}
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
-        self.builtin_function_aliases = {}
         self.value_scopes = [set()]
         self.tokens = tokens
 
@@ -102,11 +94,9 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
-        self.module_namespace_aliases = {}
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
-        self.builtin_function_aliases = {}
         self.value_scopes = [set()]
         self.tokens = TokenList([])
 
