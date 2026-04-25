@@ -31,7 +31,9 @@ def test_bundled_stdlib_package_data_is_present() -> None:
     assert (stdlib_root / "__init__.x").is_file()
     assert (stdlib_root / "math.x").is_file()
 
-    pyproject = tomllib.loads(Path("pyproject.toml").read_text("utf-8"))
+    pyproject = tomllib.loads(
+        Path("packages/arx/pyproject.toml").read_text("utf-8")
+    )
     includes = pyproject["tool"]["poetry"]["include"]
     assert "src/arx/stdlib/**/*.x" in includes
 

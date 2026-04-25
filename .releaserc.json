@@ -121,8 +121,8 @@
           },
           {
             "files": ["packages/arx/pyproject.toml"],
-            "from": "  \"irx == .*\",  # semantic-release",
-            "to": "  \"irx == ${nextRelease.version}\",  # semantic-release",
+            "from": "  \"pyirx == .*\",  # semantic-release",
+            "to": "  \"pyirx == ${nextRelease.version}\",  # semantic-release",
             "results": [
               {
                 "file": "packages/arx/pyproject.toml",
@@ -161,14 +161,21 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "poetry build",
-        "publishCmd": "poetry publish"
+        "prepareCmd": "poetry lock && ./scripts/build.sh",
+        "publishCmd": "./scripts/publish.sh"
       }
     ],
     [
       "@semantic-release/github",
       {
-        "assets": ["dist/*.whl", "dist/*.tar.gz"]
+        "assets": [
+          "packages/astx/dist/*.whl",
+          "packages/astx/dist/*.tar.gz",
+          "packages/irx/dist/*.whl",
+          "packages/irx/dist/*.tar.gz",
+          "packages/arx/dist/*.whl",
+          "packages/arx/dist/*.tar.gz"
+        ]
       }
     ],
     [
@@ -176,13 +183,14 @@
       {
         "assets": [
           "pyproject.toml",
+          "poetry.lock",
           "docs/changelog.md",
-          "packages/arx/pyproject.toml",
-          "packages/arx/src/arx/__init__.py",
+          "packages/astx/pyproject.toml",
+          "packages/astx/src/astx/__init__.py",
           "packages/irx/pyproject.toml",
           "packages/irx/src/irx/__init__.py",
-          "packages/astx/pyproject.toml",
-          "packages/astx/src/astx/__init__.py"
+          "packages/arx/pyproject.toml",
+          "packages/arx/src/arx/__init__.py"
         ],
         "message": "chore(release): ${nextRelease.version}"
       }

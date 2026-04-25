@@ -17,7 +17,7 @@ from irx.analysis import (
 from irx.analysis.module_symbols import qualified_function_name
 from irx.analysis.resolved_nodes import SemanticInfo
 
-from tests.conftest import StaticImportResolver, make_parsed_module
+from ..conftest import StaticImportResolver, make_parsed_module
 
 
 def _semantic(node: astx.AST) -> SemanticInfo:

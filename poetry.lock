@@ -182,16 +182,36 @@ astroid = ["astroid (>=2,<5)"]
 test = ["astroid (>=2,<5)", "pytest (<9.0)", "pytest-cov", "pytest-xdist"]
 
 [[package]]
+name = "arxlang"
+version = "1.18.1"
+description = "Arx is a compiler built with llvm"
+optional = false
+python-versions = ">=3.10,<4"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+astx = "1.18.1"
+jsonschema = ">=4.0.0"
+pyirx = "1.18.1"
+pyyaml = ">=4"
+tomli = {version = ">=2.0.0", markers = "python_version < \"3.11\""}
+types-pyyaml = ">=6.0.12.20250516"
+
+[package.source]
+type = "directory"
+url = "packages/arx"
+
+[[package]]
 name = "astx"
-version = "0.24.0"
+version = "1.18.1"
 description = "ASTx is an agnostic expression structure for AST."
 optional = false
-python-versions = "<4,>=3.10"
+python-versions = ">=3.10,<4"
 groups = ["main"]
-files = [
-    {file = "astx-0.24.0-py3-none-any.whl", hash = "sha256:9b078aa6b2a76fe01654a98641281c37ada4a7db112971a2947c9a309b36ef8e"},
-    {file = "astx-0.24.0.tar.gz", hash = "sha256:15dc487b6fd4467e068bf4757563451ecbb04f6c668d341116fdaedf4ec05db5"},
-]
+files = []
+develop = true
 
 [package.dependencies]
 atpublic = ">=4.0"
@@ -202,6 +222,10 @@ typing-extensions = ">=4"
 [package.extras]
 all = ["mermaid-ascii (>=0.6.1)"]
 console = ["mermaid-ascii (>=0.6.1)"]
+
+[package.source]
+type = "directory"
+url = "packages/astx"
 
 [[package]]
 name = "async-lru"
@@ -3206,25 +3230,27 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyirx"
-version = "1.18.0"
+version = "1.18.1"
 description = "IRx"
 optional = false
-python-versions = "<4,>=3.10"
+python-versions = ">=3.10,<4"
 groups = ["main"]
-files = [
-    {file = "pyirx-1.18.0-py3-none-any.whl", hash = "sha256:f834cd691f6a68b997a9a125615fbb8b3c50a455516a8490fb6806466fac286e"},
-    {file = "pyirx-1.18.0.tar.gz", hash = "sha256:4bcf7fd18a71f3932b31e47747e1c3cd73a8ae7d18f0d25db6c50d611b0d0478"},
-]
+files = []
+develop = true
 
 [package.dependencies]
 arx-arrowcpp-sources = "24.0.0"
-astx = ">=0.24.0"
+astx = "1.18.1"
 atpublic = ">=4.0"
 llvmlite = ">=0.44.0"
 plum-dispatch = ">=2.2.2"
 pyarrow = ">=24.0.0,<25.0.0"
 typeguard = ">=4"
 xhell = ">=0.2.1"
+
+[package.source]
+type = "directory"
+url = "packages/irx"
 
 [[package]]
 name = "pymdown-extensions"
@@ -4722,4 +4748,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "f7e366fc5c471cf4599a7cc5948e3f642dd962107654c71b706e70dfe52c78e8"
+content-hash = "6021b91451462cc5c7a9babcbd99271b38d60056cfc127d64458eeca88989b35"

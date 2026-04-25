@@ -1,8 +1,8 @@
 [project]
 name = "arxlang"
-version = "0.16.0"  # semantic-release
+version = "1.18.1"  # semantic-release
 description = "Arx is a compiler built with llvm"
-readme = "docs/index.md"
+readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]
@@ -10,12 +10,19 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
-  "astx (>=0.24.0)",  # semantic-release
-  "pyirx (==1.18.0)",  # semantic-release
+  "astx == 1.18.1",  # semantic-release
+  "pyirx == 1.18.1",  # semantic-release
   "jsonschema (>=4.0.0)",
   "types-pyyaml (>=6.0.12.20250516)",
   "tomli >=2.0.0 ; python_version < \"3.11\""
 ]
+
+[project.scripts]
+"arx" = "arx.__main__:app"
+
+[build-system]
+requires = ["poetry-core>=2"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 include = [
@@ -33,9 +40,6 @@ exclude = [
 packages = [
   {include = "arx", from="src"},
 ]
-
-[tool.poetry.scripts]
-"arx" = "arx.__main__:app"
 
 [tool.pytest.ini_options]
 testpaths = [

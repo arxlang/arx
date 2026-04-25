@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-pushd packages/astx || exit
-poetry publish
-popd || return
+packages=(
+  packages/astx
+  packages/irx
+  packages/arx
+)
 
-pushd packages/irx || exit
-poetry publish
-popd || return
-
-pushd packages/arx || exit
-poetry publish
-popd || return
+for package_dir in "${packages[@]}"; do
+  (
+    cd "${package_dir}"
+    poetry publish
+  )
+done

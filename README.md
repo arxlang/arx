@@ -85,11 +85,11 @@ fn main() -> i32:
 ```
 
 Compiler-provided builtins stay separate from stdlib. Builtin sources live in
-`src/arx/builtins/*.x`, are bundled inside the installed `arx` package, and are
-resolved by dedicated compiler logic instead of user-project module lookup.
-Those bundled builtin modules are internal compiler assets, not a public
-stdlib-style import namespace. User code does not import `builtins`; builtin
-functions such as `range(...)` are available automatically.
+`packages/arx/src/arx/builtins/*.x`, are bundled inside the installed `arx`
+package, and are resolved by dedicated compiler logic instead of user-project
+module lookup. Those bundled builtin modules are internal compiler assets, not a
+public stdlib-style import namespace. User code does not import `builtins`;
+builtin functions such as `range(...)` are available automatically.
 
 ```arx
 fn main() -> none:
@@ -117,19 +117,19 @@ You can run compiled tests with the new `arx test` subcommand:
 
 ```bash
 arx test
-arx test tests/arx/test_math.x --list
+arx test packages/arx/tests/arx/test_math.x --list
 arx test -k square
 arx test -x
 arx test --keep-artifacts
-arx test --exclude "tests/arx/slow_*.x"
+arx test --exclude "packages/arx/tests/arx/slow_*.x"
 ```
 
 By default the runner searches `tests/` for files matching `test_*.x`, discovers
 zero-argument `test_*` functions that return `none`, and executes each test in
 its own compiled subprocess. Test identifiers use the cwd-relative path of the
 source file (without the `.x` suffix) joined to the function name via `::`, for
-example `tests/arx/test_math::test_square`, so same-named files in parallel
-directories stay distinct.
+example `packages/arx/tests/arx/test_math::test_square`, so same-named files in
+parallel directories stay distinct.
 
 You can override discovery from `.arxproject.toml`:
 

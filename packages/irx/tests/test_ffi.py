@@ -13,7 +13,7 @@ import pytest
 from irx import astx
 from irx.builder import Builder
 
-from tests.conftest import assert_ir_parses
+from .conftest import assert_ir_parses
 
 HAS_CLANG = shutil.which("clang") is not None
 EXPECTED_SQRT_EXIT_CODE = 4

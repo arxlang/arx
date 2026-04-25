@@ -17,7 +17,7 @@ from irx.buffer import (
 )
 from irx.builder import Builder
 
-from tests.conftest import assert_ir_parses
+from .conftest import assert_ir_parses
 
 
 def _metadata(

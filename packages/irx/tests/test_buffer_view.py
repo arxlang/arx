@@ -35,7 +35,7 @@ from irx.builder import Builder
 from irx.builder.runtime.buffer.feature import build_buffer_runtime_feature
 from irx.builder.runtime.linking import link_executable
 
-from tests.conftest import assert_ir_parses
+from .conftest import assert_ir_parses
 
 
 def _borrowed_metadata(

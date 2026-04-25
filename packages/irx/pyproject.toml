@@ -1,8 +1,8 @@
 [project]
 name = "pyirx"
-version = "1.18.0"  # semantic-release
+version = "1.18.1"  # semantic-release
 description = "IRx"
-readme = "docs/index.md"
+readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]
@@ -10,7 +10,7 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "atpublic >= 4.0",
-  "astx (>=0.24.0)",  # semantic-release
+  "astx == 1.18.1",  # semantic-release
   "llvmlite  >= 0.44.0",
   "plum-dispatch >= 2.2.2",
   "xhell (>=0.2.1)",

@@ -17,7 +17,7 @@ from irx.analysis import (
 )
 from irx.analysis.resolved_nodes import SemanticInfo
 
-from tests.conftest import (
+from ..conftest import (
     StaticImportResolver,
     make_module,
     make_parsed_module,

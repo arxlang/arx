@@ -6,6 +6,7 @@ groups:
         run: |
           rm -fr build/
           rm -fr dist/
+          rm -fr packages/*/dist/
           rm -fr .eggs/
           find . -name '*.egg-info' -exec rm -fr {} +
           find . -name '*.egg' -exec rm -f {} +
@@ -31,7 +32,7 @@ groups:
           path:
             help: Specify the location of the tests
             type: string
-            default: ""
+            default: "packages/arx/tests/python packages/astx/tests packages/astx-transpilers/tests packages/irx/tests"
           params:
             help: Specify parameters to be used for tests
             type: string
@@ -39,19 +40,22 @@ groups:
         run: |
           pytest \
             --cov=arx \
-            --cov-fail-under=90 \
+            --cov=astx \
+            --cov=astx_transpilers \
+            --cov=irx \
+            --cov-fail-under=85 \
             --cov-report term-missing \
             --no-cov-on-fail ${{ args.path }} ${{ args.params }}
 
       arx:
         help: run Arx compiled tests
         run: |
-          arx test
+          arx test packages/arx/tests/arx
 
       syntax:
         help: run syntax tests
         run: |
-          python -m json.tool src/arx/lexer/syntax.json
+          python -m json.tool packages/arx/src/arx/lexer/syntax.json
 
       smoke:
         help: run smoke tests

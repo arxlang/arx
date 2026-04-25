@@ -8,6 +8,7 @@ authors = [
 ]
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
+dynamic = ["dependencies"]
 
 [tool.poetry]
 exclude = [
@@ -17,8 +18,8 @@ exclude = [
 package-mode = false
 
 [tool.poetry.dependencies]
-arx = { path = "packages/arx/", develop = true }
-irx = { path = "packages/irx/", develop = true }
+arxlang = { path = "packages/arx/", develop = true }
+pyirx = { path = "packages/irx/", develop = true }
 astx = { path = "packages/astx/", develop = true }
 
 [tool.poetry.group.dev.dependencies]
@@ -54,9 +55,13 @@ requires = ["poetry-core>=2"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
 testpaths = [
-    "libs/astx/tests",
-    "libs/astx-transpilers/tests",
+    "packages/arx/tests/python",
+    "packages/astx/tests",
+    "packages/irx/tests",
 ]
 filterwarnings = [
     "error::RuntimeWarning",
@@ -81,9 +86,14 @@ verbose = false
 target-version = "py310"
 line-length = 79
 force-exclude = true
-src = ["./"]
+src = [
+  "packages/arx/src",
+  "packages/astx/src",
+  "packages/irx/src",
+]
 exclude = [
   'docs',
+  'packages/*/dist',
 ]
 fix = true
 
@@ -109,7 +119,7 @@ extend-select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"libs/astx/src/astx/base.py" = [
+"packages/astx/src/astx/base.py" = [
   "UP006",
   "UP007",
 ]

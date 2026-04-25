@@ -15,7 +15,7 @@ from irx.analysis import SemanticError, SemanticInfo, analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 
-from tests.conftest import assert_ir_parses, assert_jit_int_main_result
+from .conftest import assert_ir_parses, assert_jit_int_main_result
 
 ENTER_VALUE = 7
 ENTER_STATE = 1

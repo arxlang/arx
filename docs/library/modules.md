@@ -117,7 +117,8 @@ Builtins and stdlib are intentionally separate:
 - builtins are compiler/language-provided facilities resolved by dedicated
   compiler logic
 - stdlib is the importable library namespace under `stdlib`
-- builtin source files live under `src/arx/builtins/` in the compiler repo
+- builtin source files live under `packages/arx/src/arx/builtins/` in the
+  compiler repo
 - builtin source files use the `.x` extension and are bundled inside the
   installed `arx` Python package
 - bundled builtin sources are loaded from package resources at compile time and

@@ -4,6 +4,8 @@ title: Test to see if the usage demo in README.md still works.
 
 import textwrap
 
+import pytest
+
 
 def usage_demo() -> str:
     """
@@ -33,10 +35,10 @@ def usage_demo() -> str:
         body=fn_body,
     )
 
-    from astx_transpilers.python_string import ASTxPythonTranspiler
+    python_string = pytest.importorskip("astx_transpilers.python_string")
 
     # Transpile the AST to Python
-    transpiler = ASTxPythonTranspiler()
+    transpiler = python_string.ASTxPythonTranspiler()
     python_code = transpiler.visit(add_function)
 
     return str(python_code)

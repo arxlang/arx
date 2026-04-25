@@ -12,7 +12,7 @@ from irx.analysis.module_symbols import mangle_struct_name
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 
-from tests.conftest import assert_ir_parses, make_module
+from .conftest import assert_ir_parses, make_module
 
 
 def _struct_type(name: str) -> astx.StructType:

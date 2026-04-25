@@ -31,7 +31,7 @@ from irx.astx.binary_op import (
     AddBinOp,
 )
 
-from tests.conftest import (
+from ..conftest import (
     StaticImportResolver,
     make_module,
     make_parsed_module,

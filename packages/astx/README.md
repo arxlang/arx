@@ -75,10 +75,10 @@ ASTx is designed around two primary concepts:
 2. **Tree**: Nodes are organized hierarchically, forming an abstract
    representation of the program structure.
 
-Additionally, ASTx provides a simple transpiler for converting ASTx nodes to
-Python code (in text format). This feature is intended solely for educational
-purposes, demonstrating how a transpiler from ASTx to any other language can be
-implemented.
+The companion `astx-transpilers` package provides a simple transpiler for
+converting ASTx nodes to Python code in text format. This feature is intended
+solely for educational purposes, demonstrating how a transpiler from ASTx to any
+other language can be implemented.
 
 ---
 
@@ -149,9 +149,9 @@ example:
 
 ## Transpilers
 
-ASTx includes a powerful transpiler system to convert your AST structures into
-executable Python code. This is great for code generation, prototyping, or
-building custom language tools.
+The companion `astx-transpilers` package converts AST structures into executable
+Python code. This is useful for code generation, prototyping, or building custom
+language tools.
 
 ```python
 from astx_transpilers.python_string import ASTxPythonTranspiler
@@ -168,9 +168,6 @@ print(python_code)
 def add(x: int, y: int) -> int:
     return (x + y)
 ```
-
-For a deep dive into the architecture and more hands-on examples, check out the
-**[full transpiler tutorial](docs/tutorials/astx_transpiler_refactor_tutorial.md)**.
 
 ---
 

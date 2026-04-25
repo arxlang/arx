@@ -1,6 +1,6 @@
 ```
 title: Compiled test support arithmetic module
-summary: Shared helper functions imported by compiled tests under tests/arx.
+summary: Shared helper functions imported by compiled tests under packages/arx/tests/arx.
 ```
 
 fn add2(lhs: i32, rhs: i32) -> i32:

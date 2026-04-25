@@ -25,7 +25,7 @@ from irx.analysis.module_symbols import (
 )
 from irx.analysis.resolved_nodes import SemanticInfo
 
-from tests.conftest import make_module
+from ..conftest import make_module
 
 CLASS_HEADER_SLOT_COUNT = 2
 FIRST_INSTANCE_STORAGE_INDEX = CLASS_HEADER_SLOT_COUNT

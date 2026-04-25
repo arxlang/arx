@@ -37,12 +37,13 @@ Use this guidance for any change inside the Arx compiler repository:
 
 ## Repository Layout
 
-- `src/arx/`: compiler implementation
-- `tests/python/`: Python `pytest` coverage
-- `tests/arx/`: compiled Arx tests run via `arx test`
+- `packages/arx/src/arx/`: compiler implementation
+- `packages/arx/tests/python/`: Python `pytest` coverage
+- `packages/arx/tests/arx/`: compiled Arx tests run via `arx test`
 - `examples/`: runnable language samples (`.x`)
 - `docs/`: project and language documentation
-- `src/arx/lexer/syntax.json`: lexical source-of-truth for editor tooling
+- `packages/arx/src/arx/lexer/syntax.json`: lexical source-of-truth for editor
+  tooling
 - `.makim.yaml`: local task runner definitions
 - `.github/workflows/main.yaml`: CI pipeline
 
@@ -59,33 +60,33 @@ Use this guidance for any change inside the Arx compiler repository:
 - If a needed node or lowering hook does not exist, treat that as an IRx/ASTx
   change request, not an Arx-local extension.
 
-### `src/arx/io.py`
+### `packages/arx/src/arx/io.py`
 
 - Maintains a shared text buffer used by lexer/parser flows.
 - `ArxIO.file_to_buffer` and `ArxIO.string_to_buffer` are standard entry points
   for tests and compilation.
 
-### `src/arx/lexer.py`
+### `packages/arx/src/arx/lexer.py`
 
 - Defines `TokenKind`, `Token`, `TokenList`, and `Lexer`.
 - Tokenizes indentation-sensitive syntax and emits `TokenKind.indent` for
   leading spaces at each logical line.
 - Parses docstrings delimited by triple backticks as `TokenKind.docstring`.
 
-### `src/arx/parser.py`
+### `packages/arx/src/arx/parser.py`
 
 - Converts token stream into `irx.astx` nodes through the IRx facade.
 - Enforces indentation-based blocks (`INDENT_SIZE = 2`).
 - Handles module/function docstring placement and validation.
 - Raises `ParserException` for parser-specific errors.
 
-### `src/arx/docstrings.py`
+### `packages/arx/src/arx/docstrings.py`
 
 - Validates docstring content as Douki YAML.
-- Loads schema from `src/arx/schema/douki.json`.
+- Loads schema from `packages/arx/src/arx/schema/douki.json`.
 - Enforces non-empty YAML object and schema conformance.
 
-### `src/arx/codegen.py`
+### `packages/arx/src/arx/codegen.py`
 
 - Contains the remaining Arx-specific builder adapter on top of IRx.
 - `ArxVisitor` extends `irx.builder.Visitor`.
@@ -94,7 +95,7 @@ Use this guidance for any change inside the Arx compiler repository:
 - Prefer shrinking this layer over time by upstreaming generic or feature-level
   lowering work into IRx.
 
-### `src/arx/main.py` and `src/arx/cli.py`
+### `packages/arx/src/arx/main.py` and `packages/arx/src/arx/cli.py`
 
 - CLI argument handling and execution modes (`--show-tokens`, `--show-ast`,
   `--show-llvm-ir`, compile, `--run`).
@@ -124,12 +125,12 @@ If you extend language syntax, update all affected surfaces:
 1. lexer/token definitions
 2. parser behavior
 3. tests
-4. `src/arx/lexer/syntax.json`
+4. `packages/arx/src/arx/lexer/syntax.json`
 5. docs and examples
 
 ## Codegen Invariants (Arx + IRx)
 
-When changing `src/arx/codegen.py`, preserve these invariants:
+When changing `packages/arx/src/arx/codegen.py`, preserve these invariants:
 
 - `result_stack` discipline:
   - never assume a value exists after statement-only or terminating branches
@@ -246,7 +247,7 @@ High-value commands:
 
 ```bash
 # tests
-pytest tests/python -q
+pytest packages/arx/tests/python -q
 arx test
 makim tests.arx
 
@@ -271,10 +272,10 @@ Codegen-focused checks:
 
 ```bash
 # translate-path regressions (no linker required)
-pytest -q tests/python/test_codegen_ast_output.py
+pytest -q packages/arx/tests/python/test_codegen_ast_output.py
 
 # build/run-path checks (requires clang)
-pytest -q tests/python/test_codegen_file_object.py
+pytest -q packages/arx/tests/python/test_codegen_file_object.py
 ```
 
 Smoke examples:
@@ -313,12 +314,12 @@ fences around the code block to safely include inner triple backticks.
 - Prefer targeted tests near changed behavior.
 - For parser or syntax changes: add/adjust parser tests and at least one
   example.
-- Keep Python tests under `tests/python/` and compiled Arx tests under
-  `tests/arx/`.
+- Keep Python tests under `packages/arx/tests/python/` and compiled Arx tests
+  under `packages/arx/tests/arx/`.
 - New or updated `.x` tests must include valid Douki module docstrings.
 - For codegen/control-flow changes:
   - add at least one translate-path test
-    (`tests/python/test_codegen_ast_output.py`)
+    (`packages/arx/tests/python/test_codegen_ast_output.py`)
   - add build/run assertions when behavior depends on linked execution and
     toolchain is available.
 
@@ -335,7 +336,7 @@ fences around the code block to safely include inner triple backticks.
 1. Update `TokenKind` and keyword maps.
 2. Adjust lexing logic and location behavior.
 3. Add/adjust `tests/test_lexer.py` cases.
-4. Update `src/arx/lexer/syntax.json` if lexical spec changed.
+4. Update `packages/arx/src/arx/lexer/syntax.json` if lexical spec changed.
 5. Update docs/examples.
 
 ### Adding/changing parser rules

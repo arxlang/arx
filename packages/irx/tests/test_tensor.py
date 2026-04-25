@@ -18,7 +18,7 @@ from irx.builtins.collections.tensor import (
     tensor_element_size_bytes_from_dtype,
 )
 
-from tests.conftest import assert_ir_parses, build_and_run
+from .conftest import assert_ir_parses, build_and_run
 
 
 def _module_with_main(*nodes: astx.AST) -> astx.Module:

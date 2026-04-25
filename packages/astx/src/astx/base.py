@@ -10,6 +10,7 @@ from abc import abstractmethod
 from enum import Enum
 from hashlib import sha256
 from typing import (
+    Any,
     ClassVar,
     Generic,
     Iterator,
@@ -60,13 +61,31 @@ class SourceLocation:
     col: int
 
     def __init__(self, line: int, col: int):
+        """
+        title: Initialize the source location.
+        parameters:
+          line:
+            type: int
+          col:
+            type: int
+        """
         self.line = line
         self.col = col
 
     def __str__(self) -> str:
+        """
+        title: Return a string representation of the source location.
+        returns:
+          type: str
+        """
         return "{" + f"line: {self.line}, col: {self.col}" + "}"
 
     def __repr__(self) -> str:
+        """
+        title: Return a representation of the source location.
+        returns:
+          type: str
+        """
         return str(self)
 
 
@@ -259,6 +278,11 @@ class AST(metaclass=ASTMeta):
         self._update_parent()
 
     def __hash__(self) -> int:
+        """
+        title: Return a stable hash for the AST structure.
+        returns:
+          type: int
+        """
         value = sha256(f"{self.get_struct()}".encode("utf8")).digest()
         return int.from_bytes(value, "big")
 
@@ -325,6 +349,18 @@ class AST(metaclass=ASTMeta):
         value: PrimitivesStruct | ReprStruct,
         simplified: bool,
     ) -> ReprStruct:
+        """
+        title: Prepare a representation structure for the node.
+        parameters:
+          key:
+            type: str
+          value:
+            type: PrimitivesStruct | ReprStruct
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
         struct: ReprStruct = (
             {
                 key: {
@@ -584,7 +620,7 @@ class Undefined(Expr):
 
 
 PrimitivesStruct: TypeAlias = int | str | float | bool | Undefined
-DataTypesStruct: TypeAlias = PrimitivesStruct | dict[str, "DataTypesStruct"] | list["DataTypesStruct"]
+DataTypesStruct: TypeAlias = PrimitivesStruct | dict[str, Any] | list[Any]
 DictDataTypesStruct: TypeAlias = dict[str, DataTypesStruct]
 ReprStruct: TypeAlias = list[DataTypesStruct] | DictDataTypesStruct | Undefined
 
@@ -624,6 +660,14 @@ class DataType(ExprType):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the data type.
+        parameters:
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.name = f"temp_{DataType._tmp_id}"
         DataType._tmp_id += 1

@@ -1,0 +1,231 @@
+# Contributing Guideline
+
+In order to be able to contribute, it is important that you understand the
+project layout. This project uses the _src layout_, which means that the package
+code is located at `./packages/irx/src/irx`.
+
+For my information, check the official documentation:
+https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
+
+In addition, you should know that to build our package we use
+[Poetry](https://python-poetry.org/), it's a Python package management tool that
+simplifies the process of building and publishing Python packages. It allows us
+to easily manage dependencies, virtual environments and package versions. Poetry
+also includes features such as dependency resolution, lock files and publishing
+to PyPI. Overall, Poetry streamlines the process of managing Python packages,
+making it easier for us to create and share our code with others.
+
+Contributions are welcome, and they are greatly appreciated! Every little bit
+helps, and credit will always be given.
+
+You can contribute in many ways:
+
+## Types of Contributions
+
+### Report Bugs
+
+Report bugs at https://github.com/arxlang/arx/issues.
+
+If you are reporting a bug, please include:
+
+- Your operating system name and version.
+- Any details about your local setup that might be helpful in troubleshooting.
+- Detailed steps to reproduce the bug.
+
+### Fix Bugs
+
+Look through the GitHub issues for bugs. Anything tagged with "bug" and "help
+wanted" is open to whoever wants to implement it.
+
+### Implement Features
+
+Look through the GitHub issues for features. Anything tagged with "enhancement"
+and "help wanted" is open to whoever wants to implement it.
+
+### Write Documentation
+
+IRx could always use more documentation, whether as part of the official IRx
+docs, in docstrings, or even on the web in blog posts, articles, and such.
+
+### Submit Feedback
+
+The best way to send feedback is to file an issue at
+https://github.com/arxlang/arx/issues.
+
+If you are proposing a feature:
+
+- Explain in detail how it would work.
+- Keep the scope as narrow as possible, to make it easier to implement.
+- Remember that this is a volunteer-driven project, and that contributions are
+  welcome :)
+
+## Get Started!
+
+Ready to contribute? Here’s how to set up `irx` for local development.
+
+1.  Fork the `arx` monorepo on GitHub.
+2.  Clone your fork locally:
+
+    ```bash
+    $ git clone git@github.com:your_name_here/arx.git
+    $ cd arx/
+    ```
+
+3.  Create a new virtual environment and install your local copy into that:
+
+    ```bash
+    # note: you can use mamba or conda or micromamba
+    $ mamba env create --file conda/dev.yaml
+    $ conda activate arx
+    $ poetry install
+    ```
+
+4.  Create a branch for local development:
+
+    ```bash
+    $ git checkout -b name-of-your-bugfix-or-feature
+    # Now you can make your changes locally.
+    ```
+
+5.  When you’re done making changes, check that your changes pass the linter and
+    the tests:
+
+    ```bash
+    $ makim tests.linter
+    $ makim tests.unit
+    ```
+
+    If you need to bootstrap the repository's Codex configuration, run:
+
+    ```bash
+    $ makim llm-config.codex
+    ```
+
+    This task clones `https://github.com/arxlang/llm-config` into
+    `./.tmp/llm-config`, copies the cloned `.codex` directory into the
+    repository root, and removes the temporary clone when it finishes. The
+    reusable `llm-config.setup` and `llm-config.cleanup` tasks are available as
+    Makim hooks for future LLM config tasks.
+
+## Runtime Type Checking
+
+IRx keeps runtime type checking on by default for its own code under
+`packages/irx/src/irx`.
+
+- Use `irx.typecheck.typechecked` on every module-level function and every
+  concrete class.
+- Methods are expected to be covered through the class decorator; avoid adding
+  per-method decorators unless the class itself cannot be decorated.
+- Keep `@public` or `@private` outermost and place `@typechecked` on the
+  implementation boundary; for wrappers like `@lru_cache(...)`, that means
+  keeping `@typechecked` closest to the original function.
+- Keep class decorators ordered as `@public` or `@private`, then `@typechecked`,
+  then `@dataclass(...)`.
+- Write Douki docstrings for private helpers too. Underscore-prefixed functions,
+  methods, and other internal implementation helpers should still have
+  repository-style docstrings unless they are a clearly documented exemption
+  such as a typing-only stub.
+- If you need an exemption for a `Protocol` or a typing-only stub, document it
+  clearly and update `packages/irx/tests/test_typechecked_policy.py` in the same
+  change.
+
+## Code Style And Architecture
+
+When contributing to IRx, prefer a small set of architectural habits that keep
+the codebase easier to evolve:
+
+- Do not define classes inside `if TYPE_CHECKING:` blocks. Prefer top-level
+  `Protocol` definitions, aliases, or other patterns that keep typing helpers
+  out of the runtime MRO without hiding class definitions behind conditional
+  blocks.
+- Apply SOLID principles when they improve the design and keep the change
+  practical.
+- Prefer a "never nesting" style when possible: use guard clauses, early
+  returns, and extracted helpers to keep control flow flat and readable.
+- Keep test function names short and descriptive. Prefer a concise test name
+  plus a clear docstring over one long function name that tries to spell out the
+  entire scenario.
+- Avoid literal numbers in assertions when the number is part of the expected
+  behavior. Assign the expected value to a local variable first so the assertion
+  documents intent without relying on magic numbers.
+
+6.  Commit your changes and push your branch to GitHub:
+
+    ```bash
+    $ git add .
+    $ git commit -m "Your detailed description of your changes."
+    $ git push origin name-of-your-bugfix-or-feature
+    ```
+
+7.  Submit a pull request through the GitHub website.
+
+## Pull Request Guidelines
+
+Before you submit a pull request, check that it meets these guidelines:
+
+1.  The pull request should include tests.
+2.  If the pull request adds functionality, the docs should be updated. Put your
+    new functionality into a function with a docstring, and add the feature to
+    the list in README.md.
+3.  The pull request should work for Python >= 3.8.
+
+## Tips
+
+To run a subset of tests, you can use something like:
+
+```bash
+$ pytest tests.test_binary_op
+```
+
+or
+
+```bash
+$ makim tests.unit --path "packages/irx/tests/test_binary_op.py" --params "-k mytest_func"
+```
+
+## Release
+
+This project uses semantic-release in order to cut a new release based on the
+commit-message.
+
+### Commit message format
+
+**semantic-release** uses the commit messages to determine the consumer impact
+of changes in the codebase. Following formalized conventions for commit
+messages, **semantic-release** automatically determines the next
+[semantic version](https://semver.org) number, generates a changelog and
+publishes the release.
+
+By default, **semantic-release** uses
+[Angular Commit Message Conventions](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#-commit-message-format).
+The commit message format can be changed with the `preset` or `config` options\_
+of the
+[@semantic-release/commit-analyzer](https://github.com/semantic-release/commit-analyzer#options)
+and
+[@semantic-release/release-notes-generator](https://github.com/semantic-release/release-notes-generator#options)
+plugins.
+
+Tools such as [commitizen](https://github.com/commitizen/cz-cli) or
+[commitlint](https://github.com/conventional-changelog/commitlint) can be used
+to help contributors and enforce valid commit messages.
+
+The table below shows which commit message gets you which release type when
+`semantic-release` runs (using the default configuration):
+
+| Commit message                                                 | Release type     |
+| -------------------------------------------------------------- | ---------------- |
+| `fix(pencil): stop graphite breaking when pressure is applied` | Fix Release      |
+| `feat(pencil): add 'graphiteWidth' option`                     | Feature Release  |
+| `perf(pencil): remove graphiteWidth option`                    | Chore            |
+| `feat(pencil)!: The graphiteWidth option has been removed`     | Breaking Release |
+
+_NOTE: Breaking change's commit message prefix should have `!` before `:`_.
+Also, ensure to specify `feat` or `fix` in the prefix.
+
+**References:**
+
+- https://github.com/semantic-release/semantic-release/blob/master/README.md#commit-message-format
+- https://www.conventionalcommits.org/en/v1.0.0/
+
+This project uses the `squash and merge` strategy, so ensure to apply the commit
+message format to the PR's title.

@@ -12,7 +12,7 @@ from irx.analysis.module_symbols import (
 )
 from irx.builder import Builder
 
-from tests.conftest import (
+from .conftest import (
     StaticImportResolver,
     assert_ir_parses,
     make_parsed_module,

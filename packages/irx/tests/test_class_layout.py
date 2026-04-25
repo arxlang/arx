@@ -18,7 +18,7 @@ from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 from llvmlite import binding as llvm
 
-from tests.conftest import (
+from .conftest import (
     assert_ir_parses,
     assert_jit_int_main_result,
     make_module,

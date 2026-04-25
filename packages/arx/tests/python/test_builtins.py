@@ -47,7 +47,9 @@ def test_bundled_builtin_package_data_is_present() -> None:
     assert child_asset.origin == "arx:builtins/generators.x"
     assert child_asset.is_package is False
 
-    pyproject = tomllib.loads(Path("pyproject.toml").read_text("utf-8"))
+    pyproject = tomllib.loads(
+        Path("packages/arx/pyproject.toml").read_text("utf-8")
+    )
     includes = pyproject["tool"]["poetry"]["include"]
     assert "src/arx/builtins/**/*.x" in includes
 

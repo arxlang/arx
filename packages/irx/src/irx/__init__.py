@@ -6,6 +6,8 @@ from importlib import metadata as importlib_metadata
 
 from irx.typecheck import typechecked
 
+_DISTRIBUTION_NAME = "pyirx"
+
 
 @typechecked
 def get_version() -> str:
@@ -15,9 +17,9 @@ def get_version() -> str:
       type: str
     """
     try:
-        return importlib_metadata.version(__name__)
+        return importlib_metadata.version(_DISTRIBUTION_NAME)
     except importlib_metadata.PackageNotFoundError:  # pragma: no cover
-        return "1.18.0"  # semantic-release
+        return "1.18.1"  # semantic-release
 
 
 __author__ = """Ivan Ogasawara"""

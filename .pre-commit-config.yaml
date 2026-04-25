@@ -22,40 +22,136 @@ repos:
 
   - repo: local
     hooks:
-      - id: ruff-format
-        name: ruff-format
-        entry: ruff format
-        exclude: |
-          (?x)(
-            docs
-          )
+      - id: ruff-format-arx
+        name: ruff-format-arx
+        entry: ruff format --config packages/arx/pyproject.toml
+        files: ^packages/arx/.*\.py$
         language: system
         pass_filenames: true
         types:
           - python
 
-      - id: ruff-linter
-        name: ruff-linter
-        entry: ruff check
+      - id: ruff-format-astx
+        name: ruff-format-astx
+        entry: ruff format --config pyproject.toml
+        files: ^packages/astx/.*\.py$
         language: system
-        exclude: "docs/"
         pass_filenames: true
         types:
           - python
 
-      - id: douki
-        name: douki
+      - id: ruff-format-irx
+        name: ruff-format-irx
+        entry: ruff format --config packages/irx/pyproject.toml
+        files: ^packages/irx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-format-tools
+        name: ruff-format-tools
+        entry: ruff format --config pyproject.toml
+        files: ^scripts/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-arx
+        name: ruff-check-arx
+        entry: ruff check --config packages/arx/pyproject.toml
+        files: ^packages/arx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-astx
+        name: ruff-check-astx
+        entry: ruff check --config pyproject.toml
+        files: ^packages/astx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-irx
+        name: ruff-check-irx
+        entry: ruff check --config packages/irx/pyproject.toml
+        files: ^packages/irx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-tools
+        name: ruff-check-tools
+        entry: ruff check --config pyproject.toml
+        files: ^scripts/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: douki-arx
+        name: douki-arx
         entry: douki sync
+        files: ^packages/arx/.*\.py$
         language: system
         pass_filenames: true
         require_serial: yes
-        files: "./"
         types:
           - python
 
-      - id: mypy
-        name: mypy
-        entry: mypy .
+      - id: douki-tools
+        name: douki-tools
+        entry: douki sync
+        files: ^scripts/.*\.py$
+        language: system
+        pass_filenames: true
+        require_serial: yes
+        types:
+          - python
+
+      - id: douki-irx
+        name: douki-irx
+        entry: douki sync
+        files: ^packages/irx/.*\.py$
+        language: system
+        pass_filenames: true
+        require_serial: yes
+        types:
+          - python
+
+      - id: douki-astx
+        name: douki-astx
+        entry: douki sync
+        files: ^packages/astx/.*\.py$
+        language: system
+        pass_filenames: true
+        require_serial: yes
+        types:
+          - python
+
+      - id: mypy-arx
+        name: mypy-arx
+        entry: bash -c 'cd packages/arx && mypy src'
+        files: ^packages/arx/.*\.py$
+        language: system
+        pass_filenames: false
+
+      - id: mypy-astx
+        name: mypy-astx
+        entry: bash -c 'cd packages/astx && mypy src'
+        files: ^packages/astx/.*\.py$
+        language: system
+        pass_filenames: false
+
+      - id: mypy-irx
+        name: mypy-irx
+        entry: bash -c 'cd packages/irx && mypy src'
+        files: ^packages/irx/.*\.py$
         language: system
         pass_filenames: false
 
@@ -72,30 +168,118 @@ repos:
           - dash
           - ksh
 
-      - id: bandit
-        name: bandit
+      - id: bandit-arx
+        name: bandit-arx
+        entry: bandit
+        language: system
+        args: ["--configfile", "packages/arx/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/arx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: bandit-astx
+        name: bandit-astx
         entry: bandit
         language: system
         args: ["--configfile", "pyproject.toml", "-iii", "-lll"]
+        files: ^packages/astx/.*\.py$
         pass_filenames: true
         types:
           - python
 
-      - id: vulture
-        name: vulture
+      - id: bandit-irx
+        name: bandit-irx
+        entry: bandit
+        language: system
+        args: ["--configfile", "packages/irx/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/irx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: bandit-tools
+        name: bandit-tools
+        entry: bandit
+        language: system
+        args: ["--configfile", "pyproject.toml", "-iii", "-lll"]
+        files: ^scripts/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: vulture-arx
+        name: vulture-arx
         entry: vulture --min-confidence 80
         language: system
-        files: "./"
-        description: Find unused Python code.
+        files: ^packages/arx/.*\.py$
+        description: Find unused Arx Python code.
         pass_filenames: true
         types:
           - python
 
-      - id: mccabe
-        name: mccabe
+      - id: vulture-astx
+        name: vulture-astx
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^packages/astx/.*\.py$
+        description: Find unused ASTx Python code.
+        pass_filenames: true
+        types:
+          - python
+
+      - id: vulture-irx
+        name: vulture-irx
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^packages/irx/.*\.py$
+        description: Find unused IRx Python code.
+        pass_filenames: true
+        types:
+          - python
+
+      - id: vulture-tools
+        name: vulture-tools
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^scripts/.*\.py$
+        description: Find unused tooling Python code.
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-arx
+        name: mccabe-arx
         entry: python -m mccabe --min 10
         language: system
-        files: "./"
+        files: ^packages/arx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-astx
+        name: mccabe-astx
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^packages/astx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-irx
+        name: mccabe-irx
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^packages/irx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-tools
+        name: mccabe-tools
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^scripts/.*\.py$
         pass_filenames: true
         types:
           - python
