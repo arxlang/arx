@@ -10,13 +10,13 @@ from __future__ import annotations
 from typing import cast
 
 from irx import astx
-from irx.buffer import BUFFER_VIEW_METADATA_EXTRA
+from irx.builtins.collections.tensor import TENSOR_LAYOUT_EXTRA, TensorLayout
 
 from arx import builtins
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
-from arx.ndarray import attach_binding, infer_descriptor
 from arx.parser.base import ParserMixinBase
+from arx.tensor import attach_binding, infer_literal
 
 
 class ExpressionParserMixin(ParserMixinBase):
@@ -253,7 +253,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
     def parse_array_expr(self) -> astx.Literal:
         """
-        title: Parse list and ndarray literals.
+        title: Parse list and tensor literals.
         returns:
           type: astx.Literal
         """
@@ -265,7 +265,7 @@ class ExpressionParserMixin(ParserMixinBase):
                 elem = self.parse_expression()
                 if not isinstance(elem, astx.Literal):
                     raise ParserException(
-                        "List and ndarray literals currently support only "
+                        "List and tensor literals currently support only "
                         "literal elements."
                     )
                 elements.append(elem)
@@ -298,7 +298,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
         if not self._is_operator("("):
             identifier = astx.Identifier(id_name, loc=id_loc)
-            binding = self._lookup_ndarray_binding(id_name)
+            binding = self._lookup_tensor_binding(id_name)
             if binding is not None:
                 attach_binding(identifier, binding)
             return identifier
@@ -373,7 +373,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
     def parse_subscript_expr(self, base: astx.AST) -> astx.AST:
         """
-        title: Parse one postfix subscript or ndarray index expression.
+        title: Parse one postfix subscript or tensor index expression.
         parameters:
           base:
             type: astx.AST
@@ -395,12 +395,12 @@ class ExpressionParserMixin(ParserMixinBase):
 
         self._consume_operator("]")
 
-        ndarray_base = self._coerce_ndarray_base(base)
-        if ndarray_base is None:
+        tensor_base = self._coerce_tensor_base(base)
+        if tensor_base is None:
             if len(indices) != 1:
                 raise ParserException(
                     "Multidimensional indexing is only supported for "
-                    "ndarray values."
+                    "tensor values."
                 )
             return astx.SubscriptExpr(
                 cast(astx.Expr, base),
@@ -408,82 +408,85 @@ class ExpressionParserMixin(ParserMixinBase):
                 loc=subscript_loc,
             )
 
-        self._validate_ndarray_indices(ndarray_base, indices)
-        return astx.BufferViewIndex(ndarray_base, indices)
+        self._validate_tensor_indices(tensor_base, indices)
+        return astx.TensorIndex(tensor_base, indices)
 
-    def _coerce_ndarray_base(self, base: astx.AST) -> astx.AST | None:
+    def _coerce_tensor_base(self, base: astx.AST) -> astx.AST | None:
         """
-        title: Return one ndarray-aware indexing base when available.
+        title: Return one tensor-aware indexing base when available.
         parameters:
           base:
             type: astx.AST
         returns:
           type: astx.AST | None
         """
-        if isinstance(base, astx.BufferViewDescriptor):
+        if isinstance(base, astx.TensorLiteral):
             return base
 
         if isinstance(base, astx.Identifier):
-            binding = self._lookup_ndarray_binding(base.name)
+            binding = self._lookup_tensor_binding(base.name)
             if binding is not None:
                 attach_binding(base, binding)
                 return base
-            if not self._is_ndarray_name(base.name):
-                return None
-            return base
+            return None
 
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
             try:
-                return infer_descriptor(base)
+                return infer_literal(base)
             except ValueError:
                 return None
 
         return None
 
-    def _validate_ndarray_indices(
+    def _validate_tensor_indices(
         self,
         base: astx.AST,
         indices: list[astx.Expr],
     ) -> None:
         """
-        title: Validate one ndarray index arity and static bounds.
+        title: Validate one tensor index arity and static bounds.
         parameters:
           base:
             type: astx.AST
           indices:
             type: list[astx.Expr]
         """
-        metadata = getattr(
+        layout = getattr(
             getattr(base, "semantic", None),
             "extras",
             {},
-        ).get(BUFFER_VIEW_METADATA_EXTRA)
-        if metadata is None and isinstance(base, astx.BufferViewDescriptor):
-            metadata = base.metadata
-        if metadata is None:
-            return
+        ).get(TENSOR_LAYOUT_EXTRA)
+        if not isinstance(layout, TensorLayout):
+            if isinstance(base, astx.TensorLiteral):
+                layout = TensorLayout(
+                    shape=base.shape,
+                    strides=base.strides or (),
+                    offset_bytes=base.offset_bytes,
+                )
+            else:
+                return
 
-        if len(indices) != metadata.ndim:
+        if len(indices) != layout.ndim:
             raise ParserException(
-                "NDArray indexing expects "
-                f"{metadata.ndim} indices for shape "
-                f"{self._format_ndarray_shape(metadata.shape)}."
+                "Tensor indexing expects "
+                f"{layout.ndim} indices for shape "
+                f"{self._format_tensor_shape(layout.shape)}."
             )
 
         for axis, index in enumerate(indices):
             if not isinstance(index, astx.LiteralInt32):
                 continue
-            extent = metadata.shape[axis]
+            extent = layout.shape[axis]
             if index.value < 0 or index.value >= extent:
                 raise ParserException(
-                    "NDArray index "
+                    "Tensor index "
                     f"{index.value} is out of bounds for dimension {axis} "
                     f"with extent {extent}."
                 )
 
-    def _format_ndarray_shape(self, shape: tuple[int, ...]) -> str:
+    def _format_tensor_shape(self, shape: tuple[int, ...]) -> str:
         """
-        title: Render one ndarray shape in parser diagnostics.
+        title: Render one tensor shape in parser diagnostics.
         parameters:
           shape:
             type: tuple[int, Ellipsis]

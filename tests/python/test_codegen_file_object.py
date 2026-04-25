@@ -270,9 +270,9 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
-def test_ndarray_program_builds_and_runs(tmp_path: Path) -> None:
+def test_tensor_program_builds_and_runs(tmp_path: Path) -> None:
     """
-    title: NDArray literals and indexing should survive full build and run.
+    title: Tensor literals and indexing should survive full build and run.
     parameters:
       tmp_path:
         type: Path
@@ -280,18 +280,18 @@ def test_ndarray_program_builds_and_runs(tmp_path: Path) -> None:
     module_ast = _parse_min_module(
         dedent(
             """
-            fn pick(grid: ndarray[i32, 2, 2]) -> i32:
+            fn pick(grid: tensor[i32, 2, 2]) -> i32:
               return grid[1, 0] + grid[0, 1]
 
             fn main() -> i32:
-              var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
-              var ids: ndarray[i32, 4] = [5, 6, 7, 8]
+              var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+              var ids: tensor[i32, 4] = [5, 6, 7, 8]
               return pick(grid) + ids[2]
             """
         ).lstrip()
     )
 
-    bin_path = tmp_path / "ndarray_program"
+    bin_path = tmp_path / "tensor_program"
     ArxBuilder().build(module_ast, str(bin_path))
 
     result = subprocess.run(
