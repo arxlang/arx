@@ -12,6 +12,7 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
+from arx.parser.state import TypeUseContext
 from arx.tensor import tensor_shape
 from irx import astx
 
@@ -269,25 +270,78 @@ def test_parse_list_and_tensor_type_forms_and_default_values() -> None:
     assert isinstance(list_default.type_, astx.ListType)
 
 
-def test_parse_unsized_tensor_type_is_rejected() -> None:
+def test_parse_runtime_shaped_tensor_parameters() -> None:
     """
-    title: Unsized tensor annotations are rejected in the current phase.
+    title: Runtime-shaped tensor annotations are accepted for parameters.
+    """
+    ArxIO.string_to_buffer("tensor[i32, ...]")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    runtime_tensor = parser.parse_type(type_context=TypeUseContext.PARAMETER)
+    assert isinstance(runtime_tensor, astx.TensorType)
+    assert tensor_shape(runtime_tensor) is None
+
+    indexed_tree = _parse(
+        "fn read(values: tensor[i32, ...]) -> i32:\n  return values[0]\n"
+    )
+    read_fn = indexed_tree.nodes[0]
+    assert isinstance(read_fn, astx.FunctionDef)
+    read_return = read_fn.body.nodes[0]
+    assert isinstance(read_return, astx.FunctionReturn)
+    assert isinstance(read_return.value, astx.TensorIndex)
+
+    tree = _parse(
+        "extern consume(values: tensor[i32, ...]) -> i32\n"
+        "fn passthrough(values: tensor[i32, ...]) -> i32:\n"
+        "  return consume(values)\n"
+        "class TensorSink:\n"
+        "  fn accept(self, values: tensor[i32, ...]) -> i32:\n"
+        "    return consume(values)\n"
+    )
+    extern = tree.nodes[0]
+    fn = tree.nodes[1]
+    class_def = tree.nodes[2]
+    assert isinstance(extern, astx.FunctionPrototype)
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(class_def, astx.ClassDefStmt)
+    assert isinstance(extern.args.nodes[0].type_, astx.TensorType)
+    assert tensor_shape(extern.args.nodes[0].type_) is None
+    assert tensor_shape(fn.prototype.args.nodes[0].type_) is None
+    method = class_def.methods[0]
+    assert tensor_shape(method.prototype.args.nodes[0].type_) is None
+
+
+def test_parse_runtime_shaped_tensor_restricted_contexts() -> None:
+    """
+    title: Runtime-shaped tensor annotations are rejected outside parameters.
     """
     ArxIO.string_to_buffer("tensor[i32]")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="static shape"):
+    with pytest.raises(ParserException, match="tensor\\[i32, \\.\\.\\.\\]"):
+        parser.parse_type()
+
+    ArxIO.string_to_buffer("tensor[i32, ...]")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="function parameter"):
         parser.parse_type()
 
     with pytest.raises(ParserException, match="static shape"):
-        _parse("fn vector(values: tensor[i32]) -> i32:\n  return values[0]\n")
+        _parse("fn vector(values: tensor[i32]) -> i32:\n  return 0\n")
 
-    with pytest.raises(ParserException, match="static shape"):
+    with pytest.raises(ParserException, match="function parameter"):
         _parse(
             "fn main() -> i32:\n"
-            "  var values: tensor[i32] = [1, 2, 3]\n"
-            "  return values[1]\n"
+            "  var values: tensor[i32, ...] = [1, 2, 3]\n"
+            "  return 0\n"
         )
+
+    with pytest.raises(ParserException, match="function parameter"):
+        _parse("fn make() -> tensor[i32, ...]:\n  return [1, 2]\n")
+
+    with pytest.raises(ParserException, match="function parameter"):
+        _parse("class Bad:\n  values: tensor[i32, ...]\n")
 
 
 def test_parse_list_types_reject_shape_dimensions() -> None:
@@ -675,6 +729,26 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
             "  var grid: tensor[i32, size] = [1, 2]\n"
             "  return 0\n",
             "integer literals",
+        ),
+        (
+            "fn bad(values: tensor[i32, 2, ...]) -> i32:\n  return 0\n",
+            "cannot be combined",
+        ),
+        (
+            "fn bad(values: tensor[i32, ..., 2]) -> i32:\n  return 0\n",
+            "cannot be combined",
+        ),
+        (
+            "fn bad(values: tensor[i32, .]) -> i32:\n  return 0\n",
+            "must be '\\.\\.\\.'",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  for var values: tensor[i32, ...] = [1, 2]; "
+            "values[0] < 3; values:\n"
+            "    return 0\n"
+            "  return 0\n",
+            "function parameter",
         ),
     ],
 )

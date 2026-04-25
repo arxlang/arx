@@ -244,14 +244,18 @@ def test_tensor_surface_type_and_binding_round_trip() -> None:
     title: Tensor surface types round-trip through shape and binding metadata.
     """
     target_type = tensor_type(astx.Int16(), (2, 3))
+    runtime_type = tensor_type(astx.Int16())
     binding = _binding_for(target_type)
 
     assert is_tensor_type(target_type) is True
+    assert is_tensor_type(runtime_type) is True
     assert is_tensor_type(astx.TensorType(astx.Int16())) is False
     assert tensor_shape(target_type) == (2, 3)
+    assert tensor_shape(runtime_type) is None
     assert tensor_shape(None) is None
     assert is_tensor_type(astx.ListType([astx.Int16()])) is False
     assert binding_from_type(astx.ListType([astx.Int16()])) is None
+    assert binding_from_type(runtime_type) is None
 
     assert binding.layout.ndim == 2
     assert binding.layout.shape == (2, 3)
@@ -265,12 +269,8 @@ def test_tensor_surface_type_and_binding_round_trip() -> None:
 def test_tensor_type_rejects_invalid_shapes_and_elements() -> None:
     """
     title: >-
-      Tensor types reject missing shapes, empty shapes, negative shapes, and
-      bool elements.
+      Tensor types reject empty shapes, negative shapes, and bool elements.
     """
-    with pytest.raises(ValueError, match="static shape"):
-        tensor_type(astx.Int32())
-
     with pytest.raises(ValueError, match="at least one dimension"):
         tensor_type(astx.Int32(), ())
 
@@ -296,10 +296,8 @@ def test_zero_extent_binding_and_default_value_paths() -> None:
     assert values[0] is not values[1]
     assert literal.shape == (2, 2)
 
-    missing_shape_type = astx.TensorType(astx.Int32())
-    setattr(missing_shape_type, tensor_module.TENSOR_SURFACE_ATTR, True)
     with pytest.raises(ValueError, match="static tensor shape"):
-        default_value(missing_shape_type)
+        default_value(tensor_type(astx.Int32()))
 
 
 def test_attach_binding_and_coerce_expression_cover_branch_paths() -> None:
@@ -359,12 +357,10 @@ def test_build_literal_and_infer_literal_round_trip() -> None:
     assert isinstance(literal.type_, astx.TensorType)
     assert tensor_shape(literal.type_) == (2, 2)
 
-    missing_shape_type = astx.TensorType(astx.Int32())
-    setattr(missing_shape_type, tensor_module.TENSOR_SURFACE_ATTR, True)
     with pytest.raises(ValueError, match="static tensor shape"):
         build_literal_from_literal(
             astx.LiteralList([astx.LiteralInt32(8), astx.LiteralInt32(9)]),
-            missing_shape_type,
+            tensor_type(astx.Int32()),
             context="initializer",
         )
 

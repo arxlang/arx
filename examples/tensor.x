@@ -10,6 +10,13 @@ fn pick(grid: tensor[i32, 2, 2]) -> i32:
   ```
   return grid[1, 0] + grid[0, 1]
 
+fn accept_runtime_shape(values: tensor[i32, ...]) -> none:
+  ```
+  title: accept_runtime_shape
+  summary: Accepts a tensor whose shape is supplied at runtime.
+  ```
+  return none
+
 fn main() -> i32:
   ```
   title: main

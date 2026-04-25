@@ -128,9 +128,7 @@ def tensor_type(
     """
     _element_size_bytes(element_type)
     if shape is None:
-        raise ValueError(
-            "tensor types require at least one static shape dimension"
-        )
+        return _mark_tensor_type(astx.TensorType(element_type), None)
     if not shape:
         raise ValueError("tensor shapes must include at least one dimension")
     if any(dim < 0 for dim in shape):

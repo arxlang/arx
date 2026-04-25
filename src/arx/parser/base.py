@@ -13,6 +13,7 @@ from arx.lexer import Token, TokenList
 from arx.parser.state import (
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
+    TypeUseContext,
 )
 from arx.tensor import TensorBinding
 
@@ -30,7 +31,7 @@ class ParserMixinBase:
       known_class_names:
         type: set[str]
       tensor_scopes:
-        type: list[dict[str, TensorBinding]]
+        type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -45,7 +46,7 @@ class ParserMixinBase:
     indent_level: int
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    tensor_scopes: list[dict[str, TensorBinding]]
+    tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -55,7 +56,7 @@ class ParserMixinBase:
         self,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_tensors: dict[str, TensorBinding] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope.
@@ -65,7 +66,7 @@ class ParserMixinBase:
           declared_lists:
             type: tuple[str, Ellipsis]
           declared_tensors:
-            type: dict[str, TensorBinding] | None
+            type: dict[str, TensorBinding | None] | None
         """
         del declared_names
         del declared_lists
@@ -103,7 +104,7 @@ class ParserMixinBase:
     def _declare_tensor_name(
         self,
         name: str,
-        binding: TensorBinding,
+        binding: TensorBinding | None,
     ) -> None:
         """
         title: Record one visible tensor binding in the current scope.
@@ -111,10 +112,22 @@ class ParserMixinBase:
           name:
             type: str
           binding:
-            type: TensorBinding
+            type: TensorBinding | None
         """
         del name
         del binding
+        raise NotImplementedError
+
+    def _is_tensor_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a tensor.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        del name
         raise NotImplementedError
 
     def _declare_list_name(self, name: str) -> None:
@@ -339,7 +352,7 @@ class ParserMixinBase:
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_tensors: dict[str, TensorBinding] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse one block of nodes.
@@ -351,7 +364,7 @@ class ParserMixinBase:
           declared_lists:
             type: tuple[str, Ellipsis]
           declared_tensors:
-            type: dict[str, TensorBinding] | None
+            type: dict[str, TensorBinding | None] | None
         returns:
           type: astx.Block
         """
@@ -363,6 +376,7 @@ class ParserMixinBase:
         *,
         allow_template_vars: bool = True,
         allow_union: bool = False,
+        type_context: TypeUseContext = TypeUseContext.GENERAL,
     ) -> astx.DataType:
         """
         title: Parse one type annotation.
@@ -371,10 +385,12 @@ class ParserMixinBase:
             type: bool
           allow_union:
             type: bool
+          type_context:
+            type: TypeUseContext
         returns:
           type: astx.DataType
         """
-        del allow_template_vars, allow_union
+        del allow_template_vars, allow_union, type_context
         raise NotImplementedError
 
     def parse_function(

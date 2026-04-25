@@ -33,7 +33,7 @@ class ParserCore(ParserMixinBase):
       known_class_names:
         type: set[str]
       tensor_scopes:
-        type: list[dict[str, TensorBinding]]
+        type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -48,7 +48,7 @@ class ParserCore(ParserMixinBase):
     indent_level: int = 0
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    tensor_scopes: list[dict[str, TensorBinding]]
+    tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -215,7 +215,7 @@ class ParserCore(ParserMixinBase):
         self,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_tensors: dict[str, TensorBinding] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
@@ -225,7 +225,7 @@ class ParserCore(ParserMixinBase):
           declared_lists:
             type: tuple[str, Ellipsis]
           declared_tensors:
-            type: dict[str, TensorBinding] | None
+            type: dict[str, TensorBinding | None] | None
         """
         self.value_scopes.append(set(declared_names))
         self.list_scopes.append(set(declared_lists))
@@ -265,7 +265,7 @@ class ParserCore(ParserMixinBase):
     def _declare_tensor_name(
         self,
         name: str,
-        binding: TensorBinding,
+        binding: TensorBinding | None,
     ) -> None:
         """
         title: Record one visible tensor binding in the current scope.
@@ -273,9 +273,20 @@ class ParserCore(ParserMixinBase):
           name:
             type: str
           binding:
-            type: TensorBinding
+            type: TensorBinding | None
         """
         self.tensor_scopes[-1][name] = binding
+
+    def _is_tensor_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a tensor.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        return any(name in scope for scope in reversed(self.tensor_scopes))
 
     def _declare_list_name(self, name: str) -> None:
         """

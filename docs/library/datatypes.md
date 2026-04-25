@@ -41,6 +41,11 @@ Common places where types appear:
 - generic collection annotations: `list[i32]`
 - shaped 1D tensor annotations: `tensor[i32, 4]`
 - multidimensional tensor annotations: `tensor[i32, 2, 2]`
+- runtime-shaped tensor parameters: `fn sink(x: tensor[i32, ...]) -> none:`
+
+`tensor[T, ...]` is currently parameter-only. Use fixed-shape tensor annotations
+for variables, fields, and return types until runtime-shaped storage and return
+semantics are defined.
 
 ## Built-in Type Reference
 

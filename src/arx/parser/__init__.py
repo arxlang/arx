@@ -39,7 +39,7 @@ class Parser(
       known_class_names:
         type: set[str]
       tensor_scopes:
-        type: list[dict[str, TensorBinding]]
+        type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -53,7 +53,7 @@ class Parser(
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
-    tensor_scopes: list[dict[str, TensorBinding]]
+    tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
