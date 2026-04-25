@@ -17,6 +17,13 @@ fn mul_add(lhs: i32, rhs: i32, extra: i32) -> i32:
   ```
   return (lhs * rhs) + extra
 
+fn add_offset(value: i32, offset: i32 = 1) -> i32:
+  ```
+  title: add_offset
+  summary: Adds an optional integer offset to one value.
+  ```
+  return value + offset
+
 fn fib(value: i32) -> i32:
   ```
   title: fib
@@ -41,6 +48,8 @@ fn test_helper_function_calls() -> none:
   ```
   assert add(1, 2) == 3
   assert mul_add(2, 3, 4) == 10
+  assert add_offset(4) == 5
+  assert add_offset(4, 3) == 7
 
 fn test_recursive_calls() -> none:
   ```

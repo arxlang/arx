@@ -7,6 +7,6 @@ fn print_star(n: i32) -> none:
   title: print_star
   summary: Prints stars in a loop by calling print.
   ```
-  for i in (0:n:1):
+  for i in range(0, n):
     print("*");
   return none

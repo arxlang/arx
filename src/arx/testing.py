@@ -20,7 +20,11 @@ from irx.builder.base import CommandResult
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
-from arx.main import FileImportResolver, get_module_name_from_file_path
+from arx.main import (
+    FileImportResolver,
+    _inject_ambient_builtin_imports,
+    get_module_name_from_file_path,
+)
 from arx.parser import Parser
 
 DEFAULT_TEST_PATHS: tuple[str, ...] = ("tests",)
@@ -353,6 +357,7 @@ class ArxTestRunner:
         ArxIO.file_to_buffer(str(file))
         module_name = get_module_name_from_file_path(str(file))
         module = Parser().parse(Lexer().lex(), module_name)
+        module = _inject_ambient_builtin_imports(module)
         if not isinstance(module, astx.Module):
             raise TestRunError(
                 f"test file did not parse into a module: {file}"

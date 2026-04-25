@@ -49,6 +49,12 @@ class TypeParserMixin(ParserMixinBase):
             return astx.LiteralString("")
         if isinstance(data_type, astx.NoneType):
             return astx.LiteralNone()
+        if isinstance(data_type, astx.ListType):
+            if len(data_type.element_types) != 1:
+                raise ParserException(
+                    "Parser: List types accept exactly one element type."
+                )
+            return astx.ListCreate(data_type.element_types[0])
         if isinstance(data_type, astx.DateTime):
             return astx.LiteralDateTime("1970-01-01T00:00:00")
         if isinstance(data_type, astx.Timestamp):

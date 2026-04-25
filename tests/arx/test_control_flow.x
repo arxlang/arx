@@ -1,6 +1,6 @@
 ```
 title: Repository control-flow tests
-summary: Cover if branches, while loops, range loops, and count loops.
+summary: Cover if branches, while loops, for-in loops, and count loops.
 ```
 
 fn classify(value: i32) -> i32:
@@ -30,9 +30,16 @@ fn first_range_value(limit: i32) -> i32:
   title: first_range_value
   summary: Returns the first value produced by one range loop.
   ```
-  for i in (0:limit:1):
+  for i in range(0, limit):
     return i
   return limit
+
+fn make_values() -> list[i32]:
+  ```
+  title: make_values
+  summary: Builds one list for function-call iterable coverage.
+  ```
+  return range(0, 4)
 
 fn skipped_count_loop() -> i32:
   ```
@@ -64,9 +71,30 @@ fn test_for_range_loop_asserts() -> none:
   title: test_for_range_loop_asserts
   summary: Executes one range loop and validates each yielded index.
   ```
-  for i in (0:4:1):
-    assert i < 4
+  for i in range(0, 4):
+    assert i < 4, "range loop values should stay below the stop bound"
   assert first_range_value(4) == 0
+
+fn test_for_in_list_asserts() -> none:
+  ```
+  title: test_for_in_list_asserts
+  summary: Executes for-in loops over one list variable and one list literal.
+  ```
+  var values: list[i32] = range(0, 4)
+  var total_from_var: i32 = 0
+  for value in values:
+    total_from_var = total_from_var + value
+  assert total_from_var == 6, "for-in over a list variable should sum to 6"
+
+  var total_from_literal: i32 = 0
+  for value in [1, 2, 3]:
+    total_from_literal = total_from_literal + value
+  assert total_from_literal == 6, "for-in over a list literal should sum to 6"
+
+  var total_from_call: i32 = 0
+  for value in make_values():
+    total_from_call = total_from_call + value
+  assert total_from_call == 6, "for-in over a function call should sum to 6"
 
 fn test_for_count_loop_asserts() -> none:
   ```
@@ -74,5 +102,5 @@ fn test_for_count_loop_asserts() -> none:
   summary: Executes one count loop and one skipped count loop.
   ```
   for var i: i32 = 0; i < 3; i + 1:
-    assert i < 3
+    assert i < 3, "count loop values should stay below the exit condition"
   assert skipped_count_loop() == 0

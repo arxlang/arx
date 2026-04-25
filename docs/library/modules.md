@@ -108,6 +108,51 @@ fn main() -> i32:
   return math.square(4) + math.clamp(0 - 3, 0, 2)
 ```
 
+## Bundled `builtins`
+
+Arx also ships compiler-provided builtins backed by bundled Arx source modules.
+
+Builtins and stdlib are intentionally separate:
+
+- builtins are compiler/language-provided facilities resolved by dedicated
+  compiler logic
+- stdlib is the importable library namespace under `stdlib`
+- builtin source files live under `src/arx/builtins/` in the compiler repo
+- builtin source files use the `.x` extension and are bundled inside the
+  installed `arx` Python package
+- bundled builtin sources are loaded from package resources at compile time and
+  are not copied into user projects
+- builtin source modules are an internal compiler asset store, not a public
+  stdlib-like import surface
+- user code cannot import the internal `builtins` namespace directly
+- local user modules are not allowed to shadow the reserved `builtins` namespace
+
+The first builtin module is `generators`. It is intentionally generic so future
+generator helpers, `yield`, and fuller generator semantics can live in the same
+conceptual area.
+
+Current MVP:
+
+- `range` is available automatically without an import
+- supported callable shapes:
+  - `range(start, stop) -> list[i32]`
+  - `range(start, stop, step) -> list[i32]`
+- `start` and `stop` are always explicit
+- `step` defaults to `1` when omitted
+- `step > 0` counts up and `step < 0` counts down
+- `step == 0` is rejected with an assertion failure
+- for-in loops can iterate over `range(...)`, list literals, and list variables
+  because they consume list-valued expressions
+- ambient builtin names such as `range` are injected only when not shadowed by a
+  local top-level declaration or import
+
+Example:
+
+```arx
+fn main() -> none:
+  print(range(0, 4)[2])
+```
+
 ### Namespace Imports
 
 Use a module alias when you want to keep names grouped under a module namespace:

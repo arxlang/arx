@@ -29,10 +29,37 @@ class ControlFlowParserMixin(ParserMixinBase):
     title: Control-flow parser mixin.
     """
 
+    def _looks_like_removed_for_range_header(self) -> bool:
+        """
+        title: Return whether the current token begins the removed colon range.
+        returns:
+          type: bool
+        """
+        if not self._is_operator("("):
+            return False
+
+        depth = 0
+        current_index = self.tokens.position - 1
+        for token in self.tokens.tokens[current_index:]:
+            if token.kind != TokenKind.operator:
+                continue
+            if token.value == "(":
+                depth += 1
+                continue
+            if token.value == ")":
+                depth -= 1
+                if depth == 0:
+                    return False
+                continue
+            if token.value == ":" and depth == 1:
+                return True
+        return False
+
     def parse_block(
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
+        declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> astx.Block:
         """
@@ -41,6 +68,8 @@ class ControlFlowParserMixin(ParserMixinBase):
           allow_docstring:
             type: bool
           declared_names:
+            type: tuple[str, Ellipsis]
+          declared_lists:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
@@ -59,7 +88,11 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         self.indent_level = cur_indent
         self.tokens.get_next_token()  # eat indentation
-        self._push_value_scope(declared_names, declared_ndarrays)
+        self._push_value_scope(
+            declared_names,
+            declared_lists,
+            declared_ndarrays,
+        )
 
         block = astx.Block()
         docstring_allowed_here = allow_docstring
@@ -178,32 +211,49 @@ class ControlFlowParserMixin(ParserMixinBase):
             raise ParserException("Parser: Expected 'in' after loop variable.")
 
         self.tokens.get_next_token()  # eat in
-        self._consume_operator("(")
+        if self._looks_like_removed_for_range_header():
+            raise ParserException(
+                "Colon range syntax was removed; use "
+                "'range(start, stop[, step])' after 'in'."
+            )
 
-        # Slice-like range header: (start:end:step)
-        start = self.parse_expression()
-        self._consume_operator(":")
-        end = self.parse_expression()
-
-        step: astx.AST = astx.LiteralInt32(1)
-        if self._is_operator(":"):
-            self._consume_operator(":")
-            step = self.parse_expression()
-
-        self._consume_operator(")")
-        self._consume_operator(":")
-        body = self.parse_block(declared_names=(var_name,))
-
-        variable = astx.InlineVariableDeclaration(
-            name=var_name,
-            type_=astx.Int32(),
-            loc=var_loc,
+        iterable = cast(astx.Expr, self.parse_expression())
+        return self._parse_for_iterable_stmt(
+            for_loc=for_loc,
+            loop_var_name=var_name,
+            loop_var_loc=var_loc,
+            iterable=iterable,
         )
-        return astx.ForRangeLoopStmt(
-            variable,
-            cast(astx.Expr, start),
-            cast(astx.Expr, end),
-            cast(astx.Expr, step),
+
+    def _parse_for_iterable_stmt(
+        self,
+        *,
+        for_loc: SourceLocation,
+        loop_var_name: str,
+        loop_var_loc: SourceLocation,
+        iterable: astx.Expr,
+    ) -> astx.ForInLoopStmt:
+        """
+        title: Parse one generic for-in loop over a list-valued expression.
+        parameters:
+          for_loc:
+            type: SourceLocation
+          loop_var_name:
+            type: str
+          loop_var_loc:
+            type: SourceLocation
+          iterable:
+            type: astx.Expr
+        returns:
+          type: astx.ForInLoopStmt
+        """
+        self._consume_operator(":")
+
+        target = astx.Identifier(loop_var_name, loc=loop_var_loc)
+        body = self.parse_block(declared_names=(loop_var_name,))
+        return astx.ForInLoopStmt(
+            target,
+            iterable,
             body,
             loc=for_loc,
         )
@@ -222,7 +272,14 @@ class ControlFlowParserMixin(ParserMixinBase):
         initializer = self.parse_inline_var_declaration()
         self._consume_operator(";")
 
-        self._push_value_scope((initializer.name,))
+        declared_lists: tuple[str, ...] = ()
+        if isinstance(initializer.type_, astx.ListType):
+            declared_lists = (initializer.name,)
+
+        self._push_value_scope(
+            (initializer.name,),
+            declared_lists,
+        )
         try:
             condition = self.parse_expression()
             self._consume_operator(";")
@@ -284,6 +341,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
+            mutability=astx.MutabilityKind.mutable,
             loc=var_loc,
         )
 
@@ -335,12 +393,15 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
+            mutability=astx.MutabilityKind.mutable,
             loc=var_loc,
         )
         self._declare_value_name(name)
         if is_ndarray_type(var_type):
             binding = binding_from_type(var_type)
             self._declare_ndarray_name(name, binding)
+        if isinstance(var_type, astx.ListType):
+            self._declare_list_name(name)
         return declaration
 
     def parse_assert_stmt(self) -> astx.AssertStmt:

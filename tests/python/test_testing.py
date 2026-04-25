@@ -19,6 +19,36 @@ from irx.builder.base import CommandResult
 HAS_CLANG = shutil.which("clang") is not None
 
 
+def test_arx_test_runner_parses_ambient_range_in_test_modules(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Test modules receive ambient range during runner parsing.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    entry = tmp_path / "test_generators.x"
+    entry.write_text(
+        dedent(
+            """
+            fn test_range_values() -> none:
+              var values: list[i32] = range(0, 4)
+              var value: i32 = values[2]
+              assert value == 2, "range(0, 4)[2] should be 2"
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    runner = ArxTestRunner(paths=(str(entry),))
+    module = runner._parse_module(entry)
+
+    assert isinstance(module.nodes[0], astx.ImportFromStmt)
+    assert module.nodes[0].module == "builtins.generators"
+    assert [alias.name for alias in module.nodes[0].names] == ["range"]
+
+
 def test_arx_test_runner_lists_matching_tests_across_files(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -400,6 +430,20 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
 
     captured_wrappers: list[list[str]] = []
 
+    def module_node_name(node: object) -> str:
+        """
+        title: Return one stable display name for a synthetic wrapper node.
+        parameters:
+          node:
+            type: object
+        returns:
+          type: str
+        """
+        prototype = getattr(node, "prototype", None)
+        if prototype is not None and hasattr(prototype, "name"):
+            return str(prototype.name)
+        return type(node).__name__
+
     class DummyBuilder:
         """
         title: Dummy builder for test-runner orchestration coverage.
@@ -435,10 +479,7 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
             self.output_file = output_file
             module = root.ast
             captured_wrappers.append(
-                [
-                    getattr(node.prototype, "name", type(node).__name__)
-                    for node in module.nodes
-                ]
+                [module_node_name(node) for node in module.nodes]
             )
 
         def run(
@@ -473,8 +514,8 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     assert summary.exit_code == 0
     assert summary.passed == 2
     expected = [
-        ["helper", "test_first", "main"],
-        ["helper", "test_second", "main"],
+        ["ImportFromStmt", "helper", "test_first", "main"],
+        ["ImportFromStmt", "helper", "test_second", "main"],
     ]
     assert captured_wrappers == expected
 
@@ -599,8 +640,8 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
 
     assert summary.exit_code == 0
     expected = [
-        ["putchard", "helper", "test_first", "main"],
-        ["putchard", "helper", "test_second", "main"],
+        ["ImportFromStmt", "putchard", "helper", "test_first", "main"],
+        ["ImportFromStmt", "putchard", "helper", "test_second", "main"],
     ]
     assert captured_wrappers == expected
 

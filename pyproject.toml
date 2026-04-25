@@ -11,7 +11,7 @@ requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
   "astx (>=0.24.0)",
-  "pyirx (==1.15.0)",
+  "pyirx (==1.17.0)",
   "jsonschema (>=4.0.0)",
   "types-pyyaml (>=6.0.12.20250516)",
   "tomli >=2.0.0 ; python_version < \"3.11\""
@@ -20,6 +20,7 @@ dependencies = [
 [tool.poetry]
 include = [
   "src/arx",
+  "src/arx/builtins/**/*.x",
   "src/arx/schema/*.json",
   "src/arx/py.typed",
   "src/arx/lexer/syntax.json",

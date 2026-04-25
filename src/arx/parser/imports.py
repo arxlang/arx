@@ -11,6 +11,7 @@ from typing import cast
 
 from irx import astx
 
+from arx import builtins
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
@@ -20,6 +21,26 @@ class ImportParserMixin(ParserMixinBase):
     """
     title: Import parser mixin.
     """
+
+    def _reject_public_builtin_import(
+        self,
+        module_path: str,
+        level: int,
+    ) -> None:
+        """
+        title: Reject user-facing imports from the internal builtin namespace.
+        parameters:
+          module_path:
+            type: str
+          level:
+            type: int
+        """
+        if level != 0 or not builtins.is_builtin_module_specifier(module_path):
+            return
+        raise ParserException(
+            "Compiler builtins are available automatically and cannot "
+            "be imported directly."
+        )
 
     def parse_import_stmt(self) -> astx.ImportStmt | astx.ImportFromStmt:
         """
@@ -38,6 +59,7 @@ class ImportParserMixin(ParserMixinBase):
                 )
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
+            self._reject_public_builtin_import(module_path, level)
             return astx.ImportFromStmt(
                 names=names,
                 module=module_path,
@@ -69,6 +91,7 @@ class ImportParserMixin(ParserMixinBase):
             alias_name = self.parse_import_alias()
             if self._is_identifier_value("from"):
                 raise ParserException("Module imports do not use 'from'.")
+            self._reject_public_builtin_import(module_path, level=0)
             return astx.ImportStmt(
                 [
                     astx.AliasExpr(
@@ -84,6 +107,7 @@ class ImportParserMixin(ParserMixinBase):
         if self._is_identifier_value("from"):
             self._consume_identifier_value("from")
             level, module_path = self.parse_import_from_module_path()
+            self._reject_public_builtin_import(module_path, level)
             return astx.ImportFromStmt(
                 names=[
                     astx.AliasExpr(
@@ -105,6 +129,7 @@ class ImportParserMixin(ParserMixinBase):
                 "Parentheses are only supported for grouped named imports."
             )
 
+        self._reject_public_builtin_import(target_name, level=0)
         return astx.ImportStmt(
             [astx.AliasExpr(target_name, asname=alias_name, loc=target_loc)],
             loc=import_loc,

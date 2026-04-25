@@ -11,7 +11,10 @@ from irx import astx
 
 from arx.lexer import Token, TokenList
 from arx.ndarray import NDArrayBinding
-from arx.parser.state import ParsedAnnotation, ParsedDeclarationPrefixes
+from arx.parser.state import (
+    ParsedAnnotation,
+    ParsedDeclarationPrefixes,
+)
 
 
 class ParserMixinBase:
@@ -22,6 +25,8 @@ class ParserMixinBase:
         type: dict[str, int]
       indent_level:
         type: int
+      list_scopes:
+        type: list[set[str]]
       known_class_names:
         type: set[str]
       ndarray_scopes:
@@ -38,6 +43,7 @@ class ParserMixinBase:
 
     bin_op_precedence: dict[str, int]
     indent_level: int
+    list_scopes: list[set[str]]
     known_class_names: set[str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
@@ -48,6 +54,7 @@ class ParserMixinBase:
     def _push_value_scope(
         self,
         declared_names: tuple[str, ...] = (),
+        declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> None:
         """
@@ -55,10 +62,13 @@ class ParserMixinBase:
         parameters:
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_lists:
+            type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
         """
         del declared_names
+        del declared_lists
         del declared_ndarrays
         raise NotImplementedError
 
@@ -105,6 +115,28 @@ class ParserMixinBase:
         """
         del name
         del binding
+        raise NotImplementedError
+
+    def _declare_list_name(self, name: str) -> None:
+        """
+        title: Record one visible list binding in the current scope.
+        parameters:
+          name:
+            type: str
+        """
+        del name
+        raise NotImplementedError
+
+    def _is_list_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a list.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        del name
         raise NotImplementedError
 
     def _is_ndarray_name(self, name: str) -> bool:
@@ -318,6 +350,7 @@ class ParserMixinBase:
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
+        declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> astx.Block:
         """
@@ -327,12 +360,14 @@ class ParserMixinBase:
             type: bool
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_lists:
+            type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
         returns:
           type: astx.Block
         """
-        del allow_docstring, declared_names, declared_ndarrays
+        del allow_docstring, declared_names, declared_lists, declared_ndarrays
         raise NotImplementedError
 
     def parse_type(

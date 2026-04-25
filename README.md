@@ -73,6 +73,27 @@ fn main() -> i32:
   return math.square(4)
 ```
 
+Compiler-provided builtins stay separate from stdlib. Builtin sources live in
+`src/arx/builtins/*.x`, are bundled inside the installed `arx` package, and are
+resolved by dedicated compiler logic instead of user-project module lookup.
+Those bundled builtin modules are internal compiler assets, not a public
+stdlib-style import namespace. User code does not import `builtins`; builtin
+functions such as `range(...)` are available automatically.
+
+```arx
+fn main() -> none:
+  print(range(0, 4)[2])
+```
+
+The first builtin module is `generators`. Its current MVP exposes
+`range(start, stop[, step]) -> list[i32]`, while future overloads and
+`yield`-backed generator semantics will grow in the same area. Positive steps
+count up, negative steps count down, and `step == 0` raises an assertion
+failure. For-in loops can iterate over list-valued expressions such as
+`range(...)`, list literals, and list variables. Ambient builtin names such as
+`range` are injected only when not shadowed, so a local function or import with
+the same name overrides the builtin in that module.
+
 Arx now supports fatal assertion statements in the language surface:
 
 ```arx

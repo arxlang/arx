@@ -14,12 +14,14 @@ import astx
 
 from irx.analysis.module_interfaces import ParsedModule
 
+from arx import builtins as arx_builtins
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
 
+BUILTIN_NAMESPACE = arx_builtins.BUILTIN_NAMESPACE
 STDLIB_NAMESPACE = "stdlib"
 
 
@@ -45,6 +47,136 @@ def _is_stdlib_specifier(requested_specifier: str) -> bool:
         requested_specifier == STDLIB_NAMESPACE
         or requested_specifier.startswith(f"{STDLIB_NAMESPACE}.")
     )
+
+
+def _is_builtin_specifier(requested_specifier: str) -> bool:
+    """
+    title: Return whether one import specifier targets bundled builtins.
+    parameters:
+      requested_specifier:
+        type: str
+    returns:
+      type: bool
+    """
+    return arx_builtins.is_builtin_module_specifier(requested_specifier)
+
+
+def _has_imported_name(
+    module: astx.Module,
+    module_name: str,
+    binding_name: str,
+) -> bool:
+    """
+    title: Return whether one module already imports a binding by name.
+    parameters:
+      module:
+        type: astx.Module
+      module_name:
+        type: str
+      binding_name:
+        type: str
+    returns:
+      type: bool
+    """
+    for node in module.nodes:
+        if not isinstance(node, astx.ImportFromStmt):
+            continue
+        if node.level != 0 or node.module != module_name:
+            continue
+        for alias in node.names:
+            local_name = alias.asname or alias.name
+            if alias.name == binding_name and local_name == binding_name:
+                return True
+    return False
+
+
+def _has_top_level_binding_name(
+    module: astx.Module,
+    binding_name: str,
+) -> bool:
+    """
+    title: Return whether one module already binds a top-level name.
+    parameters:
+      module:
+        type: astx.Module
+      binding_name:
+        type: str
+    returns:
+      type: bool
+    """
+    for node in module.nodes:
+        if isinstance(node, (astx.ImportStmt, astx.ImportFromStmt)):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                local_name = alias.asname or alias.name
+                if local_name == binding_name:
+                    return True
+            continue
+
+        if isinstance(node, astx.FunctionPrototype):
+            if node.name == binding_name:
+                return True
+            continue
+
+        if isinstance(node, astx.FunctionDef):
+            if node.prototype.name == binding_name:
+                return True
+            continue
+
+        if (
+            isinstance(
+                node,
+                (
+                    astx.StructDefStmt,
+                    astx.ClassDefStmt,
+                    astx.VariableDeclaration,
+                ),
+            )
+            and node.name == binding_name
+        ):
+            return True
+
+    return False
+
+
+def _inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
+    """
+    title: Inject compiler-provided builtin bindings into one module AST.
+    parameters:
+      module:
+        type: astx.Module
+    returns:
+      type: astx.Module
+    """
+    implicit_imports = arx_builtins.get_ambient_builtin_imports(module.name)
+    missing_imports: list[astx.ImportFromStmt] = []
+
+    for import_node in implicit_imports:
+        module_name = import_node.module
+        if module_name is None:
+            continue
+        names = tuple(
+            alias.name
+            for alias in import_node.names
+            if not _has_imported_name(module, module_name, alias.name)
+            and not _has_top_level_binding_name(module, alias.name)
+        )
+        if not names:
+            continue
+        aliases = [astx.AliasExpr(name) for name in names]
+        missing_imports.append(
+            astx.ImportFromStmt(
+                names=aliases,
+                module=module_name,
+                level=import_node.level,
+            )
+        )
+
+    if missing_imports:
+        module.nodes[:0] = missing_imports
+
+    return module
 
 
 def _find_project_source_root(start: Path) -> Path | None:
@@ -197,9 +329,9 @@ class FileImportResolver:
 
         return tuple(roots)
 
-    def _stdlib_shadow_roots(self) -> tuple[Path, ...]:
+    def _reserved_namespace_shadow_roots(self) -> tuple[Path, ...]:
         """
-        title: Build the local roots that may validly shadow stdlib.
+        title: Build the local roots that may validly shadow reserved modules.
         returns:
           type: tuple[Path, Ellipsis]
         """
@@ -208,7 +340,7 @@ class FileImportResolver:
 
         def add_root(path: Path) -> None:
             """
-            title: Add one unique root for stdlib shadow checks.
+            title: Add one unique root for reserved-namespace shadow checks.
             parameters:
               path:
                 type: Path
@@ -274,28 +406,33 @@ class FileImportResolver:
                 return file_path
         raise LookupError(requested_specifier)
 
-    def _shadowing_stdlib_path(
+    def _shadowing_reserved_path(
         self,
         requested_specifier: str,
     ) -> Path | None:
         """
-        title: Return one local path that attempts to shadow the stdlib.
+        title: Return one local path that attempts to shadow a reserved module.
         parameters:
           requested_specifier:
             type: str
         returns:
           type: Path | None
         """
-        package_path = Path(*requested_specifier.split("."))
-        file_candidate = package_path.with_suffix(".x")
-        init_candidate = package_path / "__init__.x"
-        for root in self._stdlib_shadow_roots():
-            init_path = (root / init_candidate).resolve()
-            file_path = (root / file_candidate).resolve()
-            if init_path.is_file():
-                return init_path
-            if file_path.is_file():
-                return file_path
+        specifier_parts = tuple(
+            part for part in requested_specifier.split(".") if part
+        )
+
+        for prefix_length in range(1, len(specifier_parts) + 1):
+            package_path = Path(*specifier_parts[:prefix_length])
+            file_candidate = package_path.with_suffix(".x")
+            init_candidate = package_path / "__init__.x"
+            for root in self._reserved_namespace_shadow_roots():
+                init_path = (root / init_candidate).resolve()
+                file_path = (root / file_candidate).resolve()
+                if init_path.is_file():
+                    return init_path
+                if file_path.is_file():
+                    return file_path
         return None
 
     def _resolve_stdlib_module_file(self, requested_specifier: str) -> Path:
@@ -307,7 +444,7 @@ class FileImportResolver:
         returns:
           type: Path
         """
-        shadowing_path = self._shadowing_stdlib_path(requested_specifier)
+        shadowing_path = self._shadowing_reserved_path(requested_specifier)
         if shadowing_path is not None:
             raise ValueError(
                 "reserved stdlib namespace 'stdlib' cannot be shadowed by "
@@ -339,6 +476,33 @@ class FileImportResolver:
             return file_path
         raise LookupError(requested_specifier)
 
+    def _load_builtin_module(self, requested_specifier: str) -> ParsedModule:
+        """
+        title: Resolve one builtin module specifier from packaged resources.
+        parameters:
+          requested_specifier:
+            type: str
+        returns:
+          type: ParsedModule
+        """
+        shadowing_path = self._shadowing_reserved_path(requested_specifier)
+        if shadowing_path is not None:
+            raise ValueError(
+                "reserved builtin namespace 'builtins' cannot be shadowed by "
+                f"local source file '{shadowing_path}'"
+            )
+
+        builtin_asset = arx_builtins.load_builtin_module(requested_specifier)
+        ArxIO.string_to_buffer(builtin_asset.source)
+        module_ast = Parser().parse(Lexer().lex(), requested_specifier)
+        module_ast = _inject_ambient_builtin_imports(module_ast)
+        return ParsedModule(
+            key=requested_specifier,
+            ast=module_ast,
+            display_name=requested_specifier,
+            origin=builtin_asset.origin,
+        )
+
     def _current_package_parts(
         self, requesting_module_key: str
     ) -> tuple[str, ...]:
@@ -350,12 +514,20 @@ class FileImportResolver:
         returns:
           type: tuple[str, Ellipsis]
         """
-        module_file = self._resolve_module_file(requesting_module_key)
         parts = tuple(
             part for part in requesting_module_key.split(".") if part
         )
-        if module_file.name == "__init__.x":
+        if _is_builtin_specifier(requesting_module_key):
+            is_package = arx_builtins.load_builtin_module(
+                requesting_module_key
+            ).is_package
+        else:
+            module_file = self._resolve_module_file(requesting_module_key)
+            is_package = module_file.name == "__init__.x"
+
+        if is_package:
             return parts
+
         if len(parts) > 1:
             return parts[:-1]
         raise LookupError(
@@ -433,9 +605,15 @@ class FileImportResolver:
         if cached is not None:
             return cached
 
+        if _is_builtin_specifier(resolved_specifier):
+            parsed_module = self._load_builtin_module(resolved_specifier)
+            self.cache[resolved_specifier] = parsed_module
+            return parsed_module
+
         module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
         module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
+        module_ast = _inject_ambient_builtin_imports(module_ast)
         parsed_module = ParsedModule(
             key=resolved_specifier,
             ast=module_ast,
@@ -610,6 +788,8 @@ class ArxMain:
                 "Compiling multiple input files in a single invocation "
                 "is not supported yet."
             )
+        if isinstance(tree_ast, astx.Module):
+            return _inject_ambient_builtin_imports(tree_ast)
         return tree_ast
 
     def _module_has_imports(self, module: astx.Module) -> bool:

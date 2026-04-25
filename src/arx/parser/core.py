@@ -28,6 +28,8 @@ class ParserCore(ParserMixinBase):
         type: dict[str, int]
       indent_level:
         type: int
+      list_scopes:
+        type: list[set[str]]
       known_class_names:
         type: set[str]
       ndarray_scopes:
@@ -44,6 +46,7 @@ class ParserCore(ParserMixinBase):
 
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
+    list_scopes: list[set[str]]
     known_class_names: set[str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
@@ -76,6 +79,7 @@ class ParserCore(ParserMixinBase):
             "/": 40,
         }
         self.indent_level = 0
+        self.list_scopes = [set()]
         self.known_class_names = set()
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
@@ -88,6 +92,7 @@ class ParserCore(ParserMixinBase):
         title: Reset the Parser static variables.
         """
         self.indent_level = 0
+        self.list_scopes = [set()]
         self.known_class_names = set()
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
@@ -209,6 +214,7 @@ class ParserCore(ParserMixinBase):
     def _push_value_scope(
         self,
         declared_names: tuple[str, ...] = (),
+        declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
     ) -> None:
         """
@@ -216,10 +222,13 @@ class ParserCore(ParserMixinBase):
         parameters:
           declared_names:
             type: tuple[str, Ellipsis]
+          declared_lists:
+            type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
         """
         self.value_scopes.append(set(declared_names))
+        self.list_scopes.append(set(declared_lists))
         self.ndarray_scopes.append(dict(declared_ndarrays or {}))
 
     def _pop_value_scope(self) -> None:
@@ -227,6 +236,7 @@ class ParserCore(ParserMixinBase):
         title: Pop the most recent visible-name scope.
         """
         self.value_scopes.pop()
+        self.list_scopes.pop()
         self.ndarray_scopes.pop()
 
     def _declare_value_name(self, name: str) -> None:
@@ -247,7 +257,10 @@ class ParserCore(ParserMixinBase):
         returns:
           type: bool
         """
-        return any(name in scope for scope in reversed(self.value_scopes))
+        for value_scope in reversed(self.value_scopes):
+            if name in value_scope:
+                return True
+        return False
 
     def _declare_ndarray_name(
         self,
@@ -263,6 +276,26 @@ class ParserCore(ParserMixinBase):
             type: NDArrayBinding | None
         """
         self.ndarray_scopes[-1][name] = binding
+
+    def _declare_list_name(self, name: str) -> None:
+        """
+        title: Record one visible list binding in the current scope.
+        parameters:
+          name:
+            type: str
+        """
+        self.list_scopes[-1].add(name)
+
+    def _is_list_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a list.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        return any(name in scope for scope in reversed(self.list_scopes))
 
     def _is_ndarray_name(self, name: str) -> bool:
         """

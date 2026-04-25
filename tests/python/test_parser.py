@@ -660,12 +660,12 @@ def test_parse_for_count_stmt() -> None:
     assert isinstance(fn.body.nodes[0], astx.ForCountLoopStmt)
 
 
-def test_parse_for_range_slice_style() -> None:
+def test_parse_for_range_builtin_call() -> None:
     """
-    title: Test range-style for parsing with colon-separated bounds.
+    title: Test for-in parsing with builtin range calls.
     """
     ArxIO.string_to_buffer(
-        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
+        "fn main() -> i32:\n  for j in range(0, 5):\n    return j\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -673,20 +673,61 @@ def test_parse_for_range_slice_style() -> None:
     tree = parser.parse(lexer.lex())
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, irx_astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "j"
+    assert isinstance(loop.iterable, astx.FunctionCall)
+    assert loop.iterable.fn == "range"
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "j"
 
 
-def test_parse_for_range_tuple_style_is_rejected() -> None:
+def test_parse_for_in_list_variable() -> None:
     """
-    title: Tuple-style for range must be rejected.
+    title: Test generic for-in parsing with one list variable.
     """
     ArxIO.string_to_buffer(
-        "fn main() -> i32:\n  for j in (0, 5, 1):\n    return j\n"
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    return value\n"
+        "  return 0\n"
     )
     lexer = Lexer()
     parser = Parser()
 
-    with pytest.raises(ParserException):
+    tree = parser.parse(lexer.lex())
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    assert isinstance(fn.body.nodes[1], irx_astx.ForInLoopStmt)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, irx_astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.Identifier)
+    assert loop.iterable.name == "xs"
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
+
+
+def test_parse_for_removed_colon_range_syntax_is_rejected() -> None:
+    """
+    title: Removed colon range syntax must be rejected with guidance.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
+    )
+    lexer = Lexer()
+    parser = Parser()
+
+    with pytest.raises(
+        ParserException,
+        match="Colon range syntax was removed",
+    ):
         parser.parse(lexer.lex())
 
 

@@ -98,7 +98,7 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     """
     tree = _parse(
         "fn print_star(n: i32) -> none:\n"
-        "  for i in (0:n:1):\n"
+        "  for i in range(0, n):\n"
         '    print("*");\n'
         "  return none\n"
     )
@@ -107,7 +107,7 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert len(fn.body.nodes) == 2
-    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+    assert isinstance(fn.body.nodes[0], astx.ForInLoopStmt)
     assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
 
 
@@ -115,11 +115,11 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     "code, expected",
     [
         (
-            "fn main() -> i32:\n  for 1 in (0:1:1):\n    return 1\n",
+            "fn main() -> i32:\n  for 1 in range(0, 1):\n    return 1\n",
             "identifier",
         ),
         (
-            "fn main() -> i32:\n  for i (0:1:1):\n    return i\n",
+            "fn main() -> i32:\n  for i range(0, 1):\n    return i\n",
             "Expected 'in'",
         ),
     ],
@@ -276,8 +276,11 @@ def test_parse_list_and_ndarray_type_forms_and_default_values() -> None:
     with pytest.raises(ParserException, match="unsized ndarray"):
         parser._default_value_for_type(ndarray_type(astx.Int32()))
 
-    with pytest.raises(ParserException):
-        parser._default_value_for_type(astx.ListType([astx.Int32()]))
+    list_default = parser._default_value_for_type(
+        astx.ListType([astx.Int32()])
+    )
+    assert isinstance(list_default, astx.ListCreate)
+    assert isinstance(list_default.type_, astx.ListType)
 
 
 def test_parse_list_types_reject_shape_dimensions() -> None:
@@ -382,6 +385,272 @@ def test_parse_unsized_ndarray_indexing_skips_static_bounds_checks() -> None:
     ret = fn.body.nodes[1]
     assert isinstance(ret, astx.FunctionReturn)
     assert isinstance(ret.value, astx.BufferViewIndex)
+
+
+def test_parse_list_default_init_and_append() -> None:
+    """
+    title: List declarations default to ListCreate and lower append calls.
+    """
+    tree = _parse(
+        "fn build(stop: i32) -> list[i32]:\n"
+        "  var values: list[i32]\n"
+        "  for var current: i32 = 0; current < stop; current + 1:\n"
+        "    values.append(current)\n"
+        "  return values\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    declaration = fn.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert isinstance(declaration.type_, astx.ListType)
+    assert isinstance(declaration.value, astx.ListCreate)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert len(loop.body.nodes) == 1
+    assert isinstance(loop.body.nodes[0], astx.ListAppend)
+
+    ret = fn.body.nodes[2]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.Identifier)
+
+
+def test_parse_function_and_extern_argument_defaults() -> None:
+    """
+    title: Function and extern arguments can declare default values.
+    """
+    tree = _parse(
+        "extern seed(value: i32 = 3) -> i32\n"
+        "fn add(value: i32, step: i32 = 1) -> i32:\n"
+        "  return value + step\n"
+    )
+
+    extern = tree.nodes[0]
+    fn = tree.nodes[1]
+    assert isinstance(extern, astx.FunctionPrototype)
+    assert isinstance(fn, astx.FunctionDef)
+
+    extern_default = extern.args.nodes[0].default
+    assert isinstance(extern_default, astx.LiteralInt32)
+    assert extern_default.value == 3
+
+    value_arg = fn.prototype.args.nodes[0]
+    step_arg = fn.prototype.args.nodes[1]
+    assert isinstance(value_arg.default, astx.Undefined)
+    assert isinstance(step_arg.default, astx.LiteralInt32)
+    assert step_arg.default.value == 1
+
+
+def test_parse_method_argument_defaults() -> None:
+    """
+    title: Method arguments can declare default values.
+    """
+    tree = _parse(
+        "class Counter:\n"
+        "  fn add(self, amount: i32 = 1) -> i32:\n"
+        "    return amount\n"
+    )
+
+    class_def = tree.nodes[0]
+    assert isinstance(class_def, astx.ClassDefStmt)
+    method = class_def.methods[0]
+    amount_arg = method.prototype.args.nodes[0]
+    assert isinstance(amount_arg.default, astx.LiteralInt32)
+    assert amount_arg.default.value == 1
+
+
+def test_parse_range_keeps_source_arguments() -> None:
+    """
+    title: Range calls keep source arity for IRx default arguments.
+    """
+    tree = _parse(
+        "fn first() -> none:\n"
+        "  var values: list[i32] = range(0, 4)\n"
+        "  return none\n"
+        "fn second() -> none:\n"
+        "  var values: list[i32] = range(2, 8, 2)\n"
+        "  return none\n"
+    )
+
+    first_fn = tree.nodes[0]
+    second_fn = tree.nodes[1]
+    assert isinstance(first_fn, astx.FunctionDef)
+    assert isinstance(second_fn, astx.FunctionDef)
+
+    first_decl = cast(astx.VariableDeclaration, first_fn.body.nodes[0])
+    assert isinstance(first_decl.value, astx.FunctionCall)
+    assert first_decl.value.fn == "range"
+    assert len(first_decl.value.args) == 2
+
+    second_decl = cast(astx.VariableDeclaration, second_fn.body.nodes[0])
+    assert isinstance(second_decl.value, astx.FunctionCall)
+    assert second_decl.value.fn == "range"
+    assert len(second_decl.value.args) == 3
+    assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
+    assert second_decl.value.args[2].value == 2
+
+
+def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
+    """
+    title: Range calls with variable stop do not synthesize a step argument.
+    """
+    tree = _parse(
+        "fn build(n: i32) -> none:\n"
+        "  var xs: list[i32] = range(0, n)\n"
+        "  return none\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    decl = cast(astx.VariableDeclaration, fn.body.nodes[0])
+    assert isinstance(decl.value, astx.FunctionCall)
+    assert decl.value.fn == "range"
+    assert len(decl.value.args) == 2
+    assert isinstance(decl.value.args[0], astx.LiteralInt32)
+    assert decl.value.args[0].value == 0
+    assert isinstance(decl.value.args[1], astx.Identifier)
+    assert decl.value.args[1].name == "n"
+    assert len(decl.value.args) == 2
+
+
+def test_parse_for_in_list_literal_uses_for_in_node() -> None:
+    """
+    title: For-in over a list literal preserves one for-in AST node.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  for value in [1, 2, 3]:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.LiteralList)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
+
+
+def test_parse_for_in_list_variable_uses_for_in_node() -> None:
+    """
+    title: For-in over a list variable preserves one for-in AST node.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.Identifier)
+    assert loop.iterable.name == "xs"
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
+
+
+def test_parse_for_in_function_call_preserves_iterable_call() -> None:
+    """
+    title: For-in over a function call keeps one iterable call expression.
+    """
+    tree = _parse(
+        "fn make_values() -> list[i32]:\n"
+        "  return range(0, 3)\n"
+        "fn main() -> i32:\n"
+        "  for value in make_values():\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[1]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.iterable, astx.FunctionCall)
+    assert loop.iterable.fn == "make_values"
+    assert len(loop.iterable.args) == 0
+
+
+def test_parse_for_in_target_is_visible_in_body() -> None:
+    """
+    title: For-in loop targets are visible identifiers inside the body.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  var xs: list[i32] = range(0, 3)\n"
+        "  for value in xs:\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import generators from builtins\n",
+        "import builtins.generators as generators\n",
+        "import range as rg from builtins.generators\n",
+        "import (generators as g) from builtins\n",
+        "import (range as rg) from builtins.generators\n",
+    ],
+)
+def test_parse_builtin_imports_are_rejected(code: str) -> None:
+    """
+    title: User source cannot import internal builtin modules directly.
+    parameters:
+      code:
+        type: str
+    """
+    with pytest.raises(
+        ParserException,
+        match="cannot be imported directly",
+    ):
+        _parse(code + "fn main() -> none:\n  return none\n")
+
+
+def test_parse_range_leaves_arity_validation_to_builtins() -> None:
+    """
+    title: Range calls parse like ordinary calls before semantic analysis.
+    """
+    tree = _parse(
+        "fn main() -> none:\n"
+        "  var values: list[i32] = range(4)\n"
+        "  return none\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    decl = cast(astx.VariableDeclaration, fn.body.nodes[0])
+    call = decl.value
+    assert isinstance(call, astx.FunctionCall)
+    assert call.fn == "range"
+    assert len(call.args) == 1
 
 
 @pytest.mark.parametrize(
