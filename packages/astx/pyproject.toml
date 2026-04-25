@@ -1,0 +1,36 @@
+[project]
+name = "astx"
+version = "1.18.1"  # semantic-release
+description = "ASTx is an agnostic expression structure for AST."
+readme = "README.md"
+authors = [
+  {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.10,<4"
+dependencies = [
+  "atpublic >= 4.0",
+  "plum-dispatch >= 2",
+  "typeguard >= 4",
+  "typing-extensions >= 4",
+]
+
+[project.optional-dependencies]
+console = ["mermaid-ascii >=0.6.1"]
+all = ["mermaid-ascii >=0.6.1"]
+
+
+[build-system]
+requires = ["poetry-core>=2"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+exclude = [
+  ".git/*",
+  ".env*",
+]
+packages = [
+  {include = "astx", from="src"},
+]
+include = ["src/astx/py.typed"]

@@ -1,0 +1,115 @@
+[project]
+name = "arxlang"
+version = "0.16.0"  # semantic-release
+description = "Arx is a compiler built with llvm"
+readme = "docs/index.md"
+authors = [
+  {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.10,<4"
+dependencies = [
+  "pyyaml >=4",
+  "astx (>=0.24.0)",  # semantic-release
+  "pyirx (==1.18.0)",  # semantic-release
+  "jsonschema (>=4.0.0)",
+  "types-pyyaml (>=6.0.12.20250516)",
+  "tomli >=2.0.0 ; python_version < \"3.11\""
+]
+
+[tool.poetry]
+include = [
+  "src/arx",
+  "src/arx/builtins/**/*.x",
+  "src/arx/schema/*.json",
+  "src/arx/py.typed",
+  "src/arx/lexer/syntax.json",
+  "src/arx/stdlib/**/*.x",
+]
+exclude = [
+  ".git/*",
+  ".env*",
+]
+packages = [
+  {include = "arx", from="src"},
+]
+
+[tool.poetry.scripts]
+"arx" = "arx.__main__:app"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests/python",
+]
+filterwarnings = [
+    "error::RuntimeWarning",
+    "error::typeguard.TypeHintWarning",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+targets = "./"
+
+[tool.vulture]
+exclude = ["tests"]
+ignore_decorators = ["abc.abstractmethod"]
+ignore_names = []
+make_whitelist = true
+min_confidence = 80
+paths = ["./"]
+sort_by_size = true
+verbose = false
+
+[tool.ruff]
+target-version = "py310"
+line-length = 79
+force-exclude = true
+src = ["./"]
+exclude = [
+  'docs',
+]
+fix = true
+
+[tool.ruff.lint]
+ignore = [
+  "F811",  # redefined-while-unused
+  "PLR0911",  # Too many return statements
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments in a function definition
+  "RUF012",  # mutable-class-default
+  "PLR0915",  # Too many statements
+  "PLR2004",  # Magic value used in comparison
+]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "YTT", # flake8-2020
+  "PL",  # PL
+  "RUF", # Ruff-specific rules
+  "I001", # isort
+]
+extend-select = [
+  "UP006",  # Prefer builtin generics in annotations
+  "UP007",  # Prefer | syntax for unions and optionals
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+# Use a single line between direct and from import
+lines-between-types = 1
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+show_error_codes = true
+exclude = ["scripts/"]

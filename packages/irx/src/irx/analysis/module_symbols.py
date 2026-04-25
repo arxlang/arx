@@ -1,0 +1,469 @@
+"""
+title: Module-aware semantic identity and LLVM mangling helpers.
+summary: >-
+  Centralize module-qualified semantic ids and deterministic LLVM mangling
+  rules for cross-module declarations.
+"""
+
+from __future__ import annotations
+
+import re
+
+from public import public
+
+from irx.analysis.module_interfaces import ModuleKey
+from irx.typecheck import typechecked
+
+_SEGMENT_RE = re.compile(r"[A-Za-z0-9_]+")
+
+
+@typechecked
+def _split_segments(value: str) -> list[str]:
+    """
+    title: Split a string into LLVM-friendly segments.
+    parameters:
+      value:
+        type: str
+    returns:
+      type: list[str]
+    """
+    segments = _SEGMENT_RE.findall(value)
+    if segments:
+        return segments
+    if not value:
+        return ["module"]
+    return [f"x{ord(char):02x}" for char in value]
+
+
+@typechecked
+def _mangle_parts(*parts: str) -> str:
+    """
+    title: Mangle string parts into a deterministic LLVM name.
+    parameters:
+      parts:
+        type: str
+        variadic: positional
+    returns:
+      type: str
+    """
+    segments: list[str] = []
+    for part in parts:
+        segments.extend(_split_segments(part))
+    return "__".join(segments)
+
+
+@public
+@typechecked
+def function_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
+    """
+    title: Return a module-aware function registry key.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: tuple[ModuleKey, str]
+    """
+    return (module_key, name)
+
+
+@public
+@typechecked
+def struct_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
+    """
+    title: Return a module-aware struct registry key.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: tuple[ModuleKey, str]
+    """
+    return (module_key, name)
+
+
+@public
+@typechecked
+def class_key(module_key: ModuleKey, name: str) -> tuple[ModuleKey, str]:
+    """
+    title: Return a module-aware class registry key.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: tuple[ModuleKey, str]
+    """
+    return (module_key, name)
+
+
+@public
+@typechecked
+def qualified_function_name(module_key: ModuleKey, name: str) -> str:
+    """
+    title: Return a qualified semantic function name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: str
+    """
+    return f"{module_key}::fn::{name}"
+
+
+@public
+@typechecked
+def qualified_class_name(module_key: ModuleKey, name: str) -> str:
+    """
+    title: Return a qualified semantic class name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: str
+    """
+    return f"{module_key}::class::{name}"
+
+
+@public
+@typechecked
+def qualified_struct_name(module_key: ModuleKey, name: str) -> str:
+    """
+    title: Return a qualified semantic struct name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      name:
+        type: str
+    returns:
+      type: str
+    """
+    return f"{module_key}::struct::{name}"
+
+
+@public
+@typechecked
+def qualified_class_member_name(
+    module_key: ModuleKey,
+    class_name: str,
+    member_name: str,
+    overload_key: str | None = None,
+) -> str:
+    """
+    title: Return a qualified semantic class-member name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+      member_name:
+        type: str
+      overload_key:
+        type: str | None
+    returns:
+      type: str
+    """
+    qualified_name = (
+        f"{module_key}::class::{class_name}::member::{member_name}"
+    )
+    if overload_key is None:
+        return qualified_name
+    return f"{qualified_name}::overload::{overload_key}"
+
+
+@public
+@typechecked
+def qualified_class_method_name(
+    module_key: ModuleKey,
+    class_name: str,
+    method_name: str,
+    overload_key: str | None = None,
+) -> str:
+    """
+    title: Return a qualified semantic class-method function name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+      method_name:
+        type: str
+      overload_key:
+        type: str | None
+    returns:
+      type: str
+    """
+    qualified_name = (
+        f"{module_key}::class::{class_name}::method::{method_name}"
+    )
+    if overload_key is None:
+        return qualified_name
+    return f"{qualified_name}::overload::{overload_key}"
+
+
+@typechecked
+def _class_method_symbol_basename(
+    class_name: str,
+    method_name: str,
+    overload_key: str | None = None,
+) -> str:
+    """
+    title: Return a deterministic method-symbol basename.
+    parameters:
+      class_name:
+        type: str
+      method_name:
+        type: str
+      overload_key:
+        type: str | None
+    returns:
+      type: str
+    """
+    if overload_key is None:
+        return _mangle_parts(class_name, "method", method_name)
+    return _mangle_parts(
+        class_name,
+        "method",
+        method_name,
+        "overload",
+        overload_key,
+    )
+
+
+@public
+@typechecked
+def qualified_local_name(
+    module_key: ModuleKey,
+    kind: str,
+    name: str,
+    symbol_id: str,
+) -> str:
+    """
+    title: Return a qualified semantic local symbol name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      kind:
+        type: str
+      name:
+        type: str
+      symbol_id:
+        type: str
+    returns:
+      type: str
+    """
+    return f"{module_key}::{kind}::{name}::{symbol_id}"
+
+
+@public
+@typechecked
+def specialized_function_basename(
+    function_name: str,
+    arg_type_names: tuple[str, ...],
+) -> str:
+    """
+    title: Return a deterministic specialization basename.
+    parameters:
+      function_name:
+        type: str
+      arg_type_names:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: str
+    """
+    if not arg_type_names:
+        return function_name
+    suffix = _mangle_parts(*arg_type_names)
+    return f"{function_name}__{suffix}"
+
+
+@public
+@typechecked
+def mangle_function_name(module_key: ModuleKey, function_name: str) -> str:
+    """
+    title: Return a deterministic LLVM function name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      function_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), function_name)
+
+
+@public
+@typechecked
+def mangle_struct_name(module_key: ModuleKey, struct_name: str) -> str:
+    """
+    title: Return a deterministic LLVM struct name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      struct_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), struct_name)
+
+
+@public
+@typechecked
+def mangle_class_name(module_key: ModuleKey, class_name: str) -> str:
+    """
+    title: Return a deterministic LLVM class-object name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), class_name)
+
+
+@public
+@typechecked
+def mangle_namespace_name(
+    namespace_key: ModuleKey,
+    namespace_kind: str,
+) -> str:
+    """
+    title: Return a deterministic LLVM namespace-handle name.
+    parameters:
+      namespace_key:
+        type: ModuleKey
+      namespace_kind:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(namespace_key), namespace_kind, "namespace")
+
+
+@public
+@typechecked
+def class_method_symbol_basename(
+    class_name: str,
+    method_name: str,
+    overload_key: str | None = None,
+) -> str:
+    """
+    title: Return a deterministic class-method symbol basename.
+    parameters:
+      class_name:
+        type: str
+      method_name:
+        type: str
+      overload_key:
+        type: str | None
+    returns:
+      type: str
+    """
+    return _class_method_symbol_basename(
+        class_name,
+        method_name,
+        overload_key,
+    )
+
+
+@public
+@typechecked
+def mangle_class_method_name(
+    module_key: ModuleKey,
+    class_name: str,
+    method_name: str,
+    overload_key: str | None = None,
+) -> str:
+    """
+    title: Return a deterministic LLVM class-method symbol name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+      method_name:
+        type: str
+      overload_key:
+        type: str | None
+    returns:
+      type: str
+    """
+    return _mangle_parts(
+        str(module_key),
+        _class_method_symbol_basename(
+            class_name,
+            method_name,
+            overload_key,
+        ),
+    )
+
+
+@public
+@typechecked
+def mangle_class_descriptor_name(
+    module_key: ModuleKey,
+    class_name: str,
+) -> str:
+    """
+    title: Return a deterministic LLVM class-descriptor global name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), class_name, "descriptor")
+
+
+@public
+@typechecked
+def mangle_class_dispatch_name(
+    module_key: ModuleKey,
+    class_name: str,
+) -> str:
+    """
+    title: Return a deterministic LLVM class-dispatch global name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), class_name, "dispatch")
+
+
+@public
+@typechecked
+def mangle_class_static_name(
+    module_key: ModuleKey,
+    class_name: str,
+    member_name: str,
+) -> str:
+    """
+    title: Return a deterministic LLVM static-member global name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+      member_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), class_name, "static", member_name)

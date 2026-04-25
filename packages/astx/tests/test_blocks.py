@@ -1,0 +1,28 @@
+"""
+title: Module for testing different kind of ASTx blocks.
+"""
+
+from astx.blocks import Block
+from astx.data import Variable, VariableDeclaration
+from astx.literals.numeric import LiteralInt32
+from astx.types.numeric import Int32
+from astx.types.operators import BinaryOp
+
+
+def test_block() -> None:
+    """
+    title: Test ASTx block.
+    """
+    block = Block()
+
+    decl_a = VariableDeclaration("a", type_=Int32(), value=LiteralInt32(1))
+    decl_b = VariableDeclaration("b", type_=Int32(), value=LiteralInt32(2))
+
+    var_a = Variable("a")
+    var_b = Variable("b")
+    sum_op = BinaryOp(op_code="+", lhs=var_a, rhs=var_b)
+
+    block.append(decl_a)
+    block.append(decl_b)
+
+    block.append(sum_op)

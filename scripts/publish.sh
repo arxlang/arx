@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-pushd libs/astx || exit
+pushd packages/astx || exit
 poetry publish
 popd || return
 
-pushd libs/astx-transpilers || exit
+pushd packages/irx || exit
+poetry publish
+popd || return
+
+pushd packages/arx || exit
 poetry publish
 popd || return

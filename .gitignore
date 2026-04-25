@@ -105,8 +105,7 @@ ENV/
 # llm
 .codex
 .claude
-PLAN.md
-REVIEW.md
+.agents
 
 # tmp
 pytest-*
