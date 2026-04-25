@@ -126,11 +126,11 @@ from arx.parser import Parser
         ).lstrip(),
         dedent(
             """
-            fn pick(grid: ndarray[i32, 2, 2]) -> i32:
+            fn pick(grid: tensor[i32, 2, 2]) -> i32:
               return grid[1, 0] + grid[0, 1]
 
             fn main() -> i32:
-              var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
+              var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
               return pick(grid)
             """
         ).lstrip(),

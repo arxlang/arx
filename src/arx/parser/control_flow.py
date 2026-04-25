@@ -15,13 +15,13 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
-from arx.ndarray import (
-    NDArrayBinding,
+from arx.parser.base import ParserMixinBase
+from arx.tensor import (
+    TensorBinding,
     binding_from_type,
     coerce_expression,
-    is_ndarray_type,
+    is_tensor_type,
 )
-from arx.parser.base import ParserMixinBase
 
 
 class ControlFlowParserMixin(ParserMixinBase):
@@ -60,7 +60,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -71,8 +71,8 @@ class ControlFlowParserMixin(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_lists:
             type: tuple[str, Ellipsis]
-          declared_ndarrays:
-            type: dict[str, NDArrayBinding | None] | None
+          declared_tensors:
+            type: dict[str, TensorBinding | None] | None
         returns:
           type: astx.Block
         """
@@ -91,7 +91,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         self._push_value_scope(
             declared_names,
             declared_lists,
-            declared_ndarrays,
+            declared_tensors,
         )
 
         block = astx.Block()
@@ -397,9 +397,9 @@ class ControlFlowParserMixin(ParserMixinBase):
             loc=var_loc,
         )
         self._declare_value_name(name)
-        if is_ndarray_type(var_type):
+        if is_tensor_type(var_type):
             binding = binding_from_type(var_type)
-            self._declare_ndarray_name(name, binding)
+            self._declare_tensor_name(name, binding)
         if isinstance(var_type, astx.ListType):
             self._declare_list_name(name)
         return declaration

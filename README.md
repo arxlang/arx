@@ -2,7 +2,7 @@
 
 Arx is a new programming language that uses the power of LLVM to provide
 multi-architecture machine target code generation. Arx aims to provide native
-list and ndarray abstractions with a builtin runtime backed internally by IRx.
+list and tensor abstractions with a builtin runtime backed internally by IRx.
 
 Arx is a prototype that should replace the current Arx compiler in c++.
 
@@ -41,15 +41,15 @@ objects were not compiled in a PIE-compatible mode.
 
 ## Testing
 
-Arx now exposes `list[...]` and `ndarray[...]` as distinct public collection
+Arx now exposes `list[...]` and `tensor[...]` as distinct public collection
 forms:
 
 ```arx
-fn pick(grid: ndarray[i32, 2, 2]) -> i32:
+fn pick(grid: tensor[i32, 2, 2]) -> i32:
   return grid[1, 0]
 
 fn main() -> i32:
-  var grid: ndarray[i32, 2, 2] = [[1, 2], [3, 4]]
+  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   var ids: list[i32] = [5, 6, 7, 8]
   return pick(grid) + ids[2]
 ```
@@ -57,11 +57,17 @@ fn main() -> i32:
 Use:
 
 - `list[T]` for generic collection values
-- `ndarray[T]` for dynamic Arrow-backed numeric arrays
-- `ndarray[T, N]` and `ndarray[T, D1, D2, ...]` for fixed-shape numeric arrays
+- `tensor[T]` for dynamic Arrow-backed numeric tensor values
+- `tensor[T, N]` and `tensor[T, D1, D2, ...]` for fixed-shape tensors
 
-NDArray details stay user-facing in terms of element types, shape, dimensions,
-and indexing. IRx buffer-view lowering remains an internal backend detail.
+Tensor details stay user-facing in terms of element types, shape, dimensions,
+and indexing. IRx owns the Arrow C++ backed Tensor runtime and lowering. Current
+tensor element types are fixed-width numeric types: `i8`, `i16`, `i32`, `i64`,
+`f32`, and `f64`.
+
+Arx uses `Tensor` for homogeneous N-dimensional data and reserves `Array` for
+one-dimensional Arrow-style data where the language exposes it. Future
+heterogeneous dataframe or table support will use a separate surface type.
 
 Arx also ships a bundled pure-Arx standard library under the reserved `stdlib`
 namespace:

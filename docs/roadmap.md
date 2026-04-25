@@ -3,7 +3,7 @@
 The roadmap document define the direction that the project is taking.
 
 The initial and decisive part of the project is the implementation of native
-ndarray abstractions backed by Apache Arrow. But in order to get to that point,
+tensor abstractions backed by Apache Arrow. But in order to get to that point,
 we need first implement a bunch of small pieces across the Arx + IRx stack. Arx
 owns the surface front end (lexer, parser, docs, examples), while IRx owns AST
 definitions, semantic analysis, lowering, and code generation.
@@ -41,6 +41,6 @@ type for each variable and function returning.
 - [ ] Wave 5: string
 - [ ] Wave 6: datetime
 
-## Implement native ndarrays
+## Implement native tensors
 
 TBA

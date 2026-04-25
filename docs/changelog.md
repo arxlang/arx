@@ -1,6 +1,12 @@
 # Release Notes
 ---
 
+# Unreleased
+
+### Features
+
+* migrate Arx tensor syntax to IRx Tensor APIs and Arrow C++ runtime terminology
+
 # [0.15.0](https://github.com/arxlang/arx/compare/0.14.0...0.15.0) (2026-04-22)
 
 

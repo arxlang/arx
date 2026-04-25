@@ -10,11 +10,11 @@ from __future__ import annotations
 from irx import astx
 
 from arx.lexer import Token, TokenList
-from arx.ndarray import NDArrayBinding
 from arx.parser.state import (
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
 )
+from arx.tensor import TensorBinding
 
 
 class ParserMixinBase:
@@ -29,8 +29,8 @@ class ParserMixinBase:
         type: list[set[str]]
       known_class_names:
         type: set[str]
-      ndarray_scopes:
-        type: list[dict[str, NDArrayBinding | None]]
+      tensor_scopes:
+        type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -45,7 +45,7 @@ class ParserMixinBase:
     indent_level: int
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    ndarray_scopes: list[dict[str, NDArrayBinding | None]]
+    tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -55,7 +55,7 @@ class ParserMixinBase:
         self,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope.
@@ -64,12 +64,12 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_lists:
             type: tuple[str, Ellipsis]
-          declared_ndarrays:
-            type: dict[str, NDArrayBinding | None] | None
+          declared_tensors:
+            type: dict[str, TensorBinding | None] | None
         """
         del declared_names
         del declared_lists
-        del declared_ndarrays
+        del declared_tensors
         raise NotImplementedError
 
     def _pop_value_scope(self) -> None:
@@ -100,18 +100,18 @@ class ParserMixinBase:
         del name
         raise NotImplementedError
 
-    def _declare_ndarray_name(
+    def _declare_tensor_name(
         self,
         name: str,
-        binding: NDArrayBinding | None,
+        binding: TensorBinding | None,
     ) -> None:
         """
-        title: Record one visible ndarray binding in the current scope.
+        title: Record one visible tensor binding in the current scope.
         parameters:
           name:
             type: str
           binding:
-            type: NDArrayBinding | None
+            type: TensorBinding | None
         """
         del name
         del binding
@@ -139,9 +139,9 @@ class ParserMixinBase:
         del name
         raise NotImplementedError
 
-    def _is_ndarray_name(self, name: str) -> bool:
+    def _is_tensor_name(self, name: str) -> bool:
         """
-        title: Return whether one visible name is declared as an ndarray.
+        title: Return whether one visible name is declared as a tensor.
         parameters:
           name:
             type: str
@@ -151,14 +151,14 @@ class ParserMixinBase:
         del name
         raise NotImplementedError
 
-    def _lookup_ndarray_binding(self, name: str) -> NDArrayBinding | None:
+    def _lookup_tensor_binding(self, name: str) -> TensorBinding | None:
         """
-        title: Look up one visible ndarray binding by name.
+        title: Look up one visible tensor binding by name.
         parameters:
           name:
             type: str
         returns:
-          type: NDArrayBinding | None
+          type: TensorBinding | None
         """
         del name
         raise NotImplementedError
@@ -351,7 +351,7 @@ class ParserMixinBase:
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse one block of nodes.
@@ -362,12 +362,12 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_lists:
             type: tuple[str, Ellipsis]
-          declared_ndarrays:
-            type: dict[str, NDArrayBinding | None] | None
+          declared_tensors:
+            type: dict[str, TensorBinding | None] | None
         returns:
           type: astx.Block
         """
-        del allow_docstring, declared_names, declared_lists, declared_ndarrays
+        del allow_docstring, declared_names, declared_lists, declared_tensors
         raise NotImplementedError
 
     def parse_type(

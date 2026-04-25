@@ -21,7 +21,7 @@ community-based process breaks down.
 
 ArxLang (Arx) community aims to create an open source compiler with a syntax
 that inherits elements from Python, C++, YAML, etc. An important aspect to Arx
-is that it aims to provide native ndarray types backed by Arrow internally.
+is that it aims to provide native tensor types backed by Arrow internally.
 
 The Project is conducted by a distributed team of contributors, who are
 individuals that have collaborated with code, documentation, graphical design or

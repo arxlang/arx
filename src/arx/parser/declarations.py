@@ -16,12 +16,6 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
-from arx.ndarray import (
-    NDArrayBinding,
-    binding_from_type,
-    coerce_expression,
-    is_ndarray_type,
-)
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import (
     CLASS_ALLOWED_MODIFIERS,
@@ -34,6 +28,12 @@ from arx.parser.state import (
     VISIBILITY_NAME_MAP,
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
+)
+from arx.tensor import (
+    TensorBinding,
+    binding_from_type,
+    coerce_expression,
+    is_tensor_type,
 )
 
 
@@ -132,7 +132,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 declared_lists=self._list_names_for_arguments(
                     proto.args.nodes
                 ),
-                declared_ndarrays=self._ndarray_bindings_for_arguments(
+                declared_tensors=self._tensor_bindings_for_arguments(
                     proto.args.nodes
                 ),
             )
@@ -343,7 +343,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 )
             except ValueError as err:
                 raise ParserException(str(err)) from err
-        elif is_ndarray_type(field_type):
+        elif is_tensor_type(field_type):
             try:
                 initializer = cast(
                     astx.Expr,
@@ -421,7 +421,7 @@ class DeclarationParserMixin(ParserMixinBase):
                         declared_lists=self._list_names_for_arguments(
                             prototype.args.nodes
                         ),
-                        declared_ndarrays=self._ndarray_bindings_for_arguments(
+                        declared_tensors=self._tensor_bindings_for_arguments(
                             prototype.args.nodes
                         ),
                     )
@@ -440,7 +440,7 @@ class DeclarationParserMixin(ParserMixinBase):
                         declared_lists=self._list_names_for_arguments(
                             prototype.args.nodes
                         ),
-                        declared_ndarrays=self._ndarray_bindings_for_arguments(
+                        declared_tensors=self._tensor_bindings_for_arguments(
                             prototype.args.nodes
                         ),
                     )
@@ -1045,21 +1045,21 @@ class DeclarationParserMixin(ParserMixinBase):
             fn_name, args, cast(AnyType, ret_type), loc=fn_loc
         )
 
-    def _ndarray_bindings_for_arguments(
+    def _tensor_bindings_for_arguments(
         self,
         arguments: tuple[astx.Argument, ...] | list[astx.Argument],
-    ) -> dict[str, NDArrayBinding | None]:
+    ) -> dict[str, TensorBinding | None]:
         """
-        title: Build one ndarray scope map for function arguments.
+        title: Build one tensor scope map for function arguments.
         parameters:
           arguments:
             type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
         returns:
-          type: dict[str, NDArrayBinding | None]
+          type: dict[str, TensorBinding | None]
         """
-        bindings: dict[str, NDArrayBinding | None] = {}
+        bindings: dict[str, TensorBinding | None] = {}
         for argument in arguments:
-            if not is_ndarray_type(argument.type_):
+            if not is_tensor_type(argument.type_):
                 continue
             bindings[argument.name] = binding_from_type(argument.type_)
         return bindings

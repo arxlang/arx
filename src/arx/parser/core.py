@@ -16,8 +16,8 @@ from irx import astx
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
-from arx.ndarray import NDArrayBinding
 from arx.parser.base import ParserMixinBase
+from arx.tensor import TensorBinding
 
 
 class ParserCore(ParserMixinBase):
@@ -32,8 +32,8 @@ class ParserCore(ParserMixinBase):
         type: list[set[str]]
       known_class_names:
         type: set[str]
-      ndarray_scopes:
-        type: list[dict[str, NDArrayBinding | None]]
+      tensor_scopes:
+        type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -48,7 +48,7 @@ class ParserCore(ParserMixinBase):
     indent_level: int = 0
     list_scopes: list[set[str]]
     known_class_names: set[str]
-    ndarray_scopes: list[dict[str, NDArrayBinding | None]]
+    tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -81,7 +81,7 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
-        self.ndarray_scopes = [{}]
+        self.tensor_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
@@ -94,7 +94,7 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
-        self.ndarray_scopes = [{}]
+        self.tensor_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
@@ -215,7 +215,7 @@ class ParserCore(ParserMixinBase):
         self,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
@@ -224,12 +224,12 @@ class ParserCore(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_lists:
             type: tuple[str, Ellipsis]
-          declared_ndarrays:
-            type: dict[str, NDArrayBinding | None] | None
+          declared_tensors:
+            type: dict[str, TensorBinding | None] | None
         """
         self.value_scopes.append(set(declared_names))
         self.list_scopes.append(set(declared_lists))
-        self.ndarray_scopes.append(dict(declared_ndarrays or {}))
+        self.tensor_scopes.append(dict(declared_tensors or {}))
 
     def _pop_value_scope(self) -> None:
         """
@@ -237,7 +237,7 @@ class ParserCore(ParserMixinBase):
         """
         self.value_scopes.pop()
         self.list_scopes.pop()
-        self.ndarray_scopes.pop()
+        self.tensor_scopes.pop()
 
     def _declare_value_name(self, name: str) -> None:
         """
@@ -262,20 +262,20 @@ class ParserCore(ParserMixinBase):
                 return True
         return False
 
-    def _declare_ndarray_name(
+    def _declare_tensor_name(
         self,
         name: str,
-        binding: NDArrayBinding | None,
+        binding: TensorBinding | None,
     ) -> None:
         """
-        title: Record one visible ndarray binding in the current scope.
+        title: Record one visible tensor binding in the current scope.
         parameters:
           name:
             type: str
           binding:
-            type: NDArrayBinding | None
+            type: TensorBinding | None
         """
-        self.ndarray_scopes[-1][name] = binding
+        self.tensor_scopes[-1][name] = binding
 
     def _declare_list_name(self, name: str) -> None:
         """
@@ -297,27 +297,27 @@ class ParserCore(ParserMixinBase):
         """
         return any(name in scope for scope in reversed(self.list_scopes))
 
-    def _is_ndarray_name(self, name: str) -> bool:
+    def _is_tensor_name(self, name: str) -> bool:
         """
-        title: Return whether one visible name is declared as an ndarray.
+        title: Return whether one visible name is declared as a tensor.
         parameters:
           name:
             type: str
         returns:
           type: bool
         """
-        return any(name in scope for scope in reversed(self.ndarray_scopes))
+        return any(name in scope for scope in reversed(self.tensor_scopes))
 
-    def _lookup_ndarray_binding(self, name: str) -> NDArrayBinding | None:
+    def _lookup_tensor_binding(self, name: str) -> TensorBinding | None:
         """
-        title: Return one visible ndarray binding by name.
+        title: Return one visible tensor binding by name.
         parameters:
           name:
             type: str
         returns:
-          type: NDArrayBinding | None
+          type: TensorBinding | None
         """
-        for scope in reversed(self.ndarray_scopes):
+        for scope in reversed(self.tensor_scopes):
             if name in scope:
                 return scope[name]
         return None

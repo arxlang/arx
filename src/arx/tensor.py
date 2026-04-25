@@ -1,8 +1,8 @@
 """
-title: NDArray surface helpers for Arx.
+title: Tensor surface helpers for Arx.
 summary: >-
-  Adapt Arx surface ndarray syntax to the IRx buffer-view substrate while
-  keeping user-facing shape and indexing rules local to Arx.
+  Adapt Arx surface tensor syntax to IRx Tensor nodes while keeping user-facing
+  shape and indexing rules local to Arx.
 """
 
 from __future__ import annotations
@@ -13,55 +13,79 @@ from typing import cast
 
 from irx import astx
 from irx.analysis.resolved_nodes import SemanticInfo
-from irx.buffer import (
-    BUFFER_DTYPE_TOKENS,
-    BUFFER_VIEW_ELEMENT_TYPE_EXTRA,
-    BUFFER_VIEW_METADATA_EXTRA,
-    BufferHandle,
-    BufferMutability,
-    BufferOwnership,
-    BufferViewMetadata,
-    buffer_view_flags,
+from irx.buffer import BufferMutability, BufferOwnership, buffer_view_flags
+from irx.builtins.collections.tensor import (
+    TENSOR_ELEMENT_TYPE_EXTRA,
+    TENSOR_FLAGS_EXTRA,
+    TENSOR_LAYOUT_EXTRA,
+    TensorLayout,
+    tensor_buffer_dtype,
+    tensor_default_strides,
+    tensor_element_size_bytes,
+    tensor_is_c_contiguous,
+    tensor_is_f_contiguous,
 )
 
-NDARRAY_SHAPE_ATTR = "_arx_ndarray_shape"
-NDARRAY_SURFACE_ATTR = "_arx_ndarray_surface"
-NDARRAY_VALUES_ATTR = "_arx_ndarray_values"
+TENSOR_SHAPE_ATTR = "_arx_tensor_shape"
+TENSOR_SURFACE_ATTR = "_arx_tensor_surface"
 
 
 @dataclass(frozen=True)
-class NDArrayBinding:
+class TensorBinding:
     """
-    title: Static ndarray binding metadata.
+    title: Static tensor binding metadata.
     attributes:
       element_type:
         type: astx.DataType
-      metadata:
-        type: BufferViewMetadata
+      layout:
+        type: TensorLayout
+      flags:
+        type: int
     """
 
     element_type: astx.DataType
-    metadata: BufferViewMetadata
+    layout: TensorLayout
+    flags: int
 
 
 def _shape_of(data_type: astx.DataType) -> tuple[int, ...] | None:
     """
-    title: Return the declared ndarray shape stored on one buffer view.
+    title: Return the declared tensor shape stored on one type.
     parameters:
       data_type:
         type: astx.DataType
     returns:
       type: tuple[int, Ellipsis] | None
     """
-    shape = getattr(data_type, NDARRAY_SHAPE_ATTR, None)
+    shape = getattr(data_type, TENSOR_SHAPE_ATTR, None)
     if isinstance(shape, tuple) and all(isinstance(dim, int) for dim in shape):
         return cast(tuple[int, ...], shape)
     return None
 
 
-def is_ndarray_type(data_type: astx.DataType | None) -> bool:
+def _mark_tensor_type(
+    data_type: astx.TensorType,
+    shape: tuple[int, ...] | None,
+) -> astx.TensorType:
     """
-    title: Return whether one type is an Arx ndarray surface type.
+    title: Mark one IRx TensorType as originating from Arx syntax.
+    parameters:
+      data_type:
+        type: astx.TensorType
+      shape:
+        type: tuple[int, Ellipsis] | None
+    returns:
+      type: astx.TensorType
+    """
+    setattr(data_type, TENSOR_SURFACE_ATTR, True)
+    if shape is not None:
+        setattr(data_type, TENSOR_SHAPE_ATTR, shape)
+    return data_type
+
+
+def is_tensor_type(data_type: astx.DataType | None) -> bool:
+    """
+    title: Return whether one type is an Arx tensor surface type.
     parameters:
       data_type:
         type: astx.DataType | None
@@ -69,14 +93,14 @@ def is_ndarray_type(data_type: astx.DataType | None) -> bool:
       type: bool
     """
     return (
-        isinstance(data_type, astx.BufferViewType)
-        and getattr(data_type, NDARRAY_SURFACE_ATTR, False) is True
+        isinstance(data_type, astx.TensorType)
+        and getattr(data_type, TENSOR_SURFACE_ATTR, False) is True
     )
 
 
-def ndarray_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
+def tensor_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
     """
-    title: Return the declared ndarray shape when available.
+    title: Return the declared tensor shape when available.
     parameters:
       data_type:
         type: astx.DataType | None
@@ -88,87 +112,85 @@ def ndarray_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
     return _shape_of(data_type)
 
 
-def ndarray_type(
+def tensor_type(
     element_type: astx.DataType,
     shape: tuple[int, ...] | None = None,
-) -> astx.BufferViewType:
+) -> astx.TensorType:
     """
-    title: Build one ndarray surface type.
+    title: Build one tensor surface type.
     parameters:
       element_type:
         type: astx.DataType
       shape:
         type: tuple[int, Ellipsis] | None
     returns:
-      type: astx.BufferViewType
+      type: astx.TensorType
     """
     _element_size_bytes(element_type)
-    result = astx.BufferViewType(element_type)
-    setattr(result, NDARRAY_SURFACE_ATTR, True)
-    if shape is None:
-        return result
-    if not shape:
-        raise ValueError("ndarray shapes must include at least one dimension")
-    if any(dim < 0 for dim in shape):
-        raise ValueError("ndarray dimensions must be non-negative")
-    setattr(result, NDARRAY_SHAPE_ATTR, shape)
-    return result
+    if shape is not None:
+        if not shape:
+            raise ValueError(
+                "tensor shapes must include at least one dimension"
+            )
+        if any(dim < 0 for dim in shape):
+            raise ValueError("tensor dimensions must be non-negative")
+    return _mark_tensor_type(astx.TensorType(element_type), shape)
 
 
 def binding_from_type(
     data_type: astx.DataType | None,
-) -> NDArrayBinding | None:
+) -> TensorBinding | None:
     """
-    title: Build one static ndarray binding from one declared type.
+    title: Build one static tensor binding from one declared type.
     parameters:
       data_type:
         type: astx.DataType | None
     returns:
-      type: NDArrayBinding | None
+      type: TensorBinding | None
     """
-    if not is_ndarray_type(data_type):
+    if not is_tensor_type(data_type):
         return None
 
-    shape = ndarray_shape(data_type)
-    element_type = cast(astx.BufferViewType, data_type).element_type
+    shape = tensor_shape(data_type)
+    element_type = cast(astx.TensorType, data_type).element_type
     if shape is None or element_type is None:
         return None
 
     item_size = _element_size_bytes(element_type)
-    extent = prod(shape)
-    data_handle = BufferHandle(1) if extent > 0 else BufferHandle()
-    metadata = BufferViewMetadata(
-        data=data_handle,
-        owner=BufferHandle(),
-        dtype=BufferHandle(_dtype_token(element_type)),
-        ndim=len(shape),
+    layout = TensorLayout(
         shape=shape,
-        strides=_c_contiguous_strides(shape, item_size),
+        strides=tensor_default_strides(shape, item_size),
         offset_bytes=0,
-        flags=buffer_view_flags(
-            BufferOwnership.BORROWED,
-            BufferMutability.READONLY,
-            c_contiguous=True,
-        ),
     )
-    return NDArrayBinding(element_type=element_type, metadata=metadata)
+    flags = buffer_view_flags(
+        BufferOwnership.EXTERNAL_OWNER,
+        BufferMutability.READONLY,
+        c_contiguous=tensor_is_c_contiguous(layout, item_size),
+        f_contiguous=tensor_is_f_contiguous(layout, item_size),
+    )
+    return TensorBinding(
+        element_type=element_type,
+        layout=layout,
+        flags=flags,
+    )
 
 
-def attach_binding(node: astx.AST, binding: NDArrayBinding) -> None:
+def attach_binding(node: astx.AST, binding: TensorBinding) -> None:
     """
-    title: Attach static ndarray metadata to one AST node.
+    title: Attach static tensor metadata to one AST node.
     parameters:
       node:
         type: astx.AST
       binding:
-        type: NDArrayBinding
+        type: TensorBinding
     """
     info = cast(SemanticInfo | None, getattr(node, "semantic", None))
     if info is None or not isinstance(info, SemanticInfo):
         info = SemanticInfo()
         setattr(node, "semantic", info)
-    info.extras[BUFFER_VIEW_METADATA_EXTRA] = binding.metadata
-    info.extras[BUFFER_VIEW_ELEMENT_TYPE_EXTRA] = binding.element_type
+    info.extras[TENSOR_LAYOUT_EXTRA] = binding.layout
+    info.extras[TENSOR_ELEMENT_TYPE_EXTRA] = binding.element_type
+    info.extras[TENSOR_FLAGS_EXTRA] = binding.flags
 
 
 def coerce_expression(
@@ -178,7 +200,7 @@ def coerce_expression(
     context: str,
 ) -> astx.Expr:
     """
-    title: Coerce one parsed expression into one declared ndarray type.
+    title: Coerce one parsed expression into one declared tensor type.
     parameters:
       expr:
         type: astx.Expr
@@ -189,44 +211,42 @@ def coerce_expression(
     returns:
       type: astx.Expr
     """
-    if not is_ndarray_type(target_type):
+    if not is_tensor_type(target_type):
         return expr
-    if isinstance(expr, astx.BufferViewDescriptor):
+    if isinstance(expr, astx.TensorLiteral):
         return expr
     if not isinstance(expr, astx.Literal):
         return expr
-    return build_descriptor_from_literal(expr, target_type, context=context)
+    return build_literal_from_literal(expr, target_type, context=context)
 
 
-def default_value(target_type: astx.DataType) -> astx.BufferViewDescriptor:
+def default_value(target_type: astx.DataType) -> astx.TensorLiteral:
     """
-    title: Build one default ndarray literal for one declared type.
+    title: Build one default tensor literal for one declared type.
     parameters:
       target_type:
         type: astx.DataType
     returns:
-      type: astx.BufferViewDescriptor
+      type: astx.TensorLiteral
     """
     binding = binding_from_type(target_type)
     if binding is None:
-        raise ValueError(
-            "default ndarray value requires a shaped ndarray type"
-        )
+        raise ValueError("default tensor value requires a shaped tensor type")
 
-    count = prod(binding.metadata.shape)
+    count = prod(binding.layout.shape)
     scalar = _zero_literal(binding.element_type)
     values = tuple(_clone_scalar_literal(scalar) for _ in range(count))
-    return _descriptor_from_values(binding, values)
+    return _literal_from_values(binding, values)
 
 
-def build_descriptor_from_literal(
+def build_literal_from_literal(
     expr: astx.Literal,
     target_type: astx.DataType,
     *,
     context: str,
-) -> astx.BufferViewDescriptor:
+) -> astx.TensorLiteral:
     """
-    title: Build one ndarray descriptor from one nested literal value.
+    title: Build one tensor literal from one nested literal value.
     parameters:
       expr:
         type: astx.Literal
@@ -235,52 +255,52 @@ def build_descriptor_from_literal(
       context:
         type: str
     returns:
-      type: astx.BufferViewDescriptor
+      type: astx.TensorLiteral
     """
     binding = binding_from_type(target_type)
     if binding is None:
-        if not is_ndarray_type(target_type):
-            raise ValueError("ndarray literal target must be an ndarray type")
-        element_type = cast(astx.BufferViewType, target_type).element_type
+        if not is_tensor_type(target_type):
+            raise ValueError("tensor literal target must be a tensor type")
+        element_type = cast(astx.TensorType, target_type).element_type
         if element_type is None:
             raise ValueError(
-                "ndarray literal target must declare an element type"
+                "tensor literal target must declare an element type"
             )
         shape, values = _flatten_literal(expr)
         for value in values:
             _validate_scalar_literal(value, element_type, context=context)
         inferred_binding = cast(
-            NDArrayBinding,
-            binding_from_type(ndarray_type(element_type, shape)),
+            TensorBinding,
+            binding_from_type(tensor_type(element_type, shape)),
         )
-        return _descriptor_from_values(inferred_binding, values)
+        return _literal_from_values(inferred_binding, values)
 
     shape, values = _flatten_literal(expr)
-    if shape != binding.metadata.shape:
+    if shape != binding.layout.shape:
         raise ValueError(
             f"{context} has shape {_format_shape(shape)} but the declared "
-            f"ndarray shape is {_format_shape(binding.metadata.shape)}"
+            f"tensor shape is {_format_shape(binding.layout.shape)}"
         )
 
     for value in values:
         _validate_scalar_literal(value, binding.element_type, context=context)
 
-    return _descriptor_from_values(binding, values)
+    return _literal_from_values(binding, values)
 
 
-def infer_descriptor(expr: astx.Literal) -> astx.BufferViewDescriptor:
+def infer_literal(expr: astx.Literal) -> astx.TensorLiteral:
     """
-    title: Infer one ndarray descriptor directly from one literal value.
+    title: Infer one tensor literal directly from one literal value.
     parameters:
       expr:
         type: astx.Literal
     returns:
-      type: astx.BufferViewDescriptor
+      type: astx.TensorLiteral
     """
     shape, values = _flatten_literal(expr)
     if not values:
         raise ValueError(
-            "cannot infer an ndarray element type from an empty literal"
+            "cannot infer a tensor element type from an empty literal"
         )
 
     element_type = _infer_element_type(values[0])
@@ -288,136 +308,108 @@ def infer_descriptor(expr: astx.Literal) -> astx.BufferViewDescriptor:
         _validate_scalar_literal(
             value,
             element_type,
-            context="ndarray literal",
+            context="tensor literal",
         )
 
     binding = cast(
-        NDArrayBinding,
-        binding_from_type(ndarray_type(element_type, shape)),
+        TensorBinding,
+        binding_from_type(tensor_type(element_type, shape)),
     )
-    return _descriptor_from_values(binding, values)
+    return _literal_from_values(binding, values)
 
 
 def literal_values(
-    node: astx.BufferViewDescriptor,
-) -> tuple[astx.Literal, ...] | None:
+    node: astx.TensorLiteral,
+) -> tuple[astx.AST, ...]:
     """
-    title: Return one flattened scalar payload attached to a descriptor.
+    title: Return one flattened scalar payload from a tensor literal.
     parameters:
       node:
-        type: astx.BufferViewDescriptor
+        type: astx.TensorLiteral
     returns:
-      type: tuple[astx.Literal, Ellipsis] | None
+      type: tuple[astx.AST, Ellipsis]
     """
-    values = getattr(node, NDARRAY_VALUES_ATTR, None)
-    if isinstance(values, tuple) and all(
-        isinstance(value, astx.Literal) for value in values
-    ):
-        return values
-    return None
+    return tuple(node.values)
 
 
-def _descriptor_from_values(
-    binding: NDArrayBinding,
+def _literal_from_values(
+    binding: TensorBinding,
     values: tuple[astx.Literal, ...],
-) -> astx.BufferViewDescriptor:
+) -> astx.TensorLiteral:
     """
-    title: Build one descriptor and attach its flattened scalar payload.
+    title: Build one TensorLiteral and attach static metadata.
     parameters:
       binding:
-        type: NDArrayBinding
+        type: TensorBinding
       values:
         type: tuple[astx.Literal, Ellipsis]
     returns:
-      type: astx.BufferViewDescriptor
+      type: astx.TensorLiteral
     """
-    descriptor = astx.BufferViewDescriptor(
-        binding.metadata,
-        binding.element_type,
+    literal = astx.TensorLiteral(
+        values,
+        element_type=binding.element_type,
+        shape=binding.layout.shape,
+        strides=binding.layout.strides,
+        offset_bytes=binding.layout.offset_bytes,
     )
-    setattr(descriptor.type_, NDARRAY_SURFACE_ATTR, True)
-    setattr(descriptor.type_, NDARRAY_SHAPE_ATTR, binding.metadata.shape)
-    setattr(descriptor, NDARRAY_VALUES_ATTR, values)
-    attach_binding(descriptor, binding)
-    return descriptor
-
-
-def _c_contiguous_strides(
-    shape: tuple[int, ...],
-    item_size: int,
-) -> tuple[int, ...]:
-    """
-    title: Build byte strides for one C-contiguous ndarray shape.
-    parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-      item_size:
-        type: int
-    returns:
-      type: tuple[int, Ellipsis]
-    """
-    strides: list[int] = []
-    stride = item_size
-    for dim in reversed(shape):
-        strides.append(stride)
-        stride *= max(dim, 1)
-    return tuple(reversed(strides))
+    _mark_tensor_type(literal.type_, binding.layout.shape)
+    attach_binding(literal, binding)
+    return literal
 
 
 def _element_size_bytes(element_type: astx.DataType) -> int:
     """
-    title: Return the byte width of one supported ndarray scalar type.
+    title: Return the byte width of one supported tensor scalar type.
     parameters:
       element_type:
         type: astx.DataType
     returns:
       type: int
     """
-    if isinstance(element_type, (astx.Boolean, astx.Int8)):
-        return 1
-    if isinstance(element_type, astx.Int16):
-        return 2
-    if isinstance(element_type, (astx.Int32, astx.Float32)):
-        return 4
-    if isinstance(element_type, (astx.Int64, astx.Float64)):
-        return 8
-    raise ValueError(
-        "ndarray element types currently support only bool, i8, i16, "
-        "i32, i64, f32, and f64"
-    )
+    if not isinstance(
+        element_type,
+        (
+            astx.Int8,
+            astx.Int16,
+            astx.Int32,
+            astx.Int64,
+            astx.Float32,
+            astx.Float64,
+        ),
+    ):
+        raise ValueError(
+            "tensor element types currently support only i8, i16, i32, "
+            "i64, f32, and f64"
+        )
+
+    size = tensor_element_size_bytes(element_type)
+    if size is None:
+        raise ValueError("unsupported tensor element type")
+    return size
 
 
-def _dtype_token(element_type: astx.DataType) -> int:
+def _dtype_handle(element_type: astx.DataType) -> int:
     """
-    title: Return one IRx dtype token for one ndarray scalar type.
+    title: Return one IRx dtype token for one tensor scalar type.
     parameters:
       element_type:
         type: astx.DataType
     returns:
       type: int
     """
-    if isinstance(element_type, astx.Boolean):
-        return BUFFER_DTYPE_TOKENS["bool"]
-    if isinstance(element_type, astx.Int8):
-        return BUFFER_DTYPE_TOKENS["int8"]
-    if isinstance(element_type, astx.Int16):
-        return BUFFER_DTYPE_TOKENS["int16"]
-    if isinstance(element_type, astx.Int32):
-        return BUFFER_DTYPE_TOKENS["int32"]
-    if isinstance(element_type, astx.Int64):
-        return BUFFER_DTYPE_TOKENS["int64"]
-    if isinstance(element_type, astx.Float32):
-        return BUFFER_DTYPE_TOKENS["float32"]
-    if isinstance(element_type, astx.Float64):
-        return BUFFER_DTYPE_TOKENS["float64"]
-    raise ValueError("unsupported ndarray element type")
+    _element_size_bytes(element_type)
+    handle = tensor_buffer_dtype(element_type)
+    if handle is None or handle.address is None:
+        raise ValueError("unsupported tensor element type")
+    return handle.address
 
 
 def _flatten_literal(
     expr: astx.Literal,
 ) -> tuple[tuple[int, ...], tuple[astx.Literal, ...]]:
     """
-    title: Flatten one nested ndarray literal.
+    title: Flatten one nested tensor literal.
     parameters:
       expr:
         type: astx.Literal
@@ -434,7 +426,7 @@ def _flatten_literal(
     child_values: list[astx.Literal] = []
     for element in expr.elements:
         if not isinstance(element, astx.Literal):
-            raise ValueError("ndarray literals support only literal elements")
+            raise ValueError("tensor literals support only literal elements")
         child_shape, flat_values = _flatten_literal(element)
         child_shapes.append(child_shape)
         child_values.extend(flat_values)
@@ -442,7 +434,7 @@ def _flatten_literal(
     first_shape = child_shapes[0]
     if any(shape != first_shape for shape in child_shapes[1:]):
         raise ValueError(
-            "ndarray literals must use a regular rectangular shape"
+            "tensor literals must use a regular rectangular shape"
         )
 
     return (len(expr.elements), *first_shape), tuple(child_values)
@@ -450,15 +442,13 @@ def _flatten_literal(
 
 def _infer_element_type(value: astx.Literal) -> astx.DataType:
     """
-    title: Infer one ndarray scalar type from one literal.
+    title: Infer one tensor scalar type from one literal.
     parameters:
       value:
         type: astx.Literal
     returns:
       type: astx.DataType
     """
-    if isinstance(value, astx.LiteralBoolean):
-        return astx.Boolean()
     if isinstance(value, (astx.LiteralInt8, astx.LiteralUTF8Char)):
         return astx.Int8()
     if isinstance(value, astx.LiteralInt16):
@@ -472,8 +462,8 @@ def _infer_element_type(value: astx.Literal) -> astx.DataType:
     if isinstance(value, astx.LiteralFloat64):
         return astx.Float64()
     raise ValueError(
-        "ndarray literals currently support only bool, char, integer, "
-        "and floating-point scalars"
+        "tensor literals currently support only char, integer, and "
+        "floating-point scalars"
     )
 
 
@@ -484,7 +474,7 @@ def _validate_scalar_literal(
     context: str,
 ) -> None:
     """
-    title: Validate one scalar literal against one ndarray element type.
+    title: Validate one scalar literal against one tensor element type.
     parameters:
       value:
         type: astx.Literal
@@ -493,11 +483,6 @@ def _validate_scalar_literal(
       context:
         type: str
     """
-    if isinstance(element_type, astx.Boolean):
-        if isinstance(value, astx.LiteralBoolean):
-            return
-        raise ValueError(f"{context} expects bool elements")
-
     if isinstance(
         element_type,
         (astx.Int8, astx.Int16, astx.Int32, astx.Int64),
@@ -536,20 +521,18 @@ def _validate_scalar_literal(
             f"{type(element_type).__name__}"
         )
 
-    raise ValueError("unsupported ndarray element type")
+    raise ValueError("unsupported tensor element type")
 
 
 def _zero_literal(element_type: astx.DataType) -> astx.Literal:
     """
-    title: Return one zero-value scalar literal for one ndarray type.
+    title: Return one zero-value scalar literal for one tensor type.
     parameters:
       element_type:
         type: astx.DataType
     returns:
       type: astx.Literal
     """
-    if isinstance(element_type, astx.Boolean):
-        return astx.LiteralBoolean(False)
     if isinstance(element_type, astx.Int8):
         return astx.LiteralInt8(0)
     if isinstance(element_type, astx.Int16):
@@ -562,7 +545,7 @@ def _zero_literal(element_type: astx.DataType) -> astx.Literal:
         return astx.LiteralFloat32(0.0)
     if isinstance(element_type, astx.Float64):
         return astx.LiteralFloat64(0.0)
-    raise ValueError("unsupported ndarray element type")
+    raise ValueError("unsupported tensor element type")
 
 
 def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
@@ -574,8 +557,6 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
     returns:
       type: astx.Literal
     """
-    if isinstance(value, astx.LiteralBoolean):
-        return astx.LiteralBoolean(value.value)
     if isinstance(value, astx.LiteralInt8):
         return astx.LiteralInt8(value.value)
     if isinstance(value, astx.LiteralInt16):
@@ -588,12 +569,12 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
         return astx.LiteralFloat32(value.value)
     if isinstance(value, astx.LiteralFloat64):
         return astx.LiteralFloat64(value.value)
-    raise ValueError("unsupported ndarray element type")
+    raise ValueError("unsupported tensor element type")
 
 
 def _format_shape(shape: tuple[int, ...]) -> str:
     """
-    title: Render one ndarray shape for user-facing diagnostics.
+    title: Render one tensor shape for user-facing diagnostics.
     parameters:
       shape:
         type: tuple[int, Ellipsis]
@@ -606,15 +587,15 @@ def _format_shape(shape: tuple[int, ...]) -> str:
 
 
 __all__ = [
-    "NDArrayBinding",
+    "TensorBinding",
     "attach_binding",
     "binding_from_type",
-    "build_descriptor_from_literal",
+    "build_literal_from_literal",
     "coerce_expression",
     "default_value",
-    "infer_descriptor",
-    "is_ndarray_type",
+    "infer_literal",
+    "is_tensor_type",
     "literal_values",
-    "ndarray_shape",
-    "ndarray_type",
+    "tensor_shape",
+    "tensor_type",
 ]
