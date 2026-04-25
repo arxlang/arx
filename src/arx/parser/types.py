@@ -18,6 +18,7 @@ from arx.tensor import (
     binding_from_type,
     default_value,
     is_tensor_type,
+    runtime_tensor_type,
     tensor_type,
 )
 
@@ -205,7 +206,7 @@ class TypeParserMixin(ParserMixinBase):
                         type_context,
                     )
                     try:
-                        type_ = tensor_type(elem_type)
+                        type_ = runtime_tensor_type(elem_type)
                     except ValueError as err:
                         raise ParserException(str(err)) from err
                 else:

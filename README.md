@@ -57,14 +57,18 @@ fn main() -> i32:
 Use:
 
 - `list[T]` for generic collection values
-- `tensor[T, N]` and `tensor[T, D1, D2]` for fixed-shape tensors
+- `tensor[T, N]` and `tensor[T, D0, D1, ..., DN]` for fixed-shape tensors
 - `tensor[T, ...]` for runtime-shaped tensor parameters
 
 Tensor details stay user-facing in terms of element types, shape, dimensions,
 and indexing. In this phase, variable, field, and return tensor annotations must
 declare at least one static shape dimension. IRx owns the Arrow C++ backed
 Tensor runtime and lowering. Current tensor element types are fixed-width
-numeric types: `i8`, `i16`, `i32`, `i64`, `f32`, and `f64`.
+numeric types: `i8`, `i16`, `i32`, `i64`, `f32`, and `f64`. For fixed-shape
+tensors, `...` in documentation is descriptive notation for additional integer
+dimensions, not the runtime-shaped marker. Runtime-shaped tensor parameters can
+be passed through function boundaries, but indexed access requires static-shape
+annotations until dynamic tensor indexing lands in IRx.
 
 Arx uses `Tensor` for homogeneous N-dimensional data and reserves `Array` for
 one-dimensional Arrow-style data where the language exposes it. Future

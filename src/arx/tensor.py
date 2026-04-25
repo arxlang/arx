@@ -114,26 +114,37 @@ def tensor_shape(data_type: astx.DataType | None) -> tuple[int, ...] | None:
 
 def tensor_type(
     element_type: astx.DataType,
-    shape: tuple[int, ...] | None = None,
+    shape: tuple[int, ...],
 ) -> astx.TensorType:
     """
-    title: Build one tensor surface type.
+    title: Build one static-shape tensor surface type.
     parameters:
       element_type:
         type: astx.DataType
       shape:
-        type: tuple[int, Ellipsis] | None
+        type: tuple[int, Ellipsis]
     returns:
       type: astx.TensorType
     """
     _element_size_bytes(element_type)
-    if shape is None:
-        return _mark_tensor_type(astx.TensorType(element_type), None)
     if not shape:
         raise ValueError("tensor shapes must include at least one dimension")
     if any(dim < 0 for dim in shape):
         raise ValueError("tensor dimensions must be non-negative")
     return _mark_tensor_type(astx.TensorType(element_type), shape)
+
+
+def runtime_tensor_type(element_type: astx.DataType) -> astx.TensorType:
+    """
+    title: Build one runtime-shaped tensor surface type.
+    parameters:
+      element_type:
+        type: astx.DataType
+    returns:
+      type: astx.TensorType
+    """
+    _element_size_bytes(element_type)
+    return _mark_tensor_type(astx.TensorType(element_type), None)
 
 
 def binding_from_type(
@@ -585,6 +596,7 @@ __all__ = [
     "infer_literal",
     "is_tensor_type",
     "literal_values",
+    "runtime_tensor_type",
     "tensor_shape",
     "tensor_type",
 ]

@@ -20,6 +20,7 @@ from arx.tensor import (
     infer_literal,
     is_tensor_type,
     literal_values,
+    runtime_tensor_type,
     tensor_shape,
     tensor_type,
 )
@@ -244,7 +245,7 @@ def test_tensor_surface_type_and_binding_round_trip() -> None:
     title: Tensor surface types round-trip through shape and binding metadata.
     """
     target_type = tensor_type(astx.Int16(), (2, 3))
-    runtime_type = tensor_type(astx.Int16())
+    runtime_type = runtime_tensor_type(astx.Int16())
     binding = _binding_for(target_type)
 
     assert is_tensor_type(target_type) is True
@@ -297,7 +298,7 @@ def test_zero_extent_binding_and_default_value_paths() -> None:
     assert literal.shape == (2, 2)
 
     with pytest.raises(ValueError, match="static tensor shape"):
-        default_value(tensor_type(astx.Int32()))
+        default_value(runtime_tensor_type(astx.Int32()))
 
 
 def test_attach_binding_and_coerce_expression_cover_branch_paths() -> None:
@@ -360,7 +361,7 @@ def test_build_literal_and_infer_literal_round_trip() -> None:
     with pytest.raises(ValueError, match="static tensor shape"):
         build_literal_from_literal(
             astx.LiteralList([astx.LiteralInt32(8), astx.LiteralInt32(9)]),
-            tensor_type(astx.Int32()),
+            runtime_tensor_type(astx.Int32()),
             context="initializer",
         )
 

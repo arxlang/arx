@@ -432,7 +432,11 @@ class ExpressionParserMixin(ParserMixinBase):
                 attach_binding(base, binding)
                 return base
             if self._is_tensor_name(base.name):
-                return base
+                raise ParserException(
+                    "Runtime-shaped tensor indexing is not supported yet; "
+                    "pass tensor parameters through or use a static-shape "
+                    "tensor annotation for indexed access."
+                )
             return None
 
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):

@@ -281,14 +281,10 @@ def test_parse_runtime_shaped_tensor_parameters() -> None:
     assert isinstance(runtime_tensor, astx.TensorType)
     assert tensor_shape(runtime_tensor) is None
 
-    indexed_tree = _parse(
-        "fn read(values: tensor[i32, ...]) -> i32:\n  return values[0]\n"
-    )
-    read_fn = indexed_tree.nodes[0]
-    assert isinstance(read_fn, astx.FunctionDef)
-    read_return = read_fn.body.nodes[0]
-    assert isinstance(read_return, astx.FunctionReturn)
-    assert isinstance(read_return.value, astx.TensorIndex)
+    with pytest.raises(ParserException, match="indexing is not supported"):
+        _parse(
+            "fn read(values: tensor[i32, ...]) -> i32:\n  return values[0]\n"
+        )
 
     tree = _parse(
         "extern consume(values: tensor[i32, ...]) -> i32\n"

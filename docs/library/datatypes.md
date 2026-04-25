@@ -45,7 +45,8 @@ Common places where types appear:
 
 `tensor[T, ...]` is currently parameter-only. Use fixed-shape tensor annotations
 for variables, fields, and return types until runtime-shaped storage and return
-semantics are defined.
+semantics are defined. Runtime-shaped tensor parameters can be passed through,
+but indexed access currently requires a static-shape tensor annotation.
 
 ## Built-in Type Reference
 
