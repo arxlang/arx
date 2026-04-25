@@ -16,6 +16,7 @@ from arx import builtins
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
+from arx.parser.state import TypeUseContext
 from arx.tensor import attach_binding, infer_literal
 
 
@@ -312,7 +313,9 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             value_expr = self.parse_expression()
             self._consume_operator(",")
-            target_type = self.parse_type()
+            target_type = self.parse_type(
+                type_context=TypeUseContext.EXPRESSION
+            )
             self._consume_operator(")")
             return builtins.build_cast(
                 cast(astx.DataType, value_expr), target_type
@@ -428,6 +431,12 @@ class ExpressionParserMixin(ParserMixinBase):
             if binding is not None:
                 attach_binding(base, binding)
                 return base
+            if self._is_tensor_name(base.name):
+                raise ParserException(
+                    "Runtime-shaped tensor indexing is not supported yet; "
+                    "pass tensor parameters through or use a static-shape "
+                    "tensor annotation for indexed access."
+                )
             return None
 
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):

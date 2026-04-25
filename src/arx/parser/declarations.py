@@ -28,6 +28,7 @@ from arx.parser.state import (
     VISIBILITY_NAME_MAP,
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
+    TypeUseContext,
 )
 from arx.tensor import (
     TensorBinding,
@@ -330,7 +331,7 @@ class DeclarationParserMixin(ParserMixinBase):
             )
 
         self._consume_operator(":")
-        field_type = self.parse_type()
+        field_type = self.parse_type(type_context=TypeUseContext.FIELD)
 
         initializer: astx.Expr | None = None
         if self._is_operator("="):
@@ -518,7 +519,9 @@ class DeclarationParserMixin(ParserMixinBase):
                         )
 
                     self._consume_operator(":")
-                    param_type = self.parse_type()
+                    param_type = self.parse_type(
+                        type_context=TypeUseContext.PARAMETER
+                    )
                     self._append_argument(
                         args,
                         param_name,
@@ -542,7 +545,7 @@ class DeclarationParserMixin(ParserMixinBase):
             )
 
         self._consume_operator("->")
-        return_type = self.parse_type()
+        return_type = self.parse_type(type_context=TypeUseContext.RETURN)
         return (
             astx.FunctionPrototype(
                 method_name,
@@ -678,6 +681,7 @@ class DeclarationParserMixin(ParserMixinBase):
             bound = self.parse_type(
                 allow_template_vars=False,
                 allow_union=True,
+                type_context=TypeUseContext.TEMPLATE_BOUND,
             )
             template_params.append(
                 astx.TemplateParam(param_name, bound, loc=param_loc)
@@ -716,6 +720,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 self.parse_type(
                     allow_template_vars=False,
                     allow_union=False,
+                    type_context=TypeUseContext.TEMPLATE_ARGUMENT,
                 )
             )
 
@@ -1019,7 +1024,9 @@ class DeclarationParserMixin(ParserMixinBase):
                     )
 
                 self._consume_operator(":")
-                arg_type = self.parse_type()
+                arg_type = self.parse_type(
+                    type_context=TypeUseContext.PARAMETER
+                )
 
                 self._append_argument(args, arg_name, arg_type, arg_loc)
 
@@ -1036,7 +1043,9 @@ class DeclarationParserMixin(ParserMixinBase):
                 "Parser: Expected return type annotation with '->'."
             )
         self._consume_operator("->")
-        ret_type: astx.DataType = self.parse_type()
+        ret_type: astx.DataType = self.parse_type(
+            type_context=TypeUseContext.RETURN
+        )
 
         if expect_colon:
             self._consume_operator(":")
@@ -1048,25 +1057,20 @@ class DeclarationParserMixin(ParserMixinBase):
     def _tensor_bindings_for_arguments(
         self,
         arguments: tuple[astx.Argument, ...] | list[astx.Argument],
-    ) -> dict[str, TensorBinding]:
+    ) -> dict[str, TensorBinding | None]:
         """
         title: Build one tensor scope map for function arguments.
         parameters:
           arguments:
             type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
         returns:
-          type: dict[str, TensorBinding]
+          type: dict[str, TensorBinding | None]
         """
-        bindings: dict[str, TensorBinding] = {}
+        bindings: dict[str, TensorBinding | None] = {}
         for argument in arguments:
             if not is_tensor_type(argument.type_):
                 continue
-            binding = binding_from_type(argument.type_)
-            if binding is None:
-                raise ParserException(
-                    "Tensor parameters require a static shape."
-                )
-            bindings[argument.name] = binding
+            bindings[argument.name] = binding_from_type(argument.type_)
         return bindings
 
     def _list_names_for_arguments(

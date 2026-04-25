@@ -134,6 +134,16 @@ from arx.parser import Parser
               return pick(grid)
             """
         ).lstrip(),
+        dedent(
+            """
+            fn accept(values: tensor[i32, ...]) -> i32:
+              return 0
+
+            fn main() -> i32:
+              var values: tensor[i32, 2] = [1, 2]
+              return accept(values)
+            """
+        ).lstrip(),
     ],
 )
 def test_ast_to_output(code: str) -> None:

@@ -16,6 +16,7 @@ from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
+from arx.parser.state import TypeUseContext
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
@@ -60,7 +61,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_tensors: dict[str, TensorBinding] | None = None,
+        declared_tensors: dict[str, TensorBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -72,7 +73,7 @@ class ControlFlowParserMixin(ParserMixinBase):
           declared_lists:
             type: tuple[str, Ellipsis]
           declared_tensors:
-            type: dict[str, TensorBinding] | None
+            type: dict[str, TensorBinding | None] | None
         returns:
           type: astx.Block
         """
@@ -276,7 +277,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         if isinstance(initializer.type_, astx.ListType):
             declared_lists = (initializer.name,)
 
-        declared_tensors: dict[str, TensorBinding] = {}
+        declared_tensors: dict[str, TensorBinding | None] = {}
         if is_tensor_type(initializer.type_):
             binding = binding_from_type(initializer.type_)
             if binding is None:
@@ -335,7 +336,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             )
 
         self._consume_operator(":")
-        var_type = self.parse_type()
+        var_type = self.parse_type(type_context=TypeUseContext.INLINE_VARIABLE)
 
         self._consume_operator("=")
         try:
@@ -376,7 +377,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             )
 
         self._consume_operator(":")
-        var_type = self.parse_type()
+        var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
 
         value: astx.Expr | None = None
         if self._is_operator("="):

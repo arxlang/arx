@@ -8,11 +8,41 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 from astx import SourceLocation
 from irx import astx
 
 INDENT_SIZE = 2
+
+
+class TypeUseContext(Enum):
+    """
+    title: Type annotation use context.
+    summary: >-
+      Describe where a parsed type annotation appears so surface types can
+      decide whether runtime-layout forms are allowed.
+    """
+
+    GENERAL = "general"
+    PARAMETER = "function parameter"
+    RETURN = "function return"
+    VARIABLE = "variable"
+    INLINE_VARIABLE = "inline variable"
+    FIELD = "field"
+    EXPRESSION = "expression"
+    TEMPLATE_BOUND = "template bound"
+    TEMPLATE_ARGUMENT = "template argument"
+    NESTED = "nested type"
+
+    @property
+    def allows_runtime_layout(self) -> bool:
+        """
+        title: Return whether runtime-layout collection forms are allowed.
+        returns:
+          type: bool
+        """
+        return self is TypeUseContext.PARAMETER
 
 
 @dataclass(frozen=True)
@@ -99,4 +129,5 @@ __all__ = [
     "VISIBILITY_NAME_MAP",
     "ParsedAnnotation",
     "ParsedDeclarationPrefixes",
+    "TypeUseContext",
 ]

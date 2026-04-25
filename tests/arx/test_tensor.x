@@ -17,6 +17,13 @@ fn edge_sum(values: tensor[i32, 4]) -> i32:
   ```
   return values[0] + values[3]
 
+fn accept_runtime_shape(values: tensor[i32, ...]) -> none:
+  ```
+  title: accept_runtime_shape
+  summary: Accepts a tensor whose shape is supplied at runtime.
+  ```
+  return none
+
 fn test_tensor_grid_indexing() -> none:
   ```
   title: test_tensor_grid_indexing
