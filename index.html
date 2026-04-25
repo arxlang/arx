@@ -781,6 +781,8 @@
       
         
       
+        
+      
     
     
     
@@ -1557,6 +1559,34 @@
   
   
     <li class="md-nav__item">
+      <a href="api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="api/testing/" class="md-nav__link">
         
   
@@ -1938,10 +1968,10 @@
 
 
 <h1 id="arxlang">ArxLang<a class="headerlink" href="#arxlang" title="Permanent link">&para;</a></h1>
-<p>Arx is a multi-purpose compiler that aims to provide native array abstractions
-with an <a href="https://arrow.apache.org/">Apache Arrow</a>-backed runtime. It uses the
-power of <a href="https://llvm.org/">LLVM</a> to provide multi-architecture machine target
-code generation.</p>
+<p>Arx is a multi-purpose compiler that aims to provide native list and tensor
+abstractions backed internally by IRx runtime support. It uses the power of
+<a href="https://llvm.org/">LLVM</a> to provide multi-architecture machine target code
+generation.</p>
 <p>The language syntax is influenced by Python, C++, and YAML, featuring
 significant whitespace, static typing (planned), and a focus on data-oriented
 computing.</p>
@@ -1971,8 +2001,8 @@ then consumed from Arx.</p>
 <ul>
 <li><strong>LLVM-powered</strong> -- compiles to native machine code via LLVM</li>
 <li><strong>Python-like syntax</strong> -- indentation-based blocks, familiar keywords</li>
-<li><strong>Native arrays</strong> -- builtin array-oriented types backed by Arrow internally
-  (planned)</li>
+<li><strong>Lists and tensors</strong> -- generic collections plus Arrow-backed numeric tensors
+  with first-class indexing and compiler-known shapes</li>
 <li><strong>Multiple output modes</strong> -- inspect tokens, AST, LLVM IR, or compile to
   object files</li>
 </ul>

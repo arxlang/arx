@@ -624,10 +624,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#arrays" class="md-nav__link">
+  <a href="#collections-and-tensors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Arrays
+        Collections and tensors
       
     </span>
   </a>
@@ -790,6 +790,8 @@
       
         
           
+        
+      
         
       
         
@@ -1594,6 +1596,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/testing/" class="md-nav__link">
         
   
@@ -1955,10 +1985,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#arrays" class="md-nav__link">
+  <a href="#collections-and-tensors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Arrays
+        Collections and tensors
       
     </span>
   </a>
@@ -2129,11 +2159,25 @@ their canonical spellings, accepted aliases, and current surface syntax.</p>
 <td>Recognized as a built-in type name</td>
 </tr>
 <tr>
-<td><code class="language-python highlight"><span class="n">array</span><span class="p">[</span><span class="n">T</span><span class="p">]</span></code></td>
+<td><code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">T</span><span class="p">]</span></code></td>
 <td>—</td>
 <td>collection</td>
-<td><code class="language-python highlight"><span class="n">var</span> <span class="n">ids</span><span class="p">:</span> <span class="n">array</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span></code></td>
-<td>Element type is written inside brackets</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span></code></td>
+<td>Generic collection type</td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">]</span></code></td>
+<td>—</td>
+<td>collection</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">ids</span><span class="p">:</span> <span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span></code></td>
+<td>Fixed-shape 1D numeric tensor</td>
+</tr>
+<tr>
+<td><code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span></code></td>
+<td>—</td>
+<td>collection</td>
+<td><code class="language-python highlight"><span class="n">var</span> <span class="n">grid</span><span class="p">:</span> <span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]</span></code></td>
+<td>Fixed-shape multidimensional tensor</td>
 </tr>
 </tbody>
 </table>
@@ -2186,15 +2230,37 @@ representation rather than a separate rich text type.</p>
 </code></pre></div>
 <p>The parser also recognizes <code class="language-python highlight"><span class="n">date</span></code> and <code class="language-python highlight"><span class="n">time</span></code> as built-in type names in
 annotations.</p>
-<h2 id="arrays">Arrays<a class="headerlink" href="#arrays" title="Permanent link">&para;</a></h2>
-<p>Use <code class="language-python highlight"><span class="n">array</span><span class="p">[</span><span class="n">T</span><span class="p">]</span></code> for typed arrays.</p>
-<div class="language-text highlight"><pre><span></span><code>fn array_demo() -&gt; none:
-  var ids: array[i32] = [1, 2, 3, 4]
-  var empty_ids: array[i32] = []
+<h2 id="collections-and-tensors">Collections and tensors<a class="headerlink" href="#collections-and-tensors" title="Permanent link">&para;</a></h2>
+<p>Arx exposes two public collection constructors:</p>
+<ul>
+<li><code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">T</span><span class="p">]</span></code> for generic collection values</li>
+<li><code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="p">]</span></code> for fixed-shape 1D numeric tensors</li>
+<li><code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">d0</span><span class="p">,</span> <span class="n">d1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span></code> for fixed-shape multidimensional tensors</li>
+</ul>
+<p>The naming is intentional: Arx uses <code class="language-python highlight"><span class="n">Tensor</span></code> for homogeneous N-dimensional data,
+aligning with common data-science terminology and IRx's Arrow C++ backed
+runtime. <code class="language-python highlight"><span class="n">Array</span></code> remains the term for one-dimensional Arrow-style data where it
+is exposed, and future dataframe/table support will be separate and
+heterogeneous.</p>
+<div class="language-text highlight"><pre><span></span><code>fn tensor_demo() -&gt; none:
+  var names: list[str] = [&quot;a&quot;, &quot;b&quot;]
+  var ids: tensor[i32, 4] = [1, 2, 3, 4]
+  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  print(names[0])
+  print(ids[2])
+  print(grid[1, 0])
   return none
 </code></pre></div>
-<p>Current limitation: array code generation is still limited to empty or
-homogeneous integer constant arrays.</p>
+<p>Current tensor rules in this phase:</p>
+<ul>
+<li>element types are fixed-width numeric types (<code class="language-python highlight"><span class="n">i8</span></code>, <code class="language-python highlight"><span class="n">i16</span></code>, <code class="language-python highlight"><span class="n">i32</span></code>, <code class="language-python highlight"><span class="n">i64</span></code>, <code class="language-python highlight"><span class="n">f32</span></code>,
+  or <code class="language-python highlight"><span class="n">f64</span></code>)</li>
+<li>every tensor annotation must declare at least one static shape dimension</li>
+<li>literals must be rectangular and match the declared shape</li>
+<li>indexing uses one index per declared dimension</li>
+<li>current lowering is read-only and is focused on literal/default-initialized
+  shaped tensors</li>
+</ul>
 <h2 id="casting">Casting<a class="headerlink" href="#casting" title="Permanent link">&para;</a></h2>
 <p>Use the built-in <code class="language-python highlight"><span class="n">cast</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> helper to convert values between supported
 types.</p>

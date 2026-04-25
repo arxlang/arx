@@ -507,6 +507,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#default-parameter-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Parameter Values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#template-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -757,6 +768,8 @@
       
         
           
+        
+      
         
       
         
@@ -1561,6 +1574,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/testing/" class="md-nav__link">
         
   
@@ -1889,6 +1930,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#default-parameter-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Parameter Values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#template-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1974,6 +2026,27 @@ fn main() -&gt; i32:
   summary: Calls double with a constant input.
   ```
   return double(10)
+</code></pre></div>
+<h2 id="default-parameter-values">Default Parameter Values<a class="headerlink" href="#default-parameter-values" title="Permanent link">&para;</a></h2>
+<p>Function, method, and extern parameters can declare trailing default values with
+<code class="language-python highlight"><span class="o">=</span></code>. Calls may omit those trailing arguments.</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Default argument example
+summary: Calls a helper using an optional offset.
+```
+fn add_offset(value: i32, offset: i32 = 1) -&gt; i32:
+  ```
+  title: add_offset
+  summary: Adds an optional offset to value.
+  ```
+  return value + offset
+
+fn main() -&gt; i32:
+  ```
+  title: main
+  summary: Uses the declared default offset.
+  ```
+  return add_offset(4)
 </code></pre></div>
 <h2 id="template-functions">Template Functions<a class="headerlink" href="#template-functions" title="Permanent link">&para;</a></h2>
 <p>Function templates use an <code class="language-python highlight"><span class="o">@&lt;...&gt;</span></code> block on the line immediately before <code class="language-python highlight"><span class="n">fn</span></code>.

@@ -763,6 +763,8 @@
       
         
       
+        
+      
     
     
     
@@ -1539,6 +1541,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/testing/" class="md-nav__link">
         
   
@@ -1919,8 +1949,10 @@ fn add(a: i32, b: i32) -&gt; i32:
   return a + b
 </code></pre></div>
 <h2 id="common-annotation-forms">Common Annotation Forms<a class="headerlink" href="#common-annotation-forms" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code>fn summarize(name: str, values: array[i32]) -&gt; none:
+<div class="language-text highlight"><pre><span></span><code>fn summarize(name: str, values: list[i32]) -&gt; none:
+  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   var count: i32 = 0
+  print(grid[0, 1])
   return
 </code></pre></div>
 <p>Common places where types appear:</p>
@@ -1928,7 +1960,9 @@ fn add(a: i32, b: i32) -&gt; i32:
 <li>function parameters: <code class="language-python highlight"><span class="n">fn</span> <span class="n">add</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">i32</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">i32</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">i32</span><span class="p">:</span></code></li>
 <li>function return types: <code class="language-python highlight"><span class="n">fn</span> <span class="n">test_add</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">none</span><span class="p">:</span></code></li>
 <li>variable declarations: <code class="language-python highlight"><span class="n">var</span> <span class="n">total</span><span class="p">:</span> <span class="n">i32</span> <span class="o">=</span> <span class="mi">0</span></code></li>
-<li>generic-style element annotations: <code class="language-python highlight"><span class="n">array</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span></code></li>
+<li>generic collection annotations: <code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span></code></li>
+<li>shaped 1D tensor annotations: <code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span></code></li>
+<li>multidimensional tensor annotations: <code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span></code></li>
 </ul>
 <h2 id="built-in-type-reference">Built-in Type Reference<a class="headerlink" href="#built-in-type-reference" title="Permanent link">&para;</a></h2>
 <p>For the catalog of built-in types, aliases, and examples, see
@@ -1938,7 +1972,7 @@ fn add(a: i32, b: i32) -&gt; i32:
 <li>numeric types and aliases</li>
 <li><code class="language-python highlight"><span class="n">none</span></code> as the unit type and value</li>
 <li>string, character, and temporal types</li>
-<li>arrays and current limitations</li>
+<li>lists, tensors, and current limitations</li>
 <li>the <code class="language-python highlight"><span class="n">cast</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> helper</li>
 </ul>
 

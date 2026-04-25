@@ -681,6 +681,8 @@
       
         
       
+        
+      
     
     
     
@@ -1457,6 +1459,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/testing/" class="md-nav__link">
         
   
@@ -1690,6 +1720,17 @@
     <span class="md-ellipsis">
       
         Get Started!
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arx-source-file-docstrings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arx Source File Docstrings
       
     </span>
   </a>
@@ -2037,6 +2078,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#arx-source-file-docstrings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arx Source File Docstrings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration-style" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2186,7 +2238,22 @@ $<span class="w"> </span>poetry<span class="w"> </span>install
 </ol>
 <div class="language-bash highlight"><pre><span></span><code>$<span class="w"> </span>makim<span class="w"> </span>tests.linter
 $<span class="w"> </span>makim<span class="w"> </span>tests.unit
+$<span class="w"> </span>makim<span class="w"> </span>tests.arx
 </code></pre></div>
+<h2 id="arx-source-file-docstrings">Arx Source File Docstrings<a class="headerlink" href="#arx-source-file-docstrings" title="Permanent link">&para;</a></h2>
+<p>Every committed <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code> file in this repository must start with a valid Douki
+module docstring.</p>
+<p>Use triple backticks with a YAML mapping, for example:</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Example source file
+summary: Short optional summary.
+```
+</code></pre></div>
+<p>If you add a function docstring inside a <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code> file, it must also use the same
+Douki YAML format and remain the first statement in that function body.</p>
+<p>When a <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code> file defines classes or methods, add Douki docstrings for those
+declarations too. Keep class-body docstrings inside the class block and keep
+method docstrings in valid parser-supported positions.</p>
 <ol>
 <li>Commit your changes and push your branch to GitHub:</li>
 </ol>
@@ -2216,11 +2283,13 @@ and avoid heredocs.</p>
    the list in README.md.</li>
 <li>YAML configuration changes should avoid heredocs and follow the repo's
    plain-command style for files such as <code class="language-python highlight"><span class="o">.</span><span class="n">makim</span><span class="o">.</span><span class="n">yaml</span></code> and CI workflows.</li>
+<li>New or updated <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code> files should include valid Douki docstrings.</li>
 <li>The pull request should work for Python &gt;= 3.10.</li>
 </ol>
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
 <p>To run a subset of tests:</p>
-<div class="language-bash highlight"><pre><span></span><code>$<span class="w"> </span>pytest<span class="w"> </span>tests/test_io.py
+<div class="language-bash highlight"><pre><span></span><code>$<span class="w"> </span>pytest<span class="w"> </span>tests/python/test_io.py
+$<span class="w"> </span>arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/arx/test_math.x<span class="w"> </span>--list
 </code></pre></div>
 <h2 id="release">Release<a class="headerlink" href="#release" title="Permanent link">&para;</a></h2>
 <p>This project uses semantic-release in order to cut a new release based on the

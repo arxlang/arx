@@ -619,10 +619,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#for-loop-range-style" class="md-nav__link">
+  <a href="#for-loop-for-in-style" class="md-nav__link">
     <span class="md-ellipsis">
       
-        For Loop (Range Style)
+        For Loop (For-In Style)
       
     </span>
   </a>
@@ -768,6 +768,8 @@
       
         
           
+        
+      
         
       
         
@@ -1572,6 +1574,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/testing/" class="md-nav__link">
         
   
@@ -1900,10 +1930,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#for-loop-range-style" class="md-nav__link">
+  <a href="#for-loop-for-in-style" class="md-nav__link">
     <span class="md-ellipsis">
       
-        For Loop (Range Style)
+        For Loop (For-In Style)
       
     </span>
   </a>
@@ -1995,12 +2025,13 @@ fn count_to_ten() -&gt; i32:
     a = a + 1
   return a
 </code></pre></div>
-<h2 id="for-loop-range-style">For Loop (Range Style)<a class="headerlink" href="#for-loop-range-style" title="Permanent link">&para;</a></h2>
-<p>Range-style loops use the slice-like header:</p>
-<p><code class="language-python highlight"><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">:</span><span class="n">step</span><span class="p">):</span></code></p>
+<h2 id="for-loop-for-in-style">For Loop (For-In Style)<a class="headerlink" href="#for-loop-for-in-style" title="Permanent link">&para;</a></h2>
+<p>For-in loops iterate over list-valued expressions, including builtin
+<code class="language-python highlight"><span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">[,</span> <span class="n">step</span><span class="p">])</span></code>, list literals, and list variables:</p>
+<p><code class="language-python highlight"><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="o">&lt;</span><span class="nb">list</span><span class="o">-</span><span class="n">expression</span><span class="o">&gt;</span><span class="p">:</span></code></p>
 <div class="language-text highlight"><pre><span></span><code>```
 title: Range-style for loop
-summary: Iterates from start to end with step.
+summary: Iterates from start to end with the builtin range helper.
 ```
 fn range_loop(n: i32) -&gt; i32:
   ```
@@ -2008,11 +2039,30 @@ fn range_loop(n: i32) -&gt; i32:
   summary: Sums values produced by a range loop.
   ```
   var total: i32 = 0
-  for i in (0:n:1):
+  for i in range(0, n):
     total = total + i
   return total
 </code></pre></div>
-<p>Tuple-style range headers such as <code class="language-python highlight"><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></code> are not supported.</p>
+<p>You can also iterate over a list literal or a list variable:</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: List for-in loop
+summary: Iterates over one list variable and one list literal.
+```
+fn list_loop() -&gt; i32:
+  ```
+  title: list_loop
+  summary: Sums values from two list-valued loop inputs.
+  ```
+  var values: list[i32] = range(0, 3)
+  var total: i32 = 0
+  for value in values:
+    total = total + value
+  for value in [3, 4]:
+    total = total + value
+  return total
+</code></pre></div>
+<p>The old colon range header syntax was removed. Use builtin <code class="language-python highlight"><span class="nb">range</span><span class="p">(</span><span class="o">...</span><span class="p">)</span></code> or any
+other list-valued expression instead.</p>
 <h2 id="for-loop-count-style">For Loop (Count Style)<a class="headerlink" href="#for-loop-count-style" title="Permanent link">&para;</a></h2>
 <p>Count-style loops follow:</p>
 <p><code class="language-python highlight"><span class="k">for</span> <span class="n">var</span> <span class="n">i</span><span class="p">:</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">init</span><span class="p">;</span> <span class="n">condition</span><span class="p">;</span> <span class="n">update</span><span class="p">:</span></code></p>

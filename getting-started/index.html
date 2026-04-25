@@ -1049,6 +1049,8 @@
       
         
       
+        
+      
     
     
     
@@ -1805,6 +1807,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> tensor
   
 
     
@@ -2613,7 +2643,7 @@ fn print_star(n: i32) -&gt; none:
   title: print_star
   summary: Prints stars in a loop by calling putchard.
   ```
-  for i in (0:n:1):
+  for i in range(0, n):
     putchard(42);  # ascii 42 = &#39;*&#39;
   return none
 
@@ -2713,23 +2743,24 @@ functions follow a simple convention:</p>
 <code class="language-python highlight"><span class="k">return</span> <span class="n">none</span></code>, or omit the return statement entirely.</p>
 <p>Example test module:</p>
 <div class="language-text highlight"><pre><span></span><code>```
-title: Example tests
-summary: Demonstrates `assert` and `arx test`.
+title: Example stdlib math tests
+summary: Demonstrates `assert`, `import`, and `arx test`.
 ```
-fn add(a: i32, b: i32) -&gt; i32:
-  return a + b
+import math from stdlib
 
-fn test_add() -&gt; none:
-  assert add(1, 2) == 3
-  assert add(2, 2) == 4, &quot;add(2, 2) should be 4&quot;
+fn test_square() -&gt; none:
+  assert math.square(3) == 9
+
+fn test_clamp() -&gt; none:
+  assert math.clamp(0 - 3, 0, 2) == 0
 </code></pre></div>
 <p>Run the test suite with:</p>
 <div class="language-bash highlight"><pre><span></span><code>arx<span class="w"> </span><span class="nb">test</span>
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/test_add.x<span class="w"> </span>--list
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-k<span class="w"> </span>add
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>tests/arx/test_math.x<span class="w"> </span>--list
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-k<span class="w"> </span>square
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-x
 arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--keep-artifacts
-arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s2">&quot;tests/slow_*.x&quot;</span>
+arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s2">&quot;tests/arx/slow_*.x&quot;</span>
 </code></pre></div>
 <p>Test discovery can also be tuned from <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code>:</p>
 <div class="language-toml highlight"><pre><span></span><code><span class="k">[tests]</span>
@@ -2741,7 +2772,7 @@ arx<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-
 <p>CLI arguments always take precedence over <code class="language-python highlight"><span class="p">[</span><span class="n">tests</span><span class="p">]</span></code> settings. Discovered tests
 are displayed using the cwd-relative path of the source file (without the <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code>
 suffix) joined to the function name via <code class="language-python highlight"><span class="p">::</span></code>, for example
-<code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">unit</span><span class="o">/</span><span class="n">test_math</span><span class="p">::</span><span class="n">test_add</span></code>, so same-named files in different directories
+<code class="language-python highlight"><span class="n">tests</span><span class="o">/</span><span class="n">arx</span><span class="o">/</span><span class="n">test_math</span><span class="p">::</span><span class="n">test_square</span></code>, so same-named files in different directories
 stay unambiguous.</p>
 <p>The runner compiles each selected test into its own temporary executable and
 reports assertion failures from IRx's machine-readable runtime protocol. In v1,
@@ -2837,6 +2868,18 @@ fn add(x: i32, y: i32) -&gt; i32:
   ```
   return x + y
 </code></pre></div>
+<p>Trailing function arguments can declare defaults:</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Default argument example
+summary: Omits the optional offset argument.
+```
+fn add_offset(value: i32, offset: i32 = 1) -&gt; i32:
+  ```
+  title: add_offset
+  summary: Adds an optional offset to value.
+  ```
+  return value + offset
+</code></pre></div>
 <h3 id="control-flow">Control Flow<a class="headerlink" href="#control-flow" title="Permanent link">&para;</a></h3>
 <p><strong>If/else:</strong></p>
 <div class="language-text highlight"><pre><span></span><code>```
@@ -2856,17 +2899,19 @@ fn abs(x: i32) -&gt; i32:
 <p><strong>For loop:</strong></p>
 <div class="language-text highlight"><pre><span></span><code>```
 title: For loop example
-summary: Shows loop syntax with a slice-like range clause.
+summary: Shows loop syntax with the builtin range helper.
 ```
 fn count(n: i32) -&gt; none:
   ```
   title: count
   summary: Iterates and prints star characters.
   ```
-  for i in (1:n:1):
+  for i in range(1, n):
     putchard(42)
 </code></pre></div>
-<p>The range header uses <code class="language-python highlight"><span class="p">(</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">:</span><span class="n">step</span><span class="p">)</span></code> and is intentionally slice-like.</p>
+<p>For-in loops iterate over list-valued expressions. Builtin
+<code class="language-python highlight"><span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">[,</span> <span class="n">step</span><span class="p">])</span></code> is one common source, and list literals or list
+variables work too.</p>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
 <p>Variables are declared with <code class="language-python highlight"><span class="n">var</span></code>:</p>
 <div class="language-text highlight"><pre><span></span><code>```
