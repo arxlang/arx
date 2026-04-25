@@ -5,7 +5,7 @@ summary: >-
 ```
 
 # TODO: Expand this module when iterable generators and `yield` land.
-fn range(start: i32, stop: i32, step: i32) -> list[i32]:
+fn range(start: i32, stop: i32, step: i32 = 1) -> list[i32]:
   ```
   title: range
   summary: >-

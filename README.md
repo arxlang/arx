@@ -91,7 +91,8 @@ The first builtin module is `generators`. Its current MVP exposes
 count up, negative steps count down, and `step == 0` raises an assertion
 failure. For-in loops can iterate over list-valued expressions such as
 `range(...)`, list literals, and list variables. Ambient builtin names such as
-`range` are reserved at module top level.
+`range` are injected only when not shadowed, so a local function or import with
+the same name overrides the builtin in that module.
 
 Arx now supports fatal assertion statements in the language surface:
 

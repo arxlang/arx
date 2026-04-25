@@ -381,27 +381,13 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
-    def _builtin_range_call_args(
-        self,
-        expr: astx.AST,
-    ) -> list[astx.Expr] | None:
-        """
-        title: Extract builtin range arguments from one parsed call.
-        parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: list[astx.Expr] | None
-        """
-        del expr
-        raise NotImplementedError
-
     def parse_block(
         self,
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
+        synthetic_for_in: dict[str, SyntheticForInBinding] | None = None,
     ) -> astx.Block:
         """
         title: Parse one block of nodes.
@@ -414,10 +400,18 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
+          synthetic_for_in:
+            type: dict[str, SyntheticForInBinding] | None
         returns:
           type: astx.Block
         """
-        del allow_docstring, declared_names, declared_lists, declared_ndarrays
+        del (
+            allow_docstring,
+            declared_names,
+            declared_lists,
+            declared_ndarrays,
+            synthetic_for_in,
+        )
         raise NotImplementedError
 
     def parse_type(

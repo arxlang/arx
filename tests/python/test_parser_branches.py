@@ -107,7 +107,7 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert len(fn.body.nodes) == 2
-    assert isinstance(fn.body.nodes[0], astx.ForRangeLoopStmt)
+    assert isinstance(fn.body.nodes[0], astx.ForCountLoopStmt)
     assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
 
 
@@ -417,9 +417,53 @@ def test_parse_list_default_init_and_append() -> None:
     assert isinstance(ret.value, astx.Identifier)
 
 
-def test_parse_range_normalizes_optional_step() -> None:
+def test_parse_function_and_extern_argument_defaults() -> None:
     """
-    title: Range calls require explicit start/stop and default step to one.
+    title: Function and extern arguments can declare default values.
+    """
+    tree = _parse(
+        "extern seed(value: i32 = 3) -> i32\n"
+        "fn add(value: i32, step: i32 = 1) -> i32:\n"
+        "  return value + step\n"
+    )
+
+    extern = tree.nodes[0]
+    fn = tree.nodes[1]
+    assert isinstance(extern, astx.FunctionPrototype)
+    assert isinstance(fn, astx.FunctionDef)
+
+    extern_default = extern.args.nodes[0].default
+    assert isinstance(extern_default, astx.LiteralInt32)
+    assert extern_default.value == 3
+
+    value_arg = fn.prototype.args.nodes[0]
+    step_arg = fn.prototype.args.nodes[1]
+    assert isinstance(value_arg.default, astx.Undefined)
+    assert isinstance(step_arg.default, astx.LiteralInt32)
+    assert step_arg.default.value == 1
+
+
+def test_parse_method_argument_defaults() -> None:
+    """
+    title: Method arguments can declare default values.
+    """
+    tree = _parse(
+        "class Counter:\n"
+        "  fn add(self, amount: i32 = 1) -> i32:\n"
+        "    return amount\n"
+    )
+
+    class_def = tree.nodes[0]
+    assert isinstance(class_def, astx.ClassDefStmt)
+    method = class_def.methods[0]
+    amount_arg = method.prototype.args.nodes[0]
+    assert isinstance(amount_arg.default, astx.LiteralInt32)
+    assert amount_arg.default.value == 1
+
+
+def test_parse_range_keeps_source_arguments() -> None:
+    """
+    title: Range calls keep source arity for IRx default arguments.
     """
     tree = _parse(
         "fn first() -> none:\n"
@@ -438,9 +482,7 @@ def test_parse_range_normalizes_optional_step() -> None:
     first_decl = cast(astx.VariableDeclaration, first_fn.body.nodes[0])
     assert isinstance(first_decl.value, astx.FunctionCall)
     assert first_decl.value.fn == "range"
-    assert len(first_decl.value.args) == 3
-    assert isinstance(first_decl.value.args[2], astx.LiteralInt32)
-    assert first_decl.value.args[2].value == 1
+    assert len(first_decl.value.args) == 2
 
     second_decl = cast(astx.VariableDeclaration, second_fn.body.nodes[0])
     assert isinstance(second_decl.value, astx.FunctionCall)
@@ -450,9 +492,9 @@ def test_parse_range_normalizes_optional_step() -> None:
     assert second_decl.value.args[2].value == 2
 
 
-def test_parse_range_normalizes_optional_step_with_variable_stop() -> None:
+def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
     """
-    title: Range normalization also works when stop is a variable.
+    title: Range calls with variable stop do not synthesize a step argument.
     """
     tree = _parse(
         "fn build(n: i32) -> none:\n"
@@ -466,13 +508,12 @@ def test_parse_range_normalizes_optional_step_with_variable_stop() -> None:
     decl = cast(astx.VariableDeclaration, fn.body.nodes[0])
     assert isinstance(decl.value, astx.FunctionCall)
     assert decl.value.fn == "range"
-    assert len(decl.value.args) == 3
+    assert len(decl.value.args) == 2
     assert isinstance(decl.value.args[0], astx.LiteralInt32)
     assert decl.value.args[0].value == 0
     assert isinstance(decl.value.args[1], astx.Identifier)
     assert decl.value.args[1].name == "n"
-    assert isinstance(decl.value.args[2], astx.LiteralInt32)
-    assert decl.value.args[2].value == 1
+    assert len(decl.value.args) == 2
 
 
 def test_parse_for_in_list_literal_uses_generic_loop_lowering() -> None:
@@ -568,15 +609,22 @@ def test_parse_builtin_imports_are_rejected(code: str) -> None:
         _parse(code + "fn main() -> none:\n  return none\n")
 
 
-def test_parse_range_rejects_missing_explicit_start_or_stop() -> None:
+def test_parse_range_leaves_arity_validation_to_builtins() -> None:
     """
-    title: Range calls reject the legacy single-argument form.
+    title: Range calls parse like ordinary calls before semantic analysis.
     """
-    with pytest.raises(
-        ParserException,
-        match="expects explicit start and stop arguments",
-    ):
-        _parse("fn main() -> i32:\n  return range(4)[0]\n")
+    tree = _parse(
+        "fn main() -> none:\n"
+        "  var values: list[i32] = range(4)\n"
+        "  return none\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    decl = cast(astx.VariableDeclaration, fn.body.nodes[0])
+    call = decl.value
+    assert isinstance(call, astx.FunctionCall)
+    assert call.fn == "range"
+    assert len(call.args) == 1
 
 
 @pytest.mark.parametrize(

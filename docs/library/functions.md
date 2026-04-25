@@ -40,6 +40,31 @@ fn main() -> i32:
   return double(10)
 ````
 
+## Default Parameter Values
+
+Function, method, and extern parameters can declare trailing default values with
+`=`. Calls may omit those trailing arguments.
+
+````arx
+```
+title: Default argument example
+summary: Calls a helper using an optional offset.
+```
+fn add_offset(value: i32, offset: i32 = 1) -> i32:
+  ```
+  title: add_offset
+  summary: Adds an optional offset to value.
+  ```
+  return value + offset
+
+fn main() -> i32:
+  ```
+  title: main
+  summary: Uses the declared default offset.
+  ```
+  return add_offset(4)
+````
+
 ## Template Functions
 
 Function templates use an `@<...>` block on the line immediately before `fn`.

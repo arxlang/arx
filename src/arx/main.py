@@ -156,22 +156,11 @@ def _inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
         module_name = import_node.module
         if module_name is None:
             continue
-        conflicting_names = tuple(
-            alias.name
-            for alias in import_node.names
-            if not _has_imported_name(module, module_name, alias.name)
-            and _has_top_level_binding_name(module, alias.name)
-        )
-        if conflicting_names:
-            conflict = conflicting_names[0]
-            raise ValueError(
-                f"ambient builtin name '{conflict}' is reserved and cannot "
-                "be rebound by a top-level declaration or import"
-            )
         names = tuple(
             alias.name
             for alias in import_node.names
             if not _has_imported_name(module, module_name, alias.name)
+            and not _has_top_level_binding_name(module, alias.name)
         )
         if not names:
             continue

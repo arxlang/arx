@@ -36,7 +36,7 @@ def test_bundled_builtin_package_data_is_present() -> None:
         "generators.x"
     )
     assert (
-        "fn range(start: i32, stop: i32, step: i32) -> list[i32]:"
+        "fn range(start: i32, stop: i32, step: i32 = 1) -> list[i32]:"
         in builtins.get_builtin_source("generators")
     )
 
@@ -433,11 +433,11 @@ def test_arxmain_rejects_namespaced_range_reference_in_for_loop(
         app.compile()
 
 
-def test_ambient_builtin_injection_rejects_local_range_definition(
+def test_ambient_builtin_injection_allows_local_range_definition(
     tmp_path: Path,
 ) -> None:
     """
-    title: Ambient range names are reserved against local top-level rebinding.
+    title: Local top-level definitions can override ambient builtin names.
     parameters:
       tmp_path:
         type: Path
@@ -462,18 +462,23 @@ def test_ambient_builtin_injection_rejects_local_range_definition(
         is_lib=True,
     )
 
-    with pytest.raises(
-        ValueError,
-        match="ambient builtin name 'range' is reserved",
-    ):
-        app._get_codegen_astx()
+    module = app._get_codegen_astx()
+
+    assert isinstance(module, irx_astx.Module)
+    assert not any(
+        isinstance(node, irx_astx.ImportFromStmt)
+        and node.module == "builtins.generators"
+        for node in module.nodes
+    )
+    assert isinstance(module.nodes[0], irx_astx.FunctionDef)
+    assert module.nodes[0].prototype.name == "range"
 
 
-def test_ambient_builtin_injection_rejects_imported_range_binding(
+def test_ambient_builtin_injection_allows_imported_range_binding(
     tmp_path: Path,
 ) -> None:
     """
-    title: Ambient range names are reserved against imported top-level names.
+    title: Imported top-level names can override ambient builtin names.
     parameters:
       tmp_path:
         type: Path
@@ -507,11 +512,17 @@ def test_ambient_builtin_injection_rejects_imported_range_binding(
         is_lib=True,
     )
 
-    with pytest.raises(
-        ValueError,
-        match="ambient builtin name 'range' is reserved",
-    ):
-        app._get_codegen_astx()
+    module = app._get_codegen_astx()
+
+    assert isinstance(module, irx_astx.Module)
+    assert isinstance(module.nodes[0], irx_astx.ImportFromStmt)
+    assert module.nodes[0].module == "helper"
+    assert [alias.name for alias in module.nodes[0].names] == ["range"]
+    assert not any(
+        isinstance(node, irx_astx.ImportFromStmt)
+        and node.module == "builtins.generators"
+        for node in module.nodes[1:]
+    )
 
 
 def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:

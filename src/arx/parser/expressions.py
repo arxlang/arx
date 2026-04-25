@@ -24,50 +24,6 @@ class ExpressionParserMixin(ParserMixinBase):
     title: Expression parser mixin.
     """
 
-    def _normalize_builtin_range_args(
-        self,
-        args: list[astx.DataType],
-        template_args: tuple[astx.DataType, ...] | None,
-    ) -> None:
-        """
-        title: Normalize one builtin range call argument list.
-        parameters:
-          args:
-            type: list[astx.DataType]
-          template_args:
-            type: tuple[astx.DataType, Ellipsis] | None
-        """
-        if template_args is not None:
-            raise ParserException(
-                "Builtin 'range' does not accept template arguments."
-            )
-        if len(args) == 2:
-            args.append(astx.LiteralInt32(1))
-            return
-        if len(args) != 3:
-            raise ParserException(
-                "Builtin 'range' expects explicit start and stop "
-                "arguments, with an optional step."
-            )
-
-    def _builtin_range_call_args(
-        self,
-        expr: astx.AST,
-    ) -> list[astx.Expr] | None:
-        """
-        title: Extract builtin range arguments from one parsed call expression.
-        parameters:
-          expr:
-            type: astx.AST
-        returns:
-          type: list[astx.Expr] | None
-        """
-        if isinstance(expr, astx.FunctionCall) and (
-            expr.fn == builtins.BUILTIN_RANGE
-        ):
-            return [cast(astx.Expr, arg) for arg in expr.args]
-        return None
-
     def parse_primary(self) -> astx.AST:
         """
         title: Parse the primary expression.
@@ -400,8 +356,6 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator(",")
 
         self._consume_operator(")")
-        if id_name == builtins.BUILTIN_RANGE:
-            self._normalize_builtin_range_args(args, template_args)
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name
         ):

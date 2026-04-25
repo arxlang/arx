@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import cast
 
+from astx import SourceLocation
 from astx.types import AnyType
 from irx import astx
 
@@ -40,6 +41,67 @@ class DeclarationParserMixin(ParserMixinBase):
     """
     title: Declaration parser mixin.
     """
+
+    def _parse_argument_default(
+        self,
+        arg_name: str,
+        arg_type: astx.DataType,
+    ) -> astx.Expr | None:
+        """
+        title: Parse one optional function argument default value.
+        parameters:
+          arg_name:
+            type: str
+          arg_type:
+            type: astx.DataType
+        returns:
+          type: astx.Expr | None
+        """
+        if not self._is_operator("="):
+            return None
+
+        self._consume_operator("=")
+        try:
+            return coerce_expression(
+                cast(astx.Expr, self.parse_expression()),
+                arg_type,
+                context=f"default value for parameter '{arg_name}'",
+            )
+        except ValueError as err:
+            raise ParserException(str(err)) from err
+
+    def _append_argument(
+        self,
+        args: astx.Arguments,
+        arg_name: str,
+        arg_type: astx.DataType,
+        arg_loc: SourceLocation,
+    ) -> None:
+        """
+        title: Append one parsed argument, including an optional default.
+        parameters:
+          args:
+            type: astx.Arguments
+          arg_name:
+            type: str
+          arg_type:
+            type: astx.DataType
+          arg_loc:
+            type: SourceLocation
+        """
+        default = self._parse_argument_default(arg_name, arg_type)
+        if default is None:
+            args.append(astx.Argument(arg_name, arg_type, loc=arg_loc))
+            return
+
+        args.append(
+            astx.Argument(
+                arg_name,
+                arg_type,
+                default=default,
+                loc=arg_loc,
+            )
+        )
 
     def parse_function(
         self,
@@ -457,8 +519,11 @@ class DeclarationParserMixin(ParserMixinBase):
 
                     self._consume_operator(":")
                     param_type = self.parse_type()
-                    args.append(
-                        astx.Argument(param_name, param_type, loc=param_loc)
+                    self._append_argument(
+                        args,
+                        param_name,
+                        param_type,
+                        param_loc,
                     )
 
                 index += 1
@@ -956,7 +1021,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 self._consume_operator(":")
                 arg_type = self.parse_type()
 
-                args.append(astx.Argument(arg_name, arg_type, loc=arg_loc))
+                self._append_argument(args, arg_name, arg_type, arg_loc)
 
                 if self._is_operator(","):
                     self._consume_operator(",")

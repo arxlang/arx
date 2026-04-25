@@ -143,7 +143,8 @@ Current MVP:
 - `step == 0` is rejected with an assertion failure
 - for-in loops can iterate over `range(...)`, list literals, and list variables
   because they consume list-valued expressions
-- ambient builtin names such as `range` are reserved at module top level
+- ambient builtin names such as `range` are injected only when not shadowed by a
+  local top-level declaration or import
 
 Example:
 

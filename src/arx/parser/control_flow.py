@@ -223,44 +223,11 @@ class ControlFlowParserMixin(ParserMixinBase):
             )
 
         iterable = cast(astx.Expr, self.parse_expression())
-        range_args = self._builtin_range_call_args(iterable)
-        if range_args is None:
-            return self._parse_for_iterable_stmt(
-                for_loc=for_loc,
-                loop_var_name=var_name,
-                loop_var_loc=var_loc,
-                iterable=iterable,
-            )
-
-        if len(range_args) == 2:
-            start = range_args[0]
-            end = range_args[1]
-            step = astx.LiteralInt32(1)
-        elif len(range_args) == 3:
-            start = range_args[0]
-            end = range_args[1]
-            step = range_args[2]
-        else:
-            raise ParserException(
-                "Builtin 'range' expects explicit start and stop "
-                "arguments, with an optional step."
-            )
-
-        self._consume_operator(":")
-        body = self.parse_block(declared_names=(var_name,))
-
-        variable = astx.InlineVariableDeclaration(
-            name=var_name,
-            type_=astx.Int32(),
-            loc=var_loc,
-        )
-        return astx.ForRangeLoopStmt(
-            variable,
-            cast(astx.Expr, start),
-            cast(astx.Expr, end),
-            cast(astx.Expr, step),
-            body,
-            loc=for_loc,
+        return self._parse_for_iterable_stmt(
+            for_loc=for_loc,
+            loop_var_name=var_name,
+            loop_var_loc=var_loc,
+            iterable=iterable,
         )
 
     def _parse_for_iterable_stmt(

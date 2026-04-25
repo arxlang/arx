@@ -436,6 +436,21 @@ fn add(x: i32, y: i32) -> i32:
   return x + y
 ````
 
+Trailing function arguments can declare defaults:
+
+````arx
+```
+title: Default argument example
+summary: Omits the optional offset argument.
+```
+fn add_offset(value: i32, offset: i32 = 1) -> i32:
+  ```
+  title: add_offset
+  summary: Adds an optional offset to value.
+  ```
+  return value + offset
+````
+
 ### Control Flow
 
 **If/else:**
