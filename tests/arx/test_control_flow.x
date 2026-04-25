@@ -34,6 +34,13 @@ fn first_range_value(limit: i32) -> i32:
     return i
   return limit
 
+fn make_values() -> list[i32]:
+  ```
+  title: make_values
+  summary: Builds one list for function-call iterable coverage.
+  ```
+  return range(0, 4)
+
 fn skipped_count_loop() -> i32:
   ```
   title: skipped_count_loop
@@ -83,6 +90,11 @@ fn test_for_in_list_asserts() -> none:
   for value in [1, 2, 3]:
     total_from_literal = total_from_literal + value
   assert total_from_literal == 6, "for-in over a list literal should sum to 6"
+
+  var total_from_call: i32 = 0
+  for value in make_values():
+    total_from_call = total_from_call + value
+  assert total_from_call == 6, "for-in over a function call should sum to 6"
 
 fn test_for_count_loop_asserts() -> none:
   ```

@@ -674,11 +674,14 @@ def test_parse_for_range_builtin_call() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     loop = fn.body.nodes[0]
-    assert isinstance(loop, astx.ForCountLoopStmt)
-    assert isinstance(loop.condition, astx.BinaryOp)
-    assert isinstance(loop.condition.rhs, irx_astx.ListLength)
+    assert isinstance(loop, irx_astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "j"
+    assert isinstance(loop.iterable, astx.FunctionCall)
+    assert loop.iterable.fn == "range"
     assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
-    assert isinstance(loop.body.nodes[0].value, irx_astx.ListIndex)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "j"
 
 
 def test_parse_for_in_list_variable() -> None:
@@ -698,14 +701,17 @@ def test_parse_for_in_list_variable() -> None:
     tree = parser.parse(lexer.lex())
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
-    assert isinstance(fn.body.nodes[1], astx.ForCountLoopStmt)
+    assert isinstance(fn.body.nodes[1], irx_astx.ForInLoopStmt)
 
     loop = fn.body.nodes[1]
-    assert isinstance(loop, astx.ForCountLoopStmt)
-    assert isinstance(loop.condition, astx.BinaryOp)
-    assert isinstance(loop.condition.rhs, irx_astx.ListLength)
+    assert isinstance(loop, irx_astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.Identifier)
+    assert loop.iterable.name == "xs"
     assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
-    assert isinstance(loop.body.nodes[0].value, irx_astx.ListIndex)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
 
 
 def test_parse_for_removed_colon_range_syntax_is_rejected() -> None:

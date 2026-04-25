@@ -107,7 +107,7 @@ def test_parse_block_keeps_return_after_loop_semicolon() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert len(fn.body.nodes) == 2
-    assert isinstance(fn.body.nodes[0], astx.ForCountLoopStmt)
+    assert isinstance(fn.body.nodes[0], astx.ForInLoopStmt)
     assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
 
 
@@ -516,9 +516,9 @@ def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
     assert len(decl.value.args) == 2
 
 
-def test_parse_for_in_list_literal_uses_generic_loop_lowering() -> None:
+def test_parse_for_in_list_literal_uses_for_in_node() -> None:
     """
-    title: For-in over a list literal lowers through the generic list path.
+    title: For-in over a list literal preserves one for-in AST node.
     """
     tree = _parse(
         "fn main() -> i32:\n"
@@ -531,16 +531,18 @@ def test_parse_for_in_list_literal_uses_generic_loop_lowering() -> None:
     assert isinstance(fn, astx.FunctionDef)
 
     loop = fn.body.nodes[0]
-    assert isinstance(loop, astx.ForCountLoopStmt)
-    assert isinstance(loop.condition, astx.BinaryOp)
-    assert isinstance(loop.condition.rhs, astx.ListLength)
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.LiteralList)
     assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
-    assert isinstance(loop.body.nodes[0].value, astx.ListIndex)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
 
 
-def test_parse_for_in_list_variable_uses_generic_loop_lowering() -> None:
+def test_parse_for_in_list_variable_uses_for_in_node() -> None:
     """
-    title: For-in over a list variable lowers through the generic list path.
+    title: For-in over a list variable preserves one for-in AST node.
     """
     tree = _parse(
         "fn main() -> i32:\n"
@@ -554,22 +556,47 @@ def test_parse_for_in_list_variable_uses_generic_loop_lowering() -> None:
     assert isinstance(fn, astx.FunctionDef)
 
     loop = fn.body.nodes[1]
-    assert isinstance(loop, astx.ForCountLoopStmt)
-    assert isinstance(loop.condition, astx.BinaryOp)
-    assert isinstance(loop.condition.rhs, astx.ListLength)
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.target, astx.Identifier)
+    assert loop.target.name == "value"
+    assert isinstance(loop.iterable, astx.Identifier)
+    assert loop.iterable.name == "xs"
     assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
-    assert isinstance(loop.body.nodes[0].value, astx.ListIndex)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
 
 
-def test_parse_for_in_list_shadowing_keeps_inner_binding() -> None:
+def test_parse_for_in_function_call_preserves_iterable_call() -> None:
     """
-    title: Inner declarations shadow synthetic for-in element bindings.
+    title: For-in over a function call keeps one iterable call expression.
+    """
+    tree = _parse(
+        "fn make_values() -> list[i32]:\n"
+        "  return range(0, 3)\n"
+        "fn main() -> i32:\n"
+        "  for value in make_values():\n"
+        "    return value\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[1]
+    assert isinstance(fn, astx.FunctionDef)
+
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.iterable, astx.FunctionCall)
+    assert loop.iterable.fn == "make_values"
+    assert len(loop.iterable.args) == 0
+
+
+def test_parse_for_in_target_is_visible_in_body() -> None:
+    """
+    title: For-in loop targets are visible identifiers inside the body.
     """
     tree = _parse(
         "fn main() -> i32:\n"
         "  var xs: list[i32] = range(0, 3)\n"
         "  for value in xs:\n"
-        "    var value: i32 = 9\n"
         "    return value\n"
         "  return 0\n"
     )
@@ -578,11 +605,10 @@ def test_parse_for_in_list_shadowing_keeps_inner_binding() -> None:
     assert isinstance(fn, astx.FunctionDef)
 
     loop = fn.body.nodes[1]
-    assert isinstance(loop, astx.ForCountLoopStmt)
-    assert isinstance(loop.body.nodes[0], astx.VariableDeclaration)
-    assert isinstance(loop.body.nodes[1], astx.FunctionReturn)
-    assert isinstance(loop.body.nodes[1].value, astx.Identifier)
-    assert loop.body.nodes[1].value.name == "value"
+    assert isinstance(loop, astx.ForInLoopStmt)
+    assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
+    assert isinstance(loop.body.nodes[0].value, astx.Identifier)
+    assert loop.body.nodes[0].value.name == "value"
 
 
 @pytest.mark.parametrize(

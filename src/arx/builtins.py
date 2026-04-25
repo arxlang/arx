@@ -6,11 +6,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib.resources import files
-from importlib.resources.abc import Traversable
-from typing import cast
+from typing import Any, TypeAlias, cast
 
 import astx
 import irx.astx as irx_astx
+
+Traversable: TypeAlias = Any
 
 BUILTIN_NAMESPACE = "builtins"
 BUILTIN_SOURCE_EXTENSION = ".x"

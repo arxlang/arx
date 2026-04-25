@@ -106,6 +106,7 @@ ENV/
 .codex
 .claude
 PLAN.md
+REVIEW.md
 
 # tmp
 pytest-*

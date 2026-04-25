@@ -18,7 +18,6 @@ from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
 from arx.ndarray import NDArrayBinding
 from arx.parser.base import ParserMixinBase
-from arx.parser.state import SyntheticForInBinding
 
 
 class ParserCore(ParserMixinBase):
@@ -37,16 +36,12 @@ class ParserCore(ParserMixinBase):
         type: list[dict[str, NDArrayBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
-      synthetic_for_in_scopes:
-        type: list[dict[str, SyntheticForInBinding]]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
       value_scopes:
         type: list[set[str]]
       tokens:
         type: TokenList
-      _internal_name_counter:
-        type: int
     """
 
     bin_op_precedence: dict[str, int] = {}
@@ -55,11 +50,9 @@ class ParserCore(ParserMixinBase):
     known_class_names: set[str]
     ndarray_scopes: list[dict[str, NDArrayBinding | None]]
     return_type_scopes: list[astx.DataType]
-    synthetic_for_in_scopes: list[dict[str, SyntheticForInBinding]]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
     tokens: TokenList
-    _internal_name_counter: int
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
         """
@@ -90,11 +83,9 @@ class ParserCore(ParserMixinBase):
         self.known_class_names = set()
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
-        self.synthetic_for_in_scopes = [{}]
         self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = tokens
-        self._internal_name_counter = 0
 
     def clean(self) -> None:
         """
@@ -105,11 +96,9 @@ class ParserCore(ParserMixinBase):
         self.known_class_names = set()
         self.ndarray_scopes = [{}]
         self.return_type_scopes = []
-        self.synthetic_for_in_scopes = [{}]
         self.template_type_scopes = []
         self.value_scopes = [set()]
         self.tokens = TokenList([])
-        self._internal_name_counter = 0
 
     def parse(
         self, tokens: TokenList, module_name: str = "main"
@@ -227,7 +216,6 @@ class ParserCore(ParserMixinBase):
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_ndarrays: dict[str, NDArrayBinding | None] | None = None,
-        synthetic_for_in: dict[str, SyntheticForInBinding] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
@@ -238,13 +226,10 @@ class ParserCore(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_ndarrays:
             type: dict[str, NDArrayBinding | None] | None
-          synthetic_for_in:
-            type: dict[str, SyntheticForInBinding] | None
         """
         self.value_scopes.append(set(declared_names))
         self.list_scopes.append(set(declared_lists))
         self.ndarray_scopes.append(dict(declared_ndarrays or {}))
-        self.synthetic_for_in_scopes.append(dict(synthetic_for_in or {}))
 
     def _pop_value_scope(self) -> None:
         """
@@ -253,7 +238,6 @@ class ParserCore(ParserMixinBase):
         self.value_scopes.pop()
         self.list_scopes.pop()
         self.ndarray_scopes.pop()
-        self.synthetic_for_in_scopes.pop()
 
     def _declare_value_name(self, name: str) -> None:
         """
@@ -264,45 +248,6 @@ class ParserCore(ParserMixinBase):
         """
         self.value_scopes[-1].add(name)
 
-    def _lookup_synthetic_for_in(
-        self,
-        name: str,
-    ) -> SyntheticForInBinding | None:
-        """
-        title: Return one visible synthetic for-in binding by name.
-        parameters:
-          name:
-            type: str
-        returns:
-          type: SyntheticForInBinding | None
-        """
-        for value_scope, synthetic_scope in zip(
-            reversed(self.value_scopes),
-            reversed(self.synthetic_for_in_scopes),
-            strict=True,
-        ):
-            if name in value_scope:
-                return None
-            binding = synthetic_scope.get(name)
-            if binding is not None:
-                return binding
-        return None
-
-    def _fresh_internal_name(self, prefix: str) -> str:
-        """
-        title: Return one collision-free parser-generated name.
-        parameters:
-          prefix:
-            type: str
-        returns:
-          type: str
-        """
-        while True:
-            candidate = f"{prefix}_{self._internal_name_counter}"
-            self._internal_name_counter += 1
-            if not any(candidate in scope for scope in self.value_scopes):
-                return candidate
-
     def _name_is_shadowed(self, name: str) -> bool:
         """
         title: Return whether a visible value binding shadows a class name.
@@ -312,12 +257,8 @@ class ParserCore(ParserMixinBase):
         returns:
           type: bool
         """
-        for value_scope, synthetic_scope in zip(
-            reversed(self.value_scopes),
-            reversed(self.synthetic_for_in_scopes),
-            strict=True,
-        ):
-            if name in value_scope or name in synthetic_scope:
+        for value_scope in reversed(self.value_scopes):
+            if name in value_scope:
                 return True
         return False
 
