@@ -1,6 +1,16 @@
 # Release Notes
 ---
 
+# [0.16.0](https://github.com/arxlang/arx/compare/0.15.0...0.16.0) (2026-04-25)
+
+
+### Features
+
+* Add initial stdlib ([#67](https://github.com/arxlang/arx/issues/67)) ([3e74ca7](https://github.com/arxlang/arx/commit/3e74ca7ae858533865f9139c6310bdd9c68aed35))
+* Add support for NDArray ([#66](https://github.com/arxlang/arx/issues/66)) ([d473ae3](https://github.com/arxlang/arx/commit/d473ae3ef572549cf7095da0decf4f8fc5a5e806))
+* Create initial structure for builtins ([#69](https://github.com/arxlang/arx/issues/69)) ([5f7bb17](https://github.com/arxlang/arx/commit/5f7bb17a2f84a3e8e6812b175c7bbf2c83ca0f65))
+* Move from ndarray to tensors with arrow c++ ([#70](https://github.com/arxlang/arx/issues/70)) ([c2f68e8](https://github.com/arxlang/arx/commit/c2f68e87b788efe9b0a9e539283bdd94c7d8ae8e))
+
 # Unreleased
 
 ### Features
