@@ -1048,20 +1048,25 @@ class DeclarationParserMixin(ParserMixinBase):
     def _tensor_bindings_for_arguments(
         self,
         arguments: tuple[astx.Argument, ...] | list[astx.Argument],
-    ) -> dict[str, TensorBinding | None]:
+    ) -> dict[str, TensorBinding]:
         """
         title: Build one tensor scope map for function arguments.
         parameters:
           arguments:
             type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
         returns:
-          type: dict[str, TensorBinding | None]
+          type: dict[str, TensorBinding]
         """
-        bindings: dict[str, TensorBinding | None] = {}
+        bindings: dict[str, TensorBinding] = {}
         for argument in arguments:
             if not is_tensor_type(argument.type_):
                 continue
-            bindings[argument.name] = binding_from_type(argument.type_)
+            binding = binding_from_type(argument.type_)
+            if binding is None:
+                raise ParserException(
+                    "Tensor parameters require a static shape."
+                )
+            bindings[argument.name] = binding
         return bindings
 
     def _list_names_for_arguments(

@@ -39,8 +39,7 @@ Common places where types appear:
 - function return types: `fn test_add() -> none:`
 - variable declarations: `var total: i32 = 0`
 - generic collection annotations: `list[i32]`
-- unsized tensor annotations: `tensor[i32]`
-- shaped tensor annotations: `tensor[i32, 4]`
+- shaped 1D tensor annotations: `tensor[i32, 4]`
 - multidimensional tensor annotations: `tensor[i32, 2, 2]`
 
 ## Built-in Type Reference

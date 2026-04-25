@@ -66,8 +66,8 @@ class TypeParserMixin(ParserMixinBase):
         if is_tensor_type(data_type):
             if binding_from_type(data_type) is None:
                 raise ParserException(
-                    "Parser: No default value defined for unsized tensor "
-                    "types. An explicit initializer is required."
+                    "Parser: Tensor types require at least one static shape "
+                    "dimension."
                 )
             try:
                 return default_value(data_type)
@@ -140,11 +140,13 @@ class TypeParserMixin(ParserMixinBase):
                     self.tokens.get_next_token()
 
                 self._consume_operator("]")
-                try:
-                    type_ = tensor_type(
-                        elem_type,
-                        tuple(shape) if shape else None,
+                if not shape:
+                    raise ParserException(
+                        "Tensor types require at least one static shape "
+                        "dimension, for example tensor[i32, 4]."
                     )
+                try:
+                    type_ = tensor_type(elem_type, tuple(shape))
                 except ValueError as err:
                     raise ParserException(str(err)) from err
             else:

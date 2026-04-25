@@ -127,13 +127,14 @@ def tensor_type(
       type: astx.TensorType
     """
     _element_size_bytes(element_type)
-    if shape is not None:
-        if not shape:
-            raise ValueError(
-                "tensor shapes must include at least one dimension"
-            )
-        if any(dim < 0 for dim in shape):
-            raise ValueError("tensor dimensions must be non-negative")
+    if shape is None:
+        raise ValueError(
+            "tensor types require at least one static shape dimension"
+        )
+    if not shape:
+        raise ValueError("tensor shapes must include at least one dimension")
+    if any(dim < 0 for dim in shape):
+        raise ValueError("tensor dimensions must be non-negative")
     return _mark_tensor_type(astx.TensorType(element_type), shape)
 
 
@@ -231,7 +232,7 @@ def default_value(target_type: astx.DataType) -> astx.TensorLiteral:
     """
     binding = binding_from_type(target_type)
     if binding is None:
-        raise ValueError("default tensor value requires a shaped tensor type")
+        raise ValueError("default tensor value requires a static tensor shape")
 
     count = prod(binding.layout.shape)
     scalar = _zero_literal(binding.element_type)
@@ -261,19 +262,9 @@ def build_literal_from_literal(
     if binding is None:
         if not is_tensor_type(target_type):
             raise ValueError("tensor literal target must be a tensor type")
-        element_type = cast(astx.TensorType, target_type).element_type
-        if element_type is None:
-            raise ValueError(
-                "tensor literal target must declare an element type"
-            )
-        shape, values = _flatten_literal(expr)
-        for value in values:
-            _validate_scalar_literal(value, element_type, context=context)
-        inferred_binding = cast(
-            TensorBinding,
-            binding_from_type(tensor_type(element_type, shape)),
+        raise ValueError(
+            "tensor literal target requires a static tensor shape"
         )
-        return _literal_from_values(inferred_binding, values)
 
     shape, values = _flatten_literal(expr)
     if shape != binding.layout.shape:

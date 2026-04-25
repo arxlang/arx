@@ -24,7 +24,6 @@ their canonical spellings, accepted aliases, and current surface syntax.
 | `date`           | —                | temporal   | `var d: date`                                    | Recognized as a built-in type name       |
 | `time`           | —                | temporal   | `var t: time`                                    | Recognized as a built-in type name       |
 | `list[T]`        | —                | collection | `var ids: list[i32] = [1, 2, 3]`                 | Generic collection type                  |
-| `tensor[T]`      | —                | collection | `var ids: tensor[i32] = [1, 2, 3]`               | Dynamic / unsized numeric tensor         |
 | `tensor[T, N]`   | —                | collection | `var ids: tensor[i32, 4] = [1, 2, 3, 4]`         | Fixed-shape 1D numeric tensor            |
 | `tensor[T, ...]` | —                | collection | `var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]` | Fixed-shape multidimensional tensor      |
 
@@ -99,7 +98,6 @@ annotations.
 Arx exposes two public collection constructors:
 
 - `list[T]` for generic collection values
-- `tensor[T]` for dynamic / unsized numeric tensors
 - `tensor[T, N]` for fixed-shape 1D numeric tensors
 - `tensor[T, d0, d1, ...]` for fixed-shape multidimensional tensors
 
@@ -124,7 +122,7 @@ Current tensor rules in this phase:
 
 - element types are fixed-width numeric types (`i8`, `i16`, `i32`, `i64`, `f32`,
   or `f64`)
-- shapes are declared in the type annotation
+- every tensor annotation must declare at least one static shape dimension
 - literals must be rectangular and match the declared shape
 - indexing uses one index per declared dimension
 - current lowering is read-only and is focused on literal/default-initialized

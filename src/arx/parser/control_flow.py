@@ -60,7 +60,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         allow_docstring: bool = False,
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
-        declared_tensors: dict[str, TensorBinding | None] | None = None,
+        declared_tensors: dict[str, TensorBinding] | None = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -72,7 +72,7 @@ class ControlFlowParserMixin(ParserMixinBase):
           declared_lists:
             type: tuple[str, Ellipsis]
           declared_tensors:
-            type: dict[str, TensorBinding | None] | None
+            type: dict[str, TensorBinding] | None
         returns:
           type: astx.Block
         """
@@ -276,9 +276,19 @@ class ControlFlowParserMixin(ParserMixinBase):
         if isinstance(initializer.type_, astx.ListType):
             declared_lists = (initializer.name,)
 
+        declared_tensors: dict[str, TensorBinding] = {}
+        if is_tensor_type(initializer.type_):
+            binding = binding_from_type(initializer.type_)
+            if binding is None:
+                raise ParserException(
+                    "Tensor loop initializers require a static shape."
+                )
+            declared_tensors[initializer.name] = binding
+
         self._push_value_scope(
             (initializer.name,),
             declared_lists,
+            declared_tensors,
         )
         try:
             condition = self.parse_expression()
@@ -399,6 +409,10 @@ class ControlFlowParserMixin(ParserMixinBase):
         self._declare_value_name(name)
         if is_tensor_type(var_type):
             binding = binding_from_type(var_type)
+            if binding is None:
+                raise ParserException(
+                    "Tensor declarations require a static shape."
+                )
             self._declare_tensor_name(name, binding)
         if isinstance(var_type, astx.ListType):
             self._declare_list_name(name)

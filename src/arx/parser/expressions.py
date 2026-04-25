@@ -428,9 +428,7 @@ class ExpressionParserMixin(ParserMixinBase):
             if binding is not None:
                 attach_binding(base, binding)
                 return base
-            if not self._is_tensor_name(base.name):
-                return None
-            return base
+            return None
 
         if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
             try:

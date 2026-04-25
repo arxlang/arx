@@ -12,7 +12,7 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
-from arx.tensor import tensor_shape, tensor_type
+from arx.tensor import tensor_shape
 from irx import astx
 
 
@@ -207,26 +207,16 @@ def test_parse_list_and_tensor_type_forms_and_default_values() -> None:
     tree = _parse(
         "fn dynamic(arg: list[i32]) -> i32:\n"
         "  return 1\n"
-        "fn vector(values: tensor[i32]) -> i32:\n"
-        "  return values[0]\n"
         "fn fixed(values: tensor[i32, 4]) -> i32:\n"
         "  return values[0]\n"
         "fn grid(values: tensor[i32, 2, 3]) -> i32:\n"
         "  return values[1, 2]\n"
     )
     dynamic_fn = tree.nodes[0]
-    vector_fn = tree.nodes[1]
-    fixed_fn = tree.nodes[2]
-    grid_fn = tree.nodes[3]
+    fixed_fn = tree.nodes[1]
+    grid_fn = tree.nodes[2]
     assert isinstance(dynamic_fn, astx.FunctionDef)
     assert isinstance(dynamic_fn.prototype.args[0].type_, astx.ListType)
-    assert isinstance(vector_fn, astx.FunctionDef)
-    assert isinstance(vector_fn.prototype.args[0].type_, astx.TensorType)
-    assert tensor_shape(vector_fn.prototype.args[0].type_) is None
-    assert isinstance(
-        cast(astx.FunctionReturn, vector_fn.body.nodes[0]).value,
-        astx.TensorIndex,
-    )
     assert isinstance(fixed_fn, astx.FunctionDef)
     assert isinstance(fixed_fn.prototype.args[0].type_, astx.TensorType)
     assert tensor_shape(fixed_fn.prototype.args[0].type_) == (4,)
@@ -272,14 +262,32 @@ def test_parse_list_and_tensor_type_forms_and_default_values() -> None:
         parser._default_value_for_type(astx.Time()), astx.LiteralTime
     )
 
-    with pytest.raises(ParserException, match="unsized tensor"):
-        parser._default_value_for_type(tensor_type(astx.Int32()))
-
     list_default = parser._default_value_for_type(
         astx.ListType([astx.Int32()])
     )
     assert isinstance(list_default, astx.ListCreate)
     assert isinstance(list_default.type_, astx.ListType)
+
+
+def test_parse_unsized_tensor_type_is_rejected() -> None:
+    """
+    title: Unsized tensor annotations are rejected in the current phase.
+    """
+    ArxIO.string_to_buffer("tensor[i32]")
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match="static shape"):
+        parser.parse_type()
+
+    with pytest.raises(ParserException, match="static shape"):
+        _parse("fn vector(values: tensor[i32]) -> i32:\n  return values[0]\n")
+
+    with pytest.raises(ParserException, match="static shape"):
+        _parse(
+            "fn main() -> i32:\n"
+            "  var values: tensor[i32] = [1, 2, 3]\n"
+            "  return values[1]\n"
+        )
 
 
 def test_parse_list_types_reject_shape_dimensions() -> None:
@@ -346,45 +354,6 @@ def test_parse_tensor_type_literal_and_indexing() -> None:
     ) == (4,)
 
 
-def test_parse_unsized_tensor_literal_init_and_indexing() -> None:
-    """
-    title: Unsized tensor declarations allow indexing without specialization.
-    """
-    tree = _parse(
-        "fn main() -> i32:\n"
-        "  var values: tensor[i32] = [1, 2, 3]\n"
-        "  return values[1]\n"
-    )
-    fn = tree.nodes[0]
-    assert isinstance(fn, astx.FunctionDef)
-    declaration = fn.body.nodes[0]
-    assert isinstance(declaration, astx.VariableDeclaration)
-    assert isinstance(declaration.type_, astx.TensorType)
-    assert tensor_shape(declaration.type_) is None
-    assert isinstance(declaration.value, astx.TensorLiteral)
-    assert tensor_shape(declaration.value.type_) == (3,)
-
-    ret = fn.body.nodes[1]
-    assert isinstance(ret, astx.FunctionReturn)
-    assert isinstance(ret.value, astx.TensorIndex)
-
-
-def test_parse_unsized_tensor_indexing_skips_static_bounds_checks() -> None:
-    """
-    title: Unsized tensor indexing does not perform shaped static bound checks.
-    """
-    tree = _parse(
-        "fn main() -> i32:\n"
-        "  var values: tensor[i32] = [1, 2, 3]\n"
-        "  return values[99]\n"
-    )
-    fn = tree.nodes[0]
-    assert isinstance(fn, astx.FunctionDef)
-    ret = fn.body.nodes[1]
-    assert isinstance(ret, astx.FunctionReturn)
-    assert isinstance(ret.value, astx.TensorIndex)
-
-
 def test_parse_list_default_init_and_append() -> None:
     """
     title: List declarations default to ListCreate and lower append calls.
@@ -413,6 +382,29 @@ def test_parse_list_default_init_and_append() -> None:
     ret = fn.body.nodes[2]
     assert isinstance(ret, astx.FunctionReturn)
     assert isinstance(ret.value, astx.Identifier)
+
+
+def test_parse_count_loop_tensor_initializer_scope() -> None:
+    """
+    title: Count-loop tensor initializer metadata remains visible.
+    """
+    tree = _parse(
+        "fn main() -> i32:\n"
+        "  for var values: tensor[i32, 2] = [1, 2]; "
+        "values[0] < 3; values:\n"
+        "    return values[1]\n"
+        "  return 0\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    loop = fn.body.nodes[0]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.condition, astx.BinaryOp)
+    assert isinstance(loop.condition.lhs, astx.TensorIndex)
+    ret = loop.body.nodes[0]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.TensorIndex)
 
 
 def test_parse_function_and_extern_argument_defaults() -> None:
