@@ -94,8 +94,8 @@ $ git checkout -b name-of-your-bugfix-or-feature
     the tests:
 
 ```bash
-$ makim tests.linter
-$ makim tests.unit
+$ makim all.lint
+$ makim all.unittests
 ```
 
 6.  Commit your changes and push your branch to GitHub:
@@ -129,7 +129,7 @@ $ pytest tests.test_arxast
 or
 
 ```bash
-$ makim tests.unit --path "packages/astx/tests" --params "-k mytest_func"
+$ makim astx.unittests --params "-k mytest_func"
 ```
 
 ## Release

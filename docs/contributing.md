@@ -83,9 +83,9 @@ $ git checkout -b name-of-your-bugfix-or-feature
    the tests:
 
 ```bash
-$ makim tests.linter
-$ makim tests.unit
-$ makim tests.arx
+$ makim all.lint
+$ makim all.unittests
+$ makim arx.test-compiled
 ```
 
 ## Arx Source File Docstrings

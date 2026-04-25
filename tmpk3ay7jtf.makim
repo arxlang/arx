@@ -1,0 +1,1 @@
+python -m json.tool packages/arx/src/arx/lexer/syntax.json

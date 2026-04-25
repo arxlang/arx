@@ -249,7 +249,7 @@ High-value commands:
 # tests
 pytest packages/arx/tests/python -q
 arx test
-makim tests.arx
+makim arx.test-compiled
 
 # strict typing
 mypy src
@@ -259,10 +259,10 @@ ruff check src tests
 ruff format src tests
 
 # full lint stack used by project
-makim tests.linter
+makim all.lint
 
 # CI-like local run
-makim tests.ci
+makim all.ci
 
 # docs
 mkdocs build --config-file mkdocs.yaml
@@ -281,7 +281,7 @@ pytest -q packages/arx/tests/python/test_codegen_file_object.py
 Smoke examples:
 
 ```bash
-makim tests.smoke
+makim arx.test-smoke
 ```
 
 Note: `arx --show-ast` may require `mermaid-ascii` installed by your `astx`

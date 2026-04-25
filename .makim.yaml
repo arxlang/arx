@@ -18,21 +18,15 @@ groups:
           rm -fr htmlcov/
           rm -fr .pytest_cache
 
-  tests:
+  all:
     tasks:
-      linter:
-        help: run linter tools
-        run: |
-          pre-commit install
-          pre-commit run --all-files
-
-      unit:
-        help: run tests
+      unittests:
+        help: run all package unit tests with aggregate coverage
         args:
           path:
             help: Specify the location of the tests
             type: string
-            default: "packages/arx/tests/python packages/astx/tests packages/astx-transpilers/tests packages/irx/tests"
+            default: "packages/arx/tests/python packages/astx/tests packages/irx/tests"
           params:
             help: Specify parameters to be used for tests
             type: string
@@ -41,57 +35,127 @@ groups:
           pytest \
             --cov=arx \
             --cov=astx \
-            --cov=astx_transpilers \
             --cov=irx \
             --cov-fail-under=85 \
             --cov-report term-missing \
-            --no-cov-on-fail ${{ args.path }} ${{ args.params }}
+            --no-cov-on-fail \
+            ${{ args.path }} \
+            ${{ args.params }}
 
-      arx:
-        help: run Arx compiled tests
+      lint:
+        help: run all lint and pre-commit checks
         run: |
-          arx test packages/arx/tests/arx
+          pre-commit install
+          pre-commit run --all-files
 
-      syntax:
-        help: run syntax tests
-        run: |
-          python -m json.tool packages/arx/src/arx/lexer/syntax.json
-
-      smoke:
-        help: run smoke tests
+      typecheck:
+        help: run type checks for every package
         hooks:
           pre-run:
-            - task: examples.show-tokens
+            - task: arx.typecheck
+            - task: astx.typecheck
+            - task: irx.typecheck
+
+      build:
+        help: build all packages
+        run: ./scripts/build.sh
+
+      ci:
+        help: run the same checks executed on CI
+        hooks:
+          pre-run:
+            - task: all.unittests
+            - task: arx.test-compiled
+            - task: arx.test-smoke
+            - task: arx.check-syntax
+            - task: all.typecheck
+            - task: all.lint
+
+  arx:
+    tasks:
+      unittests:
+        help: run Arx Python unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/arx/tests/python"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      test-compiled:
+        help: run compiled Arx language tests
+        run: arx test packages/arx/tests/arx
+
+      test-smoke:
+        help: run Arx CLI smoke tests against examples
+        hooks:
+          pre-run:
+            - task: arx.show-tokens
               args:
                 examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal,classes
-            - task: examples.show-ast
+            - task: arx.show-ast
               args:
                 examples: constant,average,fibonacci,print-star,sum,irx-feature-proposal,classes
-            - task: examples.show-llvm-ir
+            - task: arx.show-llvm-ir
               args:
                 examples: constant,average,fibonacci,print-star,sum,classes
-            - task: examples.emit-object
+            - task: arx.emit-object
               args:
                 examples: constant,average,fibonacci,print-star,sum,classes
         run: |
           arx --help
           arx --version
+
+      check-syntax:
+        help: validate the Arx lexer syntax manifest
+        run: python -m json.tool packages/arx/src/arx/lexer/syntax.json
+
+      format:
+        help: format Arx Python files
+        run: pre-commit run ruff-format-arx --all-files
+
+      lint:
+        help: run Arx package lint hooks
+        run: |
+          pre-commit run ruff-check-arx --all-files
+          pre-commit run douki-arx --all-files
+          pre-commit run bandit-arx --all-files
+          pre-commit run vulture-arx --all-files
+          pre-commit run mccabe-arx --all-files
+
+      typecheck:
+        help: run Arx type checks
+        run: |
+          cd packages/arx
+          mypy src
+
+      build:
+        help: build the Arx package
+        run: |
+          cd packages/arx
+          poetry build
+
       ci:
-        help: run the sames tests executed on CI
+        help: run Arx package CI checks
         hooks:
           pre-run:
-            - task: tests.unit
-            - task: tests.arx
-            - task: tests.smoke
-            - task: tests.linter
+            - task: arx.unittests
+            - task: arx.test-compiled
+            - task: arx.test-smoke
+            - task: arx.check-syntax
+            - task: arx.typecheck
+            - task: arx.lint
+            - task: arx.build
 
-  examples:
-    tasks:
       show-tokens:
-        help: Emit tokens for input file
+        help: emit tokens for Arx example files
         args:
           examples:
-            help: The examples name separated by comma `,`
+            help: The example names separated by comma `,`
             type: string
             required: true
         run: |
@@ -109,11 +173,12 @@ groups:
             if not output:
               raise RuntimeError(f"show-tokens produced no output for: {name}")
             print(output)
+
       show-ast:
-        help: Emit ast for input file
+        help: emit AST output for Arx example files
         args:
           examples:
-            help: The examples name separated by comma `,`
+            help: The example names separated by comma `,`
             type: string
             required: true
         run: |
@@ -136,11 +201,12 @@ groups:
                 f"example={name}"
               )
             print(output)
+
       show-llvm-ir:
-        help: Emit ast for input file
+        help: emit LLVM IR for Arx example files
         args:
           examples:
-            help: The examples name separated by comma `,`
+            help: The example names separated by comma `,`
             type: string
             required: true
         run: |
@@ -161,11 +227,12 @@ groups:
                 f"{name}"
               )
             print(output)
+
       emit-object:
-        help: Emit ast for input file
+        help: emit object artifacts for Arx example files
         args:
           examples:
-            help: The examples name separated by comma `,`
+            help: The example names separated by comma `,`
             type: string
             required: true
         run: |
@@ -197,6 +264,118 @@ groups:
                 f"{name}"
               )
             print(str(output_file))
+
+  astx:
+    tasks:
+      unittests:
+        help: run ASTx unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/astx/tests"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      format:
+        help: format ASTx Python files
+        run: pre-commit run ruff-format-astx --all-files
+
+      lint:
+        help: run ASTx package lint hooks
+        run: |
+          pre-commit run ruff-check-astx --all-files
+          pre-commit run douki-astx --all-files
+          pre-commit run bandit-astx --all-files
+          pre-commit run vulture-astx --all-files
+          pre-commit run mccabe-astx --all-files
+
+      typecheck:
+        help: run ASTx type checks
+        run: |
+          cd packages/astx
+          mypy src
+
+      build:
+        help: build the ASTx package
+        run: |
+          cd packages/astx
+          poetry build
+
+      ci:
+        help: run ASTx package CI checks
+        hooks:
+          pre-run:
+            - task: astx.unittests
+            - task: astx.typecheck
+            - task: astx.lint
+            - task: astx.build
+
+  irx:
+    tasks:
+      unittests:
+        help: run IRx unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/irx/tests"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      test-analysis:
+        help: run IRx semantic-analysis tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/irx/tests/analysis"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      format:
+        help: format IRx Python files
+        run: pre-commit run ruff-format-irx --all-files
+
+      lint:
+        help: run IRx package lint hooks
+        run: |
+          pre-commit run ruff-check-irx --all-files
+          pre-commit run douki-irx --all-files
+          pre-commit run bandit-irx --all-files
+          pre-commit run vulture-irx --all-files
+          pre-commit run mccabe-irx --all-files
+
+      typecheck:
+        help: run IRx type checks
+        run: |
+          cd packages/irx
+          mypy src
+
+      build:
+        help: build the IRx package
+        run: |
+          cd packages/irx
+          poetry build
+
+      ci:
+        help: run IRx package CI checks
+        hooks:
+          pre-run:
+            - task: irx.unittests
+            - task: irx.test-analysis
+            - task: irx.typecheck
+            - task: irx.lint
+            - task: irx.build
 
   docs:
     tasks:
@@ -230,7 +409,7 @@ groups:
         help: run semantic release on CI
         run: ${{ vars.app }} --ci
 
-      dry:
+      dry-run:
         help: run semantic release in dry-run mode
         run: |
           ${{ vars.app }} --dry-run

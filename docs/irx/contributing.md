@@ -91,8 +91,8 @@ Ready to contribute? Here’s how to set up `irx` for local development.
     the tests:
 
     ```bash
-    $ makim tests.linter
-    $ makim tests.unit
+    $ makim all.lint
+    $ makim all.unittests
     ```
 
     If you need to bootstrap the repository's Codex configuration, run:
@@ -180,7 +180,7 @@ $ pytest tests.test_binary_op
 or
 
 ```bash
-$ makim tests.unit --path "packages/irx/tests/test_binary_op.py" --params "-k mytest_func"
+$ makim irx.unittests --path "packages/irx/tests/test_binary_op.py" --params "-k mytest_func"
 ```
 
 ## Release
