@@ -84,7 +84,9 @@ $ git checkout -b name-of-your-bugfix-or-feature
 
 ```bash
 $ makim all.lint
-$ makim all.unittests
+$ makim arx.unittests
+$ makim astx.unittests
+$ makim irx.unittests
 $ makim arx.test-compiled
 ```
 

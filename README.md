@@ -35,7 +35,6 @@ Common local tasks:
 makim arx.unittests
 makim astx.unittests
 makim irx.unittests
-makim all.unittests
 makim all.lint
 makim docs.build
 ```

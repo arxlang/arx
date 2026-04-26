@@ -92,7 +92,7 @@ Ready to contribute? Here’s how to set up `irx` for local development.
 
     ```bash
     $ makim all.lint
-    $ makim all.unittests
+    $ makim irx.unittests
     ```
 
     If you need to bootstrap the repository's Codex configuration, run:

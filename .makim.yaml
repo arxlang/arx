@@ -20,28 +20,6 @@ groups:
 
   all:
     tasks:
-      unittests:
-        help: run all package unit tests with aggregate coverage
-        args:
-          path:
-            help: Specify the location of the tests
-            type: string
-            default: "packages/arx/tests/python packages/astx/tests packages/irx/tests"
-          params:
-            help: Specify parameters to be used for tests
-            type: string
-            default: "-vv"
-        run: |
-          pytest \
-            --cov=arx \
-            --cov=astx \
-            --cov=irx \
-            --cov-fail-under=85 \
-            --cov-report term-missing \
-            --no-cov-on-fail \
-            ${{ args.path }} \
-            ${{ args.params }}
-
       lint:
         help: run all lint and pre-commit checks
         run: |
@@ -64,7 +42,9 @@ groups:
         help: run the same checks executed on CI
         hooks:
           pre-run:
-            - task: all.unittests
+            - task: arx.unittests
+            - task: astx.unittests
+            - task: irx.unittests
             - task: arx.test-compiled
             - task: arx.test-smoke
             - task: arx.check-syntax

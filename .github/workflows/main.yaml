@@ -75,51 +75,6 @@ jobs:
       - name: Run package unit tests
         run: makim ${{ matrix.project }}.unittests
 
-  all-tests:
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        python_version:
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
-          - "3.14"
-        os:
-          - "ubuntu"
-          # - "macos"
-          # - "windows"
-    runs-on: ${{ matrix.os }}-latest
-    concurrency:
-      group: ci-all-tests-${{ matrix.os }}-${{ matrix.python_version }}-${{ github.ref }}
-      cancel-in-progress: true
-
-    defaults:
-      run:
-        shell: bash -l {0}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: conda-incubator/setup-miniconda@v3
-        with:
-          miniconda-version: "latest"
-          environment-file: conda/dev.yaml
-          channels: conda-forge,nodefaults
-          activate-environment: arx
-          auto-update-conda: true
-          conda-solver: libmamba
-          python-version: ${{ matrix.python_version }}
-
-      - name: Install dependencies
-        run: |
-          poetry check
-          poetry install
-
-      - name: Run all package unit tests
-        run: makim all.unittests
-
   arx-language-tests:
     timeout-minutes: 10
     strategy:

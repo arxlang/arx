@@ -95,7 +95,7 @@ $ git checkout -b name-of-your-bugfix-or-feature
 
 ```bash
 $ makim all.lint
-$ makim all.unittests
+$ makim astx.unittests
 ```
 
 6.  Commit your changes and push your branch to GitHub:
