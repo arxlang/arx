@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [1.19.0](https://github.com/arxlang/arx/compare/1.18.1...1.19.0) (2026-04-26)
+
+
+### Features
+
+* Add initial version for monorepo for Arx, IRx, and ASTx ([#72](https://github.com/arxlang/arx/issues/72)) ([d7a6bcf](https://github.com/arxlang/arx/commit/d7a6bcfb99302fd9c0f8eef9763257aeca1a874c))
+
 # [0.16.0](https://github.com/arxlang/arx/compare/0.15.0...0.16.0) (2026-04-25)
 
 
