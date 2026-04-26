@@ -12,6 +12,34 @@ Arx is a prototype that should replace the current Arx compiler in c++.
 If you want more information about ArxLang, please check the original project in
 c++: https://github.com/arxlang/arx
 
+## Monorepo Workflow
+
+This repository contains the lockstep-released Arx ecosystem packages:
+
+- `packages/astx`: `astx`
+- `packages/irx`: `pyirx`
+- `packages/arx`: `arxlang`
+
+Root Poetry installs these packages as editable path dependencies for local
+development. The package sources should still depend on released package names
+and versions; local checkout wiring belongs in the root `pyproject.toml`.
+
+Releases are intentionally lockstep. A semantic-release run updates one shared
+version across the root project and all three package projects, then
+`scripts/build.sh` and `scripts/publish.sh` build and publish `astx`, `pyirx`,
+and `arxlang` together.
+
+Common local tasks:
+
+```bash
+makim arx.unittests
+makim astx.unittests
+makim irx.unittests
+makim all.unittests
+makim all.lint
+makim docs.build
+```
+
 ## Link Modes
 
 Arx supports explicit executable link modes:

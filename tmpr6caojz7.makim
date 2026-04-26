@@ -1,1 +1,0 @@
-pytest packages/irx/tests/analysis -q

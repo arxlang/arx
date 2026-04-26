@@ -109,3 +109,4 @@ ENV/
 
 # tmp
 pytest-*
+tmp*.makim
