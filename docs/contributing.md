@@ -2,7 +2,7 @@
 
 In order to be able to contribute, it is important that you understand the
 project layout. This project uses the _src layout_, which means that the package
-code is located at `./src/arx`.
+code is located at `./packages/arx/src/arx`.
 
 For my information, check the official documentation:
 https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
@@ -83,9 +83,11 @@ $ git checkout -b name-of-your-bugfix-or-feature
    the tests:
 
 ```bash
-$ makim tests.linter
-$ makim tests.unit
-$ makim tests.arx
+$ makim all.lint
+$ makim arx.unittests
+$ makim astx.unittests
+$ makim irx.unittests
+$ makim arx.test-compiled
 ```
 
 ## Arx Source File Docstrings
@@ -148,8 +150,8 @@ Before you submit a pull request, check that it meets these guidelines:
 To run a subset of tests:
 
 ```bash
-$ pytest tests/python/test_io.py
-$ arx test tests/arx/test_math.x --list
+$ pytest packages/arx/tests/python/test_io.py
+$ arx test packages/arx/tests/arx/test_math.x --list
 ```
 
 ## Release

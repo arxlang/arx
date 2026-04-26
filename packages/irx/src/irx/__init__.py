@@ -1,0 +1,27 @@
+"""
+title: Top-level package for IRx.
+"""
+
+from importlib import metadata as importlib_metadata
+
+from irx.typecheck import typechecked
+
+_DISTRIBUTION_NAME = "pyirx"
+
+
+@typechecked
+def get_version() -> str:
+    """
+    title: Return the program version.
+    returns:
+      type: str
+    """
+    try:
+        return importlib_metadata.version(_DISTRIBUTION_NAME)
+    except importlib_metadata.PackageNotFoundError:  # pragma: no cover
+        return "1.18.1"  # semantic-release
+
+
+__author__ = """Ivan Ogasawara"""
+__email__ = "ivan.ogasawara@gmail.com"
+__version__: str = get_version()

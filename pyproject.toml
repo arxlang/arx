@@ -1,54 +1,40 @@
 [project]
-name = "arxlang"
-version = "0.16.0"  # semantic-release
-description = "Arx is a compiler built with llvm"
+name = "arx-dev"
+version = "1.18.1"  # semantic-release
+description = "Arx metapackage for development of Arx, IRx, and ASTx."
 readme = "docs/index.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
-dependencies = [
-  "pyyaml >=4",
-  "astx (>=0.24.0)",
-  "pyirx (==1.18.0)",
-  "jsonschema (>=4.0.0)",
-  "types-pyyaml (>=6.0.12.20250516)",
-  "tomli >=2.0.0 ; python_version < \"3.11\""
-]
+dynamic = ["dependencies"]
 
 [tool.poetry]
-include = [
-  "src/arx",
-  "src/arx/builtins/**/*.x",
-  "src/arx/schema/*.json",
-  "src/arx/py.typed",
-  "src/arx/lexer/syntax.json",
-  "src/arx/stdlib/**/*.x",
-]
 exclude = [
   ".git/*",
   ".env*",
 ]
-packages = [
-  {include = "arx", from="src"},
-]
+package-mode = false
 
-[tool.poetry.scripts]
-"arx" = "arx.__main__:app"
+[tool.poetry.dependencies]
+arxlang = { path = "packages/arx/", develop = true }
+pyirx = { path = "packages/irx/", develop = true }
+astx = { path = "packages/astx/", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.3.2"
 pytest-cov = ">=4.1.0"
+pytest-xdist = ">=3.8.0"
 coverage = ">=7.2.7"
 pre-commit = ">=3.3.2"
-ruff = ">=0.1.5"
-mypy = ">=1.5.0"
+ruff = ">=0.9.5"
+mypy = ">=1.6.0"
 bandit = ">=1.7.5"
 vulture = ">=2.9.1"
 mccabe = ">=0.6.1"
-ipython = ">=7"
 ipykernel = ">=6.0.0"
+ipython = ">=7.0.0"
 mkdocs = ">=1.3,<2"
 mkdocs-exclude = ">=1.0.2"
 mkdocs-jupyter = ">=0.24.7"
@@ -58,14 +44,24 @@ mkdocs-material = ">=8"
 mkdocstrings = {version=">=0.19.0", extras=["python"]}
 mkdocstrings-python = "<2"
 mkdocs-gen-files = ">=0.5.0"
-makim = "1.27.0"
 jupyterlab = ">=4.0.7"
+makim = "1.27.0"
 nbmake = ">=1.5.3"
+types-requests = ">=2.31.0.20240406"
 douki = ">=0.12.1"
 
+[build-system]
+requires = ["poetry-core>=2"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
 testpaths = [
-    "tests/python",
+    "packages/arx/tests/python",
+    "packages/astx/tests",
+    "packages/irx/tests",
 ]
 filterwarnings = [
     "error::RuntimeWarning",
@@ -78,7 +74,7 @@ targets = "./"
 
 [tool.vulture]
 exclude = ["tests"]
-ignore_decorators = ["abc.abstractmethod"]
+ignore_decorators = ["@abc.abstractmethod"]
 ignore_names = []
 make_whitelist = true
 min_confidence = 80
@@ -90,21 +86,24 @@ verbose = false
 target-version = "py310"
 line-length = 79
 force-exclude = true
-src = ["./"]
+src = [
+  "packages/arx/src",
+  "packages/astx/src",
+  "packages/irx/src",
+]
 exclude = [
   'docs',
+  'packages/*/dist',
 ]
 fix = true
 
 [tool.ruff.lint]
 ignore = [
-  "F811",  # redefined-while-unused
+  "F811",
   "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
-  "PLR0913",  # Too many arguments in a function definition
-  "RUF012",  # mutable-class-default
-  "PLR0915",  # Too many statements
-  "PLR2004",  # Magic value used in comparison
+  "PLR0913",
+  "PLC0415",  # `import` should be at the top-level of a file
 ]
 select = [
   "E",   # pycodestyle
@@ -119,8 +118,11 @@ extend-select = [
   "UP007",  # Prefer | syntax for unions and optionals
 ]
 
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
+[tool.ruff.lint.per-file-ignores]
+"packages/astx/src/astx/base.py" = [
+  "UP006",
+  "UP007",
+]
 
 [tool.ruff.lint.isort]
 # Use a single line between direct and from import
@@ -137,5 +139,10 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-show_error_codes = true
 exclude = ["scripts/"]
+
+[[tool.mypy.overrides]]
+module = [
+  "yaml",
+]
+ignore_missing_imports = true

@@ -332,11 +332,11 @@ Run the test suite with:
 
 ```bash
 arx test
-arx test tests/arx/test_math.x --list
+arx test packages/arx/tests/arx/test_math.x --list
 arx test -k square
 arx test -x
 arx test --keep-artifacts
-arx test --exclude "tests/arx/slow_*.x"
+arx test --exclude "packages/arx/tests/arx/slow_*.x"
 ```
 
 Test discovery can also be tuned from `.arxproject.toml`:
@@ -352,8 +352,8 @@ function_pattern = "test_*"
 CLI arguments always take precedence over `[tests]` settings. Discovered tests
 are displayed using the cwd-relative path of the source file (without the `.x`
 suffix) joined to the function name via `::`, for example
-`tests/arx/test_math::test_square`, so same-named files in different directories
-stay unambiguous.
+`packages/arx/tests/arx/test_math::test_square`, so same-named files in
+different directories stay unambiguous.
 
 The runner compiles each selected test into its own temporary executable and
 reports assertion failures from IRx's machine-readable runtime protocol. In v1,
@@ -528,5 +528,5 @@ extern putchard(x: i32) -> i32
 - Review [Built-in Types](library/built-in-types.md) for the canonical type
   catalog
 - Read the [Contributing Guide](contributing.md) to help develop Arx
-- Browse the [API Docs](api/index.md) for the compiler internals
+- Browse the [API Docs](api/arx/index.md) for the compiler internals
 - Join the [Community](discord.md) on Discord

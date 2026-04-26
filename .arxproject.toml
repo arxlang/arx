@@ -3,4 +3,4 @@ name = "arx"
 version = "0.0.0"
 
 [tests]
-paths = ["tests/arx"]
+paths = ["packages/arx/tests/arx"]

@@ -1,0 +1,154 @@
+"""
+title: Test classes from the base module.
+"""
+
+from __future__ import annotations
+
+import astx
+
+from astx.base import is_using_jupyter_notebook
+
+
+def test_is_using_jupyter_notebook() -> None:
+    """
+    title: Test is_using_jupyter_notebook function.
+    """
+    assert not is_using_jupyter_notebook()
+
+
+def test_source_location() -> None:
+    """
+    title: Test SourceLocation.
+    """
+    line = 1
+    col = 2
+
+    loc = astx.SourceLocation(line, col)
+    assert loc.line == line
+    assert loc.col == col
+
+
+def test_ast_parent() -> None:
+    """
+    title: Test AST parent usage.
+    """
+    block = astx.Block()
+    decl_a = astx.VariableDeclaration("a", type_=astx.Int32(), parent=block)
+    assert block.nodes[0] == decl_a
+
+
+def test_ast_to_json() -> None:
+    """
+    title: Test AST object to json.
+    """
+    block = astx.Block()
+    astx.VariableDeclaration("a", type_=astx.Int32(), parent=block)
+    assert block.to_json(simplified=True) != ""
+    # assert block.to_json(simplified=False) != ""
+
+
+def test_ast_to_yaml() -> None:
+    """
+    title: Test AST object to yaml.
+    """
+    block = astx.Block()
+    astx.VariableDeclaration("a", type_=astx.Int32(), parent=block)
+    assert block.to_yaml(simplified=True) != ""
+    # assert block.to_json(simplified=False) != ""
+
+
+def test_ast_nodes() -> None:
+    """
+    title: Test ASTNodes class.
+    """
+    block = astx.Block()
+    astx.VariableDeclaration("a", type_=astx.Int32(), parent=block)
+
+    for item in block:
+        assert item is not None
+
+    assert len(block) == 1
+    count = 0
+
+    for idx, item in enumerate(block):
+        count += 1
+
+    assert count == 1
+
+
+def test_data_type() -> None:
+    """
+    title: Test DataType class.
+    """
+    dt = astx.DataType()
+    assert str(dt) != ""
+    assert repr(dt) != ""
+    assert dt.get_struct() != {}
+    assert dt.get_struct(simplified=True) != {}
+
+
+COLUMN_NUMBER = 10
+
+
+def test_identifier_creation() -> None:
+    """
+    title: Test basic identifier creation.
+    """
+    ident = astx.Identifier("test_var")
+    assert ident.name == "test_var"
+
+
+def test_identifier_with_location() -> None:
+    """
+    title: Test identifier with location.
+    """
+    loc = astx.SourceLocation(1, COLUMN_NUMBER)
+    ident_with_loc = astx.Identifier("var2", loc=loc)
+    assert ident_with_loc.name == "var2"
+    assert ident_with_loc.loc.line == 1
+    assert ident_with_loc.loc.col == COLUMN_NUMBER
+
+
+def test_identifier_as_part_of_block() -> None:
+    """
+    title: Test identifier as part of a block.
+    """
+    block = astx.Block()
+    ident_with_parent = astx.Identifier("var3", parent=block)
+    assert block.nodes[0] == ident_with_parent
+
+
+def test_struct_representation() -> None:
+    """
+    title: Test struct representation.
+    """
+    ident = astx.Identifier("test_var")
+    struct = ident.get_struct(simplified=True)
+    assert struct == {"IDENTIFIER[test_var]": "test_var"}
+
+
+def test_parenthesized_expr_1() -> None:
+    """
+    title: Test ParenthesizedExpr 1.
+    """
+    node = astx.ParenthesizedExpr(
+        astx.AndOp(astx.LiteralBoolean(True), astx.LiteralBoolean(False))
+    )
+    assert node.get_struct(simplified=True)
+    assert node.get_struct(simplified=False)
+
+
+def test_parenthesized_expr_2() -> None:
+    """
+    title: Test ParenthesizedExpr 2.
+    """
+    node_1 = astx.ParenthesizedExpr(
+        astx.AndOp(
+            astx.LiteralBoolean(True),
+            astx.LiteralBoolean(False),
+        )
+    )
+
+    node_2 = astx.OrOp(node_1, node_1)
+    assert node_2.get_struct(simplified=True)
+    assert node_2.get_struct(simplified=False)

@@ -26,12 +26,15 @@ jobs:
           remote_branch: origin/main
           pr_sha: ${{ github.event.pull_request.head.sha }}
 
-  tests:
-    needs: check-branch
+  package-tests:
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
+        project:
+          - arx
+          - astx
+          - irx
         python_version:
           - "3.10"
           - "3.11"
@@ -44,7 +47,7 @@ jobs:
           # - "windows"
     runs-on: ${{ matrix.os }}-latest
     concurrency:
-      group: ci-tests-${{ matrix.os }}-${{ matrix.python_version }}-${{ github.ref }}
+      group: ci-package-tests-${{ matrix.project }}-${{ matrix.os }}-${{ matrix.python_version }}-${{ github.ref }}
       cancel-in-progress: true
 
     defaults:
@@ -69,17 +72,59 @@ jobs:
           poetry check
           poetry install
 
-      - name: Run tests
-        run: makim tests.unit
+      - name: Run package unit tests
+        run: makim ${{ matrix.project }}.unittests
 
-      - name: Run Arx tests
-        run: makim tests.arx
+  arx-language-tests:
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
+        os:
+          - "ubuntu"
+          # - "macos"
+          # - "windows"
+    runs-on: ${{ matrix.os }}-latest
+    concurrency:
+      group: ci-arx-language-tests-${{ matrix.os }}-${{ matrix.python_version }}-${{ github.ref }}
+      cancel-in-progress: true
 
-      - name: Run smoke tests
-        run: makim tests.smoke
+    defaults:
+      run:
+        shell: bash -l {0}
 
-      - name: Run syntax tests
-        run: makim tests.syntax
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: "latest"
+          environment-file: conda/dev.yaml
+          channels: conda-forge,nodefaults
+          activate-environment: arx
+          auto-update-conda: true
+          conda-solver: libmamba
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install dependencies
+        run: |
+          poetry check
+          poetry install
+
+      - name: Run compiled Arx tests
+        run: makim arx.test-compiled
+
+      - name: Run Arx smoke tests
+        run: makim arx.test-smoke
+
+      - name: Run Arx syntax manifest checks
+        run: makim arx.check-syntax
 
   linter:
     runs-on: ubuntu-latest
@@ -115,7 +160,7 @@ jobs:
         if: success() || failure()
         run: |
           pre-commit install
-          makim tests.linter
+          makim all.lint
 
       - name: Setup tmate session
         if: "${{ failure() && (contains(github.event.pull_request.labels.*.name, 'ci:enable-debugging')) }}"

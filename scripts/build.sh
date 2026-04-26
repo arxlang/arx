@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-pushd libs/astx || exit
-cp ../../README.md .
-poetry build
-popd || return
+packages=(
+  packages/astx
+  packages/irx
+  packages/arx
+)
 
-pushd libs/astx-transpilers || exit
-cp ../../README.md .
-poetry build
-popd || return
+for package_dir in "${packages[@]}"; do
+  rm -rf "${package_dir}/dist"
+  (
+    cd "${package_dir}"
+    poetry build
+  )
+done

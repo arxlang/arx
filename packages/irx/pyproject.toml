@@ -1,0 +1,144 @@
+[project]
+name = "pyirx"
+version = "1.18.1"  # semantic-release
+description = "IRx"
+readme = "README.md"
+authors = [
+  {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.10,<4"
+dependencies = [
+  "atpublic >= 4.0",
+  "astx == 1.18.1",  # semantic-release
+  "llvmlite  >= 0.44.0",
+  "plum-dispatch >= 2.2.2",
+  "xhell (>=0.2.1)",
+  "eval-type-backport >=0.2 ; python_version < '3.10'",
+  "typeguard >= 4",
+  "pyarrow (>=24.0.0,<25.0.0)",
+  "arx-arrowcpp-sources == 24.0.0",
+]
+
+[build-system]
+requires = ["poetry-core>=2"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+exclude = [
+  ".git/*",
+  ".env*",
+]
+packages = [
+  {include = "irx", from="src"},
+]
+include = [
+  "src/irx/py.typed",
+  "src/irx/builder/runtime/**/*.c",
+  "src/irx/builder/runtime/**/*.h",
+  "src/irx/builder/runtime/**/*.md",
+  "src/irx/builder/runtime/**/LICENSE.txt",
+]
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.3.2"
+pytest-cov = ">=4.1.0"
+coverage = ">=7.2.7"
+pre-commit = ">=3.3.2"
+ruff = ">=0.1.5"
+mypy = ">=1.5.0"
+bandit = ">=1.7.5"
+vulture = ">=2.9.1"
+mccabe = ">=0.6.1"
+ipython = ">=7"
+ipykernel = ">=6.0.0"
+mkdocs = ">=1.3"
+mkdocs-exclude = ">=1.0.2"
+mkdocs-jupyter = ">=0.24.7"
+mkdocs-literate-nav = ">=0.4.1"
+mkdocs-macros-plugin = ">=0.6.3"
+mkdocs-material = ">=8"
+mkdocstrings = {version=">=0.19.0", extras=["python"]}
+mkdocstrings-python = "<2"
+makim = "1.25.0"
+jupyterlab = ">=4.0.7"
+mkdocs-gen-files = ">=0.5.0"
+nbmake = ">=1.5.3"
+pytest-xdist = "^3.8.0"
+douki = ">=0.12.1"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error::RuntimeWarning",
+    "error::typeguard.TypeHintWarning",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+targets = "./"
+
+[tool.vulture]
+exclude = ["tests"]
+ignore_decorators = ["abc.abstractmethod"]
+ignore_names = []
+make_whitelist = true
+min_confidence = 80
+paths = ["./"]
+sort_by_size = true
+verbose = false
+
+[tool.ruff]
+line-length = 79
+force-exclude = true
+src = ["./"]
+target-version = "py310"
+exclude = [
+  'docs',
+]
+fix = true
+
+[tool.ruff.lint]
+ignore = [
+  "F811",  # redefined-while-unused
+  "PLR0911",  # Too many return statements
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments in a function definition
+  "RUF012",  # mutable-class-default
+  "PLR0915",  # Too many statements
+]
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "YTT", # flake8-2020
+  "PL",  # PL
+  "RUF", # Ruff-specific rules
+  "I001", # isort
+]
+extend-select = [
+  "UP006",  # Prefer builtin generics in annotations
+  "UP007",  # Prefer | syntax for unions and optionals
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+# Use a single line between direct and from import
+lines-between-types = 1
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+show_error_codes = true
+exclude = ["scripts/"]

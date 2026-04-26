@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-pushd libs/astx || exit
-poetry publish
-popd || return
+packages=(
+  packages/astx
+  packages/irx
+  packages/arx
+)
 
-pushd libs/astx-transpilers || exit
-poetry publish
-popd || return
+for package_dir in "${packages[@]}"; do
+  (
+    cd "${package_dir}"
+    poetry publish
+  )
+done

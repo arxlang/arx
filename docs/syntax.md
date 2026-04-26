@@ -4,7 +4,7 @@ Status: draft `0.1.0`
 
 This document defines Arx lexical/token-level behavior for editor tooling.
 
-Normative source: `src/arx/lexer/syntax.json`
+Normative source: `packages/arx/src/arx/lexer/syntax.json`
 
 Non-goal: full parsing or AST semantics.
 
@@ -214,7 +214,7 @@ import (
 
 1. Canonical check:
 
-   - Parse `src/arx/lexer/syntax.json`.
+   - Parse `packages/arx/src/arx/lexer/syntax.json`.
    - Verify required keys exist (`keywords`, `comment`, `strings`, `numbers`,
      `identifiers`, `whitespace`, `brackets`).
 
