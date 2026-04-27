@@ -1,8 +1,8 @@
 """
-title: IRx-owned template AST helpers.
+title: ASTx template AST helpers.
 summary: >-
   Provide semantic-facing template metadata for compile-time specialization
-  without requiring parser-level syntax support inside IRx.
+  without requiring parser-level syntax support.
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ import astx
 from astx.tools.typing import typechecked
 from astx.types import TemplateTypeVar, UnionType
 
-_TEMPLATE_PARAMS_ATTR = "irx_template_params"
-_TEMPLATE_ARGS_ATTR = "irx_template_args"
-_TEMPLATE_SPECIALIZATION_ATTR = "irx_template_specialization_name"
-_GENERATED_TEMPLATE_NODES_ATTR = "irx_generated_template_nodes"
+_TEMPLATE_PARAMS_ATTR = "astx_template_params"
+_TEMPLATE_ARGS_ATTR = "astx_template_args"
+_TEMPLATE_SPECIALIZATION_ATTR = "astx_template_specialization_name"
+_GENERATED_TEMPLATE_NODES_ATTR = "astx_generated_template_nodes"
 
 
 @typechecked

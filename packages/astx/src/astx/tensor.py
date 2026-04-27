@@ -1,5 +1,5 @@
 """
-title: IRx-owned Tensor AST nodes.
+title: ASTx Tensor AST nodes.
 summary: >-
   Provide internal nodes for the Arrow C++ backed tensor runtime, aligned with
   Apache Arrow's homogeneous N-dimensional tensor model.

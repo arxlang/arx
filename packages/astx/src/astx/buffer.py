@@ -1,5 +1,5 @@
 """
-title: IRx-owned low-level buffer AST nodes.
+title: ASTx low-level buffer AST nodes.
 summary: >-
   Provide internal nodes that host compilers can target for the buffer/view
   substrate without defining a user-facing array API.
@@ -27,7 +27,7 @@ class BufferOwnerType(OpaqueHandleType):
         """
         title: Initialize the buffer owner handle type.
         """
-        super().__init__("irx_buffer_owner_handle")
+        super().__init__("astx_buffer_owner_handle")
 
     def __str__(self) -> str:
         """

@@ -1,5 +1,5 @@
 """
-title: Shared collection helper AST nodes.
+title: ASTx shared collection helper AST nodes.
 summary: >-
   Provide backend-neutral collection query nodes that frontends can target when
   they need common list, tuple, set, or dictionary operations without binding
@@ -170,7 +170,7 @@ class CollectionIndex(astx.base.DataType):
     title: Common sequence index query node.
     summary: >-
       Return the first zero-based index of a value in a list or tuple. The
-      initial IRx contract returns -1 when the value is not found.
+      initial ASTx contract returns -1 when the value is not found.
     attributes:
       base:
         type: astx.AST

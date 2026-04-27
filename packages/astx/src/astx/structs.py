@@ -1,5 +1,5 @@
 """
-title: IRx-owned struct AST nodes.
+title: ASTx struct AST nodes.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """
-title: IRX-owned collection helper AST nodes.
+title: ASTx collection helper AST nodes.
 summary: >-
-  Group IRX-specific collection-oriented AST helpers behind one stable package
-  boundary while re-exporting the current public node names.
+  Group ASTx collection-oriented AST helpers behind one stable package boundary
+  while re-exporting the current public node names.
 """
 
 from __future__ import annotations

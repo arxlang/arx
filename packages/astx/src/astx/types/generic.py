@@ -1,5 +1,5 @@
 """
-title: IRx-owned AST type helpers.
+title: ASTx AST type helpers.
 summary: >-
   Provide semantic-facing type nodes that extend the upstream ASTx type model
   without coupling them to template metadata helpers.

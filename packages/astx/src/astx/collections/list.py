@@ -1,5 +1,5 @@
 """
-title: IRX-owned list helper AST nodes.
+title: ASTx list helper AST nodes.
 summary: >-
   Provide the smallest explicit list-construction and query API that host
   frontends can target when they need to build list values incrementally or
@@ -179,7 +179,7 @@ class ListLength(astx.base.DataType):
     summary: >-
       Return the current logical length of one list-valued expression as an
       int32 value. The runtime stores list lengths as int64, but the current
-      IRx language-level contract intentionally truncates that representation
+      ASTx language-level contract intentionally truncates that representation
       to Int32.
     attributes:
       base:

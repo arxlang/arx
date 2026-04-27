@@ -1,5 +1,5 @@
 """
-title: IRx-owned array AST nodes.
+title: ASTx array AST nodes.
 summary: >-
   Provide internal nodes for the Arrow C++ backed one-dimensional array
   runtime.
@@ -19,8 +19,8 @@ class ArrayInt32ArrayLength(astx.base.DataType):
     """
     title: Internal array helper AST node.
     summary: >-
-      Build an int32 array using the IRx builtin array runtime, then return its
-      length.
+      Build an int32 array using the ASTx-compatible array runtime, then return
+      its length.
     attributes:
       values:
         type: list[astx.AST]
