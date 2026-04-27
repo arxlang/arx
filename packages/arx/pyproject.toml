@@ -1,6 +1,6 @@
 [project]
 name = "arxlang"
-version = "1.19.2"  # semantic-release
+version = "1.20.0"  # semantic-release
 description = "Arx is a compiler built with llvm"
 readme = "README.md"
 authors = [
@@ -10,8 +10,8 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
-  "astx == 1.19.2",  # semantic-release
-  "pyirx == 1.19.2",  # semantic-release
+  "astx == 1.20.0",  # semantic-release
+  "pyirx == 1.20.0",  # semantic-release
   "jsonschema (>=4.0.0)",
   "types-pyyaml (>=6.0.12.20250516)",
   "tomli >=2.0.0 ; python_version < \"3.11\""

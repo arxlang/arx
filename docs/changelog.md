@@ -1,6 +1,14 @@
 # Release Notes
 ---
 
+# [1.20.0](https://github.com/arxlang/arx/compare/1.19.2...1.20.0) (2026-04-27)
+
+
+### Features
+
+* Add support for dataframes/series ([#75](https://github.com/arxlang/arx/issues/75)) ([bbc76e4](https://github.com/arxlang/arx/commit/bbc76e44070dcf03b25bf5b0b78948fd151c2d0a))
+* Standardize unsize types for collections/tensors/dataframes etc ([#76](https://github.com/arxlang/arx/issues/76)) ([99bf4f2](https://github.com/arxlang/arx/commit/99bf4f2b7d60c2ecff0288ece0b198a5b0f85e6b))
+
 ## [1.19.2](https://github.com/arxlang/arx/compare/1.19.1...1.19.2) (2026-04-27)
 
 
