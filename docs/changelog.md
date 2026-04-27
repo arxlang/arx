@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [1.19.1](https://github.com/arxlang/arx/compare/1.19.0...1.19.1) (2026-04-27)
+
+
+### Bug Fixes
+
+* Fix readme files ([#73](https://github.com/arxlang/arx/issues/73)) ([48df1fe](https://github.com/arxlang/arx/commit/48df1fe7637ee8f66ce92b6b239d5093d48fc6cc))
+
 # [1.19.0](https://github.com/arxlang/arx/compare/1.18.1...1.19.0) (2026-04-26)
 
 
