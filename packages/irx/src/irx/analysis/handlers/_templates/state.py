@@ -7,7 +7,12 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+from typing import cast
+
+import astx
+
+from astx.types import AnyType
+
 from irx.analysis.handlers._templates.support import (
     TemplateSupportVisitorMixin,
 )
@@ -128,9 +133,12 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
         if isinstance(node, astx.FunctionPrototype):
             for argument in node.args.nodes:
                 self._substitute_declared_types(argument, bindings)
-            node.return_type = self._substitute_type(
-                node.return_type,
-                bindings,
+            node.return_type = cast(
+                AnyType,
+                self._substitute_type(
+                    node.return_type,
+                    bindings,
+                ),
             )
             explicit_args = astx.get_template_args(node)
             if explicit_args is not None:

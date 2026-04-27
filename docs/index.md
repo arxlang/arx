@@ -34,10 +34,10 @@ examples. For language details, see the [Library Reference](library/index.md).
 ## Architecture Boundary
 
 Arx is the surface-language front end. It owns source syntax, lexing, parsing,
-CLI flow, tests, examples, and docs. IRx owns the AST model (`irx.astx`),
-semantic analysis, lowering, and backend code generation. When a new feature
-needs AST or lowering support, that support should be added in IRx first and
-then consumed from Arx.
+CLI flow, tests, examples, and docs. IRx owns the AST model (`astx`), semantic
+analysis, lowering, and backend code generation. When a new feature needs AST or
+lowering support, that support should be added in IRx first and then consumed
+from Arx.
 
 ## Key Features
 

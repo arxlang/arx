@@ -8,9 +8,8 @@ from enum import Enum
 
 import astx
 
+from astx.tools.typing import typechecked
 from astx.types import AnyType
-
-from irx.typecheck import typechecked
 
 
 @typechecked

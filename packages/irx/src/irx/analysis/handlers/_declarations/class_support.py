@@ -11,7 +11,8 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )

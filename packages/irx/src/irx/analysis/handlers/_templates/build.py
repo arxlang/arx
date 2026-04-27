@@ -11,7 +11,8 @@ import copy
 
 from dataclasses import replace
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers._templates.state import (
     _OWNER_MODULE_ATTR,
     TemplateStateVisitorMixin,

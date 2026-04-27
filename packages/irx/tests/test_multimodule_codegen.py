@@ -4,7 +4,8 @@ title: Tests for multi-module LLVM lowering.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.module_symbols import (
     mangle_function_name,
     mangle_namespace_name,

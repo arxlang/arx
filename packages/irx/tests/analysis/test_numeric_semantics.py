@@ -4,9 +4,9 @@ title: Tests for scalar numeric semantics.
 
 from __future__ import annotations
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 
 

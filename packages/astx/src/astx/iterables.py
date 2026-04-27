@@ -13,8 +13,7 @@ from typing import cast
 import astx
 
 from astx.base import NO_SOURCE_LOCATION, ReprStruct, SourceLocation
-
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
 
 
 @typechecked

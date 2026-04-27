@@ -16,7 +16,7 @@ import arx.cli as cli_module
 import arx.main as main_module
 import arx.testing as testing_module
 import astx
-import irx.astx as irx_astx
+import astx as irx_astx
 import pytest
 
 from arx import __version__, builtins
@@ -1132,12 +1132,12 @@ def test_arxmain_get_astx_uses_all_inputs(
     )
 
     app = main_module.ArxMain(
-        input_files=["/tmp/demo/a.x", "/tmp/demo/b.x"],
+        input_files=[".tmp/tests/demo/a.x", ".tmp/tests/demo/b.x"],
         output_file="out.o",
     )
     tree = app._get_astx()
 
-    assert loaded_files == ["/tmp/demo/a.x", "/tmp/demo/b.x"]
+    assert loaded_files == [".tmp/tests/demo/a.x", ".tmp/tests/demo/b.x"]
     assert parsed_modules == ["a", "b"]
     assert isinstance(tree, astx.Block)
     assert len(tree.nodes) == 2

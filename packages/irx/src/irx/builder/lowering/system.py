@@ -4,9 +4,10 @@
 title: System/runtime visitor mixins for llvmliteir.
 """
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.types import is_boolean_type, is_unsigned_type
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase

@@ -14,7 +14,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import cast
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -108,7 +109,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           type: str
         """
         if isinstance(node, astx.Identifier):
-            return cast(str, node.name)
+            return node.name
         if isinstance(node, astx.FieldAccess):
             base_name = self._module_namespace_name(node.value, module)
             return f"{base_name}.{node.field_name}"

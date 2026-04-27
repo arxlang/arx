@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import NoReturn, TypeVar
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.types import display_type_name
 from irx.diagnostics import (
     Diagnostic,

@@ -7,9 +7,10 @@ summary: >-
 
 from __future__ import annotations
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey

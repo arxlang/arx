@@ -6,9 +6,10 @@ title: Function visitor mixins for llvmliteir.
 
 from typing import Any, Sequence, cast
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.resolved_nodes import (
     CallingConvention,
     CallResolution,

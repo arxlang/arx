@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from irx import astx
+import astx
+
 from irx.analysis.module_interfaces import ParsedModule
 from irx.builder.base import CommandResult
 

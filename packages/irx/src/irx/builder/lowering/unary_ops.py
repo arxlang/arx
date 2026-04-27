@@ -4,9 +4,10 @@
 title: Unary-operator visitor mixins for llvmliteir.
 """
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.builder.core import VisitorCore, semantic_assignment_key
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop

@@ -4,7 +4,7 @@ title: parser module gather all functions and classes for parsing.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
 
 from arx.lexer import TokenList
 from arx.parser.control_flow import ControlFlowParserMixin

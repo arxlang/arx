@@ -4,133 +4,132 @@ title: IRx-owned BinaryOp node specializations.
 
 from __future__ import annotations
 
-import astx
-
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
+from astx.types import BinaryOp
 
 SPECIALIZED_BINARY_OP_EXTRA = "specialized_binary_op"
 
 
 @typechecked
-class AssignmentBinOp(astx.BinaryOp):
+class AssignmentBinOp(BinaryOp):
     """
     title: Specialized assignment binary operation node.
     """
 
 
 @typechecked
-class AddBinOp(astx.BinaryOp):
+class AddBinOp(BinaryOp):
     """
     title: Specialized addition binary operation node.
     """
 
 
 @typechecked
-class SubBinOp(astx.BinaryOp):
+class SubBinOp(BinaryOp):
     """
     title: Specialized subtraction binary operation node.
     """
 
 
 @typechecked
-class MulBinOp(astx.BinaryOp):
+class MulBinOp(BinaryOp):
     """
     title: Specialized multiplication binary operation node.
     """
 
 
 @typechecked
-class DivBinOp(astx.BinaryOp):
+class DivBinOp(BinaryOp):
     """
     title: Specialized division binary operation node.
     """
 
 
 @typechecked
-class ModBinOp(astx.BinaryOp):
+class ModBinOp(BinaryOp):
     """
     title: Specialized modulo binary operation node.
     """
 
 
 @typechecked
-class EqBinOp(astx.BinaryOp):
+class EqBinOp(BinaryOp):
     """
     title: Specialized equality binary operation node.
     """
 
 
 @typechecked
-class NeBinOp(astx.BinaryOp):
+class NeBinOp(BinaryOp):
     """
     title: Specialized inequality binary operation node.
     """
 
 
 @typechecked
-class LtBinOp(astx.BinaryOp):
+class LtBinOp(BinaryOp):
     """
     title: Specialized less-than binary operation node.
     """
 
 
 @typechecked
-class GtBinOp(astx.BinaryOp):
+class GtBinOp(BinaryOp):
     """
     title: Specialized greater-than binary operation node.
     """
 
 
 @typechecked
-class LeBinOp(astx.BinaryOp):
+class LeBinOp(BinaryOp):
     """
     title: Specialized less-than-or-equal binary operation node.
     """
 
 
 @typechecked
-class GeBinOp(astx.BinaryOp):
+class GeBinOp(BinaryOp):
     """
     title: Specialized greater-than-or-equal binary operation node.
     """
 
 
 @typechecked
-class LogicalAndBinOp(astx.BinaryOp):
+class LogicalAndBinOp(BinaryOp):
     """
     title: Specialized logical-and binary operation node.
     """
 
 
 @typechecked
-class LogicalOrBinOp(astx.BinaryOp):
+class LogicalOrBinOp(BinaryOp):
     """
     title: Specialized logical-or binary operation node.
     """
 
 
 @typechecked
-class BitOrBinOp(astx.BinaryOp):
+class BitOrBinOp(BinaryOp):
     """
     title: Specialized bitwise-or binary operation node.
     """
 
 
 @typechecked
-class BitAndBinOp(astx.BinaryOp):
+class BitAndBinOp(BinaryOp):
     """
     title: Specialized bitwise-and binary operation node.
     """
 
 
 @typechecked
-class BitXorBinOp(astx.BinaryOp):
+class BitXorBinOp(BinaryOp):
     """
     title: Specialized bitwise-xor binary operation node.
     """
 
 
-_BINARY_OP_TYPES: dict[str, type[astx.BinaryOp]] = {
+_BINARY_OP_TYPES: dict[str, type[BinaryOp]] = {
     "=": AssignmentBinOp,
     "+": AddBinOp,
     "-": SubBinOp,
@@ -154,30 +153,30 @@ _BINARY_OP_TYPES: dict[str, type[astx.BinaryOp]] = {
 
 
 @typechecked
-def binary_op_type_for_opcode(op_code: str) -> type[astx.BinaryOp]:
+def binary_op_type_for_opcode(op_code: str) -> type[BinaryOp]:
     """
     title: Return the specialized BinaryOp subclass for an opcode.
     parameters:
       op_code:
         type: str
     returns:
-      type: type[astx.BinaryOp]
+      type: type[BinaryOp]
     """
-    return _BINARY_OP_TYPES.get(op_code, astx.BinaryOp)
+    return _BINARY_OP_TYPES.get(op_code, BinaryOp)
 
 
 @typechecked
-def specialize_binary_op(node: astx.BinaryOp) -> astx.BinaryOp:
+def specialize_binary_op(node: BinaryOp) -> BinaryOp:
     """
     title: Return a specialized BinaryOp instance for the given opcode.
     parameters:
       node:
-        type: astx.BinaryOp
+        type: BinaryOp
     returns:
-      type: astx.BinaryOp
+      type: BinaryOp
     """
     target_type = binary_op_type_for_opcode(node.op_code)
-    if target_type is astx.BinaryOp or isinstance(node, target_type):
+    if target_type is BinaryOp or isinstance(node, target_type):
         return node
 
     specialized = target_type(

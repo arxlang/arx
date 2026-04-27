@@ -7,9 +7,10 @@ title: Temporal literal visitor mixins for llvmliteir.
 from datetime import datetime
 from datetime import time as time_value
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.typecheck import typechecked

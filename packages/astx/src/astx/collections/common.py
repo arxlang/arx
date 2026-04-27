@@ -12,7 +12,7 @@ from typing import cast
 
 import astx
 
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
 
 
 @typechecked

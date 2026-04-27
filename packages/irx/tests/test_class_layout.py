@@ -7,9 +7,9 @@ from __future__ import annotations
 import ctypes
 import re
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis.module_symbols import (
     mangle_class_name,
     mangle_class_static_name,

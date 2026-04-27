@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,

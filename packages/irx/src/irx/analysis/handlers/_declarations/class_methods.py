@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     class_method_symbol_basename,

@@ -10,9 +10,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import cast
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.builtins.collections.list import list_element_type
 from irx.typecheck import typechecked
 

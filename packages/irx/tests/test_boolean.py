@@ -4,9 +4,9 @@ title: Tests for Boolean semantics, lowering, and comparisons.
 
 from __future__ import annotations
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder

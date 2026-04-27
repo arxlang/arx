@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from irx import astx
+import astx
+
 from irx.builtins.collections.tensor import TENSOR_LAYOUT_EXTRA, TensorLayout
 
 from arx import builtins

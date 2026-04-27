@@ -12,9 +12,10 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, cast
 
+import astx
+
 from astx.types import AnyType as AstxAnyType
 
-from irx import astx
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,

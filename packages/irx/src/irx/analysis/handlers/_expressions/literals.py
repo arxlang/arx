@@ -14,7 +14,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import cast
 
-from irx import astx
+import astx
+
 from irx.analysis.collections import (
     collection_contains_types,
     collection_supports_sequence_search,

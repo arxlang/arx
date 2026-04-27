@@ -2,7 +2,8 @@
 title: Tests for numeric and expression-based PrintExpr lowering.
 """
 
-from irx import astx
+import astx
+
 from irx.analysis.module_symbols import mangle_function_name
 from irx.builder import Builder
 from irx.system import PrintExpr

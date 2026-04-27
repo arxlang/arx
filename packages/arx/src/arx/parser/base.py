@@ -7,7 +7,7 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+import astx
 
 from arx.lexer import Token, TokenList
 from arx.parser.state import (

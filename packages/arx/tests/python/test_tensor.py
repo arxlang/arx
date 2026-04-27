@@ -4,6 +4,7 @@ title: Tests for Arx tensor helpers and tensor-specific parser paths.
 
 from __future__ import annotations
 
+import astx
 import pytest
 
 from arx import tensor as tensor_module
@@ -24,7 +25,6 @@ from arx.tensor import (
     tensor_shape,
     tensor_type,
 )
-from irx import astx
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.buffer import BUFFER_DTYPE_TOKENS
 from irx.builtins.collections.tensor import (

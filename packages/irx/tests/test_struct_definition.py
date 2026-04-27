@@ -4,9 +4,9 @@ title: Stable struct semantics and lowering tests.
 
 from __future__ import annotations
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError
 from irx.analysis.module_symbols import mangle_struct_name
 from irx.builder import Builder as LLVMBuilder

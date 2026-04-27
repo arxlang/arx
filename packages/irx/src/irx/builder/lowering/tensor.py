@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.types import is_float_type, is_unsigned_type
 from irx.buffer import BUFFER_VIEW_FIELD_INDICES
 from irx.builder.core import VisitorCore

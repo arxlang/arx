@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from typing import Callable
 
-import astx
 import pytest
+
+import astx
 
 from astx.data import Variable
 from astx.literals.temporal import (

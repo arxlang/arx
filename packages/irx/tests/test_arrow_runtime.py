@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TypedDict, cast
 
+import astx
 import pyarrow as pa
 import pytest
 
@@ -25,7 +26,6 @@ from arx_arrowcpp_sources import (
 from arx_arrowcpp_sources import (
     get_include_dir as get_arrowcpp_include_dir,
 )
-from irx import astx
 from irx.buffer import (
     BUFFER_DTYPE_BOOL,
     BUFFER_DTYPE_INT32,

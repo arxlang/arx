@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from itertools import product
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers._templates.resolution import (
     TemplateResolutionVisitorMixin,
 )

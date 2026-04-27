@@ -19,6 +19,11 @@ from astx.types.collections import (
     SetType,
     TupleType,
 )
+from astx.types.generic import (
+    GeneratorType,
+    TemplateTypeVar,
+    UnionType,
+)
 from astx.types.numeric import (
     Complex,
     Complex32,
@@ -86,6 +91,7 @@ __all__ = [
     "Float32",
     "Float64",
     "Floating",
+    "GeneratorType",
     "Int8",
     "Int16",
     "Int32",
@@ -101,6 +107,7 @@ __all__ = [
     "SetType",
     "SignedInteger",
     "String",
+    "TemplateTypeVar",
     "Time",
     "Timestamp",
     "TupleType",
@@ -113,6 +120,7 @@ __all__ = [
     "UTF8Char",
     "UTF8String",
     "UnaryOp",
+    "UnionType",
     "UnsignedInteger",
     "XnorOp",
     "XorOp",

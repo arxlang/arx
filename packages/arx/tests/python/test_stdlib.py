@@ -7,10 +7,10 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
+import astx as irx_astx
 import pytest
 
 from arx import main as main_module
-from irx import astx as irx_astx
 
 try:
     import tomllib

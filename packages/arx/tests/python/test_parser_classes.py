@@ -4,13 +4,13 @@ title: Tests for annotation-based class parsing.
 
 from textwrap import dedent
 
+import astx
 import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from irx import astx
 
 
 def _parse_module(code: str) -> astx.Module:

@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import astx
 import pytest
 
-from irx import astx
 from irx.diagnostics import (
     Diagnostic,
     DiagnosticBag,

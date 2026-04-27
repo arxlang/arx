@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import analyze
 from irx.analysis.module_symbols import (
     mangle_class_dispatch_name,

@@ -4,9 +4,10 @@
 title: Module-level visitor mixins for llvmliteir.
 """
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.builder.core import (
     VisitorCore,
     semantic_class_key,

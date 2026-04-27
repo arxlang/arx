@@ -13,7 +13,13 @@ from __future__ import annotations
 
 from typing import cast
 
-from irx import astx
+import astx
+
+from astx.binary_op import (
+    SPECIALIZED_BINARY_OP_EXTRA,
+    specialize_binary_op,
+)
+
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -29,10 +35,6 @@ from irx.analysis.types import (
 )
 from irx.analysis.typing import binary_result_type, unary_result_type
 from irx.analysis.validation import validate_assignment, validate_cast
-from irx.astx.binary_op import (
-    SPECIALIZED_BINARY_OP_EXTRA,
-    specialize_binary_op,
-)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 

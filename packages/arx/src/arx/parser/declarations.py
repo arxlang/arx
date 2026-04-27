@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
+
 from astx import SourceLocation
 from astx.types import AnyType
-from irx import astx
 
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
@@ -346,26 +347,29 @@ class DeclarationParserMixin(ParserMixinBase):
                 raise ParserException(str(err)) from err
         elif is_tensor_type(field_type):
             try:
-                initializer = cast(
-                    astx.Expr,
-                    self._default_value_for_type(field_type),
-                )
+                initializer = self._default_value_for_type(field_type)
             except ValueError as err:
                 raise ParserException(str(err)) from err
 
-        field_kwargs: dict[str, object] = {
-            "mutability": self._resolve_field_mutability(modifiers),
-            "visibility": self._resolve_visibility(modifiers),
-            "loc": field_loc,
-        }
-        if initializer is not None:
-            field_kwargs["value"] = initializer
-
-        field = astx.VariableDeclaration(
-            name,
-            field_type,
-            **field_kwargs,
-        )
+        mutability = self._resolve_field_mutability(modifiers)
+        visibility = self._resolve_visibility(modifiers)
+        if initializer is None:
+            field = astx.VariableDeclaration(
+                name,
+                field_type,
+                mutability=mutability,
+                visibility=visibility,
+                loc=field_loc,
+            )
+        else:
+            field = astx.VariableDeclaration(
+                name,
+                field_type,
+                mutability=mutability,
+                visibility=visibility,
+                value=initializer,
+                loc=field_loc,
+            )
         self._apply_field_modifiers(field, modifiers)
         return field
 

@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from math import prod
 from typing import cast
 
-from irx import astx
+import astx
+
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.buffer import BufferMutability, BufferOwnership, buffer_view_flags
 from irx.builtins.collections.tensor import (

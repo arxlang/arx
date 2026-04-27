@@ -8,15 +8,13 @@ summary: >-
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast
+from typing import Any, cast
 
 import astx
 
+from astx.ffi import OpaqueHandleType
+from astx.tools.typing import typechecked
 from astx.types import AnyType
-
-from irx.astx.ffi import OpaqueHandleType
-from irx.buffer import BufferViewMetadata
-from irx.typecheck import typechecked
 
 
 @typechecked
@@ -78,24 +76,24 @@ class BufferViewDescriptor(astx.base.DataType):
     title: Internal low-level buffer view descriptor literal.
     attributes:
       metadata:
-        type: BufferViewMetadata
+        type: Any
       type_:
         type: BufferViewType
     """
 
-    metadata: BufferViewMetadata
+    metadata: Any
     type_: BufferViewType
 
     def __init__(
         self,
-        metadata: BufferViewMetadata,
+        metadata: Any,
         element_type: astx.DataType | None = None,
     ) -> None:
         """
         title: Initialize one buffer view descriptor.
         parameters:
           metadata:
-            type: BufferViewMetadata
+            type: Any
           element_type:
             type: astx.DataType | None
         """

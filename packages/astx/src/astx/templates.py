@@ -12,8 +12,8 @@ from typing import Iterable
 
 import astx
 
-from irx.astx.types import TemplateTypeVar, UnionType
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
+from astx.types import TemplateTypeVar, UnionType
 
 _TEMPLATE_PARAMS_ATTR = "irx_template_params"
 _TEMPLATE_ARGS_ATTR = "irx_template_args"

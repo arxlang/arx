@@ -2,9 +2,9 @@
 title: Symbol Table classes.
 """
 
+from astx.symbol_table import SymbolTable
 from public import public
 
-from irx.astx.symbol_table import SymbolTable
 from irx.typecheck import typechecked
 
 __all__ = ["SymbolTable"]

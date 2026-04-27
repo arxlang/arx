@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.module_interfaces import (
     ImportResolver,
     ModuleKey,

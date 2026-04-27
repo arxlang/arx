@@ -8,9 +8,9 @@ import shutil
 
 from typing import Any, cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.buffer import buffer_dtype_handle
 from irx.builder import Builder

@@ -2,8 +2,9 @@
 title: Tests for operators.
 """
 
-import astx
 import pytest
+
+import astx
 
 from astx.base import ASTKind
 from astx.data import Identifier, Variable

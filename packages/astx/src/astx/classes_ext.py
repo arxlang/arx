@@ -12,9 +12,11 @@ from typing import cast
 
 import astx
 
+from astx.base import NO_SOURCE_LOCATION
+from astx.classes import StructDeclStmt
+from astx.modifiers import VisibilityKind
+from astx.tools.typing import typechecked
 from astx.types import AnyType
-
-from irx.typecheck import typechecked
 
 
 @typechecked
@@ -93,7 +95,7 @@ class ClassType(AnyType):
 
 
 @typechecked
-class ClassDefStmt(astx.StructDeclStmt):
+class ClassDefStmt(StructDeclStmt):
     """
     title: Explicit class definition statement.
     summary: >-
@@ -124,9 +126,9 @@ class ClassDefStmt(astx.StructDeclStmt):
         decorators: Iterable[astx.Expr] | astx.ASTNodes[astx.Expr] = (),
         methods: Iterable[astx.FunctionDef]
         | astx.ASTNodes[astx.FunctionDef] = (),
-        visibility: astx.VisibilityKind = astx.VisibilityKind.public,
+        visibility: VisibilityKind = VisibilityKind.public,
         is_abstract: bool = False,
-        loc: astx.SourceLocation = astx.base.NO_SOURCE_LOCATION,
+        loc: astx.SourceLocation = NO_SOURCE_LOCATION,
         parent: astx.ASTNodes[astx.AST] | None = None,
     ) -> None:
         """
@@ -145,7 +147,7 @@ class ClassDefStmt(astx.StructDeclStmt):
           methods:
             type: Iterable[astx.FunctionDef] | astx.ASTNodes[astx.FunctionDef]
           visibility:
-            type: astx.VisibilityKind
+            type: VisibilityKind
           is_abstract:
             type: bool
           loc:
@@ -181,7 +183,7 @@ class ClassDefStmt(astx.StructDeclStmt):
             f"@{decorator}\n" for decorator in self.decorators
         )
         modifiers: list[str] = []
-        if self.visibility != astx.VisibilityKind.public:
+        if self.visibility != VisibilityKind.public:
             modifiers.append(self.visibility.name.lower())
         if self.is_abstract:
             modifiers.append("abstract")
