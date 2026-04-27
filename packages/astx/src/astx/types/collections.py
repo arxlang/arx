@@ -11,6 +11,19 @@ from astx.tools.typing import typechecked
 from astx.types.base import AnyType
 
 
+@typechecked
+def _format_type_name(type_: ExprType) -> str:
+    """
+    title: Return one stable collection element type name.
+    parameters:
+      type_:
+        type: ExprType
+    returns:
+      type: str
+    """
+    return type_.__class__.__name__
+
+
 @public
 @typechecked
 class CollectionType(AnyType):
@@ -27,18 +40,31 @@ class ListType(CollectionType):
     attributes:
       element_types:
         type: list[ExprType]
+      size:
+        type: int | None
     """
 
     element_types: list[ExprType]
+    size: int | None
 
-    def __init__(self, element_types: list[ExprType]) -> None:
+    def __init__(
+        self,
+        element_types: list[ExprType],
+        *,
+        size: int | None = None,
+    ) -> None:
         """
         title: Initialize ListType with an element type.
         parameters:
           element_types:
             type: list[ExprType]
+          size:
+            type: int | None
         """
+        if size is not None and size < 0:
+            raise ValueError("list size must be non-negative")
         self.element_types = element_types
+        self.size = size
 
     def __str__(self) -> str:
         """
@@ -46,7 +72,10 @@ class ListType(CollectionType):
         returns:
           type: str
         """
-        types_str = ", ".join(str(t) for t in self.element_types)
+        parts = [_format_type_name(type_) for type_ in self.element_types]
+        if self.size is not None:
+            parts.append(str(self.size))
+        types_str = ", ".join(parts)
         return f"ListType[{types_str}]"
 
 

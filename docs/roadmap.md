@@ -72,3 +72,17 @@ columns. Static-schema values use `dataframe[name: T, ...]`, column views use
 - [ ] Expand runtime-layout/schema annotations beyond function and extern
       parameters, applying the same behavior to both `dataframe[...]` and
       `tensor[T, ...]`.
+
+## Type System Follow-ups
+
+- [ ] Add parser-level support for optional list, tensor, series, and dataframe
+      size/shape annotations once the surface-syntax restrictions are ready to
+      change.
+- [ ] Add runtime check sidecars for assigning unknown-size values to sized
+      targets, including list length, tensor shape, series length, and dataframe
+      row count.
+- [ ] Add support for partial tensor shape constraints using ellipsis, such as
+      `tensor[f64, 2, ...]`, `tensor[f64, ..., 3]`, and
+      `tensor[f64, 2, ..., 3]`.
+- [ ] Add symbolic shape variables for generic algorithms, such as
+      `fn dot[N](a: tensor[f64, N], b: tensor[f64, N])`.

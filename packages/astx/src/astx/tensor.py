@@ -17,6 +17,19 @@ from astx.types import AnyType
 
 
 @typechecked
+def _format_type_name(type_: astx.DataType) -> str:
+    """
+    title: Return one stable tensor element type name.
+    parameters:
+      type_:
+        type: astx.DataType
+    returns:
+      type: str
+    """
+    return type_.__class__.__name__
+
+
+@typechecked
 class TensorType(AnyType):
     """
     title: Internal Tensor semantic type.
@@ -26,19 +39,32 @@ class TensorType(AnyType):
     attributes:
       element_type:
         type: astx.DataType | None
+      shape:
+        type: tuple[int, Ellipsis] | None
     """
 
     element_type: astx.DataType | None
+    shape: tuple[int, ...] | None
 
-    def __init__(self, element_type: astx.DataType | None = None) -> None:
+    def __init__(
+        self,
+        element_type: astx.DataType | None = None,
+        *,
+        shape: Sequence[int] | None = None,
+    ) -> None:
         """
         title: Initialize one Tensor type.
         parameters:
           element_type:
             type: astx.DataType | None
+          shape:
+            type: Sequence[int] | None
         """
         super().__init__()
         self.element_type = element_type
+        self.shape = None if shape is None else tuple(shape)
+        if self.shape is not None and any(dim < 0 for dim in self.shape):
+            raise ValueError("tensor shape dimensions must be non-negative")
 
     def __str__(self) -> str:
         """
@@ -48,7 +74,10 @@ class TensorType(AnyType):
         """
         if self.element_type is None:
             return "TensorType"
-        return f"TensorType[{self.element_type}]"
+        parts = [_format_type_name(self.element_type)]
+        if self.shape is not None:
+            parts.extend(str(dimension) for dimension in self.shape)
+        return f"TensorType[{', '.join(parts)}]"
 
 
 @typechecked
@@ -109,7 +138,7 @@ class TensorLiteral(astx.base.DataType):
         self.shape = tuple(shape)
         self.strides = None if strides is None else tuple(strides)
         self.offset_bytes = offset_bytes
-        self.type_ = TensorType(element_type)
+        self.type_ = TensorType(element_type, shape=self.shape)
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -185,7 +214,7 @@ class TensorView(astx.base.DataType):
         self.shape = tuple(shape)
         self.strides = None if strides is None else tuple(strides)
         self.offset_bytes = offset_bytes
-        self.type_ = TensorType()
+        self.type_ = TensorType(shape=self.shape)
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """

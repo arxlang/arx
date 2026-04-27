@@ -58,6 +58,9 @@ def _shape_of(data_type: astx.DataType) -> tuple[int, ...] | None:
     returns:
       type: tuple[int, Ellipsis] | None
     """
+    if isinstance(data_type, astx.TensorType) and data_type.shape is not None:
+        return data_type.shape
+
     shape = getattr(data_type, TENSOR_SHAPE_ATTR, None)
     if isinstance(shape, tuple) and all(isinstance(dim, int) for dim in shape):
         return cast(tuple[int, ...], shape)
@@ -79,6 +82,7 @@ def _mark_tensor_type(
       type: astx.TensorType
     """
     setattr(data_type, TENSOR_SURFACE_ATTR, True)
+    data_type.shape = shape
     if shape is not None:
         setattr(data_type, TENSOR_SHAPE_ATTR, shape)
     return data_type
@@ -132,7 +136,10 @@ def tensor_type(
         raise ValueError("tensor shapes must include at least one dimension")
     if any(dim < 0 for dim in shape):
         raise ValueError("tensor dimensions must be non-negative")
-    return _mark_tensor_type(astx.TensorType(element_type), shape)
+    return _mark_tensor_type(
+        astx.TensorType(element_type, shape=shape),
+        shape,
+    )
 
 
 def runtime_tensor_type(element_type: astx.DataType) -> astx.TensorType:
