@@ -13,6 +13,7 @@ from typing import cast
 
 import astx
 
+from arx.dataframe import DataFrameBinding
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind, TokenList
@@ -34,6 +35,8 @@ class ParserCore(ParserMixinBase):
         type: set[str]
       tensor_scopes:
         type: list[dict[str, TensorBinding | None]]
+      dataframe_scopes:
+        type: list[dict[str, DataFrameBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -49,6 +52,7 @@ class ParserCore(ParserMixinBase):
     list_scopes: list[set[str]]
     known_class_names: set[str]
     tensor_scopes: list[dict[str, TensorBinding | None]]
+    dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -82,6 +86,7 @@ class ParserCore(ParserMixinBase):
         self.list_scopes = [set()]
         self.known_class_names = set()
         self.tensor_scopes = [{}]
+        self.dataframe_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
@@ -95,6 +100,7 @@ class ParserCore(ParserMixinBase):
         self.list_scopes = [set()]
         self.known_class_names = set()
         self.tensor_scopes = [{}]
+        self.dataframe_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
         self.value_scopes = [set()]
@@ -216,6 +222,9 @@ class ParserCore(ParserMixinBase):
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_tensors: dict[str, TensorBinding | None] | None = None,
+        declared_dataframes: (
+            dict[str, DataFrameBinding | None] | None
+        ) = None,
     ) -> None:
         """
         title: Push one visible-name scope for expression disambiguation.
@@ -226,10 +235,13 @@ class ParserCore(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_tensors:
             type: dict[str, TensorBinding | None] | None
+          declared_dataframes:
+            type: dict[str, DataFrameBinding | None] | None
         """
         self.value_scopes.append(set(declared_names))
         self.list_scopes.append(set(declared_lists))
         self.tensor_scopes.append(dict(declared_tensors or {}))
+        self.dataframe_scopes.append(dict(declared_dataframes or {}))
 
     def _pop_value_scope(self) -> None:
         """
@@ -238,6 +250,7 @@ class ParserCore(ParserMixinBase):
         self.value_scopes.pop()
         self.list_scopes.pop()
         self.tensor_scopes.pop()
+        self.dataframe_scopes.pop()
 
     def _declare_value_name(self, name: str) -> None:
         """
@@ -288,6 +301,32 @@ class ParserCore(ParserMixinBase):
         """
         return any(name in scope for scope in reversed(self.tensor_scopes))
 
+    def _declare_dataframe_name(
+        self,
+        name: str,
+        binding: DataFrameBinding | None,
+    ) -> None:
+        """
+        title: Record one visible DataFrame binding in the current scope.
+        parameters:
+          name:
+            type: str
+          binding:
+            type: DataFrameBinding | None
+        """
+        self.dataframe_scopes[-1][name] = binding
+
+    def _is_dataframe_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a DataFrame.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        return any(name in scope for scope in reversed(self.dataframe_scopes))
+
     def _declare_list_name(self, name: str) -> None:
         """
         title: Record one visible list binding in the current scope.
@@ -318,6 +357,23 @@ class ParserCore(ParserMixinBase):
           type: TensorBinding | None
         """
         for scope in reversed(self.tensor_scopes):
+            if name in scope:
+                return scope[name]
+        return None
+
+    def _lookup_dataframe_binding(
+        self,
+        name: str,
+    ) -> DataFrameBinding | None:
+        """
+        title: Return one visible DataFrame binding by name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: DataFrameBinding | None
+        """
+        for scope in reversed(self.dataframe_scopes):
             if name in scope:
                 return scope[name]
         return None

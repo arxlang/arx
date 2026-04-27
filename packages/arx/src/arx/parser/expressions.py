@@ -14,6 +14,12 @@ import astx
 from irx.builtins.collections.tensor import TENSOR_LAYOUT_EXTRA, TensorLayout
 
 from arx import builtins
+from arx.dataframe import (
+    attach_binding as attach_dataframe_binding,
+)
+from arx.dataframe import (
+    column_type as dataframe_column_type,
+)
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
@@ -133,6 +139,24 @@ class ExpressionParserMixin(ParserMixinBase):
                         self._consume_operator(",")
 
                 self._consume_operator(")")
+                if self._is_dataframe_expr(expr) and member_name in {
+                    "nrows",
+                    "ncols",
+                }:
+                    if template_args is not None:
+                        raise ParserException(
+                            "DataFrame metadata methods do not accept "
+                            "template arguments."
+                        )
+                    if args:
+                        raise ParserException(
+                            f"DataFrame {member_name} expects no arguments."
+                        )
+                    if member_name == "nrows":
+                        expr = astx.DataFrameRowCount(expr)
+                    else:
+                        expr = astx.DataFrameColumnCount(expr)
+                    continue
                 if (
                     member_name == "append"
                     and isinstance(expr, astx.Identifier)
@@ -168,6 +192,8 @@ class ExpressionParserMixin(ParserMixinBase):
             class_name = self._class_name_from_expr(expr)
             if class_name is not None:
                 expr = astx.StaticFieldAccess(class_name, member_name)
+            elif self._is_dataframe_expr(expr):
+                expr = self._parse_dataframe_field_access(expr, member_name)
             else:
                 expr = astx.FieldAccess(expr, member_name)
 
@@ -303,9 +329,19 @@ class ExpressionParserMixin(ParserMixinBase):
             binding = self._lookup_tensor_binding(id_name)
             if binding is not None:
                 attach_binding(identifier, binding)
+            dataframe_binding = self._lookup_dataframe_binding(id_name)
+            if dataframe_binding is not None:
+                attach_dataframe_binding(identifier, dataframe_binding)
             return identifier
 
         self._consume_operator("(")
+
+        if id_name == builtins.BUILTIN_DATAFRAME:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
+            return self.parse_dataframe_constructor()
 
         if id_name == builtins.BUILTIN_CAST:
             if template_args is not None:
@@ -399,6 +435,21 @@ class ExpressionParserMixin(ParserMixinBase):
 
         self._consume_operator("]")
 
+        dataframe_base = self._coerce_dataframe_base(base)
+        if dataframe_base is not None:
+            if len(indices) != 1 or not isinstance(
+                indices[0],
+                astx.LiteralString,
+            ):
+                raise ParserException(
+                    "DataFrame string-key column access expects exactly one "
+                    "string literal key."
+                )
+            return self._parse_dataframe_string_access(
+                dataframe_base,
+                indices[0].value,
+            )
+
         tensor_base = self._coerce_tensor_base(base)
         if tensor_base is None:
             if len(indices) != 1:
@@ -414,6 +465,172 @@ class ExpressionParserMixin(ParserMixinBase):
 
         self._validate_tensor_indices(tensor_base, indices)
         return astx.TensorIndex(tensor_base, indices)
+
+    def parse_dataframe_constructor(self) -> astx.DataFrameLiteral:
+        """
+        title: Parse a builtin DataFrame constructor expression.
+        returns:
+          type: astx.DataFrameLiteral
+        """
+        self._skip_inline_indents()
+        self._consume_operator("{")
+        self._skip_inline_indents()
+
+        columns: list[astx.DataFrameLiteralColumn] = []
+        seen: set[str] = set()
+        if self._is_operator("}"):
+            raise ParserException(
+                "DataFrame constructor requires at least one column."
+            )
+
+        while True:
+            if self.tokens.cur_tok.kind != TokenKind.identifier:
+                raise ParserException(
+                    "DataFrame constructor column names must be identifiers."
+                )
+            column_name = cast(str, self.tokens.cur_tok.value)
+            if column_name in seen:
+                raise ParserException(
+                    f"duplicate dataframe column '{column_name}'"
+                )
+            seen.add(column_name)
+            self.tokens.get_next_token()
+
+            self._consume_operator(":")
+            value = self.parse_expression()
+            if not isinstance(value, astx.LiteralList):
+                raise ParserException(
+                    "DataFrame constructor column values must be list "
+                    "literals."
+                )
+            columns.append(
+                astx.DataFrameLiteralColumn(
+                    column_name,
+                    tuple(value.elements),
+                )
+            )
+            self._skip_inline_indents()
+
+            if self._is_operator("}"):
+                break
+
+            self._consume_operator(",")
+            self._skip_inline_indents()
+            if self._is_operator("}"):
+                break
+
+        self._consume_operator("}")
+        self._skip_inline_indents()
+        self._consume_operator(")")
+        return astx.DataFrameLiteral(columns)
+
+    def _skip_inline_indents(self) -> None:
+        """
+        title: Skip indentation markers inside grouped expressions.
+        """
+        while self.tokens.cur_tok.kind == TokenKind.indent:
+            self.tokens.get_next_token()
+
+    def _is_dataframe_expr(self, expr: astx.AST) -> bool:
+        """
+        title: Return whether one expression is known as a DataFrame.
+        parameters:
+          expr:
+            type: astx.AST
+        returns:
+          type: bool
+        """
+        if isinstance(expr, astx.DataFrameLiteral):
+            return True
+        if isinstance(expr, astx.Identifier):
+            return self._is_dataframe_name(expr.name)
+        return False
+
+    def _coerce_dataframe_base(self, base: astx.AST) -> astx.AST | None:
+        """
+        title: Return one DataFrame-aware access base when available.
+        parameters:
+          base:
+            type: astx.AST
+        returns:
+          type: astx.AST | None
+        """
+        if isinstance(base, astx.DataFrameLiteral):
+            return base
+        if not isinstance(base, astx.Identifier):
+            return None
+        binding = self._lookup_dataframe_binding(base.name)
+        if binding is not None:
+            attach_dataframe_binding(base, binding)
+            return base
+        if self._is_dataframe_name(base.name):
+            raise ParserException(
+                "Runtime-schema dataframe column access is not supported yet."
+            )
+        return None
+
+    def _parse_dataframe_field_access(
+        self,
+        base: astx.AST,
+        column_name: str,
+    ) -> astx.DataFrameColumnAccess:
+        """
+        title: Build and validate one DataFrame field-style column access.
+        parameters:
+          base:
+            type: astx.AST
+          column_name:
+            type: str
+        returns:
+          type: astx.DataFrameColumnAccess
+        """
+        dataframe_base = self._coerce_dataframe_base(base)
+        if dataframe_base is None:
+            raise ParserException("Expected a DataFrame value.")
+        if isinstance(base, astx.Identifier):
+            binding = self._lookup_dataframe_binding(base.name)
+            if (
+                binding is not None
+                and dataframe_column_type(
+                    binding,
+                    column_name,
+                )
+                is None
+            ):
+                raise ParserException(
+                    f"DataFrame has no column '{column_name}'."
+                )
+        return astx.DataFrameColumnAccess(dataframe_base, column_name)
+
+    def _parse_dataframe_string_access(
+        self,
+        base: astx.AST,
+        column_name: str,
+    ) -> astx.DataFrameStringColumnAccess:
+        """
+        title: Build and validate one DataFrame string-key column access.
+        parameters:
+          base:
+            type: astx.AST
+          column_name:
+            type: str
+        returns:
+          type: astx.DataFrameStringColumnAccess
+        """
+        if isinstance(base, astx.Identifier):
+            binding = self._lookup_dataframe_binding(base.name)
+            if (
+                binding is not None
+                and dataframe_column_type(
+                    binding,
+                    column_name,
+                )
+                is None
+            ):
+                raise ParserException(
+                    f"DataFrame has no column '{column_name}'."
+                )
+        return astx.DataFrameStringColumnAccess(base, column_name)
 
     def _coerce_tensor_base(self, base: astx.AST) -> astx.AST | None:
         """

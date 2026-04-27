@@ -78,6 +78,10 @@ class VariablesLLVM:
     TENSOR_HANDLE_TYPE: ir.types.Type
     ARROW_TENSOR_BUILDER_HANDLE_TYPE: ir.types.Type
     ARROW_TENSOR_HANDLE_TYPE: ir.types.Type
+    TABLE_HANDLE_TYPE: ir.types.Type
+    CHUNKED_ARRAY_HANDLE_TYPE: ir.types.Type
+    ARROW_TABLE_HANDLE_TYPE: ir.types.Type
+    ARROW_CHUNKED_ARRAY_HANDLE_TYPE: ir.types.Type
 
     context: ir.context.Context
     module: ir.module.Module

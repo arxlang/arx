@@ -14,6 +14,16 @@ import astx
 from astx import SourceLocation
 from astx.types import AnyType
 
+from arx.dataframe import (
+    DataFrameBinding,
+    is_dataframe_type,
+)
+from arx.dataframe import (
+    binding_from_type as dataframe_binding_from_type,
+)
+from arx.dataframe import (
+    coerce_expression as coerce_dataframe_expression,
+)
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
@@ -34,8 +44,10 @@ from arx.parser.state import (
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
-    coerce_expression,
     is_tensor_type,
+)
+from arx.tensor import (
+    coerce_expression as coerce_tensor_expression,
 )
 
 
@@ -43,6 +55,31 @@ class DeclarationParserMixin(ParserMixinBase):
     """
     title: Declaration parser mixin.
     """
+
+    def _coerce_declared_expression(
+        self,
+        expr: astx.Expr,
+        target_type: astx.DataType,
+        *,
+        context: str,
+    ) -> astx.Expr:
+        """
+        title: Coerce one expression for declared collection target types.
+        parameters:
+          expr:
+            type: astx.Expr
+          target_type:
+            type: astx.DataType
+          context:
+            type: str
+        returns:
+          type: astx.Expr
+        """
+        return coerce_dataframe_expression(
+            coerce_tensor_expression(expr, target_type, context=context),
+            target_type,
+            context=context,
+        )
 
     def _parse_argument_default(
         self,
@@ -64,7 +101,7 @@ class DeclarationParserMixin(ParserMixinBase):
 
         self._consume_operator("=")
         try:
-            return coerce_expression(
+            return self._coerce_declared_expression(
                 cast(astx.Expr, self.parse_expression()),
                 arg_type,
                 context=f"default value for parameter '{arg_name}'",
@@ -135,6 +172,9 @@ class DeclarationParserMixin(ParserMixinBase):
                     proto.args.nodes
                 ),
                 declared_tensors=self._tensor_bindings_for_arguments(
+                    proto.args.nodes
+                ),
+                declared_dataframes=self._dataframe_bindings_for_arguments(
                     proto.args.nodes
                 ),
             )
@@ -338,7 +378,7 @@ class DeclarationParserMixin(ParserMixinBase):
         if self._is_operator("="):
             self._consume_operator("=")
             try:
-                initializer = coerce_expression(
+                initializer = self._coerce_declared_expression(
                     cast(astx.Expr, self.parse_expression()),
                     field_type,
                     context=f"field '{name}'",
@@ -429,6 +469,11 @@ class DeclarationParserMixin(ParserMixinBase):
                         declared_tensors=self._tensor_bindings_for_arguments(
                             prototype.args.nodes
                         ),
+                        declared_dataframes=(
+                            self._dataframe_bindings_for_arguments(
+                                prototype.args.nodes
+                            )
+                        ),
                     )
                     if body.nodes:
                         raise ParserException(
@@ -447,6 +492,11 @@ class DeclarationParserMixin(ParserMixinBase):
                         ),
                         declared_tensors=self._tensor_bindings_for_arguments(
                             prototype.args.nodes
+                        ),
+                        declared_dataframes=(
+                            self._dataframe_bindings_for_arguments(
+                                prototype.args.nodes
+                            )
                         ),
                     )
             elif not (
@@ -1075,6 +1125,27 @@ class DeclarationParserMixin(ParserMixinBase):
             if not is_tensor_type(argument.type_):
                 continue
             bindings[argument.name] = binding_from_type(argument.type_)
+        return bindings
+
+    def _dataframe_bindings_for_arguments(
+        self,
+        arguments: tuple[astx.Argument, ...] | list[astx.Argument],
+    ) -> dict[str, DataFrameBinding | None]:
+        """
+        title: Build one DataFrame scope map for function arguments.
+        parameters:
+          arguments:
+            type: tuple[astx.Argument, Ellipsis] | list[astx.Argument]
+        returns:
+          type: dict[str, DataFrameBinding | None]
+        """
+        bindings: dict[str, DataFrameBinding | None] = {}
+        for argument in arguments:
+            if not is_dataframe_type(argument.type_):
+                continue
+            bindings[argument.name] = dataframe_binding_from_type(
+                argument.type_
+            )
         return bindings
 
     def _list_names_for_arguments(

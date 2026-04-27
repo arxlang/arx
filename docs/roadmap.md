@@ -54,20 +54,21 @@ type that uses that approach.
 - [ ] Keep tensor semantics aligned with the Arrow-backed runtime rather than
       adding Arx-local lowering behavior.
 
-## Implement Arrow-backed DataFrames
+## DataFrames and Series
 
-DataFrames should be a distinct public collection abstraction for heterogeneous
-named columns. The accepted design direction is documented in
-[Arrow-backed DataFrames](proposals/arrow-backed-dataframes.md).
+DataFrames are a distinct public collection abstraction for heterogeneous named
+columns. Static-schema values use `dataframe[name: T, ...]`, column views use
+`series[T]`, and literals are constructed with `dataframe({...})`.
 
-- [ ] Add the builtin `dataframe[...]` type.
-- [ ] Add the builtin `series[T]` type for typed DataFrame columns.
-- [ ] Add the builtin `dataframe({...})` constructor for column-oriented
+- [x] Add the builtin `dataframe[...]` type.
+- [x] Add the builtin `series[T]` type for typed DataFrame columns.
+- [x] Add the builtin `dataframe({...})` constructor for column-oriented
       literals.
-- [ ] Back DataFrame values with Arrow C++ `arrow::Table`.
-- [ ] Back Series values with Arrow C++ `arrow::ChunkedArray`.
-- [ ] Keep the MVP limited to fixed-width numeric and `bool` columns.
+- [x] Back DataFrame values with Arrow C++ `arrow::Table`.
+- [x] Back Series values with Arrow C++ `arrow::ChunkedArray`.
+- [x] Keep the MVP limited to fixed-width numeric and `bool` columns.
 - [ ] Add string, nullable, nested, temporal, and user-defined column support
       after the fixed-width MVP is stable.
-- [ ] Keep runtime-schema `dataframe[...]` annotations limited to function and
-      extern parameters at first, then expand this consistently with tensors.
+- [ ] Expand runtime-layout/schema annotations beyond function and extern
+      parameters, applying the same behavior to both `dataframe[...]` and
+      `tensor[T, ...]`.

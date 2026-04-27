@@ -19,6 +19,7 @@ _ARX_RESOURCE_PACKAGE = "arx"
 _BUILTIN_RESOURCE_DIR = "builtins"
 
 BUILTIN_CAST = "cast"
+BUILTIN_DATAFRAME = "dataframe"
 BUILTIN_PRINT = "print"
 BUILTIN_RANGE = "range"
 _GENERATORS_MODULE = f"{BUILTIN_NAMESPACE}.generators"
@@ -69,6 +70,7 @@ _AMBIENT_BUILTIN_BINDINGS = (
 
 __all__ = [
     "BUILTIN_CAST",
+    "BUILTIN_DATAFRAME",
     "BUILTIN_NAMESPACE",
     "BUILTIN_PRINT",
     "BUILTIN_RANGE",
@@ -96,7 +98,7 @@ def is_builtin(name: str) -> bool:
     returns:
       type: bool
     """
-    return name in {BUILTIN_CAST, BUILTIN_PRINT}
+    return name in {BUILTIN_CAST, BUILTIN_DATAFRAME, BUILTIN_PRINT}
 
 
 def build_cast(

@@ -6,27 +6,30 @@ their canonical spellings, accepted aliases, and current surface syntax.
 
 ## Overview
 
-| Canonical type               | Accepted aliases | Category   | Example                                          | Notes                                    |
-| ---------------------------- | ---------------- | ---------- | ------------------------------------------------ | ---------------------------------------- |
-| `i8`                         | `int8`           | integer    | `var a: i8 = 8`                                  | 8-bit integer                            |
-| `i16`                        | `int16`          | integer    | `var b: i16 = 16`                                | 16-bit integer                           |
-| `i32`                        | `int32`          | integer    | `var c: i32 = 32`                                | 32-bit integer                           |
-| `i64`                        | `int64`          | integer    | `var d: i64 = 64`                                | 64-bit integer                           |
-| `f16`                        | `float16`        | float      | `var x: f16 = 1.5`                               | 16-bit float                             |
-| `f32`                        | `float32`        | float      | `var y: f32 = 3.25`                              | 32-bit float                             |
-| `f64`                        | `float64`        | float      | `var z: f64 = 9.5`                               | 64-bit float                             |
-| `bool`                       | `boolean`        | boolean    | `var ok: bool = true`                            | Uses `true` and `false` literals         |
-| `none`                       | —                | unit       | `fn log() -> none:`                              | Also the single value of the `none` type |
-| `str`                        | `string`         | text       | `var s: str = "hi"`                              | UTF-8 string                             |
-| `char`                       | —                | text       | `var ch: char = 'A'`                             | Currently mapped to `i8`                 |
-| `datetime`                   | —                | temporal   | `datetime("2026-03-05T12:30:59")`                | Constructor-style literal form           |
-| `timestamp`                  | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")`              | Constructor-style literal form           |
-| `date`                       | —                | temporal   | `var d: date`                                    | Recognized as a built-in type name       |
-| `time`                       | —                | temporal   | `var t: time`                                    | Recognized as a built-in type name       |
-| `list[T]`                    | —                | collection | `var ids: list[i32] = [1, 2, 3]`                 | Generic collection type                  |
-| `tensor[T, N]`               | —                | collection | `var ids: tensor[i32, 4] = [1, 2, 3, 4]`         | Fixed-shape 1D numeric tensor            |
-| `tensor[T, d0, d1, ..., dN]` | —                | collection | `var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]` | Fixed-shape multidimensional tensor      |
-| `tensor[T, ...]`             | —                | collection | `fn sink(values: tensor[i32, ...]) -> none:`     | Runtime-shaped tensor parameter          |
+| Canonical type               | Accepted aliases | Category   | Example                                               | Notes                                    |
+| ---------------------------- | ---------------- | ---------- | ----------------------------------------------------- | ---------------------------------------- |
+| `i8`                         | `int8`           | integer    | `var a: i8 = 8`                                       | 8-bit integer                            |
+| `i16`                        | `int16`          | integer    | `var b: i16 = 16`                                     | 16-bit integer                           |
+| `i32`                        | `int32`          | integer    | `var c: i32 = 32`                                     | 32-bit integer                           |
+| `i64`                        | `int64`          | integer    | `var d: i64 = 64`                                     | 64-bit integer                           |
+| `f16`                        | `float16`        | float      | `var x: f16 = 1.5`                                    | 16-bit float                             |
+| `f32`                        | `float32`        | float      | `var y: f32 = 3.25`                                   | 32-bit float                             |
+| `f64`                        | `float64`        | float      | `var z: f64 = 9.5`                                    | 64-bit float                             |
+| `bool`                       | `boolean`        | boolean    | `var ok: bool = true`                                 | Uses `true` and `false` literals         |
+| `none`                       | —                | unit       | `fn log() -> none:`                                   | Also the single value of the `none` type |
+| `str`                        | `string`         | text       | `var s: str = "hi"`                                   | UTF-8 string                             |
+| `char`                       | —                | text       | `var ch: char = 'A'`                                  | Currently mapped to `i8`                 |
+| `datetime`                   | —                | temporal   | `datetime("2026-03-05T12:30:59")`                     | Constructor-style literal form           |
+| `timestamp`                  | —                | temporal   | `timestamp("2026-03-05T12:30:59Z")`                   | Constructor-style literal form           |
+| `date`                       | —                | temporal   | `var d: date`                                         | Recognized as a built-in type name       |
+| `time`                       | —                | temporal   | `var t: time`                                         | Recognized as a built-in type name       |
+| `list[T]`                    | —                | collection | `var ids: list[i32] = [1, 2, 3]`                      | Generic collection type                  |
+| `tensor[T, N]`               | —                | collection | `var ids: tensor[i32, 4] = [1, 2, 3, 4]`              | Fixed-shape 1D numeric tensor            |
+| `tensor[T, d0, d1, ..., dN]` | —                | collection | `var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]`      | Fixed-shape multidimensional tensor      |
+| `tensor[T, ...]`             | —                | collection | `fn sink(values: tensor[i32, ...]) -> none:`          | Runtime-shaped tensor parameter          |
+| `dataframe[name: T, ...]`    | —                | collection | `var rows: dataframe[id: i32] = dataframe({id: [1]})` | Static-schema DataFrame                  |
+| `dataframe[...]`             | —                | collection | `fn sink(rows: dataframe[...]) -> none:`              | Runtime-schema DataFrame parameter       |
+| `series[T]`                  | —                | collection | `var ids: series[i32] = rows["id"]`                   | Typed DataFrame column                   |
 
 ## Numeric Types
 
@@ -94,7 +97,7 @@ fn time_demo() -> none:
 The parser also recognizes `date` and `time` as built-in type names in
 annotations.
 
-## Collections and tensors
+## Collections, tensors, and dataframes
 
 Arx exposes two public collection constructors:
 
@@ -102,16 +105,19 @@ Arx exposes two public collection constructors:
 - `tensor[T, N]` for fixed-shape 1D numeric tensors
 - `tensor[T, d0, d1, ..., dN]` for fixed-shape multidimensional tensors
 - `tensor[T, ...]` for runtime-shaped tensor parameters
+- `dataframe[name: T, ...]` for static-schema named-column DataFrames
+- `dataframe[...]` for runtime-schema DataFrame parameters
+- `series[T]` for typed DataFrame columns
 
 In the fixed-shape form, `...` is documentation prose for additional integer
 dimensions. The literal `...` marker is reserved for runtime-shaped tensor
-parameters.
+parameters and runtime-schema DataFrame parameters.
 
 The naming is intentional: Arx uses `Tensor` for homogeneous N-dimensional data,
 aligning with common data-science terminology and IRx's Arrow C++ backed
-runtime. `Array` remains the term for one-dimensional Arrow-style data where it
-is exposed, and future dataframe/table support will be separate and
-heterogeneous.
+runtime. `DataFrame` is the heterogeneous named-column abstraction backed by
+Arrow C++ `Table`, and `Series` is the one-dimensional typed column view backed
+by Arrow C++ `ChunkedArray`.
 
 ```arx
 fn tensor_demo() -> none:
@@ -138,6 +144,32 @@ Current tensor rules in this phase:
   indexing is supported by IRx
 - current lowering is read-only and is focused on literal/default-initialized
   shaped tensors
+
+Current DataFrame rules in this phase:
+
+- column types are fixed-width numeric types (`i8`, `i16`, `i32`, `i64`, `f32`,
+  `f64`) or `bool`
+- string, nullable, nested, temporal, and user-defined columns are not part of
+  the MVP yet
+- static-schema values use `dataframe[name: T, ...]` annotations and the
+  column-oriented `dataframe({...})` constructor
+- constructor columns must be list literals, use declared column names, and have
+  equal row counts
+- columns can be accessed as `rows.score` or `rows["score"]`
+- `rows.nrows()` and `rows.ncols()` return row and column counts as `i64`
+- `dataframe[...]` is accepted only in function and extern parameter annotations
+  for now; column access on runtime-schema parameters is not available yet
+
+```arx
+fn dataframe_demo() -> i32:
+  var rows: dataframe[id: i32, score: f64] = dataframe({
+    id: [1, 2, 3],
+    score: [0.5, 0.8, 1.0],
+  })
+  var scores: series[f64] = rows.score
+  var ids: series[i32] = rows["id"]
+  return cast(rows.nrows(), i32)
+```
 
 ## Casting
 

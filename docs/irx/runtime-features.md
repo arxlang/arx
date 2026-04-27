@@ -46,6 +46,8 @@ when needed.
 - `array` Declares the builtin one-dimensional Arrow array runtime surface.
 - `tensor` Declares the builtin homogeneous N-dimensional Arrow tensor runtime
   surface.
+- `dataframe` Declares the builtin heterogeneous named-column Arrow table
+  runtime surface.
 - `list` Declares the minimal dynamic-list runtime used by `ListCreate`,
   `ListAppend`, and lowered list indexing.
 
@@ -174,6 +176,17 @@ Current initial Tensor layer alongside that substrate:
 - shallow tensor views may replace shape/stride/offset metadata without copying
   storage
 - current tensor lowering supports fixed-width numeric element types only
+
+Current initial DataFrame layer alongside that substrate:
+
+- dataframe values are created through `irx_arrow_table_*` runtime symbols
+- dataframe construction stores named columns in Arrow C++ `arrow::Table`
+  handles
+- series values are column views backed by Arrow C++ `arrow::ChunkedArray`
+  handles
+- static column access resolves to a known column index during semantic analysis
+- current dataframe lowering supports fixed-width numeric and `bool` columns
+  only
 
 What IRx does not do here:
 

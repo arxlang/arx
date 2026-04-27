@@ -28,8 +28,13 @@ fn add(a: i32, b: i32) -> i32:
 ```arx
 fn summarize(name: str, values: list[i32]) -> none:
   var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  var rows: dataframe[id: i32, score: f64] = dataframe({
+    id: [1, 2],
+    score: [0.5, 1.0],
+  })
   var count: i32 = 0
   print(grid[0, 1])
+  print(rows.nrows())
   return
 ```
 
@@ -42,11 +47,19 @@ Common places where types appear:
 - shaped 1D tensor annotations: `tensor[i32, 4]`
 - multidimensional tensor annotations: `tensor[i32, 2, 2]`
 - runtime-shaped tensor parameters: `fn sink(x: tensor[i32, ...]) -> none:`
+- static-schema DataFrame annotations: `dataframe[id: i32, score: f64]`
+- runtime-schema DataFrame parameters: `fn sink(rows: dataframe[...]) -> none:`
+- typed DataFrame column annotations: `series[f64]`
 
 `tensor[T, ...]` is currently parameter-only. Use fixed-shape tensor annotations
 for variables, fields, and return types until runtime-shaped storage and return
 semantics are defined. Runtime-shaped tensor parameters can be passed through,
 but indexed access currently requires a static-shape tensor annotation.
+
+`dataframe[...]` follows the same current restriction: it is accepted only in
+function and extern parameter annotations. Static-schema DataFrames can be
+constructed with `dataframe({...})`, and their columns can be accessed with
+either `rows.score` or `rows["score"]`.
 
 ## Built-in Type Reference
 
@@ -58,5 +71,5 @@ That page covers:
 - numeric types and aliases
 - `none` as the unit type and value
 - string, character, and temporal types
-- lists, tensors, and current limitations
+- lists, tensors, dataframes, series, and current limitations
 - the `cast(value, type)` helper

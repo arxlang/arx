@@ -149,6 +149,17 @@
     },
     "relative_imports": {
       "leading_dot_tokens": true
+    },
+    "dataframe_type": {
+      "static_schema": "dataframe[name: type, ...]",
+      "runtime_schema_parameter": "dataframe[...]"
+    },
+    "series_type": {
+      "form": "series[type]"
+    },
+    "dataframe_constructor": {
+      "form": "dataframe({name: [literal, ...], ...})",
+      "column_access": ["value.name", "value[\"name\"]"]
     }
   },
 
