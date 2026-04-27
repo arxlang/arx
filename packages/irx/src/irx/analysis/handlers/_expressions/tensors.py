@@ -144,7 +144,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         self._semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
             node.element_type
         )
-        node.type_ = astx.TensorType(node.element_type)
+        node.type_ = astx.TensorType(node.element_type, shape=shape)
         self._set_type(node, node.type_)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -300,7 +300,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
             self._semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
                 element_type
             )
-            node.type_ = astx.TensorType(element_type)
+            node.type_ = astx.TensorType(element_type, shape=shape)
         self._semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
         self._semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
         self._set_type(node, node.type_)

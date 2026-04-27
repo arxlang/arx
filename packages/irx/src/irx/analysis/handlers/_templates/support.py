@@ -199,7 +199,7 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
                 if type_.element_type is not None
                 else None
             )
-            return astx.TensorType(element_type)
+            return astx.TensorType(element_type, shape=type_.shape)
         return clone_type(type_)
 
     def _template_bindings_map(

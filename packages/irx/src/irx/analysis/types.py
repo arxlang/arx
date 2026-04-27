@@ -60,6 +60,152 @@ _FLOATS_BY_WIDTH: dict[int, type[astx.DataType]] = {
 }
 
 
+@typechecked
+def _same_optional_size(lhs: int | None, rhs: int | None) -> bool:
+    """
+    title: Return whether optional collection sizes are compatible.
+    parameters:
+      lhs:
+        type: int | None
+      rhs:
+        type: int | None
+    returns:
+      type: bool
+    """
+    return lhs is None or rhs is None or lhs == rhs
+
+
+@typechecked
+def _same_optional_shape(
+    lhs: tuple[int, ...] | None,
+    rhs: tuple[int, ...] | None,
+) -> bool:
+    """
+    title: Return whether optional tensor shapes are compatible.
+    parameters:
+      lhs:
+        type: tuple[int, Ellipsis] | None
+      rhs:
+        type: tuple[int, Ellipsis] | None
+    returns:
+      type: bool
+    """
+    return lhs is None or rhs is None or lhs == rhs
+
+
+@typechecked
+def _target_accepts_known_size(
+    target_size: int | None,
+    value_size: int | None,
+) -> bool:
+    """
+    title: Return whether a target size accepts a value size.
+    parameters:
+      target_size:
+        type: int | None
+      value_size:
+        type: int | None
+    returns:
+      type: bool
+    """
+    return target_size is None or (
+        value_size is not None and target_size == value_size
+    )
+
+
+@typechecked
+def _target_accepts_known_shape(
+    target_shape: tuple[int, ...] | None,
+    value_shape: tuple[int, ...] | None,
+) -> bool:
+    """
+    title: Return whether a target shape accepts a value shape.
+    parameters:
+      target_shape:
+        type: tuple[int, Ellipsis] | None
+      value_shape:
+        type: tuple[int, Ellipsis] | None
+    returns:
+      type: bool
+    """
+    return target_shape is None or (
+        value_shape is not None and target_shape == value_shape
+    )
+
+
+@typechecked
+def _metadata_assignment_compatible(
+    target: astx.DataType,
+    value: astx.DataType,
+) -> bool:
+    """
+    title: Return whether assignment metadata is statically compatible.
+    parameters:
+      target:
+        type: astx.DataType
+      value:
+        type: astx.DataType
+    returns:
+      type: bool
+    """
+    if isinstance(target, astx.ListType) and isinstance(value, astx.ListType):
+        return _target_accepts_known_size(target.size, value.size)
+    if isinstance(target, astx.TensorType) and isinstance(
+        value,
+        astx.TensorType,
+    ):
+        return _target_accepts_known_shape(target.shape, value.shape)
+    if isinstance(target, astx.SeriesType) and isinstance(
+        value,
+        astx.SeriesType,
+    ):
+        return _target_accepts_known_size(target.size, value.size)
+    if isinstance(target, astx.DataFrameType) and isinstance(
+        value,
+        astx.DataFrameType,
+    ):
+        return _target_accepts_known_size(target.row_count, value.row_count)
+    return True
+
+
+@public
+@typechecked
+def requires_size_check(
+    target_size: int | None,
+    value_size: int | None,
+) -> bool:
+    """
+    title: Return whether assignment requires a runtime size check.
+    parameters:
+      target_size:
+        type: int | None
+      value_size:
+        type: int | None
+    returns:
+      type: bool
+    """
+    return target_size is not None and value_size is None
+
+
+@public
+@typechecked
+def requires_shape_check(
+    target_shape: tuple[int, ...] | None,
+    value_shape: tuple[int, ...] | None,
+) -> bool:
+    """
+    title: Return whether assignment requires a runtime shape check.
+    parameters:
+      target_shape:
+        type: tuple[int, Ellipsis] | None
+      value_shape:
+        type: tuple[int, Ellipsis] | None
+    returns:
+      type: bool
+    """
+    return target_shape is not None and value_shape is None
+
+
 @public
 @typechecked
 def clone_type(type_: astx.DataType) -> astx.DataType:
@@ -116,7 +262,8 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             [
                 clone_type(cast(astx.DataType, element_type))
                 for element_type in type_.element_types
-            ]
+            ],
+            size=type_.size,
         )
     if isinstance(type_, astx.TupleType):
         return astx.TupleType(
@@ -151,17 +298,21 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             if type_.element_type is not None
             else None
         )
-        return astx.TensorType(element_type)
+        return astx.TensorType(element_type, shape=type_.shape)
     if isinstance(type_, astx.SeriesType):
         element_type = (
             clone_type(type_.element_type)
             if type_.element_type is not None
             else None
         )
-        return astx.SeriesType(element_type, nullable=type_.nullable)
+        return astx.SeriesType(
+            element_type,
+            nullable=type_.nullable,
+            size=type_.size,
+        )
     if isinstance(type_, astx.DataFrameType):
         if type_.columns is None:
-            return astx.DataFrameType()
+            return astx.DataFrameType(row_count=type_.row_count)
         return astx.DataFrameType(
             tuple(
                 astx.DataFrameColumn(
@@ -170,7 +321,8 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
                     nullable=column.nullable,
                 )
                 for column in type_.columns
-            )
+            ),
+            row_count=type_.row_count,
         )
     return type_.__class__()
 
@@ -211,15 +363,16 @@ def display_type_name(type_: astx.DataType | None) -> str:
         return f"PointerType[{display_type_name(type_.pointee_type)}]"
     if isinstance(type_, astx.ListType):
         if not type_.element_types:
+            if type_.size is not None:
+                return f"ListType[{type_.size}]"
             return "ListType"
-        return (
-            "ListType["
-            + ", ".join(
-                display_type_name(cast(astx.DataType, member))
-                for member in type_.element_types
-            )
-            + "]"
-        )
+        parts = [
+            display_type_name(cast(astx.DataType, member))
+            for member in type_.element_types
+        ]
+        if type_.size is not None:
+            parts.append(str(type_.size))
+        return "ListType[" + ", ".join(parts) + "]"
     if isinstance(type_, astx.TupleType):
         if not type_.element_types:
             return "TupleType"
@@ -249,19 +402,29 @@ def display_type_name(type_: astx.DataType | None) -> str:
     if isinstance(type_, astx.TensorType):
         if type_.element_type is None:
             return "TensorType"
-        return f"TensorType[{display_type_name(type_.element_type)}]"
+        parts = [display_type_name(type_.element_type)]
+        if type_.shape is not None:
+            parts.extend(str(dimension) for dimension in type_.shape)
+        return "TensorType[" + ", ".join(parts) + "]"
     if isinstance(type_, astx.SeriesType):
         if type_.element_type is None:
             return "SeriesType"
-        return f"SeriesType[{display_type_name(type_.element_type)}]"
+        parts = [display_type_name(type_.element_type)]
+        if type_.size is not None:
+            parts.append(str(type_.size))
+        return "SeriesType[" + ", ".join(parts) + "]"
     if isinstance(type_, astx.DataFrameType):
         if type_.columns is None:
+            if type_.row_count is not None:
+                return f"DataFrameType[{type_.row_count}]"
             return "DataFrameType"
-        columns = ", ".join(
+        parts = [
             f"{column.name}: {display_type_name(column.type_)}"
             for column in type_.columns
-        )
-        return f"DataFrameType[{columns}]"
+        ]
+        if type_.row_count is not None:
+            parts.append(str(type_.row_count))
+        return "DataFrameType[" + ", ".join(parts) + "]"
     return str(type_.__class__.__name__)
 
 
@@ -320,6 +483,8 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
             return lhs.pointee_type is None and rhs.pointee_type is None
         return same_type(lhs.pointee_type, rhs.pointee_type)
     if isinstance(lhs, astx.ListType) and isinstance(rhs, astx.ListType):
+        if not _same_optional_size(lhs.size, rhs.size):
+            return False
         if len(lhs.element_types) != len(rhs.element_types):
             return False
         return all(
@@ -374,6 +539,8 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         rhs,
         astx.TensorType,
     ):
+        if not _same_optional_shape(lhs.shape, rhs.shape):
+            return False
         if lhs.element_type is None or rhs.element_type is None:
             return True
         return same_type(lhs.element_type, rhs.element_type)
@@ -381,6 +548,8 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         rhs,
         astx.SeriesType,
     ):
+        if not _same_optional_size(lhs.size, rhs.size):
+            return False
         if lhs.element_type is None or rhs.element_type is None:
             return True
         return lhs.nullable == rhs.nullable and same_type(
@@ -390,6 +559,8 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         rhs,
         astx.DataFrameType,
     ):
+        if not _same_optional_size(lhs.row_count, rhs.row_count):
+            return False
         if lhs.columns is None or rhs.columns is None:
             return True
         if len(lhs.columns) != len(rhs.columns):
@@ -784,6 +955,8 @@ def is_assignable(
     """
     if target is None or value is None:
         return True
+    if not _metadata_assignment_compatible(target, value):
+        return False
     if same_type(target, value):
         return True
     if isinstance(target, astx.UnionType):
@@ -800,6 +973,8 @@ def is_assignable(
     ):
         return is_assignable(target.yield_type, value.yield_type)
     if isinstance(target, astx.ListType) and isinstance(value, astx.ListType):
+        if not _target_accepts_known_size(target.size, value.size):
+            return False
         if not target.element_types or not value.element_types:
             return True
         target_members = [
@@ -843,6 +1018,47 @@ def is_assignable(
         ) and is_assignable(
             cast(astx.DataType, target.value_type),
             cast(astx.DataType, value.value_type),
+        )
+    if isinstance(target, astx.TensorType) and isinstance(
+        value,
+        astx.TensorType,
+    ):
+        if not _target_accepts_known_shape(target.shape, value.shape):
+            return False
+        if target.element_type is None or value.element_type is None:
+            return True
+        return same_type(target.element_type, value.element_type)
+    if isinstance(target, astx.SeriesType) and isinstance(
+        value,
+        astx.SeriesType,
+    ):
+        if not _target_accepts_known_size(target.size, value.size):
+            return False
+        if target.element_type is None or value.element_type is None:
+            return True
+        return target.nullable == value.nullable and same_type(
+            target.element_type,
+            value.element_type,
+        )
+    if isinstance(target, astx.DataFrameType) and isinstance(
+        value,
+        astx.DataFrameType,
+    ):
+        if not _target_accepts_known_size(target.row_count, value.row_count):
+            return False
+        if target.columns is None or value.columns is None:
+            return True
+        if len(target.columns) != len(value.columns):
+            return False
+        return all(
+            target_column.name == value_column.name
+            and target_column.nullable == value_column.nullable
+            and same_type(target_column.type_, value_column.type_)
+            for target_column, value_column in zip(
+                target.columns,
+                value.columns,
+                strict=True,
+            )
         )
     if isinstance(target, astx.ClassType) and isinstance(
         value, astx.ClassType

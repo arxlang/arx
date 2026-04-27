@@ -9,6 +9,7 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VIRTUALENV_ACTIVATORS: "bash,python"
 
 jobs:
   release:

@@ -111,6 +111,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         node.type_ = astx.SeriesType(
             column.type_,
             nullable=column.nullable,
+            size=base_type.row_count,
         )
         self._semantic(node).extras[DATAFRAME_COLUMN_INDEX_EXTRA] = (
             column.index

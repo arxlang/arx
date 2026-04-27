@@ -18,6 +18,28 @@ from astx.types import AnyType
 
 
 @typechecked
+def _format_type_name(type_: astx.DataType) -> str:
+    """
+    title: Return one stable DataFrame type name.
+    parameters:
+      type_:
+        type: astx.DataType
+    returns:
+      type: str
+    """
+    if isinstance(type_, astx.PointerType):
+        if type_.pointee_type is None:
+            return "PointerType"
+        return f"PointerType[{_format_type_name(type_.pointee_type)}]"
+
+    value = str(type_)
+    default_name = f"{type_.__class__.__name__}: {type_.name}"
+    if value == default_name:
+        return type_.__class__.__name__
+    return value
+
+
+@typechecked
 @dataclass(frozen=True)
 class DataFrameColumn:
     """
@@ -93,16 +115,20 @@ class SeriesType(AnyType):
         type: astx.DataType | None
       nullable:
         type: bool
+      size:
+        type: int | None
     """
 
     element_type: astx.DataType | None
     nullable: bool
+    size: int | None
 
     def __init__(
         self,
         element_type: astx.DataType | None = None,
         *,
         nullable: bool = False,
+        size: int | None = None,
     ) -> None:
         """
         title: Initialize one Series type.
@@ -111,10 +137,15 @@ class SeriesType(AnyType):
             type: astx.DataType | None
           nullable:
             type: bool
+          size:
+            type: int | None
         """
         super().__init__()
+        if size is not None and size < 0:
+            raise ValueError("series size must be non-negative")
         self.element_type = element_type
         self.nullable = nullable
+        self.size = size
 
     def __str__(self) -> str:
         """
@@ -124,7 +155,10 @@ class SeriesType(AnyType):
         """
         if self.element_type is None:
             return "SeriesType"
-        return f"SeriesType[{self.element_type}]"
+        parts = [_format_type_name(self.element_type)]
+        if self.size is not None:
+            parts.append(str(self.size))
+        return f"SeriesType[{', '.join(parts)}]"
 
 
 @typechecked
@@ -137,22 +171,32 @@ class DataFrameType(AnyType):
     attributes:
       columns:
         type: tuple[DataFrameColumn, Ellipsis] | None
+      row_count:
+        type: int | None
     """
 
     columns: tuple[DataFrameColumn, ...] | None
+    row_count: int | None
 
     def __init__(
         self,
         columns: Sequence[DataFrameColumn] | None = None,
+        *,
+        row_count: int | None = None,
     ) -> None:
         """
         title: Initialize one DataFrame type.
         parameters:
           columns:
             type: Sequence[DataFrameColumn] | None
+          row_count:
+            type: int | None
         """
         super().__init__()
+        if row_count is not None and row_count < 0:
+            raise ValueError("dataframe row count must be non-negative")
         self.columns = None if columns is None else tuple(columns)
+        self.row_count = row_count
 
     def __str__(self) -> str:
         """
@@ -161,11 +205,38 @@ class DataFrameType(AnyType):
           type: str
         """
         if self.columns is None:
+            if self.row_count is not None:
+                return f"DataFrameType[{self.row_count}]"
             return "DataFrameType"
-        columns = ", ".join(
-            f"{column.name}: {column.type_}" for column in self.columns
-        )
-        return f"DataFrameType[{columns}]"
+        parts = [
+            f"{column.name}: {_format_type_name(column.type_)}"
+            for column in self.columns
+        ]
+        if self.row_count is not None:
+            parts.append(str(self.row_count))
+        return f"DataFrameType[{', '.join(parts)}]"
+
+
+@typechecked
+def _infer_literal_row_count(
+    columns: tuple[DataFrameLiteralColumn, ...],
+) -> int | None:
+    """
+    title: Infer row count for a DataFrame literal when statically consistent.
+    parameters:
+      columns:
+        type: tuple[DataFrameLiteralColumn, Ellipsis]
+    returns:
+      type: int | None
+    """
+    row_count: int | None = None
+    for column in columns:
+        if row_count is None:
+            row_count = len(column.values)
+            continue
+        if len(column.values) != row_count:
+            return None
+    return 0 if row_count is None else row_count
 
 
 @typechecked
@@ -199,7 +270,8 @@ class DataFrameLiteral(astx.base.DataType):
         """
         super().__init__()
         self.columns = tuple(columns)
-        self.type_ = type_ or DataFrameType()
+        row_count = _infer_literal_row_count(self.columns)
+        self.type_ = type_ or DataFrameType(row_count=row_count)
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -210,19 +282,17 @@ class DataFrameLiteral(astx.base.DataType):
         returns:
           type: astx.base.ReprStruct
         """
-        value = {
+        value: dict[str, object] = {
             "columns": [
                 column.get_struct(simplified) for column in self.columns
             ],
-            "type": (
-                None
-                if self.type_.columns is None
-                else [
-                    column.get_struct(simplified)
-                    for column in self.type_.columns
-                ]
-            ),
         }
+        if self.type_.columns is not None:
+            value["type"] = [
+                column.get_struct(simplified) for column in self.type_.columns
+            ]
+        if self.type_.row_count is not None:
+            value["row_count"] = self.type_.row_count
         return self._prepare_struct(
             "DataFrameLiteral",
             cast(astx.base.ReprStruct, value),

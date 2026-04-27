@@ -46,7 +46,7 @@ class LiteralList(Literal):
         super().__init__(loc)
         self.elements = list(elements)  # Ensure correct type
         unique_types = {type(elem.type_) for elem in elements}
-        self.type_ = ListType([t() for t in unique_types])
+        self.type_ = ListType([t() for t in unique_types], size=len(elements))
         self.loc = loc
 
 
