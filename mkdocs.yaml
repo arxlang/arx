@@ -45,6 +45,8 @@ nav:
   - API Docs: api/
   - Syntax: syntax.md
   - Roadmap: roadmap.md
+  - Proposals:
+      - Arrow-backed DataFrames: proposals/arrow-backed-dataframes.md
   - Contributing Guide: contributing.md
   - Sponsor: sponsor.md
   - Partners: partners.md
