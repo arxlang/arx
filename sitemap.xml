@@ -153,11 +153,23 @@
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/array/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/base/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/binary_op/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/blocks/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/buffer/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -169,7 +181,15 @@
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/classes_ext/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/comprehensions/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/context/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -185,7 +205,15 @@
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/ffi/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/flows/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/iterables/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -197,11 +225,19 @@
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/modules/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/operators/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
          <loc>https://arxlang.org/api/astx/packages/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/structs/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -213,7 +249,31 @@
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
+         <loc>https://arxlang.org/api/astx/system/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/templates/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/tensor/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
          <loc>https://arxlang.org/api/astx/viz/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/collections/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/collections/common/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/collections/list/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -270,6 +330,10 @@
     </url>
     <url>
          <loc>https://arxlang.org/api/astx/types/collections/</loc>
+         <lastmod>2026-04-27</lastmod>
+    </url>
+    <url>
+         <loc>https://arxlang.org/api/astx/types/generic/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
@@ -538,78 +602,6 @@
     </url>
     <url>
          <loc>https://arxlang.org/api/irx/analysis/handlers/_templates/support/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/array/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/binary_op/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/buffer/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/classes/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/context/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/ffi/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/iterables/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/modules/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/structs/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/symbol_table/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/system/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/templates/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/tensor/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/types/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/collections/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/collections/common/</loc>
-         <lastmod>2026-04-27</lastmod>
-    </url>
-    <url>
-         <loc>https://arxlang.org/api/irx/astx/collections/list/</loc>
          <lastmod>2026-04-27</lastmod>
     </url>
     <url>
