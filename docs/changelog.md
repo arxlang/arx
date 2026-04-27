@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [1.19.2](https://github.com/arxlang/arx/compare/1.19.1...1.19.2) (2026-04-27)
+
+
+### Bug Fixes
+
+* Move irx.astx wrappers back to astx ([#74](https://github.com/arxlang/arx/issues/74)) ([0c37e1b](https://github.com/arxlang/arx/commit/0c37e1b2e0f18fe2306fc4e3416c779554eb00a1))
+
 ## [1.19.1](https://github.com/arxlang/arx/compare/1.19.0...1.19.1) (2026-04-27)
 
 
