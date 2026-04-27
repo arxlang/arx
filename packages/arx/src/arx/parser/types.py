@@ -10,6 +10,12 @@ from typing import cast
 
 import astx
 
+from arx.dataframe import (
+    dataframe_type,
+    is_dataframe_type,
+    runtime_dataframe_type,
+    series_type,
+)
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
@@ -34,9 +40,7 @@ class TypeParserMixin(ParserMixinBase):
         """
         for _ in range(3):
             if not self._is_operator("."):
-                raise ParserException(
-                    "Runtime-shaped tensor marker must be '...'."
-                )
+                raise ParserException("Runtime-layout marker must be '...'.")
             self._consume_operator(".")
 
     def _ensure_runtime_layout_allowed(
@@ -55,7 +59,7 @@ class TypeParserMixin(ParserMixinBase):
         if type_context.allows_runtime_layout:
             return
         raise ParserException(
-            f"Runtime-shaped {type_name} types using '...' are only "
+            f"Runtime-layout {type_name} types using '...' are only "
             "supported in function parameter annotations."
         )
 
@@ -108,6 +112,15 @@ class TypeParserMixin(ParserMixinBase):
                 return default_value(data_type)
             except ValueError as err:
                 raise ParserException(str(err)) from err
+        if is_dataframe_type(data_type):
+            raise ParserException(
+                "Parser: DataFrame declarations require an explicit "
+                "initializer."
+            )
+        if isinstance(data_type, astx.SeriesType):
+            raise ParserException(
+                "Parser: Series declarations require an explicit initializer."
+            )
 
         raise ParserException(
             f"Parser: No default value defined for type "
@@ -221,6 +234,60 @@ class TypeParserMixin(ParserMixinBase):
                         )
                     try:
                         type_ = tensor_type(elem_type, tuple(shape))
+                    except ValueError as err:
+                        raise ParserException(str(err)) from err
+            elif type_name == "series":
+                self.tokens.get_next_token()  # eat series
+                self._consume_operator("[")
+                elem_type = self.parse_type(
+                    allow_template_vars=allow_template_vars,
+                    allow_union=allow_union,
+                    type_context=TypeUseContext.NESTED,
+                )
+                if self._is_operator(","):
+                    raise ParserException(
+                        "Series types accept exactly one element type."
+                    )
+                self._consume_operator("]")
+                try:
+                    type_ = series_type(elem_type)
+                except ValueError as err:
+                    raise ParserException(str(err)) from err
+            elif type_name == "dataframe":
+                self.tokens.get_next_token()  # eat dataframe
+                self._consume_operator("[")
+                if self._is_operator("."):
+                    self._consume_runtime_shape_marker()
+                    self._consume_operator("]")
+                    self._ensure_runtime_layout_allowed(
+                        "dataframe",
+                        type_context,
+                    )
+                    type_ = runtime_dataframe_type()
+                else:
+                    columns: list[astx.DataFrameColumn] = []
+                    while True:
+                        if self.tokens.cur_tok.kind != TokenKind.identifier:
+                            raise ParserException(
+                                "DataFrame column names must be identifiers."
+                            )
+                        column_name = cast(str, self.tokens.cur_tok.value)
+                        self.tokens.get_next_token()
+                        self._consume_operator(":")
+                        column_type = self.parse_type(
+                            allow_template_vars=allow_template_vars,
+                            allow_union=allow_union,
+                            type_context=TypeUseContext.NESTED,
+                        )
+                        columns.append(
+                            astx.DataFrameColumn(column_name, column_type)
+                        )
+                        if not self._is_operator(","):
+                            break
+                        self._consume_operator(",")
+                    self._consume_operator("]")
+                    try:
+                        type_ = dataframe_type(tuple(columns))
                     except ValueError as err:
                         raise ParserException(str(err)) from err
             else:

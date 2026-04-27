@@ -263,6 +263,13 @@ class VariableVisitorMixin(VisitorMixinBase):
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
+            elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
+                init_val = ir.Constant(llvm_type, None)
+                alloca = (
+                    existing_storage
+                    if existing_storage is not None
+                    else self.create_entry_block_alloca(node.name, llvm_type)
+                )
             elif "float" in type_str:
                 init_val = ir.Constant(self._llvm.get_data_type(type_str), 0.0)
                 alloca = (
@@ -324,6 +331,8 @@ class VariableVisitorMixin(VisitorMixinBase):
         elif isinstance(node.type_, astx.ClassType):
             init_val = ir.Constant(llvm_type, None)
         elif isinstance(node.type_, astx.GeneratorType):
+            init_val = ir.Constant(llvm_type, None)
+        elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
             init_val = ir.Constant(llvm_type, None)
         elif "float" in type_str:
             init_val = ir.Constant(self._llvm.get_data_type(type_str), 0.0)

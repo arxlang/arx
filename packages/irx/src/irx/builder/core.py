@@ -830,6 +830,12 @@ class VisitorCore(BuilderVisitor):
             self._llvm.TENSOR_BUILDER_HANDLE_TYPE
         )
         self._llvm.ARROW_TENSOR_HANDLE_TYPE = self._llvm.TENSOR_HANDLE_TYPE
+        self._llvm.TABLE_HANDLE_TYPE = self._llvm.OPAQUE_POINTER_TYPE
+        self._llvm.CHUNKED_ARRAY_HANDLE_TYPE = self._llvm.OPAQUE_POINTER_TYPE
+        self._llvm.ARROW_TABLE_HANDLE_TYPE = self._llvm.TABLE_HANDLE_TYPE
+        self._llvm.ARROW_CHUNKED_ARRAY_HANDLE_TYPE = (
+            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE
+        )
         self._llvm.TIME_TYPE = ir.LiteralStructType(
             [
                 self._llvm.INT32_TYPE,
@@ -1112,6 +1118,10 @@ class VisitorCore(BuilderVisitor):
             return self._llvm.BUFFER_VIEW_TYPE
         if isinstance(type_, astx.TensorType):
             return self._llvm.BUFFER_VIEW_TYPE
+        if isinstance(type_, astx.DataFrameType):
+            return self._llvm.TABLE_HANDLE_TYPE
+        if isinstance(type_, astx.SeriesType):
+            return self._llvm.CHUNKED_ARRAY_HANDLE_TYPE
         if isinstance(type_, astx.StructType):
             struct_key = type_.qualified_name
             if struct_key is None and type_.module_key is not None:

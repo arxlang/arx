@@ -123,6 +123,8 @@ class LiteralVisitorMixin(VisitorMixinBase):
                 astx.StructType,
                 astx.BufferViewType,
                 astx.TensorType,
+                astx.DataFrameType,
+                astx.SeriesType,
                 astx.PointerType,
                 astx.OpaqueHandleType,
                 astx.BufferOwnerType,

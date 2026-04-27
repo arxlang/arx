@@ -13,6 +13,9 @@ from irx.analysis.handlers._expressions.arrays import (
 from irx.analysis.handlers._expressions.classes import (
     ExpressionClassVisitorMixin,
 )
+from irx.analysis.handlers._expressions.dataframes import (
+    ExpressionDataFrameVisitorMixin,
+)
 from irx.analysis.handlers._expressions.literals import (
     ExpressionLiteralVisitorMixin,
 )
@@ -38,6 +41,7 @@ class ExpressionVisitorMixin(
     ExpressionModuleVisitorMixin,
     ExpressionMutationVisitorMixin,
     ExpressionClassVisitorMixin,
+    ExpressionDataFrameVisitorMixin,
     ExpressionOperatorVisitorMixin,
     ExpressionArrayVisitorMixin,
     ExpressionTensorBufferVisitorMixin,

@@ -9,6 +9,7 @@ from irx.builder.lowering.collections import CollectionVisitorMixin
 from irx.builder.lowering.control_flow import (
     ControlFlowVisitorMixin,
 )
+from irx.builder.lowering.dataframe import DataFrameVisitorMixin
 from irx.builder.lowering.functions import FunctionVisitorMixin
 from irx.builder.lowering.generators import GeneratorVisitorMixin
 from irx.builder.lowering.list import ListVisitorMixin
@@ -26,6 +27,7 @@ __all__ = [
     "BufferVisitorMixin",
     "CollectionVisitorMixin",
     "ControlFlowVisitorMixin",
+    "DataFrameVisitorMixin",
     "FunctionVisitorMixin",
     "GeneratorVisitorMixin",
     "ListVisitorMixin",

@@ -13,6 +13,16 @@ import astx
 
 from astx import SourceLocation
 
+from arx.dataframe import (
+    DataFrameBinding,
+    is_dataframe_type,
+)
+from arx.dataframe import (
+    binding_from_type as dataframe_binding_from_type,
+)
+from arx.dataframe import (
+    coerce_expression as coerce_dataframe_expression,
+)
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
@@ -21,8 +31,10 @@ from arx.parser.state import TypeUseContext
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
-    coerce_expression,
     is_tensor_type,
+)
+from arx.tensor import (
+    coerce_expression as coerce_tensor_expression,
 )
 
 
@@ -63,6 +75,9 @@ class ControlFlowParserMixin(ParserMixinBase):
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_tensors: dict[str, TensorBinding | None] | None = None,
+        declared_dataframes: (
+            dict[str, DataFrameBinding | None] | None
+        ) = None,
     ) -> astx.Block:
         """
         title: Parse a block of nodes.
@@ -75,6 +90,8 @@ class ControlFlowParserMixin(ParserMixinBase):
             type: tuple[str, Ellipsis]
           declared_tensors:
             type: dict[str, TensorBinding | None] | None
+          declared_dataframes:
+            type: dict[str, DataFrameBinding | None] | None
         returns:
           type: astx.Block
         """
@@ -94,6 +111,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             declared_names,
             declared_lists,
             declared_tensors,
+            declared_dataframes,
         )
 
         block = astx.Block()
@@ -286,11 +304,17 @@ class ControlFlowParserMixin(ParserMixinBase):
                     "Tensor loop initializers require a static shape."
                 )
             declared_tensors[initializer.name] = binding
+        declared_dataframes: dict[str, DataFrameBinding | None] = {}
+        if is_dataframe_type(initializer.type_):
+            declared_dataframes[initializer.name] = (
+                dataframe_binding_from_type(initializer.type_)
+            )
 
         self._push_value_scope(
             (initializer.name,),
             declared_lists,
             declared_tensors,
+            declared_dataframes,
         )
         try:
             condition = self.parse_expression()
@@ -341,8 +365,13 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         self._consume_operator("=")
         try:
-            value = coerce_expression(
-                cast(astx.Expr, self.parse_expression()),
+            raw_value = cast(astx.Expr, self.parse_expression())
+            value = coerce_dataframe_expression(
+                coerce_tensor_expression(
+                    raw_value,
+                    var_type,
+                    context=f"inline variable '{name}'",
+                ),
                 var_type,
                 context=f"inline variable '{name}'",
             )
@@ -384,8 +413,13 @@ class ControlFlowParserMixin(ParserMixinBase):
         if self._is_operator("="):
             self._consume_operator("=")
             try:
-                value = coerce_expression(
-                    cast(astx.Expr, self.parse_expression()),
+                raw_value = cast(astx.Expr, self.parse_expression())
+                value = coerce_dataframe_expression(
+                    coerce_tensor_expression(
+                        raw_value,
+                        var_type,
+                        context=f"variable '{name}'",
+                    ),
                     var_type,
                     context=f"variable '{name}'",
                 )
@@ -416,6 +450,11 @@ class ControlFlowParserMixin(ParserMixinBase):
                     "Tensor declarations require a static shape."
                 )
             self._declare_tensor_name(name, binding)
+        if is_dataframe_type(var_type):
+            self._declare_dataframe_name(
+                name,
+                dataframe_binding_from_type(var_type),
+            )
         if isinstance(var_type, astx.ListType):
             self._declare_list_name(name)
         return declaration
@@ -479,8 +518,12 @@ class ControlFlowParserMixin(ParserMixinBase):
         return_type = self._current_return_type()
         if return_type is not None:
             try:
-                value = coerce_expression(
-                    cast(astx.Expr, value),
+                value = coerce_dataframe_expression(
+                    coerce_tensor_expression(
+                        cast(astx.Expr, value),
+                        return_type,
+                        context="return value",
+                    ),
                     return_type,
                     context="return value",
                 )

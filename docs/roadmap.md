@@ -43,4 +43,32 @@ type for each variable and function returning.
 
 ## Implement native tensors
 
-TBA
+Native tensors now have an initial Arrow C++ backed implementation. Remaining
+work should continue to make runtime-shaped tensor values usable in more
+contexts, while preserving the same runtime-layout rules for every collection
+type that uses that approach.
+
+- [ ] Expand runtime-layout annotations beyond function and extern parameters
+      once default values, ownership, and type checking are ready for local
+      declarations and expression contexts.
+- [ ] Keep tensor semantics aligned with the Arrow-backed runtime rather than
+      adding Arx-local lowering behavior.
+
+## DataFrames and Series
+
+DataFrames are a distinct public collection abstraction for heterogeneous named
+columns. Static-schema values use `dataframe[name: T, ...]`, column views use
+`series[T]`, and literals are constructed with `dataframe({...})`.
+
+- [x] Add the builtin `dataframe[...]` type.
+- [x] Add the builtin `series[T]` type for typed DataFrame columns.
+- [x] Add the builtin `dataframe({...})` constructor for column-oriented
+      literals.
+- [x] Back DataFrame values with Arrow C++ `arrow::Table`.
+- [x] Back Series values with Arrow C++ `arrow::ChunkedArray`.
+- [x] Keep the MVP limited to fixed-width numeric and `bool` columns.
+- [ ] Add string, nullable, nested, temporal, and user-defined column support
+      after the fixed-width MVP is stable.
+- [ ] Expand runtime-layout/schema annotations beyond function and extern
+      parameters, applying the same behavior to both `dataframe[...]` and
+      `tensor[T, ...]`.

@@ -18,6 +18,8 @@ typedef struct irx_arrow_array_builder_handle irx_arrow_array_builder_handle;
 typedef struct irx_arrow_array_handle irx_arrow_array_handle;
 typedef struct irx_arrow_tensor_builder_handle irx_arrow_tensor_builder_handle;
 typedef struct irx_arrow_tensor_handle irx_arrow_tensor_handle;
+typedef struct irx_arrow_table_handle irx_arrow_table_handle;
+typedef struct irx_arrow_chunked_array_handle irx_arrow_chunked_array_handle;
 
 enum irx_arrow_type_id {
   IRX_ARROW_TYPE_UNKNOWN = 0,
@@ -144,6 +146,26 @@ int irx_arrow_tensor_borrow_buffer_view(
     irx_buffer_view* out_view);
 int irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor);
 void irx_arrow_tensor_release(irx_arrow_tensor_handle* tensor);
+
+int irx_arrow_table_new_from_arrays(
+    int64_t column_count,
+    const char** names,
+    irx_arrow_array_handle** arrays,
+    irx_arrow_table_handle** out_table);
+int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table);
+int64_t irx_arrow_table_num_columns(const irx_arrow_table_handle* table);
+int irx_arrow_table_column_by_name(
+    const irx_arrow_table_handle* table,
+    const char* name,
+    irx_arrow_chunked_array_handle** out_column);
+int irx_arrow_table_column_by_index(
+    const irx_arrow_table_handle* table,
+    int32_t index,
+    irx_arrow_chunked_array_handle** out_column);
+int irx_arrow_table_retain(irx_arrow_table_handle* table);
+void irx_arrow_table_release(irx_arrow_table_handle* table);
+int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column);
+void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column);
 const char* irx_arrow_last_error(void);
 
 #ifdef __cplusplus

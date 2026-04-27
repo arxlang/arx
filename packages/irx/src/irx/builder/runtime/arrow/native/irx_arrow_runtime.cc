@@ -238,6 +238,16 @@ struct irx_arrow_tensor_handle {
   int64_t element_size_bytes = 0;
 };
 
+struct irx_arrow_table_handle {
+  int64_t refcount = 0;
+  std::shared_ptr<arrow::Table> table;
+};
+
+struct irx_arrow_chunked_array_handle {
+  int64_t refcount = 0;
+  std::shared_ptr<arrow::ChunkedArray> column;
+};
+
 namespace {
 
 void clear_error() { last_error[0] = '\0'; }
@@ -1625,6 +1635,199 @@ void irx_arrow_tensor_release(irx_arrow_tensor_handle* tensor) {
   tensor->refcount -= 1;
   if (tensor->refcount == 0) {
     delete tensor;
+  }
+}
+
+int irx_arrow_table_new_from_arrays(
+    int64_t column_count,
+    const char** names,
+    irx_arrow_array_handle** arrays,
+    irx_arrow_table_handle** out_table) {
+  clear_error();
+  try {
+    if (out_table == nullptr) {
+      return set_error(EINVAL, "out_table must not be NULL");
+    }
+    *out_table = nullptr;
+    if (column_count < 0) {
+      return set_error(EINVAL, "column_count must be non-negative");
+    }
+    if (column_count > 0 && names == nullptr) {
+      return set_error(EINVAL, "names must not be NULL");
+    }
+    if (column_count > 0 && arrays == nullptr) {
+      return set_error(EINVAL, "arrays must not be NULL");
+    }
+
+    std::vector<std::shared_ptr<arrow::Field>> fields;
+    std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
+    fields.reserve(static_cast<size_t>(column_count));
+    columns.reserve(static_cast<size_t>(column_count));
+
+    int64_t row_count = -1;
+    for (int64_t index = 0; index < column_count; ++index) {
+      if (names[index] == nullptr) {
+        return set_error(EINVAL, "column name must not be NULL");
+      }
+      irx_arrow_array_handle* array = arrays[index];
+      if (array == nullptr || !array->array) {
+        return set_error(EINVAL, "array handle must not be NULL");
+      }
+      const int64_t length = array->array->length();
+      if (row_count < 0) {
+        row_count = length;
+      } else if (length != row_count) {
+        return set_error(EINVAL, "dataframe columns must have equal length");
+      }
+
+      fields.push_back(arrow::field(
+          std::string(names[index]),
+          array->array->type(),
+          array->nullable != 0));
+      columns.push_back(std::make_shared<arrow::ChunkedArray>(array->array));
+    }
+
+    auto schema = arrow::schema(std::move(fields));
+    auto table = arrow::Table::Make(
+        schema,
+        std::move(columns),
+        row_count < 0 ? 0 : row_count);
+
+    auto handle = std::make_unique<irx_arrow_table_handle>();
+    handle->refcount = kInitialRefcount;
+    handle->table = std::move(table);
+    *out_table = handle.release();
+    return kArrowOk;
+  } catch (const std::bad_alloc&) {
+    return set_error(ENOMEM, "failed to allocate Arrow table");
+  } catch (const std::exception& exc) {
+    return set_exception_error("irx_arrow_table_new_from_arrays", exc);
+  }
+}
+
+int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
+  clear_error();
+  if (table == nullptr || !table->table) {
+    set_error(EINVAL, "table must not be NULL");
+    return -1;
+  }
+  return table->table->num_rows();
+}
+
+int64_t irx_arrow_table_num_columns(const irx_arrow_table_handle* table) {
+  clear_error();
+  if (table == nullptr || !table->table) {
+    set_error(EINVAL, "table must not be NULL");
+    return -1;
+  }
+  return table->table->num_columns();
+}
+
+int irx_arrow_table_column_by_name(
+    const irx_arrow_table_handle* table,
+    const char* name,
+    irx_arrow_chunked_array_handle** out_column) {
+  clear_error();
+  try {
+    if (table == nullptr || !table->table) {
+      return set_error(EINVAL, "table must not be NULL");
+    }
+    if (name == nullptr) {
+      return set_error(EINVAL, "column name must not be NULL");
+    }
+    if (out_column == nullptr) {
+      return set_error(EINVAL, "out_column must not be NULL");
+    }
+    *out_column = nullptr;
+
+    std::shared_ptr<arrow::ChunkedArray> column =
+        table->table->GetColumnByName(name);
+    if (!column) {
+      return set_error(EINVAL, "table has no column named '%s'", name);
+    }
+
+    auto handle = std::make_unique<irx_arrow_chunked_array_handle>();
+    handle->refcount = kInitialRefcount;
+    handle->column = std::move(column);
+    *out_column = handle.release();
+    return kArrowOk;
+  } catch (const std::bad_alloc&) {
+    return set_error(ENOMEM, "failed to allocate Arrow chunked array handle");
+  } catch (const std::exception& exc) {
+    return set_exception_error("irx_arrow_table_column_by_name", exc);
+  }
+}
+
+int irx_arrow_table_column_by_index(
+    const irx_arrow_table_handle* table,
+    int32_t index,
+    irx_arrow_chunked_array_handle** out_column) {
+  clear_error();
+  try {
+    if (table == nullptr || !table->table) {
+      return set_error(EINVAL, "table must not be NULL");
+    }
+    if (out_column == nullptr) {
+      return set_error(EINVAL, "out_column must not be NULL");
+    }
+    *out_column = nullptr;
+    if (index < 0 || index >= table->table->num_columns()) {
+      return set_error(EINVAL, "column index is out of bounds");
+    }
+
+    auto handle = std::make_unique<irx_arrow_chunked_array_handle>();
+    handle->refcount = kInitialRefcount;
+    handle->column = table->table->column(index);
+    *out_column = handle.release();
+    return kArrowOk;
+  } catch (const std::bad_alloc&) {
+    return set_error(ENOMEM, "failed to allocate Arrow chunked array handle");
+  } catch (const std::exception& exc) {
+    return set_exception_error("irx_arrow_table_column_by_index", exc);
+  }
+}
+
+int irx_arrow_table_retain(irx_arrow_table_handle* table) {
+  clear_error();
+  if (table == nullptr) {
+    return kArrowOk;
+  }
+  if (table->refcount <= 0) {
+    return set_error(EINVAL, "table handle is released");
+  }
+  table->refcount += 1;
+  return kArrowOk;
+}
+
+void irx_arrow_table_release(irx_arrow_table_handle* table) {
+  if (table == nullptr || table->refcount <= 0) {
+    return;
+  }
+  table->refcount -= 1;
+  if (table->refcount == 0) {
+    delete table;
+  }
+}
+
+int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
+  clear_error();
+  if (column == nullptr) {
+    return kArrowOk;
+  }
+  if (column->refcount <= 0) {
+    return set_error(EINVAL, "chunked array handle is released");
+  }
+  column->refcount += 1;
+  return kArrowOk;
+}
+
+void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column) {
+  if (column == nullptr || column->refcount <= 0) {
+    return;
+  }
+  column->refcount -= 1;
+  if (column->refcount == 0) {
+    delete column;
   }
 }
 

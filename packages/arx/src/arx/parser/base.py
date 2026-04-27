@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import astx
 
+from arx.dataframe import DataFrameBinding
 from arx.lexer import Token, TokenList
 from arx.parser.state import (
     ParsedAnnotation,
@@ -32,6 +33,8 @@ class ParserMixinBase:
         type: set[str]
       tensor_scopes:
         type: list[dict[str, TensorBinding | None]]
+      dataframe_scopes:
+        type: list[dict[str, DataFrameBinding | None]]
       return_type_scopes:
         type: list[astx.DataType]
       template_type_scopes:
@@ -47,6 +50,7 @@ class ParserMixinBase:
     list_scopes: list[set[str]]
     known_class_names: set[str]
     tensor_scopes: list[dict[str, TensorBinding | None]]
+    dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
     value_scopes: list[set[str]]
@@ -57,6 +61,7 @@ class ParserMixinBase:
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_tensors: dict[str, TensorBinding | None] | None = None,
+        declared_dataframes: dict[str, DataFrameBinding | None] | None = None,
     ) -> None:
         """
         title: Push one visible-name scope.
@@ -67,10 +72,13 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_tensors:
             type: dict[str, TensorBinding | None] | None
+          declared_dataframes:
+            type: dict[str, DataFrameBinding | None] | None
         """
         del declared_names
         del declared_lists
         del declared_tensors
+        del declared_dataframes
         raise NotImplementedError
 
     def _pop_value_scope(self) -> None:
@@ -130,6 +138,35 @@ class ParserMixinBase:
         del name
         raise NotImplementedError
 
+    def _declare_dataframe_name(
+        self,
+        name: str,
+        binding: DataFrameBinding | None,
+    ) -> None:
+        """
+        title: Record one visible DataFrame binding in the current scope.
+        parameters:
+          name:
+            type: str
+          binding:
+            type: DataFrameBinding | None
+        """
+        del name
+        del binding
+        raise NotImplementedError
+
+    def _is_dataframe_name(self, name: str) -> bool:
+        """
+        title: Return whether one visible name is declared as a DataFrame.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: bool
+        """
+        del name
+        raise NotImplementedError
+
     def _declare_list_name(self, name: str) -> None:
         """
         title: Record one visible list binding in the current scope.
@@ -160,6 +197,21 @@ class ParserMixinBase:
             type: str
         returns:
           type: TensorBinding | None
+        """
+        del name
+        raise NotImplementedError
+
+    def _lookup_dataframe_binding(
+        self,
+        name: str,
+    ) -> DataFrameBinding | None:
+        """
+        title: Look up one visible DataFrame binding by name.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: DataFrameBinding | None
         """
         del name
         raise NotImplementedError
@@ -353,6 +405,7 @@ class ParserMixinBase:
         declared_names: tuple[str, ...] = (),
         declared_lists: tuple[str, ...] = (),
         declared_tensors: dict[str, TensorBinding | None] | None = None,
+        declared_dataframes: dict[str, DataFrameBinding | None] | None = None,
     ) -> astx.Block:
         """
         title: Parse one block of nodes.
@@ -365,10 +418,18 @@ class ParserMixinBase:
             type: tuple[str, Ellipsis]
           declared_tensors:
             type: dict[str, TensorBinding | None] | None
+          declared_dataframes:
+            type: dict[str, DataFrameBinding | None] | None
         returns:
           type: astx.Block
         """
-        del allow_docstring, declared_names, declared_lists, declared_tensors
+        del (
+            allow_docstring,
+            declared_names,
+            declared_lists,
+            declared_tensors,
+            declared_dataframes,
+        )
         raise NotImplementedError
 
     def parse_type(

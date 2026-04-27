@@ -152,6 +152,26 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             else None
         )
         return astx.TensorType(element_type)
+    if isinstance(type_, astx.SeriesType):
+        element_type = (
+            clone_type(type_.element_type)
+            if type_.element_type is not None
+            else None
+        )
+        return astx.SeriesType(element_type, nullable=type_.nullable)
+    if isinstance(type_, astx.DataFrameType):
+        if type_.columns is None:
+            return astx.DataFrameType()
+        return astx.DataFrameType(
+            tuple(
+                astx.DataFrameColumn(
+                    column.name,
+                    clone_type(column.type_),
+                    nullable=column.nullable,
+                )
+                for column in type_.columns
+            )
+        )
     return type_.__class__()
 
 
@@ -230,6 +250,18 @@ def display_type_name(type_: astx.DataType | None) -> str:
         if type_.element_type is None:
             return "TensorType"
         return f"TensorType[{display_type_name(type_.element_type)}]"
+    if isinstance(type_, astx.SeriesType):
+        if type_.element_type is None:
+            return "SeriesType"
+        return f"SeriesType[{display_type_name(type_.element_type)}]"
+    if isinstance(type_, astx.DataFrameType):
+        if type_.columns is None:
+            return "DataFrameType"
+        columns = ", ".join(
+            f"{column.name}: {display_type_name(column.type_)}"
+            for column in type_.columns
+        )
+        return f"DataFrameType[{columns}]"
     return str(type_.__class__.__name__)
 
 
@@ -345,6 +377,29 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         if lhs.element_type is None or rhs.element_type is None:
             return True
         return same_type(lhs.element_type, rhs.element_type)
+    if isinstance(lhs, astx.SeriesType) and isinstance(
+        rhs,
+        astx.SeriesType,
+    ):
+        if lhs.element_type is None or rhs.element_type is None:
+            return True
+        return lhs.nullable == rhs.nullable and same_type(
+            lhs.element_type, rhs.element_type
+        )
+    if isinstance(lhs, astx.DataFrameType) and isinstance(
+        rhs,
+        astx.DataFrameType,
+    ):
+        if lhs.columns is None or rhs.columns is None:
+            return True
+        if len(lhs.columns) != len(rhs.columns):
+            return False
+        return all(
+            left.name == right.name
+            and left.nullable == right.nullable
+            and same_type(left.type_, right.type_)
+            for left, right in zip(lhs.columns, rhs.columns, strict=True)
+        )
     return lhs.__class__ is rhs.__class__
 
 
