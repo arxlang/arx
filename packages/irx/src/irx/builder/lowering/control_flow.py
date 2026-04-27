@@ -9,9 +9,10 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Any, Iterator, Literal, cast
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.resolved_nodes import (
     IterationKind,
     MethodDispatchKind,

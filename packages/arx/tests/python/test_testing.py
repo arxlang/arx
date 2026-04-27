@@ -9,10 +9,10 @@ import shutil
 from pathlib import Path
 from textwrap import dedent
 
+import astx
 import pytest
 
 from arx.testing import ArxTestRunner
-from irx import astx
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.builder.base import CommandResult
 

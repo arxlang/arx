@@ -10,7 +10,8 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers._expressions.tensor_buffer_support import (
     ExpressionTensorBufferSupportVisitorMixin,
 )

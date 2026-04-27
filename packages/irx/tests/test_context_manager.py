@@ -8,9 +8,9 @@ import re
 
 from typing import cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, SemanticInfo, analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder

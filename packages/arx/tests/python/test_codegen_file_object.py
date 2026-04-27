@@ -23,8 +23,9 @@ from irx.analysis.module_interfaces import ParsedModule
 from irx.builder.runtime.registry import RuntimeFeatureState
 from llvmlite import binding as llvm
 
-TMP_PATH = Path("/tmp/arxtmp")
-TMP_PATH.mkdir(exist_ok=True)
+WORKSPACE_PATH = Path(__file__).resolve().parents[4]
+TMP_PATH = WORKSPACE_PATH / ".tmp" / "tests" / "arxtmp"
+TMP_PATH.mkdir(parents=True, exist_ok=True)
 HAS_CLANG = shutil.which("clang") is not None
 
 _MIN_MAIN = "fn main() -> i32:\n  return 0\n"

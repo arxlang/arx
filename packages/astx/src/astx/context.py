@@ -1,5 +1,5 @@
 """
-title: IRx-owned context-manager AST nodes.
+title: ASTx context-manager AST nodes.
 summary: >-
   Provide a small facade node for Python-like ``with`` statements until
   upstream ASTx exposes a canonical context-manager construct.
@@ -12,8 +12,7 @@ from typing import cast
 import astx
 
 from astx.base import NO_SOURCE_LOCATION, ReprStruct, SourceLocation
-
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
 
 
 @typechecked

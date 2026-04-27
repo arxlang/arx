@@ -7,9 +7,13 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import cast
 
+import astx
 import pytest
 
-from irx import astx
+from astx.binary_op import (
+    SPECIALIZED_BINARY_OP_EXTRA,
+    AddBinOp,
+)
 from irx.analysis import (
     CompilationSession,
     DiagnosticBag,
@@ -26,10 +30,6 @@ from irx.analysis.module_symbols import (
     qualified_struct_name,
 )
 from irx.analysis.resolved_nodes import SemanticInfo
-from irx.astx.binary_op import (
-    SPECIALIZED_BINARY_OP_EXTRA,
-    AddBinOp,
-)
 
 from ..conftest import (
     StaticImportResolver,

@@ -8,15 +8,15 @@ import importlib
 
 from typing import Any, cast
 
-from irx import astx
+import astx
 
 
 def test_collections_package_reexports_list_helpers() -> None:
     """
     title: Collections package should preserve the list helper import surface.
     """
-    package = importlib.import_module("irx.astx.collections")
-    list_module = importlib.import_module("irx.astx.collections.list")
+    package = importlib.import_module("astx.collections")
+    list_module = importlib.import_module("astx.collections.list")
 
     assert package.ListCreate is list_module.ListCreate is astx.ListCreate
     assert package.ListIndex is list_module.ListIndex is astx.ListIndex

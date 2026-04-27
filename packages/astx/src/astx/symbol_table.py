@@ -200,6 +200,9 @@ class SymbolTable:
     scopes: Scope
 
     def __init__(self) -> None:
+        """
+        title: Initialize the symbol table.
+        """
         self.scopes = Scope()
 
     def define(self, expr: NamedExpr) -> None:

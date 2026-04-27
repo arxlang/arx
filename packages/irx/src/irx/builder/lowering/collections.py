@@ -11,9 +11,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
     ResolvedCollectionMethod,

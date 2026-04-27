@@ -8,16 +8,18 @@ import os
 import shutil
 import tempfile
 
-from pathlib import Path
-
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.builder import Builder
 from irx.builder.base import CommandResult
 
-from .conftest import assert_ir_parses, assert_jit_int_main_result
+from .conftest import (
+    assert_ir_parses,
+    assert_jit_int_main_result,
+    workspace_tmpdir_env,
+)
 
 HAS_CLANG = shutil.which("clang") is not None
 HAS_LITERAL_LIST = hasattr(astx, "LiteralList")
@@ -113,29 +115,22 @@ def _run_workspace_build(
     returns:
       type: CommandResult
     """
-    temp_root = (Path.cwd() / "tmp").resolve()
-    temp_root.mkdir(exist_ok=True)
-    original_tmpdir = os.environ.get("TMPDIR")
     output_path = ""
-    try:
-        os.environ["TMPDIR"] = str(temp_root)
-        with tempfile.NamedTemporaryFile(
-            suffix=".exe",
-            prefix="irx_dynamic_list_",
-            dir=temp_root,
-            delete=False,
-        ) as handle:
-            output_path = handle.name
+    with workspace_tmpdir_env() as temp_root:
+        try:
+            with tempfile.NamedTemporaryFile(
+                suffix=".exe",
+                prefix="irx_dynamic_list_",
+                dir=temp_root,
+                delete=False,
+            ) as handle:
+                output_path = handle.name
 
-        builder.build(module, output_file=output_path)
-        return builder.run(raise_on_error=False)
-    finally:
-        if original_tmpdir is None:
-            os.environ.pop("TMPDIR", None)
-        else:
-            os.environ["TMPDIR"] = original_tmpdir
-        if output_path and os.path.exists(output_path):
-            os.unlink(output_path)
+            builder.build(module, output_file=output_path)
+            return builder.run(raise_on_error=False)
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.unlink(output_path)
 
 
 def _assert_workspace_build_output(

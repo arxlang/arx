@@ -6,9 +6,9 @@ import sys
 
 from typing import Any, Sequence
 
+import astx
 import pytest
 
-from irx import astx
 from irx.builder.base import (
     Builder,
     BuilderVisitor,
@@ -177,8 +177,9 @@ def test_builder_run_forwards_all_kwargs(
         type: pytest.MonkeyPatch
     """
     calls: list[dict[str, Any]] = []
+    fake_bin = ".tmp/tests/fake-bin"
     fake_result = CommandResult(
-        stdout="done", stderr="", returncode=0, command=["/tmp/fake-bin"]
+        stdout="done", stderr="", returncode=0, command=[fake_bin]
     )
 
     def _fake_run(
@@ -213,7 +214,7 @@ def test_builder_run_forwards_all_kwargs(
         return fake_result
 
     builder = _DummyBuilder()
-    builder.output_file = "/tmp/fake-bin"
+    builder.output_file = fake_bin
     monkeypatch.setattr("irx.builder.base.run_command", _fake_run)
 
     result = builder.run(
@@ -222,7 +223,7 @@ def test_builder_run_forwards_all_kwargs(
     assert result == fake_result
     assert calls == [
         {
-            "command": ["/tmp/fake-bin"],
+            "command": [fake_bin],
             "capture_stderr": False,
             "raise_on_error": False,
             "debug": True,

@@ -6,13 +6,15 @@ import ctypes
 import os
 import tempfile
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import ModuleKey, ParsedModule
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
@@ -21,6 +23,52 @@ from llvmlite import binding as llvm
 from llvmlite import ir
 
 TEST_DATA_PATH = Path(__file__).parent / "data"
+WORKSPACE_PATH = Path(__file__).resolve().parents[3]
+TEST_TEMP_PATH = WORKSPACE_PATH / ".tmp" / "tests"
+
+
+def workspace_test_temp_root() -> Path:
+    """
+    title: Return the workspace-local temporary directory for tests.
+    returns:
+      type: Path
+    """
+    TEST_TEMP_PATH.mkdir(parents=True, exist_ok=True)
+    return TEST_TEMP_PATH
+
+
+@contextmanager
+def workspace_tmpdir_env() -> Iterator[Path]:
+    """
+    title: Temporarily route Python temp files into the workspace.
+    returns:
+      type: Iterator[Path]
+    yields:
+      type: Path
+    """
+    temp_root = workspace_test_temp_root()
+    original_tmpdir = os.environ.get("TMPDIR")
+    os.environ["TMPDIR"] = str(temp_root)
+    try:
+        yield temp_root
+    finally:
+        if original_tmpdir is None:
+            os.environ.pop("TMPDIR", None)
+        else:
+            os.environ["TMPDIR"] = original_tmpdir
+
+
+@pytest.fixture(scope="session", autouse=True)
+def use_workspace_tmpdir() -> Iterator[None]:
+    """
+    title: Route tempfile defaults into the workspace during tests.
+    returns:
+      type: Iterator[None]
+    yields:
+      type: None
+    """
+    with workspace_tmpdir_env():
+        yield
 
 
 def similarity(text_a: str, text_b: str) -> float:
@@ -95,20 +143,21 @@ def build_and_run(builder: Builder, module: astx.Module) -> CommandResult:
       type: CommandResult
     """
     output_path = ""
-    try:
-        with tempfile.NamedTemporaryFile(
-            suffix=".exe",
-            prefix="arx",
-            dir="/tmp",
-            delete=False,
-        ) as fp:
-            output_path = fp.name
+    with workspace_tmpdir_env() as temp_root:
+        try:
+            with tempfile.NamedTemporaryFile(
+                suffix=".exe",
+                prefix="arx",
+                dir=temp_root,
+                delete=False,
+            ) as fp:
+                output_path = fp.name
 
-        builder.build(module, output_file=output_path)
-        return builder.run(raise_on_error=False)
-    finally:
-        if output_path and os.path.exists(output_path):
-            os.unlink(output_path)
+            builder.build(module, output_file=output_path)
+            return builder.run(raise_on_error=False)
+        finally:
+            if output_path and os.path.exists(output_path):
+                os.unlink(output_path)
 
 
 def assert_build_output(

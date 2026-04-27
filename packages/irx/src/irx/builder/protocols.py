@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+import astx
+
 from llvmlite import binding as llvm
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.resolved_nodes import FunctionSignature
 from irx.base.visitors.protocols import BaseVisitorProtocol
 from irx.builder.state import (

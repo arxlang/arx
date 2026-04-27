@@ -9,10 +9,11 @@ import tempfile
 
 from pathlib import Path
 
+import astx
+
 from llvmlite import binding as llvm
 from public import public
 
-from irx import astx
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.builder.base import Builder as BaseBuilder
 from irx.builder.core import VisitorCore

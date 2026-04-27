@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from irx import astx
+import astx
 
 from arx import builtins
 from arx.exceptions import ParserException

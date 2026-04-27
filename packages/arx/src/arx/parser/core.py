@@ -11,7 +11,7 @@ import copy
 
 from typing import cast
 
-from irx import astx
+import astx
 
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
@@ -418,7 +418,7 @@ class ParserCore(ParserMixinBase):
             return None
         if self._name_is_shadowed(expr.name):
             return None
-        return cast(str, expr.name)
+        return expr.name
 
     def _is_operator(self, value: str) -> bool:
         """

@@ -4,7 +4,8 @@ title: Tests for template-specialization LLVM lowering.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis import analyze_modules
 from irx.analysis.module_symbols import mangle_function_name
 from irx.builder import Builder

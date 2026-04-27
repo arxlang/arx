@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.analyzer import SemanticAnalyzer
 from irx.analysis.module_interfaces import (
     ImportResolver,

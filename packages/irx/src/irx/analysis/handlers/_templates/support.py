@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Iterable
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import specialized_function_basename
 from irx.analysis.resolved_nodes import (

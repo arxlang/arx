@@ -10,9 +10,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.builder import Builder, Visitor
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
@@ -152,15 +152,15 @@ def test_runtime_feature_state_collects_only_active_artifacts() -> None:
         RuntimeFeature(
             name="feature_a",
             artifacts=(
-                NativeArtifact("c_source", Path("/tmp/a.c")),
-                NativeArtifact("object", Path("/tmp/a.o")),
+                NativeArtifact("c_source", Path(".tmp/tests/a.c")),
+                NativeArtifact("object", Path(".tmp/tests/a.o")),
             ),
         )
     )
     registry.register(
         RuntimeFeature(
             name="feature_b",
-            artifacts=(NativeArtifact("c_source", Path("/tmp/b.c")),),
+            artifacts=(NativeArtifact("c_source", Path(".tmp/tests/b.c")),),
         )
     )
     visitor = Visitor()
@@ -172,7 +172,9 @@ def test_runtime_feature_state_collects_only_active_artifacts() -> None:
 
     artifacts = state.native_artifacts()
 
-    assert [artifact.path for artifact in artifacts] == [Path("/tmp/b.c")]
+    assert [artifact.path for artifact in artifacts] == [
+        Path(".tmp/tests/b.c")
+    ]
 
 
 def test_print_expr_uses_libc_feature_without_array_runtime() -> None:

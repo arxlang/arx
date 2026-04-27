@@ -4,7 +4,8 @@ title: Structural tests for array AST nodes.
 
 from typing import Any, cast
 
-from irx import astx
+import astx
+
 from irx.builder import Builder
 
 

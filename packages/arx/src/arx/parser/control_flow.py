@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
+
 from astx import SourceLocation
-from irx import astx
 
 from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException

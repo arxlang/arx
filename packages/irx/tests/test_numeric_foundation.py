@@ -4,7 +4,8 @@ title: Tests for scalar numeric lowering and codegen.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.builder import Builder
 from irx.system import Cast, PrintExpr
 

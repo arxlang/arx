@@ -7,7 +7,8 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.types import (
     bit_width,

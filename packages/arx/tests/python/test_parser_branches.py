@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
 import pytest
 
 from arx.exceptions import ParserException
@@ -14,7 +15,6 @@ from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
 from arx.parser.state import TypeUseContext
 from arx.tensor import tensor_shape
-from irx import astx
 
 
 def _parse(code: str) -> astx.Module:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from irx import astx
+import astx
 
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
@@ -87,7 +87,9 @@ class TypeParserMixin(ParserMixinBase):
                 raise ParserException(
                     "Parser: List types accept exactly one element type."
                 )
-            return astx.ListCreate(data_type.element_types[0])
+            return astx.ListCreate(
+                cast(astx.DataType, data_type.element_types[0])
+            )
         if isinstance(data_type, astx.DateTime):
             return astx.LiteralDateTime("1970-01-01T00:00:00")
         if isinstance(data_type, astx.Timestamp):

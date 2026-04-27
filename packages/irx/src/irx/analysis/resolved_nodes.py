@@ -11,9 +11,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.module_interfaces import ModuleKey
 from irx.typecheck import typechecked
 

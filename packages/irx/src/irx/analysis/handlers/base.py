@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+import astx
+
 from astx.types import AnyType as AstxAnyType
 from plum import dispatch
 
-from irx import astx
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory

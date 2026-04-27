@@ -120,10 +120,10 @@ fn main() -> int32:
 
 This surface syntax maps directly onto IRx-owned class nodes:
 
-- `Counter` in annotations becomes `irx.astx.ClassType`
-- `Counter()` becomes `irx.astx.ClassConstruct`
-- `Counter.version` becomes `irx.astx.StaticFieldAccess`
-- `CounterFactory.make()` becomes `irx.astx.StaticMethodCall`
+- `Counter` in annotations becomes `astx.ClassType`
+- `Counter()` becomes `astx.ClassConstruct`
+- `Counter.version` becomes `astx.StaticFieldAccess`
+- `CounterFactory.make()` becomes `astx.StaticMethodCall`
 
 ## IRx Alignment
 
@@ -131,14 +131,14 @@ Arx now emits IRx/ASTx nodes directly instead of maintaining a separate Arx
 class AST layer. This is a hard repository boundary: new AST node types or new
 lowering behavior for class features belong in IRx/ASTx, not in Arx.
 
-- `class` declarations lower into `irx.astx.ClassDefStmt`.
-- Base classes become `irx.astx.ClassType` entries.
+- `class` declarations lower into `astx.ClassDefStmt`.
+- Base classes become `astx.ClassType` entries.
 - Fields become `astx.VariableDeclaration` with visibility and mutability set
   directly, plus `is_static` when present.
 - Methods become `astx.FunctionDef` plus `astx.FunctionPrototype`, with
   visibility set directly and `is_static`, `is_abstract`, or `is_extern`
   attached to the prototype when written.
-- Instance member syntax like `self.value` lowers into `irx.astx.FieldAccess`.
+- Instance member syntax like `self.value` lowers into `astx.FieldAccess`.
 
 This keeps Arx syntax aligned with the IRx semantic boundary while preserving
 explicit modifier intent on the same nodes that later lowering consumes.

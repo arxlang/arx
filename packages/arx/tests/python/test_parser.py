@@ -5,7 +5,7 @@ title: Test parser methods.
 from textwrap import dedent
 
 import astx
-import irx.astx as irx_astx
+import astx as irx_astx
 import pytest
 
 from arx.exceptions import ParserException
@@ -168,7 +168,7 @@ def test_parse_fn() -> None:
 
 def test_parse_assert_stmt() -> None:
     """
-    title: Test parsing `assert <expr>` into irx.astx.AssertStmt.
+    title: Test parsing `assert <expr>` into astx.AssertStmt.
     """
     tree = _parse_module(
         dedent(

@@ -305,7 +305,7 @@ Implemented in this phase:
 - builtin tensor runtime feature backed by Arrow C++ `arrow::Tensor`
 - Python `pyarrow` dependency and direct Arrow C Data interop tests
 - centralized Arrow runtime symbol declarations
-- one internal array lowering path: `irx.astx.ArrayInt32ArrayLength`
+- one internal array lowering path: `astx.ArrayInt32ArrayLength`
 - tests for registry behavior, IR declarations, build integration, primitive
   type coverage, nullability, move/copy ownership, and Arrow-to-buffer-view
   projection

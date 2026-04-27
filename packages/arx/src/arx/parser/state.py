@@ -10,8 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+import astx
+
 from astx import SourceLocation
-from irx import astx
 
 INDENT_SIZE = 2
 

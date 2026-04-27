@@ -10,9 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, TypeAlias, runtime_checkable
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.typecheck import typechecked
 
 ModuleKey: TypeAlias = str

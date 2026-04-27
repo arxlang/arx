@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers._templates.build import (
     TemplateBuildVisitorMixin,
 )

@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.typecheck import typechecked
 
 INT_TYPES = (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
@@ -211,12 +212,13 @@ def display_type_name(type_: astx.DataType | None) -> str:
             + "]"
         )
     if isinstance(type_, astx.SetType):
-        return f"SetType[{display_type_name(type_.element_type)}]"
+        element_type = cast(astx.DataType, type_.element_type)
+        return f"SetType[{display_type_name(element_type)}]"
     if isinstance(type_, astx.DictType):
         return (
             "DictType["
-            f"{display_type_name(type_.key_type)}, "
-            f"{display_type_name(type_.value_type)}]"
+            f"{display_type_name(cast(astx.DataType, type_.key_type))}, "
+            f"{display_type_name(cast(astx.DataType, type_.value_type))}]"
         )
     if isinstance(type_, astx.OpaqueHandleType):
         return type_.handle_name
@@ -312,11 +314,17 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
             )
         )
     if isinstance(lhs, astx.SetType) and isinstance(rhs, astx.SetType):
-        return same_type(lhs.element_type, rhs.element_type)
+        return same_type(
+            cast(astx.DataType, lhs.element_type),
+            cast(astx.DataType, rhs.element_type),
+        )
     if isinstance(lhs, astx.DictType) and isinstance(rhs, astx.DictType):
-        return same_type(lhs.key_type, rhs.key_type) and same_type(
-            lhs.value_type,
-            rhs.value_type,
+        return same_type(
+            cast(astx.DataType, lhs.key_type),
+            cast(astx.DataType, rhs.key_type),
+        ) and same_type(
+            cast(astx.DataType, lhs.value_type),
+            cast(astx.DataType, rhs.value_type),
         )
     if isinstance(lhs, astx.OpaqueHandleType) and isinstance(
         rhs,
@@ -769,13 +777,17 @@ def is_assignable(
             )
         )
     if isinstance(target, astx.SetType) and isinstance(value, astx.SetType):
-        return is_assignable(target.element_type, value.element_type)
+        return is_assignable(
+            cast(astx.DataType, target.element_type),
+            cast(astx.DataType, value.element_type),
+        )
     if isinstance(target, astx.DictType) and isinstance(value, astx.DictType):
         return is_assignable(
-            target.key_type, value.key_type
+            cast(astx.DataType, target.key_type),
+            cast(astx.DataType, value.key_type),
         ) and is_assignable(
-            target.value_type,
-            value.value_type,
+            cast(astx.DataType, target.value_type),
+            cast(astx.DataType, value.value_type),
         )
     if isinstance(target, astx.ClassType) and isinstance(
         value, astx.ClassType

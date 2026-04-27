@@ -4,9 +4,9 @@ title: Tests for low-level buffer/view indexing.
 
 from __future__ import annotations
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.buffer import (
     BufferHandle,

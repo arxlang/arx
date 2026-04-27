@@ -7,11 +7,11 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import astx
 import irx.builder as builder_api
 import irx.builder.backend as builder_backend
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError
 from irx.builder import (
     Builder,

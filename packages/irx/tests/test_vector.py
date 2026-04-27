@@ -4,9 +4,9 @@ title: Tests for vector operations in the LLVM-IR builder.
 
 from typing import Any
 
+import astx
 import pytest
 
-from irx import astx
 from irx.builder import Builder, Visitor
 from llvmlite import ir
 

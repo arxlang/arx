@@ -1,8 +1,8 @@
 """
-title: IRx-owned public FFI AST types.
+title: ASTx public FFI AST types.
 summary: >-
   Provide the minimal pointer and opaque-handle type nodes that hosts can use
-  when targeting IRx's stable public FFI layer.
+  when targeting a stable public FFI layer.
 """
 
 from __future__ import annotations
@@ -11,9 +11,8 @@ from typing import cast
 
 import astx
 
+from astx.tools.typing import typechecked
 from astx.types import AnyType
-
-from irx.typecheck import typechecked
 
 
 @typechecked

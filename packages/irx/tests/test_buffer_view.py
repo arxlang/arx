@@ -11,9 +11,9 @@ import textwrap
 
 from pathlib import Path
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.buffer import (
     BUFFER_DTYPE_TOKENS,

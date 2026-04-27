@@ -1,14 +1,13 @@
 """
-title: IRx-owned struct AST nodes.
+title: ASTx struct AST nodes.
 """
 
 from __future__ import annotations
 
 import astx
 
+from astx.tools.typing import typechecked
 from astx.types import AnyType
-
-from irx.typecheck import typechecked
 
 
 @typechecked

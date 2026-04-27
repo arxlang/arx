@@ -9,7 +9,7 @@ from importlib.resources import files
 from typing import Any, TypeAlias, cast
 
 import astx
-import irx.astx as irx_astx
+import astx as irx_astx
 
 Traversable: TypeAlias = Any
 

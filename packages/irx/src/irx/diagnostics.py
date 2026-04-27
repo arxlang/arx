@@ -12,9 +12,10 @@ import re
 from dataclasses import dataclass
 from typing import Iterable
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.typecheck import typechecked
 
 DEFAULT_DIAGNOSTIC_CODE_PREFIX = "IRX-"

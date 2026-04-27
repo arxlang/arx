@@ -6,13 +6,13 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+import astx
 import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from irx import astx
 
 
 def _parse(code: str) -> astx.Module:

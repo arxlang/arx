@@ -8,7 +8,8 @@ title: Array visitor mixin for llvmliteir.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop

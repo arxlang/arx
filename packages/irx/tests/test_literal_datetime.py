@@ -8,9 +8,9 @@ import shutil
 
 from typing import cast
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor

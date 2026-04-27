@@ -4,7 +4,8 @@ title: Tests for extracted semantic infrastructure.
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory

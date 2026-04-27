@@ -8,11 +8,11 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
+
+import astx
 
 from public import public
 
-from irx import astx
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import (
     PARAMETER_DEFAULT_FINGERPRINT_METADATA,
@@ -125,7 +125,7 @@ class SemanticRegistry:
         returns:
           type: str
         """
-        prototype_name = cast(str, prototype.name)
+        prototype_name = prototype.name
         raw_symbol_name = getattr(prototype, "symbol_name", prototype_name)
         if raw_symbol_name is None:
             return prototype_name

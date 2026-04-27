@@ -7,7 +7,8 @@ summary: >-
 
 from __future__ import annotations
 
-from irx import astx
+import astx
+
 from irx.analysis.resolved_nodes import ResolvedOperator, SemanticFlags
 from irx.analysis.types import (
     common_numeric_type,

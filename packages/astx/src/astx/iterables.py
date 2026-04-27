@@ -1,8 +1,8 @@
 """
-title: IRX-owned iterable AST nodes.
+title: ASTx iterable AST nodes.
 summary: >-
   Provide small facade nodes for iterable constructs that are not yet present
-  in upstream ASTx but are needed by IRx semantic analysis and lowering.
+  in upstream ASTx but are needed by semantic analysis and lowering.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from typing import cast
 import astx
 
 from astx.base import NO_SOURCE_LOCATION, ReprStruct, SourceLocation
-
-from irx.typecheck import typechecked
+from astx.tools.typing import typechecked
 
 
 @typechecked

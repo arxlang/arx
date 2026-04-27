@@ -8,13 +8,14 @@ import ctypes
 
 from typing import Any, cast
 
+import astx
+
 from llvmlite import binding as llvm
 from llvmlite import ir
 from llvmlite.ir import DoubleType, FloatType, HalfType
 from plum import dispatch
 from public import private
 
-from irx import astx
 from irx.buffer import BUFFER_VIEW_TYPE_NAME
 
 try:  # FP128 may not exist depending on llvmlite build.

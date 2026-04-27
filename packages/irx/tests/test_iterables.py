@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import shutil
 
+import astx
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.analysis.resolved_nodes import IterationKind
 from irx.builder import Builder

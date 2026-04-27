@@ -6,8 +6,8 @@ the structure of `docs.python.org`.
 Start here when you need exact syntax and placement rules.
 
 Arx documents the surface language here, but the AST and lowering boundary comes
-from IRx: parser output should use `irx.astx`, and new lowering behavior should
-land in IRx rather than in Arx-local code.
+from IRx: parser output should use `astx`, and new lowering behavior should land
+in IRx rather than in Arx-local code.
 
 ## Available References
 

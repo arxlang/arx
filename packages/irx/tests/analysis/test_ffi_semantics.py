@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from typing import cast
 
+import astx
 import irx.builder.runtime.registry as runtime_registry_module
 import pytest
 
-from irx import astx
 from irx.analysis import SemanticError, analyze
 from irx.analysis.resolved_nodes import (
     FFILinkStrategy,

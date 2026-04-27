@@ -46,6 +46,18 @@ class TypeCastExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the type-cast expression.
+        parameters:
+          expr:
+            type: Expr
+          target_type:
+            type: DataType
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.expr = expr
         self.target_type = target_type

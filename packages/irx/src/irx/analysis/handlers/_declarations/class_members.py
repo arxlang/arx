@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from irx import astx
+import astx
+
 from irx.analysis.handlers._declarations.class_methods import (
     IMPLICIT_METHOD_RECEIVER_NAME,
     DeclarationClassMethodVisitorMixin,

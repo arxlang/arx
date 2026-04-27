@@ -6,9 +6,10 @@ title: Shared Plum-dispatch visitor base for IRx.
 
 from __future__ import annotations
 
+import astx
+
 from plum import dispatch
 
-from irx import astx
 from irx.typecheck import typechecked
 
 

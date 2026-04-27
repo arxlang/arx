@@ -8,9 +8,9 @@ import shutil
 
 from pathlib import Path
 
+import astx
 import pytest
 
-from irx import astx
 from irx.builder import Builder
 
 from .conftest import assert_ir_parses

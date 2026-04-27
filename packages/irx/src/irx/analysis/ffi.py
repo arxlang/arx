@@ -11,7 +11,8 @@ import importlib
 
 from typing import Iterable, cast
 
-from irx import astx
+import astx
+
 from irx.analysis.context import SemanticContext
 from irx.analysis.resolved_nodes import (
     FFIAdmissibility,

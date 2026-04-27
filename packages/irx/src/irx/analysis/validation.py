@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 
-from irx import astx
+import astx
+
 from irx.analysis.resolved_nodes import (
     CallableResolution,
     CallResolution,

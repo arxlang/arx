@@ -9,13 +9,13 @@ import shutil
 from pathlib import Path
 from textwrap import dedent
 
+import astx as irx_astx
 import pytest
 
 from arx import builtins
 from arx import main as main_module
 from arx.exceptions import ParserException
 from arx.testing import ArxTestRunner
-from irx import astx as irx_astx
 from irx.diagnostics import SemanticError
 
 try:

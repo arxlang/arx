@@ -7,9 +7,10 @@ summary: >-
 
 from __future__ import annotations
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.resolved_nodes import (
     IterationKind,
     IterationOrder,

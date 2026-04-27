@@ -11,9 +11,10 @@ from collections.abc import Mapping, Sequence
 from enum import Enum
 from typing import Any
 
+import astx
+
 from public import public
 
-from irx import astx
 from irx.analysis.context import SemanticContext
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.module_symbols import (

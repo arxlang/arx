@@ -43,6 +43,14 @@ class Literal(DataTypeOps):
     value: Any
 
     def __init__(self, *args, **kwargs) -> None:  # type: ignore
+        """
+        title: Initialize the literal base node.
+        parameters:
+          args:
+            variadic: positional
+          kwargs:
+            variadic: keyword
+        """
         super().__init__(*args, **kwargs)
         self.ref = uuid4().hex
 

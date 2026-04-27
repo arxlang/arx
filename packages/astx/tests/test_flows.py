@@ -4,8 +4,9 @@ title: Tests for control flow statements.
 
 from typing import Any, cast
 
-import astx
 import pytest
+
+import astx
 
 from astx.base import ReprStruct, SourceLocation
 from astx.blocks import Block

@@ -9,9 +9,10 @@ summary: >-
 
 from __future__ import annotations
 
+import astx
+
 from llvmlite import ir
 
-from irx import astx
 from irx.analysis.types import is_unsigned_type
 from irx.buffer import (
     BUFFER_VIEW_ELEMENT_TYPE_EXTRA,
