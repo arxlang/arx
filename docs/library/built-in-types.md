@@ -157,6 +157,9 @@ Current DataFrame rules in this phase:
   equal row counts
 - columns can be accessed as `rows.score` or `rows["score"]`
 - `rows.nrows()` and `rows.ncols()` return row and column counts as `i64`
+- column access and metadata methods currently work on DataFrame identifiers and
+  literals whose schema is known while parsing, not on arbitrary
+  DataFrame-returning expressions
 - `dataframe[...]` is accepted only in function and extern parameter annotations
   for now; column access on runtime-schema parameters is not available yet
 

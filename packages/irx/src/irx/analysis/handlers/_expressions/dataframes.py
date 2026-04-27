@@ -76,6 +76,49 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         if schema is not None:
             self._semantic(node).extras[DATAFRAME_SCHEMA_EXTRA] = schema
 
+    def _visit_dataframe_column_access(
+        self,
+        node: astx.DataFrameColumnAccess,
+    ) -> None:
+        """
+        title: Visit shared DataFrame column access semantics.
+        parameters:
+          node:
+            type: astx.DataFrameColumnAccess
+        """
+        self.visit(node.base)
+        base_type = self._expr_type(node.base)
+        if not isinstance(base_type, astx.DataFrameType):
+            self.context.diagnostics.add(
+                "dataframe column access requires a DataFrame value",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+            )
+            self._set_type(node, None)
+            return
+
+        schema = self._dataframe_schema(node.base)
+        column = None if schema is None else schema.column(node.column_name)
+        if column is None:
+            self.context.diagnostics.add(
+                f"dataframe has no column '{node.column_name}'",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+            )
+            self._set_type(node, None)
+            return
+
+        node.type_ = astx.SeriesType(
+            column.type_,
+            nullable=column.nullable,
+        )
+        self._semantic(node).extras[DATAFRAME_COLUMN_INDEX_EXTRA] = (
+            column.index
+        )
+        self._semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = column.type_
+        self._semantic(node).extras[SERIES_NULLABLE_EXTRA] = column.nullable
+        self._set_type(node, node.type_)
+
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameLiteral) -> None:
         """
@@ -166,38 +209,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameColumnAccess
         """
-        self.visit(node.base)
-        base_type = self._expr_type(node.base)
-        if not isinstance(base_type, astx.DataFrameType):
-            self.context.diagnostics.add(
-                "dataframe column access requires a DataFrame value",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
-            )
-            self._set_type(node, None)
-            return
-
-        schema = self._dataframe_schema(node.base)
-        column = None if schema is None else schema.column(node.column_name)
-        if column is None:
-            self.context.diagnostics.add(
-                f"dataframe has no column '{node.column_name}'",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
-            )
-            self._set_type(node, None)
-            return
-
-        node.type_ = astx.SeriesType(
-            column.type_,
-            nullable=column.nullable,
-        )
-        self._semantic(node).extras[DATAFRAME_COLUMN_INDEX_EXTRA] = (
-            column.index
-        )
-        self._semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = column.type_
-        self._semantic(node).extras[SERIES_NULLABLE_EXTRA] = column.nullable
-        self._set_type(node, node.type_)
+        self._visit_dataframe_column_access(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameStringColumnAccess) -> None:
@@ -207,17 +219,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameStringColumnAccess
         """
-        self.visit(
-            cast_column := astx.DataFrameColumnAccess(
-                node.base,
-                node.column_name,
-            )
-        )
-        semantic = getattr(cast_column, "semantic", None)
-        if semantic is not None:
-            self._semantic(node).extras.update(semantic.extras)
-        node.type_ = cast_column.type_
-        self._set_type(node, self._expr_type(cast_column))
+        self._visit_dataframe_column_access(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameRowCount) -> None:

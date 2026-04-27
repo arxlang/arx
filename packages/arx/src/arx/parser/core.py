@@ -299,7 +299,16 @@ class ParserCore(ParserMixinBase):
         returns:
           type: bool
         """
-        return any(name in scope for scope in reversed(self.tensor_scopes))
+        for value_scope, tensor_scope in zip(
+            reversed(self.value_scopes),
+            reversed(self.tensor_scopes),
+            strict=True,
+        ):
+            if name in tensor_scope:
+                return True
+            if name in value_scope:
+                return False
+        return False
 
     def _declare_dataframe_name(
         self,
@@ -325,7 +334,16 @@ class ParserCore(ParserMixinBase):
         returns:
           type: bool
         """
-        return any(name in scope for scope in reversed(self.dataframe_scopes))
+        for value_scope, dataframe_scope in zip(
+            reversed(self.value_scopes),
+            reversed(self.dataframe_scopes),
+            strict=True,
+        ):
+            if name in dataframe_scope:
+                return True
+            if name in value_scope:
+                return False
+        return False
 
     def _declare_list_name(self, name: str) -> None:
         """
@@ -345,7 +363,16 @@ class ParserCore(ParserMixinBase):
         returns:
           type: bool
         """
-        return any(name in scope for scope in reversed(self.list_scopes))
+        for value_scope, list_scope in zip(
+            reversed(self.value_scopes),
+            reversed(self.list_scopes),
+            strict=True,
+        ):
+            if name in list_scope:
+                return True
+            if name in value_scope:
+                return False
+        return False
 
     def _lookup_tensor_binding(self, name: str) -> TensorBinding | None:
         """
@@ -356,9 +383,15 @@ class ParserCore(ParserMixinBase):
         returns:
           type: TensorBinding | None
         """
-        for scope in reversed(self.tensor_scopes):
-            if name in scope:
-                return scope[name]
+        for value_scope, tensor_scope in zip(
+            reversed(self.value_scopes),
+            reversed(self.tensor_scopes),
+            strict=True,
+        ):
+            if name in tensor_scope:
+                return tensor_scope[name]
+            if name in value_scope:
+                return None
         return None
 
     def _lookup_dataframe_binding(
@@ -373,9 +406,15 @@ class ParserCore(ParserMixinBase):
         returns:
           type: DataFrameBinding | None
         """
-        for scope in reversed(self.dataframe_scopes):
-            if name in scope:
-                return scope[name]
+        for value_scope, dataframe_scope in zip(
+            reversed(self.value_scopes),
+            reversed(self.dataframe_scopes),
+            strict=True,
+        ):
+            if name in dataframe_scope:
+                return dataframe_scope[name]
+            if name in value_scope:
+                return None
         return None
 
     def _push_template_scope(

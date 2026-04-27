@@ -4,13 +4,17 @@ title: Tests for the IRx DataFrame layer.
 
 from __future__ import annotations
 
+import shutil
+
 import astx
 import pytest
 
 from irx.analysis import SemanticError, analyze
 from irx.builder import Builder
 
-from .conftest import assert_ir_parses, make_main_module
+from .conftest import assert_ir_parses, build_and_run, make_main_module
+
+EXPECTED_ROW_OR_COLUMN_COUNT = 3
 
 
 def _dataframe_type() -> astx.DataFrameType:
@@ -226,3 +230,57 @@ def test_dataframe_semantic_rejects_unknown_column() -> None:
 
     with pytest.raises(SemanticError, match="no column 'missing'"):
         analyze(module)
+
+
+def test_dataframe_build_returns_row_count() -> None:
+    """
+    title: Built DataFrame programs return Arrow Table row counts.
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("builder.build() currently requires clang")
+
+    module = make_main_module(
+        _declare_dataframe(),
+        astx.FunctionReturn(
+            astx.Cast(
+                astx.DataFrameRowCount(astx.Identifier("rows")),
+                astx.Int32(),
+            )
+        ),
+    )
+
+    result = build_and_run(Builder(), module)
+
+    assert result.returncode == EXPECTED_ROW_OR_COLUMN_COUNT, (
+        result.stderr or result.stdout
+    )
+
+
+def test_dataframe_build_releases_accessed_series_and_returns_ncols() -> None:
+    """
+    title: Built DataFrame programs can acquire and release Series handles.
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("builder.build() currently requires clang")
+
+    module = make_main_module(
+        _declare_dataframe(),
+        astx.SeriesRelease(
+            astx.DataFrameColumnAccess(astx.Identifier("rows"), "score")
+        ),
+        astx.SeriesRelease(
+            astx.DataFrameStringColumnAccess(astx.Identifier("rows"), "id")
+        ),
+        astx.FunctionReturn(
+            astx.Cast(
+                astx.DataFrameColumnCount(astx.Identifier("rows")),
+                astx.Int32(),
+            )
+        ),
+    )
+
+    result = build_and_run(Builder(), module)
+
+    assert result.returncode == EXPECTED_ROW_OR_COLUMN_COUNT, (
+        result.stderr or result.stdout
+    )

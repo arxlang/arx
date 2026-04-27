@@ -120,6 +120,31 @@ def test_dataframe_constructor_requires_declared_columns() -> None:
         )
 
 
+def test_dataframe_name_tracking_respects_inner_scope_shadowing() -> None:
+    """
+    title: Inner non-DataFrame variables shadow outer DataFrame bindings.
+    """
+    tree = _parse_module(
+        """
+        fn main() -> i32:
+          var rows: dataframe[id: i32] = dataframe({id: [1]})
+          if true:
+            var rows: i32 = 1
+            return rows.nrows()
+          return 0
+        """
+    )
+
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    branch = function.body.nodes[1]
+    assert isinstance(branch, astx.IfStmt)
+    result = branch.then.nodes[1]
+    assert isinstance(result, astx.FunctionReturn)
+    assert isinstance(result.value, astx.MethodCall)
+    assert not isinstance(result.value, astx.DataFrameRowCount)
+
+
 def test_dataframe_mvp_rejects_string_columns() -> None:
     """
     title: MVP DataFrame and Series types reject non fixed-width columns.
