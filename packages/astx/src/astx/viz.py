@@ -91,6 +91,16 @@ def _traverse_ast_to_mermaid(
         parent_id: Optional[str] = None,
         carry_edge_label: str = "",
     ) -> None:
+        """
+        title: Walk one repr subtree and append Mermaid edges.
+        parameters:
+          node:
+            type: ReprStruct
+          parent_id:
+            type: Optional[str]
+          carry_edge_label:
+            type: str
+        """
         if not isinstance(node, dict):
             return
 

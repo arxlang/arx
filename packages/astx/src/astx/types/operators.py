@@ -422,6 +422,20 @@ class BoolBinaryOp(BinaryOp):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the boolean binary operation.
+        parameters:
+          op_code:
+            type: str
+          lhs:
+            type: DataType
+          rhs:
+            type: DataType
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(
             op_code=op_code,
             lhs=lhs,
@@ -478,6 +492,18 @@ class BoolUnaryOp(UnaryOp):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the boolean unary operation.
+        parameters:
+          op_code:
+            type: str
+          operand:
+            type: DataType
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(
             op_code=op_code,
             operand=operand,

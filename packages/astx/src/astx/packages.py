@@ -295,6 +295,18 @@ class AliasExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the alias expression.
+        parameters:
+          name:
+            type: str
+          asname:
+            type: str
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.name = name
         self.asname = asname
@@ -350,6 +362,16 @@ class ImportStmt(StatementType):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the import statement.
+        parameters:
+          names:
+            type: list[AliasExpr]
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.names = names
         self.kind = ASTKind.ImportStmtKind
@@ -409,6 +431,20 @@ class ImportFromStmt(StatementType):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the import-from statement.
+        parameters:
+          names:
+            type: list[AliasExpr]
+          module:
+            type: str
+          level:
+            type: int
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.module = module
         self.names = names
@@ -472,6 +508,16 @@ class ImportExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the import expression.
+        parameters:
+          names:
+            type: list[AliasExpr]
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.names = names
         self.kind = ASTKind.ImportExprKind
@@ -531,6 +577,20 @@ class ImportFromExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the import-from expression.
+        parameters:
+          names:
+            type: list[AliasExpr]
+          module:
+            type: str
+          level:
+            type: int
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.names = names
         self.module = module

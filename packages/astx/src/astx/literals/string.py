@@ -95,6 +95,14 @@ class LiteralUTF8String(LiteralString):
     def __init__(
         self, value: str, loc: SourceLocation = NO_SOURCE_LOCATION
     ) -> None:
+        """
+        title: Initialize the UTF-8 string literal.
+        parameters:
+          value:
+            type: str
+          loc:
+            type: SourceLocation
+        """
         super().__init__(value=value, loc=loc)
         self.type_ = UTF8String()
 
@@ -142,6 +150,14 @@ class LiteralUTF8Char(LiteralString):
     def __init__(
         self, value: str, loc: SourceLocation = NO_SOURCE_LOCATION
     ) -> None:
+        """
+        title: Initialize the UTF-8 character literal.
+        parameters:
+          value:
+            type: str
+          loc:
+            type: SourceLocation
+        """
         super().__init__(value=value, loc=loc)
         self.type_ = UTF8Char()
 

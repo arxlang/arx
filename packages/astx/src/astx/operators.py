@@ -117,6 +117,18 @@ class AssignmentExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the assignment expression.
+        parameters:
+          targets:
+            type: Iterable[Expr] | ASTNodes[Expr]
+          value:
+            type: Expr
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
 
         if isinstance(targets, ASTNodes):
@@ -272,6 +284,18 @@ class AugAssign(DataType):
         value: DataType,
         loc: SourceLocation = NO_SOURCE_LOCATION,
     ) -> None:
+        """
+        title: Initialize the augmented assignment.
+        parameters:
+          target:
+            type: Identifier
+          op_code:
+            type: OpCodeAugAssign
+          value:
+            type: DataType
+          loc:
+            type: SourceLocation
+        """
         super().__init__(loc=loc)
         self.target = target
         self.op_code = op_code
@@ -407,6 +431,16 @@ class Starred(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the starred expression.
+        parameters:
+          value:
+            type: Expr
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.value = value
         self.kind = ASTKind.StarredKind

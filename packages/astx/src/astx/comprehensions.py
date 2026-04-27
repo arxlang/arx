@@ -57,6 +57,22 @@ class ComprehensionClause(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the comprehension clause.
+        parameters:
+          target:
+            type: Expr
+          iterable:
+            type: Expr
+          conditions:
+            type: Optional[Iterable[Expr] | ASTNodes[Expr]]
+          is_async:
+            type: bool
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.target = target
         self.iterable = iterable
@@ -125,6 +141,16 @@ class Comprehension(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the comprehension expression.
+        parameters:
+          generators:
+            type: Iterable[ComprehensionClause] | ASTNodes[ComprehensionClause]
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
 
         if isinstance(generators, ASTNodes):

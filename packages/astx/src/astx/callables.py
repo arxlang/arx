@@ -115,6 +115,16 @@ class Arguments(ASTNodes[Argument]):
     """
 
     def __init__(self, *args: Argument, **kwargs: Any) -> None:
+        """
+        title: Initialize the arguments collection.
+        parameters:
+          args:
+            type: Argument
+            variadic: positional
+          kwargs:
+            type: Any
+            variadic: keyword
+        """
         super().__init__(**kwargs)
         for arg in args:
             self.append(arg)
@@ -497,6 +507,18 @@ class LambdaExpr(Expr):
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
+        """
+        title: Initialize the lambda expression.
+        parameters:
+          body:
+            type: Expr
+          params:
+            type: Arguments
+          loc:
+            type: SourceLocation
+          parent:
+            type: Optional[ASTNodes]
+        """
         super().__init__(loc=loc, parent=parent)
         self.params = params
         self.body = body
