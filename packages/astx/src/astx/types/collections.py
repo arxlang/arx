@@ -21,7 +21,15 @@ def _format_type_name(type_: ExprType) -> str:
     returns:
       type: str
     """
-    return type_.__class__.__name__
+    pointee_type = getattr(type_, "pointee_type", None)
+    if isinstance(pointee_type, ExprType):
+        return f"{type_.__class__.__name__}[{_format_type_name(pointee_type)}]"
+
+    value = str(type_)
+    default_name = f"{type_.__class__.__name__}: {getattr(type_, 'name', '')}"
+    if value == default_name:
+        return type_.__class__.__name__
+    return value
 
 
 @public

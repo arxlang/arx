@@ -29,6 +29,17 @@ def test_list_type_optional_size_metadata() -> None:
         astx.ListType([astx.Int32()], size=-1)
 
 
+def test_sized_type_strings_preserve_nested_type_detail() -> None:
+    """
+    title: Sized type strings preserve nested parameterized type details.
+    """
+    pointer = astx.PointerType(astx.Int32())
+
+    assert str(astx.ListType([pointer], size=LIST_SIZE)) == (
+        "ListType[PointerType[Int32], 4]"
+    )
+
+
 def test_tensor_type_optional_shape_metadata() -> None:
     """
     title: TensorType stores optional static shapes.
@@ -42,6 +53,15 @@ def test_tensor_type_optional_shape_metadata() -> None:
     assert str(shaped) == "TensorType[Float64, 2, 3]"
     with pytest.raises(ValueError, match="non-negative"):
         astx.TensorType(astx.Float64(), shape=(2, -1))
+
+
+def test_tensor_type_string_preserves_nested_type_detail() -> None:
+    """
+    title: Tensor type strings preserve nested parameterized type details.
+    """
+    tensor = astx.TensorType(astx.PointerType(astx.Int32()), shape=(2, 3))
+
+    assert str(tensor) == "TensorType[PointerType[Int32], 2, 3]"
 
 
 def test_tensor_literal_and_view_preserve_shape_metadata() -> None:
@@ -95,6 +115,18 @@ def test_dataframe_type_optional_row_count_metadata() -> None:
     assert str(sized) == "DataFrameType[age: Int32, 100]"
     with pytest.raises(ValueError, match="non-negative"):
         astx.DataFrameType(columns, row_count=-1)
+
+
+def test_dataframe_type_string_preserves_nested_type_detail() -> None:
+    """
+    title: DataFrame type strings preserve nested parameterized type details.
+    """
+    rows = astx.DataFrameType(
+        (astx.DataFrameColumn("ptr", astx.PointerType(astx.Int32())),),
+        row_count=DATAFRAME_ROW_COUNT,
+    )
+
+    assert str(rows) == "DataFrameType[ptr: PointerType[Int32], 100]"
 
 
 def test_dataframe_literal_infers_unconstrained_row_count() -> None:

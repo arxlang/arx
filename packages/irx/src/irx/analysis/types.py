@@ -108,8 +108,8 @@ def _target_accepts_known_size(
     returns:
       type: bool
     """
-    return (
-        target_size is None or value_size is None or target_size == value_size
+    return target_size is None or (
+        value_size is not None and target_size == value_size
     )
 
 
@@ -128,11 +128,44 @@ def _target_accepts_known_shape(
     returns:
       type: bool
     """
-    return (
-        target_shape is None
-        or value_shape is None
-        or target_shape == value_shape
+    return target_shape is None or (
+        value_shape is not None and target_shape == value_shape
     )
+
+
+@typechecked
+def _metadata_assignment_compatible(
+    target: astx.DataType,
+    value: astx.DataType,
+) -> bool:
+    """
+    title: Return whether assignment metadata is statically compatible.
+    parameters:
+      target:
+        type: astx.DataType
+      value:
+        type: astx.DataType
+    returns:
+      type: bool
+    """
+    if isinstance(target, astx.ListType) and isinstance(value, astx.ListType):
+        return _target_accepts_known_size(target.size, value.size)
+    if isinstance(target, astx.TensorType) and isinstance(
+        value,
+        astx.TensorType,
+    ):
+        return _target_accepts_known_shape(target.shape, value.shape)
+    if isinstance(target, astx.SeriesType) and isinstance(
+        value,
+        astx.SeriesType,
+    ):
+        return _target_accepts_known_size(target.size, value.size)
+    if isinstance(target, astx.DataFrameType) and isinstance(
+        value,
+        astx.DataFrameType,
+    ):
+        return _target_accepts_known_size(target.row_count, value.row_count)
+    return True
 
 
 @public
@@ -922,6 +955,8 @@ def is_assignable(
     """
     if target is None or value is None:
         return True
+    if not _metadata_assignment_compatible(target, value):
+        return False
     if same_type(target, value):
         return True
     if isinstance(target, astx.UnionType):

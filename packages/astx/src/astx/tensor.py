@@ -26,7 +26,16 @@ def _format_type_name(type_: astx.DataType) -> str:
     returns:
       type: str
     """
-    return type_.__class__.__name__
+    if isinstance(type_, astx.PointerType):
+        if type_.pointee_type is None:
+            return "PointerType"
+        return f"PointerType[{_format_type_name(type_.pointee_type)}]"
+
+    value = str(type_)
+    default_name = f"{type_.__class__.__name__}: {type_.name}"
+    if value == default_name:
+        return type_.__class__.__name__
+    return value
 
 
 @typechecked

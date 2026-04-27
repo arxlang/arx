@@ -104,7 +104,7 @@ def test_same_type_allows_unconstrained_tensor_shape_wildcard() -> None:
 
 def test_tensor_assignability_checks_known_shapes() -> None:
     """
-    title: Tensor assignability rejects incompatible known shapes.
+    title: Tensor assignability rejects unchecked shape narrowing.
     """
     assert is_assignable(
         astx.TensorType(astx.Float64(), shape=(2, 3)),
@@ -118,9 +118,45 @@ def test_tensor_assignability_checks_known_shapes() -> None:
         astx.TensorType(astx.Float64()),
         astx.TensorType(astx.Float64(), shape=(2, 3)),
     )
-    assert is_assignable(
+    assert not is_assignable(
         astx.TensorType(astx.Float64(), shape=(2, 3)),
         astx.TensorType(astx.Float64()),
+    )
+
+
+def test_sized_assignability_rejects_unchecked_size_narrowing() -> None:
+    """
+    title: Sized assignment rejects unknown-to-known narrowing for all types.
+    """
+    assert not is_assignable(
+        astx.ListType([astx.Int32()], size=LIST_SIZE),
+        astx.ListType([astx.Int32()]),
+    )
+    assert is_assignable(
+        astx.ListType([astx.Int32()]),
+        astx.ListType([astx.Int32()], size=LIST_SIZE),
+    )
+    assert not is_assignable(
+        astx.SeriesType(astx.Int32(), size=SERIES_SIZE),
+        astx.SeriesType(astx.Int32()),
+    )
+    assert is_assignable(
+        astx.SeriesType(astx.Int32()),
+        astx.SeriesType(astx.Int32(), size=SERIES_SIZE),
+    )
+    assert not is_assignable(
+        astx.DataFrameType(
+            _dataframe_columns(),
+            row_count=DATAFRAME_ROW_COUNT,
+        ),
+        astx.DataFrameType(_dataframe_columns()),
+    )
+    assert is_assignable(
+        astx.DataFrameType(_dataframe_columns()),
+        astx.DataFrameType(
+            _dataframe_columns(),
+            row_count=DATAFRAME_ROW_COUNT,
+        ),
     )
 
 

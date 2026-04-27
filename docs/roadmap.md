@@ -80,7 +80,8 @@ columns. Static-schema values use `dataframe[name: T, ...]`, column views use
       change.
 - [ ] Add runtime check sidecars for assigning unknown-size values to sized
       targets, including list length, tensor shape, series length, and dataframe
-      row count.
+      row count; sized annotations must not become trusted metadata until the
+      runtime check has passed.
 - [ ] Add support for partial tensor shape constraints using ellipsis, such as
       `tensor[f64, 2, ...]`, `tensor[f64, ..., 3]`, and
       `tensor[f64, 2, ..., 3]`.
