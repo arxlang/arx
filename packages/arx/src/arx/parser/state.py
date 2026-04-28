@@ -32,6 +32,7 @@ class TypeUseContext(Enum):
     INLINE_VARIABLE = "inline variable"
     FIELD = "field"
     EXPRESSION = "expression"
+    TYPE_ALIAS = "type alias"
     TEMPLATE_BOUND = "template bound"
     TEMPLATE_ARGUMENT = "template argument"
     NESTED = "nested type"

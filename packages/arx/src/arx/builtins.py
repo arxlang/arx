@@ -20,8 +20,10 @@ _BUILTIN_RESOURCE_DIR = "builtins"
 
 BUILTIN_CAST = "cast"
 BUILTIN_DATAFRAME = "dataframe"
+BUILTIN_ISINSTANCE = "isinstance"
 BUILTIN_PRINT = "print"
 BUILTIN_RANGE = "range"
+BUILTIN_TYPE = "type"
 _GENERATORS_MODULE = f"{BUILTIN_NAMESPACE}.generators"
 
 
@@ -71,14 +73,18 @@ _AMBIENT_BUILTIN_BINDINGS = (
 __all__ = [
     "BUILTIN_CAST",
     "BUILTIN_DATAFRAME",
+    "BUILTIN_ISINSTANCE",
     "BUILTIN_NAMESPACE",
     "BUILTIN_PRINT",
     "BUILTIN_RANGE",
     "BUILTIN_SOURCE_EXTENSION",
+    "BUILTIN_TYPE",
     "AmbientBuiltinBinding",
     "BuiltinModuleAsset",
     "build_cast",
+    "build_isinstance",
     "build_print",
+    "build_type_of",
     "get_ambient_builtin_imports",
     "get_builtin_source",
     "is_builtin",
@@ -98,7 +104,13 @@ def is_builtin(name: str) -> bool:
     returns:
       type: bool
     """
-    return name in {BUILTIN_CAST, BUILTIN_DATAFRAME, BUILTIN_PRINT}
+    return name in {
+        BUILTIN_CAST,
+        BUILTIN_DATAFRAME,
+        BUILTIN_ISINSTANCE,
+        BUILTIN_PRINT,
+        BUILTIN_TYPE,
+    }
 
 
 def build_cast(
@@ -117,6 +129,23 @@ def build_cast(
     return irx_astx.Cast(value=value, target_type=target_type)
 
 
+def build_isinstance(
+    value: astx.Expr,
+    target_type: astx.DataType,
+) -> irx_astx.IsInstanceExpr:
+    """
+    title: Build an IRx IsInstanceExpr node.
+    parameters:
+      value:
+        type: astx.Expr
+      target_type:
+        type: astx.DataType
+    returns:
+      type: irx_astx.IsInstanceExpr
+    """
+    return irx_astx.IsInstanceExpr(value=value, target_type=target_type)
+
+
 def build_print(message: astx.Expr) -> irx_astx.PrintExpr:
     """
     title: Build an IRx PrintExpr node.
@@ -127,6 +156,18 @@ def build_print(message: astx.Expr) -> irx_astx.PrintExpr:
       type: irx_astx.PrintExpr
     """
     return irx_astx.PrintExpr(message=message)
+
+
+def build_type_of(value: astx.Expr) -> irx_astx.TypeOfExpr:
+    """
+    title: Build an IRx TypeOfExpr node.
+    parameters:
+      value:
+        type: astx.Expr
+    returns:
+      type: irx_astx.TypeOfExpr
+    """
+    return irx_astx.TypeOfExpr(value=value)
 
 
 def is_builtin_module_specifier(specifier: str) -> bool:

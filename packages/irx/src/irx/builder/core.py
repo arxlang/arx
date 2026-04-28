@@ -1085,6 +1085,11 @@ class VisitorCore(BuilderVisitor):
         """
         if type_ is None:
             return None
+        if isinstance(type_, astx.UnionType):
+            storage_type = self._union_storage_ast_type(type_)
+            if storage_type is None:
+                return None
+            return self._llvm_type_for_ast_type(storage_type)
         if isinstance(type_, astx.NamespaceType):
             return self._llvm.OPAQUE_POINTER_TYPE
         if isinstance(type_, astx.GeneratorType):
@@ -1147,6 +1152,41 @@ class VisitorCore(BuilderVisitor):
             return class_type.as_pointer()
         type_name = type_.__class__.__name__.lower()
         return self._llvm.get_data_type(type_name)
+
+    def _union_storage_ast_type(
+        self,
+        type_: astx.UnionType,
+    ) -> astx.DataType | None:
+        """
+        title: Return one scalar storage type for a finite union.
+        parameters:
+          type_:
+            type: astx.UnionType
+        returns:
+          type: astx.DataType | None
+        """
+        members = tuple(type_.members)
+        if not members:
+            return None
+
+        storage_type: astx.DataType | None = members[0]
+        for member in members[1:]:
+            numeric_type = common_numeric_type(storage_type, member)
+            if numeric_type is not None:
+                storage_type = numeric_type
+                continue
+
+            storage_llvm_type = self._llvm_type_for_ast_type(storage_type)
+            member_llvm_type = self._llvm_type_for_ast_type(member)
+            if (
+                storage_llvm_type is not None
+                and member_llvm_type is not None
+                and storage_llvm_type == member_llvm_type
+            ):
+                continue
+            return None
+
+        return storage_type
 
     def _resolved_class_receiver_field_address(
         self,
@@ -1450,6 +1490,13 @@ class VisitorCore(BuilderVisitor):
         returns:
           type: ir.Value
         """
+        if source_type is None or target_type is None:
+            return value
+
+        if isinstance(source_type, astx.UnionType):
+            source_type = self._union_storage_ast_type(source_type)
+        if isinstance(target_type, astx.UnionType):
+            target_type = self._union_storage_ast_type(target_type)
         if source_type is None or target_type is None:
             return value
 

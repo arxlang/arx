@@ -80,6 +80,24 @@ from arx.parser import Parser
         ).lstrip(),
         dedent(
             """
+            type Number = i32 | i64
+
+            fn identity(value: Number) -> Number:
+              return value
+
+            fn main() -> i32:
+              var value: i64 = identity(5)
+              var ok: bool = isinstance(value, Number)
+              var name: str = type(value)
+              print(name)
+              if ok:
+                return cast(value, i32)
+              else:
+                return 1
+            """
+        ).lstrip(),
+        dedent(
+            """
             class BaseCounter:
               @[public, mutable]
               value: int32 = 41

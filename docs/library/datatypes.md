@@ -41,8 +41,10 @@ fn summarize(name: str, values: list[i32]) -> none:
 Common places where types appear:
 
 - function parameters: `fn add(a: i32, b: i32) -> i32:`
+- union function parameters: `fn id(value: i32 | i64) -> i32 | i64:`
 - function return types: `fn test_add() -> none:`
 - variable declarations: `var total: i32 = 0`
+- type aliases: `type Number = i32 | i64`
 - generic collection annotations: `list[i32]`
 - shaped 1D tensor annotations: `tensor[i32, 4]`
 - multidimensional tensor annotations: `tensor[i32, 2, 2]`
@@ -61,6 +63,31 @@ function and extern parameter annotations. Static-schema DataFrames can be
 constructed with `dataframe({...})`, and their columns can be accessed with
 either `rows.score` or `rows["score"]`.
 
+## Type Aliases And Union Types
+
+Type aliases are top-level declarations. The `type` word is contextual, so
+`type Name = ...` declares an alias while `type(value)` calls the builtin
+type-name helper.
+
+````arx
+```
+title: Type alias example
+summary: Demonstrates a finite numeric union alias.
+```
+type Number = i32 | i64
+
+fn identity(value: Number) -> Number:
+  ```
+  title: identity
+  summary: Returns a numeric union value.
+  ```
+  return value
+````
+
+Union annotations use `|`. Numeric unions currently lower through a shared
+numeric storage type. Runtime tagged unions and runtime narrowing are not part
+of the current model.
+
 ## Built-in Type Reference
 
 For the catalog of built-in types, aliases, and examples, see
@@ -73,3 +100,4 @@ That page covers:
 - string, character, and temporal types
 - lists, tensors, dataframes, series, and current limitations
 - the `cast(value, type)` helper
+- the `isinstance(value, type)` and `type(value)` helpers

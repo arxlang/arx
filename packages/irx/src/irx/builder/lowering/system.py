@@ -4,11 +4,17 @@
 title: System/runtime visitor mixins for llvmliteir.
 """
 
+from typing import Any, cast
+
 import astx
 
 from llvmlite import ir
 
-from irx.analysis.types import is_boolean_type, is_unsigned_type
+from irx.analysis.types import (
+    display_type_name,
+    is_boolean_type,
+    is_unsigned_type,
+)
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
@@ -79,6 +85,21 @@ class SystemVisitorMixin(VisitorMixinBase):
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
+    def visit(self, node: astx.IsInstanceExpr) -> None:
+        """
+        title: Visit IsInstanceExpr nodes.
+        parameters:
+          node:
+            type: astx.IsInstanceExpr
+        """
+        self.visit_child(node.value)
+        _ = safe_pop(self.result_stack)
+        static_result = cast(bool, getattr(node, "static_result", False))
+        self.result_stack.append(
+            ir.Constant(self._llvm.BOOLEAN_TYPE, int(static_result))
+        )
+
+    @VisitorCore.visit.dispatch
     def visit(self, node: astx.PrintExpr) -> None:
         """
         title: Visit PrintExpr nodes.
@@ -126,3 +147,20 @@ class SystemVisitorMixin(VisitorMixinBase):
         puts_fn = self.require_runtime_symbol("libc", "puts")
         self._llvm.ir_builder.call(puts_fn, [ptr])
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.TypeOfExpr) -> None:
+        """
+        title: Visit TypeOfExpr nodes.
+        parameters:
+          node:
+            type: astx.TypeOfExpr
+        """
+        self.visit_child(node.value)
+        _ = safe_pop(self.result_stack)
+        type_name = display_type_name(self._resolved_ast_type(node.value))
+        pointer = cast(Any, self)._constant_c_string_pointer(
+            type_name,
+            name_hint="type_name",
+        )
+        self.result_stack.append(pointer)

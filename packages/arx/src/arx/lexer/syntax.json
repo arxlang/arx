@@ -22,7 +22,7 @@
       "var",
       "while"
     ],
-    "contextual": ["as", "from", "binary", "unary", "operator"]
+    "contextual": ["as", "from", "type", "binary", "unary", "operator"]
   },
 
   "literals": {
@@ -146,6 +146,11 @@
       "supported": true,
       "requires_from": true,
       "allows_trailing_comma": true
+    },
+    "type_alias": {
+      "form": "type Name = type",
+      "supports_union_rhs": true,
+      "top_level_only": true
     },
     "relative_imports": {
       "leading_dot_tokens": true

@@ -169,4 +169,96 @@ class Cast(astx.DataType):
         return self._prepare_struct(key, value, simplified)
 
 
-__all__ = ["AssertStmt", "Cast", "PrintExpr"]
+@typechecked
+class IsInstanceExpr(astx.Expr):
+    """
+    title: IsInstanceExpr AST class.
+    summary: Represent a type-membership check against one target type.
+    attributes:
+      value:
+        type: astx.Expr
+      target_type:
+        type: astx.DataType
+    """
+
+    value: astx.Expr
+    target_type: astx.DataType
+
+    def __init__(
+        self,
+        value: astx.Expr,
+        target_type: astx.DataType,
+    ) -> None:
+        """
+        title: Initialize IsInstanceExpr.
+        parameters:
+          value:
+            type: astx.Expr
+          target_type:
+            type: astx.DataType
+        """
+        super().__init__()
+        self.value = value
+        self.target_type = target_type
+
+    def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
+        """
+        title: Return the AST structure of the isinstance expression.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: astx.base.ReprStruct
+        """
+        value: astx.base.DictDataTypesStruct = {
+            "value": self.value.get_struct(simplified),
+            "target_type": self.target_type.get_struct(simplified),
+        }
+        return self._prepare_struct("IsInstanceExpr", value, simplified)
+
+
+@typechecked
+class TypeOfExpr(astx.Expr):
+    """
+    title: TypeOfExpr AST class.
+    summary: Represent an expression that produces a value's type name.
+    attributes:
+      value:
+        type: astx.Expr
+    """
+
+    value: astx.Expr
+
+    def __init__(self, value: astx.Expr) -> None:
+        """
+        title: Initialize TypeOfExpr.
+        parameters:
+          value:
+            type: astx.Expr
+        """
+        super().__init__()
+        self.value = value
+
+    def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
+        """
+        title: Return the AST structure of the type-of expression.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: astx.base.ReprStruct
+        """
+        return self._prepare_struct(
+            "TypeOfExpr",
+            self.value.get_struct(simplified),
+            simplified,
+        )
+
+
+__all__ = [
+    "AssertStmt",
+    "Cast",
+    "IsInstanceExpr",
+    "PrintExpr",
+    "TypeOfExpr",
+]

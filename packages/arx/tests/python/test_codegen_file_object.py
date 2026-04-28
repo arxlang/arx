@@ -408,6 +408,51 @@ def test_template_program_builds_and_runs(tmp_path: Path) -> None:
     assert result.stderr == ""
 
 
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_type_alias_union_and_type_builtins_build_and_run(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Type aliases, unions, and type-aware builtins should build.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    module_ast = _parse_min_module(
+        dedent(
+            """
+            type Number = i32 | i64
+
+            fn identity(value: Number) -> Number:
+              return value
+
+            fn main() -> int32:
+              var value: i64 = identity(5)
+              var ok: bool = isinstance(value, Number)
+              var name: str = type(value)
+              if ok:
+                return cast(value, int32)
+              else:
+                return 1
+            """
+        ).lstrip()
+    )
+
+    bin_path = tmp_path / "type_alias_program"
+    ArxBuilder().build(module_ast, str(bin_path))
+
+    result = subprocess.run(
+        [str(bin_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 5
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
 def test_build_without_link_writes_object_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

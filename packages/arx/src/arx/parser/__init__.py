@@ -44,6 +44,8 @@ class Parser(
         type: list[astx.DataType]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
+      type_aliases:
+        type: dict[str, astx.DataType]
       value_scopes:
         type: list[set[str]]
       tokens:
@@ -56,6 +58,7 @@ class Parser(
     tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
+    type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
     tokens: TokenList
 

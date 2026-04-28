@@ -39,6 +39,8 @@ class ParserMixinBase:
         type: list[astx.DataType]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
+      type_aliases:
+        type: dict[str, astx.DataType]
       value_scopes:
         type: list[set[str]]
       tokens:
@@ -53,6 +55,7 @@ class ParserMixinBase:
     dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
+    type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
     tokens: TokenList
 
@@ -452,6 +455,20 @@ class ParserMixinBase:
           type: astx.DataType
         """
         del allow_template_vars, allow_union, type_context
+        raise NotImplementedError
+
+    def is_type_alias_decl_start(self) -> bool:
+        """
+        title: Return whether the current token starts a type alias.
+        returns:
+          type: bool
+        """
+        raise NotImplementedError
+
+    def parse_type_alias_decl(self) -> None:
+        """
+        title: Parse one top-level type alias declaration.
+        """
         raise NotImplementedError
 
     def parse_function(
