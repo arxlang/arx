@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [1.22.0](https://github.com/arxlang/arx/compare/1.21.0...1.22.0) (2026-04-28)
+
+
+### Features
+
+* Improve the discovery of installed libraries ([#78](https://github.com/arxlang/arx/issues/78)) ([c00776d](https://github.com/arxlang/arx/commit/c00776d76e2d7e8e0040da88bcbadeed315763bc))
+
 # [1.21.0](https://github.com/arxlang/arx/compare/1.20.0...1.21.0) (2026-04-28)
 
 
