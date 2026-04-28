@@ -507,6 +507,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#installed-package-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installed Package Imports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#bundled-stdlib" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1705,6 +1716,8 @@
       
         
       
+        
+      
     
     
     
@@ -2142,6 +2155,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../api/arx/package_index/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code> package_index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -2173,7 +2214,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1_13" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -2195,14 +2236,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_6_1_12" id="__nav_6_1_12_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_6_1_13" id="__nav_6_1_13_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_6_1_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6_1_12">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_6_1_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_1_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -9117,6 +9158,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#installed-package-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installed Package Imports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#bundled-stdlib" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9270,6 +9322,50 @@ import clamp from ..shared.math
 <p>Use absolute dotted paths for public imports across package boundaries:</p>
 <div class="language-text highlight"><pre><span></span><code>import circle_area from geometry.shapes.area
 </code></pre></div>
+<h2 id="installed-package-imports">Installed Package Imports<a class="headerlink" href="#installed-package-imports" title="Permanent link">&para;</a></h2>
+<p>Arx can also resolve absolute imports from installed Arx source packages
+declared in <code class="language-python highlight"><span class="p">[</span><span class="n">project</span><span class="p">]</span><span class="o">.</span><span class="n">dependencies</span></code> in <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code>.</p>
+<p>For example, if the current project declares an installed dependency that
+exposes a package root named <code class="language-python highlight"><span class="n">local_lib</span></code>, this import resolves from that
+installed package when no local project source shadows it:</p>
+<div class="language-text highlight"><pre><span></span><code>import sum2 from local_lib.stats
+</code></pre></div>
+<p>Installed package lookup is scoped to the current Python environment running
+<code class="language-python highlight"><span class="n">arx</span></code>. The compiler reads installed distribution metadata, follows transitive
+dependency metadata, and uses packaged <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code> files to find Arx
+source roots. It does not install packages, access the network, or change
+generated IR/codegen behavior.</p>
+<p>For installed packages with the normal project layout, place <code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code>
+at the packaged project root and declare both <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code> and
+<code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">package</span></code>:</p>
+<div class="language-text highlight"><pre><span></span><code>site-packages/local_lib_project/
+├── .arxproject.toml
+└── src
+    └── local_lib
+        ├── __init__.x
+        └── stats.x
+</code></pre></div>
+<div class="language-toml highlight"><pre><span></span><code><span class="k">[build]</span>
+<span class="n">src_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src&quot;</span>
+<span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local_lib&quot;</span>
+</code></pre></div>
+<p>With that layout, <code class="language-python highlight"><span class="n">local_lib</span><span class="o">.</span><span class="n">stats</span></code> resolves to
+<code class="language-python highlight"><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">local_lib_project</span><span class="o">/</span><span class="n">src</span><span class="o">/</span><span class="n">local_lib</span><span class="o">/</span><span class="n">stats</span><span class="o">.</span><span class="n">x</span></code>.</p>
+<p>Flat package layouts are also supported for packages that place
+<code class="language-python highlight"><span class="o">.</span><span class="n">arxproject</span><span class="o">.</span><span class="n">toml</span></code> and <code class="language-python highlight"><span class="o">.</span><span class="n">x</span></code> files directly in the package directory:</p>
+<div class="language-text highlight"><pre><span></span><code>site-packages/local_lib/
+├── .arxproject.toml
+├── __init__.x
+└── stats.x
+</code></pre></div>
+<p>Resolution precedence is:</p>
+<ol>
+<li>local/current project source files</li>
+<li>installed Arx dependency packages</li>
+<li>unresolved import error</li>
+</ol>
+<p>The reserved <code class="language-python highlight"><span class="n">stdlib</span></code> and internal <code class="language-python highlight"><span class="n">builtins</span></code> namespaces always remain owned by
+the compiler and cannot be replaced by installed packages.</p>
 <h2 id="bundled-stdlib">Bundled <code class="language-python highlight"><span class="n">stdlib</span></code><a class="headerlink" href="#bundled-stdlib" title="Permanent link">&para;</a></h2>
 <p>Arx ships a first-party standard library namespace called <code class="language-python highlight"><span class="n">stdlib</span></code>.</p>
 <ul>
