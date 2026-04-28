@@ -13,6 +13,7 @@ dependencies = [
   "astx == 1.21.0",  # semantic-release
   "pyirx == 1.21.0",  # semantic-release
   "jsonschema (>=4.0.0)",
+  "packaging >=23",
   "types-pyyaml (>=6.0.12.20250516)",
   "tomli >=2.0.0 ; python_version < \"3.11\""
 ]

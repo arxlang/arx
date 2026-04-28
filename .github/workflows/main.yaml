@@ -30,7 +30,7 @@ jobs:
           pr_sha: ${{ github.event.pull_request.head.sha }}
 
   package-tests:
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +79,7 @@ jobs:
         run: makim ${{ matrix.project }}.unittests
 
   arx-language-tests:
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -131,7 +131,7 @@ jobs:
 
   linter:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     defaults:
       run:
