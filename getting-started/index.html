@@ -9833,14 +9833,25 @@ as dotted package modules.</p>
 <div class="language-toml highlight"><pre><span></span><code><span class="k">[project]</span>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry&quot;</span>
 <span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span>
+<span class="n">requires-arx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&gt;=1.0&quot;</span>
 
 <span class="k">[environment]</span>
 <span class="n">kind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;conda&quot;</span>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;geometry&quot;</span>
 
+<span class="k">[build-system]</span>
+<span class="n">dependencies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="s2">&quot;arxlang&gt;=1.0&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
 <span class="k">[build]</span>
 <span class="n">out_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;build&quot;</span>
 </code></pre></div>
+<p>Use <code class="language-python highlight"><span class="p">[</span><span class="n">project</span><span class="p">]</span><span class="o">.</span><span class="n">requires</span><span class="o">-</span><span class="n">arx</span></code> to declare the compatible Arx compiler versions for
+a project. The value uses the same version-specifier style as <code class="language-python highlight"><span class="n">requires</span><span class="o">-</span><span class="n">python</span></code>,
+for example <code class="language-python highlight"><span class="s2">&quot;&gt;=1.0,&lt;2&quot;</span></code>. <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="o">-</span><span class="n">system</span><span class="p">]</span><span class="o">.</span><span class="n">dependencies</span></code> declares installable
+packages needed to build the project. If omitted, Arx defaults to <code class="language-python highlight"><span class="n">arxlang</span></code>; if
+<code class="language-python highlight"><span class="n">requires</span><span class="o">-</span><span class="n">arx</span></code> is present, the default build dependency uses that constraint.</p>
 <p>Use <code class="language-python highlight"><span class="fm">__init__</span><span class="o">.</span><span class="n">x</span></code> as the package root. Arx uses <code class="language-python highlight"><span class="n">src</span><span class="o">/</span></code> as the default source root
 when <code class="language-python highlight"><span class="p">[</span><span class="n">build</span><span class="p">]</span><span class="o">.</span><span class="n">src_dir</span></code> is omitted. Inside a nested module such as
 <code class="language-python highlight"><span class="n">geometry</span><span class="o">.</span><span class="n">shapes</span><span class="o">.</span><span class="n">area</span></code>, use relative <code class="language-python highlight"><span class="kn">from</span></code> imports for nearby modules and
