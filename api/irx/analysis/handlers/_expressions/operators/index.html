@@ -9155,7 +9155,7 @@
 
 
 <a href="#irx.analysis.handlers._expressions.operators.ExpressionOperatorVisitorMixin.visit" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="            PrintExpr (astx.PrintExpr)" href="../../../../../astx/#astx.PrintExpr">PrintExpr</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="            TypeOfExpr (astx.TypeOfExpr)" href="../../../../../astx/#astx.TypeOfExpr">TypeOfExpr</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -9165,63 +9165,37 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/irx/src/irx/analysis/handlers/_expressions/operators.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@SemanticAnalyzerCore</span><span class="o">.</span><span class="n">visit</span><span class="o">.</span><span class="n">dispatch</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@SemanticAnalyzerCore</span><span class="o">.</span><span class="n">visit</span><span class="o">.</span><span class="n">dispatch</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">TypeOfExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    title: Visit PrintExpr nodes.</span>
+<span class="sd">    title: Visit TypeOfExpr nodes.</span>
 <span class="sd">    parameters:</span>
 <span class="sd">      node:</span>
-<span class="sd">        type: astx.PrintExpr</span>
+<span class="sd">        type: astx.TypeOfExpr</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_require_value_expression</span><span class="p">(</span>
-        <span class="n">node</span><span class="o">.</span><span class="n">message</span><span class="p">,</span>
-        <span class="n">context</span><span class="o">=</span><span class="s2">&quot;PrintExpr&quot;</span><span class="p">,</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">context</span><span class="o">=</span><span class="s2">&quot;TypeOfExpr&quot;</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_type</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_type</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">astx</span><span class="o">.</span><span class="n">String</span><span class="p">())</span>
         <span class="k">return</span>
-    <span class="n">message_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expr_type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-        <span class="n">is_string_type</span><span class="p">(</span><span class="n">message_type</span><span class="p">)</span>
-        <span class="ow">or</span> <span class="n">is_integer_type</span><span class="p">(</span><span class="n">message_type</span><span class="p">)</span>
-        <span class="ow">or</span> <span class="n">is_float_type</span><span class="p">(</span><span class="n">message_type</span><span class="p">)</span>
-        <span class="ow">or</span> <span class="n">is_boolean_type</span><span class="p">(</span><span class="n">message_type</span><span class="p">)</span>
-    <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">diagnostics</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-            <span class="s2">&quot;unsupported PrintExpr message type &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">display_type_name</span><span class="p">(</span><span class="n">message_type</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
-            <span class="n">code</span><span class="o">=</span><span class="n">DiagnosticCodes</span><span class="o">.</span><span class="n">SEMANTIC_TYPE_MISMATCH</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_set_type</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">())</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_set_type</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">astx</span><span class="o">.</span><span class="n">String</span><span class="p">())</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

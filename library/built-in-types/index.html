@@ -635,10 +635,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#casting" class="md-nav__link">
+  <a href="#type-aware-builtins" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Casting
+        Type-aware builtins
       
     </span>
   </a>
@@ -9110,10 +9110,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#casting" class="md-nav__link">
+  <a href="#type-aware-builtins" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Casting
+        Type-aware builtins
       
     </span>
   </a>
@@ -9442,11 +9442,24 @@ by Arrow C++ <code class="language-python highlight"><span class="n">ChunkedArra
   var ids: series[i32] = rows[&quot;id&quot;]
   return cast(rows.nrows(), i32)
 </code></pre></div>
-<h2 id="casting">Casting<a class="headerlink" href="#casting" title="Permanent link">&para;</a></h2>
+<h2 id="type-aware-builtins">Type-aware builtins<a class="headerlink" href="#type-aware-builtins" title="Permanent link">&para;</a></h2>
 <p>Use the built-in <code class="language-python highlight"><span class="n">cast</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> helper to convert values between supported
 types.</p>
 <div class="language-text highlight"><pre><span></span><code>fn cast_demo(a: i32) -&gt; str:
   return cast(a, str)
+</code></pre></div>
+<p>Use <code class="language-python highlight"><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> to compare the static semantic type of a value
+with a concrete type, type alias, or finite union type.</p>
+<div class="language-text highlight"><pre><span></span><code>type Number = i32 | i64
+
+fn check(value: i32) -&gt; bool:
+  return isinstance(value, Number)
+</code></pre></div>
+<p>Use <code class="language-python highlight"><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code> to produce the value's semantic type name as <code class="language-python highlight"><span class="nb">str</span></code>.</p>
+<div class="language-text highlight"><pre><span></span><code>type Count = i32
+
+fn type_name(value: Count) -&gt; str:
+  return type(value)
 </code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

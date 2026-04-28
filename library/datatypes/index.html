@@ -563,6 +563,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#type-aliases-and-union-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Aliases And Union Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#built-in-type-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9011,6 +9022,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#type-aliases-and-union-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Aliases And Union Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#built-in-type-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9077,8 +9099,10 @@ fn add(a: i32, b: i32) -&gt; i32:
 <p>Common places where types appear:</p>
 <ul>
 <li>function parameters: <code class="language-python highlight"><span class="n">fn</span> <span class="n">add</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">i32</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">i32</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">i32</span><span class="p">:</span></code></li>
+<li>union function parameters: <code class="language-python highlight"><span class="n">fn</span> <span class="nb">id</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">i32</span> <span class="o">|</span> <span class="n">i64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">i32</span> <span class="o">|</span> <span class="n">i64</span><span class="p">:</span></code></li>
 <li>function return types: <code class="language-python highlight"><span class="n">fn</span> <span class="n">test_add</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">none</span><span class="p">:</span></code></li>
 <li>variable declarations: <code class="language-python highlight"><span class="n">var</span> <span class="n">total</span><span class="p">:</span> <span class="n">i32</span> <span class="o">=</span> <span class="mi">0</span></code></li>
+<li>type aliases: <code class="language-python highlight"><span class="nb">type</span> <span class="n">Number</span> <span class="o">=</span> <span class="n">i32</span> <span class="o">|</span> <span class="n">i64</span></code></li>
 <li>generic collection annotations: <code class="language-python highlight"><span class="nb">list</span><span class="p">[</span><span class="n">i32</span><span class="p">]</span></code></li>
 <li>shaped 1D tensor annotations: <code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span></code></li>
 <li>multidimensional tensor annotations: <code class="language-python highlight"><span class="n">tensor</span><span class="p">[</span><span class="n">i32</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span></code></li>
@@ -9095,6 +9119,26 @@ but indexed access currently requires a static-shape tensor annotation.</p>
 function and extern parameter annotations. Static-schema DataFrames can be
 constructed with <code class="language-python highlight"><span class="n">dataframe</span><span class="p">({</span><span class="o">...</span><span class="p">})</span></code>, and their columns can be accessed with
 either <code class="language-python highlight"><span class="n">rows</span><span class="o">.</span><span class="n">score</span></code> or <code class="language-python highlight"><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span></code>.</p>
+<h2 id="type-aliases-and-union-types">Type Aliases And Union Types<a class="headerlink" href="#type-aliases-and-union-types" title="Permanent link">&para;</a></h2>
+<p>Type aliases are top-level declarations. The <code class="language-python highlight"><span class="nb">type</span></code> word is contextual, so
+<code class="language-python highlight"><span class="nb">type</span> <span class="n">Name</span> <span class="o">=</span> <span class="o">...</span></code> declares an alias while <code class="language-python highlight"><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code> calls the builtin
+type-name helper.</p>
+<div class="language-text highlight"><pre><span></span><code>```
+title: Type alias example
+summary: Demonstrates a finite numeric union alias.
+```
+type Number = i32 | i64
+
+fn identity(value: Number) -&gt; Number:
+  ```
+  title: identity
+  summary: Returns a numeric union value.
+  ```
+  return value
+</code></pre></div>
+<p>Union annotations use <code class="language-python highlight"><span class="o">|</span></code>. Numeric unions currently lower through a shared
+numeric storage type. Runtime tagged unions and runtime narrowing are not part
+of the current model.</p>
 <h2 id="built-in-type-reference">Built-in Type Reference<a class="headerlink" href="#built-in-type-reference" title="Permanent link">&para;</a></h2>
 <p>For the catalog of built-in types, aliases, and examples, see
 <a href="../built-in-types/">Built-in Types</a>.</p>
@@ -9105,6 +9149,7 @@ either <code class="language-python highlight"><span class="n">rows</span><span 
 <li>string, character, and temporal types</li>
 <li>lists, tensors, dataframes, series, and current limitations</li>
 <li>the <code class="language-python highlight"><span class="n">cast</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> helper</li>
+<li>the <code class="language-python highlight"><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code> and <code class="language-python highlight"><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code> helpers</li>
 </ul>
 
 

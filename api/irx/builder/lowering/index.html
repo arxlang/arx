@@ -11720,7 +11720,7 @@
 
 
 <a href="#irx.builder.lowering.SystemVisitorMixin.visit" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="            PrintExpr (astx.PrintExpr)" href="../../../astx/#astx.PrintExpr">PrintExpr</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="            TypeOfExpr (astx.TypeOfExpr)" href="../../../astx/#astx.TypeOfExpr">TypeOfExpr</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11730,101 +11730,37 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/irx/src/irx/builder/lowering/system.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
-<span class="normal"> 85</span>
-<span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@VisitorCore</span><span class="o">.</span><span class="n">visit</span><span class="o">.</span><span class="n">dispatch</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@VisitorCore</span><span class="o">.</span><span class="n">visit</span><span class="o">.</span><span class="n">dispatch</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">TypeOfExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    title: Visit PrintExpr nodes.</span>
+<span class="sd">    title: Visit TypeOfExpr nodes.</span>
 <span class="sd">    parameters:</span>
 <span class="sd">      node:</span>
-<span class="sd">        type: astx.PrintExpr</span>
+<span class="sd">        type: astx.TypeOfExpr</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">visit_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
-    <span class="n">message_value</span> <span class="o">=</span> <span class="n">safe_pop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_stack</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">message_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Invalid message in PrintExpr&quot;</span><span class="p">)</span>
-
-    <span class="n">message_source_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolved_ast_type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
-    <span class="n">message_type</span> <span class="o">=</span> <span class="n">message_value</span><span class="o">.</span><span class="n">type</span>
-    <span class="n">ptr</span><span class="p">:</span> <span class="n">ir</span><span class="o">.</span><span class="n">Value</span>
-    <span class="k">if</span> <span class="p">(</span>
-        <span class="nb">isinstance</span><span class="p">(</span><span class="n">message_type</span><span class="p">,</span> <span class="n">ir</span><span class="o">.</span><span class="n">PointerType</span><span class="p">)</span>
-        <span class="ow">and</span> <span class="n">message_type</span><span class="o">.</span><span class="n">pointee</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_llvm</span><span class="o">.</span><span class="n">INT8_TYPE</span>
-    <span class="p">):</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="n">message_value</span>
-    <span class="k">elif</span> <span class="n">is_int_type</span><span class="p">(</span><span class="n">message_type</span><span class="p">):</span>
-        <span class="n">int_arg</span><span class="p">,</span> <span class="n">int_fmt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_int_for_printf</span><span class="p">(</span>
-            <span class="n">message_value</span><span class="p">,</span>
-            <span class="n">unsigned</span><span class="o">=</span><span class="n">is_unsigned_type</span><span class="p">(</span><span class="n">message_source_type</span><span class="p">)</span>
-            <span class="ow">or</span> <span class="n">is_boolean_type</span><span class="p">(</span><span class="n">message_source_type</span><span class="p">),</span>
-        <span class="p">)</span>
-        <span class="n">int_fmt_gv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_or_create_format_global</span><span class="p">(</span><span class="n">int_fmt</span><span class="p">)</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_snprintf_heap</span><span class="p">(</span><span class="n">int_fmt_gv</span><span class="p">,</span> <span class="p">[</span><span class="n">int_arg</span><span class="p">])</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span>
-        <span class="n">message_type</span><span class="p">,</span> <span class="p">(</span><span class="n">ir</span><span class="o">.</span><span class="n">HalfType</span><span class="p">,</span> <span class="n">ir</span><span class="o">.</span><span class="n">FloatType</span><span class="p">,</span> <span class="n">ir</span><span class="o">.</span><span class="n">DoubleType</span><span class="p">)</span>
-    <span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">message_type</span><span class="p">,</span> <span class="p">(</span><span class="n">ir</span><span class="o">.</span><span class="n">HalfType</span><span class="p">,</span> <span class="n">ir</span><span class="o">.</span><span class="n">FloatType</span><span class="p">)):</span>
-            <span class="n">float_arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_llvm</span><span class="o">.</span><span class="n">ir_builder</span><span class="o">.</span><span class="n">fpext</span><span class="p">(</span>
-                <span class="n">message_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_llvm</span><span class="o">.</span><span class="n">DOUBLE_TYPE</span><span class="p">,</span> <span class="s2">&quot;print_to_double&quot;</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">float_arg</span> <span class="o">=</span> <span class="n">message_value</span>
-        <span class="n">float_fmt_gv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_or_create_format_global</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%.6f</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">ptr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_snprintf_heap</span><span class="p">(</span><span class="n">float_fmt_gv</span><span class="p">,</span> <span class="p">[</span><span class="n">float_arg</span><span class="p">])</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Unsupported message type in PrintExpr: </span><span class="si">{</span><span class="n">message_type</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
-
-    <span class="n">puts_fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">require_runtime_symbol</span><span class="p">(</span><span class="s2">&quot;libc&quot;</span><span class="p">,</span> <span class="s2">&quot;puts&quot;</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_llvm</span><span class="o">.</span><span class="n">ir_builder</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">puts_fn</span><span class="p">,</span> <span class="p">[</span><span class="n">ptr</span><span class="p">])</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">result_stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ir</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_llvm</span><span class="o">.</span><span class="n">INT32_TYPE</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit_child</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">safe_pop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_stack</span><span class="p">)</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="n">display_type_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolved_ast_type</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+    <span class="n">pointer</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Any</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_constant_c_string_pointer</span><span class="p">(</span>
+        <span class="n">type_name</span><span class="p">,</span>
+        <span class="n">name_hint</span><span class="o">=</span><span class="s2">&quot;type_name&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">result_stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
