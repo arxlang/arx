@@ -1904,6 +1904,77 @@ def _write_installed_arx_distribution(
     return package_dir
 
 
+def _write_installed_arx_src_distribution(
+    site_packages: Path,
+    distribution_name: str,
+    project_dir_name: str,
+    module_name: str,
+    files: dict[str, str],
+    requires: tuple[str, ...] = (),
+) -> Path:
+    """
+    title: Write an installed Arx distribution with a src package layout.
+    parameters:
+      site_packages:
+        type: Path
+      distribution_name:
+        type: str
+      project_dir_name:
+        type: str
+      module_name:
+        type: str
+      files:
+        type: dict[str, str]
+      requires:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: Path
+    """
+    project_dir = site_packages / project_dir_name
+    package_dir = project_dir / "src" / module_name
+    package_dir.mkdir(parents=True)
+    manifest_path = project_dir / ".arxproject.toml"
+    manifest_path.write_text(
+        f'[project]\nname = "{distribution_name}"\nversion = "0.1.0"\n'
+        f'[build]\nsrc_dir = "src"\npackage = "{module_name}"\n\n',
+        encoding="utf-8",
+    )
+
+    record_paths = [manifest_path.relative_to(site_packages)]
+    for relative_name, content in files.items():
+        file_path = package_dir / relative_name
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content, encoding="utf-8")
+        record_paths.append(file_path.relative_to(site_packages))
+
+    dist_info_name = distribution_name.replace("-", "_")
+    dist_info = site_packages / f"{dist_info_name}-0.1.dist-info"
+    dist_info.mkdir()
+    metadata_path = dist_info / "METADATA"
+    requires_lines = "".join(
+        f"Requires-Dist: {requirement}\n" for requirement in requires
+    )
+    metadata_path.write_text(
+        "Metadata-Version: 2.1\n"
+        f"Name: {distribution_name}\n"
+        "Version: 0.1.0\n"
+        f"{requires_lines}",
+        encoding="utf-8",
+    )
+    record_path = dist_info / "RECORD"
+    record_paths.extend(
+        (
+            metadata_path.relative_to(site_packages),
+            record_path.relative_to(site_packages),
+        )
+    )
+    record_path.write_text(
+        "".join(f"{path.as_posix()},,\n" for path in record_paths),
+        encoding="utf-8",
+    )
+    return package_dir
+
+
 def _write_python_only_distribution(
     site_packages: Path,
     distribution_name: str,
@@ -2110,6 +2181,107 @@ def test_file_import_resolver_resolves_transitive_installed_arx_dependency(
     resolved = resolver._resolve_module_file("project_b.tools")
 
     assert resolved == (package_b_dir / "tools.x").resolve()
+
+
+def test_file_import_resolver_skips_inactive_transitive_requirements(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Inactive metadata markers are not indexed as Arx dependencies.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("fn main() -> i32:\n  return 0\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-project-a",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-project-a",
+        "project_a",
+        {"__init__.x": ""},
+        requires=(
+            'arx-optional-lib; extra == "dev"',
+            'arx-platform-lib; sys_platform == "never-matches"',
+        ),
+    )
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-optional-lib",
+        "optional_lib",
+        {"__init__.x": "", "tools.x": "fn helper() -> i32:\n  return 1\n"},
+    )
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-platform-lib",
+        "platform_lib",
+        {"__init__.x": "", "tools.x": "fn helper() -> i32:\n  return 2\n"},
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    with pytest.raises(LookupError, match="optional_lib"):
+        resolver._resolve_module_file("optional_lib.tools")
+    with pytest.raises(LookupError, match="platform_lib"):
+        resolver._resolve_module_file("platform_lib.tools")
+
+
+def test_file_import_resolver_honors_installed_package_src_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Installed Arx package discovery honors build src_dir and package.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import sum2 from local_lib.stats\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-src-layout-lib",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    package_dir = _write_installed_arx_src_distribution(
+        site_packages,
+        "arx-test-src-layout-lib",
+        "src_layout_project",
+        "local_lib",
+        {
+            "__init__.x": "",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    resolved = resolver._resolve_module_file("local_lib.stats")
+
+    assert resolved == (package_dir / "stats.x").resolve()
 
 
 def test_file_import_resolver_local_source_shadows_installed_package(

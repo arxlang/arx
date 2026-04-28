@@ -15,6 +15,8 @@ from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import Any
 
+from packaging.requirements import InvalidRequirement, Requirement
+
 from arx import builtins as arx_builtins
 from arx import settings as arx_settings
 
@@ -111,10 +113,34 @@ def extract_dependency_name(dependency: str) -> str | None:
     returns:
       type: str | None
     """
+    try:
+        return Requirement(dependency).name
+    except InvalidRequirement:
+        pass
+
     match = _DEPENDENCY_NAME_PATTERN.match(dependency)
     if match is None:
         return None
     return match.group("name")
+
+
+def active_requirement_name(requirement_text: str) -> str | None:
+    """
+    title: Return the distribution name for an active metadata requirement.
+    parameters:
+      requirement_text:
+        type: str
+    returns:
+      type: str | None
+    """
+    try:
+        requirement = Requirement(requirement_text)
+    except InvalidRequirement:
+        return None
+
+    if requirement.marker is not None and not requirement.marker.evaluate():
+        return None
+    return requirement.name
 
 
 def discover_installed_arx_packages(
@@ -180,7 +206,7 @@ def discover_installed_arx_packages_from_dependencies(
             _add_package(package_entries, conflict_entries, package)
 
         for requirement in distribution.requires or ():
-            requirement_name = extract_dependency_name(requirement)
+            requirement_name = active_requirement_name(requirement)
             if requirement_name is None:
                 continue
             if normalize_distribution_name(requirement_name) in visited:
@@ -238,7 +264,6 @@ def _arx_packages_from_distribution(
     if files is None:
         return ()
 
-    distribution_name = _distribution_name(distribution)
     packages: list[InstalledArxPackage] = []
     for distribution_file in files:
         if distribution_file.name != arx_settings.DEFAULT_CONFIG_FILENAME:
@@ -250,21 +275,14 @@ def _arx_packages_from_distribution(
         if not manifest_path.is_file():
             continue
 
-        source_root = manifest_path.parent
-        if not _has_arx_sources(source_root):
-            continue
-
-        module_name = _module_name_from_manifest(manifest_path, source_root)
-        if module_name is None or module_name in _RESERVED_MODULE_NAMES:
-            continue
-
-        packages.append(
-            InstalledArxPackage(
-                module_name=module_name,
-                source_root=source_root,
-                distribution_name=distribution_name,
-            )
+        package = _package_from_manifest(
+            _distribution_name(distribution),
+            manifest_path,
         )
+        if package is None:
+            continue
+
+        packages.append(package)
 
     return tuple(packages)
 
@@ -301,31 +319,46 @@ def _has_arx_sources(source_root: Path) -> bool:
     return False
 
 
-def _module_name_from_manifest(
+def _package_from_manifest(
+    distribution_name: str,
     manifest_path: Path,
-    source_root: Path,
-) -> str | None:
+) -> InstalledArxPackage | None:
     """
-    title: Derive the top-level Arx module name for an installed package.
+    title: Build one installed Arx package entry from a manifest.
     parameters:
+      distribution_name:
+        type: str
       manifest_path:
         type: Path
-      source_root:
-        type: Path
     returns:
-      type: str | None
+      type: InstalledArxPackage | None
     """
     data = _load_manifest_data(manifest_path)
     if data is None:
         return None
 
     module_name = _manifest_package_name(data)
+    source_root = _manifest_source_root(
+        data,
+        manifest_path.parent,
+        module_name,
+    )
+    if source_root is None:
+        return None
+
     if module_name is None:
         module_name = source_root.name
 
-    if _ARX_MODULE_NAME_PATTERN.fullmatch(module_name) is None:
+    if (
+        _ARX_MODULE_NAME_PATTERN.fullmatch(module_name) is None
+        or module_name in _RESERVED_MODULE_NAMES
+    ):
         return None
-    return module_name
+    return InstalledArxPackage(
+        module_name=module_name,
+        source_root=source_root,
+        distribution_name=distribution_name,
+    )
 
 
 def _load_manifest_data(manifest_path: Path) -> dict[str, Any] | None:
@@ -364,3 +397,86 @@ def _manifest_package_name(data: dict[str, Any]) -> str | None:
     if not isinstance(package_name, str):
         return None
     return package_name
+
+
+def _manifest_src_dir(data: dict[str, Any]) -> str | None:
+    """
+    title: Extract an optional explicit ``[build].src_dir`` value.
+    parameters:
+      data:
+        type: dict[str, Any]
+    returns:
+      type: str | None
+    """
+    build = data.get("build")
+    if not isinstance(build, dict):
+        return None
+
+    src_dir = build.get("src_dir")
+    if not isinstance(src_dir, str):
+        return None
+    return src_dir
+
+
+def _manifest_source_root(
+    data: dict[str, Any],
+    manifest_parent: Path,
+    module_name: str | None,
+) -> Path | None:
+    """
+    title: Resolve the installed source root for one manifest.
+    parameters:
+      data:
+        type: dict[str, Any]
+      manifest_parent:
+        type: Path
+      module_name:
+        type: str | None
+    returns:
+      type: Path | None
+    """
+    candidates = _source_root_candidates(
+        manifest_parent,
+        _manifest_src_dir(data),
+        module_name,
+    )
+    for candidate in candidates:
+        source_root = candidate.resolve()
+        if _has_arx_sources(source_root):
+            return source_root
+    return None
+
+
+def _source_root_candidates(
+    manifest_parent: Path,
+    src_dir: str | None,
+    module_name: str | None,
+) -> tuple[Path, ...]:
+    """
+    title: Build candidate installed source roots in precedence order.
+    parameters:
+      manifest_parent:
+        type: Path
+      src_dir:
+        type: str | None
+      module_name:
+        type: str | None
+    returns:
+      type: tuple[Path, Ellipsis]
+    """
+    if src_dir is not None:
+        source_root = manifest_parent / src_dir
+        if module_name is not None:
+            return (source_root / module_name,)
+        return (source_root,)
+
+    candidates: list[Path] = []
+    if module_name is not None:
+        candidates.extend(
+            (
+                manifest_parent / "src" / module_name,
+                manifest_parent / module_name,
+            )
+        )
+    candidates.append(manifest_parent)
+    return tuple(candidates)

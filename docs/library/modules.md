@@ -108,6 +108,38 @@ dependency metadata, and uses packaged `.arxproject.toml` files to find Arx
 source roots. It does not install packages, access the network, or change
 generated IR/codegen behavior.
 
+For installed packages with the normal project layout, place `.arxproject.toml`
+at the packaged project root and declare both `[build].src_dir` and
+`[build].package`:
+
+```text
+site-packages/local_lib_project/
+├── .arxproject.toml
+└── src
+    └── local_lib
+        ├── __init__.x
+        └── stats.x
+```
+
+```toml
+[build]
+src_dir = "src"
+package = "local_lib"
+```
+
+With that layout, `local_lib.stats` resolves to
+`site-packages/local_lib_project/src/local_lib/stats.x`.
+
+Flat package layouts are also supported for packages that place
+`.arxproject.toml` and `.x` files directly in the package directory:
+
+```text
+site-packages/local_lib/
+├── .arxproject.toml
+├── __init__.x
+└── stats.x
+```
+
 Resolution precedence is:
 
 1. local/current project source files
