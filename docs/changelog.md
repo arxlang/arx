@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [1.21.0](https://github.com/arxlang/arx/compare/1.20.0...1.21.0) (2026-04-28)
+
+
+### Features
+
+* Add type alias, builtin functions about typing ([#77](https://github.com/arxlang/arx/issues/77)) ([87b7e28](https://github.com/arxlang/arx/commit/87b7e2817df3b4360c163ce7efea16c83e35289e))
+
 # [1.20.0](https://github.com/arxlang/arx/compare/1.19.2...1.20.0) (2026-04-27)
 
 
