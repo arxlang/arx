@@ -89,6 +89,34 @@ Use absolute dotted paths for public imports across package boundaries:
 import circle_area from geometry.shapes.area
 ```
 
+## Installed Package Imports
+
+Arx can also resolve absolute imports from installed Arx source packages
+declared in `[project].dependencies` in `.arxproject.toml`.
+
+For example, if the current project declares an installed dependency that
+exposes a package root named `local_lib`, this import resolves from that
+installed package when no local project source shadows it:
+
+```arx
+import sum2 from local_lib.stats
+```
+
+Installed package lookup is scoped to the current Python environment running
+`arx`. The compiler reads installed distribution metadata, follows transitive
+dependency metadata, and uses packaged `.arxproject.toml` files to find Arx
+source roots. It does not install packages, access the network, or change
+generated IR/codegen behavior.
+
+Resolution precedence is:
+
+1. local/current project source files
+2. installed Arx dependency packages
+3. unresolved import error
+
+The reserved `stdlib` and internal `builtins` namespaces always remain owned by
+the compiler and cannot be replaced by installed packages.
+
 ## Bundled `stdlib`
 
 Arx ships a first-party standard library namespace called `stdlib`.

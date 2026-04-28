@@ -15,6 +15,7 @@ import astx
 from irx.analysis.module_interfaces import ParsedModule
 
 from arx import builtins as arx_builtins
+from arx import package_index
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
@@ -260,11 +261,16 @@ class FileImportResolver:
         type: dict[str, ParsedModule]
       _source_root_cache:
         type: dict[Path, Path | None]
+      _installed_package_index:
+        type: package_index.InstalledArxPackageIndex | None
     """
 
     input_files: tuple[str, ...]
     cache: dict[str, ParsedModule] = field(default_factory=dict)
     _source_root_cache: dict[Path, Path | None] = field(default_factory=dict)
+    _installed_package_index: package_index.InstalledArxPackageIndex | None = (
+        None
+    )
 
     def _project_source_root(self, directory: Path) -> Path | None:
         """
@@ -404,7 +410,113 @@ class FileImportResolver:
                 return init_path
             if has_file:
                 return file_path
+        installed_path = self._resolve_installed_module_file(
+            requested_specifier
+        )
+        if installed_path is not None:
+            return installed_path
         raise LookupError(requested_specifier)
+
+    def _installed_package_start(self) -> Path:
+        """
+        title: Return the manifest search start for installed dependencies.
+        returns:
+          type: Path
+        """
+        if not self.input_files:
+            return Path.cwd()
+
+        input_root = Path(self.input_files[0]).resolve().parent
+        if arx_settings.find_config_file(start=input_root) is not None:
+            return input_root
+        return Path.cwd()
+
+    def _installed_packages(
+        self,
+    ) -> package_index.InstalledArxPackageIndex:
+        """
+        title: Lazily discover installed Arx package dependencies.
+        returns:
+          type: package_index.InstalledArxPackageIndex
+        """
+        if self._installed_package_index is None:
+            self._installed_package_index = (
+                package_index.discover_installed_arx_packages(
+                    start=self._installed_package_start()
+                )
+            )
+        return self._installed_package_index
+
+    def _resolve_installed_module_file(
+        self,
+        requested_specifier: str,
+    ) -> Path | None:
+        """
+        title: Resolve one module specifier from installed Arx packages.
+        parameters:
+          requested_specifier:
+            type: str
+        returns:
+          type: Path | None
+        """
+        specifier_parts = tuple(
+            part for part in requested_specifier.split(".") if part
+        )
+        if not specifier_parts:
+            return None
+
+        index = self._installed_packages()
+        package_name = specifier_parts[0]
+        conflicts = index.conflicts.get(package_name)
+        if conflicts is not None:
+            locations = ", ".join(
+                f"{package.distribution_name} at {package.source_root}"
+                for package in conflicts
+            )
+            raise LookupError(
+                "ambiguous installed Arx package module "
+                f"'{package_name}': provided by {locations}"
+            )
+
+        package = index.packages.get(package_name)
+        if package is None:
+            missing_distribution = index.missing_distribution_for_module(
+                package_name
+            )
+            if missing_distribution is None:
+                return None
+            raise LookupError(
+                "declared Arx dependency "
+                f"'{missing_distribution}' is not installed in the "
+                "current Python environment"
+            )
+
+        if len(specifier_parts) == 1:
+            init_path = (package.source_root / "__init__.x").resolve()
+            if init_path.is_file():
+                return init_path
+            return None
+
+        relative_path = Path(*specifier_parts[1:])
+        file_path = (
+            (package.source_root / relative_path).with_suffix(".x").resolve()
+        )
+        init_path = (
+            package.source_root / relative_path / "__init__.x"
+        ).resolve()
+        has_init = init_path.is_file()
+        has_file = file_path.is_file()
+        if has_init and has_file:
+            raise LookupError(
+                "ambiguous module specifier "
+                f"'{requested_specifier}': both "
+                f"'{file_path}' and '{init_path}' exist"
+            )
+        if has_init:
+            return init_path
+        if has_file:
+            return file_path
+        return None
 
     def _shadowing_reserved_path(
         self,

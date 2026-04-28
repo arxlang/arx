@@ -1808,6 +1808,130 @@ def test_arxmain_run_shell_not_implemented() -> None:
         app.run_shell()
 
 
+def _write_resolver_project(
+    project_root: Path,
+    name: str,
+    dependencies: tuple[str, ...] = (),
+) -> None:
+    """
+    title: Write a minimal project manifest for resolver tests.
+    parameters:
+      project_root:
+        type: Path
+      name:
+        type: str
+      dependencies:
+        type: tuple[str, Ellipsis]
+    """
+    dependency_lines = ""
+    if dependencies:
+        dependency_values = ", ".join(
+            f'"{dependency}"' for dependency in dependencies
+        )
+        dependency_lines = f"dependencies = [{dependency_values}]\n"
+
+    (project_root / ".arxproject.toml").write_text(
+        f'[project]\nname = "{name}"\nversion = "0.1.0"\n'
+        f'{dependency_lines}[build]\nsrc_dir = "src"\n\n',
+        encoding="utf-8",
+    )
+
+
+def _write_installed_arx_distribution(
+    site_packages: Path,
+    distribution_name: str,
+    module_name: str,
+    files: dict[str, str],
+    requires: tuple[str, ...] = (),
+) -> Path:
+    """
+    title: Write a minimal installed Arx distribution fixture.
+    parameters:
+      site_packages:
+        type: Path
+      distribution_name:
+        type: str
+      module_name:
+        type: str
+      files:
+        type: dict[str, str]
+      requires:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: Path
+    """
+    package_dir = site_packages / module_name
+    package_dir.mkdir(parents=True)
+    manifest_path = package_dir / ".arxproject.toml"
+    manifest_path.write_text(
+        f'[project]\nname = "{distribution_name}"\nversion = "0.1.0"\n'
+        f'[build]\npackage = "{module_name}"\n\n',
+        encoding="utf-8",
+    )
+
+    record_paths = [manifest_path.relative_to(site_packages)]
+    for relative_name, content in files.items():
+        file_path = package_dir / relative_name
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content, encoding="utf-8")
+        record_paths.append(file_path.relative_to(site_packages))
+
+    dist_info_name = distribution_name.replace("-", "_")
+    dist_info = site_packages / f"{dist_info_name}-0.1.dist-info"
+    dist_info.mkdir()
+    metadata_path = dist_info / "METADATA"
+    requires_lines = "".join(
+        f"Requires-Dist: {requirement}\n" for requirement in requires
+    )
+    metadata_path.write_text(
+        "Metadata-Version: 2.1\n"
+        f"Name: {distribution_name}\n"
+        "Version: 0.1.0\n"
+        f"{requires_lines}",
+        encoding="utf-8",
+    )
+    record_path = dist_info / "RECORD"
+    record_paths.extend(
+        (
+            metadata_path.relative_to(site_packages),
+            record_path.relative_to(site_packages),
+        )
+    )
+    record_path.write_text(
+        "".join(f"{path.as_posix()},,\n" for path in record_paths),
+        encoding="utf-8",
+    )
+    return package_dir
+
+
+def _write_python_only_distribution(
+    site_packages: Path,
+    distribution_name: str,
+) -> None:
+    """
+    title: Write a minimal non-Arx installed distribution fixture.
+    parameters:
+      site_packages:
+        type: Path
+      distribution_name:
+        type: str
+    """
+    dist_info_name = distribution_name.replace("-", "_")
+    dist_info = site_packages / f"{dist_info_name}-0.1.dist-info"
+    dist_info.mkdir(parents=True)
+    metadata_path = dist_info / "METADATA"
+    metadata_path.write_text(
+        f"Metadata-Version: 2.1\nName: {distribution_name}\nVersion: 0.1.0\n",
+        encoding="utf-8",
+    )
+    record_path = dist_info / "RECORD"
+    record_path.write_text(
+        f"{metadata_path.relative_to(site_packages).as_posix()},,\n"
+        f"{record_path.relative_to(site_packages).as_posix()},,\n",
+        encoding="utf-8",
+    )
+
+
 def test_file_import_resolver_rejects_ambiguous_package_and_module_paths(
     tmp_path: Path,
 ) -> None:
@@ -1886,6 +2010,313 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
     assert src_dir.resolve() in roots
     resolved = resolver._resolve_module_file("mypkg")
     assert resolved == (src_dir / "mypkg" / "__init__.x").resolve()
+
+
+def test_file_import_resolver_resolves_direct_installed_arx_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: FileImportResolver resolves a direct installed Arx dependency.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import sum2 from local_lib.stats\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-local-lib",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    package_dir = _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-local-lib",
+        "local_lib",
+        {
+            "__init__.x": "",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    import_node = irx_astx.ImportFromStmt(
+        [irx_astx.AliasExpr("sum2")],
+        module="local_lib.stats",
+        level=0,
+    )
+    parsed = resolver("main", import_node, "local_lib.stats")
+
+    assert parsed.key == "local_lib.stats"
+    assert parsed.origin is not None
+    assert Path(parsed.origin) == (package_dir / "stats.x").resolve()
+
+
+def test_file_import_resolver_resolves_transitive_installed_arx_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: FileImportResolver resolves transitive installed Arx dependencies.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import helper from project_b.tools\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-project-a",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-project-a",
+        "project_a",
+        {"__init__.x": "import helper from project_b.tools\n"},
+        requires=("arx-test-project-b >= 0.1",),
+    )
+    package_b_dir = _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-project-b",
+        "project_b",
+        {
+            "__init__.x": "",
+            "tools.x": "fn helper() -> i32:\n  return 4\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    resolved = resolver._resolve_module_file("project_b.tools")
+
+    assert resolved == (package_b_dir / "tools.x").resolve()
+
+
+def test_file_import_resolver_local_source_shadows_installed_package(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Local project source keeps precedence over installed packages.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    local_package = src_dir / "local_lib"
+    local_package.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import sum2 from local_lib.stats\n", encoding="utf-8")
+    local_stats = local_package / "stats.x"
+    local_stats.write_text("fn sum2() -> i32:\n  return 1\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-shadow-lib",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-shadow-lib",
+        "local_lib",
+        {
+            "__init__.x": "",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    resolved = resolver._resolve_module_file("local_lib.stats")
+
+    assert resolved == local_stats.resolve()
+
+
+def test_file_import_resolver_ignores_python_only_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Python-only installed dependencies are not Arx import roots.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("fn main() -> i32:\n  return 0\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-python-only",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_python_only_distribution(site_packages, "arx-test-python-only")
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    with pytest.raises(LookupError, match="python_only"):
+        resolver._resolve_module_file("python_only")
+
+
+def test_file_import_resolver_reports_missing_installed_dependency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Missing declared installed dependencies get a clear error.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text(
+        "import helper from arx_missing_lib.tools\n", encoding="utf-8"
+    )
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-missing-lib",),
+    )
+
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    with pytest.raises(
+        LookupError,
+        match="declared Arx dependency 'arx-missing-lib' is not installed",
+    ):
+        resolver._resolve_module_file("arx_missing_lib.tools")
+
+
+def test_file_import_resolver_rejects_ambiguous_installed_module_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Installed packages reject ambiguous module and package paths.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import value from local_lib.mod\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-ambiguous-lib",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-ambiguous-lib",
+        "local_lib",
+        {
+            "__init__.x": "",
+            "mod.x": "fn value() -> i32:\n  return 1\n",
+            "mod/__init__.x": "fn value() -> i32:\n  return 2\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    with pytest.raises(
+        LookupError,
+        match=r"ambiguous module specifier 'local_lib\.mod'",
+    ):
+        resolver._resolve_module_file("local_lib.mod")
+
+
+def test_file_import_resolver_keeps_reserved_namespaces_bundled(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Installed packages do not shadow reserved compiler namespaces.
+    parameters:
+      tmp_path:
+        type: Path
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    project_root = tmp_path / "app"
+    src_dir = project_root / "src"
+    src_dir.mkdir(parents=True)
+    source = src_dir / "main.x"
+    source.write_text("import math from stdlib\n", encoding="utf-8")
+    _write_resolver_project(
+        project_root,
+        "app",
+        dependencies=("arx-test-stdlib-shadow",),
+    )
+
+    site_packages = tmp_path / "site-packages"
+    _write_installed_arx_distribution(
+        site_packages,
+        "arx-test-stdlib-shadow",
+        "stdlib",
+        {
+            "__init__.x": "",
+            "math.x": "fn square(value: i32) -> i32:\n  return value\n",
+        },
+    )
+
+    monkeypatch.syspath_prepend(str(site_packages))
+    monkeypatch.chdir(project_root)
+
+    resolver = main_module.FileImportResolver((str(source),))
+    resolved = resolver._resolve_module_file("stdlib.math")
+
+    assert (
+        resolved
+        == (main_module.get_bundled_stdlib_root() / "math.x").resolve()
+    )
 
 
 def test_file_import_resolver_supports_nested_relative_imports(
