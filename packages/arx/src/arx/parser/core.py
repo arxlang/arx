@@ -41,6 +41,8 @@ class ParserCore(ParserMixinBase):
         type: list[astx.DataType]
       template_type_scopes:
         type: list[dict[str, astx.DataType]]
+      type_aliases:
+        type: dict[str, astx.DataType]
       value_scopes:
         type: list[set[str]]
       tokens:
@@ -55,6 +57,7 @@ class ParserCore(ParserMixinBase):
     dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
+    type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
     tokens: TokenList
 
@@ -89,6 +92,7 @@ class ParserCore(ParserMixinBase):
         self.dataframe_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
+        self.type_aliases = {}
         self.value_scopes = [set()]
         self.tokens = tokens
 
@@ -103,6 +107,7 @@ class ParserCore(ParserMixinBase):
         self.dataframe_scopes = [{}]
         self.return_type_scopes = []
         self.template_type_scopes = []
+        self.type_aliases = {}
         self.value_scopes = [set()]
         self.tokens = TokenList([])
 
@@ -194,6 +199,11 @@ class ParserCore(ParserMixinBase):
 
             if self.tokens.cur_tok.kind == TokenKind.kw_import:
                 tree.nodes.append(self.parse_import_stmt())
+                allow_module_docstring = False
+                continue
+
+            if self.is_type_alias_decl_start():
+                self.parse_type_alias_decl()
                 allow_module_docstring = False
                 continue
 

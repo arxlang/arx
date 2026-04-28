@@ -10,6 +10,7 @@ from irx.analysis.types import (
     clone_type,
     display_type_name,
     is_assignable,
+    is_type_member,
     requires_shape_check,
     requires_size_check,
     same_type,
@@ -100,6 +101,63 @@ def test_same_type_allows_unconstrained_tensor_shape_wildcard() -> None:
         astx.TensorType(astx.Float64(), shape=(2, 3)),
         astx.TensorType(astx.Float64(), shape=(3, 2)),
     )
+
+
+def test_union_same_type_ignores_alias_names() -> None:
+    """
+    title: Union same_type treats aliases as structural names.
+    """
+    left = astx.UnionType(
+        (astx.Int32(), astx.Int64()),
+        alias_name="A",
+    )
+    right = astx.UnionType(
+        (astx.Int64(), astx.Int32()),
+        alias_name="B",
+    )
+
+    assert same_type(left, right)
+
+
+def test_union_assignability_is_structural() -> None:
+    """
+    title: Union assignment accepts structural aliases and safe subsets.
+    """
+    alias_a = astx.UnionType(
+        (astx.Int32(), astx.Int64()),
+        alias_name="A",
+    )
+    alias_b = astx.UnionType(
+        (astx.Int32(), astx.Int64()),
+        alias_name="B",
+    )
+    explicit = astx.UnionType((astx.Int32(), astx.Int64()))
+    subset = astx.UnionType((astx.Int32(),))
+
+    assert is_assignable(alias_b, alias_a)
+    assert is_assignable(explicit, alias_a)
+    assert is_assignable(alias_a, explicit)
+    assert is_assignable(alias_a, subset)
+    assert not is_assignable(subset, alias_a)
+
+
+def test_is_type_member_uses_exact_structural_membership() -> None:
+    """
+    title: Type membership avoids assignment-only numeric widening.
+    """
+    alias_a = astx.UnionType(
+        (astx.Int32(), astx.Int64()),
+        alias_name="A",
+    )
+    alias_b = astx.UnionType(
+        (astx.Int64(), astx.Int32()),
+        alias_name="B",
+    )
+
+    assert is_type_member(alias_a, astx.Int32())
+    assert is_type_member(alias_a, alias_b)
+    assert not is_type_member(astx.Int64(), astx.Int32())
+    assert not is_type_member(astx.Int64(), alias_a)
 
 
 def test_tensor_assignability_checks_known_shapes() -> None:

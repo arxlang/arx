@@ -217,38 +217,61 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
     returns:
       type: astx.DataType
     """
+
+    def with_alias(cloned: astx.DataType) -> astx.DataType:
+        """
+        title: Preserve alias metadata on a cloned type.
+        parameters:
+          cloned:
+            type: astx.DataType
+        returns:
+          type: astx.DataType
+        """
+        alias_name = getattr(type_, "alias_name", None)
+        if isinstance(alias_name, str):
+            setattr(cloned, "alias_name", alias_name)
+        return cloned
+
     if isinstance(type_, astx.UnionType):
         return astx.UnionType(
             tuple(clone_type(member) for member in type_.members),
             alias_name=type_.alias_name,
         )
     if isinstance(type_, astx.TemplateTypeVar):
-        return astx.TemplateTypeVar(
-            type_.name,
-            bound=clone_type(type_.bound),
+        return with_alias(
+            astx.TemplateTypeVar(
+                type_.name,
+                bound=clone_type(type_.bound),
+            )
         )
     if isinstance(type_, astx.GeneratorType):
-        return astx.GeneratorType(clone_type(type_.yield_type))
+        return with_alias(astx.GeneratorType(clone_type(type_.yield_type)))
     if isinstance(type_, astx.StructType):
-        return astx.StructType(
-            type_.name,
-            resolved_name=type_.resolved_name,
-            module_key=type_.module_key,
-            qualified_name=type_.qualified_name,
+        return with_alias(
+            astx.StructType(
+                type_.name,
+                resolved_name=type_.resolved_name,
+                module_key=type_.module_key,
+                qualified_name=type_.qualified_name,
+            )
         )
     if isinstance(type_, astx.ClassType):
-        return astx.ClassType(
-            type_.name,
-            resolved_name=type_.resolved_name,
-            module_key=type_.module_key,
-            qualified_name=type_.qualified_name,
-            ancestor_qualified_names=type_.ancestor_qualified_names,
+        return with_alias(
+            astx.ClassType(
+                type_.name,
+                resolved_name=type_.resolved_name,
+                module_key=type_.module_key,
+                qualified_name=type_.qualified_name,
+                ancestor_qualified_names=type_.ancestor_qualified_names,
+            )
         )
     if isinstance(type_, astx.NamespaceType):
-        return astx.NamespaceType(
-            type_.namespace_key,
-            namespace_kind=type_.namespace_kind,
-            display_name=type_.display_name,
+        return with_alias(
+            astx.NamespaceType(
+                type_.namespace_key,
+                namespace_kind=type_.namespace_kind,
+                display_name=type_.display_name,
+            )
         )
     if isinstance(type_, astx.PointerType):
         pointee_type = (
@@ -256,75 +279,85 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             if type_.pointee_type is not None
             else None
         )
-        return astx.PointerType(pointee_type)
+        return with_alias(astx.PointerType(pointee_type))
     if isinstance(type_, astx.ListType):
-        return astx.ListType(
-            [
-                clone_type(cast(astx.DataType, element_type))
-                for element_type in type_.element_types
-            ],
-            size=type_.size,
+        return with_alias(
+            astx.ListType(
+                [
+                    clone_type(cast(astx.DataType, element_type))
+                    for element_type in type_.element_types
+                ],
+                size=type_.size,
+            )
         )
     if isinstance(type_, astx.TupleType):
-        return astx.TupleType(
-            [
-                clone_type(cast(astx.DataType, element_type))
-                for element_type in type_.element_types
-            ]
+        return with_alias(
+            astx.TupleType(
+                [
+                    clone_type(cast(astx.DataType, element_type))
+                    for element_type in type_.element_types
+                ]
+            )
         )
     if isinstance(type_, astx.SetType):
-        return astx.SetType(
-            clone_type(cast(astx.DataType, type_.element_type))
+        return with_alias(
+            astx.SetType(clone_type(cast(astx.DataType, type_.element_type)))
         )
     if isinstance(type_, astx.DictType):
-        return astx.DictType(
-            clone_type(cast(astx.DataType, type_.key_type)),
-            clone_type(cast(astx.DataType, type_.value_type)),
+        return with_alias(
+            astx.DictType(
+                clone_type(cast(astx.DataType, type_.key_type)),
+                clone_type(cast(astx.DataType, type_.value_type)),
+            )
         )
     if isinstance(type_, astx.BufferOwnerType):
-        return type_.__class__()
+        return with_alias(type_.__class__())
     if isinstance(type_, astx.OpaqueHandleType):
-        return astx.OpaqueHandleType(type_.handle_name)
+        return with_alias(astx.OpaqueHandleType(type_.handle_name))
     if isinstance(type_, astx.BufferViewType):
         element_type = (
             clone_type(type_.element_type)
             if type_.element_type is not None
             else None
         )
-        return astx.BufferViewType(element_type)
+        return with_alias(astx.BufferViewType(element_type))
     if isinstance(type_, astx.TensorType):
         element_type = (
             clone_type(type_.element_type)
             if type_.element_type is not None
             else None
         )
-        return astx.TensorType(element_type, shape=type_.shape)
+        return with_alias(astx.TensorType(element_type, shape=type_.shape))
     if isinstance(type_, astx.SeriesType):
         element_type = (
             clone_type(type_.element_type)
             if type_.element_type is not None
             else None
         )
-        return astx.SeriesType(
-            element_type,
-            nullable=type_.nullable,
-            size=type_.size,
+        return with_alias(
+            astx.SeriesType(
+                element_type,
+                nullable=type_.nullable,
+                size=type_.size,
+            )
         )
     if isinstance(type_, astx.DataFrameType):
         if type_.columns is None:
-            return astx.DataFrameType(row_count=type_.row_count)
-        return astx.DataFrameType(
-            tuple(
-                astx.DataFrameColumn(
-                    column.name,
-                    clone_type(column.type_),
-                    nullable=column.nullable,
-                )
-                for column in type_.columns
-            ),
-            row_count=type_.row_count,
+            return with_alias(astx.DataFrameType(row_count=type_.row_count))
+        return with_alias(
+            astx.DataFrameType(
+                tuple(
+                    astx.DataFrameColumn(
+                        column.name,
+                        clone_type(column.type_),
+                        nullable=column.nullable,
+                    )
+                    for column in type_.columns
+                ),
+                row_count=type_.row_count,
+            )
         )
-    return type_.__class__()
+    return with_alias(type_.__class__())
 
 
 @public
@@ -340,6 +373,9 @@ def display_type_name(type_: astx.DataType | None) -> str:
     """
     if type_ is None:
         return "<unknown>"
+    alias_name = getattr(type_, "alias_name", None)
+    if isinstance(alias_name, str):
+        return alias_name
     if isinstance(type_, astx.UnionType):
         if type_.alias_name is not None:
             return type_.alias_name
@@ -444,14 +480,22 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     if lhs is None or rhs is None:
         return False
     if isinstance(lhs, astx.UnionType) and isinstance(rhs, astx.UnionType):
-        if lhs.alias_name != rhs.alias_name:
-            return False
         if len(lhs.members) != len(rhs.members):
             return False
-        return all(
-            same_type(left_member, right_member)
-            for left_member, right_member in zip(lhs.members, rhs.members)
-        )
+        unmatched_members = list(rhs.members)
+        for left_member in lhs.members:
+            matched_index = next(
+                (
+                    index
+                    for index, right_member in enumerate(unmatched_members)
+                    if same_type(left_member, right_member)
+                ),
+                None,
+            )
+            if matched_index is None:
+                return False
+            unmatched_members.pop(matched_index)
+        return True
     if isinstance(lhs, astx.TemplateTypeVar) and isinstance(
         rhs,
         astx.TemplateTypeVar,
@@ -698,6 +742,42 @@ def is_none_type(type_: astx.DataType | None) -> bool:
       type: bool
     """
     return isinstance(type_, astx.NoneType)
+
+
+@public
+@typechecked
+def is_type_member(
+    target: astx.DataType | None,
+    value: astx.DataType | None,
+) -> bool:
+    """
+    title: Return whether a value type is a member of a target type.
+    parameters:
+      target:
+        type: astx.DataType | None
+      value:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if target is None or value is None:
+        return False
+    if isinstance(target, astx.UnionType) and isinstance(
+        value,
+        astx.UnionType,
+    ):
+        return all(
+            any(
+                is_type_member(target_member, value_member)
+                for target_member in target.members
+            )
+            for value_member in value.members
+        )
+    if isinstance(target, astx.UnionType):
+        return any(is_type_member(member, value) for member in target.members)
+    if isinstance(value, astx.UnionType):
+        return all(is_type_member(target, member) for member in value.members)
+    return same_type(target, value)
 
 
 @public
@@ -957,6 +1037,17 @@ def is_assignable(
         return True
     if not _metadata_assignment_compatible(target, value):
         return False
+    if isinstance(target, astx.UnionType) and isinstance(
+        value,
+        astx.UnionType,
+    ):
+        return all(
+            any(
+                is_assignable(target_member, value_member)
+                for target_member in target.members
+            )
+            for value_member in value.members
+        )
     if same_type(target, value):
         return True
     if isinstance(target, astx.UnionType):

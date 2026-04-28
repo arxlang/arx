@@ -574,7 +574,7 @@ class DeclarationParserMixin(ParserMixinBase):
 
                     self._consume_operator(":")
                     param_type = self.parse_type(
-                        type_context=TypeUseContext.PARAMETER
+                        allow_union=True, type_context=TypeUseContext.PARAMETER
                     )
                     self._append_argument(
                         args,
@@ -599,7 +599,10 @@ class DeclarationParserMixin(ParserMixinBase):
             )
 
         self._consume_operator("->")
-        return_type = self.parse_type(type_context=TypeUseContext.RETURN)
+        return_type = self.parse_type(
+            allow_union=True,
+            type_context=TypeUseContext.RETURN,
+        )
         return (
             astx.FunctionPrototype(
                 method_name,
@@ -1079,7 +1082,7 @@ class DeclarationParserMixin(ParserMixinBase):
 
                 self._consume_operator(":")
                 arg_type = self.parse_type(
-                    type_context=TypeUseContext.PARAMETER
+                    allow_union=True, type_context=TypeUseContext.PARAMETER
                 )
 
                 self._append_argument(args, arg_name, arg_type, arg_loc)
@@ -1098,7 +1101,7 @@ class DeclarationParserMixin(ParserMixinBase):
             )
         self._consume_operator("->")
         ret_type: astx.DataType = self.parse_type(
-            type_context=TypeUseContext.RETURN
+            allow_union=True, type_context=TypeUseContext.RETURN
         )
 
         if expect_colon:

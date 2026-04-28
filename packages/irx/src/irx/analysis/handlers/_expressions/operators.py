@@ -32,6 +32,7 @@ from irx.analysis.types import (
     is_integer_type,
     is_numeric_type,
     is_string_type,
+    is_type_member,
 )
 from irx.analysis.typing import binary_result_type, unary_result_type
 from irx.analysis.validation import validate_assignment, validate_cast
@@ -247,6 +248,28 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self._set_type(node, target_type)
 
     @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.IsInstanceExpr) -> None:
+        """
+        title: Visit IsInstanceExpr nodes.
+        parameters:
+          node:
+            type: astx.IsInstanceExpr
+        """
+        self.visit(node.value)
+        self._resolve_declared_type(node.target_type, node=node)
+        if not self._require_value_expression(
+            node.value,
+            context="IsInstanceExpr",
+        ):
+            self._set_type(node, astx.Boolean())
+            setattr(node, "static_result", False)
+            return
+        value_type = self._expr_type(node.value)
+        static_result = is_type_member(node.target_type, value_type)
+        setattr(node, "static_result", static_result)
+        self._set_type(node, astx.Boolean())
+
+    @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.PrintExpr) -> None:
         """
         title: Visit PrintExpr nodes.
@@ -275,3 +298,20 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         self._set_type(node, astx.Int32())
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.TypeOfExpr) -> None:
+        """
+        title: Visit TypeOfExpr nodes.
+        parameters:
+          node:
+            type: astx.TypeOfExpr
+        """
+        self.visit(node.value)
+        if not self._require_value_expression(
+            node.value,
+            context="TypeOfExpr",
+        ):
+            self._set_type(node, astx.String())
+            return
+        self._set_type(node, astx.String())

@@ -33,13 +33,22 @@ def test_builtins_helpers() -> None:
     title: Test builtins helper functions.
     """
     assert builtins.is_builtin("cast")
+    assert builtins.is_builtin("isinstance")
     assert builtins.is_builtin("print")
+    assert builtins.is_builtin("type")
     assert not builtins.is_builtin("custom_fn")
 
     cast_node = builtins.build_cast(astx.LiteralInt32(1), astx.Float32())
+    isinstance_node = builtins.build_isinstance(
+        astx.LiteralInt32(1),
+        astx.Int32(),
+    )
     print_node = builtins.build_print(astx.LiteralString("hello"))
+    type_node = builtins.build_type_of(astx.LiteralInt32(1))
     assert isinstance(cast_node, irx_astx.Cast)
+    assert isinstance(isinstance_node, irx_astx.IsInstanceExpr)
     assert isinstance(print_node, irx_astx.PrintExpr)
+    assert isinstance(type_node, irx_astx.TypeOfExpr)
 
 
 def test_custom_exceptions_prefixes() -> None:

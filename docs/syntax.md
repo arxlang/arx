@@ -128,6 +128,7 @@ Contextual keywords:
 
 - `as`
 - `from`
+- `type`
 
 ### Edge Cases
 

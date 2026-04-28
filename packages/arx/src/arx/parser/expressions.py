@@ -351,11 +351,32 @@ class ExpressionParserMixin(ParserMixinBase):
             value_expr = self.parse_expression()
             self._consume_operator(",")
             target_type = self.parse_type(
-                type_context=TypeUseContext.EXPRESSION
+                allow_union=True, type_context=TypeUseContext.EXPRESSION
             )
+            if isinstance(target_type, astx.UnionType):
+                raise ParserException(
+                    "Builtin 'cast' does not support union target types yet."
+                )
             self._consume_operator(")")
             return builtins.build_cast(
                 cast(astx.DataType, value_expr), target_type
+            )
+
+        if id_name == builtins.BUILTIN_ISINSTANCE:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
+            value_expr = self.parse_expression()
+            self._consume_operator(",")
+            target_type = self.parse_type(
+                allow_union=True,
+                type_context=TypeUseContext.EXPRESSION,
+            )
+            self._consume_operator(")")
+            return builtins.build_isinstance(
+                cast(astx.Expr, value_expr),
+                target_type,
             )
 
         if id_name == builtins.BUILTIN_PRINT:
@@ -366,6 +387,15 @@ class ExpressionParserMixin(ParserMixinBase):
             message = self.parse_expression()
             self._consume_operator(")")
             return builtins.build_print(cast(astx.Expr, message))
+
+        if id_name == builtins.BUILTIN_TYPE:
+            if template_args is not None:
+                raise ParserException(
+                    f"Builtin '{id_name}' does not accept template arguments."
+                )
+            value_expr = self.parse_expression()
+            self._consume_operator(")")
+            return builtins.build_type_of(cast(astx.Expr, value_expr))
 
         if id_name in {"datetime", "timestamp"}:
             if template_args is not None:

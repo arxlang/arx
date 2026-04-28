@@ -251,7 +251,9 @@ from astx.subscript import (
 from astx.system import (
     AssertStmt,
     Cast,
+    IsInstanceExpr,
     PrintExpr,
+    TypeOfExpr,
 )
 from astx.templates import (
     TemplateParam,
@@ -464,6 +466,7 @@ __all__ = [
     "Int32",
     "Int64",
     "Integer",
+    "IsInstanceExpr",
     "LambdaExpr",
     "LeBinOp",
     "ListAppend",
@@ -567,6 +570,7 @@ __all__ = [
     "Timestamp",
     "TupleType",
     "TypeCastExpr",
+    "TypeOfExpr",
     "UInt8",
     "UInt16",
     "UInt32",

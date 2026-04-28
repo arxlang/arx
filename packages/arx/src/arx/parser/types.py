@@ -6,10 +6,13 @@ summary: >-
 
 from __future__ import annotations
 
+import copy
+
 from typing import cast
 
 import astx
 
+from arx import builtins
 from arx.dataframe import (
     dataframe_type,
     is_dataframe_type,
@@ -28,11 +31,117 @@ from arx.tensor import (
     tensor_type,
 )
 
+_BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
+    "i8": astx.Int8(),
+    "i16": astx.Int16(),
+    "i32": astx.Int32(),
+    "i64": astx.Int64(),
+    "int8": astx.Int8(),
+    "int16": astx.Int16(),
+    "int32": astx.Int32(),
+    "int64": astx.Int64(),
+    "f16": astx.Float16(),
+    "f32": astx.Float32(),
+    "f64": astx.Float64(),
+    "float16": astx.Float16(),
+    "float32": astx.Float32(),
+    "float64": astx.Float64(),
+    "bool": astx.Boolean(),
+    "boolean": astx.Boolean(),
+    "none": astx.NoneType(),
+    "str": astx.String(),
+    "string": astx.String(),
+    "char": astx.Int8(),
+    "datetime": astx.DateTime(),
+    "timestamp": astx.Timestamp(),
+    "date": astx.Date(),
+    "time": astx.Time(),
+}
+
+_BUILTIN_TYPE_NAMES = frozenset(_BUILTIN_TYPE_MAP) | frozenset(
+    {"dataframe", "list", "series", "tensor"}
+)
+
 
 class TypeParserMixin(ParserMixinBase):
     """
     title: Type parser mixin.
     """
+
+    def is_type_alias_decl_start(self) -> bool:
+        """
+        title: Return whether the current token starts a type alias.
+        returns:
+          type: bool
+        """
+        return (
+            self._is_identifier_value(builtins.BUILTIN_TYPE)
+            and self._peek_token().kind == TokenKind.identifier
+        )
+
+    def _clone_type_for_alias(self, alias_name: str) -> astx.DataType:
+        """
+        title: Return a cloned target type for one alias reference.
+        parameters:
+          alias_name:
+            type: str
+        returns:
+          type: astx.DataType
+        """
+        type_ = copy.deepcopy(self.type_aliases[alias_name])
+        if isinstance(type_, astx.UnionType):
+            type_.alias_name = type_.alias_name or alias_name
+            return type_
+        setattr(type_, "alias_name", alias_name)
+        return type_
+
+    def _validate_type_alias_name(self, alias_name: str) -> None:
+        """
+        title: Validate one type alias declaration name.
+        parameters:
+          alias_name:
+            type: str
+        """
+        if alias_name in self.type_aliases:
+            raise ParserException(
+                f"Parser: Duplicate type alias '{alias_name}'."
+            )
+        if alias_name in _BUILTIN_TYPE_NAMES:
+            raise ParserException(
+                f"Parser: Type alias '{alias_name}' shadows a built-in type."
+            )
+        if builtins.is_builtin(alias_name):
+            raise ParserException(
+                f"Parser: Type alias '{alias_name}' shadows a built-in."
+            )
+        if alias_name in self.known_class_names:
+            raise ParserException(
+                f"Parser: Type alias '{alias_name}' shadows a class."
+            )
+
+    def parse_type_alias_decl(self) -> None:
+        """
+        title: Parse one top-level type alias declaration.
+        """
+        self._consume_identifier_value(builtins.BUILTIN_TYPE)
+        if self.tokens.cur_tok.kind != TokenKind.identifier:
+            raise ParserException("Parser: Expected type alias name.")
+
+        alias_name = cast(str, self.tokens.cur_tok.value)
+        self._validate_type_alias_name(alias_name)
+        self.tokens.get_next_token()  # eat alias name
+        self._consume_operator("=")
+
+        alias_type = self.parse_type(
+            allow_template_vars=False,
+            allow_union=True,
+            type_context=TypeUseContext.TYPE_ALIAS,
+        )
+        if isinstance(alias_type, astx.UnionType):
+            alias_type.alias_name = alias_name
+        else:
+            setattr(alias_type, "alias_name", alias_name)
+        self.type_aliases[alias_name] = alias_type
 
     def _consume_runtime_shape_marker(self) -> None:
         """
@@ -291,41 +400,16 @@ class TypeParserMixin(ParserMixinBase):
                     except ValueError as err:
                         raise ParserException(str(err)) from err
             else:
-                type_map: dict[str, astx.DataType] = {
-                    "i8": astx.Int8(),
-                    "i16": astx.Int16(),
-                    "i32": astx.Int32(),
-                    "i64": astx.Int64(),
-                    "int8": astx.Int8(),
-                    "int16": astx.Int16(),
-                    "int32": astx.Int32(),
-                    "int64": astx.Int64(),
-                    "f16": astx.Float16(),
-                    "f32": astx.Float32(),
-                    "f64": astx.Float64(),
-                    "float16": astx.Float16(),
-                    "float32": astx.Float32(),
-                    "float64": astx.Float64(),
-                    "bool": astx.Boolean(),
-                    "boolean": astx.Boolean(),
-                    "none": astx.NoneType(),
-                    "str": astx.String(),
-                    "string": astx.String(),
-                    "char": astx.Int8(),
-                    "datetime": astx.DateTime(),
-                    "timestamp": astx.Timestamp(),
-                    "date": astx.Date(),
-                    "time": astx.Time(),
-                }
-
                 self.tokens.get_next_token()  # eat type identifier
-                if type_name in type_map:
-                    type_ = type_map[type_name]
+                if type_name in _BUILTIN_TYPE_MAP:
+                    type_ = copy.deepcopy(_BUILTIN_TYPE_MAP[type_name])
                 elif template_bound is not None:
                     type_ = astx.TemplateTypeVar(
                         type_name,
                         bound=template_bound,
                     )
+                elif type_name in self.type_aliases:
+                    type_ = self._clone_type_for_alias(type_name)
                 elif type_name in self.known_class_names:
                     type_ = astx.ClassType(type_name)
                 else:
@@ -336,15 +420,21 @@ class TypeParserMixin(ParserMixinBase):
         if not allow_union or not self._is_operator("|"):
             return type_
 
-        members = [type_]
+        members: list[astx.DataType] = []
+        if isinstance(type_, astx.UnionType):
+            members.extend(type_.members)
+        else:
+            members.append(type_)
         while self._is_operator("|"):
             self._consume_operator("|")
-            members.append(
-                self.parse_type(
-                    allow_template_vars=allow_template_vars,
-                    allow_union=False,
-                    type_context=type_context,
-                )
+            member_type = self.parse_type(
+                allow_template_vars=allow_template_vars,
+                allow_union=False,
+                type_context=type_context,
             )
+            if isinstance(member_type, astx.UnionType):
+                members.extend(member_type.members)
+            else:
+                members.append(member_type)
 
         return astx.UnionType(members)

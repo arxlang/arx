@@ -750,6 +750,76 @@ def test_parse_builtin_cast_and_print() -> None:
     assert isinstance(fn.body.nodes[1], irx_astx.PrintExpr)
 
 
+def test_parse_type_alias_and_union_signature() -> None:
+    """
+    title: Type aliases should resolve in union signatures.
+    """
+    tree = _parse_module(
+        "type Number = i32 | i64\n"
+        "fn widen(x: Number) -> i32 | i64:\n"
+        "  return x\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    arg_type = fn.prototype.args[0].type_
+    ret_type = fn.prototype.return_type
+    assert isinstance(arg_type, astx.UnionType)
+    assert arg_type.alias_name == "Number"
+    assert [type(member) for member in arg_type.members] == [
+        astx.Int32,
+        astx.Int64,
+    ]
+    assert isinstance(ret_type, astx.UnionType)
+
+
+def test_parse_type_alias_with_cast_isinstance_and_typeof() -> None:
+    """
+    title: Type aliases should work with type-aware builtins.
+    """
+    tree = _parse_module(
+        "type Int = i32\n"
+        "fn main() -> i32:\n"
+        "  var x: Int = cast(0.0, Int)\n"
+        "  var ok: bool = isinstance(x, Int)\n"
+        "  var name: str = type(x)\n"
+        "  return x\n"
+    )
+
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    cast_decl = fn.body.nodes[0]
+    assert isinstance(cast_decl, astx.VariableDeclaration)
+    assert isinstance(cast_decl.value, irx_astx.Cast)
+    isinstance_decl = fn.body.nodes[1]
+    assert isinstance(isinstance_decl, astx.VariableDeclaration)
+    assert isinstance(isinstance_decl.value, irx_astx.IsInstanceExpr)
+    type_decl = fn.body.nodes[2]
+    assert isinstance(type_decl, astx.VariableDeclaration)
+    assert isinstance(type_decl.value, irx_astx.TypeOfExpr)
+
+
+def test_parse_type_alias_rejects_builtin_shadowing() -> None:
+    """
+    title: Type aliases should not shadow parser-level builtins.
+    """
+    with pytest.raises(ParserException, match="shadows a built-in"):
+        _parse_module("type cast = i32\n")
+
+
+def test_parse_cast_rejects_union_target() -> None:
+    """
+    title: Cast should reject union target types until runtime unions exist.
+    """
+    with pytest.raises(ParserException, match="union target types"):
+        _parse_module(
+            "type Number = i32 | i64\n"
+            "fn main() -> i32:\n"
+            "  var x: Number = cast(0.0, Number)\n"
+            "  return 0\n"
+        )
+
+
 def test_parse_block_with_comment_and_blank_lines() -> None:
     """
     title: Test block parsing across comment/blank lines.

@@ -174,7 +174,7 @@ fn dataframe_demo() -> i32:
   return cast(rows.nrows(), i32)
 ```
 
-## Casting
+## Type-aware builtins
 
 Use the built-in `cast(value, type)` helper to convert values between supported
 types.
@@ -182,6 +182,25 @@ types.
 ```arx
 fn cast_demo(a: i32) -> str:
   return cast(a, str)
+```
+
+Use `isinstance(value, type)` to compare the static semantic type of a value
+with a concrete type, type alias, or finite union type.
+
+```arx
+type Number = i32 | i64
+
+fn check(value: i32) -> bool:
+  return isinstance(value, Number)
+```
+
+Use `type(value)` to produce the value's semantic type name as `str`.
+
+```arx
+type Count = i32
+
+fn type_name(value: Count) -> str:
+  return type(value)
 ```
 
 ## See Also
