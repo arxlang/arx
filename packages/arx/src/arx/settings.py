@@ -505,6 +505,22 @@ def _reject_arxpm_sections(data: dict[str, Any]) -> None:
     )
 
 
+def _reject_toolchain_sections(data: dict[str, Any]) -> None:
+    """
+    title: Reject removed ``[toolchain]`` manifest sections.
+    parameters:
+      data:
+        type: dict[str, Any]
+    """
+    if "toolchain" not in data:
+        return
+    raise ArxProjectError(
+        ".arxproject.toml does not support [toolchain] sections. "
+        "Declare compiler/build requirements in [build-system] using "
+        'dependencies = ["arxlang..."].'
+    )
+
+
 def _validate_dependency(value: str, location: str) -> None:
     """
     title: Validate one dependency entry from ``.arxproject.toml``.
@@ -571,15 +587,21 @@ def _validate_build_system(
     if data is not None:
         raw_dependencies = tuple(cast(list[str], data.get("dependencies", ())))
 
-    dependencies = _normalize_build_system_dependencies(
-        raw_dependencies,
-        cast(str | None, project.get("requires-arx")),
-    )
-    for index, value in enumerate(dependencies):
+    for index, value in enumerate(raw_dependencies):
         _validate_build_system_dependency(
             value,
             f"build-system.dependencies[{index}]",
         )
+
+    if _has_arxlang_dependency(raw_dependencies):
+        return
+
+    _validate_build_system_dependency(
+        _default_build_system_dependency(
+            cast(str | None, project.get("requires-arx"))
+        ),
+        "build-system.dependencies default arxlang dependency",
+    )
 
 
 def _validate_requires_arx(value: str) -> None:
@@ -862,6 +884,7 @@ def _validate_data(data: dict[str, Any]) -> None:
         type: dict[str, Any]
     """
     _reject_arxpm_sections(data)
+    _reject_toolchain_sections(data)
     _reject_legacy_environment_kind(data.get("environment"))
 
     try:

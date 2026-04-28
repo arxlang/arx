@@ -233,6 +233,32 @@ def test_build_system_dependencies_preserve_explicit_arxlang() -> None:
     )
 
 
+def test_build_system_explicit_arxlang_overrides_requires_arx() -> None:
+    """
+    title: Explicit arxlang build dependency is preserved with requires-arx.
+    """
+    content = _project_toml(
+        dedent(
+            """
+            requires-arx = ">=1.0,<2"
+
+            [build-system]
+            dependencies = [
+              "arxlang >=0.9",
+              "arx-build-helper >=0.2",
+            ]
+            """
+        )
+    )
+
+    settings = load_settings_from_text(content)
+
+    assert settings.build_system.dependencies == (
+        "arxlang >=0.9",
+        "arx-build-helper >=0.2",
+    )
+
+
 def test_build_system_dependencies_reject_invalid_requirement() -> None:
     """
     title: Reject invalid installable build-system dependency requirements.
@@ -241,7 +267,10 @@ def test_build_system_dependencies_reject_invalid_requirement() -> None:
         '\n[build-system]\ndependencies = ["not a requirement"]\n'
     )
 
-    with pytest.raises(ArxProjectError, match=r"build-system\.dependencies"):
+    with pytest.raises(
+        ArxProjectError,
+        match=r"build-system\.dependencies\[0\]",
+    ):
         load_settings_from_text(content)
 
 
@@ -682,7 +711,10 @@ def test_rejects_removed_toolchain_table() -> None:
     """
     content = _project_toml('\n[toolchain]\nlinker = "clang"\n')
 
-    with pytest.raises(ArxProjectError, match="schema validation"):
+    with pytest.raises(
+        ArxProjectError,
+        match=r"does not support \[toolchain\]",
+    ):
         load_settings_from_text(content)
 
 
