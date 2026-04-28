@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from jsonschema import ValidationError, validate
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -70,6 +71,8 @@ class Project:
         type: tuple[Author, Ellipsis]
       dependencies:
         type: tuple[str, Ellipsis]
+      requires_arx:
+        type: str | None
     """
 
     name: str
@@ -79,6 +82,7 @@ class Project:
     license: str | None = None
     authors: tuple[Author, ...] = ()
     dependencies: tuple[str, ...] = ()
+    requires_arx: str | None = None
 
 
 @dataclass(frozen=True)
@@ -276,6 +280,7 @@ def _build_project(data: dict[str, Any]) -> Project:
     return Project(
         name=data["name"],
         version=data["version"],
+        requires_arx=data.get("requires-arx"),
         edition=data.get("edition"),
         description=data.get("description"),
         license=data.get("license"),
@@ -413,8 +418,33 @@ def _validate_project(data: dict[str, Any]) -> None:
       data:
         type: dict[str, Any]
     """
+    requires_arx = data.get("requires-arx")
+    if requires_arx is not None:
+        _validate_requires_arx(requires_arx)
+
     for index, value in enumerate(data.get("dependencies", ())):
         _validate_dependency(value, f"project.dependencies[{index}]")
+
+
+def _validate_requires_arx(value: str) -> None:
+    """
+    title: Validate a ``project.requires-arx`` version specifier.
+    parameters:
+      value:
+        type: str
+    """
+    if not value.strip():
+        raise ArxProjectError(
+            ".arxproject.toml project.requires-arx must not be empty."
+        )
+
+    try:
+        SpecifierSet(value)
+    except InvalidSpecifier as err:
+        raise ArxProjectError(
+            ".arxproject.toml project.requires-arx must be a valid "
+            'version specifier like ">=1.0,<2".'
+        ) from err
 
 
 def _validate_dependency_group_name(name: str, location: str) -> None:
@@ -760,6 +790,8 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
         "name": settings.project.name,
         "version": settings.project.version,
     }
+    if settings.project.requires_arx is not None:
+        project["requires-arx"] = settings.project.requires_arx
     if settings.project.edition is not None:
         project["edition"] = settings.project.edition
     if settings.project.description is not None:
@@ -921,6 +953,10 @@ def _append_project(lines: list[str], project: Project) -> None:
     lines.append("[project]")
     lines.append(f"name = {_format_toml_string(project.name)}")
     lines.append(f"version = {_format_toml_string(project.version)}")
+    if project.requires_arx is not None:
+        lines.append(
+            f"requires-arx = {_format_toml_string(project.requires_arx)}"
+        )
     if project.edition is not None:
         lines.append(f"edition = {_format_toml_string(project.edition)}")
     if project.description is not None:

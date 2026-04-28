@@ -34,6 +34,7 @@ EXAMPLE_TOML = dedent(
     [project]
     name = "sciarx"
     version = "0.1.0"
+    requires-arx = ">=1.0"
     edition = "2026"
     dependencies = [
       "http",
@@ -85,6 +86,7 @@ def test_load_settings_from_text_full_example() -> None:
     assert isinstance(settings, ArxProject)
     assert settings.project.name == "sciarx"
     assert settings.project.version == "0.1.0"
+    assert settings.project.requires_arx == ">=1.0"
     assert settings.project.edition == "2026"
     assert settings.project.dependencies == (
         "http",
@@ -122,6 +124,7 @@ def test_load_settings_from_text_minimal() -> None:
     settings = load_settings_from_text(_project_toml())
 
     assert settings.project.name == "demo"
+    assert settings.project.requires_arx is None
     assert settings.project.dependencies == ()
     assert settings.environment is None
     assert settings.build is None
@@ -138,6 +141,33 @@ def test_load_settings_rejects_removed_build_entry_key() -> None:
     content = _project_toml('[build]\nentry = "main.x"\n')
 
     with pytest.raises(ArxProjectError, match="Additional properties"):
+        load_settings_from_text(content)
+
+
+def test_project_requires_arx_supports_version_specifier() -> None:
+    """
+    title: Parse the optional ``project.requires-arx`` version requirement.
+    """
+    content = _project_toml('requires-arx = ">=1.0,<2"\n')
+
+    settings = load_settings_from_text(content)
+
+    assert settings.project.requires_arx == ">=1.0,<2"
+
+
+@pytest.mark.parametrize("specifier", [" ", "1.0", "=>1.0"])
+def test_project_requires_arx_rejects_invalid_specifier(
+    specifier: str,
+) -> None:
+    """
+    title: Reject invalid ``project.requires-arx`` version requirements.
+    parameters:
+      specifier:
+        type: str
+    """
+    content = _project_toml(f'requires-arx = "{specifier}"\n')
+
+    with pytest.raises(ArxProjectError, match="requires-arx"):
         load_settings_from_text(content)
 
 
@@ -584,6 +614,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
         project=Project(
             name="demo",
             version="0.1.0",
+            requires_arx=">=1.0",
             description="demo project",
             authors=(
                 Author(
@@ -623,6 +654,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
 
     rendered = dump_settings(settings)
     assert "[arxpm" not in rendered
+    assert 'requires-arx = ">=1.0"' in rendered
     assert "dependencies = [" in rendered
     assert "[dependency-groups]" in rendered
     assert '{ include-group = "lint" },' in rendered

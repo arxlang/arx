@@ -248,6 +248,7 @@ Example project manifest:
 [project]
 name = "geometry"
 version = "0.1.0"
+requires-arx = ">=1.0"
 
 [environment]
 kind = "conda"
@@ -256,6 +257,10 @@ name = "geometry"
 [build]
 out_dir = "build"
 ```
+
+Use `[project].requires-arx` to declare the compatible Arx compiler versions for
+a project. The value uses the same version-specifier style as `requires-python`,
+for example `">=1.0,<2"`.
 
 Use `__init__.x` as the package root. Arx uses `src/` as the default source root
 when `[build].src_dir` is omitted. Inside a nested module such as
