@@ -167,7 +167,7 @@ pyarrow = ">=24.0.0,<25.0.0"
 
 [[package]]
 name = "arxlang"
-version = "1.22.0"
+version = "1.23.0"
 description = "Arx is a compiler built with llvm"
 optional = false
 python-versions = ">=3.10,<4"
@@ -176,10 +176,10 @@ files = []
 develop = true
 
 [package.dependencies]
-astx = "1.22.0"
+astx = "1.23.0"
 jsonschema = ">=4.0.0"
 packaging = ">=23"
-pyirx = "1.22.0"
+pyirx = "1.23.0"
 pyyaml = ">=4"
 tomli = {version = ">=2.0.0", markers = "python_version < \"3.11\""}
 types-pyyaml = ">=6.0.12.20250516"
@@ -206,7 +206,7 @@ test = ["astroid (>=2,<5)", "pytest (<9.0)", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "astx"
-version = "1.22.0"
+version = "1.23.0"
 description = "ASTx is an agnostic expression structure for AST."
 optional = false
 python-versions = ">=3.10,<4"
@@ -3246,7 +3246,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyirx"
-version = "1.22.0"
+version = "1.23.0"
 description = "IRx"
 optional = false
 python-versions = ">=3.10,<4"
@@ -3256,7 +3256,7 @@ develop = true
 
 [package.dependencies]
 arx-arrowcpp-sources = "24.0.0"
-astx = "1.22.0"
+astx = "1.23.0"
 atpublic = ">=4.0"
 llvmlite = ">=0.44.0"
 plum-dispatch = ">=2.2.2"

@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+# [1.23.0](https://github.com/arxlang/arx/compare/1.22.0...1.23.0) (2026-04-28)
+
+
+### Features
+
+* **config:** Add support for requires-arx in the .arxproject.toml ([#79](https://github.com/arxlang/arx/issues/79)) ([d0ab513](https://github.com/arxlang/arx/commit/d0ab51327d329649003a1df55dc35035dc20200b))
+
 # [1.22.0](https://github.com/arxlang/arx/compare/1.21.0...1.22.0) (2026-04-28)
 
 
