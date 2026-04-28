@@ -72,6 +72,10 @@
           "type": "string",
           "minLength": 1
         },
+        "requires-arx": {
+          "type": "string",
+          "minLength": 1
+        },
         "edition": {
           "type": "string",
           "minLength": 1
@@ -147,15 +151,16 @@
         }
       }
     },
-    "toolchain": {
+    "build-system": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "compiler": {
-          "type": "string"
-        },
-        "linker": {
-          "type": "string"
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },

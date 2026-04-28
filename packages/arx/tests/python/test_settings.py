@@ -15,10 +15,10 @@ from arx.settings import (
     ArxProjectError,
     Author,
     Build,
+    BuildSystem,
     DependencyGroupInclude,
     Environment,
     Project,
-    Toolchain,
     dump_settings,
     find_config_file,
     load_settings,
@@ -34,6 +34,7 @@ EXAMPLE_TOML = dedent(
     [project]
     name = "sciarx"
     version = "0.1.0"
+    requires-arx = ">=1.0"
     edition = "2026"
     dependencies = [
       "http",
@@ -53,9 +54,11 @@ EXAMPLE_TOML = dedent(
     out_dir = "build"
     mode = "lib"
 
-    [toolchain]
-    compiler = "arx"
-    linker = "clang"
+    [build-system]
+    dependencies = [
+      "arxlang >=1.0",
+      "arx-build-helper >=0.2,<1",
+    ]
 
     [tests]
     paths = ["tests"]
@@ -85,6 +88,7 @@ def test_load_settings_from_text_full_example() -> None:
     assert isinstance(settings, ArxProject)
     assert settings.project.name == "sciarx"
     assert settings.project.version == "0.1.0"
+    assert settings.project.requires_arx == ">=1.0"
     assert settings.project.edition == "2026"
     assert settings.project.dependencies == (
         "http",
@@ -104,9 +108,10 @@ def test_load_settings_from_text_full_example() -> None:
     assert settings.build.out_dir == "build"
     assert settings.build.mode == "lib"
 
-    assert settings.toolchain is not None
-    assert settings.toolchain.compiler == "arx"
-    assert settings.toolchain.linker == "clang"
+    assert settings.build_system.dependencies == (
+        "arxlang >=1.0",
+        "arx-build-helper >=0.2,<1",
+    )
 
     assert settings.tests is not None
     assert settings.tests.paths == ("tests",)
@@ -122,10 +127,11 @@ def test_load_settings_from_text_minimal() -> None:
     settings = load_settings_from_text(_project_toml())
 
     assert settings.project.name == "demo"
+    assert settings.project.requires_arx is None
     assert settings.project.dependencies == ()
     assert settings.environment is None
     assert settings.build is None
-    assert settings.toolchain is None
+    assert settings.build_system == BuildSystem(dependencies=("arxlang",))
     assert settings.dependency_groups == {}
     assert settings.arxpm is None
     assert settings.project.authors == ()
@@ -138,6 +144,133 @@ def test_load_settings_rejects_removed_build_entry_key() -> None:
     content = _project_toml('[build]\nentry = "main.x"\n')
 
     with pytest.raises(ArxProjectError, match="Additional properties"):
+        load_settings_from_text(content)
+
+
+def test_project_requires_arx_supports_version_specifier() -> None:
+    """
+    title: Parse the optional ``project.requires-arx`` version requirement.
+    """
+    content = _project_toml('requires-arx = ">=1.0,<2"\n')
+
+    settings = load_settings_from_text(content)
+
+    assert settings.project.requires_arx == ">=1.0,<2"
+
+
+@pytest.mark.parametrize("specifier", [" ", "1.0", "=>1.0"])
+def test_project_requires_arx_rejects_invalid_specifier(
+    specifier: str,
+) -> None:
+    """
+    title: Reject invalid ``project.requires-arx`` version requirements.
+    parameters:
+      specifier:
+        type: str
+    """
+    content = _project_toml(f'requires-arx = "{specifier}"\n')
+
+    with pytest.raises(ArxProjectError, match="requires-arx"):
+        load_settings_from_text(content)
+
+
+def test_build_system_uses_requires_arx_default() -> None:
+    """
+    title: Derive the default build compiler dependency from requires-arx.
+    """
+    content = _project_toml('requires-arx = ">=1.0,<2"\n')
+
+    settings = load_settings_from_text(content)
+
+    assert settings.build_system.dependencies == ("arxlang>=1.0,<2",)
+
+
+def test_build_system_dependencies_auto_include_arxlang() -> None:
+    """
+    title: Build-system dependencies always include the Arx compiler package.
+    """
+    content = _project_toml(
+        dedent(
+            """
+            requires-arx = ">=1.0,<2"
+
+            [build-system]
+            dependencies = ["arx-build-helper >=0.2"]
+            """
+        )
+    )
+
+    settings = load_settings_from_text(content)
+
+    assert settings.build_system.dependencies == (
+        "arxlang>=1.0,<2",
+        "arx-build-helper >=0.2",
+    )
+
+
+def test_build_system_dependencies_preserve_explicit_arxlang() -> None:
+    """
+    title: Manual arxlang build dependencies are not duplicated.
+    """
+    content = _project_toml(
+        dedent(
+            """
+
+            [build-system]
+            dependencies = [
+              "arx-build-helper >=0.2",
+              "arxlang >=1.0",
+            ]
+            """
+        )
+    )
+
+    settings = load_settings_from_text(content)
+
+    assert settings.build_system.dependencies == (
+        "arx-build-helper >=0.2",
+        "arxlang >=1.0",
+    )
+
+
+def test_build_system_explicit_arxlang_overrides_requires_arx() -> None:
+    """
+    title: Explicit arxlang build dependency is preserved with requires-arx.
+    """
+    content = _project_toml(
+        dedent(
+            """
+            requires-arx = ">=1.0,<2"
+
+            [build-system]
+            dependencies = [
+              "arxlang >=0.9",
+              "arx-build-helper >=0.2",
+            ]
+            """
+        )
+    )
+
+    settings = load_settings_from_text(content)
+
+    assert settings.build_system.dependencies == (
+        "arxlang >=0.9",
+        "arx-build-helper >=0.2",
+    )
+
+
+def test_build_system_dependencies_reject_invalid_requirement() -> None:
+    """
+    title: Reject invalid installable build-system dependency requirements.
+    """
+    content = _project_toml(
+        '\n[build-system]\ndependencies = ["not a requirement"]\n'
+    )
+
+    with pytest.raises(
+        ArxProjectError,
+        match=r"build-system\.dependencies\[0\]",
+    ):
         load_settings_from_text(content)
 
 
@@ -572,6 +705,19 @@ def test_rejects_legacy_arxpm_dependency_tables() -> None:
         load_settings_from_text(content)
 
 
+def test_rejects_removed_toolchain_table() -> None:
+    """
+    title: Top-level ``[toolchain]`` is no longer part of the manifest schema.
+    """
+    content = _project_toml('\n[toolchain]\nlinker = "clang"\n')
+
+    with pytest.raises(
+        ArxProjectError,
+        match=r"does not support \[toolchain\]",
+    ):
+        load_settings_from_text(content)
+
+
 def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
     """
     title: Serialize and reload the canonical manifest structure.
@@ -584,6 +730,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
         project=Project(
             name="demo",
             version="0.1.0",
+            requires_arx=">=1.0",
             description="demo project",
             authors=(
                 Author(
@@ -604,7 +751,12 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
             out_dir="build",
             mode="app",
         ),
-        toolchain=Toolchain(compiler="arx", linker="clang"),
+        build_system=BuildSystem(
+            dependencies=(
+                "arxlang >=1.0",
+                "arx-build-helper >=0.2,<1",
+            )
+        ),
         dependency_groups={
             "lint": ("ruff", "mypy"),
             "test": ("pytest", "coverage"),
@@ -623,6 +775,10 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
 
     rendered = dump_settings(settings)
     assert "[arxpm" not in rendered
+    assert 'requires-arx = ">=1.0"' in rendered
+    assert "[build-system]" in rendered
+    assert '"arxlang >=1.0",' in rendered
+    assert '"arx-build-helper >=0.2,<1",' in rendered
     assert "dependencies = [" in rendered
     assert "[dependency-groups]" in rendered
     assert '{ include-group = "lint" },' in rendered
@@ -638,7 +794,7 @@ def test_dump_and_write_settings_round_trip(tmp_path: Path) -> None:
         project=settings.project,
         environment=settings.environment,
         build=settings.build,
-        toolchain=settings.toolchain,
+        build_system=settings.build_system,
         dependency_groups=settings.dependency_groups,
         tests=settings.tests,
         source_path=path,
