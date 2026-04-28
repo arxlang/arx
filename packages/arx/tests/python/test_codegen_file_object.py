@@ -422,12 +422,20 @@ def test_type_alias_union_and_type_builtins_build_and_run(
         dedent(
             """
             type Number = i32 | i64
+            type A = i32 | i64
+            type B = i32 | i64
 
             fn identity(value: Number) -> Number:
               return value
 
+            fn to_b(value: A) -> B:
+              return value
+
+            fn to_explicit(value: B) -> i32 | i64:
+              return value
+
             fn main() -> int32:
-              var value: i64 = identity(5)
+              var value: i64 = to_explicit(to_b(identity(5)))
               var ok: bool = isinstance(value, Number)
               var name: str = type(value)
               if ok:
@@ -449,6 +457,44 @@ def test_type_alias_union_and_type_builtins_build_and_run(
     )
 
     assert result.returncode == 5
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_isinstance_uses_membership_not_numeric_widening(
+    tmp_path: Path,
+) -> None:
+    """
+    title: isinstance should not treat assignable numeric types as identical.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    module_ast = _parse_min_module(
+        dedent(
+            """
+            fn main() -> int32:
+              var value: i32 = 1
+              if isinstance(value, i64):
+                return 1
+              else:
+                return 0
+            """
+        ).lstrip()
+    )
+
+    bin_path = tmp_path / "isinstance_membership_program"
+    ArxBuilder().build(module_ast, str(bin_path))
+
+    result = subprocess.run(
+        [str(bin_path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
     assert result.stdout == ""
     assert result.stderr == ""
 

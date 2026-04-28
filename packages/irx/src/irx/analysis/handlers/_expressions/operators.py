@@ -27,12 +27,12 @@ from irx.analysis.handlers.base import (
 from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.types import (
     display_type_name,
-    is_assignable,
     is_boolean_type,
     is_float_type,
     is_integer_type,
     is_numeric_type,
     is_string_type,
+    is_type_member,
 )
 from irx.analysis.typing import binary_result_type, unary_result_type
 from irx.analysis.validation import validate_assignment, validate_cast
@@ -265,7 +265,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             setattr(node, "static_result", False)
             return
         value_type = self._expr_type(node.value)
-        static_result = is_assignable(node.target_type, value_type)
+        static_result = is_type_member(node.target_type, value_type)
         setattr(node, "static_result", static_result)
         self._set_type(node, astx.Boolean())
 

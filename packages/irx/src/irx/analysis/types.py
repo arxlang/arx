@@ -480,14 +480,22 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     if lhs is None or rhs is None:
         return False
     if isinstance(lhs, astx.UnionType) and isinstance(rhs, astx.UnionType):
-        if lhs.alias_name != rhs.alias_name:
-            return False
         if len(lhs.members) != len(rhs.members):
             return False
-        return all(
-            same_type(left_member, right_member)
-            for left_member, right_member in zip(lhs.members, rhs.members)
-        )
+        unmatched_members = list(rhs.members)
+        for left_member in lhs.members:
+            matched_index = next(
+                (
+                    index
+                    for index, right_member in enumerate(unmatched_members)
+                    if same_type(left_member, right_member)
+                ),
+                None,
+            )
+            if matched_index is None:
+                return False
+            unmatched_members.pop(matched_index)
+        return True
     if isinstance(lhs, astx.TemplateTypeVar) and isinstance(
         rhs,
         astx.TemplateTypeVar,
@@ -734,6 +742,42 @@ def is_none_type(type_: astx.DataType | None) -> bool:
       type: bool
     """
     return isinstance(type_, astx.NoneType)
+
+
+@public
+@typechecked
+def is_type_member(
+    target: astx.DataType | None,
+    value: astx.DataType | None,
+) -> bool:
+    """
+    title: Return whether a value type is a member of a target type.
+    parameters:
+      target:
+        type: astx.DataType | None
+      value:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if target is None or value is None:
+        return False
+    if isinstance(target, astx.UnionType) and isinstance(
+        value,
+        astx.UnionType,
+    ):
+        return all(
+            any(
+                is_type_member(target_member, value_member)
+                for target_member in target.members
+            )
+            for value_member in value.members
+        )
+    if isinstance(target, astx.UnionType):
+        return any(is_type_member(member, value) for member in target.members)
+    if isinstance(value, astx.UnionType):
+        return all(is_type_member(target, member) for member in value.members)
+    return same_type(target, value)
 
 
 @public
@@ -993,6 +1037,17 @@ def is_assignable(
         return True
     if not _metadata_assignment_compatible(target, value):
         return False
+    if isinstance(target, astx.UnionType) and isinstance(
+        value,
+        astx.UnionType,
+    ):
+        return all(
+            any(
+                is_assignable(target_member, value_member)
+                for target_member in target.members
+            )
+            for value_member in value.members
+        )
     if same_type(target, value):
         return True
     if isinstance(target, astx.UnionType):
