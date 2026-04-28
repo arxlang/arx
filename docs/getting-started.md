@@ -254,13 +254,20 @@ requires-arx = ">=1.0"
 kind = "conda"
 name = "geometry"
 
+[build-system]
+dependencies = [
+  "arxlang>=1.0",
+]
+
 [build]
 out_dir = "build"
 ```
 
 Use `[project].requires-arx` to declare the compatible Arx compiler versions for
 a project. The value uses the same version-specifier style as `requires-python`,
-for example `">=1.0,<2"`.
+for example `">=1.0,<2"`. `[build-system].dependencies` declares installable
+packages needed to build the project. If omitted, Arx defaults to `arxlang`; if
+`requires-arx` is present, the default build dependency uses that constraint.
 
 Use `__init__.x` as the package root. Arx uses `src/` as the default source root
 when `[build].src_dir` is omitted. Inside a nested module such as

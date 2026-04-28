@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any, cast
 
 from jsonschema import ValidationError, validate
+from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.utils import canonicalize_name
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -29,6 +31,74 @@ _DEPENDENCY_PATTERN = re.compile(
 _DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _DEPENDENCY_GROUP_NORMALIZE_PATTERN = re.compile(r"[-_.]+")
 _DEFAULT_SRC_DIR = "src"
+_ARXLANG_DISTRIBUTION_NAME = "arxlang"
+
+
+def _default_build_system_dependency(requires_arx: str | None) -> str:
+    """
+    title: Build the default Arx compiler dependency requirement.
+    parameters:
+      requires_arx:
+        type: str | None
+    returns:
+      type: str
+    """
+    if requires_arx is None:
+        return _ARXLANG_DISTRIBUTION_NAME
+    return f"{_ARXLANG_DISTRIBUTION_NAME}{requires_arx.strip()}"
+
+
+def _requirement_name(value: str) -> str | None:
+    """
+    title: Parse and return one requirement distribution name.
+    parameters:
+      value:
+        type: str
+    returns:
+      type: str | None
+    """
+    try:
+        return Requirement(value).name
+    except InvalidRequirement:
+        return None
+
+
+def _has_arxlang_dependency(dependencies: tuple[str, ...]) -> bool:
+    """
+    title: Return whether dependencies already include ``arxlang``.
+    parameters:
+      dependencies:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: bool
+    """
+    arxlang_name = canonicalize_name(_ARXLANG_DISTRIBUTION_NAME)
+    for dependency in dependencies:
+        name = _requirement_name(dependency)
+        if name is None:
+            continue
+        if canonicalize_name(name) == arxlang_name:
+            return True
+    return False
+
+
+def _normalize_build_system_dependencies(
+    dependencies: tuple[str, ...],
+    requires_arx: str | None,
+) -> tuple[str, ...]:
+    """
+    title: Ensure build-system dependencies include the Arx compiler package.
+    parameters:
+      dependencies:
+        type: tuple[str, Ellipsis]
+      requires_arx:
+        type: str | None
+    returns:
+      type: tuple[str, Ellipsis]
+    """
+    if _has_arxlang_dependency(dependencies):
+        return dependencies
+    return (_default_build_system_dependency(requires_arx), *dependencies)
 
 
 class ArxProjectError(Exception):
@@ -140,18 +210,15 @@ class Build:
 
 
 @dataclass(frozen=True)
-class Toolchain:
+class BuildSystem:
     """
-    title: Parsed toolchain section of .arxproject.toml.
+    title: Parsed build-system section of .arxproject.toml.
     attributes:
-      compiler:
-        type: str | None
-      linker:
-        type: str | None
+      dependencies:
+        type: tuple[str, Ellipsis]
     """
 
-    compiler: str | None = None
-    linker: str | None = None
+    dependencies: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -216,8 +283,8 @@ class ArxProject:
         type: Environment | None
       build:
         type: Build | None
-      toolchain:
-        type: Toolchain | None
+      build_system:
+        type: BuildSystem
       dependency_groups:
         type: dict[str, tuple[DependencyGroupEntry, Ellipsis]]
       arxpm:
@@ -231,13 +298,27 @@ class ArxProject:
     project: Project
     environment: Environment | None = None
     build: Build | None = None
-    toolchain: Toolchain | None = None
+    build_system: BuildSystem = field(default_factory=BuildSystem)
     dependency_groups: dict[str, tuple[DependencyGroupEntry, ...]] = field(
         default_factory=dict
     )
     arxpm: Arxpm | None = None
     tests: Tests | None = None
     source_path: Path | None = None
+
+    def __post_init__(self) -> None:
+        """
+        title: Normalize effective build-system defaults.
+        """
+        dependencies = _normalize_build_system_dependencies(
+            self.build_system.dependencies,
+            self.project.requires_arx,
+        )
+        object.__setattr__(
+            self,
+            "build_system",
+            BuildSystem(dependencies=dependencies),
+        )
 
 
 @lru_cache(maxsize=1)
@@ -346,6 +427,36 @@ def _build_tests(data: dict[str, Any] | None) -> Tests | None:
     )
 
 
+def _build_build_system(
+    data: dict[str, Any] | None,
+    project: Project,
+) -> BuildSystem:
+    """
+    title: Build the BuildSystem dataclass with effective defaults.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+      project:
+        type: Project
+    returns:
+      type: BuildSystem
+    """
+    if data is None:
+        return BuildSystem(
+            dependencies=(
+                _default_build_system_dependency(project.requires_arx),
+            )
+        )
+
+    dependencies = tuple(data.get("dependencies", ()))
+    return BuildSystem(
+        dependencies=_normalize_build_system_dependencies(
+            dependencies,
+            project.requires_arx,
+        )
+    )
+
+
 def _resolved_src_dir(build: Build | None) -> str:
     """
     title: Resolve the effective source directory for one project.
@@ -424,6 +535,51 @@ def _validate_project(data: dict[str, Any]) -> None:
 
     for index, value in enumerate(data.get("dependencies", ())):
         _validate_dependency(value, f"project.dependencies[{index}]")
+
+
+def _validate_build_system_dependency(value: str, location: str) -> None:
+    """
+    title: Validate one installable build-system dependency requirement.
+    parameters:
+      value:
+        type: str
+      location:
+        type: str
+    """
+    try:
+        Requirement(value)
+    except InvalidRequirement as err:
+        raise ArxProjectError(
+            f".arxproject.toml {location} must be a valid dependency "
+            'requirement like "arxlang>=1.0,<2".'
+        ) from err
+
+
+def _validate_build_system(
+    data: dict[str, Any] | None,
+    project: dict[str, Any],
+) -> None:
+    """
+    title: Validate build-system-only settings after schema validation.
+    parameters:
+      data:
+        type: dict[str, Any] | None
+      project:
+        type: dict[str, Any]
+    """
+    raw_dependencies: tuple[str, ...] = ()
+    if data is not None:
+        raw_dependencies = tuple(cast(list[str], data.get("dependencies", ())))
+
+    dependencies = _normalize_build_system_dependencies(
+        raw_dependencies,
+        cast(str | None, project.get("requires-arx")),
+    )
+    for index, value in enumerate(dependencies):
+        _validate_build_system_dependency(
+            value,
+            f"build-system.dependencies[{index}]",
+        )
 
 
 def _validate_requires_arx(value: str) -> None:
@@ -716,6 +872,7 @@ def _validate_data(data: dict[str, Any]) -> None:
         ) from err
 
     _validate_project(data["project"])
+    _validate_build_system(data.get("build-system"), data["project"])
     _validate_dependency_groups(data)
     _validate_environment(data.get("environment"))
 
@@ -736,18 +893,16 @@ def _build_arx_project(
     """
     environment_data = data.get("environment")
     build_data = data.get("build")
-    toolchain_data = data.get("toolchain")
+    project = _build_project(data["project"])
     return ArxProject(
-        project=_build_project(data["project"]),
+        project=project,
         environment=(
             Environment(**environment_data)
             if environment_data is not None
             else None
         ),
         build=Build(**build_data) if build_data is not None else None,
-        toolchain=(
-            Toolchain(**toolchain_data) if toolchain_data is not None else None
-        ),
+        build_system=_build_build_system(data.get("build-system"), project),
         dependency_groups=_build_dependency_groups(
             data.get("dependency-groups")
         ),
@@ -807,6 +962,15 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
 
     data: dict[str, Any] = {"project": project}
 
+    default_build_system_dependencies = _normalize_build_system_dependencies(
+        (),
+        settings.project.requires_arx,
+    )
+    if settings.build_system.dependencies != default_build_system_dependencies:
+        data["build-system"] = {
+            "dependencies": list(settings.build_system.dependencies)
+        }
+
     if settings.dependency_groups:
         dependency_groups: dict[str, list[str | dict[str, str]]] = {}
         for group_name, entries in settings.dependency_groups.items():
@@ -856,14 +1020,6 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
         if settings.build.mode is not None:
             build["mode"] = settings.build.mode
         data["build"] = build
-
-    if settings.toolchain is not None:
-        toolchain: dict[str, Any] = {}
-        if settings.toolchain.compiler is not None:
-            toolchain["compiler"] = settings.toolchain.compiler
-        if settings.toolchain.linker is not None:
-            toolchain["linker"] = settings.toolchain.linker
-        data["toolchain"] = toolchain
 
     if settings.tests is not None:
         tests: dict[str, Any] = {}
@@ -1042,25 +1198,29 @@ def _append_build(lines: list[str], build: Build | None) -> None:
         lines.append(f"mode = {_format_toml_string(build.mode)}")
 
 
-def _append_toolchain(
+def _append_build_system(
     lines: list[str],
-    toolchain: Toolchain | None,
+    build_system: BuildSystem,
+    project: Project,
 ) -> None:
     """
-    title: Append the canonical ``[toolchain]`` section when present.
+    title: Append the canonical ``[build-system]`` section when needed.
     parameters:
       lines:
         type: list[str]
-      toolchain:
-        type: Toolchain | None
+      build_system:
+        type: BuildSystem
+      project:
+        type: Project
     """
-    if toolchain is None:
+    default_dependencies = _normalize_build_system_dependencies(
+        (),
+        project.requires_arx,
+    )
+    if build_system.dependencies == default_dependencies:
         return
-    lines.extend(("", "[toolchain]"))
-    if toolchain.compiler is not None:
-        lines.append(f"compiler = {_format_toml_string(toolchain.compiler)}")
-    if toolchain.linker is not None:
-        lines.append(f"linker = {_format_toml_string(toolchain.linker)}")
+    lines.extend(("", "[build-system]"))
+    _append_string_array(lines, "dependencies", build_system.dependencies)
 
 
 def _append_tests(lines: list[str], tests: Tests | None) -> None:
@@ -1102,10 +1262,10 @@ def dump_settings(settings: ArxProject) -> str:
 
     lines: list[str] = []
     _append_project(lines, settings.project)
+    _append_build_system(lines, settings.build_system, settings.project)
     _append_dependency_groups(lines, settings.dependency_groups)
     _append_environment(lines, settings.environment)
     _append_build(lines, settings.build)
-    _append_toolchain(lines, settings.toolchain)
     _append_tests(lines, settings.tests)
     return "\n".join(lines) + "\n"
 
