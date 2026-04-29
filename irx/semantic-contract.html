@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>semantic-contract – ArxLang</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-d0ae9245876894da5ac7e18953ecc5cc.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-bb1a7616eef61b9235a650cadac21922.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../images/arx.png" alt="" class="navbar-logo light-content">
+    <img src="../images/arx.png" alt="" class="navbar-logo dark-content">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">ArxLang</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="../discord.html" aria-current="page"> 
+<span class="menu-text">Community</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../irx/index.html">IRx</a></li><li class="breadcrumb-item"><a href="../irx/semantic-contract.html">Semantic Contract</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../getting-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Library</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/modules.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Modules</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/classes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classes</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/datatypes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Data Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/built-in-types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Built-in Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/control-flow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Control Flow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/docstrings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Docstrings</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">ASTx</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/conventions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conventions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/literals.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Literals</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/for-loop.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">For Loops</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/context.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Context</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/fibonacci.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fibonacci</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Historical Changelog</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">IRx</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/architecture.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Architecture</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/semantic-contract.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Semantic Contract</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/runtime-features.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Runtime Features</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Buffer View Model</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/class-model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Class Model</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Historical Changelog</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Docs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Syntax</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../roadmap.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Roadmap</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing Guide</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../sponsor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Sponsor</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../partners.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Partners</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../coc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Code of Conduct</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../discord.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Governance</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Changelog</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#semantic-contract" id="toc-semantic-contract" class="nav-link active" data-scroll-target="#semantic-contract">Semantic Contract</a>
+  <ul class="collapse">
+  <li><a href="#stable-semantic-phases" id="toc-stable-semantic-phases" class="nav-link" data-scroll-target="#stable-semantic-phases">Stable Semantic Phases</a></li>
+  <li><a href="#metadata-required-before-codegen" id="toc-metadata-required-before-codegen" class="nav-link" data-scroll-target="#metadata-required-before-codegen">Metadata Required Before Codegen</a></li>
+  <li><a href="#diagnostic-contract" id="toc-diagnostic-contract" class="nav-link" data-scroll-target="#diagnostic-contract">Diagnostic Contract</a>
+  <ul class="collapse">
+  <li><a href="#source-locations" id="toc-source-locations" class="nav-link" data-scroll-target="#source-locations">Source Locations</a></li>
+  <li><a href="#diagnostic-codes-and-prefixes" id="toc-diagnostic-codes-and-prefixes" class="nav-link" data-scroll-target="#diagnostic-codes-and-prefixes">Diagnostic Codes And Prefixes</a></li>
+  <li><a href="#formatting" id="toc-formatting" class="nav-link" data-scroll-target="#formatting">Formatting</a></li>
+  </ul></li>
+  <li><a href="#function-signature-and-calling-contract" id="toc-function-signature-and-calling-contract" class="nav-link" data-scroll-target="#function-signature-and-calling-contract">Function Signature And Calling Contract</a></li>
+  <li><a href="#class-inheritance-contract" id="toc-class-inheritance-contract" class="nav-link" data-scroll-target="#class-inheritance-contract">Class Inheritance Contract</a></li>
+  <li><a href="#class-layout-contract" id="toc-class-layout-contract" class="nav-link" data-scroll-target="#class-layout-contract">Class Layout Contract</a></li>
+  <li><a href="#class-method-contract" id="toc-class-method-contract" class="nav-link" data-scroll-target="#class-method-contract">Class Method Contract</a></li>
+  <li><a href="#class-member-access-contract" id="toc-class-member-access-contract" class="nav-link" data-scroll-target="#class-member-access-contract">Class Member Access Contract</a></li>
+  <li><a href="#class-access-control-contract" id="toc-class-access-control-contract" class="nav-link" data-scroll-target="#class-access-control-contract">Class Access Control Contract</a></li>
+  <li><a href="#class-construction-contract" id="toc-class-construction-contract" class="nav-link" data-scroll-target="#class-construction-contract">Class Construction Contract</a></li>
+  <li><a href="#class-abi-and-interop-contract" id="toc-class-abi-and-interop-contract" class="nav-link" data-scroll-target="#class-abi-and-interop-contract">Class ABI And Interop Contract</a></li>
+  <li><a href="#class-diagnostics-contract" id="toc-class-diagnostics-contract" class="nav-link" data-scroll-target="#class-diagnostics-contract">Class Diagnostics Contract</a></li>
+  <li><a href="#public-ffi-contract" id="toc-public-ffi-contract" class="nav-link" data-scroll-target="#public-ffi-contract">Public FFI Contract</a>
+  <ul class="collapse">
+  <li><a href="#what-qualifies-as-a-public-ffi-callable" id="toc-what-qualifies-as-a-public-ffi-callable" class="nav-link" data-scroll-target="#what-qualifies-as-a-public-ffi-callable">What Qualifies As A Public FFI Callable</a></li>
+  <li><a href="#public-ffi-type-policy" id="toc-public-ffi-type-policy" class="nav-link" data-scroll-target="#public-ffi-type-policy">Public FFI Type Policy</a></li>
+  <li><a href="#abi-compatible-structs-for-ffi" id="toc-abi-compatible-structs-for-ffi" class="nav-link" data-scroll-target="#abi-compatible-structs-for-ffi">ABI-Compatible Structs For FFI</a></li>
+  <li><a href="#pointers-and-opaque-handles" id="toc-pointers-and-opaque-handles" class="nav-link" data-scroll-target="#pointers-and-opaque-handles">Pointers And Opaque Handles</a></li>
+  <li><a href="#symbol-resolution-and-runtime-features" id="toc-symbol-resolution-and-runtime-features" class="nav-link" data-scroll-target="#symbol-resolution-and-runtime-features">Symbol Resolution And Runtime Features</a></li>
+  <li><a href="#intentionally-unsupported-for-now" id="toc-intentionally-unsupported-for-now" class="nav-link" data-scroll-target="#intentionally-unsupported-for-now">Intentionally Unsupported For Now</a></li>
+  </ul></li>
+  <li><a href="#call-and-return-validation" id="toc-call-and-return-validation" class="nav-link" data-scroll-target="#call-and-return-validation">Call And Return Validation</a></li>
+  <li><a href="#generator-and-yield-contract" id="toc-generator-and-yield-contract" class="nav-link" data-scroll-target="#generator-and-yield-contract">Generator And Yield Contract</a></li>
+  <li><a href="#main-contract" id="toc-main-contract" class="nav-link" data-scroll-target="#main-contract"><code>main</code> Contract</a></li>
+  <li><a href="#scalar-numeric-foundation" id="toc-scalar-numeric-foundation" class="nav-link" data-scroll-target="#scalar-numeric-foundation">Scalar Numeric Foundation</a></li>
+  <li><a href="#boolean-and-comparison-contract" id="toc-boolean-and-comparison-contract" class="nav-link" data-scroll-target="#boolean-and-comparison-contract">Boolean And Comparison Contract</a></li>
+  <li><a href="#loop-contract" id="toc-loop-contract" class="nav-link" data-scroll-target="#loop-contract">Loop Contract</a></li>
+  <li><a href="#context-manager-contract" id="toc-context-manager-contract" class="nav-link" data-scroll-target="#context-manager-contract">Context Manager Contract</a></li>
+  <li><a href="#struct-contract" id="toc-struct-contract" class="nav-link" data-scroll-target="#struct-contract">Struct Contract</a></li>
+  <li><a href="#bufferview-model" id="toc-bufferview-model" class="nav-link" data-scroll-target="#bufferview-model">Buffer/View Model</a></li>
+  <li><a href="#array-runtime-interop-contract" id="toc-array-runtime-interop-contract" class="nav-link" data-scroll-target="#array-runtime-interop-contract">Array Runtime Interop Contract</a>
+  <ul class="collapse">
+  <li><a href="#canonical-cast-policy" id="toc-canonical-cast-policy" class="nav-link" data-scroll-target="#canonical-cast-policy">Canonical Cast Policy</a></li>
+  </ul></li>
+  <li><a href="#error-boundaries" id="toc-error-boundaries" class="nav-link" data-scroll-target="#error-boundaries">Error Boundaries</a></li>
+  <li><a href="#what-arx-may-hand-to-irx" id="toc-what-arx-may-hand-to-irx" class="nav-link" data-scroll-target="#what-arx-may-hand-to-irx">What Arx May Hand to IRx</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../irx/index.html">IRx</a></li><li class="breadcrumb-item"><a href="../irx/semantic-contract.html">Semantic Contract</a></li></ol></nav></header>
+
+
+
+
+
+<section id="semantic-contract" class="level1">
+<h1>Semantic Contract</h1>
+<p>IRx exposes a small but explicit semantic boundary between host parsing and backend lowering. That boundary is defined in code by <code>irx.analysis.get_semantic_contract()</code> and is enforced by the public analysis entrypoints in <code>irx.analysis.api</code>.</p>
+<section id="stable-semantic-phases" class="level2">
+<h2 class="anchored" data-anchor-id="stable-semantic-phases">Stable Semantic Phases</h2>
+<p>IRx currently treats these phases as stable:</p>
+<ul>
+<li><code>module_graph_expansion</code>: <code>analyze_modules(...)</code> asks the host <code>ImportResolver</code> for every reachable <code>ParsedModule</code>, records import edges, and produces a stable dependency order in <code>CompilationSession.load_order</code>.</li>
+<li><code>top_level_predeclaration</code>: <code>analyze_modules(...)</code> registers top-level functions and structs for every reachable module before body validation.</li>
+<li><code>top_level_import_resolution</code>: <code>analyze_modules(...)</code> resolves module-top- level imports into module-visible bindings, including semantic-only module namespace aliases for plain module imports, and rejects unsupported import forms.</li>
+<li><code>semantic_validation</code>: <code>analyze(...)</code>, <code>analyze_module(...)</code>, and <code>analyze_modules(...)</code> attach semantic sidecars, normalize resolved meaning, and raise <code>SemanticError</code> if diagnostics exist.</li>
+</ul>
+</section>
+<section id="metadata-required-before-codegen" class="level2">
+<h2 class="anchored" data-anchor-id="metadata-required-before-codegen">Metadata Required Before Codegen</h2>
+<p>Before lowering starts, IRx guarantees that analyzed nodes may carry <code>node.semantic: SemanticInfo</code> with these stable fields:</p>
+<ul>
+<li><code>resolved_type</code></li>
+<li><code>resolved_symbol</code></li>
+<li><code>resolved_function</code></li>
+<li><code>resolved_callable</code></li>
+<li><code>resolved_call</code></li>
+<li><code>resolved_return</code></li>
+<li><code>resolved_struct</code></li>
+<li><code>resolved_class</code></li>
+<li><code>resolved_module</code></li>
+<li><code>resolved_imports</code></li>
+<li><code>resolved_operator</code></li>
+<li><code>resolved_assignment</code></li>
+<li><code>resolved_iteration</code></li>
+<li><code>resolved_field_access</code></li>
+<li><code>resolved_module_member_access</code></li>
+<li><code>resolved_class_field_access</code></li>
+<li><code>resolved_base_class_field_access</code></li>
+<li><code>resolved_static_class_field_access</code></li>
+<li><code>resolved_method_call</code></li>
+<li><code>resolved_context_manager</code></li>
+<li><code>resolved_class_construction</code></li>
+<li><code>semantic_flags</code></li>
+<li><code>extras</code></li>
+</ul>
+<p>For multi-module compilation, IRx also guarantees the following <code>CompilationSession</code> state before lowering:</p>
+<ul>
+<li><code>root</code></li>
+<li><code>modules</code></li>
+<li><code>graph</code></li>
+<li><code>load_order</code></li>
+<li><code>visible_bindings</code></li>
+</ul>
+<p>Lowering should consume this semantic metadata instead of re-deriving meaning from raw syntax.</p>
+<p>When lowering or build layers discover that this contract has been violated, they now raise structured diagnostics instead of flattening the failure to a plain Python exception string. In other words:</p>
+<ul>
+<li>semantic failures continue to aggregate in <code>SemanticError</code></li>
+<li>lowering failures surface as <code>LoweringError</code></li>
+<li>native runtime-artifact compilation failures surface as <code>NativeCompileError</code></li>
+<li>final executable link failures surface as <code>LinkingError</code></li>
+<li>runtime feature activation and symbol-resolution failures surface as <code>RuntimeFeatureError</code></li>
+</ul>
+<p>Each of those exception types carries one <code>Diagnostic</code> record with stable code, phase, and best-effort source attribution when IRx can recover it.</p>
+</section>
+<section id="diagnostic-contract" class="level2">
+<h2 class="anchored" data-anchor-id="diagnostic-contract">Diagnostic Contract</h2>
+<p>IRx now uses one shared diagnostics model across semantic analysis, lowering, native artifact compilation, final linking, and runtime feature resolution.</p>
+<p>Every diagnostic may include:</p>
+<ul>
+<li>phase</li>
+<li>message</li>
+<li>logical code such as <code>S010</code> or <code>K001</code></li>
+<li>module attribution when known</li>
+<li>best-effort source location derived from <code>node.loc</code></li>
+<li>note and hint lines</li>
+<li>wrapped cause information</li>
+<li>related secondary locations</li>
+</ul>
+<p>Semantic analysis still aggregates multiple diagnostics in <code>DiagnosticBag</code> and raises <code>SemanticError</code> only after the semantic pass completes. Later phases raise one structured diagnostic exception immediately because they do not have a bagging pass today.</p>
+<section id="source-locations" class="level3">
+<h3 class="anchored" data-anchor-id="source-locations">Source Locations</h3>
+<p>IRx centralizes source extraction through shared helpers:</p>
+<ul>
+<li><code>get_node_source_location(node)</code> safely reads <code>node.loc</code> without assuming every AST node carries a full span</li>
+<li><code>SourceLocation</code> stores line and column today and already has optional end fields for future span-aware parsers</li>
+<li><code>format_source_location(...)</code> renders module and line/column consistently for semantic and non-semantic diagnostics</li>
+</ul>
+<p>IRx does not invent fake spans. If an AST node does not carry location data, the diagnostic still formats cleanly without a location prefix.</p>
+</section>
+<section id="diagnostic-codes-and-prefixes" class="level3">
+<h3 class="anchored" data-anchor-id="diagnostic-codes-and-prefixes">Diagnostic Codes And Prefixes</h3>
+<p>Diagnostic codes are split into a stable logical identifier and a configurable display prefix.</p>
+<ul>
+<li>IRx stores logical identifiers such as <code>S001</code>, <code>S010</code>, <code>L001</code>, <code>F001</code>, <code>R001</code>, <code>C001</code>, and <code>K001</code></li>
+<li>IRx renders them through one shared <code>DiagnosticCodeFormatter</code></li>
+<li>the default display prefix is <code>IRX-</code></li>
+</ul>
+<p>Current high-level families:</p>
+<ul>
+<li><code>Sxxx</code>: semantic analysis</li>
+<li><code>Fxxx</code>: public FFI contract</li>
+<li><code>Lxxx</code>: lowering and codegen</li>
+<li><code>Rxxx</code>: runtime feature activation and symbol resolution</li>
+<li><code>Cxxx</code>: native runtime-artifact compilation</li>
+<li><code>Kxxx</code>: final executable linking</li>
+</ul>
+<p>Downstream compilers can override the prefix without forking IRx formatting logic:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> irx.diagnostics <span class="im">import</span> set_diagnostic_code_prefix</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>set_diagnostic_code_prefix(<span class="st">"ARX-"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>After that override, the same logical code renders as <code>ARX-S010</code>, <code>ARX-L001</code>, <code>ARX-R001</code>, and so on.</p>
+</section>
+<section id="formatting" class="level3">
+<h3 class="anchored" data-anchor-id="formatting">Formatting</h3>
+<p>IRx keeps the first diagnostic line compact:</p>
+<pre class="text"><code>module_a:12:8: error[IRX-S010]: argument 1 of call to 'puts' expects UTF8String but got Int32</code></pre>
+<p>When extra context exists, the formatter appends indented follow-up lines:</p>
+<pre class="text"><code>module_a:4:2: error[IRX-S002]: Identifier already declared: value
+  note: duplicate declarations in one scope are not allowed
+  related: module_a:1:1: previous declaration is here</code></pre>
+<p>Non-semantic failures also keep their phase visible:</p>
+<pre class="text"><code>error[IRX-K001] (link): link failed while producing 'demo'
+  note: command: clang /tmp/irx_module.o -o /tmp/demo
+  note: stderr: undefined reference to `sqrt`</code></pre>
+</section>
+</section>
+<section id="function-signature-and-calling-contract" class="level2">
+<h2 class="anchored" data-anchor-id="function-signature-and-calling-contract">Function Signature And Calling Contract</h2>
+<p>Callable semantics are part of IRx’s stable semantic boundary.</p>
+<ul>
+<li>every callable is normalized into one canonical semantic signature before lowering</li>
+<li>the canonical signature includes callable identity, ordered parameters, return type, calling convention class, variadic flag, extern/native status, and lowered symbol name</li>
+<li>extern signatures additionally record required runtime features and validated public FFI classification metadata</li>
+<li>parameter order is stable and exactly matches declaration order</li>
+<li>duplicate parameter names are rejected semantically</li>
+<li>parameters without defaults must not follow parameters with defaults</li>
+<li>unresolved parameter or return types are rejected semantically</li>
+<li>conflicting declarations are rejected semantically</li>
+</ul>
+<p>Calling conventions are classified semantically even when current LLVM emission is shared:</p>
+<ul>
+<li><code>irx_default</code> for IRx-defined functions</li>
+<li><code>c</code> for explicit extern/native declarations</li>
+</ul>
+<p>Current declaration metadata is intentionally narrow. When present on <code>FunctionPrototype</code>, IRx consumes:</p>
+<ul>
+<li><code>is_extern</code></li>
+<li><code>calling_convention</code></li>
+<li><code>is_variadic</code></li>
+<li><code>symbol_name</code></li>
+<li><code>runtime_feature</code></li>
+<li><code>runtime_features</code></li>
+</ul>
+</section>
+<section id="class-inheritance-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-inheritance-contract">Class Inheritance Contract</h2>
+<p>Class semantics are also part of IRx’s stable semantic boundary.</p>
+<ul>
+<li>every analyzed class records a deterministic C3 linearization in <code>SemanticClass.mro</code></li>
+<li>multiple inheritance is allowed when C3 can produce a consistent order; if it cannot, semantic analysis raises a diagnostic before lowering</li>
+<li>method lookup follows MRO order for inherited candidates, but class methods now normalize into exact-signature overload groups in <code>SemanticClass.method_groups</code> and <code>SemanticClass.method_resolution</code></li>
+<li><code>SemanticClass.member_table</code> remains the single-name lookup surface for attributes and method names with exactly one visible overload; overloaded method families live only in the overload-group metadata</li>
+<li>same-name inherited attributes from distinct ancestors are rejected as ambiguous unless they collapse to one logical shared ancestor in the MRO</li>
+<li>same-call-signature inherited methods from sibling bases are rejected unless one candidate dominates unambiguously through inheritance or the subclass supplies an exact-signature override</li>
+<li>diamond inheritance is allowed semantically; <code>SemanticClass.shared_ancestors</code> records ancestors reached through more than one direct-base lineage so later layout/lowering phases can reuse that metadata instead of re-deriving it</li>
+<li>private members do not participate in inherited lookup; non-private inherited members are normalized before lowering in <code>SemanticClass.member_table</code> and <code>SemanticClass.method_groups</code></li>
+</ul>
+</section>
+<section id="class-layout-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-layout-contract">Class Layout Contract</h2>
+<p>IRx now records a deterministic low-level object layout for every analyzed class before lowering.</p>
+<ul>
+<li>class values lower as pointers to identified object structs, not by-value composites</li>
+<li>every class object reserves two hidden header slots first: one type-descriptor pointer slot and one dispatch-table pointer slot</li>
+<li>the type-descriptor header slot is reserved in semantic layout metadata now, but codegen does not populate a descriptor global yet; that slot is kept stable for later construction/runtime work</li>
+<li>instance storage is flattened in one canonical ancestor-first order with shared ancestors stored once per logical base class</li>
+<li><code>SemanticClass.layout.instance_fields</code> records stable storage indices for all declared instance attributes, including inherited storage that is not visible for lookup</li>
+<li>declared static attributes lower to internal module globals named in <code>SemanticClass.layout.static_fields</code></li>
+<li><code>SemanticClass.layout.visible_field_slots</code> and <code>SemanticClass.layout.visible_static_storage</code> let later lowering phases reuse semantic member resolution instead of recomputing layout lookups from syntax</li>
+</ul>
+</section>
+<section id="class-method-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-method-contract">Class Method Contract</h2>
+<p>IRx class methods now lower as explicit functions with analysis-owned dispatch metadata rather than as implicit runtime behavior.</p>
+<ul>
+<li>every analyzed class method records a normalized source signature plus a lowered callable form in <code>SemanticClassMember.lowered_function</code></li>
+<li>abstract methods are marked with <code>SemanticClassMember.is_abstract</code>; they carry signature metadata for call validation but do not lower an executable body</li>
+<li><code>SemanticClass.is_abstract</code> is true for explicitly abstract classes and for classes with unresolved abstract methods; <code>SemanticClass.abstract_methods</code> records the remaining abstract method set</li>
+<li>instance methods gain one hidden leading <code>self</code> parameter whose type is the declaring class pointer representation</li>
+<li>static methods keep their declared parameter list and do not receive an implicit receiver</li>
+<li>class methods support exact-signature multidispatch by method name and explicit argument types; overload selection does not rank implicit numeric or class-hierarchy conversions when more than one overload is visible</li>
+<li>non-private instance methods receive hierarchy-family-local dispatch slots in <code>SemanticClassMember.dispatch_slot</code>; valid exact-signature overrides reuse the inherited slot, and unrelated class families do not affect those slot numbers</li>
+<li><code>SemanticClass.layout.dispatch_entries</code> and <code>SemanticClass.layout.visible_method_slots</code> provide the lowering-facing view of one class dispatch table after MRO resolution, keyed by exact signature</li>
+<li><code>MethodCall</code> analysis records one <code>ResolvedMethodCall</code> with the chosen member, overload key, candidate set, validated argument conversions, dispatch mode, receiver class, and dispatch slot when indirect dispatch is required</li>
+<li>implicit <code>Derived -&gt; Base</code> upcasts participate in assignment, call, and return compatibility, which makes overridden instance methods usable through base-typed receivers</li>
+<li>full multiple-inheritance ancestor field views are still deferred; the current upcast guarantee is specifically for class pointer compatibility and method dispatch</li>
+<li>conversion-ranked overload selection is intentionally deferred; callers that want a non-exact overload must spell the conversion explicitly with <code>Cast</code></li>
+<li><code>StaticMethodCall</code> analysis always resolves to direct calls because static methods never consume a hidden receiver and do not participate in instance dispatch</li>
+<li>lowering emits one internal dispatch table global per class when at least one visible instance method has a dispatch slot, and instance call sites load the callee through that table instead of re-resolving semantics from syntax</li>
+<li>abstract instance methods reserve dispatch slots so abstract-base-typed calls can dispatch through concrete subclass dispatch tables; abstract slots are emitted as null entries on abstract class dispatch tables</li>
+</ul>
+</section>
+<section id="class-member-access-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-member-access-contract">Class Member Access Contract</h2>
+<p>IRx now distinguishes instance and class-qualified member access forms explicitly instead of inferring them from generic field syntax.</p>
+<ul>
+<li><code>FieldAccess</code> remains the low-level read form for <code>obj.attr</code> on structs and class instances</li>
+<li><code>BaseFieldAccess</code> is the low-level read/write form for one explicit base-qualified instance attribute view on a class receiver</li>
+<li><code>StaticFieldAccess</code> is the low-level read/write form for <code>ClassName.static_attr</code></li>
+<li><code>MethodCall</code> remains the low-level call form for <code>obj.method(...)</code> and uses direct or indirect dispatch from analyzed method metadata</li>
+<li><code>BaseMethodCall</code> is the low-level call form for one explicit base-qualified instance method invocation and lowers as a direct call to the selected base implementation</li>
+<li><code>StaticMethodCall</code> remains the low-level call form for <code>ClassName.static_method(...)</code> and always lowers as a direct call</li>
+<li>base-qualified member access is legal only when the named base appears in the receiver class MRO; analysis rejects unrelated class names before lowering</li>
+<li>static field reads resolve through <code>SemanticClass.layout.visible_static_storage</code> first and only fall back to qualified-name storage metadata for the selected inherited member when needed</li>
+<li>instance field reads resolve through <code>SemanticClass.layout.visible_field_slots</code> and the canonical flattened storage layout recorded during class analysis</li>
+<li>explicit base-qualified field reads resolve through the concrete receiver layout using the selected base member’s qualified storage slot</li>
+<li>lowering consumes the resolved storage and dispatch metadata attached during semantic analysis and does not re-run class member lookup from syntax</li>
+<li>direct writes through <code>FieldAccess</code>, <code>BaseFieldAccess</code>, and <code>StaticFieldAccess</code> reuse the same analyzed layout or storage metadata as their read paths</li>
+<li>constant class members reject both assignment and unary mutation during semantic analysis before lowering</li>
+<li>static field initialization remains limited to literal/default construction in this phase; phase 8 adds mutability and write enforcement without changing initialization order</li>
+<li>implicit ancestor field views remain deferred; IRx now supports only explicit base-qualified ancestor access in this phase</li>
+</ul>
+</section>
+<section id="class-access-control-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-access-control-contract">Class Access Control Contract</h2>
+<p>IRx enforces class visibility during semantic analysis instead of deferring it to lowering or runtime behavior.</p>
+<ul>
+<li><code>public</code> members are accessible from any context that can already resolve the containing class value</li>
+<li><code>private</code> members are accessible only while analyzing methods of their declaring class</li>
+<li><code>protected</code> members are accessible only within the declaring class and its subclasses; IRx does not add same-module or friend-style access</li>
+<li>private members still stay out of inherited lookup tables, but access sites diagnose hidden base members as inaccessible rather than pretending they do not exist</li>
+<li>explicit <code>BaseFieldAccess</code> and <code>BaseMethodCall</code> follow the same visibility rules as ordinary member access; qualifying a base does not bypass access control</li>
+<li>when the declaring class accesses one of its private members through a derived-typed receiver, analysis resolves the originating base member and lowering reuses the existing class-pointer upcast path</li>
+</ul>
+</section>
+<section id="class-construction-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-construction-contract">Class Construction Contract</h2>
+<p>IRx now exposes one low-level default-construction path for classes without introducing high-level constructor syntax yet.</p>
+<ul>
+<li><code>ClassConstruct("Name")</code> allocates one heap object and returns the analyzed class pointer type for <code>Name</code></li>
+<li>construction initializes object headers first, then instance fields in the same canonical flattened storage order recorded in <code>SemanticClass.layout.instance_fields</code></li>
+<li>the reserved type-descriptor header slot is initialized to null for now</li>
+<li>the dispatch-table header slot is initialized to the class dispatch global when one exists, otherwise null</li>
+<li>instance fields use their declaration initializer when present; otherwise they receive the same zero/null default used for ordinary local declarations</li>
+<li>instance constant fields must have declaration initializers in the current model because dedicated constructors are not implemented yet</li>
+<li>static class fields initialize once at module load from literal declaration initializers or their zero/null default when no initializer is present</li>
+<li>non-literal static field initializers are rejected during semantic analysis in this phase so codegen never has to invent runtime initialization order</li>
+</ul>
+</section>
+<section id="class-abi-and-interop-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-abi-and-interop-contract">Class ABI And Interop Contract</h2>
+<p>IRx now makes the internal class ABI explicit without treating it as a stable foreign object ABI.</p>
+<ul>
+<li>source-level <code>ClassType</code> parameters and return types inside IRx-defined functions lower through the same pointer ABI as method receivers; they are not copied by value</li>
+<li>class method bodies lower to internal LLVM symbols named with <code>mangle_class_method_name(module_key, class_name, method_name, overload_key)</code> so the module, declaring class, method name, and exact overload signature all participate in the symbol name</li>
+<li>class static attributes lower to internal globals named with <code>mangle_class_static_name(module_key, class_name, member_name)</code></li>
+<li>dispatch tables and reserved descriptor metadata remain internal globals and should be treated as opaque implementation details rather than a public ABI</li>
+<li>IRx does not promise a stable foreign ABI for general classes in this phase; explicit extern declarations reject <code>ClassType</code> directly and through pointer pointees</li>
+<li>ABI-oriented interop should continue to use plain structs, plain extern functions, typed pointers, and opaque handles at foreign boundaries</li>
+</ul>
+</section>
+<section id="class-diagnostics-contract" class="level2">
+<h2 class="anchored" data-anchor-id="class-diagnostics-contract">Class Diagnostics Contract</h2>
+<p>IRx now treats class errors as stable semantic diagnostics rather than backend failures.</p>
+<ul>
+<li>unknown base classes diagnose before MRO resolution completes</li>
+<li>duplicate direct bases, self-inheritance, inheritance cycles, and inconsistent C3 linearizations diagnose on the class definition</li>
+<li>duplicate member names, duplicate exact method signatures, return-type-only overloads, and mixed static/instance method families diagnose during member normalization</li>
+<li>inherited attribute ambiguity, inherited member conflicts, visibility reductions on override, and static/instance status changes across inheritance diagnose before lowering</li>
+<li>inaccessible private/protected member use, instance-vs-static access misuse, and unrelated explicit base qualification diagnose at semantic access sites</li>
+<li>constant class members reject assignment and unary mutation during semantic analysis before codegen</li>
+<li>invalid constant or static initialization rules diagnose while building the canonical class initialization plan</li>
+<li>abstract methods with bodies, concrete classes with unresolved abstract methods, direct calls to abstract methods, and construction of abstract classes diagnose during semantic analysis</li>
+</ul>
+</section>
+<section id="public-ffi-contract" class="level2">
+<h2 class="anchored" data-anchor-id="public-ffi-contract">Public FFI Contract</h2>
+<p>IRx now treats explicit extern/native declarations as one public FFI layer instead of an incidental backend escape hatch.</p>
+<section id="what-qualifies-as-a-public-ffi-callable" class="level3">
+<h3 class="anchored" data-anchor-id="what-qualifies-as-a-public-ffi-callable">What Qualifies As A Public FFI Callable</h3>
+<ul>
+<li>only explicit extern declarations participate in the public FFI contract</li>
+<li>extern declarations must not define an IRx body</li>
+<li>extern declarations default to calling convention <code>c</code></li>
+<li>source-level function names default to <code>symbol_name == name</code></li>
+<li><code>symbol_name</code> may override the linked/native symbol while keeping a different IRx-visible wrapper name</li>
+<li><code>runtime_feature</code> or <code>runtime_features</code> may declare explicit native dependency packaging for that extern</li>
+<li>semantic analysis records the public/source name, linked symbol name, calling convention, variadic flag, extern flag, required runtime features, and public FFI admissibility metadata before lowering</li>
+</ul>
+</section>
+<section id="public-ffi-type-policy" class="level3">
+<h3 class="anchored" data-anchor-id="public-ffi-type-policy">Public FFI Type Policy</h3>
+<p>IRx intentionally keeps the public FFI type surface narrow in this phase.</p>
+<p>Accepted in extern signatures:</p>
+<ul>
+<li>scalar integers</li>
+<li>scalar floats</li>
+<li><code>Boolean</code></li>
+<li><code>NoneType</code> only as a return type (<code>void</code>)</li>
+<li><code>String</code> / <code>UTF8String</code> / <code>UTF8Char</code> only as pointer-based extern values</li>
+<li><code>PointerType(T)</code> when <code>T</code> is itself FFI-admissible</li>
+<li><code>PointerType()</code> as an opaque pointer</li>
+<li><code>OpaqueHandleType("name")</code></li>
+<li><code>BufferOwnerType</code> as a named opaque handle</li>
+<li>ABI-compatible structs</li>
+<li>nested ABI-compatible structs by value</li>
+<li>the canonical <code>BufferViewType</code> descriptor, which is a stable plain ABI struct</li>
+</ul>
+<p>Rejected in extern signatures:</p>
+<ul>
+<li>unresolved or unsized types</li>
+<li><code>ClassType(...)</code> values and pointers to class pointees</li>
+<li>non-ABI-stable internal-only composite forms</li>
+<li>temporal and other IRx-only types without an explicit public FFI ABI contract</li>
+<li>pointers to unsupported pointee types</li>
+<li>arbitrary variadic IRx-defined callables</li>
+<li>function pointers and callbacks in this phase</li>
+</ul>
+</section>
+<section id="abi-compatible-structs-for-ffi" class="level3">
+<h3 class="anchored" data-anchor-id="abi-compatible-structs-for-ffi">ABI-Compatible Structs For FFI</h3>
+<p>The public FFI layer accepts a validated subset of IRx structs:</p>
+<ul>
+<li>fields must resolve semantically before lowering</li>
+<li>declaration order is the ABI field order</li>
+<li>empty structs are rejected</li>
+<li>direct or mutual by-value recursive layouts are rejected</li>
+<li>every field must itself be FFI-admissible</li>
+<li>nested structs are allowed when every nested field remains ABI-admissible</li>
+<li>by-value and by-pointer passing both use the same validated layout assumptions</li>
+<li>lowering emits the same plain LLVM struct layout that semantic validation approved; no hidden headers or runtime payloads are introduced</li>
+</ul>
+</section>
+<section id="pointers-and-opaque-handles" class="level3">
+<h3 class="anchored" data-anchor-id="pointers-and-opaque-handles">Pointers And Opaque Handles</h3>
+<ul>
+<li><code>PointerType(T)</code> represents a typed native pointer</li>
+<li><code>PointerType()</code> represents an opaque pointer with no visible pointee layout</li>
+<li><code>OpaqueHandleType("name")</code> represents a first-class named native handle whose layout is intentionally hidden</li>
+<li>opaque handles may be passed, returned, stored, and compared when comparison is otherwise semantically supported</li>
+<li>opaque handles do not support field access or indexing</li>
+<li>nullability is not modeled statically yet; null is currently a runtime-level concern rather than a typed IRx value</li>
+</ul>
+</section>
+<section id="symbol-resolution-and-runtime-features" class="level3">
+<h3 class="anchored" data-anchor-id="symbol-resolution-and-runtime-features">Symbol Resolution And Runtime Features</h3>
+<ul>
+<li>an extern with no runtime features emits only an LLVM external declaration; the final system toolchain/linker is expected to resolve the symbol</li>
+<li>an extern with <code>runtime_feature</code> / <code>runtime_features</code> still emits one semantic extern declaration, but it also activates the named runtime feature set for that compilation unit</li>
+<li>runtime features remain the only place where IRx packages native C/C++ sources, objects, static libraries, or linker flags</li>
+<li>duplicate extern declarations with incompatible ABI or runtime-feature meaning are rejected semantically</li>
+<li>duplicate source-level declarations or duplicate <code>symbol_name</code> aliases must be compatible in calling convention, variadic status, symbol name, parameter types, return type, and required runtime features</li>
+</ul>
+</section>
+<section id="intentionally-unsupported-for-now" class="level3">
+<h3 class="anchored" data-anchor-id="intentionally-unsupported-for-now">Intentionally Unsupported For Now</h3>
+<ul>
+<li>dynamic loading or plugin discovery</li>
+<li>callbacks and public function-pointer interop</li>
+<li>broad platform-specific ABI tuning beyond the current LLVM/data-layout model</li>
+<li>arbitrary variadic IRx-defined functions</li>
+<li>auto-coercion between incompatible pointers, structs, or opaque handles</li>
+</ul>
+<p>Minimal examples:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>puts <span class="op">=</span> astx.FunctionPrototype(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"puts"</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>astx.Arguments(astx.Argument(<span class="st">"message"</span>, astx.UTF8String())),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    return_type<span class="op">=</span>astx.Int32(),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>puts.is_extern <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>puts.calling_convention <span class="op">=</span> <span class="st">"c"</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>puts.symbol_name <span class="op">=</span> <span class="st">"puts"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>sqrt <span class="op">=</span> astx.FunctionPrototype(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"sqrt"</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>astx.Arguments(astx.Argument(<span class="st">"value"</span>, astx.Float64())),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    return_type<span class="op">=</span>astx.Float64(),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>sqrt.is_extern <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>sqrt.calling_convention <span class="op">=</span> <span class="st">"c"</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>sqrt.symbol_name <span class="op">=</span> <span class="st">"sqrt"</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>sqrt.runtime_feature <span class="op">=</span> <span class="st">"libm"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>open_handle <span class="op">=</span> astx.FunctionPrototype(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"open_handle"</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>astx.Arguments(),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    return_type<span class="op">=</span>astx.OpaqueHandleType(<span class="st">"demo_handle"</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>open_handle.is_extern <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>open_handle.calling_convention <span class="op">=</span> <span class="st">"c"</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>open_handle.symbol_name <span class="op">=</span> <span class="st">"open_handle"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>astx.StructDefStmt(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"Point"</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    attributes<span class="op">=</span>[</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        astx.VariableDeclaration(name<span class="op">=</span><span class="st">"x"</span>, type_<span class="op">=</span>astx.Float64()),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        astx.VariableDeclaration(name<span class="op">=</span><span class="st">"y"</span>, type_<span class="op">=</span>astx.Float64()),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>take_point <span class="op">=</span> astx.FunctionPrototype(</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"take_point"</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>astx.Arguments(astx.Argument(<span class="st">"point"</span>, astx.StructType(<span class="st">"Point"</span>))),</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    return_type<span class="op">=</span>astx.Int32(),</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>take_point.is_extern <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>take_point.calling_convention <span class="op">=</span> <span class="st">"c"</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>take_point.symbol_name <span class="op">=</span> <span class="st">"take_point"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="call-and-return-validation" class="level2">
+<h2 class="anchored" data-anchor-id="call-and-return-validation">Call And Return Validation</h2>
+<p>Function calls are validated through one semantic path before lowering:</p>
+<ul>
+<li>callee resolution must produce a callable symbol with a canonical signature</li>
+<li>fixed-arity calls may omit only a trailing suffix covered by declared defaults</li>
+<li>variadic calls are limited to explicit extern/native declarations</li>
+<li>fixed prefix arguments use the canonical implicit-cast policy</li>
+<li>declared default expressions are analyzed semantically before lowering and lowered at the call site when callers omit those trailing arguments</li>
+<li>successful call analysis records resolved callable metadata, resolved argument types, result type, and any inserted implicit conversions</li>
+<li>lowering must consume that metadata instead of repairing malformed calls</li>
+</ul>
+<p>Returns are also validated semantically before lowering:</p>
+<ul>
+<li><code>return expr</code> is valid only in non-void functions</li>
+<li>bare <code>return</code> is valid only in void functions</li>
+<li>implicit return conversion follows the same canonical cast policy used for assignments and call arguments</li>
+<li>non-void functions must not fall through</li>
+<li>structured control flow is analyzed conservatively; missing returns on any reachable path are rejected</li>
+</ul>
+<p>Representative examples of the current semantic style:</p>
+<ul>
+<li><code>cannot assign Float64 to 'count' of type Int32</code></li>
+<li><code>argument 2 of call to 'sqrt' expects Float64 but got Int32</code></li>
+<li><code>if condition must be Boolean, got Int32</code></li>
+<li><code>extern 'take_point' is not FFI-safe: parameter 'point' field 'x' uses unsupported FFI type 'DateTime'</code></li>
+</ul>
+<p>Void and non-void usage is explicit:</p>
+<ul>
+<li>void calls may be used as statements</li>
+<li>void calls may not be used as expression values</li>
+<li>non-void calls may be used as expressions or discarded as statements</li>
+</ul>
+</section>
+<section id="generator-and-yield-contract" class="level2">
+<h2 class="anchored" data-anchor-id="generator-and-yield-contract">Generator And Yield Contract</h2>
+<p>IRx supports an initial typed generator contract for named functions:</p>
+<ul>
+<li>a function that contains <code>yield</code> must declare <code>GeneratorType(T)</code> as its return type</li>
+<li>each yielded value must be assignable to <code>T</code></li>
+<li>calling a generator function returns a first-class generator object</li>
+<li>generator objects are one-shot iterables and resolve to <code>IterationKind.GENERATOR</code></li>
+<li><code>ForInLoopStmt</code> consumes generator values through the same <code>ResolvedIteration</code> sidecar used by other iterables</li>
+<li>bare <code>return</code> and <code>return None</code> terminate a generator</li>
+<li>non-<code>None</code> generator return values, <code>yield from</code>, <code>send</code>, <code>throw</code>, <code>close</code>, async generators, and generator expressions are deferred</li>
+</ul>
+<p>The current LLVM lowering supports straight-line named generator bodies with top-level <code>YieldStmt</code> nodes. Yield suspension inside nested control flow is diagnosed before lowering until frame and cleanup suspension are extended.</p>
+</section>
+<section id="main-contract" class="level2">
+<h2 class="anchored" data-anchor-id="main-contract"><code>main</code> Contract</h2>
+<p><code>main</code> is part of the stable semantic contract rather than a backend caveat:</p>
+<ul>
+<li><code>main</code> must be <code>Int32 main()</code></li>
+<li><code>main</code> must not be variadic</li>
+<li><code>main</code> must not be extern</li>
+<li><code>main</code> must return deterministically along every path</li>
+</ul>
+<p>IRx no longer accepts loose <code>void main</code> behavior or non-deterministic fallthrough.</p>
+</section>
+<section id="scalar-numeric-foundation" class="level2">
+<h2 class="anchored" data-anchor-id="scalar-numeric-foundation">Scalar Numeric Foundation</h2>
+<p>Binary scalar numerics use one canonical promotion table:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 82%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Operand mix</th>
+<th>Promoted operand type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>float + float</code></td>
+<td>wider float</td>
+</tr>
+<tr class="even">
+<td><code>float + integer</code></td>
+<td>float widened to cover the integer width floor (<code>16</code>, <code>32</code>, or <code>64</code> bits), capped at <code>Float64</code></td>
+</tr>
+<tr class="odd">
+<td><code>signed + signed</code></td>
+<td>wider signed integer</td>
+</tr>
+<tr class="even">
+<td><code>unsigned + unsigned</code></td>
+<td>wider unsigned integer</td>
+</tr>
+<tr class="odd">
+<td><code>signed + unsigned</code></td>
+<td>wider signed integer when the signed operand is strictly wider; otherwise the wider unsigned integer</td>
+</tr>
+</tbody>
+</table>
+<p>Comparison operators (<code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>==</code>, <code>!=</code>) promote their operands with the same table and always return <code>Boolean</code> semantically and <code>i1</code> in LLVM IR.</p>
+</section>
+<section id="boolean-and-comparison-contract" class="level2">
+<h2 class="anchored" data-anchor-id="boolean-and-comparison-contract">Boolean And Comparison Contract</h2>
+<p>Boolean behavior is part of the stable semantic boundary:</p>
+<ul>
+<li>comparisons always return <code>Boolean</code></li>
+<li><code>if</code>, <code>while</code>, and <code>for-count</code> conditions must be <code>Boolean</code></li>
+<li><code>&amp;&amp;</code>, <code>||</code>, and <code>!</code> require <code>Boolean</code> operands</li>
+<li>implicit truthiness is forbidden for integers, floats, pointers, and other non-boolean values</li>
+</ul>
+<p>Lowering should branch directly on the analyzed Boolean <code>i1</code> value for control flow instead of inventing zero-comparison truthiness rules during codegen.</p>
+</section>
+<section id="loop-contract" class="level2">
+<h2 class="anchored" data-anchor-id="loop-contract">Loop Contract</h2>
+<p>Loop semantics are now part of the stable lowering contract for structured control flow:</p>
+<ul>
+<li><code>break</code> exits the nearest enclosing loop</li>
+<li><code>continue</code> targets the canonical re-entry block for the active loop form</li>
+<li><code>WhileStmt</code> re-enters through its condition block</li>
+<li><code>ForCountLoopStmt</code> evaluates initializer once, condition before each iteration, update after each fallthrough or <code>continue</code>, and stores the update result as the next loop-variable value</li>
+<li><code>ForRangeLoopStmt</code> initializes its induction variable once before the first condition check, observes <code>end</code> and <code>step</code> before iteration begins, runs body mutations before the step block, and does not expose the loop variable after the loop</li>
+<li>loop misuse such as <code>break</code> or <code>continue</code> outside a loop is rejected semantically before lowering and still surfaces as a structured lowering diagnostic in direct backend use</li>
+</ul>
+</section>
+<section id="context-manager-contract" class="level2">
+<h2 class="anchored" data-anchor-id="context-manager-contract">Context Manager Contract</h2>
+<p><code>WithStmt(manager, body, target=None)</code> models a Python-like context-manager statement over IRx class values:</p>
+<ul>
+<li>the manager expression is evaluated exactly once</li>
+<li>the manager must resolve to a class value</li>
+<li>semantic analysis resolves zero-argument instance methods named <code>__enter__</code> and <code>__exit__</code></li>
+<li><code>__enter__</code> runs before the body</li>
+<li><code>__exit__</code> runs on normal fallthrough and before structured <code>return</code>, <code>break</code>, or <code>continue</code> transfers leave the body</li>
+<li>an optional target binds the <code>__enter__</code> result for the with-body scope only</li>
+<li>targets require <code>__enter__</code> to return a non-void value</li>
+<li>the initial contract does not implement Python exception propagation or <code>__exit__(exc_type, exc_value, traceback)</code> suppression semantics</li>
+</ul>
+<p>Lowering consumes the resolved context-manager sidecar instead of rediscovering method names in codegen.</p>
+</section>
+<section id="struct-contract" class="level2">
+<h2 class="anchored" data-anchor-id="struct-contract">Struct Contract</h2>
+<p>Structs are IRx’s stable composite storage and ABI foundation.</p>
+<ul>
+<li>struct names are stable semantic symbols</li>
+<li>field order is exactly declaration order</li>
+<li>field names must be unique within a struct</li>
+<li>field types must resolve semantically before lowering</li>
+<li>field layout must not be implicitly reordered by semantics or lowering</li>
+<li>field access must resolve semantically before codegen and lower by stable field index</li>
+<li>nested structs by value are allowed when every referenced struct is fully defined</li>
+<li>direct by-value recursive structs are forbidden</li>
+<li>mutual by-value recursive structs are forbidden</li>
+<li>structs can be passed and returned by value within IRx-defined functions</li>
+<li>the public FFI layer accepts only the ABI-compatible subset described above</li>
+<li>emitted LLVM struct types are plain data with no hidden headers, metadata, tags, or runtime object payloads</li>
+</ul>
+<p>For now, empty structs are rejected explicitly instead of relying on backend- specific behavior.</p>
+</section>
+<section id="bufferview-model" class="level2">
+<h2 class="anchored" data-anchor-id="bufferview-model">Buffer/View Model</h2>
+<p>IRx defines a canonical buffer owner plus buffer view substrate for low-level memory/container interop. This is not a user-facing scientific array API, and it does not define broadcasting, slicing syntax, reductions, or tensor algebra.</p>
+<p>The canonical view descriptor is a plain stable struct conceptually equivalent to:</p>
+<ul>
+<li><code>data: ptr</code></li>
+<li><code>owner: ptr | null</code></li>
+<li><code>dtype: opaque handle or stable token</code></li>
+<li><code>ndim: i32</code></li>
+<li><code>shape: ptr&lt;i64&gt;</code></li>
+<li><code>strides: ptr&lt;i64&gt;</code></li>
+<li><code>offset_bytes: i64</code></li>
+<li><code>flags: i32</code></li>
+</ul>
+<p>Stable built-in primitive dtype tokens are also available when a producer does not need an out-of-band dtype handle:</p>
+<ul>
+<li><code>1: bool</code></li>
+<li><code>2: int8</code></li>
+<li><code>3: int16</code></li>
+<li><code>4: int32</code></li>
+<li><code>5: int64</code></li>
+<li><code>6: uint8</code></li>
+<li><code>7: uint16</code></li>
+<li><code>8: uint32</code></li>
+<li><code>9: uint64</code></li>
+<li><code>10: float32</code></li>
+<li><code>11: float64</code></li>
+</ul>
+<p>Semantic rules:</p>
+<ul>
+<li>ownership is explicit as borrowed, owned, or external-owner</li>
+<li>exactly one ownership flag must be present</li>
+<li>borrowed views do not free memory and use a null owner handle</li>
+<li>owned and external-owner views use non-null opaque owner handles</li>
+<li>descriptor copies are shallow metadata copies</li>
+<li>deep copy is explicit and never implicit</li>
+<li>retain and release go through runtime/native helpers</li>
+<li>statically known borrowed views are rejected for retain/release helpers</li>
+<li>mutability is attached to the view, not only the allocation</li>
+<li>readonly and writable views are mutually exclusive</li>
+<li>writes through statically readonly views are rejected semantically</li>
+<li>raw byte writes require an 8-bit integer value and are not typed element stores</li>
+<li>shape and strides describe logical indexing, not ownership</li>
+<li>offset support is part of the descriptor model</li>
+<li>null data with statically nonzero extent is rejected</li>
+<li><code>IRX_BUFFER_FLAG_VALIDITY_BITMAP</code> may advertise producer-side validity metadata, but generic buffer operations remain null-agnostic</li>
+</ul>
+<p>Lowering uses <code>irx_buffer_view</code> as a named plain struct with stable field order:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode llvm code-with-copy"><code class="sourceCode llvm"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">%"irx_buffer_view"</span> = <span class="kw">type</span> {<span class="dt">i8</span>*, <span class="dt">i8</span>*, <span class="dt">i8</span>*, <span class="dt">i32</span>, <span class="dt">i64</span>*, <span class="dt">i64</span>*, <span class="dt">i64</span>, <span class="dt">i32</span>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Runtime/native lifetime operations are feature-gated behind the <code>buffer</code> runtime feature. Plain descriptors do not pull native helper symbols into a module unless a helper is used.</p>
+</section>
+<section id="array-runtime-interop-contract" class="level2">
+<h2 class="anchored" data-anchor-id="array-runtime-interop-contract">Array Runtime Interop Contract</h2>
+<p>IRx exposes arrays through a builtin runtime surface backed by Arrow. The high-level abstraction is array-oriented; the low-level FFI ABI remains Arrow-specific. It is not a first-class language container model.</p>
+<p>IRx also now exposes an initial internal <code>Tensor</code> layer alongside that one-dimensional array runtime:</p>
+<ul>
+<li>tensor storage comes from Arrow C++ <code>arrow::Tensor</code> handles under <code>irx_arrow_tensor_*</code></li>
+<li>tensor layout follows homogeneous dtype, shape, and stride metadata and lowers through the canonical <code>irx_buffer_view</code> descriptor for indexing</li>
+<li>tensor indexing and view construction reuse explicit <code>shape</code>, <code>strides</code>, and <code>offset_bytes</code> metadata</li>
+<li>current <code>Tensor</code> support in this initial phase is limited to fixed-width numeric element types and readonly Arrow C++ backed storage</li>
+</ul>
+<p>Stable scope in this phase:</p>
+<ul>
+<li>supported plain primitive Arrow storage types: <code>bool</code>, <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code>, <code>float32</code>, and <code>float64</code></li>
+<li>opaque schema, array builder, array, tensor builder, and tensor handles under <code>irx_arrow_*</code></li>
+<li>Arrow C Data import/export as the external interchange boundary</li>
+<li>explicit Arrow-to-<code>irx_buffer_view</code> projection for supported fixed-width numeric arrays</li>
+</ul>
+<p>Import/export rules:</p>
+<ul>
+<li><code>irx_arrow_array_import_copy(...)</code> copies external Arrow C Data into a new runtime-owned array handle</li>
+<li><code>irx_arrow_array_import_move(...)</code> adopts external Arrow C Data into a new runtime-owned array handle and leaves the source structs moved-from on success</li>
+<li><code>irx_arrow_array_export(...)</code> copies a runtime-owned array handle into an independent Arrow C Data pair that the caller releases separately</li>
+<li>schema handles use the same copy-oriented pattern through <code>irx_arrow_schema_import_copy(...)</code> and <code>irx_arrow_schema_export(...)</code></li>
+</ul>
+<p>Nullability rules:</p>
+<ul>
+<li>Arrow nullability is modeled on Arrow handles, not as generic <code>BufferViewType</code> element semantics</li>
+<li><code>irx_arrow_array_is_nullable(...)</code>, <code>irx_arrow_array_null_count(...)</code>, and <code>irx_arrow_array_has_validity_bitmap(...)</code> are the stable Arrow-side inspection surface</li>
+<li><code>irx_arrow_array_validity_bitmap(...)</code> exposes the physical validity bitmap pointer plus bit offset and length</li>
+<li>generic buffer indexing, stores, and raw writes remain null-agnostic</li>
+</ul>
+<p>Arrow-to-buffer-view bridge rules:</p>
+<ul>
+<li>only fixed-width, byte-addressable primitive arrays are buffer-view compatible in this phase</li>
+<li>the bridge is always readonly and borrowed</li>
+<li>bridged views use a null owner handle; the caller must keep the Arrow array handle alive explicitly</li>
+<li>bridged views populate dtype, shape, strides, and offset for one 1-D columnar value buffer</li>
+<li>when a validity bitmap exists, the returned view sets <code>IRX_BUFFER_FLAG_VALIDITY_BITMAP</code></li>
+<li>bool arrays are supported as Arrow handles but are not buffer-view compatible because their values are bit-packed</li>
+</ul>
+<p>Tensor layering rules:</p>
+<ul>
+<li>fresh tensor literals build Arrow tensor handles through <code>irx_arrow_tensor_*</code>, then wrap borrowed tensor buffers in external-owner buffer views so lifetime remains explicit</li>
+<li>tensor view nodes are shallow metadata rewrites over the same storage</li>
+<li>tensor shape/stride queries and indexed addressing reuse the same descriptor fields used by low-level buffer/view indexing</li>
+<li>dynamic-rank runtime validation, broadcasting, and source-language slicing syntax remain out of scope in this phase</li>
+</ul>
+<p>Intentionally out of scope here:</p>
+<ul>
+<li>ArrowArrayStream, RecordBatch, and Table runtime handles</li>
+<li>dataframe/query semantics</li>
+<li>compute kernels</li>
+<li>nested, dictionary, temporal, decimal, and other non-primitive Arrow layouts</li>
+<li>implicit null-aware scalar semantics on generic buffer views</li>
+</ul>
+<p>Example scalar wrapper:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>astx.StructDefStmt(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"ScalarBox"</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    attributes<span class="op">=</span>[</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        astx.VariableDeclaration(name<span class="op">=</span><span class="st">"value"</span>, type_<span class="op">=</span>astx.Int32()),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Example nested record:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>astx.StructDefStmt(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"Descriptor"</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    attributes<span class="op">=</span>[</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        astx.VariableDeclaration(name<span class="op">=</span><span class="st">"point"</span>, type_<span class="op">=</span>astx.StructType(<span class="st">"Point"</span>)),</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        astx.VariableDeclaration(name<span class="op">=</span><span class="st">"ready"</span>, type_<span class="op">=</span>astx.Boolean()),</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="canonical-cast-policy" class="level3">
+<h3 class="anchored" data-anchor-id="canonical-cast-policy">Canonical Cast Policy</h3>
+<p>Implicit promotions in variable initializers, assignments, call arguments, and returns are intentionally narrower than explicit casts:</p>
+<ul>
+<li>same-type assignment is always allowed</li>
+<li>signed integers may widen to wider signed integers</li>
+<li>unsigned integers may widen to wider unsigned integers</li>
+<li>unsigned integers may widen to strictly wider signed integers</li>
+<li>integers may promote to floats when the target float width meets the same <code>16</code>/<code>32</code>/<code>64</code> floor used by the numeric-promotion table</li>
+<li>floats may widen to wider floats</li>
+<li>implicit sign-changing integer casts to unsigned targets are rejected</li>
+<li>implicit narrowing casts are rejected</li>
+<li>implicit float-to-integer and numeric-to-boolean casts are rejected</li>
+</ul>
+<p>Explicit <code>Cast(...)</code> expressions allow the full scalar conversions:</p>
+<ul>
+<li>numeric-to-numeric casts</li>
+<li>boolean-to-numeric casts using <code>0</code> and <code>1</code></li>
+<li>numeric-to-boolean casts using <code>!= 0</code> or <code>!= 0.0</code></li>
+<li>string-to-string casts</li>
+<li>numeric/boolean-to-string casts through runtime formatting</li>
+</ul>
+</section>
+</section>
+<section id="error-boundaries" class="level2">
+<h2 class="anchored" data-anchor-id="error-boundaries">Error Boundaries</h2>
+<ul>
+<li>Semantic errors: invalid programs, unsupported semantic input, and import contract violations are reported as diagnostics and surfaced as <code>SemanticError</code> from the public analysis entrypoints.</li>
+<li>Lowering errors: once semantic analysis succeeds, failures during LLVM IR emission belong to backend lowering, not to semantic validation.</li>
+<li>Linking/runtime errors: native artifact compilation, linker execution, and runtime integration failures happen after lowering and are outside the semantic contract.</li>
+</ul>
+</section>
+<section id="what-arx-may-hand-to-irx" class="level2">
+<h2 class="anchored" data-anchor-id="what-arx-may-hand-to-irx">What Arx May Hand to IRx</h2>
+<ul>
+<li>Arx owns parsing. IRx accepts ASTx nodes and host-owned <code>ParsedModule</code> values; it does not parse source files or perform package discovery.</li>
+<li>Single-root lowering may use <code>analyze(...)</code> or <code>analyze_module(...)</code> when no cross-module import graph is required.</li>
+<li>Cross-module lowering must use <code>analyze_modules(root, resolver)</code> with a host-supplied <code>ImportResolver</code>.</li>
+<li>Imports are currently part of the stable contract only at module top level.</li>
+<li>Wildcard imports and import expressions are not part of the current stable lowering contract and are rejected semantically.</li>
+</ul>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/arxlang\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright © 2022, ArxLang Team</p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

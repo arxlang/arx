@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>architecture – ArxLang</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-d0ae9245876894da5ac7e18953ecc5cc.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-bb1a7616eef61b9235a650cadac21922.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../images/arx.png" alt="" class="navbar-logo light-content">
+    <img src="../images/arx.png" alt="" class="navbar-logo dark-content">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">ArxLang</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="../discord.html" aria-current="page"> 
+<span class="menu-text">Community</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../irx/index.html">IRx</a></li><li class="breadcrumb-item"><a href="../irx/architecture.html">Architecture</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../getting-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Library</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/modules.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Modules</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/classes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classes</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/datatypes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Data Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/built-in-types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Built-in Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/control-flow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Control Flow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/docstrings.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Docstrings</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">ASTx</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/conventions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Conventions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/literals.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Literals</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/for-loop.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">For Loops</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/context.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Context</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/tutorials/fibonacci.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fibonacci</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../astx/changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Historical Changelog</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">IRx</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/installation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Installation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/architecture.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Architecture</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/semantic-contract.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Semantic Contract</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/runtime-features.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Runtime Features</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Buffer View Model</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/class-model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Class Model</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
+ <span class="menu-text">Tutorials</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Getting Started</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../irx/changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Historical Changelog</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Docs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../syntax.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Syntax</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../roadmap.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Roadmap</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../contributing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Contributing Guide</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../sponsor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Sponsor</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../partners.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Partners</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../coc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Code of Conduct</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../discord.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Governance</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../changelog.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Changelog</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#architecture" id="toc-architecture" class="nav-link active" data-scroll-target="#architecture">Architecture</a>
+  <ul class="collapse">
+  <li><a href="#design-goals" id="toc-design-goals" class="nav-link" data-scroll-target="#design-goals">Design Goals</a></li>
+  <li><a href="#pipeline-overview" id="toc-pipeline-overview" class="nav-link" data-scroll-target="#pipeline-overview">Pipeline Overview</a></li>
+  <li><a href="#semantic-analysis" id="toc-semantic-analysis" class="nav-link" data-scroll-target="#semantic-analysis">Semantic Analysis</a>
+  <ul class="collapse">
+  <li><a href="#semantic-contract" id="toc-semantic-contract" class="nav-link" data-scroll-target="#semantic-contract">Semantic Contract</a></li>
+  <li><a href="#why-sidecars-instead-of-a-separate-hir" id="toc-why-sidecars-instead-of-a-separate-hir" class="nav-link" data-scroll-target="#why-sidecars-instead-of-a-separate-hir">Why sidecars instead of a separate HIR?</a></li>
+  <li><a href="#multi-module-boundary" id="toc-multi-module-boundary" class="nav-link" data-scroll-target="#multi-module-boundary">Multi-Module Boundary</a></li>
+  <li><a href="#template-specialization-metadata" id="toc-template-specialization-metadata" class="nav-link" data-scroll-target="#template-specialization-metadata">Template Specialization Metadata</a></li>
+  <li><a href="#compilation-session" id="toc-compilation-session" class="nav-link" data-scroll-target="#compilation-session">Compilation Session</a></li>
+  </ul></li>
+  <li><a href="#shared-visitor-foundation" id="toc-shared-visitor-foundation" class="nav-link" data-scroll-target="#shared-visitor-foundation">Shared Visitor Foundation</a></li>
+  <li><a href="#builder-architecture" id="toc-builder-architecture" class="nav-link" data-scroll-target="#builder-architecture">Builder Architecture</a></li>
+  <li><a href="#builder-package-layout" id="toc-builder-package-layout" class="nav-link" data-scroll-target="#builder-package-layout">Builder Package Layout</a></li>
+  <li><a href="#bufferview-indexing" id="toc-bufferview-indexing" class="nav-link" data-scroll-target="#bufferview-indexing">Buffer/View Indexing</a></li>
+  <li><a href="#dynamic-list-construction" id="toc-dynamic-list-construction" class="nav-link" data-scroll-target="#dynamic-list-construction">Dynamic List Construction</a></li>
+  <li><a href="#common-collection-methods" id="toc-common-collection-methods" class="nav-link" data-scroll-target="#common-collection-methods">Common Collection Methods</a></li>
+  <li><a href="#iterable-semantics" id="toc-iterable-semantics" class="nav-link" data-scroll-target="#iterable-semantics">Iterable Semantics</a></li>
+  <li><a href="#generator-semantics" id="toc-generator-semantics" class="nav-link" data-scroll-target="#generator-semantics">Generator Semantics</a></li>
+  <li><a href="#tensor-layering" id="toc-tensor-layering" class="nav-link" data-scroll-target="#tensor-layering">Tensor Layering</a></li>
+  <li><a href="#why-visit...-remains-the-public-lowering-boundary" id="toc-why-visit...-remains-the-public-lowering-boundary" class="nav-link" data-scroll-target="#why-visit...-remains-the-public-lowering-boundary">Why <code>visit(...)</code> Remains the Public Lowering Boundary</a></li>
+  <li><a href="#core-class-and-protocol" id="toc-core-class-and-protocol" class="nav-link" data-scroll-target="#core-class-and-protocol">Core Class and Protocol</a></li>
+  <li><a href="#visitor-mixins" id="toc-visitor-mixins" class="nav-link" data-scroll-target="#visitor-mixins">Visitor Mixins</a></li>
+  <li><a href="#canonical-loop-lowering" id="toc-canonical-loop-lowering" class="nav-link" data-scroll-target="#canonical-loop-lowering">Canonical Loop Lowering</a></li>
+  <li><a href="#contributor-guidelines" id="toc-contributor-guidelines" class="nav-link" data-scroll-target="#contributor-guidelines">Contributor Guidelines</a></li>
+  <li><a href="#if-another-backend-ever-returns" id="toc-if-another-backend-ever-returns" class="nav-link" data-scroll-target="#if-another-backend-ever-returns">If Another Backend Ever Returns</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../irx/index.html">IRx</a></li><li class="breadcrumb-item"><a href="../irx/architecture.html">Architecture</a></li></ol></nav></header>
+
+
+
+
+
+<section id="architecture" class="level1">
+<h1>Architecture</h1>
+<p>IRx is organized as a small compiler pipeline with a deliberate boundary between semantic meaning and backend-specific lowering. The goal is to keep the codebase easy to extend without letting semantic rules slowly drift into code generation.</p>
+<section id="design-goals" class="level2">
+<h2 class="anchored" data-anchor-id="design-goals">Design Goals</h2>
+<p>The current architecture is shaped by a few practical goals:</p>
+<ul>
+<li>Keep parsing, semantic analysis, and code generation as distinct phases.</li>
+<li>Make semantic analysis the authority for meaning and program validity.</li>
+<li>Keep backend packages focused on emission, not interpretation.</li>
+<li>Preserve method-based multiple dispatch for visitor-driven lowering.</li>
+<li>Use package structure to communicate architecture instead of large utility modules or generic <code>helpers/</code> folders.</li>
+</ul>
+</section>
+<section id="pipeline-overview" class="level2">
+<h2 class="anchored" data-anchor-id="pipeline-overview">Pipeline Overview</h2>
+<p>IRx currently follows this high-level flow:</p>
+<p><code>ASTx parser output -&gt; semantic analysis -&gt; resolved semantic sidecars -&gt; backend code generation</code></p>
+<p>The parser produces raw ASTx nodes. Those nodes are still close to surface syntax and may not yet have enough information for direct lowering. The semantic-analysis phase walks that tree, resolves symbols and types, validates program rules, and attaches a structured <code>node.semantic</code> sidecar to the nodes that backend code needs.</p>
+<p>By the time a backend starts lowering, it should not need to infer meaning from raw syntax or re-run language validation from scratch.</p>
+</section>
+<section id="semantic-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="semantic-analysis">Semantic Analysis</h2>
+<p>The semantic-analysis package lives in <code>packages/irx/src/irx/analysis/</code> and is intentionally independent from LLVM or <code>llvmlite</code>.</p>
+<p>It is responsible for:</p>
+<ul>
+<li>symbol resolution</li>
+<li>lexical scope tracking</li>
+<li>mutability and assignment validation</li>
+<li>function and return validation</li>
+<li>loop-control legality such as <code>break</code> and <code>continue</code></li>
+<li>expression typing and promotion policy</li>
+<li>operator normalization</li>
+<li>semantic flag normalization such as unsigned and fast-math intent</li>
+<li>diagnostics collection and semantic error reporting</li>
+</ul>
+<p>The public entry points are:</p>
+<ul>
+<li><code>irx.analysis.analyze(node)</code></li>
+<li><code>irx.analysis.analyze_module(module)</code></li>
+<li><code>irx.analysis.analyze_modules(root, resolver)</code></li>
+</ul>
+<p>These entry points return the same AST root after attaching semantic sidecars. If semantic validation fails, analysis raises <code>SemanticError</code> before codegen begins.</p>
+<section id="semantic-contract" class="level3">
+<h3 class="anchored" data-anchor-id="semantic-contract">Semantic Contract</h3>
+<p>The host-facing semantic boundary is now explicit in code through <code>irx.analysis.get_semantic_contract()</code>. That contract names the stable semantic phases, the <code>SemanticInfo</code> and <code>CompilationSession</code> metadata that must exist before codegen, and the boundary between semantic, lowering, and linking/runtime failures.</p>
+<p>See <a href="../irx/semantic-contract.html">Semantic Contract</a> for the concise contract summary.</p>
+</section>
+<section id="why-sidecars-instead-of-a-separate-hir" class="level3">
+<h3 class="anchored" data-anchor-id="why-sidecars-instead-of-a-separate-hir">Why sidecars instead of a separate HIR?</h3>
+<p>For the current size of IRx, attaching explicit semantic sidecars to AST nodes is the lightest approach that still creates a clean boundary. It gives codegen resolved information without introducing a second full tree structure before it is needed.</p>
+<p>If the language grows to the point where a true HIR becomes useful, the current phase split still leaves room for that evolution.</p>
+</section>
+<section id="multi-module-boundary" class="level3">
+<h3 class="anchored" data-anchor-id="multi-module-boundary">Multi-Module Boundary</h3>
+<p>IRx now also supports a parser-agnostic multi-module path for imports.</p>
+<p>The boundary is explicit:</p>
+<ul>
+<li>the host compiler parses source text into <code>astx.Module</code> objects</li>
+<li>the host compiler decides how an import specifier maps to a module</li>
+<li>IRx receives <code>ParsedModule</code> objects plus an <code>ImportResolver</code></li>
+<li>IRx expands the reachable dependency graph, performs cross-module semantic analysis, and lowers the reachable graph into one LLVM module for the MVP</li>
+</ul>
+<p>Import-from resolution remains symbol-first, but it also supports child-module namespace sugar: <code>import stats from sciarx</code> may bind <code>sciarx.stats</code> as a local module namespace when <code>sciarx</code> does not already expose an importable symbol named <code>stats</code>.</p>
+<p>IRx does not parse source text, search the filesystem, or implement package discovery. Those responsibilities stay outside the library.</p>
+</section>
+<section id="template-specialization-metadata" class="level3">
+<h3 class="anchored" data-anchor-id="template-specialization-metadata">Template Specialization Metadata</h3>
+<p>IRx also carries semantic-only template metadata for compile-time specialization. The current scope is bounded template functions and methods.</p>
+<p>Semantic analysis preserves:</p>
+<ul>
+<li>template parameters attached to callable definitions</li>
+<li>finite union bounds used as specialization domains</li>
+<li>unresolved template type variables inside generic signatures</li>
+<li>explicit template arguments attached to call sites</li>
+<li>stable specialization identities and generated concrete callables</li>
+</ul>
+<p>During analysis, template bodies are validated over every admissible bound substitution. Successful specializations are materialized as generated concrete functions so backend lowering can continue to operate mostly on ordinary non-template callables. That generated specialization set is treated as per-analysis state and is cleared before rerunning semantic analysis on the same AST module.</p>
+<p>For v1, template methods lower only as direct concrete specializations. They do not participate in class dispatch slots or virtual-style dispatch tables.</p>
+</section>
+<section id="compilation-session" class="level3">
+<h3 class="anchored" data-anchor-id="compilation-session">Compilation Session</h3>
+<p>The multi-module path is centered on <code>CompilationSession</code> in <code>packages/irx/src/irx/analysis/session.py</code>.</p>
+<p>That session owns:</p>
+<ul>
+<li>the root parsed module and resolver callback</li>
+<li>the cache of reachable parsed modules</li>
+<li>the import dependency graph and stable load order</li>
+<li>cycle diagnostics</li>
+<li>per-module visible top-level bindings used for direct imports and module namespace aliases</li>
+<li>semantic-only module namespace values and namespace-member lookup metadata</li>
+</ul>
+<p>Semantic identity for top-level functions and structs is module-aware. Backend lowering consumes that semantic identity rather than raw source names, which is what keeps same-named declarations in different modules from colliding in LLVM.</p>
+</section>
+</section>
+<section id="shared-visitor-foundation" class="level2">
+<h2 class="anchored" data-anchor-id="shared-visitor-foundation">Shared Visitor Foundation</h2>
+<p>IRx also has a shared visitor layer in <code>packages/irx/src/irx/base/visitors/</code>.</p>
+<p>It currently provides:</p>
+<ul>
+<li><code>BaseVisitorProtocol</code>: the minimal typing contract shared by visitor-style classes</li>
+<li><code>BaseVisitor</code>: a concrete Plum-dispatch scaffold with explicit <code>NotImplementedError</code> defaults for the current ASTx node surface</li>
+</ul>
+<p>This keeps typing and runtime behavior separate:</p>
+<ul>
+<li>protocols define what visitor-like objects must expose</li>
+<li>the concrete base class defines what happens for unsupported nodes</li>
+</ul>
+<p>In practice:</p>
+<ul>
+<li><code>SemanticAnalyzer</code> inherits <code>BaseVisitor</code></li>
+<li><code>BuilderVisitor</code> inherits <code>BaseVisitor</code></li>
+<li>builder-specific protocols such as <code>builder.VisitorProtocol</code> extend <code>BaseVisitorProtocol</code></li>
+</ul>
+</section>
+<section id="builder-architecture" class="level2">
+<h2 class="anchored" data-anchor-id="builder-architecture">Builder Architecture</h2>
+<p>IRx now exposes a single builder package at <code>packages/irx/src/irx/builder/</code>. The package path identifies the concrete LLVM builder, while the public classes inside it use short generic names.</p>
+<p>For example, <code>packages/irx/src/irx/builder</code> exposes:</p>
+<ul>
+<li><code>Builder</code></li>
+<li><code>Visitor</code></li>
+<li><code>VisitorProtocol</code></li>
+<li>optional <code>VisitorCore</code> as a module-private implementation class</li>
+</ul>
+<p>This keeps the public API concise without reintroducing legacy class prefixes.</p>
+</section>
+<section id="builder-package-layout" class="level2">
+<h2 class="anchored" data-anchor-id="builder-package-layout">Builder Package Layout</h2>
+<p>The LLVM backend is split into first-class modules instead of one monolithic builder:</p>
+<ul>
+<li><code>../packages/irx/src/irx/base/visitors/</code>: shared visitor protocol and runtime scaffold</li>
+<li><code>backend.py</code>: public backend entry points</li>
+<li><code>core.py</code>: shared mutable lowering state and backend lifecycle</li>
+<li><code>protocols.py</code>: typing contract used by mixins and runtime features</li>
+<li><code>types.py</code>, <code>casting.py</code>, <code>vector.py</code>, <code>strings.py</code>, <code>runtime/</code>: shared IR infrastructure</li>
+<li><code>lowering/</code>: concern-grouped <code>visit(...)</code> overloads</li>
+<li><code>../packages/irx/src/irx/buffer.py</code>: the canonical low-level buffer owner/view semantic substrate that Arx can target without exposing an array API</li>
+</ul>
+<p>Foundational modules stay at the package root because they are architectural components, not incidental helpers.</p>
+</section>
+<section id="bufferview-indexing" class="level2">
+<h2 class="anchored" data-anchor-id="bufferview-indexing">Buffer/View Indexing</h2>
+<p>IRx treats first-class indexing as a low-level operation over the canonical buffer/view descriptor in <code>packages/irx/src/irx/buffer.py</code>. It is the stable memory/container path that Arx can target for element access such as <code>a[i]</code>, <code>a[i, j]</code>, and the corresponding stores. It is not a NumPy-like array API and does not define slicing, broadcasting, fancy indexing, masks, or shape inference.</p>
+<p>Indexed access has an explicit IRx node surface for reads and stores. Semantic analysis validates the descriptor base, the number of indices, index scalar types, mutability for stores, static bounds when descriptor shape and literal indices make the answer provable, and the scalar element type used by lowering. The MVP requires static descriptor metadata for rank validation. Dynamic-rank runtime checks are intentionally deferred.</p>
+<p>Backend lowering keeps address computation separate from load/store emission. The address helper extracts descriptor fields through <code>BUFFER_VIEW_FIELD_INDICES</code>, starts from <code>data</code>, includes <code>offset_bytes</code>, loads byte strides from <code>strides</code>, and computes:</p>
+<p><code>effective_byte_offset = offset_bytes + sum(index_k * stride_k)</code></p>
+<p>The result is cast to the resolved element pointer type. Indexed reads emit a load from that pointer; indexed stores cast the right-hand side to the resolved element type and emit a store. The default bounds policy means semantic static bounds rejection when provable and no emitted runtime bounds helper yet. Future checked and unchecked runtime modes can reuse the same element-pointer helper.</p>
+</section>
+<section id="dynamic-list-construction" class="level2">
+<h2 class="anchored" data-anchor-id="dynamic-list-construction">Dynamic List Construction</h2>
+<p>IRx also exposes one intentionally small list-building surface for frontend- emitted AST:</p>
+<ul>
+<li><code>ListCreate(element_type)</code> creates an empty list value with explicit element type</li>
+<li><code>ListAppend(base, value)</code> grows a mutable list variable or field</li>
+<li>regular <code>SubscriptExpr</code> lowering may read from produced list values</li>
+</ul>
+<p>This is deliberately narrower than a full collection API. The goal is to let frontends author pure source routines that accumulate list results inside loops without moving collection policy into the frontend. The current runtime owns append/growth and indexed reads only; list teardown is intentionally deferred to a future ownership API.</p>
+</section>
+<section id="common-collection-methods" class="level2">
+<h2 class="anchored" data-anchor-id="common-collection-methods">Common Collection Methods</h2>
+<p>IRx also exposes backend-neutral query nodes for common collection operations:</p>
+<ul>
+<li><code>CollectionLength(base)</code> returns the logical length as <code>Int32</code></li>
+<li><code>CollectionIsEmpty(base)</code> returns a Boolean emptiness check</li>
+<li><code>CollectionContains(base, value)</code> checks list, tuple, or set values and dict keys</li>
+<li><code>CollectionIndex(base, value)</code> returns the first list/tuple index or <code>-1</code></li>
+<li><code>CollectionCount(base, value)</code> returns the number of list/tuple matches</li>
+</ul>
+<p>Semantic analysis validates the receiver kind, probe type, and result type and attaches a <code>ResolvedCollectionMethod</code> sidecar. Lowering consumes that sidecar instead of re-resolving the collection operation from raw AST shape.</p>
+<p>Literal lists, tuples, sets, and dictionaries support common length, emptiness, and containment queries. Dynamic IRx lists also support length, emptiness, contains, index, and count by reusing the existing list runtime and emitting small search loops where needed. Dynamic set and dictionary method lowering remains intentionally deferred until those runtime representations exist.</p>
+</section>
+<section id="iterable-semantics" class="level2">
+<h2 class="anchored" data-anchor-id="iterable-semantics">Iterable Semantics</h2>
+<p>IRx now models iteration as a semantic capability instead of as backend-specific collection probing. Semantic analysis resolves known iterable expressions into a <code>ResolvedIteration</code> sidecar that records the adapter kind, yielded element type, ordering contract, and loop/comprehension target symbol. Backend lowering consumes that sidecar instead of rediscovering whether an expression is a list, set, or dict.</p>
+<p>The executable MVP supports <code>ForInLoopStmt</code> and <code>ListComprehension</code> over list iterables, including literal lists and dynamic IRx lists. List iteration follows index order and evaluates the iterable once when that loop or comprehension clause is entered. Dict and set literals are recognized semantically as iterables as well: dict iteration yields keys, while set iteration order remains unspecified. Their dynamic lowering is intentionally guarded until IRx has runtime-backed dynamic dict and set construction APIs.</p>
+</section>
+<section id="generator-semantics" class="level2">
+<h2 class="anchored" data-anchor-id="generator-semantics">Generator Semantics</h2>
+<p>IRx models named generator functions as functions returning <code>GeneratorType(T)</code>. Semantic analysis validates top-level <code>yield</code> sites against the declared yielded element type and exposes generator values through the same <code>ResolvedIteration</code> sidecar used by <code>ForInLoopStmt</code>.</p>
+<p>The initial executable lowering supports straight-line named generator functions with top-level <code>YieldStmt</code> nodes. Calls create a small generator object containing an opaque frame pointer and an internal resume function pointer. For-in lowering calls the resume function until it reports exhaustion. More Python-compatible behavior such as nested-control-flow suspension, <code>yield from</code>, generator expressions, <code>send</code>, <code>throw</code>, and <code>close</code> remains deferred.</p>
+</section>
+<section id="tensor-layering" class="level2">
+<h2 class="anchored" data-anchor-id="tensor-layering">Tensor Layering</h2>
+<p>IRx now treats <code>Tensor</code> support as a distinct semantic layer aligned with Apache Arrow’s homogeneous tensor model:</p>
+<ul>
+<li>the builtin Arrow C++ backed tensor runtime provides dtype, shape, stride, and data-buffer ownership for homogeneous N-dimensional values through <code>arrow::Tensor</code></li>
+<li>the canonical <code>irx_buffer_view</code> substrate remains the lowering descriptor for indexing, byte-offset calculation, ownership, and layout flags</li>
+</ul>
+<p>That split keeps the data-container roles explicit:</p>
+<ul>
+<li><code>tensor</code> is the homogeneous N-dimensional semantic abstraction</li>
+<li><code>array</code> remains the one-dimensional Arrow array/runtime abstraction for column-like values and future <code>Series</code> work</li>
+<li>future <code>DataFrame</code> support should wrap heterogeneous named columns backed by Arrow C++ <code>arrow::Table</code> storage</li>
+<li><code>buffer/view</code> remains the low-level layout and ownership substrate</li>
+</ul>
+<p>Current tensor lowering stays intentionally conservative:</p>
+<ul>
+<li>literals build Arrow C++ tensor handles through <code>irx_arrow_tensor_*</code>, then wrap borrowed tensor buffers in external-owner buffer views</li>
+<li>indexing and byte-offset queries reuse buffer/view stride arithmetic</li>
+<li>view construction is shallow and metadata-driven</li>
+<li>fixed-width numeric element types are supported in this phase</li>
+<li>Arrow C++ backed <code>Tensor</code> values remain readonly in this phase</li>
+</ul>
+</section>
+<section id="why-visit...-remains-the-public-lowering-boundary" class="level2">
+<h2 class="anchored" data-anchor-id="why-visit...-remains-the-public-lowering-boundary">Why <code>visit(...)</code> Remains the Public Lowering Boundary</h2>
+<p>The codegen layer continues to use method-based Plum multiple dispatch:</p>
+<ul>
+<li><code>visit(self, node: ...)</code></li>
+</ul>
+<p>This remains the only public dispatch boundary for backend lowering. IRx does not use a free-function dispatch registry or a second public API like <code>lower(...)</code> or <code>build_node(...)</code>.</p>
+<p>That choice keeps backend code readable and local:</p>
+<ul>
+<li>AST-family-specific lowering remains attached to the visitor class.</li>
+<li>Mixins can group overloads by concern without changing the public surface.</li>
+<li>Shared lowering state stays on the visitor instance instead of moving into a registry-driven design.</li>
+</ul>
+</section>
+<section id="core-class-and-protocol" class="level2">
+<h2 class="anchored" data-anchor-id="core-class-and-protocol">Core Class and Protocol</h2>
+<p><code>VisitorProtocol</code> and <code>VisitorCore</code> serve different purposes:</p>
+<ul>
+<li><code>VisitorProtocol</code> defines the stable interface that mixins and runtime feature declarations depend on for typing, building on <code>BaseVisitorProtocol</code>.</li>
+<li><code>VisitorCore</code> is the concrete implementation center that owns mutable state, module setup, helper methods, and backend lifecycle.</li>
+</ul>
+<p><code>VisitorCore</code> is still internal to the backend package. IRx uses <code>from public import private</code> for module-level internal helpers and internal implementation classes when a clear non-underscored name reads better than an underscore-prefixed export. That keeps internal names readable without making them part of the intended public surface.</p>
+<p>The protocol is not a replacement for the core class. It exists so backend subsystems can depend on a narrow contract instead of the full concrete type.</p>
+</section>
+<section id="visitor-mixins" class="level2">
+<h2 class="anchored" data-anchor-id="visitor-mixins">Visitor Mixins</h2>
+<p>The final backend visitor is composed from concern-specific mixins plus the shared core. Each mixin should contain:</p>
+<ul>
+<li><code>@dispatch def visit(self, node: ...)</code> overloads for one concern</li>
+<li>a small number of private helpers local to that concern</li>
+</ul>
+<p>Examples of concern boundaries include:</p>
+<ul>
+<li>literals</li>
+<li>variables</li>
+<li>unary and binary operators</li>
+<li>control flow</li>
+<li>functions</li>
+<li>runtime or domain-specific lowering</li>
+</ul>
+<p>This keeps dispatch organization aligned with language structure while still sharing one lowering state object.</p>
+</section>
+<section id="canonical-loop-lowering" class="level2">
+<h2 class="anchored" data-anchor-id="canonical-loop-lowering">Canonical Loop Lowering</h2>
+<p>IRx now treats loop lowering as one small shared control-flow contract instead of three ad hoc visitors:</p>
+<ul>
+<li><code>while</code>: <code>cond -&gt; body -&gt; exit</code>, with <code>continue</code> targeting <code>cond</code></li>
+<li><code>for-count</code>: <code>cond -&gt; body -&gt; update -&gt; exit</code>, with <code>continue</code> targeting <code>update</code></li>
+<li><code>for-range</code>: <code>cond -&gt; body -&gt; step -&gt; exit</code>, with <code>continue</code> targeting <code>step</code></li>
+</ul>
+<p>Loop variables remain semantic symbols rather than backend-only temporaries. For-count initializers are visible only within the loop. For-range induction variables are body-visible, loop-scoped, and restored after lowering so outer shadowed bindings remain stable. Mutable post-loop state reconciles through the existing variable-slot model instead of accidental value-stack state.</p>
+</section>
+<section id="contributor-guidelines" class="level2">
+<h2 class="anchored" data-anchor-id="contributor-guidelines">Contributor Guidelines</h2>
+<p>When extending IRx, these rules help preserve the architecture:</p>
+<ul>
+<li>Put semantic meaning and validation in <code>analysis/</code>, not in a backend.</li>
+<li>Let codegen consume normalized semantic information instead of re-deriving it.</li>
+<li>Keep buffer/view support framed as a low-level memory/container substrate, not as NumPy-like user-facing array behavior.</li>
+<li>Keep shared visitor dispatch defaults in <code>packages/irx/src/irx/base/visitors/</code> so semantic and backend visitors fail consistently for unsupported ASTx nodes.</li>
+<li>Add new backend-wide infrastructure at the package root, not under <code>helpers/</code>.</li>
+<li>Keep mutable lowering state instance-local.</li>
+<li>Prefer explicit code over clever abstractions.</li>
+<li>Use the package name, not class prefixes, to identify the backend.</li>
+</ul>
+</section>
+<section id="if-another-backend-ever-returns" class="level2">
+<h2 class="anchored" data-anchor-id="if-another-backend-ever-returns">If Another Backend Ever Returns</h2>
+<p>IRx currently standardizes on a single builder package. If another backend is ever introduced again, keep the public class names generic and make the package split an explicit architecture decision instead of quietly rebuilding a plural builders namespace.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/arxlang\.org");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright © 2022, ArxLang Team</p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
