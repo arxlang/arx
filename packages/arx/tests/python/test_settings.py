@@ -340,7 +340,7 @@ def test_dependency_groups_support_multiple_named_groups() -> None:
         [dependency-groups]
         dev = ["pytest", "ruff", "mypy"]
         test = ["pytest", "coverage"]
-        docs = ["mkdocs"]
+        docs = ["quarto-cli"]
         """
     ).lstrip()
 
@@ -350,7 +350,7 @@ def test_dependency_groups_support_multiple_named_groups() -> None:
     assert settings.dependency_groups == {
         "dev": ("pytest", "ruff", "mypy"),
         "test": ("pytest", "coverage"),
-        "docs": ("mkdocs",),
+        "docs": ("quarto-cli",),
     }
 
 

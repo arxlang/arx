@@ -33,7 +33,7 @@ Use this guidance for any change inside the Arx compiler repository:
   - `irx` for semantic analysis, lowering, and code generation
   - `astx` as the upstream node library consumed through IRx
   - `jsonschema` + `pyyaml` for Douki docstring validation
-- Docs stack: MkDocs + Material + mkdocstrings
+- Docs stack: Quarto
 
 ## Repository Layout
 
@@ -265,7 +265,7 @@ makim all.lint
 makim all.ci
 
 # docs
-mkdocs build --config-file mkdocs.yaml
+makim docs.build
 ```
 
 Codegen-focused checks:
@@ -304,7 +304,7 @@ When behavior changes, update docs in same PR:
 
 - language overview and getting-started examples
 - `docs/library/*` for syntax/placement rules
-- API docs are generated via mkdocstrings (`scripts/gen_ref_nav.py`)
+- API docs are generated for Quarto via `scripts/gen_api_docs.py`
 
 If embedding Arx docstrings inside Markdown code examples, prefer quadruple
 fences around the code block to safely include inner triple backticks.
