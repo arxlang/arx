@@ -22,8 +22,7 @@
     },
     "dependency": {
       "type": "string",
-      "minLength": 1,
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*( @ \\S+)?$"
+      "minLength": 1
     },
     "dependency_group_name": {
       "type": "string",

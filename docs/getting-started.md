@@ -249,6 +249,9 @@ Example project manifest:
 name = "geometry"
 version = "0.1.0"
 requires-arx = ">=1.0"
+dependencies = [
+  "sciarx>=0.0.3,<1",
+]
 
 [environment]
 kind = "conda"
@@ -268,6 +271,11 @@ a project. The value uses the same version-specifier style as `requires-python`,
 for example `">=1.0,<2"`. `[build-system].dependencies` declares installable
 packages needed to build the project. If omitted, Arx defaults to `arxlang`; if
 `requires-arx` is present, the default build dependency uses that constraint.
+
+Use `[project].dependencies` to declare runtime Arx package dependencies.
+Entries use standard dependency requirement strings, so packages may be
+unconstrained (`"sciarx"`), version constrained (`"sciarx>=0.0.3,<1"`), or
+direct references (`"sciarx @ ../sciarx"`).
 
 Use `__init__.x` as the package root. Arx uses `src/` as the default source root
 when `[build].src_dir` is omitted. Inside a nested module such as

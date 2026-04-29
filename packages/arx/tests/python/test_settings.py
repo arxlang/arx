@@ -38,6 +38,7 @@ EXAMPLE_TOML = dedent(
     edition = "2026"
     dependencies = [
       "http",
+      "sciarx-utils>=0.0.3,<1",
       "mylib @ ../mylib",
     ]
     authors = [
@@ -92,6 +93,7 @@ def test_load_settings_from_text_full_example() -> None:
     assert settings.project.edition == "2026"
     assert settings.project.dependencies == (
         "http",
+        "sciarx-utils>=0.0.3,<1",
         "mylib @ ../mylib",
     )
     assert settings.project.authors[0].name == "Ivan Ogasawara"
@@ -278,10 +280,13 @@ def test_build_system_dependencies_reject_invalid_requirement() -> None:
     "dependency",
     [
         "http",
+        "sciarx>=0.0.3",
+        "sciarx>=0.0.3,<1",
+        "sciarx==0.0.3",
         "mylib @ ../mylib",
         "utils @ git+https://example.com/utils.git",
     ],
-    ids=["registry", "path", "git"],
+    ids=["registry", "lower-bound", "bounded", "exact", "path", "git"],
 )
 def test_project_dependencies_support_canonical_strings(
     dependency: str,
@@ -297,6 +302,19 @@ def test_project_dependencies_support_canonical_strings(
     settings = load_settings_from_text(content)
     assert settings.project.dependencies == (dependency,)
     assert settings.dependency_groups == {}
+
+
+def test_project_dependencies_reject_invalid_requirements() -> None:
+    """
+    title: Reject invalid requirement strings in runtime dependencies.
+    """
+    content = _project_toml('dependencies = ["bad dep @"]\n')
+
+    with pytest.raises(
+        ArxProjectError,
+        match=r"project\.dependencies\[0\]",
+    ):
+        load_settings_from_text(content)
 
 
 def test_dependency_groups_with_plain_string_entries_parse() -> None:
@@ -388,7 +406,10 @@ def test_dependency_group_entries_reuse_dependency_string_rules() -> None:
         """
     ).lstrip()
 
-    with pytest.raises(ArxProjectError, match="schema validation"):
+    with pytest.raises(
+        ArxProjectError,
+        match=r"dependency-groups\.dev\[0\]",
+    ):
         load_settings_from_text(content)
 
 

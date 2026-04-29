@@ -25,9 +25,6 @@ else:
     import tomli as tomllib
 
 DEFAULT_CONFIG_FILENAME = ".arxproject.toml"
-_DEPENDENCY_PATTERN = re.compile(
-    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)(?: @ (?P<location>\S+))?$"
-)
 _DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _DEPENDENCY_GROUP_NORMALIZE_PATTERN = re.compile(r"[-_.]+")
 _DEFAULT_SRC_DIR = "src"
@@ -501,7 +498,7 @@ def _reject_arxpm_sections(data: dict[str, Any]) -> None:
     raise ArxProjectError(
         ".arxproject.toml does not support [arxpm] sections. "
         "Declare dependencies in [project] using "
-        'dependencies = ["name", "name @ ../path"].'
+        'dependencies = ["name", "name>=1.0,<2", "name @ ../path"].'
     )
 
 
@@ -530,12 +527,14 @@ def _validate_dependency(value: str, location: str) -> None:
       location:
         type: str
     """
-    if _DEPENDENCY_PATTERN.fullmatch(value) is not None:
-        return
-    raise ArxProjectError(
-        f".arxproject.toml {location} must be either a package name "
-        'like "http" or a direct reference like "mylib @ ../mylib".'
-    )
+    try:
+        Requirement(value)
+    except InvalidRequirement as err:
+        raise ArxProjectError(
+            f".arxproject.toml {location} must be a valid dependency "
+            'requirement like "http", "sciarx>=0.0.3,<1", or '
+            '"mylib @ ../mylib".'
+        ) from err
 
 
 def _validate_project(data: dict[str, Any]) -> None:
