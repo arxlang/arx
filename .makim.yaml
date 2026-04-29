@@ -362,12 +362,12 @@ groups:
       build:
         help: build documentation
         run: |
-          mkdocs build --config-file mkdocs.yaml
-          echo "arxlang.org" > ./build/CNAME
+          bash -lc 'mkdir -p .quarto-tmp .quarto-cache .deno-cache && rm -rf build && TMPDIR="$PWD/.quarto-tmp" XDG_CACHE_HOME="$PWD/.quarto-cache" DENO_DIR="$PWD/.deno-cache" quarto render docs && cp -a docs/_site build && echo "arxlang.org" > ./build/CNAME'
 
       preview:
         help: preview documentation page locally
-        run: mkdocs serve --watch docs --config-file mkdocs.yaml
+        run: |
+          bash -lc 'mkdir -p .quarto-tmp .quarto-cache .deno-cache && TMPDIR="$PWD/.quarto-tmp" XDG_CACHE_HOME="$PWD/.quarto-cache" DENO_DIR="$PWD/.deno-cache" quarto preview docs'
 
   release:
     vars:

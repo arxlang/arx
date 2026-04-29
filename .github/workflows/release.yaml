@@ -51,7 +51,7 @@ jobs:
           poetry config pypi-token.pypi ${PYPI_TOKEN}
           makim release.ci
 
-      - name: Generate documentation with changes from semantic-release
+      - name: Generate documentation
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: makim docs.build
 

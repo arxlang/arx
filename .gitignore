@@ -101,6 +101,11 @@ ENV/
 
 # arx
 *.x.o
+/docs/api/
+/docs/_site/
+.quarto-tmp/
+.quarto-cache/
+.deno-cache/
 
 # llm
 .codex
