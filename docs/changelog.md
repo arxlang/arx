@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [1.23.1](https://github.com/arxlang/arx/compare/1.23.0...1.23.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* Fix the config dependencies format ([#81](https://github.com/arxlang/arx/issues/81)) ([309091a](https://github.com/arxlang/arx/commit/309091a37fe30a654696ced2a512f7aebfc5956a))
+
 # [1.23.0](https://github.com/arxlang/arx/compare/1.22.0...1.23.0) (2026-04-28)
 
 
