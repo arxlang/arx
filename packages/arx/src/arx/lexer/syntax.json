@@ -132,7 +132,17 @@
     "annotations": {
       "start": "@[",
       "separator": ",",
-      "end": "]"
+      "end": "]",
+      "modifiers": [
+        "public",
+        "private",
+        "protected",
+        "static",
+        "constant",
+        "mutable",
+        "abstract",
+        "extern"
+      ]
     },
     "template_parameter_block": {
       "start": "@<",
@@ -172,5 +182,39 @@
     ["(", ")"],
     ["[", "]"],
     ["{", "}"]
-  ]
+  ],
+
+  "builtins": {
+    "types": [
+      "i8",
+      "i16",
+      "i32",
+      "i64",
+      "int8",
+      "int16",
+      "int32",
+      "int64",
+      "f16",
+      "f32",
+      "f64",
+      "float16",
+      "float32",
+      "float64",
+      "bool",
+      "boolean",
+      "none",
+      "str",
+      "string",
+      "char",
+      "datetime",
+      "timestamp",
+      "date",
+      "time",
+      "dataframe",
+      "list",
+      "series",
+      "tensor"
+    ],
+    "functions": ["cast", "dataframe", "isinstance", "print", "range", "type"]
+  }
 }
