@@ -1,0 +1,58 @@
+{
+  "name": "aix",
+  "extensions": [".aix"],
+  "comments": {
+    "line": "⍝"
+  },
+  "symbols": {
+    "define": "∴",
+    "metadata": "κ",
+    "semantic_lbracket": "⟦",
+    "semantic_rbracket": "⟧",
+    "return": "⊢",
+    "conditional_return": "⇒",
+    "bind": "⌁",
+    "assign": "≔",
+    "emit": "⟣",
+    "end": "∎",
+    "arrow": "→"
+  },
+  "types": [
+    "ℕ",
+    "ℤ",
+    "ℝ",
+    "ℂ",
+    "𝔹",
+    "∅",
+    "i8",
+    "i16",
+    "i32",
+    "i64",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "f32",
+    "f64"
+  ],
+  "literals": {
+    "true": "⊤",
+    "false": "⊥",
+    "unit": "∅"
+  },
+  "reserved_operators": [
+    "⍴",
+    "⍳",
+    "¨",
+    "∘",
+    "↑",
+    "↓",
+    "⍋",
+    "⍒",
+    "∊",
+    "∪",
+    "∑",
+    "∫",
+    "∂"
+  ]
+}
