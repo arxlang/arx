@@ -5,7 +5,6 @@ title: AIX package metadata.
 from importlib import metadata as importlib_metadata
 
 _DISTRIBUTION_NAME = "airx"
-_FALLBACK_VERSION = "0.1.0"
 
 
 def get_version() -> str:
@@ -17,7 +16,7 @@ def get_version() -> str:
     try:
         return importlib_metadata.version(_DISTRIBUTION_NAME)
     except importlib_metadata.PackageNotFoundError:  # pragma: no cover
-        return _FALLBACK_VERSION
+        return "0.1.0"  # semantic-release
 
 
 version: str = get_version()

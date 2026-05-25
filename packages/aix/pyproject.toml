@@ -1,6 +1,6 @@
 [project]
 name = "airx"
-version = "0.1.0"
+version = "0.1.0"  # semantic-release
 description = "AIX is an AI-oriented symbolic programming language frontend"
 readme = "README.md"
 authors = [
@@ -10,8 +10,8 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
-  "astx == 1.23.1",
-  "pyirx == 1.23.1",
+  "astx == 1.23.1",  # semantic-release
+  "pyirx == 1.23.1",  # semantic-release
   "jsonschema (>=4.0.0)",
   "packaging >=23",
   "types-pyyaml (>=6.0.12.20250516)",
