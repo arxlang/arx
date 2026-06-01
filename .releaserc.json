@@ -1,5 +1,7 @@
 {
-  "branches": ["main"],
+  "branches": [
+    "main"
+  ],
   "tagFormat": "${version}",
   "plugins": [
     "@semantic-release/commit-analyzer",
@@ -8,7 +10,9 @@
       {
         "replacements": [
           {
-            "files": ["pyproject.toml"],
+            "files": [
+              "pyproject.toml"
+            ],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -22,7 +26,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/astx/pyproject.toml"],
+            "files": [
+              "packages/astx/pyproject.toml"
+            ],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -36,7 +42,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/astx/src/astx/__init__.py"],
+            "files": [
+              "packages/astx/src/astx/__init__.py"
+            ],
             "from": "return \".*\"  # semantic-release",
             "to": "return \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -50,7 +58,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/irx/pyproject.toml"],
+            "files": [
+              "packages/irx/pyproject.toml"
+            ],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -64,7 +74,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/irx/pyproject.toml"],
+            "files": [
+              "packages/irx/pyproject.toml"
+            ],
             "from": "  \"astx == .*\",  # semantic-release",
             "to": "  \"astx == ${nextRelease.version}\",  # semantic-release",
             "results": [
@@ -78,7 +90,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/irx/src/irx/__init__.py"],
+            "files": [
+              "packages/irx/src/irx/__init__.py"
+            ],
             "from": "return \".*\"  # semantic-release",
             "to": "return \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -92,7 +106,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/arx/pyproject.toml"],
+            "files": [
+              "packages/arx/pyproject.toml"
+            ],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
             "results": [
@@ -106,7 +122,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/arx/pyproject.toml"],
+            "files": [
+              "packages/arx/pyproject.toml"
+            ],
             "from": "  \"astx == .*\",  # semantic-release",
             "to": "  \"astx == ${nextRelease.version}\",  # semantic-release",
             "results": [
@@ -120,7 +138,9 @@
             "countMatches": true
           },
           {
-            "files": ["packages/arx/pyproject.toml"],
+            "files": [
+              "packages/arx/pyproject.toml"
+            ],
             "from": "  \"pyirx == .*\",  # semantic-release",
             "to": "  \"pyirx == ${nextRelease.version}\",  # semantic-release",
             "results": [
@@ -134,12 +154,56 @@
             "countMatches": true
           },
           {
-            "files": ["packages/arx/src/arx/__init__.py"],
+            "files": [
+              "packages/arx/src/arx/__init__.py"
+            ],
             "from": "return \".*\"  # semantic-release",
             "to": "return \"${nextRelease.version}\"  # semantic-release",
             "results": [
               {
                 "file": "packages/arx/src/arx/__init__.py",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/pyproject.toml"],
+            "from": "version = \".*\"  # semantic-release",
+            "to": "version = \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/pyproject.toml"],
+            "from": "  \"arxlang == .*\",  # semantic-release",
+            "to": "  \"arxlang == ${nextRelease.version}\",  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/src/pyarx/__init__.py"],
+            "from": "return \".*\"  # semantic-release",
+            "to": "return \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/src/pyarx/__init__.py",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
@@ -174,7 +238,9 @@
           "packages/irx/dist/*.whl",
           "packages/irx/dist/*.tar.gz",
           "packages/arx/dist/*.whl",
-          "packages/arx/dist/*.tar.gz"
+          "packages/arx/dist/*.tar.gz",
+          "packages/pyarx/dist/*.whl",
+          "packages/pyarx/dist/*.tar.gz"
         ]
       }
     ],
@@ -190,7 +256,9 @@
           "packages/irx/pyproject.toml",
           "packages/irx/src/irx/__init__.py",
           "packages/arx/pyproject.toml",
-          "packages/arx/src/arx/__init__.py"
+          "packages/arx/src/arx/__init__.py",
+          "packages/pyarx/pyproject.toml",
+          "packages/pyarx/src/pyarx/__init__.py"
         ],
         "message": "chore(release): ${nextRelease.version}"
       }

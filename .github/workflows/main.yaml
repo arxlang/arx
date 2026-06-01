@@ -38,6 +38,7 @@ jobs:
           - arx
           - astx
           - irx
+          - pyarx
         python_version:
           - "3.10"
           - "3.11"
