@@ -73,6 +73,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install python-discovery
           poetry check
           poetry install
 
