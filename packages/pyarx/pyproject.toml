@@ -2,7 +2,6 @@
 name = "pyarx"
 version = "1.23.1"  # semantic-release
 description = "PyArx is a Python API layer for the Arx compiler."
-readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]
