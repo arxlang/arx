@@ -119,7 +119,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry check
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run compiled Arx tests
         run: makim arx.test-compiled
@@ -158,7 +158,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry config virtualenvs.create false
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run style checks
         if: success() || failure()
