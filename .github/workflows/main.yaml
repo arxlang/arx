@@ -73,9 +73,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install python-discovery
           poetry check
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run package unit tests
         run: makim ${{ matrix.project }}.unittests
