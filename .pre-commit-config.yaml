@@ -283,3 +283,67 @@ repos:
         pass_filenames: true
         types:
           - python
+
+      - id: ruff-format-pyarx
+        name: ruff-format-pyarx
+        entry: ruff format --config packages/pyarx/pyproject.toml
+        files: ^packages/pyarx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-pyarx
+        name: ruff-check-pyarx
+        entry: ruff check --config packages/pyarx/pyproject.toml
+        files: ^packages/pyarx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: douki-pyarx
+        name: douki-pyarx
+        entry: douki sync
+        files: ^packages/pyarx/.*\.py$
+        language: system
+        pass_filenames: true
+        require_serial: yes
+        types:
+          - python
+
+      - id: mypy-pyarx
+        name: mypy-pyarx
+        entry: bash -c 'cd packages/pyarx && mypy src'
+        files: ^packages/pyarx/.*\.py$
+        language: system
+        pass_filenames: false
+
+      - id: bandit-pyarx
+        name: bandit-pyarx
+        entry: bandit
+        language: system
+        args: ["--configfile", "packages/pyarx/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/pyarx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: vulture-pyarx
+        name: vulture-pyarx
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^packages/pyarx/.*\.py$
+        description: Find unused PyArx Python code.
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-pyarx
+        name: mccabe-pyarx
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^packages/pyarx/.*\.py$
+        pass_filenames: true
+        types:
+          - python

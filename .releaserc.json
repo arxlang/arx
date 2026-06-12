@@ -146,6 +146,48 @@
               }
             ],
             "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/pyproject.toml"],
+            "from": "version = \".*\"  # semantic-release",
+            "to": "version = \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/pyproject.toml"],
+            "from": "  \"arxlang == .*\",  # semantic-release",
+            "to": "  \"arxlang == ${nextRelease.version}\",  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/pyarx/src/pyarx/__init__.py"],
+            "from": "return \".*\"  # semantic-release",
+            "to": "return \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/pyarx/src/pyarx/__init__.py",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
           }
         ]
       }
@@ -174,7 +216,9 @@
           "packages/irx/dist/*.whl",
           "packages/irx/dist/*.tar.gz",
           "packages/arx/dist/*.whl",
-          "packages/arx/dist/*.tar.gz"
+          "packages/arx/dist/*.tar.gz",
+          "packages/pyarx/dist/*.whl",
+          "packages/pyarx/dist/*.tar.gz"
         ]
       }
     ],
@@ -190,7 +234,9 @@
           "packages/irx/pyproject.toml",
           "packages/irx/src/irx/__init__.py",
           "packages/arx/pyproject.toml",
-          "packages/arx/src/arx/__init__.py"
+          "packages/arx/src/arx/__init__.py",
+          "packages/pyarx/pyproject.toml",
+          "packages/pyarx/src/pyarx/__init__.py"
         ],
         "message": "chore(release): ${nextRelease.version}"
       }

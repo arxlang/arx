@@ -33,6 +33,7 @@ groups:
             - task: arx.typecheck
             - task: astx.typecheck
             - task: irx.typecheck
+            - task: pyarx.typecheck
 
       build:
         help: build all packages
@@ -45,6 +46,7 @@ groups:
             - task: arx.unittests
             - task: astx.unittests
             - task: irx.unittests
+            - task: pyarx.unittests
             - task: arx.test-compiled
             - task: arx.test-smoke
             - task: arx.check-syntax
@@ -356,6 +358,55 @@ groups:
             - task: irx.typecheck
             - task: irx.lint
             - task: irx.build
+
+  pyarx:
+    tasks:
+      unittests:
+        help: run PyArx unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/pyarx/tests"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      format:
+        help: format PyArx Python files
+        run: pre-commit run ruff-format-pyarx --all-files
+
+      lint:
+        help: run PyArx package lint hooks
+        run: |
+          pre-commit run ruff-check-pyarx --all-files
+          pre-commit run douki-pyarx --all-files
+          pre-commit run bandit-pyarx --all-files
+          pre-commit run vulture-pyarx --all-files
+          pre-commit run mccabe-pyarx --all-files
+
+      typecheck:
+        help: run PyArx type checks
+        run: |
+          cd packages/pyarx
+          mypy src
+
+      build:
+        help: build the PyArx package
+        run: |
+          cd packages/pyarx
+          poetry build
+
+      ci:
+        help: run PyArx package CI checks
+        hooks:
+          pre-run:
+            - task: pyarx.unittests
+            - task: pyarx.typecheck
+            - task: pyarx.lint
+            - task: pyarx.build
 
   docs:
     tasks:

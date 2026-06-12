@@ -38,6 +38,7 @@ jobs:
           - arx
           - astx
           - irx
+          - pyarx
         python_version:
           - "3.10"
           - "3.11"
@@ -73,7 +74,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry check
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run package unit tests
         run: makim ${{ matrix.project }}.unittests
@@ -118,7 +119,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry check
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run compiled Arx tests
         run: makim arx.test-compiled
@@ -157,7 +158,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry config virtualenvs.create false
-          poetry install
+          poetry install || (pip install "python-discovery>=1.4" && poetry install)
 
       - name: Run style checks
         if: success() || failure()
