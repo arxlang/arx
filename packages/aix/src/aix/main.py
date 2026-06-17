@@ -17,6 +17,7 @@ from aix.lexer import Lexer
 from aix.parser import Parser
 
 SOURCE_EXTENSION = ".aix"
+_ENTRY_HELPER_NAME = "__aix_main"
 
 
 def get_module_name_from_file_path(filepath: str) -> str:
@@ -86,15 +87,17 @@ class AixMain:
             return "a.out"
         return Path(self.input_files[0]).stem or "a.out"
 
-    def _has_main_entry(self, node: astx.AST) -> bool:
-        modules: list[astx.Module] = []
+    def _modules_from_ast(self, node: astx.AST) -> list[astx.Module]:
         if isinstance(node, astx.Module):
-            modules = [node]
-        elif isinstance(node, astx.Block):
-            modules = [
+            return [node]
+        if isinstance(node, astx.Block):
+            return [
                 item for item in node.nodes if isinstance(item, astx.Module)
             ]
+        return []
 
+    def _has_main_entry(self, node: astx.AST) -> bool:
+        modules = self._modules_from_ast(node)
         for module in modules:
             for module_node in module.nodes:
                 if (
@@ -103,6 +106,71 @@ class AixMain:
                 ):
                     return True
         return False
+
+    def _prepare_backend_ast(self, node: astx.AST) -> astx.AST:
+        for module in self._modules_from_ast(node):
+            self._adapt_module_main_entry(module)
+        return node
+
+    def _adapt_module_main_entry(self, module: astx.Module) -> None:
+        for index, module_node in enumerate(tuple(module.nodes)):
+            if not isinstance(module_node, astx.FunctionDef):
+                continue
+            if module_node.prototype.name != "main":
+                continue
+            if not isinstance(
+                module_node.prototype.return_type, astx.NoneType
+            ):
+                return
+            if len(module_node.prototype.args.nodes) != 0:
+                return
+
+            helper_name = self._next_entry_helper_name(module)
+            module_node.prototype.name = helper_name
+            module.nodes.insert(
+                index + 1,
+                self._build_main_entry_wrapper(module_node, helper_name),
+            )
+            return
+
+    def _next_entry_helper_name(self, module: astx.Module) -> str:
+        used_names = {
+            node.prototype.name
+            for node in module.nodes
+            if isinstance(node, astx.FunctionDef)
+        }
+        candidate = _ENTRY_HELPER_NAME
+        counter = 1
+        while candidate in used_names:
+            candidate = f"{_ENTRY_HELPER_NAME}_{counter}"
+            counter += 1
+        return candidate
+
+    def _build_main_entry_wrapper(
+        self, main_function: astx.FunctionDef, helper_name: str
+    ) -> astx.FunctionDef:
+        call_args: list[astx.DataType] = []
+        body = astx.Block(loc=main_function.loc)
+        body.append(
+            astx.FunctionCall(
+                helper_name,
+                call_args,
+                loc=main_function.loc,
+            )
+        )
+        body.append(
+            astx.FunctionReturn(
+                astx.LiteralInt32(0, loc=main_function.loc),
+                loc=main_function.loc,
+            )
+        )
+        prototype = astx.FunctionPrototype(
+            "main",
+            astx.Arguments(),
+            astx.Int32(loc=main_function.loc),
+            loc=main_function.prototype.loc,
+        )
+        return astx.FunctionDef(prototype, body, loc=main_function.loc)
 
     def run(self, **kwargs: Any) -> None:
         """
@@ -154,9 +222,11 @@ class AixMain:
         paths = tuple(kwargs.get("paths") or ("tests/aix",))
         file_pattern = str(kwargs.get("file_pattern") or "test_*.aix")
         excludes = tuple(kwargs.get("exclude") or ())
+        name_filter = str(kwargs.get("name_filter") or "").strip()
         list_only = bool(kwargs.get("list_only", False))
 
         files = self._discover_test_files(paths, file_pattern, excludes)
+        files = self._filter_test_files(files, name_filter)
         if list_only:
             for path in files:
                 print(path)
@@ -195,6 +265,17 @@ class AixMain:
                     files.append(candidate)
         return files
 
+    def _filter_test_files(
+        self, files: list[Path], name_filter: str
+    ) -> list[Path]:
+        if not name_filter:
+            return files
+        return [
+            path
+            for path in files
+            if name_filter in path.stem or name_filter in path.as_posix()
+        ]
+
     def _is_included_test(self, path: Path, excludes: tuple[str, ...]) -> bool:
         text = path.as_posix()
         return not any(fnmatch(text, pattern) for pattern in excludes)
@@ -224,7 +305,8 @@ class AixMain:
         """
         from aix.codegen import AixBuilder
 
-        print(AixBuilder().translate(self._get_astx()))
+        tree_ast = self._prepare_backend_ast(self._get_astx())
+        print(AixBuilder().translate(tree_ast))
 
     def run_shell(self) -> None:
         """
@@ -255,7 +337,7 @@ class AixMain:
         _ = show_llvm_ir
         from aix.codegen import AixBuilder
 
-        tree_ast = self._get_astx()
+        tree_ast = self._prepare_backend_ast(self._get_astx())
         self.output_file = self._resolve_output_file()
         emits_executable = not self.is_lib and self._has_main_entry(tree_ast)
         AixBuilder().build(

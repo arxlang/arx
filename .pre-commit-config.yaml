@@ -31,6 +31,15 @@ repos:
         types:
           - python
 
+      - id: ruff-format-aix
+        name: ruff-format-aix
+        entry: ruff format --config packages/aix/pyproject.toml
+        files: ^packages/aix/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
       - id: ruff-format-astx
         name: ruff-format-astx
         entry: ruff format --config pyproject.toml
@@ -62,6 +71,15 @@ repos:
         name: ruff-check-arx
         entry: ruff check --config packages/arx/pyproject.toml
         files: ^packages/arx/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-aix
+        name: ruff-check-aix
+        entry: ruff check --config packages/aix/pyproject.toml
+        files: ^packages/aix/.*\.py$
         language: system
         pass_filenames: true
         types:
@@ -141,6 +159,13 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: mypy-aix
+        name: mypy-aix
+        entry: bash -c 'cd packages/aix && mypy src'
+        files: ^packages/aix/.*\.py$
+        language: system
+        pass_filenames: false
+
       - id: mypy-astx
         name: mypy-astx
         entry: bash -c 'cd packages/astx && mypy src'
@@ -174,6 +199,16 @@ repos:
         language: system
         args: ["--configfile", "packages/arx/pyproject.toml", "-iii", "-lll"]
         files: ^packages/arx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: bandit-aix
+        name: bandit-aix
+        entry: bandit
+        language: system
+        args: ["--configfile", "packages/aix/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/aix/.*\.py$
         pass_filenames: true
         types:
           - python
@@ -218,6 +253,16 @@ repos:
         types:
           - python
 
+      - id: vulture-aix
+        name: vulture-aix
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^packages/aix/.*\.py$
+        description: Find unused AIX Python code.
+        pass_filenames: true
+        types:
+          - python
+
       - id: vulture-astx
         name: vulture-astx
         entry: vulture --min-confidence 80
@@ -253,6 +298,15 @@ repos:
         entry: python -m mccabe --min 10
         language: system
         files: ^packages/arx/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-aix
+        name: mccabe-aix
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^packages/aix/.*\.py$
         pass_filenames: true
         types:
           - python

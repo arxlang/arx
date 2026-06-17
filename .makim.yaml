@@ -34,6 +34,7 @@ groups:
             - task: astx.typecheck
             - task: irx.typecheck
             - task: pyarx.typecheck
+            - task: aix.typecheck
 
       build:
         help: build all packages
@@ -47,9 +48,12 @@ groups:
             - task: astx.unittests
             - task: irx.unittests
             - task: pyarx.unittests
+            - task: aix.unittests
             - task: arx.test-compiled
+            - task: aix.test-compiled
             - task: arx.test-smoke
             - task: arx.check-syntax
+            - task: aix.check-syntax
             - task: all.typecheck
             - task: all.lint
 
@@ -246,6 +250,64 @@ groups:
                 f"{name}"
               )
             print(str(output_file))
+
+  aix:
+    tasks:
+      unittests:
+        help: run AIX Python unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/aix/tests/python"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      test-compiled:
+        help: run parsed AIX language tests
+        run: python -m aix test packages/aix/tests/aix
+
+      check-syntax:
+        help: validate the AIX lexer syntax manifest
+        run: python -m json.tool packages/aix/src/aix/lexer/syntax.json
+
+      format:
+        help: format AIX Python files
+        run: pre-commit run ruff-format-aix --all-files
+
+      lint:
+        help: run AIX package lint hooks
+        run: |
+          pre-commit run ruff-check-aix --all-files
+          pre-commit run bandit-aix --all-files
+          pre-commit run vulture-aix --all-files
+          pre-commit run mccabe-aix --all-files
+
+      typecheck:
+        help: run AIX type checks
+        run: |
+          cd packages/aix
+          mypy src
+
+      build:
+        help: build the AIX package
+        run: |
+          cd packages/aix
+          poetry build
+
+      ci:
+        help: run AIX package CI checks
+        hooks:
+          pre-run:
+            - task: aix.unittests
+            - task: aix.test-compiled
+            - task: aix.check-syntax
+            - task: aix.typecheck
+            - task: aix.lint
+            - task: aix.build
 
   astx:
     tasks:
