@@ -1,0 +1,15 @@
+κ⟦
+  ι: fib.recursive.v1,
+  π: true,
+  τ: ℕ → ℕ,
+  χ: recursion
+⟧
+
+∴ fib ⟦ n:ℕ ⟧ → ℕ
+  ⊢ n ≤ 1 ⇒ n
+  ⊢ fib⟦n - 1⟧ + fib⟦n - 2⟧
+∎
+
+∴ main ⟦⟧ → ∅
+  ⟣ fib⟦10⟧
+∎

@@ -1,0 +1,8 @@
+κ⟦
+  ι: hello.v1,
+  χ: example
+⟧
+
+∴ main ⟦⟧ → ∅
+  ⟣ "metadata parsed"
+∎

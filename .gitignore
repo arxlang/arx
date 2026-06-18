@@ -111,6 +111,7 @@ ENV/
 .codex
 .claude
 .agents
+PLAN.md
 
 # tmp
 pytest-*

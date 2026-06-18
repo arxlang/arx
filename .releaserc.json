@@ -188,6 +188,62 @@
               }
             ],
             "countMatches": true
+          },
+          {
+            "files": ["packages/aix/pyproject.toml"],
+            "from": "version = \".*\"  # semantic-release",
+            "to": "version = \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/aix/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/aix/pyproject.toml"],
+            "from": "  \"astx == .*\",  # semantic-release",
+            "to": "  \"astx == ${nextRelease.version}\",  # semantic-release",
+            "results": [
+              {
+                "file": "packages/aix/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/aix/pyproject.toml"],
+            "from": "  \"pyirx == .*\",  # semantic-release",
+            "to": "  \"pyirx == ${nextRelease.version}\",  # semantic-release",
+            "results": [
+              {
+                "file": "packages/aix/pyproject.toml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
+            "files": ["packages/aix/src/aix/__init__.py"],
+            "from": "return \".*\"  # semantic-release",
+            "to": "return \"${nextRelease.version}\"  # semantic-release",
+            "results": [
+              {
+                "file": "packages/aix/src/aix/__init__.py",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
           }
         ]
       }
@@ -218,7 +274,9 @@
           "packages/arx/dist/*.whl",
           "packages/arx/dist/*.tar.gz",
           "packages/pyarx/dist/*.whl",
-          "packages/pyarx/dist/*.tar.gz"
+          "packages/pyarx/dist/*.tar.gz",
+          "packages/aix/dist/*.whl",
+          "packages/aix/dist/*.tar.gz"
         ]
       }
     ],
@@ -236,7 +294,9 @@
           "packages/arx/pyproject.toml",
           "packages/arx/src/arx/__init__.py",
           "packages/pyarx/pyproject.toml",
-          "packages/pyarx/src/pyarx/__init__.py"
+          "packages/pyarx/src/pyarx/__init__.py",
+          "packages/aix/pyproject.toml",
+          "packages/aix/src/aix/__init__.py"
         ],
         "message": "chore(release): ${nextRelease.version}"
       }
