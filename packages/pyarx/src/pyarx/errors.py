@@ -2,7 +2,7 @@
 title: Public exception hierarchy for the PyArx API.
 summary: >-
   Define the single error hierarchy PyArx raises to callers: ArxError as the
-  base, with ParseError, CompileError, and RuntimeError for the lex/parse,
+  base, with ParseError, CompileError, and ExecutionError for the lex/parse,
   analysis/lowering, and execution stages of the pipeline. Each error carries a
   list of structured Diagnostic records so callers can inspect failures
   programmatically instead of scraping message text. The pipeline modules catch
@@ -72,7 +72,7 @@ class CompileError(ArxError):
     """
 
 
-class RuntimeError(ArxError):
+class ExecutionError(ArxError):
     """
     title: Raised when running a compiled Arx program fails to execute.
     summary: >-
@@ -88,6 +88,6 @@ class RuntimeError(ArxError):
 __all__ = [
     "ArxError",
     "CompileError",
+    "ExecutionError",
     "ParseError",
-    "RuntimeError",
 ]
