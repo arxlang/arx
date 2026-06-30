@@ -246,7 +246,8 @@ int irx_rb_stream_reader_open_file(const char         *path,
 
 /**
  * Open an Arrow IPC stream reader from a byte buffer.
- * The buffer must remain valid for the lifetime of the reader.
+ * The bytes are copied into an Arrow-owned buffer, so the caller's buffer
+ * does not need to outlive the reader.
  */
 int irx_rb_stream_reader_open_buffer(const uint8_t      *data,
                                       int64_t             size,

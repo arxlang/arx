@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 
+import pyarrow as pa
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -377,3 +378,110 @@ class TestLargeBatch:
         rb.release()
         reader.close()
         schema.release()
+
+
+# ---------------------------------------------------------------------------
+# PyArrow IPC interop — the core ecosystem-compatibility guarantee
+# ---------------------------------------------------------------------------
+
+
+class TestPyArrowInterop:
+    """IRx emits standard Arrow IPC stream bytes; verify PyArrow reads them
+    (and vice-versa), including null masks."""
+
+    def test_irx_buffer_read_by_pyarrow(self):
+        """IRx writes a stream buffer; PyArrow imports and matches values."""
+        schema = make_simple_schema()  # id INT32 non-null, value FLOAT64 null
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        for i in range(5):
+            builder.append_int32(0, i)
+            if i % 2 == 0:
+                builder.append_float64(1, i * 1.5)
+            else:
+                builder.append_null(1)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        # PyArrow consumes the IRx-produced IPC bytes directly.
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+
+        assert table.num_rows == 5
+        assert table.column_names == ["id", "value"]
+        assert table.schema.field("id").type == pa.int32()
+        assert table.schema.field("value").type == pa.float64()
+        assert table.column("id").to_pylist() == [0, 1, 2, 3, 4]
+        assert table.column("value").to_pylist() == [0.0, None, 3.0, None, 6.0]
+
+    def test_pyarrow_buffer_read_by_irx(self):
+        """PyArrow writes an IPC stream; the IRx reader imports it back."""
+        pa_schema = pa.schema(
+            [
+                pa.field("id", pa.int32(), nullable=False),
+                pa.field("value", pa.float64(), nullable=True),
+            ]
+        )
+        record_batch = pa.record_batch(
+            [
+                pa.array([10, 20, 30], type=pa.int32()),
+                pa.array([1.5, None, 4.5], type=pa.float64()),
+            ],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.num_rows == 3
+        assert rb.num_columns == 2
+        assert rb.get_int32(0, 0) == 10
+        assert rb.get_int32(0, 2) == 30
+        assert math.isclose(rb.get_float64(1, 0), 1.5)
+        assert rb.is_null(1, 1) is True
+        assert math.isclose(rb.get_float64(1, 2), 4.5)
+        rb.release()
+        assert reader.next_batch() is None
+        reader.close()
+
+    def test_irx_pyarrow_all_numeric_types(self):
+        """Every supported fixed-width column survives the IRx -> PyArrow trip."""
+        schema = RecordBatchSchema()
+        schema.add_field("i8", IrxColumnType.INT8)
+        schema.add_field("u32", IrxColumnType.UINT32)
+        schema.add_field("f32", IrxColumnType.FLOAT32)
+        schema.add_field("b", IrxColumnType.BOOL)
+
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_int8(0, -5)
+        builder.append_uint32(1, 4_000_000_000)
+        builder.append_float32(2, 1.25)
+        builder.append_bool(3, True)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("i8").type == pa.int8()
+        assert table.schema.field("u32").type == pa.uint32()
+        assert table.schema.field("f32").type == pa.float32()
+        assert table.schema.field("b").type == pa.bool_()
+        assert table.column("i8").to_pylist() == [-5]
+        assert table.column("u32").to_pylist() == [4_000_000_000]
+        assert math.isclose(table.column("f32").to_pylist()[0], 1.25)
+        assert table.column("b").to_pylist() == [True]

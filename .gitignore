@@ -116,3 +116,8 @@ PLAN.md
 # tmp
 pytest-*
 tmp*.makim
+
+# record_batch native build artifacts (compiled on demand by tests)
+packages/irx/src/irx/builder/runtime/arrow/native/_build/
+packages/irx/src/irx/builder/runtime/arrow/libirx_record_batch.*
+packages/irx/src/irx/builder/runtime/arrow/irx_record_batch.dll

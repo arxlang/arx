@@ -206,22 +206,9 @@ int irx_rb_builder_create(const IrxRbSchema *schema, IrxRbBuilder **out) {
     return IRX_OK;
 }
 
-/* Macro to generate typed append helpers */
-#define APPEND_IMPL(fname, ctype, arrowtype)                                \
-int fname(IrxRbBuilder *b, int col, ctype v) {                             \
-    GUARD(b);                                                               \
-    if (col < 0 || col >= (int)b->builders.size())                         \
-        return set_err("column index out of bounds", IRX_ERR_OOB);         \
-    if (b->schema_ref->col_types[col] != arrowtype)                        \
-        return set_err("type mismatch on append", IRX_ERR_TYPE);           \
-    auto *bldr = static_cast<arrow::arrowtype##Builder *>(                 \
-        b->builders[col].get());                                            \
-    auto st = bldr->Append(v);                                              \
-    if (!st.ok()) return set_err(st);                                       \
-    return IRX_OK;                                                          \
-}
-
-/* Specialised because Arrow uses Int8Builder not INT8Builder */
+/* Append helpers are written out longhand: Arrow builder class names
+ * (Int8Builder, FloatBuilder, …) do not map mechanically from IrxColumnType,
+ * so a token-pasting macro cannot cover every case cleanly. */
 int irx_rb_builder_append_int8(IrxRbBuilder *b, int col, int8_t v) {
     GUARD(b);
     if (col < 0 || col >= (int)b->builders.size())
@@ -448,11 +435,21 @@ int irx_rb_batch_value_buffer(const IrxRbBatch *b, int col,
     GUARD(b); GUARD(buf); GUARD(len);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    auto &arr = b->batch->column(col);
+    auto arr = b->batch->column(col);
+    auto &data = *arr->data();
     /* Buffer 1 is the value buffer for fixed-width types. */
-    if (arr->data()->buffers.size() < 2 || !arr->data()->buffers[1])
+    if (data.buffers.size() < 2 || !data.buffers[1])
         return set_err("column has no value buffer (variable-width type?)", IRX_ERR_TYPE);
-    *buf = arr->data()->buffers[1]->data();
+    /* Account for a non-zero logical offset (sliced arrays): the value buffer
+     * starts before the array's first logical element. Advance by
+     * offset * byte_width so the returned pointer aligns with element 0. */
+    const auto *type = arr->type().get();
+    const auto *fw = dynamic_cast<const arrow::FixedWidthType *>(type);
+    if (fw == nullptr)
+        return set_err("column is not a fixed-width type", IRX_ERR_TYPE);
+    const int64_t byte_width = fw->bit_width() / 8;
+    const uint8_t *base = data.buffers[1]->data();
+    *buf = base + data.offset * byte_width;
     *len = arr->length();
     return IRX_OK;
 }
@@ -568,7 +565,16 @@ static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
     r->schema_handle.schema       = arrow_schema;
     r->schema_handle.reader_owned = true;
     for (int i = 0; i < arrow_schema->num_fields(); ++i) {
-        auto ct = col_type_from_arrow(*arrow_schema->field(i)->type());
+        auto &field = *arrow_schema->field(i);
+        auto ct = col_type_from_arrow(*field.type());
+        if (static_cast<int>(ct) < 0) {
+            delete r;
+            return set_err(
+                "stream column '" + field.name() + "' has type '" +
+                    field.type()->ToString() +
+                    "' which is not supported by this reader",
+                IRX_ERR_TYPE);
+        }
         r->schema_handle.col_types.push_back(ct);
     }
 
@@ -588,7 +594,14 @@ int irx_rb_stream_reader_open_buffer(const uint8_t      *data,
                                       int64_t             size,
                                       IrxRbStreamReader **out) {
     GUARD(data); GUARD(out);
-    auto buf   = std::make_shared<arrow::Buffer>(data, size);
+    /* Copy the caller's bytes into an Arrow-owned buffer so the reader (and
+     * any batches it yields) stay valid regardless of the caller's buffer
+     * lifetime. Avoids a use-after-free when the source bytes are freed
+     * before the reader is closed. */
+    auto buf_res = arrow::AllocateBuffer(size);
+    if (!buf_res.ok()) return set_err(buf_res.status(), IRX_ERR_IO);
+    std::shared_ptr<arrow::Buffer> buf = std::move(*buf_res);
+    if (size > 0) std::memcpy(buf->mutable_data(), data, size);
     auto stream = std::make_shared<arrow::io::BufferReader>(buf);
     return open_stream_reader(stream, out);
 }
