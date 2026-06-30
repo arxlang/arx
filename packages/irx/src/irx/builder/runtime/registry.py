@@ -21,6 +21,9 @@ from irx.builder.runtime.feature_libc import build_libc_runtime_feature
 from irx.builder.runtime.feature_libm import build_libm_runtime_feature
 from irx.builder.runtime.features import NativeArtifact, RuntimeFeature
 from irx.builder.runtime.list.feature import build_list_runtime_feature
+from irx.builder.runtime.record_batch import (
+    build_record_batch_runtime_feature,
+)
 from irx.builder.runtime.tensor.feature import build_tensor_runtime_feature
 from irx.diagnostics import (
     Diagnostic,
@@ -305,4 +308,5 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_dataframe_runtime_feature())
     registry.register(build_tensor_runtime_feature())
     registry.register(build_list_runtime_feature())
+    registry.register(build_record_batch_runtime_feature())
     return registry
