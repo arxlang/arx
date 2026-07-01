@@ -7,6 +7,7 @@ packages=(
   packages/arx
   packages/pyarx
   packages/aix
+  packages/arxjit
 )
 
 for package_dir in "${packages[@]}"; do
