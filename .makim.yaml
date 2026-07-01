@@ -35,6 +35,7 @@ groups:
             - task: irx.typecheck
             - task: pyarx.typecheck
             - task: aix.typecheck
+            - task: arxjit.typecheck
 
       build:
         help: build all packages
@@ -49,6 +50,7 @@ groups:
             - task: irx.unittests
             - task: pyarx.unittests
             - task: aix.unittests
+            - task: arxjit.unittests
             - task: arx.test-compiled
             - task: aix.test-compiled
             - task: arx.test-smoke
@@ -469,6 +471,55 @@ groups:
             - task: pyarx.typecheck
             - task: pyarx.lint
             - task: pyarx.build
+
+  arxjit:
+    tasks:
+      unittests:
+        help: run arxjit unit tests
+        args:
+          path:
+            help: Specify the location of the tests
+            type: string
+            default: "packages/arxjit/tests"
+          params:
+            help: Specify parameters to be used for tests
+            type: string
+            default: "-vv"
+        run: pytest ${{ args.path }} ${{ args.params }}
+
+      format:
+        help: format arxjit Python files
+        run: pre-commit run ruff-format-arxjit --all-files
+
+      lint:
+        help: run arxjit package lint hooks
+        run: |
+          pre-commit run ruff-check-arxjit --all-files
+          pre-commit run douki-arxjit --all-files
+          pre-commit run bandit-arxjit --all-files
+          pre-commit run vulture-arxjit --all-files
+          pre-commit run mccabe-arxjit --all-files
+
+      typecheck:
+        help: run arxjit type checks
+        run: |
+          cd packages/arxjit
+          mypy src
+
+      build:
+        help: build the arxjit package
+        run: |
+          cd packages/arxjit
+          poetry build
+
+      ci:
+        help: run arxjit package CI checks
+        hooks:
+          pre-run:
+            - task: arxjit.unittests
+            - task: arxjit.typecheck
+            - task: arxjit.lint
+            - task: arxjit.build
 
   docs:
     tasks:

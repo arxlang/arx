@@ -23,6 +23,7 @@ pyirx = { path = "packages/irx/", develop = true }
 astx = { path = "packages/astx/", develop = true }
 pyarx = { path = "packages/pyarx/", develop = true }
 airx = { path = "packages/aix/", develop = true }
+arxjit = { path = "packages/arxjit/", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.3.2"
@@ -58,6 +59,7 @@ testpaths = [
     "packages/irx/tests",
     "packages/pyarx/tests",
     "packages/aix/tests/python",
+    "packages/arxjit/tests",
 ]
 filterwarnings = [
     "error::RuntimeWarning",
@@ -88,6 +90,7 @@ src = [
   "packages/irx/src",
   "packages/pyarx/src",
   "packages/aix/src",
+  "packages/arxjit/src",
 ]
 exclude = [
   'docs',
