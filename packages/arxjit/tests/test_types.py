@@ -8,7 +8,7 @@ import arxjit
 import astx
 import pytest
 
-from arxjit.types import ScalarType, Signature, bool_, f32, f64, i32, i64
+from arxjit.types import Signature, SigType, bool_, f32, f64, i32, i64
 
 
 def test_call_builds_signature() -> None:
@@ -57,11 +57,11 @@ def test_scalar_types_map_to_real_astx_classes() -> None:
         assert isinstance(astx_cls, type)
 
 
-def test_scalar_type_equality_by_value() -> None:
+def test_sigtype_equality_by_value() -> None:
     """
-    title: ScalarType compares equal by value (frozen dataclass).
+    title: SigType compares equal by value (frozen dataclass).
     """
-    assert i64 == ScalarType("i64", "Int64")
+    assert i64 == SigType("i64", "Int64")
     assert i64 != i32
 
 
@@ -76,9 +76,9 @@ def test_signature_equality_and_hashability() -> None:
     assert len({i64(i64), i64(i64), f64(i64)}) == 2
 
 
-def test_scalar_type_is_immutable() -> None:
+def test_sigtype_is_immutable() -> None:
     """
-    title: ScalarType instances cannot be mutated.
+    title: SigType instances cannot be mutated.
     """
     with pytest.raises(dataclasses.FrozenInstanceError):
         i64.name = "changed"  # type: ignore[misc]
@@ -90,5 +90,5 @@ def test_types_are_exported_from_package() -> None:
     """
     assert arxjit.i64 is i64
     assert arxjit.Signature is Signature
-    for name in ("i32", "i64", "f32", "f64", "bool_", "ScalarType"):
+    for name in ("i32", "i64", "f32", "f64", "bool_", "SigType"):
         assert name in arxjit.__all__

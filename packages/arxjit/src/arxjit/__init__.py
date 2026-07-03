@@ -5,8 +5,8 @@ title: Top-level package for arxjit.
 from importlib import metadata as importlib_metadata
 
 from arxjit.types import (
-    ScalarType,
     Signature,
+    SigType,
     bool_,
     f32,
     f64,
@@ -34,7 +34,7 @@ __email__: str = "ivan.ogasawara@gmail.com"
 __version__: str = get_version()
 
 __all__ = [
-    "ScalarType",
+    "SigType",
     "Signature",
     "__version__",
     "bool_",

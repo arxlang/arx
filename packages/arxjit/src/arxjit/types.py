@@ -12,27 +12,31 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class ScalarType:
+class SigType:
     """
-    title: A built-in scalar type usable in arxjit signatures.
+    title: A type usable in an arxjit signature.
+    summary: >-
+      Scalar today (e.g. ``i64``); the name is kept element-vs-array neutral so
+      array forms such as ``i64[2, 2]`` can be added later via subscripting
+      without renaming the public type.
     attributes:
       name:
         type: str
         description: The arxjit-facing name, e.g. ``i64``.
       astx_name:
         type: str
-        description: The astx class this scalar lowers to, e.g. ``Int64``.
+        description: The astx class this type lowers to, e.g. ``Int64``.
     """
 
     name: str
     astx_name: str
 
-    def __call__(self, *arg_types: ScalarType) -> Signature:
+    def __call__(self, *arg_types: SigType) -> Signature:
         """
         title: Build a Signature using this type as the return type.
         parameters:
           arg_types:
-            type: ScalarType
+            type: SigType
             description: The positional argument types, in order.
             variadic: positional
         returns:
@@ -42,7 +46,7 @@ class ScalarType:
 
     def __str__(self) -> str:
         """
-        title: Return the arxjit name of the scalar type.
+        title: Return the arxjit name of the type.
         returns:
           type: str
         """
@@ -55,15 +59,15 @@ class Signature:
     title: A compiled-function signature (return type and argument types).
     attributes:
       return_type:
-        type: ScalarType
+        type: SigType
         description: The type returned by the compiled function.
       arg_types:
-        type: tuple[ScalarType, Ellipsis]
+        type: tuple[SigType, Ellipsis]
         description: The positional argument types, in order.
     """
 
-    return_type: ScalarType
-    arg_types: tuple[ScalarType, ...]
+    return_type: SigType
+    arg_types: tuple[SigType, ...]
 
     def __str__(self) -> str:
         """
@@ -75,10 +79,10 @@ class Signature:
         return f"{self.return_type}({args})"
 
 
-i32 = ScalarType("i32", "Int32")
-i64 = ScalarType("i64", "Int64")
-f32 = ScalarType("f32", "Float32")
-f64 = ScalarType("f64", "Float64")
+i32 = SigType("i32", "Int32")
+i64 = SigType("i64", "Int64")
+f32 = SigType("f32", "Float32")
+f64 = SigType("f64", "Float64")
 # Exported as ``bool_`` to avoid shadowing the ``bool`` builtin, but the
 # user-facing type name (used in signature rendering) stays ``bool``.
-bool_ = ScalarType("bool", "Boolean")
+bool_ = SigType("bool", "Boolean")
