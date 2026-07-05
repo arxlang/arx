@@ -401,3 +401,67 @@ repos:
         pass_filenames: true
         types:
           - python
+
+      - id: ruff-format-arxjit
+        name: ruff-format-arxjit
+        entry: ruff format --config packages/arxjit/pyproject.toml
+        files: ^packages/arxjit/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: ruff-check-arxjit
+        name: ruff-check-arxjit
+        entry: ruff check --config packages/arxjit/pyproject.toml
+        files: ^packages/arxjit/.*\.py$
+        language: system
+        pass_filenames: true
+        types:
+          - python
+
+      - id: douki-arxjit
+        name: douki-arxjit
+        entry: douki sync
+        files: ^packages/arxjit/.*\.py$
+        language: system
+        pass_filenames: true
+        require_serial: yes
+        types:
+          - python
+
+      - id: mypy-arxjit
+        name: mypy-arxjit
+        entry: bash -c 'cd packages/arxjit && mypy src'
+        files: ^packages/arxjit/.*\.py$
+        language: system
+        pass_filenames: false
+
+      - id: bandit-arxjit
+        name: bandit-arxjit
+        entry: bandit
+        language: system
+        args: ["--configfile", "packages/arxjit/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/arxjit/.*\.py$
+        pass_filenames: true
+        types:
+          - python
+
+      - id: vulture-arxjit
+        name: vulture-arxjit
+        entry: vulture --min-confidence 80
+        language: system
+        files: ^packages/arxjit/.*\.py$
+        description: Find unused arxjit Python code.
+        pass_filenames: true
+        types:
+          - python
+
+      - id: mccabe-arxjit
+        name: mccabe-arxjit
+        entry: python -m mccabe --min 10
+        language: system
+        files: ^packages/arxjit/.*\.py$
+        pass_filenames: true
+        types:
+          - python

@@ -189,6 +189,24 @@ files = [
 pyarrow = ">=24.0.0,<25.0.0"
 
 [[package]]
+name = "arxjit"
+version = "1.23.1"
+description = "arxjit is a Numba-style JIT decorator that compiles a subset of pure Python through the Arx compiler stack."
+optional = false
+python-versions = ">=3.10,<4"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+astx = "1.23.1"
+pyirx = "1.23.1"
+
+[package.source]
+type = "directory"
+url = "packages/arxjit"
+
+[[package]]
 name = "arxlang"
 version = "1.23.1"
 description = "Arx is a compiler built with llvm"
@@ -4440,4 +4458,4 @@ test = ["coverage (>=5.3.1)", "prompt-toolkit (>=3.0.29)", "pygments (>=2.2)", "
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "77b21d1e52648df97ca342942fa5b3d5b9d819188ed21a46f94b0930402685d9"
+content-hash = "f570fb4916b0a0e203b75c2496d869e3cdc6278363777064745bf7197533e815"
