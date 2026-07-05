@@ -1,25 +1,5 @@
 """
-packages/irx/src/irx/builder/runtime/record_batch.py
-
-Runtime-feature descriptor for RecordBatch streaming via the Arrow C++ bridge.
-
-This module registers the ``record_batch`` feature with the IRx runtime
-registry so that compiled Arx programs (and IRx-level externs) can call the
-``irx_rb_*`` family of functions declared in ``irx_record_batch.h``.
-
-The feature guarantees:
-  * The ``irx_record_batch.cpp`` native source is compiled and linked.
-  * Arrow C++ headers are available on the include path (via
-    arx-arrowcpp-sources / pyarrow).
-  * libarrow is linked.
-
-``record_batch`` depends on the ``array`` feature, which owns the shared Arrow
-C++ build infrastructure; the registry activates ``array`` transitively.
-
-In addition to the LLVM-codegen feature descriptor, this module exposes
-``build_record_batch_shared_library`` which compiles the C++ runtime into a
-standalone shared library for the ctypes-based Python API in
-``irx.record_batch`` (and its tests).
+title: Record batch streaming API.
 """
 
 from __future__ import annotations
@@ -53,13 +33,21 @@ from irx.typecheck import typechecked
 
 @typechecked
 def _native_source_dir() -> Path:
-    """Return the directory that contains ``irx_record_batch.cpp``."""
+    """
+    title: _native_source_dir.
+    returns:
+      type: Path
+    """
     return (Path(__file__).resolve().parent / "arrow" / "native").resolve()
 
 
 @typechecked
 def _native_source() -> Path:
-    """Return the path to ``irx_record_batch.cpp``."""
+    """
+    title: _native_source.
+    returns:
+      type: Path
+    """
     return _native_source_dir() / "irx_record_batch.cpp"
 
 
@@ -135,7 +123,16 @@ RECORD_BATCH_SYMBOLS: frozenset[str] = frozenset(_SIGNATURES)
 
 @typechecked
 def _resolve_type(visitor: object, code: str) -> ir.Type:
-    """Map a signature type code to an LLVM type from the visitor's helper."""
+    """
+    title: _resolve_type.
+    parameters:
+      visitor:
+        type: object
+      code:
+        type: str
+    returns:
+      type: ir.Type
+    """
     llvm = visitor._llvm  # type: ignore[attr-defined]
     if code == "p":
         return llvm.OPAQUE_POINTER_TYPE
@@ -155,9 +152,28 @@ def _resolve_type(visitor: object, code: str) -> ir.Type:
 def _make_declarer(
     name: str, ret_code: str, arg_codes: tuple[str, ...]
 ) -> Callable[[object], ir.Function]:
-    """Build a declaration factory for one C symbol."""
+    """
+    title: _make_declarer.
+    parameters:
+      name:
+        type: str
+      ret_code:
+        type: str
+      arg_codes:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: Callable[[object], ir.Function]
+    """
 
     def declare(visitor: object) -> ir.Function:
+        """
+        title: Declare a native record-batch symbol for the current visitor.
+        parameters:
+          visitor:
+            type: object
+        returns:
+          type: ir.Function
+        """
         fn_type = ir.FunctionType(
             _resolve_type(visitor, ret_code),
             [_resolve_type(visitor, code) for code in arg_codes],
@@ -224,7 +240,11 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
 
 @typechecked
 def _shared_library_name() -> str:
-    """Return the platform shared-library filename the ctypes loader expects."""
+    """
+    title: _shared_library_name.
+    returns:
+      type: str
+    """
     if sys.platform == "darwin":
         return "libirx_record_batch.dylib"
     if sys.platform == "win32":
@@ -234,7 +254,11 @@ def _shared_library_name() -> str:
 
 @typechecked
 def shared_library_path() -> Path:
-    """Return the canonical install location of the ctypes shared library."""
+    """
+    title: shared_library_path.
+    returns:
+      type: Path
+    """
     arrow_dir = (Path(__file__).resolve().parent / "arrow").resolve()
     return arrow_dir / _shared_library_name()
 
@@ -247,10 +271,10 @@ def build_record_batch_shared_library(
 ) -> Path:
     """
     title: Compile irx_record_batch.cpp into a standalone shared library.
-
-    Used by the ctypes-based Python API (``irx.record_batch``) and its test
-    suite, which load the library directly rather than going through LLVM
-    codegen.
+    summary: >-
+      Used by the ctypes-based Python API (``irx.record_batch``) and its test
+      suite, which load the library directly rather than going through LLVM
+      codegen.
     parameters:
       output_path:
         type: Path | None
@@ -268,7 +292,7 @@ def build_record_batch_shared_library(
     feature = build_record_batch_runtime_feature()
     # Shared objects must be position-independent.
     pic_artifacts = tuple(
-        replace(a, compile_flags=a.compile_flags + ("-fPIC",))
+        replace(a, compile_flags=(*a.compile_flags, "-fPIC"))
         for a in feature.artifacts
     )
 

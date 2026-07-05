@@ -1,18 +1,12 @@
 """
-tests/builder/runtime/test_record_batch.py
-
-Integration tests for RecordBatch streaming via the Arrow C++ bridge.
-
-These tests run the full native path:
-  Python API → ctypes → libirx_record_batch.so → Arrow C++ → IPC bytes
-
-The native runtime is a first-class part of the feature: like the array
-runtime tests, these always run and fail loudly if the library is missing.
+title: Record batch streaming API.
 """
 
 from __future__ import annotations
 
 import math
+
+from pathlib import Path
 
 import pyarrow as pa
 import pytest
@@ -27,9 +21,27 @@ from irx.record_batch import (
 
 # Helpers
 
+EXPECTED_FIELD_COUNT = 2
+ROW_COUNT = 4
+NULL_ROW_INDEX = 2
+INT32_VALUE = 42
+INT32_VALUE_ALT = 7
+BATCH_ROW_COUNT = 10
+BATCH_ROW_COUNT_LARGE = 20
+PYARROW_ROW_COUNT = 5
+PYARROW_BATCH_ROW_COUNT = 3
+PYARROW_BATCH_COLUMN_COUNT = 2
+PYARROW_FIRST_INT32_VALUE = 10
+PYARROW_LAST_INT32_VALUE = 30
+PYARROW_CONTEXT_MANAGER_INT32_VALUE = 99
+
 
 def make_simple_schema() -> RecordBatchSchema:
-    """Schema with one INT32 column and one FLOAT64 column."""
+    """
+    title: Create a simple schema with one int32 and one float64 column.
+    returns:
+      type: RecordBatchSchema
+    """
     schema = RecordBatchSchema()
     schema.add_field("id", IrxColumnType.INT32, nullable=False)
     schema.add_field("value", IrxColumnType.FLOAT64, nullable=True)
@@ -37,7 +49,14 @@ def make_simple_schema() -> RecordBatchSchema:
 
 
 def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
-    """Append n rows: id=i, value=i*1.5."""
+    """
+    title: Append a simple pattern of rows to a record-batch builder.
+    parameters:
+      builder:
+        type: RecordBatchBuilder
+      n:
+        type: int
+    """
     for i in range(n):
         builder.append_int32(0, i)
         builder.append_float64(1, i * 1.5)
@@ -48,18 +67,27 @@ def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
 
 class TestSchema:
     def test_empty_schema(self):
+        """
+        title: Ensure an empty schema reports zero fields.
+        """
         s = RecordBatchSchema()
         assert s.num_fields == 0
         s.release()
 
     def test_add_fields(self):
+        """
+        title: Ensure schema fields can be added and counted.
+        """
         s = RecordBatchSchema()
         s.add_field("a", IrxColumnType.INT32)
         s.add_field("b", IrxColumnType.FLOAT64, nullable=False)
-        assert s.num_fields == 2
+        assert s.num_fields == EXPECTED_FIELD_COUNT
         s.release()
 
     def test_all_types(self):
+        """
+        title: Ensure every supported column type can be registered.
+        """
         s = RecordBatchSchema()
         for ct in IrxColumnType:
             s.add_field(ct.name.lower(), ct)
@@ -67,6 +95,9 @@ class TestSchema:
         s.release()
 
     def test_double_release_is_safe(self):
+        """
+        title: Ensure releasing a schema more than once is harmless.
+        """
         s = RecordBatchSchema()
         s.release()
         s.release()  # must not crash
@@ -77,15 +108,18 @@ class TestSchema:
 
 class TestBuilder:
     def test_build_and_inspect(self):
+        """
+        title: Ensure builders can create and inspect a simple batch.
+        """
         schema = make_simple_schema()
         builder = RecordBatchBuilder(schema)
         fill_builder(builder, 4)
         batch = builder.finish()
 
-        assert batch.num_rows == 4
-        assert batch.num_columns == 2
+        assert batch.num_rows == ROW_COUNT
+        assert batch.num_columns == EXPECTED_FIELD_COUNT
 
-        for i in range(4):
+        for i in range(ROW_COUNT):
             assert batch.get_int32(0, i) == i
             assert math.isclose(batch.get_float64(1, i), i * 1.5)
 
@@ -94,6 +128,9 @@ class TestBuilder:
         schema.release()
 
     def test_null_values(self):
+        """
+        title: Ensure null values are reported correctly.
+        """
         schema = RecordBatchSchema()
         schema.add_field("x", IrxColumnType.INT32, nullable=True)
         builder = RecordBatchBuilder(schema)
@@ -104,15 +141,18 @@ class TestBuilder:
 
         assert batch.is_null(0, 0) is False
         assert batch.is_null(0, 1) is True
-        assert batch.is_null(0, 2) is False
-        assert batch.get_int32(0, 0) == 42
-        assert batch.get_int32(0, 2) == 7
+        assert batch.is_null(0, NULL_ROW_INDEX) is False
+        assert batch.get_int32(0, 0) == INT32_VALUE
+        assert batch.get_int32(0, NULL_ROW_INDEX) == INT32_VALUE_ALT
 
         batch.release()
         builder.release()
         schema.release()
 
     def test_bool_column(self):
+        """
+        title: Ensure boolean columns round-trip through the builder.
+        """
         schema = RecordBatchSchema()
         schema.add_field("flag", IrxColumnType.BOOL)
         builder = RecordBatchBuilder(schema)
@@ -129,6 +169,9 @@ class TestBuilder:
         schema.release()
 
     def test_all_numeric_types(self):
+        """
+        title: Ensure all numeric column types are supported.
+        """
         schema = RecordBatchSchema()
         types_and_appenders = [
             (IrxColumnType.INT8, "append_int8", "get_int8", -1),
@@ -161,6 +204,9 @@ class TestBuilder:
         schema.release()
 
     def test_oob_column_raises(self):
+        """
+        title: Ensure out-of-bounds columns raise a runtime error.
+        """
         schema = RecordBatchSchema()
         schema.add_field("x", IrxColumnType.INT32)
         builder = RecordBatchBuilder(schema)
@@ -170,6 +216,9 @@ class TestBuilder:
         schema.release()
 
     def test_type_mismatch_raises(self):
+        """
+        title: Ensure type mismatches raise a runtime error.
+        """
         schema = RecordBatchSchema()
         schema.add_field("x", IrxColumnType.INT32)
         builder = RecordBatchBuilder(schema)
@@ -179,6 +228,9 @@ class TestBuilder:
         schema.release()
 
     def test_empty_batch(self):
+        """
+        title: Ensure an empty batch can be produced and inspected.
+        """
         schema = make_simple_schema()
         builder = RecordBatchBuilder(schema)
         batch = builder.finish()
@@ -192,7 +244,19 @@ class TestBuilder:
 
 
 class TestBufferRoundTrip:
-    def _write_batches(self, schema, batches_data):
+    def _write_batches(
+        self, schema: RecordBatchSchema, batches_data: list
+    ) -> bytes:
+        """
+        title: Write a list of batches into an in-memory stream.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+          batches_data:
+            type: list
+        returns:
+          type: bytes
+        """
         writer = RecordBatchStreamWriter.open_buffer(schema)
         for rows in batches_data:
             builder = RecordBatchBuilder(schema)
@@ -209,14 +273,17 @@ class TestBufferRoundTrip:
         return data
 
     def test_single_batch_round_trip(self):
+        """
+        title: Ensure a single batch survives a buffer round-trip.
+        """
         schema = make_simple_schema()
         data = self._write_batches(schema, [range(10)])
 
         reader = RecordBatchStreamReader.open_buffer(data)
         batch = reader.next_batch()
         assert batch is not None
-        assert batch.num_rows == 10
-        for i in range(10):
+        assert batch.num_rows == BATCH_ROW_COUNT
+        for i in range(BATCH_ROW_COUNT):
             assert batch.get_int32(0, i) == i
             assert math.isclose(batch.get_float64(1, i), float(i))
         batch.release()
@@ -226,6 +293,9 @@ class TestBufferRoundTrip:
         schema.release()
 
     def test_multiple_batches_round_trip(self):
+        """
+        title: Ensure multiple batches survive a buffer round-trip.
+        """
         schema = make_simple_schema()
         data = self._write_batches(
             schema, [range(5), range(5, 10), range(10, 15)]
@@ -242,6 +312,9 @@ class TestBufferRoundTrip:
         schema.release()
 
     def test_empty_stream(self):
+        """
+        title: Ensure an empty stream yields no batches.
+        """
         schema = make_simple_schema()
         writer = RecordBatchStreamWriter.open_buffer(schema)
         writer.close()
@@ -254,6 +327,9 @@ class TestBufferRoundTrip:
         schema.release()
 
     def test_context_manager(self):
+        """
+        title: Ensure the writer and reader work as context managers.
+        """
         schema = make_simple_schema()
         with RecordBatchStreamWriter.open_buffer(schema) as writer:
             builder = RecordBatchBuilder(schema)
@@ -269,7 +345,7 @@ class TestBufferRoundTrip:
         reader = RecordBatchStreamReader.open_buffer(data)
         batch = reader.next_batch()
         assert batch is not None
-        assert batch.get_int32(0, 0) == 99
+        assert batch.get_int32(0, 0) == PYARROW_CONTEXT_MANAGER_INT32_VALUE
         batch.release()
         reader.close()
         schema.release()
@@ -279,7 +355,13 @@ class TestBufferRoundTrip:
 
 
 class TestFileRoundTrip:
-    def test_file_round_trip(self, tmp_path):
+    def test_file_round_trip(self, tmp_path: Path) -> None:
+        """
+        title: Ensure file-based streams round-trip correctly.
+        parameters:
+          tmp_path:
+            type: Path
+        """
         path = tmp_path / "test.arrows"
         schema = make_simple_schema()
 
@@ -301,8 +383,8 @@ class TestFileRoundTrip:
         reader = RecordBatchStreamReader.open_file(str(path))
         rb = reader.next_batch()
         assert rb is not None
-        assert rb.num_rows == 20
-        for i in range(20):
+        assert rb.num_rows == BATCH_ROW_COUNT_LARGE
+        for i in range(BATCH_ROW_COUNT_LARGE):
             assert rb.get_int32(0, i) == i
             assert math.isclose(rb.get_float64(1, i), i * 0.5)
         rb.release()
@@ -311,6 +393,9 @@ class TestFileRoundTrip:
         schema.release()
 
     def test_missing_file_raises(self):
+        """
+        title: Ensure opening a missing file raises a runtime error.
+        """
         with pytest.raises(RuntimeError):
             RecordBatchStreamReader.open_file("/nonexistent/path.arrows")
 
@@ -320,7 +405,13 @@ class TestFileRoundTrip:
 
 class TestLargeBatch:
     @pytest.mark.parametrize("n", [1_000, 100_000])
-    def test_large_batch(self, n):
+    def test_large_batch(self, n: int) -> None:
+        """
+        title: Ensure large batches can be written and read back.
+        parameters:
+          n:
+            type: int
+        """
         schema = RecordBatchSchema()
         schema.add_field("x", IrxColumnType.INT64)
         schema.add_field("y", IrxColumnType.FLOAT64)
@@ -355,11 +446,14 @@ class TestLargeBatch:
 
 
 class TestPyArrowInterop:
-    """IRx emits standard Arrow IPC stream bytes; verify PyArrow reads them
-    (and vice-versa), including null masks."""
+    """
+    title: TestPyArrowInterop.
+    """
 
     def test_irx_buffer_read_by_pyarrow(self):
-        """IRx writes a stream buffer; PyArrow imports and matches values."""
+        """
+        title: Ensure PyArrow can read IRx-written IPC bytes.
+        """
         schema = make_simple_schema()  # id INT32 non-null, value FLOAT64 null
         writer = RecordBatchStreamWriter.open_buffer(schema)
         builder = RecordBatchBuilder(schema)
@@ -381,7 +475,7 @@ class TestPyArrowInterop:
         # PyArrow consumes the IRx-produced IPC bytes directly.
         table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
 
-        assert table.num_rows == 5
+        assert table.num_rows == PYARROW_ROW_COUNT
         assert table.column_names == ["id", "value"]
         assert table.schema.field("id").type == pa.int32()
         assert table.schema.field("value").type == pa.float64()
@@ -389,7 +483,9 @@ class TestPyArrowInterop:
         assert table.column("value").to_pylist() == [0.0, None, 3.0, None, 6.0]
 
     def test_pyarrow_buffer_read_by_irx(self):
-        """PyArrow writes an IPC stream; the IRx reader imports it back."""
+        """
+        title: Ensure the IRx reader can import PyArrow-written IPC bytes.
+        """
         pa_schema = pa.schema(
             [
                 pa.field("id", pa.int32(), nullable=False),
@@ -411,10 +507,10 @@ class TestPyArrowInterop:
         reader = RecordBatchStreamReader.open_buffer(data)
         rb = reader.next_batch()
         assert rb is not None
-        assert rb.num_rows == 3
-        assert rb.num_columns == 2
-        assert rb.get_int32(0, 0) == 10
-        assert rb.get_int32(0, 2) == 30
+        assert rb.num_rows == PYARROW_BATCH_ROW_COUNT
+        assert rb.num_columns == PYARROW_BATCH_COLUMN_COUNT
+        assert rb.get_int32(0, 0) == PYARROW_FIRST_INT32_VALUE
+        assert rb.get_int32(0, 2) == PYARROW_LAST_INT32_VALUE
         assert math.isclose(rb.get_float64(1, 0), 1.5)
         assert rb.is_null(1, 1) is True
         assert math.isclose(rb.get_float64(1, 2), 4.5)
@@ -423,7 +519,10 @@ class TestPyArrowInterop:
         reader.close()
 
     def test_irx_pyarrow_all_numeric_types(self):
-        """Every fixed-width column survives the IRx -> PyArrow trip."""
+        """
+        title: >-
+          Ensure fixed-width numeric types survive the IRx to PyArrow trip.
+        """
         schema = RecordBatchSchema()
         schema.add_field("i8", IrxColumnType.INT8)
         schema.add_field("u32", IrxColumnType.UINT32)

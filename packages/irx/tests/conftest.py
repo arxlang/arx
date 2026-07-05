@@ -19,6 +19,10 @@ from irx.analysis import ModuleKey, ParsedModule
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder, CommandResult
+from irx.builder.runtime.record_batch import (
+    build_record_batch_shared_library,
+    shared_library_path,
+)
 from llvmlite import binding as llvm
 from llvmlite import ir
 
@@ -494,16 +498,14 @@ def llvm_visitor_in_function() -> LLVMVisitor:
 def pytest_configure(config: pytest.Config) -> None:
     """
     title: Build the record_batch native runtime before collection.
-
-    The native library is a first-class part of the feature and must be
-    available for its tests, mirroring the array runtime. Build it here so the
-    tests run against a fresh artifact. A build failure is NOT swallowed: the
-    native tests then fail loudly rather than silently passing.
+    summary: >-
+      The native library is a first-class part of the feature and must be
+      available for its tests, mirroring the array runtime. Build it here so
+      the tests run against a fresh artifact. A build failure is not swallowed:
+      the native tests then fail loudly rather than silently passing.
+    parameters:
+      config:
+        type: pytest.Config
     """
-    from irx.builder.runtime.record_batch import (
-        build_record_batch_shared_library,
-        shared_library_path,
-    )
-
     if not shared_library_path().exists():
         build_record_batch_shared_library()

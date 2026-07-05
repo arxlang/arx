@@ -1,56 +1,5 @@
 """
-packages/irx/src/irx/record_batch.py
-
-High-level Python API for RecordBatch streaming via the Arrow C++ bridge.
-
-This module provides:
-
-* ``RecordBatchSchema``   — build an Arrow schema incrementally.
-* ``RecordBatchBuilder``  — append typed values and produce a batch.
-* ``RecordBatchStreamWriter`` — write batches to a file or in-memory buffer.
-* ``RecordBatchStreamReader`` — iterate batches from a file or buffer.
-
-The classes are thin wrappers around the opaque C handles declared in
-``irx_record_batch.h``.  They are also the canonical Python-side spelling of
-the feature for IRx integration tests and for Arx programs that need to
-round-trip Arrow IPC data via the Python host.
-
-Example — round-trip through a buffer
---------------------------------------
-::
-
-    from irx.record_batch import (
-        RecordBatchSchema, RecordBatchBuilder,
-        RecordBatchStreamWriter, RecordBatchStreamReader,
-        IrxColumnType,
-    )
-
-    schema = RecordBatchSchema()
-    schema.add_field("id",    IrxColumnType.INT32,   nullable=False)
-    schema.add_field("value", IrxColumnType.FLOAT64, nullable=True)
-
-    writer = RecordBatchStreamWriter.open_buffer(schema)
-
-    builder = RecordBatchBuilder(schema)
-    for i in range(5):
-        builder.append_int32(0, i)
-        builder.append_float64(1, i * 1.5)
-    batch = builder.finish()
-    writer.write_batch(batch)
-    batch.release()
-    builder.release()
-
-    writer.close()
-    data = writer.buffer_data()
-    writer.release()
-
-    reader = RecordBatchStreamReader.open_buffer(data)
-    while (rb := reader.next_batch()) is not None:
-        print(rb.num_rows(), rb.num_columns())
-        for row in range(rb.num_rows()):
-            print(rb.get_int32(0, row), rb.get_float64(1, row))
-        rb.release()
-    reader.close()
+title: Record batch streaming API.
 """
 
 from __future__ import annotations
@@ -76,11 +25,9 @@ from irx.typecheck import typechecked
 @typechecked
 def _load_native_lib() -> ctypes.CDLL:
     """
-    Locate and load the IRx Arrow native library.
-
-    During development the library is compiled by the IRx build system and
-    placed under the runtime/arrow/ directory.  In an installed package it will
-    be in the platform lib/ directory next to the Python package.
+    title: _load_native_lib.
+    returns:
+      type: ctypes.CDLL
     """
     candidates = [
         # Development build (in-tree)
@@ -123,6 +70,11 @@ def _load_native_lib() -> ctypes.CDLL:
 @lru_cache(maxsize=1)
 @typechecked
 def _get_lib() -> ctypes.CDLL:
+    """
+    title: Return the lazily-loaded record-batch native library.
+    returns:
+      type: ctypes.CDLL
+    """
     lib = _load_native_lib()
     _configure_lib(lib)
     return lib
@@ -130,7 +82,12 @@ def _get_lib() -> ctypes.CDLL:
 
 @typechecked
 def _configure_lib(lib: ctypes.CDLL) -> None:
-    """Set argtypes / restype for every exported function."""
+    """
+    title: _configure_lib.
+    parameters:
+      lib:
+        type: ctypes.CDLL
+    """
     c = ctypes
     vp = c.c_void_p
     pvp = c.POINTER(c.c_void_p)
@@ -159,6 +116,17 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     ppui8 = c.POINTER(pui8)
 
     def fn(name: str, restype: Any, *argtypes: Any) -> None:
+        """
+        title: Configure ctypes metadata for one exported native function.
+        parameters:
+          name:
+            type: str
+          restype:
+            type: Any
+          argtypes:
+            type: Any
+            variadic: positional
+        """
         f = getattr(lib, name)
         f.restype = restype
         f.argtypes = list(argtypes)
@@ -227,6 +195,14 @@ IRX_EOF = 1
 
 @typechecked
 def _check(rc: int, lib: ctypes.CDLL) -> None:
+    """
+    title: Validate a native record-batch call result code.
+    parameters:
+      rc:
+        type: int
+      lib:
+        type: ctypes.CDLL
+    """
     if rc < 0:
         msg = lib.irx_record_batch_errmsg()
         raise RuntimeError(f"IRx RecordBatch error ({rc}): {msg.decode()}")
@@ -239,6 +215,10 @@ def _check(rc: int, lib: ctypes.CDLL) -> None:
 
 @typechecked
 class IrxColumnType(IntEnum):
+    """
+    title: IrxColumnType.
+    """
+
     INT8 = 0
     INT16 = 1
     INT32 = 2
@@ -259,9 +239,25 @@ class IrxColumnType(IntEnum):
 
 @typechecked
 class RecordBatchSchema:
-    """Incrementally build an Arrow schema for RecordBatch streaming."""
+    """
+    title: RecordBatchSchema.
+    attributes:
+      _handle:
+        type: ctypes.c_void_p
+      _lib:
+        type: ctypes.CDLL
+      _released:
+        type: bool
+    """
+
+    _handle: ctypes.c_void_p
+    _lib: ctypes.CDLL
+    _released: bool
 
     def __init__(self) -> None:
+        """
+        title: Create a new Arrow schema handle.
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(lib.irx_rb_schema_create(ctypes.byref(handle)), lib)
@@ -272,7 +268,18 @@ class RecordBatchSchema:
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
     ) -> "RecordBatchSchema":
-        """Add a named field to the schema. Returns self for chaining."""
+        """
+        title: add_field.
+        parameters:
+          name:
+            type: str
+          col_type:
+            type: IrxColumnType
+          nullable:
+            type: bool
+        returns:
+          type: RecordBatchSchema
+        """
         _check(
             self._lib.irx_rb_schema_add_field(
                 self._handle,
@@ -286,17 +293,33 @@ class RecordBatchSchema:
 
     @property
     def num_fields(self) -> int:
+        """
+        title: Return the number of schema fields.
+        returns:
+          type: int
+        """
         return int(self._lib.irx_rb_schema_num_fields(self._handle))
 
     def release(self) -> None:
+        """
+        title: Release the underlying schema handle.
+        """
         if not self._released:
             self._lib.irx_rb_schema_release(self._handle)
             self._released = True
 
     def __del__(self) -> None:
+        """
+        title: Release the schema when the object is garbage collected.
+        """
         self.release()
 
     def _raw(self) -> ctypes.c_void_p:
+        """
+        title: Return the underlying native handle.
+        returns:
+          type: ctypes.c_void_p
+        """
         return self._handle
 
 
@@ -307,9 +330,28 @@ class RecordBatchSchema:
 
 @typechecked
 class RecordBatchBuilder:
-    """Append typed values column-by-column and produce a RecordBatch."""
+    """
+    title: RecordBatchBuilder.
+    attributes:
+      _handle:
+        type: ctypes.c_void_p
+      _lib:
+        type: ctypes.CDLL
+      _released:
+        type: bool
+    """
+
+    _handle: ctypes.c_void_p
+    _lib: ctypes.CDLL
+    _released: bool
 
     def __init__(self, schema: RecordBatchSchema) -> None:
+        """
+        title: Create a builder for the supplied schema.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(
@@ -322,6 +364,14 @@ class RecordBatchBuilder:
     # --- typed appends ---
 
     def append_int8(self, col: int, v: int) -> None:
+        """
+        title: Append an 8-bit signed integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_int8(
                 self._handle, col, ctypes.c_int8(v)
@@ -330,6 +380,14 @@ class RecordBatchBuilder:
         )
 
     def append_int16(self, col: int, v: int) -> None:
+        """
+        title: Append a 16-bit signed integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_int16(
                 self._handle, col, ctypes.c_int16(v)
@@ -338,6 +396,14 @@ class RecordBatchBuilder:
         )
 
     def append_int32(self, col: int, v: int) -> None:
+        """
+        title: Append a 32-bit signed integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_int32(
                 self._handle, col, ctypes.c_int32(v)
@@ -346,6 +412,14 @@ class RecordBatchBuilder:
         )
 
     def append_int64(self, col: int, v: int) -> None:
+        """
+        title: Append a 64-bit signed integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_int64(
                 self._handle, col, ctypes.c_int64(v)
@@ -354,6 +428,14 @@ class RecordBatchBuilder:
         )
 
     def append_uint8(self, col: int, v: int) -> None:
+        """
+        title: Append an 8-bit unsigned integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_uint8(
                 self._handle, col, ctypes.c_uint8(v)
@@ -362,6 +444,14 @@ class RecordBatchBuilder:
         )
 
     def append_uint16(self, col: int, v: int) -> None:
+        """
+        title: Append a 16-bit unsigned integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_uint16(
                 self._handle, col, ctypes.c_uint16(v)
@@ -370,6 +460,14 @@ class RecordBatchBuilder:
         )
 
     def append_uint32(self, col: int, v: int) -> None:
+        """
+        title: Append a 32-bit unsigned integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_uint32(
                 self._handle, col, ctypes.c_uint32(v)
@@ -378,6 +476,14 @@ class RecordBatchBuilder:
         )
 
     def append_uint64(self, col: int, v: int) -> None:
+        """
+        title: Append a 64-bit unsigned integer to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_uint64(
                 self._handle, col, ctypes.c_uint64(v)
@@ -386,6 +492,14 @@ class RecordBatchBuilder:
         )
 
     def append_float32(self, col: int, v: float) -> None:
+        """
+        title: Append a 32-bit floating-point value to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: float
+        """
         _check(
             self._lib.irx_rb_builder_append_float32(
                 self._handle, col, ctypes.c_float(v)
@@ -394,6 +508,14 @@ class RecordBatchBuilder:
         )
 
     def append_float64(self, col: int, v: float) -> None:
+        """
+        title: Append a 64-bit floating-point value to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: float
+        """
         _check(
             self._lib.irx_rb_builder_append_float64(
                 self._handle, col, ctypes.c_double(v)
@@ -402,6 +524,14 @@ class RecordBatchBuilder:
         )
 
     def append_bool(self, col: int, v: bool) -> None:
+        """
+        title: Append a boolean value to a column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: bool
+        """
         _check(
             self._lib.irx_rb_builder_append_bool(
                 self._handle, col, ctypes.c_int32(int(v))
@@ -410,12 +540,22 @@ class RecordBatchBuilder:
         )
 
     def append_null(self, col: int) -> None:
+        """
+        title: Append a null value to a column.
+        parameters:
+          col:
+            type: int
+        """
         _check(
             self._lib.irx_rb_builder_append_null(self._handle, col), self._lib
         )
 
     def finish(self) -> "RecordBatch":
-        """Finalise and return a RecordBatch handle."""
+        """
+        title: finish.
+        returns:
+          type: RecordBatch
+        """
         batch_handle = ctypes.c_void_p()
         _check(
             self._lib.irx_rb_builder_finish(
@@ -426,11 +566,17 @@ class RecordBatchBuilder:
         return RecordBatch(batch_handle, self._lib)
 
     def release(self) -> None:
+        """
+        title: Release the underlying builder handle.
+        """
         if not self._released:
             self._lib.irx_rb_builder_release(self._handle)
             self._released = True
 
     def __del__(self) -> None:
+        """
+        title: Release the builder when the object is garbage collected.
+        """
         self.release()
 
 
@@ -441,24 +587,69 @@ class RecordBatchBuilder:
 
 @typechecked
 class RecordBatch:
-    """Wraps an irx_rb_batch handle from builder.finish() or the reader."""
+    """
+    title: RecordBatch.
+    attributes:
+      _handle:
+        type: ctypes.c_void_p
+      _lib:
+        type: ctypes.CDLL
+      _released:
+        type: bool
+    """
+
+    _handle: ctypes.c_void_p
+    _lib: ctypes.CDLL
+    _released: bool
 
     def __init__(self, handle: ctypes.c_void_p, lib: ctypes.CDLL) -> None:
+        """
+        title: Create a wrapper around an existing native batch handle.
+        parameters:
+          handle:
+            type: ctypes.c_void_p
+          lib:
+            type: ctypes.CDLL
+        """
         self._handle = handle
         self._lib = lib
         self._released = False
 
     @property
     def num_rows(self) -> int:
+        """
+        title: Return the number of rows in the batch.
+        returns:
+          type: int
+        """
         return int(self._lib.irx_rb_batch_num_rows(self._handle))
 
     @property
     def num_columns(self) -> int:
+        """
+        title: Return the number of columns in the batch.
+        returns:
+          type: int
+        """
         return int(self._lib.irx_rb_batch_num_columns(self._handle))
 
     def _scalar_get(
         self, fn_name: str, ctype: type[Any], col: int, row: int
     ) -> Any:
+        """
+        title: Read a scalar value from the batch through a native getter.
+        parameters:
+          fn_name:
+            type: str
+          ctype:
+            type: type[Any]
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: Any
+        """
         out = ctype()
         _check(
             getattr(self._lib, fn_name)(
@@ -469,11 +660,31 @@ class RecordBatch:
         return out.value
 
     def get_int8(self, col: int, row: int) -> int:
+        """
+        title: Return an 8-bit signed integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get("irx_rb_batch_get_int8", ctypes.c_int8, col, row)
         )
 
     def get_int16(self, col: int, row: int) -> int:
+        """
+        title: Return a 16-bit signed integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_int16", ctypes.c_int16, col, row
@@ -481,6 +692,16 @@ class RecordBatch:
         )
 
     def get_int32(self, col: int, row: int) -> int:
+        """
+        title: Return a 32-bit signed integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_int32", ctypes.c_int32, col, row
@@ -488,6 +709,16 @@ class RecordBatch:
         )
 
     def get_int64(self, col: int, row: int) -> int:
+        """
+        title: Return a 64-bit signed integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_int64", ctypes.c_int64, col, row
@@ -495,6 +726,16 @@ class RecordBatch:
         )
 
     def get_uint8(self, col: int, row: int) -> int:
+        """
+        title: Return an 8-bit unsigned integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_uint8", ctypes.c_uint8, col, row
@@ -502,6 +743,16 @@ class RecordBatch:
         )
 
     def get_uint16(self, col: int, row: int) -> int:
+        """
+        title: Return a 16-bit unsigned integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_uint16", ctypes.c_uint16, col, row
@@ -509,6 +760,16 @@ class RecordBatch:
         )
 
     def get_uint32(self, col: int, row: int) -> int:
+        """
+        title: Return a 32-bit unsigned integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_uint32", ctypes.c_uint32, col, row
@@ -516,6 +777,16 @@ class RecordBatch:
         )
 
     def get_uint64(self, col: int, row: int) -> int:
+        """
+        title: Return a 64-bit unsigned integer value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
         return int(
             self._scalar_get(
                 "irx_rb_batch_get_uint64", ctypes.c_uint64, col, row
@@ -523,6 +794,16 @@ class RecordBatch:
         )
 
     def get_float32(self, col: int, row: int) -> float:
+        """
+        title: Return a 32-bit floating-point value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: float
+        """
         return float(
             self._scalar_get(
                 "irx_rb_batch_get_float32", ctypes.c_float, col, row
@@ -530,6 +811,16 @@ class RecordBatch:
         )
 
     def get_float64(self, col: int, row: int) -> float:
+        """
+        title: Return a 64-bit floating-point value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: float
+        """
         return float(
             self._scalar_get(
                 "irx_rb_batch_get_float64", ctypes.c_double, col, row
@@ -537,6 +828,16 @@ class RecordBatch:
         )
 
     def get_bool(self, col: int, row: int) -> bool:
+        """
+        title: Return a boolean value from the batch.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: bool
+        """
         out = ctypes.c_int32()
         _check(
             self._lib.irx_rb_batch_get_bool(
@@ -547,6 +848,16 @@ class RecordBatch:
         return bool(out.value)
 
     def is_null(self, col: int, row: int) -> bool:
+        """
+        title: Return whether the value at the supplied location is null.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: bool
+        """
         out = ctypes.c_int32()
         _check(
             self._lib.irx_rb_batch_is_null(
@@ -557,11 +868,17 @@ class RecordBatch:
         return bool(out.value)
 
     def release(self) -> None:
+        """
+        title: Release the underlying batch handle.
+        """
         if not self._released:
             self._lib.irx_rb_batch_release(self._handle)
             self._released = True
 
     def __del__(self) -> None:
+        """
+        title: Release the batch when the object is garbage collected.
+        """
         self.release()
 
 
@@ -572,7 +889,26 @@ class RecordBatch:
 
 @typechecked
 class RecordBatchStreamWriter:
-    """Write RecordBatches to an Arrow IPC stream (file or buffer)."""
+    """
+    title: RecordBatchStreamWriter.
+    attributes:
+      _handle:
+        type: ctypes.c_void_p
+      _lib:
+        type: ctypes.CDLL
+      _is_buffer:
+        type: bool
+      _closed:
+        type: bool
+      _released:
+        type: bool
+    """
+
+    _handle: ctypes.c_void_p
+    _lib: ctypes.CDLL
+    _is_buffer: bool
+    _closed: bool
+    _released: bool
 
     def __init__(
         self,
@@ -580,6 +916,16 @@ class RecordBatchStreamWriter:
         lib: ctypes.CDLL,
         is_buffer: bool = False,
     ) -> None:
+        """
+        title: Wrap an existing native stream writer handle.
+        parameters:
+          handle:
+            type: ctypes.c_void_p
+          lib:
+            type: ctypes.CDLL
+          is_buffer:
+            type: bool
+        """
         self._handle = handle
         self._lib = lib
         self._is_buffer = is_buffer
@@ -590,6 +936,16 @@ class RecordBatchStreamWriter:
     def open_file(
         cls, schema: RecordBatchSchema, path: str | os.PathLike[str]
     ) -> "RecordBatchStreamWriter":
+        """
+        title: Open a stream writer backed by a file path.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+          path:
+            type: str | os.PathLike[str]
+        returns:
+          type: RecordBatchStreamWriter
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(
@@ -604,6 +960,14 @@ class RecordBatchStreamWriter:
     def open_buffer(
         cls, schema: RecordBatchSchema
     ) -> "RecordBatchStreamWriter":
+        """
+        title: Open a stream writer backed by an in-memory buffer.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+        returns:
+          type: RecordBatchStreamWriter
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(
@@ -615,6 +979,12 @@ class RecordBatchStreamWriter:
         return cls(handle, lib, is_buffer=True)
 
     def write_batch(self, batch: RecordBatch) -> None:
+        """
+        title: Write a completed batch to the stream.
+        parameters:
+          batch:
+            type: RecordBatch
+        """
         _check(
             self._lib.irx_rb_stream_writer_write_batch(
                 self._handle, batch._handle
@@ -623,6 +993,9 @@ class RecordBatchStreamWriter:
         )
 
     def close(self) -> None:
+        """
+        title: Close the underlying stream writer.
+        """
         if not self._closed:
             _check(
                 self._lib.irx_rb_stream_writer_close(self._handle), self._lib
@@ -631,8 +1004,9 @@ class RecordBatchStreamWriter:
 
     def buffer_data(self) -> bytes:
         """
-        Return the serialised IPC bytes (buffer writers only).
-        Must be called after close().
+        title: buffer_data.
+        returns:
+          type: bytes
         """
         if not self._is_buffer:
             raise RuntimeError(
@@ -651,17 +1025,35 @@ class RecordBatchStreamWriter:
         return bytes(ctypes.string_at(data_ptr, size.value))
 
     def release(self) -> None:
+        """
+        title: Release the underlying stream writer handle.
+        """
         if not self._released:
             self._lib.irx_rb_stream_writer_release(self._handle)
             self._released = True
 
     def __del__(self) -> None:
+        """
+        title: Release the writer when the object is garbage collected.
+        """
         self.release()
 
     def __enter__(self) -> "RecordBatchStreamWriter":
+        """
+        title: Support using the writer as a context manager.
+        returns:
+          type: RecordBatchStreamWriter
+        """
         return self
 
-    def __exit__(self, *exc: object) -> None:
+    def __exit__(self, *_exc: object) -> None:
+        """
+        title: Close and release the writer from a context manager.
+        parameters:
+          _exc:
+            type: object
+            variadic: positional
+        """
         self.close()
         self.release()
 
@@ -673,9 +1065,30 @@ class RecordBatchStreamWriter:
 
 @typechecked
 class RecordBatchStreamReader:
-    """Read RecordBatches from an Arrow IPC stream (file or buffer)."""
+    """
+    title: RecordBatchStreamReader.
+    attributes:
+      _handle:
+        type: ctypes.c_void_p
+      _lib:
+        type: ctypes.CDLL
+      _closed:
+        type: bool
+    """
+
+    _handle: ctypes.c_void_p
+    _lib: ctypes.CDLL
+    _closed: bool
 
     def __init__(self, handle: ctypes.c_void_p, lib: ctypes.CDLL) -> None:
+        """
+        title: Wrap an existing native stream reader handle.
+        parameters:
+          handle:
+            type: ctypes.c_void_p
+          lib:
+            type: ctypes.CDLL
+        """
         self._handle = handle
         self._lib = lib
         self._closed = False
@@ -684,6 +1097,14 @@ class RecordBatchStreamReader:
     def open_file(
         cls, path: str | os.PathLike[str]
     ) -> "RecordBatchStreamReader":
+        """
+        title: Open a stream reader backed by a file path.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+        returns:
+          type: RecordBatchStreamReader
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(
@@ -696,6 +1117,14 @@ class RecordBatchStreamReader:
 
     @classmethod
     def open_buffer(cls, data: bytes) -> "RecordBatchStreamReader":
+        """
+        title: Open a stream reader backed by an in-memory buffer.
+        parameters:
+          data:
+            type: bytes
+        returns:
+          type: RecordBatchStreamReader
+        """
         lib = _get_lib()
         handle = ctypes.c_void_p()
         buf = (ctypes.c_uint8 * len(data)).from_buffer_copy(data)
@@ -709,8 +1138,9 @@ class RecordBatchStreamReader:
 
     def next_batch(self) -> Optional[RecordBatch]:
         """
-        Return the next RecordBatch or None at end-of-stream.
-        Caller is responsible for calling RecordBatch.release().
+        title: Return the next RecordBatch or None at end-of-stream.
+        returns:
+          type: Optional[RecordBatch]
         """
         batch_handle = ctypes.c_void_p()
         rc = self._lib.irx_rb_stream_reader_next_batch(
@@ -722,6 +1152,11 @@ class RecordBatchStreamReader:
         return RecordBatch(batch_handle, self._lib)
 
     def __iter__(self) -> Iterator[RecordBatch]:
+        """
+        title: Iterate batches from the stream until exhaustion.
+        returns:
+          type: Iterator[RecordBatch]
+        """
         batch = self.next_batch()
         while batch is not None:
             yield batch
@@ -729,15 +1164,33 @@ class RecordBatchStreamReader:
             batch = self.next_batch()
 
     def close(self) -> None:
+        """
+        title: Close the underlying stream reader.
+        """
         if not self._closed:
             self._lib.irx_rb_stream_reader_close(self._handle)
             self._closed = True
 
     def __del__(self) -> None:
+        """
+        title: Release the reader when the object is garbage collected.
+        """
         self.close()
 
     def __enter__(self) -> "RecordBatchStreamReader":
+        """
+        title: Support using the reader as a context manager.
+        returns:
+          type: RecordBatchStreamReader
+        """
         return self
 
-    def __exit__(self, *exc: object) -> None:
+    def __exit__(self, *_exc: object) -> None:
+        """
+        title: Close and release the reader from a context manager.
+        parameters:
+          _exc:
+            type: object
+            variadic: positional
+        """
         self.close()
