@@ -4,6 +4,7 @@ title: Top-level package for arxjit.
 
 from importlib import metadata as importlib_metadata
 
+from arxjit.core import JitFunction, jit
 from arxjit.types import (
     Signature,
     SigType,
@@ -34,6 +35,7 @@ __email__: str = "ivan.ogasawara@gmail.com"
 __version__: str = get_version()
 
 __all__ = [
+    "JitFunction",
     "SigType",
     "Signature",
     "__version__",
@@ -43,4 +45,5 @@ __all__ = [
     "get_version",
     "i32",
     "i64",
+    "jit",
 ]
