@@ -60,9 +60,11 @@ import ctypes.util
 import os
 import sys
 
+from collections.abc import Iterator
 from enum import IntEnum
+from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from irx.typecheck import typechecked
 
@@ -116,18 +118,14 @@ def _load_native_lib() -> ctypes.CDLL:
     )
 
 
-# Lazy-load so importing this module does not fail in environments where the
-# native library has not yet been compiled (e.g. during documentation builds).
-_lib: Optional[ctypes.CDLL] = None
-
-
+# Lazy-load (cached) so importing this module does not fail where the native
+# library has not been compiled yet (e.g. documentation builds).
+@lru_cache(maxsize=1)
 @typechecked
 def _get_lib() -> ctypes.CDLL:
-    global _lib
-    if _lib is None:
-        _lib = _load_native_lib()
-        _configure_lib(_lib)
-    return _lib
+    lib = _load_native_lib()
+    _configure_lib(lib)
+    return lib
 
 
 @typechecked
@@ -160,7 +158,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     pui8 = c.POINTER(c.c_uint8)
     ppui8 = c.POINTER(pui8)
 
-    def fn(name, restype, *argtypes):
+    def fn(name: str, restype: Any, *argtypes: Any) -> None:
         f = getattr(lib, name)
         f.restype = restype
         f.argtypes = list(argtypes)
@@ -261,7 +259,7 @@ class IrxColumnType(IntEnum):
 
 @typechecked
 class RecordBatchSchema:
-    """Incrementally build an Arrow schema for use with RecordBatch streaming."""
+    """Incrementally build an Arrow schema for RecordBatch streaming."""
 
     def __init__(self) -> None:
         lib = _get_lib()
@@ -288,7 +286,7 @@ class RecordBatchSchema:
 
     @property
     def num_fields(self) -> int:
-        return self._lib.irx_rb_schema_num_fields(self._handle)
+        return int(self._lib.irx_rb_schema_num_fields(self._handle))
 
     def release(self) -> None:
         if not self._released:
@@ -443,7 +441,7 @@ class RecordBatchBuilder:
 
 @typechecked
 class RecordBatch:
-    """Wraps an irx_rb_batch handle returned by builder.finish() or the reader."""
+    """Wraps an irx_rb_batch handle from builder.finish() or the reader."""
 
     def __init__(self, handle: ctypes.c_void_p, lib: ctypes.CDLL) -> None:
         self._handle = handle
@@ -458,7 +456,9 @@ class RecordBatch:
     def num_columns(self) -> int:
         return int(self._lib.irx_rb_batch_num_columns(self._handle))
 
-    def _scalar_get(self, fn_name, ctype, col, row):
+    def _scalar_get(
+        self, fn_name: str, ctype: type[Any], col: int, row: int
+    ) -> Any:
         out = ctype()
         _check(
             getattr(self._lib, fn_name)(
@@ -468,54 +468,72 @@ class RecordBatch:
         )
         return out.value
 
-    def get_int8(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_int8", ctypes.c_int8, col, row
+    def get_int8(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get("irx_rb_batch_get_int8", ctypes.c_int8, col, row)
         )
 
-    def get_int16(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_int16", ctypes.c_int16, col, row
+    def get_int16(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_int16", ctypes.c_int16, col, row
+            )
         )
 
-    def get_int32(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_int32", ctypes.c_int32, col, row
+    def get_int32(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_int32", ctypes.c_int32, col, row
+            )
         )
 
-    def get_int64(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_int64", ctypes.c_int64, col, row
+    def get_int64(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_int64", ctypes.c_int64, col, row
+            )
         )
 
-    def get_uint8(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_uint8", ctypes.c_uint8, col, row
+    def get_uint8(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_uint8", ctypes.c_uint8, col, row
+            )
         )
 
-    def get_uint16(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_uint16", ctypes.c_uint16, col, row
+    def get_uint16(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_uint16", ctypes.c_uint16, col, row
+            )
         )
 
-    def get_uint32(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_uint32", ctypes.c_uint32, col, row
+    def get_uint32(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_uint32", ctypes.c_uint32, col, row
+            )
         )
 
-    def get_uint64(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_uint64", ctypes.c_uint64, col, row
+    def get_uint64(self, col: int, row: int) -> int:
+        return int(
+            self._scalar_get(
+                "irx_rb_batch_get_uint64", ctypes.c_uint64, col, row
+            )
         )
 
-    def get_float32(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_float32", ctypes.c_float, col, row
+    def get_float32(self, col: int, row: int) -> float:
+        return float(
+            self._scalar_get(
+                "irx_rb_batch_get_float32", ctypes.c_float, col, row
+            )
         )
 
-    def get_float64(self, col, row):
-        return self._scalar_get(
-            "irx_rb_batch_get_float64", ctypes.c_double, col, row
+    def get_float64(self, col: int, row: int) -> float:
+        return float(
+            self._scalar_get(
+                "irx_rb_batch_get_float64", ctypes.c_double, col, row
+            )
         )
 
     def get_bool(self, col: int, row: int) -> bool:
@@ -554,7 +572,7 @@ class RecordBatch:
 
 @typechecked
 class RecordBatchStreamWriter:
-    """Write RecordBatches to an Arrow IPC stream (file or in-memory buffer)."""
+    """Write RecordBatches to an Arrow IPC stream (file or buffer)."""
 
     def __init__(
         self,
@@ -570,7 +588,7 @@ class RecordBatchStreamWriter:
 
     @classmethod
     def open_file(
-        cls, schema: RecordBatchSchema, path: str | os.PathLike
+        cls, schema: RecordBatchSchema, path: str | os.PathLike[str]
     ) -> "RecordBatchStreamWriter":
         lib = _get_lib()
         handle = ctypes.c_void_p()
@@ -643,7 +661,7 @@ class RecordBatchStreamWriter:
     def __enter__(self) -> "RecordBatchStreamWriter":
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
         self.release()
 
@@ -655,7 +673,7 @@ class RecordBatchStreamWriter:
 
 @typechecked
 class RecordBatchStreamReader:
-    """Read RecordBatches from an Arrow IPC stream (file or in-memory buffer)."""
+    """Read RecordBatches from an Arrow IPC stream (file or buffer)."""
 
     def __init__(self, handle: ctypes.c_void_p, lib: ctypes.CDLL) -> None:
         self._handle = handle
@@ -663,7 +681,9 @@ class RecordBatchStreamReader:
         self._closed = False
 
     @classmethod
-    def open_file(cls, path: str | os.PathLike) -> "RecordBatchStreamReader":
+    def open_file(
+        cls, path: str | os.PathLike[str]
+    ) -> "RecordBatchStreamReader":
         lib = _get_lib()
         handle = ctypes.c_void_p()
         _check(
@@ -701,7 +721,7 @@ class RecordBatchStreamReader:
         _check(rc, self._lib)
         return RecordBatch(batch_handle, self._lib)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[RecordBatch]:
         batch = self.next_batch()
         while batch is not None:
             yield batch
@@ -719,5 +739,5 @@ class RecordBatchStreamReader:
     def __enter__(self) -> "RecordBatchStreamReader":
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
