@@ -1,16 +1,4 @@
-/**
- * irx_record_batch.cpp
- *
- * Implementation of the RecordBatch streaming bridge declared in
- * irx_record_batch.h. All Arrow C++ types are confined to this translation
- * unit; the public surface is a pure C ABI.
- *
- * Build notes
- * -----------
- * Compiled as part of the `record_batch` runtime feature registered in
- * packages/irx/src/irx/builder/runtime/registry.py.  The arx-arrowcpp-sources
- * package provides the Arrow C++ headers used here.
- */
+// Copyright IRx contributors.
 
 #include "irx_record_batch.h"
 
@@ -26,10 +14,6 @@
 #include <string>
 #include <vector>
 
-/* ------------------------------------------------------------------ */
-/* Thread-local error message                                           */
-/* ------------------------------------------------------------------ */
-
 static thread_local std::string tl_errmsg;
 
 static int set_err(const std::string &msg, int code) {
@@ -43,12 +27,14 @@ static int set_err(const arrow::Status &st, int code = IRX_ERR_ARROW) {
 }
 
 const char *irx_record_batch_errmsg(void) {
-    return tl_errmsg.c_str();
+    // Hand the message to a holder and clear the live buffer, so a second
+    // read (with no error in between) returns "" instead of a stale message.
+    // The holder keeps the returned pointer valid until the next read.
+    static thread_local std::string consumed;
+    consumed = std::move(tl_errmsg);
+    tl_errmsg.clear();
+    return consumed.c_str();
 }
-
-/* ------------------------------------------------------------------ */
-/* Internal helpers: Arrow type from IrxColumnType                     */
-/* ------------------------------------------------------------------ */
 
 static std::shared_ptr<arrow::DataType> arrow_type(IrxColumnType t) {
     switch (t) {
@@ -84,10 +70,6 @@ static IrxColumnType col_type_from_arrow(const arrow::DataType &dt) {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Internal structures behind opaque handles                           */
-/* ------------------------------------------------------------------ */
-
 struct IrxRbSchema_ {
     std::shared_ptr<arrow::Schema>             schema;
     std::vector<IrxColumnType>                 col_types;
@@ -122,15 +104,8 @@ struct IrxRbStreamReader_ {
     IrxRbSchema_                               schema_handle;
 };
 
-/* ------------------------------------------------------------------ */
-/* Null-pointer guard                                                   */
-/* ------------------------------------------------------------------ */
 #define GUARD(ptr) \
     do { if (!(ptr)) return set_err("null pointer argument", IRX_ERR_NULLPTR); } while (0)
-
-/* ------------------------------------------------------------------ */
-/* Schema                                                               */
-/* ------------------------------------------------------------------ */
 
 int irx_rb_schema_create(IrxRbSchema **out) {
     GUARD(out);
@@ -165,10 +140,6 @@ int irx_rb_schema_num_fields(const IrxRbSchema *s) {
 void irx_rb_schema_release(IrxRbSchema *s) {
     delete s;
 }
-
-/* ------------------------------------------------------------------ */
-/* Builder                                                              */
-/* ------------------------------------------------------------------ */
 
 static std::unique_ptr<arrow::ArrayBuilder>
 make_builder(IrxColumnType t, arrow::MemoryPool *pool) {
@@ -363,10 +334,6 @@ void irx_rb_builder_release(IrxRbBuilder *b) {
     delete b;
 }
 
-/* ------------------------------------------------------------------ */
-/* RecordBatch inspection                                               */
-/* ------------------------------------------------------------------ */
-
 int64_t irx_rb_batch_num_rows(const IrxRbBatch *batch) {
     if (!batch) return IRX_ERR_NULLPTR;
     return batch->batch->num_rows();
@@ -458,10 +425,6 @@ void irx_rb_batch_release(IrxRbBatch *batch) {
     delete batch;
 }
 
-/* ------------------------------------------------------------------ */
-/* Stream writer                                                        */
-/* ------------------------------------------------------------------ */
-
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
                                     const char          *path,
                                     IrxRbStreamWriter  **out) {
@@ -548,10 +511,6 @@ void irx_rb_stream_writer_release(IrxRbStreamWriter *w) {
     delete w;
 }
 
-/* ------------------------------------------------------------------ */
-/* Stream reader                                                        */
-/* ------------------------------------------------------------------ */
-
 static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
                                IrxRbStreamReader **out) {
     auto reader_result = arrow::ipc::RecordBatchStreamReader::Open(stream);
@@ -601,7 +560,7 @@ int irx_rb_stream_reader_open_buffer(const uint8_t      *data,
     auto buf_res = arrow::AllocateBuffer(size);
     if (!buf_res.ok()) return set_err(buf_res.status(), IRX_ERR_IO);
     std::shared_ptr<arrow::Buffer> buf = std::move(*buf_res);
-    if (size > 0) std::memcpy(buf->mutable_data(), data, size);
+    if (size > 0) std::memcpy(const_cast<uint8_t*>(buf->data()), data, size);
     auto stream = std::make_shared<arrow::io::BufferReader>(buf);
     return open_stream_reader(stream, out);
 }

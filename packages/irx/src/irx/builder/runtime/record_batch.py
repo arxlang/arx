@@ -48,9 +48,7 @@ from irx.builder.runtime.features import (
 from irx.builder.runtime.linking import compile_native_artifacts
 from irx.typecheck import typechecked
 
-# ---------------------------------------------------------------------------
 # Native source location
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -65,9 +63,7 @@ def _native_source() -> Path:
     return _native_source_dir() / "irx_record_batch.cpp"
 
 
-# ---------------------------------------------------------------------------
 # LLVM symbol signature table
-# ---------------------------------------------------------------------------
 # Each entry maps a C symbol to (return type code, [argument type codes]).
 # Type codes are resolved against ``visitor._llvm`` at declaration time:
 #   p   -> opaque pointer (handle, handle**, char*, void**, uint8_t* ...)
@@ -175,9 +171,7 @@ def _make_declarer(
     return declare
 
 
-# ---------------------------------------------------------------------------
 # Runtime feature builder
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -225,9 +219,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
     )
 
 
-# ---------------------------------------------------------------------------
 # Standalone shared-library build (for the ctypes API in irx.record_batch)
-# ---------------------------------------------------------------------------
 
 
 @typechecked

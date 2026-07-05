@@ -493,20 +493,17 @@ def llvm_visitor_in_function() -> LLVMVisitor:
 
 def pytest_configure(config: pytest.Config) -> None:
     """
-    title: Build the record_batch ctypes shared library before collection.
+    title: Build the record_batch native runtime before collection.
 
-    ``tests/test_record_batch.py`` loads ``libirx_record_batch`` at import time
-    and skips itself when the library is absent. Build it best-effort here so
-    those tests actually run; failures (no compiler / no Arrow sources) leave
-    the library absent and the tests skip, as before.
+    The native library is a first-class part of the feature and must be
+    available for its tests, mirroring the array runtime. Build it here so the
+    tests run against a fresh artifact. A build failure is NOT swallowed: the
+    native tests then fail loudly rather than silently passing.
     """
-    try:
-        from irx.builder.runtime.record_batch import (
-            build_record_batch_shared_library,
-            shared_library_path,
-        )
+    from irx.builder.runtime.record_batch import (
+        build_record_batch_shared_library,
+        shared_library_path,
+    )
 
-        if not shared_library_path().exists():
-            build_record_batch_shared_library()
-    except Exception as exc:  # noqa: BLE001 - best-effort; tests skip on failure
-        print(f"[conftest] record_batch native lib not built: {exc}")
+    if not shared_library_path().exists():
+        build_record_batch_shared_library()

@@ -6,8 +6,8 @@ Integration tests for RecordBatch streaming via the Arrow C++ bridge.
 These tests run the full native path:
   Python API → ctypes → libirx_record_batch.so → Arrow C++ → IPC bytes
 
-They are skipped automatically when the native library has not been compiled
-(e.g. in documentation-only CI jobs).
+The native runtime is a first-class part of the feature: like the array
+runtime tests, these always run and fail loudly if the library is missing.
 """
 
 from __future__ import annotations
@@ -17,34 +17,15 @@ import math
 import pyarrow as pa
 import pytest
 
-# ---------------------------------------------------------------------------
-# Skip guard — skip all tests when the native lib is unavailable
-# ---------------------------------------------------------------------------
-
-try:
-    from irx.record_batch import (
-        IrxColumnType,
-        RecordBatchBuilder,
-        RecordBatchSchema,
-        RecordBatchStreamReader,
-        RecordBatchStreamWriter,
-        _get_lib,
-    )
-
-    _get_lib()  # trigger load; raises if lib not found
-    _NATIVE_AVAILABLE = True
-except Exception:
-    _NATIVE_AVAILABLE = False
-
-pytestmark = pytest.mark.skipif(
-    not _NATIVE_AVAILABLE,
-    reason="IRx native library not compiled; skipping record_batch tests",
+from irx.record_batch import (
+    IrxColumnType,
+    RecordBatchBuilder,
+    RecordBatchSchema,
+    RecordBatchStreamReader,
+    RecordBatchStreamWriter,
 )
 
-
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def make_simple_schema() -> RecordBatchSchema:
@@ -62,9 +43,7 @@ def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
         builder.append_float64(1, i * 1.5)
 
 
-# ---------------------------------------------------------------------------
 # Schema tests
-# ---------------------------------------------------------------------------
 
 
 class TestSchema:
@@ -93,9 +72,7 @@ class TestSchema:
         s.release()  # must not crash
 
 
-# ---------------------------------------------------------------------------
 # Builder / batch tests
-# ---------------------------------------------------------------------------
 
 
 class TestBuilder:
@@ -211,9 +188,7 @@ class TestBuilder:
         schema.release()
 
 
-# ---------------------------------------------------------------------------
 # Stream writer / reader round-trip — in-memory buffer
-# ---------------------------------------------------------------------------
 
 
 class TestBufferRoundTrip:
@@ -300,9 +275,7 @@ class TestBufferRoundTrip:
         schema.release()
 
 
-# ---------------------------------------------------------------------------
 # Stream writer / reader round-trip — file
-# ---------------------------------------------------------------------------
 
 
 class TestFileRoundTrip:
@@ -342,9 +315,7 @@ class TestFileRoundTrip:
             RecordBatchStreamReader.open_file("/nonexistent/path.arrows")
 
 
-# ---------------------------------------------------------------------------
 # Large batch stress test
-# ---------------------------------------------------------------------------
 
 
 class TestLargeBatch:
@@ -380,9 +351,7 @@ class TestLargeBatch:
         schema.release()
 
 
-# ---------------------------------------------------------------------------
 # PyArrow IPC interop — the core ecosystem-compatibility guarantee
-# ---------------------------------------------------------------------------
 
 
 class TestPyArrowInterop:
@@ -454,7 +423,7 @@ class TestPyArrowInterop:
         reader.close()
 
     def test_irx_pyarrow_all_numeric_types(self):
-        """Every supported fixed-width column survives the IRx -> PyArrow trip."""
+        """Every fixed-width column survives the IRx -> PyArrow trip."""
         schema = RecordBatchSchema()
         schema.add_field("i8", IrxColumnType.INT8)
         schema.add_field("u32", IrxColumnType.UINT32)
