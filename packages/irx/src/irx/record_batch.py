@@ -17,9 +17,7 @@ from typing import Any, Optional
 
 from irx.typecheck import typechecked
 
-# ---------------------------------------------------------------------------
 # Load the native shared library
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -112,6 +110,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     f64 = c.c_double
     pf64 = c.POINTER(c.c_double)
     cstr = c.c_char_p
+    pcstr = c.POINTER(c.c_char_p)
     pui8 = c.POINTER(c.c_uint8)
     ppui8 = c.POINTER(pui8)
 
@@ -150,6 +149,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_builder_append_float32", i32, vp, i32, f32)
     fn("irx_rb_builder_append_float64", i32, vp, i32, f64)
     fn("irx_rb_builder_append_bool", i32, vp, i32, i32)
+    fn("irx_rb_builder_append_utf8", i32, vp, i32, cstr, i64)
     fn("irx_rb_builder_append_null", i32, vp, i32)
     fn("irx_rb_builder_finish", i32, vp, pvp)
     fn("irx_rb_builder_release", None, vp)
@@ -167,6 +167,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_batch_get_float32", i32, vp, i32, i64, pf32)
     fn("irx_rb_batch_get_float64", i32, vp, i32, i64, pf64)
     fn("irx_rb_batch_get_bool", i32, vp, i32, i64, pi32)
+    fn("irx_rb_batch_get_utf8", i32, vp, i32, i64, pcstr, pi64)
     fn("irx_rb_batch_is_null", i32, vp, i32, i64, pi32)
     fn("irx_rb_batch_value_buffer", i32, vp, i32, ppui8, pi64)
     fn("irx_rb_batch_release", None, vp)
@@ -185,9 +186,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_stream_reader_close", None, vp)
 
 
-# ---------------------------------------------------------------------------
 # Error helpers
-# ---------------------------------------------------------------------------
 
 IRX_OK = 0
 IRX_EOF = 1
@@ -208,9 +207,7 @@ def _check(rc: int, lib: ctypes.CDLL) -> None:
         raise RuntimeError(f"IRx RecordBatch error ({rc}): {msg.decode()}")
 
 
-# ---------------------------------------------------------------------------
 # Public enum
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -230,11 +227,11 @@ class IrxColumnType(IntEnum):
     FLOAT32 = 8
     FLOAT64 = 9
     BOOL = 10
+    UTF8 = 11
+    LARGE_UTF8 = 12
 
 
-# ---------------------------------------------------------------------------
 # RecordBatchSchema
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -323,9 +320,7 @@ class RecordBatchSchema:
         return self._handle
 
 
-# ---------------------------------------------------------------------------
 # RecordBatchBuilder
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -539,6 +534,23 @@ class RecordBatchBuilder:
             self._lib,
         )
 
+    def append_string(self, col: int, v: str) -> None:
+        """
+        title: Append a UTF-8 string to a utf8 or large_utf8 column.
+        parameters:
+          col:
+            type: int
+          v:
+            type: str
+        """
+        data = v.encode("utf-8")
+        _check(
+            self._lib.irx_rb_builder_append_utf8(
+                self._handle, col, data, ctypes.c_int64(len(data))
+            ),
+            self._lib,
+        )
+
     def append_null(self, col: int) -> None:
         """
         title: Append a null value to a column.
@@ -580,11 +592,7 @@ class RecordBatchBuilder:
         self.release()
 
 
-# ---------------------------------------------------------------------------
 # RecordBatch (inspection handle)
-# ---------------------------------------------------------------------------
-
-
 @typechecked
 class RecordBatch:
     """
@@ -847,6 +855,32 @@ class RecordBatch:
         )
         return bool(out.value)
 
+    def get_string(self, col: int, row: int) -> str:
+        """
+        title: Return a UTF-8 string from a utf8 or large_utf8 column.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: str
+        """
+        data_ptr = ctypes.c_char_p()
+        length = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_get_utf8(
+                self._handle,
+                col,
+                row,
+                ctypes.byref(data_ptr),
+                ctypes.byref(length),
+            ),
+            self._lib,
+        )
+        raw = ctypes.string_at(data_ptr, length.value)
+        return raw.decode("utf-8")
+
     def is_null(self, col: int, row: int) -> bool:
         """
         title: Return whether the value at the supplied location is null.
@@ -880,11 +914,6 @@ class RecordBatch:
         title: Release the batch when the object is garbage collected.
         """
         self.release()
-
-
-# ---------------------------------------------------------------------------
-# RecordBatchStreamWriter
-# ---------------------------------------------------------------------------
 
 
 @typechecked
@@ -1056,11 +1085,6 @@ class RecordBatchStreamWriter:
         """
         self.close()
         self.release()
-
-
-# ---------------------------------------------------------------------------
-# RecordBatchStreamReader
-# ---------------------------------------------------------------------------
 
 
 @typechecked

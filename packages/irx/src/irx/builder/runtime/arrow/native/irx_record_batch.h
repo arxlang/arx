@@ -30,6 +30,8 @@ typedef enum IrxColumnType {
     IRX_COL_FLOAT32 = 8,
     IRX_COL_FLOAT64 = 9,
     IRX_COL_BOOL    = 10,
+    IRX_COL_UTF8       = 11,
+    IRX_COL_LARGE_UTF8 = 12,
 } IrxColumnType;
 
 typedef struct IrxRbSchema_       IrxRbSchema;
@@ -60,6 +62,8 @@ int irx_rb_builder_append_uint64 (IrxRbBuilder *b, int col, uint64_t v);
 int irx_rb_builder_append_float32(IrxRbBuilder *b, int col, float    v);
 int irx_rb_builder_append_float64(IrxRbBuilder *b, int col, double   v);
 int irx_rb_builder_append_bool   (IrxRbBuilder *b, int col, int      v);
+int irx_rb_builder_append_utf8   (IrxRbBuilder *b, int col,
+                                   const char *data, int64_t nbytes);
 int irx_rb_builder_append_null   (IrxRbBuilder *b, int col);
 int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out);
 void irx_rb_builder_release(IrxRbBuilder *b);
@@ -77,6 +81,8 @@ int irx_rb_batch_get_uint64 (const IrxRbBatch *b, int col, int64_t row, uint64_t
 int irx_rb_batch_get_float32(const IrxRbBatch *b, int col, int64_t row, float    *out);
 int irx_rb_batch_get_float64(const IrxRbBatch *b, int col, int64_t row, double   *out);
 int irx_rb_batch_get_bool   (const IrxRbBatch *b, int col, int64_t row, int      *out);
+int irx_rb_batch_get_utf8   (const IrxRbBatch *b, int col, int64_t row,
+                              const char **out, int64_t *len);
 int irx_rb_batch_is_null(const IrxRbBatch *b, int col, int64_t row, int *out);
 int irx_rb_batch_value_buffer(const IrxRbBatch *b, int col,
                                const void **buf, int64_t *len);
