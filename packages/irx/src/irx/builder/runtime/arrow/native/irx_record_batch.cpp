@@ -302,25 +302,31 @@ int irx_rb_builder_append_bool(IrxRbBuilder *b, int col, int v) {
  * The string data is copied internally, so the input pointer does not need to remain valid.
  * Interior NUL bytes are allowed; nbytes determines the string length. */
 int irx_rb_builder_append_utf8(IrxRbBuilder *b, int col,
-                               const char *data, int64_t nbytes) {
-    GUARD(b); GUARD(data);
+                               const char *data, int64_t nbytes)
+{
+    GUARD(b);
+    GUARD(data);
     if (col < 0 || col >= (int)b->builders.size())
         return set_err("column index out of bounds", IRX_ERR_OOB);
     std::string_view view(data, static_cast<size_t>(nbytes));
     arrow::Status st;
-    switch (b->schema_ref->col_types[col]) {
+    switch (b->schema_ref->col_types[col])
+    {
     case IRX_COL_UTF8:
         st = static_cast<arrow::StringBuilder *>(
-            b->builders[col].get())->Append(view);
+                 b->builders[col].get())
+                 ->Append(view);
         break;
     case IRX_COL_LARGE_UTF8:
         st = static_cast<arrow::LargeStringBuilder *>(
-            b->builders[col].get())->Append(view);
+                 b->builders[col].get())
+                 ->Append(view);
         break;
     default:
         return set_err("type mismatch on append", IRX_ERR_TYPE);
     }
-    if (!st.ok()) return set_err(st);
+    if (!st.ok())
+        return set_err(st);
     return IRX_OK;
 }
 int irx_rb_builder_append_null(IrxRbBuilder *b, int col) {
@@ -424,18 +430,25 @@ int irx_rb_batch_get_bool(const IrxRbBatch *b, int col, int64_t row, int *out) {
 }
 
 int irx_rb_batch_get_utf8(const IrxRbBatch *b, int col, int64_t row,
-                          const char **out, int64_t *len) {
-    GUARD(b); GUARD(out); GUARD(len);
-    if (check_bounds(b, col, row)) return IRX_ERR_OOB;
+                          const char **out, int64_t *len)
+{
+    GUARD(b);
+    GUARD(out);
+    GUARD(len);
+    if (check_bounds(b, col, row))
+        return IRX_ERR_OOB;
     std::string_view view;
-    switch (b->col_types[col]) {
+    switch (b->col_types[col])
+    {
     case IRX_COL_UTF8:
         view = static_cast<const arrow::StringArray *>(
-            b->batch->column(col).get())->GetView(row);
+                   b->batch->column(col).get())
+                   ->GetView(row);
         break;
     case IRX_COL_LARGE_UTF8:
         view = static_cast<const arrow::LargeStringArray *>(
-            b->batch->column(col).get())->GetView(row);
+                   b->batch->column(col).get())
+                   ->GetView(row);
         break;
     default:
         return set_err("type mismatch on get", IRX_ERR_TYPE);
