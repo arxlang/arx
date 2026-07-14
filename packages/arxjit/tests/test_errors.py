@@ -8,7 +8,7 @@ import pytest
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
 from arxjit.errors import (
     ArxJitError,
-    SourceUnavailableError,
+    SourceExtractionError,
     UnsupportedSyntaxError,
 )
 
@@ -49,7 +49,7 @@ def test_subclasses_are_arxjit_errors() -> None:
     """
     title: Every public error subclasses ArxJitError and Exception.
     """
-    for error_type in (SourceUnavailableError, UnsupportedSyntaxError):
+    for error_type in (SourceExtractionError, UnsupportedSyntaxError):
         error = error_type("failed", diagnostics=[_DIAGNOSTIC])
         assert isinstance(error, ArxJitError)
         assert isinstance(error, Exception)
@@ -72,11 +72,11 @@ def test_errors_are_exported_from_package() -> None:
     title: The exception hierarchy is exported from arxjit.
     """
     assert arxjit.ArxJitError is ArxJitError
-    assert arxjit.SourceUnavailableError is SourceUnavailableError
+    assert arxjit.SourceExtractionError is SourceExtractionError
     assert arxjit.UnsupportedSyntaxError is UnsupportedSyntaxError
     for name in (
         "ArxJitError",
-        "SourceUnavailableError",
+        "SourceExtractionError",
         "UnsupportedSyntaxError",
     ):
         assert name in arxjit.__all__

@@ -46,7 +46,11 @@ class Diagnostic:
         description: One-based source line in ``filename``, when known.
       column:
         type: int | None
-        description: One-based source column, when known.
+        description: >-
+          One-based Unicode character column in ``line``, when known. Python
+          AST ``col_offset`` values (zero-based UTF-8 byte offsets) must be
+          converted to this representation at the boundary that produces the
+          diagnostic, never stored raw.
       code:
         type: str | None
         description: Stable diagnostic code, e.g. "AJ001", when assigned.

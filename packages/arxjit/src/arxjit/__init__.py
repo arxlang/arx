@@ -8,7 +8,7 @@ from arxjit.core import JitFunction, jit
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
 from arxjit.errors import (
     ArxJitError,
-    SourceUnavailableError,
+    SourceExtractionError,
     UnsupportedSyntaxError,
 )
 from arxjit.types import (
@@ -47,7 +47,7 @@ __all__ = [
     "JitFunction",
     "SigType",
     "Signature",
-    "SourceUnavailableError",
+    "SourceExtractionError",
     "UnsupportedSyntaxError",
     "__version__",
     "bool_",

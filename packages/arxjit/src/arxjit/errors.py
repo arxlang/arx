@@ -2,7 +2,7 @@
 title: Public exception hierarchy for arxjit.
 summary: >-
   Define the single error hierarchy arxjit raises to callers: ArxJitError as
-  the base, with SourceUnavailableError for functions whose source cannot be
+  the base, with SourceExtractionError for functions whose source cannot be
   retrieved and parsed, and UnsupportedSyntaxError for functions using Python
   constructs outside the supported subset. Each error carries a list of
   structured Diagnostic records so callers can inspect failures
@@ -45,13 +45,15 @@ class ArxJitError(Exception):
         super().__init__(message)
 
 
-class SourceUnavailableError(ArxJitError):
+class SourceExtractionError(ArxJitError):
     """
-    title: Raised when a decorated function's source cannot be obtained.
+    title: Raised when a decorated function's source cannot be extracted.
     summary: >-
-      Covers functions whose source cannot be retrieved and parsed as a
-      standalone function definition, such as ones defined in the REPL, built
-      with exec, implemented in C, or lambdas.
+      Covers the whole extraction stage, functions whose source cannot be
+      retrieved or cannot be parsed as a standalone function definition, such
+      as ones defined in the REPL, built with exec, implemented in C, or
+      lambdas. Constructs rejected after successful extraction raise
+      UnsupportedSyntaxError instead.
     attributes:
       diagnostics:
         type: list[Diagnostic]
@@ -73,6 +75,6 @@ class UnsupportedSyntaxError(ArxJitError):
 
 __all__ = [
     "ArxJitError",
-    "SourceUnavailableError",
+    "SourceExtractionError",
     "UnsupportedSyntaxError",
 ]
