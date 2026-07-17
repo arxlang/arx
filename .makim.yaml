@@ -71,7 +71,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=arx --cov-fail-under=86
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       test-compiled:
@@ -265,7 +267,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=aix --cov-fail-under=35
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       test-compiled:
@@ -323,7 +327,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=astx --cov-fail-under=86
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       format:
@@ -372,7 +378,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=irx --cov-fail-under=86
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       test-analysis:
@@ -435,7 +443,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=pyarx --cov-fail-under=86
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       format:
@@ -484,7 +494,9 @@ groups:
           params:
             help: Specify parameters to be used for tests
             type: string
-            default: "-vv"
+            default: >-
+              -vv --cov=arxjit --cov-fail-under=86
+              --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       format:

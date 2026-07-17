@@ -5,6 +5,12 @@ title: Top-level package for arxjit.
 from importlib import metadata as importlib_metadata
 
 from arxjit.core import JitFunction, jit
+from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
+from arxjit.errors import (
+    ArxJitError,
+    SourceExtractionError,
+    UnsupportedSyntaxError,
+)
 from arxjit.types import (
     Signature,
     SigType,
@@ -35,9 +41,14 @@ __email__: str = "ivan.ogasawara@gmail.com"
 __version__: str = get_version()
 
 __all__ = [
+    "ArxJitError",
+    "Diagnostic",
+    "DiagnosticSeverity",
     "JitFunction",
     "SigType",
     "Signature",
+    "SourceExtractionError",
+    "UnsupportedSyntaxError",
     "__version__",
     "bool_",
     "f32",
