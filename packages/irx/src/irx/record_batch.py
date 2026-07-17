@@ -10,6 +10,7 @@ import os
 import sys
 
 from collections.abc import Iterator
+from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
 from pathlib import Path
@@ -150,6 +151,9 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_builder_append_float64", i32, vp, i32, f64)
     fn("irx_rb_builder_append_bool", i32, vp, i32, i32)
     fn("irx_rb_builder_append_utf8", i32, vp, i32, cstr, i64)
+    fn("irx_rb_builder_append_date", i32, vp, i32, i64)
+    fn("irx_rb_builder_append_timestamp", i32, vp, i32, i64)
+    fn("irx_rb_builder_append_time", i32, vp, i32, i64)
     fn("irx_rb_builder_append_null", i32, vp, i32)
     fn("irx_rb_builder_finish", i32, vp, pvp)
     fn("irx_rb_builder_release", None, vp)
@@ -168,6 +172,9 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_batch_get_float64", i32, vp, i32, i64, pf64)
     fn("irx_rb_batch_get_bool", i32, vp, i32, i64, pi32)
     fn("irx_rb_batch_get_utf8", i32, vp, i32, i64, pcstr, pi64)
+    fn("irx_rb_batch_get_date", i32, vp, i32, i64, pi64)
+    fn("irx_rb_batch_get_timestamp", i32, vp, i32, i64, pi64)
+    fn("irx_rb_batch_get_time", i32, vp, i32, i64, pi64)
     fn("irx_rb_batch_is_null", i32, vp, i32, i64, pi32)
     fn("irx_rb_batch_value_buffer", i32, vp, i32, ppui8, pi64)
     fn("irx_rb_batch_release", None, vp)
@@ -190,6 +197,89 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
 
 IRX_OK = 0
 IRX_EOF = 1
+
+_EPOCH_DATE = date(1970, 1, 1)
+_EPOCH_DATETIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_MS_PER_DAY = 86_400_000
+_US_PER_DAY = 86_400_000_000
+_NS_PER_DAY = 86_400_000_000_000
+
+
+@typechecked
+def _date_to_int(v: date, col_type: IrxColumnType) -> int:
+    """
+    title: Convert a datetime.date to the raw storage int for a date column.
+    parameters:
+      v:
+        type: date
+      col_type:
+        type: IrxColumnType
+    returns:
+      type: int
+    """
+    days = (v - _EPOCH_DATE).days
+    if col_type == IrxColumnType.DATE32:
+        return days
+    if col_type == IrxColumnType.DATE64:
+        return days * _MS_PER_DAY
+    raise ValueError(f"column type {col_type.name} is not a date column")
+
+
+@typechecked
+def _datetime_to_int(v: datetime, col_type: IrxColumnType) -> int:
+    """
+    title: Convert a datetime to the raw storage int for a timestamp column.
+    parameters:
+      v:
+        type: datetime
+      col_type:
+        type: IrxColumnType
+    returns:
+      type: int
+    """
+    if v.tzinfo is None:
+        v = v.replace(tzinfo=timezone.utc)
+    delta = v - _EPOCH_DATETIME
+    total_us = (
+        delta.days * _US_PER_DAY
+        + delta.seconds * 1_000_000
+        + delta.microseconds
+    )
+    if col_type == IrxColumnType.TIMESTAMP_S:
+        return total_us // 1_000_000
+    if col_type == IrxColumnType.TIMESTAMP_MS:
+        return total_us // 1_000
+    if col_type == IrxColumnType.TIMESTAMP_US:
+        return total_us
+    if col_type == IrxColumnType.TIMESTAMP_NS:
+        return total_us * 1_000
+    raise ValueError(f"column type {col_type.name} is not a timestamp column")
+
+
+@typechecked
+def _time_to_int(v: time, col_type: IrxColumnType) -> int:
+    """
+    title: Convert a datetime.time to the raw storage int for a time column.
+    parameters:
+      v:
+        type: time
+      col_type:
+        type: IrxColumnType
+    returns:
+      type: int
+    """
+    total_us = (
+        v.hour * 3600 + v.minute * 60 + v.second
+    ) * 1_000_000 + v.microsecond
+    if col_type == IrxColumnType.TIME32_S:
+        return total_us // 1_000_000
+    if col_type == IrxColumnType.TIME32_MS:
+        return total_us // 1_000
+    if col_type == IrxColumnType.TIME64_US:
+        return total_us
+    if col_type == IrxColumnType.TIME64_NS:
+        return total_us * 1_000
+    raise ValueError(f"column type {col_type.name} is not a time column")
 
 
 @typechecked
@@ -229,6 +319,16 @@ class IrxColumnType(IntEnum):
     BOOL = 10
     UTF8 = 11
     LARGE_UTF8 = 12
+    DATE32 = 13
+    DATE64 = 14
+    TIMESTAMP_S = 15
+    TIMESTAMP_MS = 16
+    TIMESTAMP_US = 17
+    TIMESTAMP_NS = 18
+    TIME32_S = 19
+    TIME32_MS = 20
+    TIME64_US = 21
+    TIME64_NS = 22
 
 
 # RecordBatchSchema
@@ -245,11 +345,14 @@ class RecordBatchSchema:
         type: ctypes.CDLL
       _released:
         type: bool
+      _col_types:
+        type: list[IrxColumnType]
     """
 
     _handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
+    _col_types: list[IrxColumnType]
 
     def __init__(self) -> None:
         """
@@ -261,6 +364,7 @@ class RecordBatchSchema:
         self._handle = handle
         self._lib = lib
         self._released = False
+        self._col_types = []
 
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
@@ -286,6 +390,7 @@ class RecordBatchSchema:
             ),
             self._lib,
         )
+        self._col_types.append(col_type)
         return self
 
     @property
@@ -334,11 +439,14 @@ class RecordBatchBuilder:
         type: ctypes.CDLL
       _released:
         type: bool
+      _col_types:
+        type: list[IrxColumnType]
     """
 
     _handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
+    _col_types: list[IrxColumnType]
 
     def __init__(self, schema: RecordBatchSchema) -> None:
         """
@@ -355,6 +463,7 @@ class RecordBatchBuilder:
         self._handle = handle
         self._lib = lib
         self._released = False
+        self._col_types = list(schema._col_types)
 
     # --- typed appends ---
 
@@ -551,6 +660,71 @@ class RecordBatchBuilder:
             self._lib,
         )
 
+    def append_date(self, col: int, v: date | int) -> None:
+        """
+        title: Append a value to a date32 or date64 column.
+        summary: |-
+          Accepts a datetime.date or a raw storage int (days since epoch for
+          DATE32, milliseconds since epoch for DATE64).
+        parameters:
+          col:
+            type: int
+          v:
+            type: date | int
+        """
+        if isinstance(v, date):
+            v = _date_to_int(v, self._col_types[col])
+        _check(
+            self._lib.irx_rb_builder_append_date(
+                self._handle, col, ctypes.c_int64(v)
+            ),
+            self._lib,
+        )
+
+    def append_timestamp(self, col: int, v: datetime | int) -> None:
+        """
+        title: Append a value to a timestamp column.
+        summary: |-
+          Accepts a datetime.datetime (naive treated as UTC) or a raw storage
+          int already scaled to the column's unit (seconds, milliseconds,
+          microseconds, or nanoseconds since epoch).
+        parameters:
+          col:
+            type: int
+          v:
+            type: datetime | int
+        """
+        if isinstance(v, datetime):
+            v = _datetime_to_int(v, self._col_types[col])
+        _check(
+            self._lib.irx_rb_builder_append_timestamp(
+                self._handle, col, ctypes.c_int64(v)
+            ),
+            self._lib,
+        )
+
+    def append_time(self, col: int, v: time | int) -> None:
+        """
+        title: Append a value to a time32 or time64 column.
+        summary: |-
+          Accepts a datetime.time or a raw storage int scaled to the column's
+          unit (seconds, milliseconds, microseconds, or nanoseconds since
+          midnight).
+        parameters:
+          col:
+            type: int
+          v:
+            type: time | int
+        """
+        if isinstance(v, time):
+            v = _time_to_int(v, self._col_types[col])
+        _check(
+            self._lib.irx_rb_builder_append_time(
+                self._handle, col, ctypes.c_int64(v)
+            ),
+            self._lib,
+        )
+
     def append_null(self, col: int) -> None:
         """
         title: Append a null value to a column.
@@ -597,6 +771,12 @@ class RecordBatchBuilder:
 class RecordBatch:
     """
     title: RecordBatch.
+    summary: |-
+      Null-slot behaviour is uniform across every getter: a null value reads
+      back as the zero value of its type (0 for numerics, empty string for
+      utf8/large_utf8, epoch-relative 0 for date/timestamp/time). Callers
+      that need to distinguish a real zero/empty value from a null must
+      check ``is_null(col, row)`` first.
     attributes:
       _handle:
         type: ctypes.c_void_p
@@ -885,6 +1065,75 @@ class RecordBatch:
         )
         raw = ctypes.string_at(data_ptr, length.value)
         return raw.decode("utf-8")
+
+    def get_date(self, col: int, row: int) -> int:
+        """
+        title: Return the raw storage int for a date32 or date64 column.
+        summary: |-
+          Value is days since epoch for DATE32 and milliseconds since epoch
+          for DATE64.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
+        out = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_get_date(
+                self._handle, col, row, ctypes.byref(out)
+            ),
+            self._lib,
+        )
+        return int(out.value)
+
+    def get_timestamp(self, col: int, row: int) -> int:
+        """
+        title: Return the raw storage int for a timestamp column.
+        summary: |-
+          Value is scaled to the column's unit (seconds, milliseconds,
+          microseconds, or nanoseconds since epoch).
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
+        out = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_get_timestamp(
+                self._handle, col, row, ctypes.byref(out)
+            ),
+            self._lib,
+        )
+        return int(out.value)
+
+    def get_time(self, col: int, row: int) -> int:
+        """
+        title: Return the raw storage int for a time32 or time64 column.
+        summary: |-
+          Value is scaled to the column's unit (seconds, milliseconds,
+          microseconds, or nanoseconds since midnight).
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: int
+        """
+        out = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_get_time(
+                self._handle, col, row, ctypes.byref(out)
+            ),
+            self._lib,
+        )
+        return int(out.value)
 
     def is_null(self, col: int, row: int) -> bool:
         """
