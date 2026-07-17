@@ -646,6 +646,21 @@ class TestStringTypes:
         builder.release()
         schema.release()
 
+    def test_get_string_on_non_string_column_raises(self):
+        """
+        title: Ensure get_string on a numeric column raises a type error.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        builder.append_int32(0, 42)
+        batch = builder.finish()
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_string(0, 0)
+        batch.release()
+        builder.release()
+        schema.release()
+
     def test_buffer_round_trip(self):
         """
         title: Ensure string columns survive an in-memory stream round-trip.
