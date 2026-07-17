@@ -858,6 +858,11 @@ class RecordBatch:
     def get_string(self, col: int, row: int) -> str:
         """
         title: Return a UTF-8 string from a utf8 or large_utf8 column.
+        summary: |-
+          Null slots return an empty string rather than an error, matching
+          the behavior of the numeric getters. Callers that need to
+          distinguish a real empty string from a null must check
+          ``is_null(col, row)`` first.
         parameters:
           col:
             type: int
