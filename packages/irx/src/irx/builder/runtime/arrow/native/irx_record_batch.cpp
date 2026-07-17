@@ -52,6 +52,16 @@ static std::shared_ptr<arrow::DataType> arrow_type(IrxColumnType t) {
     case IRX_COL_BOOL:    return arrow::boolean();
     case IRX_COL_UTF8:       return arrow::utf8();
     case IRX_COL_LARGE_UTF8: return arrow::large_utf8();
+    case IRX_COL_DATE32:       return arrow::date32();
+    case IRX_COL_DATE64:       return arrow::date64();
+    case IRX_COL_TIMESTAMP_S:  return arrow::timestamp(arrow::TimeUnit::SECOND);
+    case IRX_COL_TIMESTAMP_MS: return arrow::timestamp(arrow::TimeUnit::MILLI);
+    case IRX_COL_TIMESTAMP_US: return arrow::timestamp(arrow::TimeUnit::MICRO);
+    case IRX_COL_TIMESTAMP_NS: return arrow::timestamp(arrow::TimeUnit::NANO);
+    case IRX_COL_TIME32_S:     return arrow::time32(arrow::TimeUnit::SECOND);
+    case IRX_COL_TIME32_MS:    return arrow::time32(arrow::TimeUnit::MILLI);
+    case IRX_COL_TIME64_US:    return arrow::time64(arrow::TimeUnit::MICRO);
+    case IRX_COL_TIME64_NS:    return arrow::time64(arrow::TimeUnit::NANO);
     }
     return nullptr;
 }
@@ -71,6 +81,34 @@ static IrxColumnType col_type_from_arrow(const arrow::DataType &dt) {
     case arrow::Type::BOOL:    return IRX_COL_BOOL;
     case arrow::Type::STRING:       return IRX_COL_UTF8;
     case arrow::Type::LARGE_STRING: return IRX_COL_LARGE_UTF8;
+    case arrow::Type::DATE32:       return IRX_COL_DATE32;
+    case arrow::Type::DATE64:       return IRX_COL_DATE64;
+    case arrow::Type::TIMESTAMP: {
+        const auto &tt = static_cast<const arrow::TimestampType &>(dt);
+        switch (tt.unit()) {
+        case arrow::TimeUnit::SECOND: return IRX_COL_TIMESTAMP_S;
+        case arrow::TimeUnit::MILLI:  return IRX_COL_TIMESTAMP_MS;
+        case arrow::TimeUnit::MICRO:  return IRX_COL_TIMESTAMP_US;
+        case arrow::TimeUnit::NANO:   return IRX_COL_TIMESTAMP_NS;
+        }
+        return static_cast<IrxColumnType>(-1);
+    }
+    case arrow::Type::TIME32: {
+        const auto &tt = static_cast<const arrow::Time32Type &>(dt);
+        switch (tt.unit()) {
+        case arrow::TimeUnit::SECOND: return IRX_COL_TIME32_S;
+        case arrow::TimeUnit::MILLI:  return IRX_COL_TIME32_MS;
+        default: return static_cast<IrxColumnType>(-1);
+        }
+    }
+    case arrow::Type::TIME64: {
+        const auto &tt = static_cast<const arrow::Time64Type &>(dt);
+        switch (tt.unit()) {
+        case arrow::TimeUnit::MICRO: return IRX_COL_TIME64_US;
+        case arrow::TimeUnit::NANO:  return IRX_COL_TIME64_NS;
+        default: return static_cast<IrxColumnType>(-1);
+        }
+    }
     default:                   return static_cast<IrxColumnType>(-1);
     }
 }
@@ -163,6 +201,22 @@ make_builder(IrxColumnType t, arrow::MemoryPool *pool) {
     case IRX_COL_BOOL:    b = std::make_unique<arrow::BooleanBuilder>(pool); break;
     case IRX_COL_UTF8:       b = std::make_unique<arrow::StringBuilder>(pool);      break;
     case IRX_COL_LARGE_UTF8: b = std::make_unique<arrow::LargeStringBuilder>(pool); break;
+    case IRX_COL_DATE32:       b = std::make_unique<arrow::Date32Builder>(pool); break;
+    case IRX_COL_DATE64:       b = std::make_unique<arrow::Date64Builder>(pool); break;
+    case IRX_COL_TIMESTAMP_S:
+    case IRX_COL_TIMESTAMP_MS:
+    case IRX_COL_TIMESTAMP_US:
+    case IRX_COL_TIMESTAMP_NS:
+        b = std::make_unique<arrow::TimestampBuilder>(arrow_type(t), pool);
+        break;
+    case IRX_COL_TIME32_S:
+    case IRX_COL_TIME32_MS:
+        b = std::make_unique<arrow::Time32Builder>(arrow_type(t), pool);
+        break;
+    case IRX_COL_TIME64_US:
+    case IRX_COL_TIME64_NS:
+        b = std::make_unique<arrow::Time64Builder>(arrow_type(t), pool);
+        break;
     }
     return b;
 }
@@ -329,6 +383,77 @@ int irx_rb_builder_append_utf8(IrxRbBuilder *b, int col,
         return set_err(st);
     return IRX_OK;
 }
+int irx_rb_builder_append_date(IrxRbBuilder *b, int col, int64_t v) {
+    GUARD(b);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    arrow::Status st;
+    switch (b->schema_ref->col_types[col])
+    {
+    case IRX_COL_DATE32:
+        st = static_cast<arrow::Date32Builder *>(
+                 b->builders[col].get())
+                 ->Append(static_cast<int32_t>(v));
+        break;
+    case IRX_COL_DATE64:
+        st = static_cast<arrow::Date64Builder *>(
+                 b->builders[col].get())
+                 ->Append(v);
+        break;
+    default:
+        return set_err("type mismatch on append", IRX_ERR_TYPE);
+    }
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
+int irx_rb_builder_append_timestamp(IrxRbBuilder *b, int col, int64_t v) {
+    GUARD(b);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    switch (b->schema_ref->col_types[col])
+    {
+    case IRX_COL_TIMESTAMP_S:
+    case IRX_COL_TIMESTAMP_MS:
+    case IRX_COL_TIMESTAMP_US:
+    case IRX_COL_TIMESTAMP_NS:
+        break;
+    default:
+        return set_err("type mismatch on append", IRX_ERR_TYPE);
+    }
+    auto st = static_cast<arrow::TimestampBuilder *>(
+                  b->builders[col].get())
+                  ->Append(v);
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
+int irx_rb_builder_append_time(IrxRbBuilder *b, int col, int64_t v) {
+    GUARD(b);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    arrow::Status st;
+    switch (b->schema_ref->col_types[col])
+    {
+    case IRX_COL_TIME32_S:
+    case IRX_COL_TIME32_MS:
+        st = static_cast<arrow::Time32Builder *>(
+                 b->builders[col].get())
+                 ->Append(static_cast<int32_t>(v));
+        break;
+    case IRX_COL_TIME64_US:
+    case IRX_COL_TIME64_NS:
+        st = static_cast<arrow::Time64Builder *>(
+                 b->builders[col].get())
+                 ->Append(v);
+        break;
+    default:
+        return set_err("type mismatch on append", IRX_ERR_TYPE);
+    }
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
 int irx_rb_builder_append_null(IrxRbBuilder *b, int col) {
     GUARD(b);
     if (col < 0 || col >= (int)b->builders.size())
@@ -456,6 +581,58 @@ int irx_rb_batch_get_utf8(const IrxRbBatch *b, int col, int64_t row,
     *out = view.data();
     *len = static_cast<int64_t>(view.size());
     return IRX_OK;
+}
+
+int irx_rb_batch_get_date(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
+    GUARD(b); GUARD(out);
+    if (check_bounds(b, col, row)) return IRX_ERR_OOB;
+    switch (b->col_types[col]) {
+    case IRX_COL_DATE32:
+        *out = static_cast<const arrow::Date32Array *>(
+                   b->batch->column(col).get())->Value(row);
+        return IRX_OK;
+    case IRX_COL_DATE64:
+        *out = static_cast<const arrow::Date64Array *>(
+                   b->batch->column(col).get())->Value(row);
+        return IRX_OK;
+    default:
+        return set_err("type mismatch on get", IRX_ERR_TYPE);
+    }
+}
+
+int irx_rb_batch_get_timestamp(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
+    GUARD(b); GUARD(out);
+    if (check_bounds(b, col, row)) return IRX_ERR_OOB;
+    switch (b->col_types[col]) {
+    case IRX_COL_TIMESTAMP_S:
+    case IRX_COL_TIMESTAMP_MS:
+    case IRX_COL_TIMESTAMP_US:
+    case IRX_COL_TIMESTAMP_NS:
+        *out = static_cast<const arrow::TimestampArray *>(
+                   b->batch->column(col).get())->Value(row);
+        return IRX_OK;
+    default:
+        return set_err("type mismatch on get", IRX_ERR_TYPE);
+    }
+}
+
+int irx_rb_batch_get_time(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
+    GUARD(b); GUARD(out);
+    if (check_bounds(b, col, row)) return IRX_ERR_OOB;
+    switch (b->col_types[col]) {
+    case IRX_COL_TIME32_S:
+    case IRX_COL_TIME32_MS:
+        *out = static_cast<const arrow::Time32Array *>(
+                   b->batch->column(col).get())->Value(row);
+        return IRX_OK;
+    case IRX_COL_TIME64_US:
+    case IRX_COL_TIME64_NS:
+        *out = static_cast<const arrow::Time64Array *>(
+                   b->batch->column(col).get())->Value(row);
+        return IRX_OK;
+    default:
+        return set_err("type mismatch on get", IRX_ERR_TYPE);
+    }
 }
 
 int irx_rb_batch_is_null(const IrxRbBatch *b, int col, int64_t row, int *out) {
