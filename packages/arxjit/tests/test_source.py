@@ -4,12 +4,14 @@ title: Tests for source extraction.
 
 import ast
 import dataclasses
+import functools
 
 from typing import Any, Callable
 
 import arxjit
 import pytest
 
+from arxjit.core import JitFunction, jit
 from arxjit.diagnostics import DiagnosticSeverity
 from arxjit.errors import SourceExtractionError
 from arxjit.source import ExtractedSource, extract_source
@@ -161,9 +163,12 @@ def test_multiline_decorator_is_removed() -> None:
     assert "def sample_multiline_decorated(" in _file_line(extracted.lineno)
 
 
-def test_nested_function_is_dedented() -> None:
+def test_nested_function_is_extracted_verbatim() -> None:
     """
-    title: A function defined inside another parses after dedenting.
+    title: A function defined inside another parses without dedenting.
+    summary: >-
+      The source keeps its original indentation, and the def line of the
+      returned verbatim text is exactly the line found in the real file.
     """
 
     def nested(x: int) -> int:
@@ -178,8 +183,78 @@ def test_nested_function_is_dedented() -> None:
         return x + 1
 
     extracted = extract_source(nested)
-    assert extracted.source.startswith("def nested(")
     assert extracted.node.name == "nested"
+    assert extracted.source.lstrip().startswith("def nested(")
+    assert extracted.source.splitlines()[0] + "\n" == _file_line(
+        extracted.lineno
+    )
+
+
+def test_nested_function_with_multiline_string_is_extracted() -> None:
+    """
+    title: Zero-indent lines inside string literals do not break parsing.
+    summary: >-
+      textwrap.dedent would compute a common indentation of zero for this block
+      and the parse would fail with IndentationError; parsing the unmodified
+      block inside the synthetic wrapper succeeds and preserves the string
+      content verbatim.
+    """
+
+    def nested() -> str:
+        """
+        title: Return a two-line string.
+        returns:
+          type: str
+        """
+        value = """first
+second
+"""
+        return value
+
+    extracted = extract_source(nested)
+    assert extracted.node.name == "nested"
+    constants = [
+        item.value
+        for item in ast.walk(extracted.node)
+        if isinstance(item, ast.Constant)
+        and isinstance(item.value, str)
+        and "second" in item.value
+    ]
+    assert constants == ["first\nsecond\n"]
+
+
+def test_column_offsets_point_into_the_real_file() -> None:
+    """
+    title: Column offsets on nested-function nodes are file-true.
+    summary: >-
+      The source is parsed without removing indentation, so col_offset values
+      index into the real file line (as byte offsets) and need no indentation
+      correction at the diagnostic boundary.
+    """
+
+    def nested(x: int) -> int:
+        """
+        title: Increment an integer.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x + 1
+
+    extracted = extract_source(nested)
+    returns = [
+        stmt
+        for stmt in ast.walk(extracted.node)
+        if isinstance(stmt, ast.Return)
+    ]
+    assert len(returns) == 1
+    line = _file_line(returns[0].lineno)
+    assert line[returns[0].col_offset :].startswith("return x + 1")
+    assert line[returns[0].col_offset : returns[0].end_col_offset] == (
+        "return x + 1"
+    )
 
 
 def test_extracted_source_reparses_standalone() -> None:
@@ -201,6 +276,64 @@ def test_async_function_is_extracted() -> None:
     extracted = extract_source(sample_async)
     assert isinstance(extracted.node, ast.AsyncFunctionDef)
     assert extracted.source.startswith("async def sample_async(")
+
+
+def test_jit_function_is_extracted_with_filename() -> None:
+    """
+    title: Extracting an actual @jit result keeps the real filename.
+    summary: >-
+      JitFunction sets __wrapped__ via functools.update_wrapper, so both the
+      source retrieval and the filename attribution must resolve to the wrapped
+      function; the extraction also strips the @jit decorator line.
+    """
+
+    @jit
+    def doubled(x: int) -> int:
+        """
+        title: Double an integer.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    assert isinstance(doubled, JitFunction)
+    extracted = extract_source(doubled)
+    assert extracted.filename == __file__
+    assert extracted.node.name == "doubled"
+    assert extracted.node.decorator_list == []
+    assert extracted.source.lstrip().startswith("def doubled(")
+    assert "def doubled(" in _file_line(extracted.lineno)
+
+
+def test_wrapped_function_is_attributed_to_the_original_file() -> None:
+    """
+    title: A wraps-style wrapper extracts the original, filename included.
+    summary: >-
+      inspect.getsourcelines follows __wrapped__, so the extracted source is
+      the original function's; the reported filename must belong to the same
+      function, even when the wrapper's own code lives in another file.
+    """
+    namespace: dict[str, Any] = {
+        "functools": functools,
+        "sample_add": sample_add,
+    }
+    exec(
+        compile(
+            "@functools.wraps(sample_add)\n"
+            "def wrapper(*args, **kwargs):\n"
+            "    return sample_add(*args, **kwargs)\n",
+            "<wrapper>",
+            "exec",
+        ),
+        namespace,
+    )
+    extracted = extract_source(namespace["wrapper"])
+    assert extracted.filename == __file__
+    assert extracted.node.name == "sample_add"
+    assert "def sample_add(" in _file_line(extracted.lineno)
 
 
 def test_lambda_is_rejected() -> None:
