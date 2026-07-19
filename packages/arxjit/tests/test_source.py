@@ -5,6 +5,7 @@ title: Tests for source extraction.
 import ast
 import dataclasses
 import functools
+import inspect
 
 from typing import Any, Callable
 
@@ -347,6 +348,122 @@ def test_lambda_is_rejected() -> None:
     assert diagnostic.severity is DiagnosticSeverity.ERROR
     assert diagnostic.filename == __file__
     assert diagnostic.line is not None
+
+
+def test_builtin_is_rejected() -> None:
+    """
+    title: A C builtin has no source and raises SourceExtractionError.
+    """
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(len)
+    assert isinstance(caught.value.__cause__, TypeError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.filename == "<unknown>"
+    assert "cannot extract source of 'len'" in diagnostic.message
+
+
+def test_exec_defined_function_is_rejected() -> None:
+    """
+    title: An exec-defined function raises SourceExtractionError.
+    """
+    namespace: dict[str, Any] = {}
+    exec(
+        compile("def made(x):\n    return x\n", "<string>", "exec"),
+        namespace,
+    )
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(namespace["made"])
+    assert isinstance(caught.value.__cause__, OSError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.filename == "<string>"
+    assert diagnostic.line is None
+
+
+def test_self_wrapped_function_is_rejected() -> None:
+    """
+    title: A __wrapped__ cycle raises SourceExtractionError, not ValueError.
+    """
+
+    def looped(x: int) -> int:
+        """
+        title: Return the argument.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x
+
+    looped.__wrapped__ = looped  # type: ignore[attr-defined]
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(looped)
+    assert isinstance(caught.value.__cause__, ValueError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.filename == __file__
+
+
+def test_unparsable_source_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: A source block that fails ast.parse raises with a location.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
+        """
+        title: Return a syntactically broken source block.
+        parameters:
+          fn:
+            type: Any
+        returns:
+          type: tuple[list[str], int]
+        """
+        return (["def broken(:\n"], 7)
+
+    monkeypatch.setattr(inspect, "getsourcelines", fake_getsourcelines)
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(sample_add)
+    assert isinstance(caught.value.__cause__, SyntaxError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.message.startswith("cannot parse source of")
+    assert diagnostic.line == 7
+
+
+def test_indented_unparsable_source_maps_to_file_lines(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: A broken indented block reports the file line, not the wrapped one.
+    summary: >-
+      An indented block is parsed inside the synthetic wrapper, which shifts
+      SyntaxError line numbers by one; the diagnostic must still point at the
+      real file line.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
+        """
+        title: Return a broken source block indented like a method.
+        parameters:
+          fn:
+            type: Any
+        returns:
+          type: tuple[list[str], int]
+        """
+        return (["    def broken(:\n"], 10)
+
+    monkeypatch.setattr(inspect, "getsourcelines", fake_getsourcelines)
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(sample_add)
+    assert isinstance(caught.value.__cause__, SyntaxError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.line == 10
 
 
 def test_extracted_source_is_frozen() -> None:

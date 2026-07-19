@@ -6,10 +6,10 @@ summary: >-
   decorators. The source text is never modified: an indented definition (a
   nested function or a method) is parsed inside a synthetic "if True:" wrapper
   instead of being dedented, which preserves string literal content and keeps
-  every node's line and column pointing into the real file. A retrieved source
-  that is not a single function definition raises SourceExtractionError
-  carrying structured diagnostics; validating the parsed body against the
-  supported Python subset is a later stage and is not done here.
+  every node's line and column pointing into the real file. Every failure
+  raises SourceExtractionError carrying structured diagnostics; validating the
+  parsed body against the supported Python subset is a later stage and is not
+  done here.
 """
 
 from __future__ import annotations
@@ -44,7 +44,12 @@ def _filename_of(fn: PyFunc) -> str:
     returns:
       type: str
     """
-    fn = inspect.unwrap(fn)
+    try:
+        fn = inspect.unwrap(fn)
+    except ValueError:
+        # A __wrapped__ cycle: attribute the wrapper itself and let the
+        # source retrieval report the cycle.
+        pass
     code = getattr(fn, "__code__", None)
     filename = getattr(code, "co_filename", None)
     return filename or "<unknown>"
@@ -145,11 +150,20 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
       type: ExtractedSource
     raises:
       SourceExtractionError: >-
-        If the retrieved source is not a single function definition (for
-        example a lambda).
+        If the source cannot be retrieved (REPL- or exec-defined functions, C
+        builtins, self-referential wrappers), cannot be parsed, or is not a
+        single function definition (for example a lambda).
     """
     filename = _filename_of(fn)
-    block_lines, block_start = inspect.getsourcelines(fn)
+    try:
+        block_lines, block_start = inspect.getsourcelines(fn)
+    except (OSError, TypeError, ValueError) as exc:
+        message = f"cannot extract source of {_name_of(fn)!r}: {exc}"
+        raise SourceExtractionError(
+            message,
+            diagnostics=[_error(message, filename)],
+        ) from exc
+
     block = "".join(block_lines)
     indented = block_lines[0] != block_lines[0].lstrip()
 
@@ -159,7 +173,22 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
     else:
         text = block
         line_delta = block_start - 1
-    module = ast.parse(text, filename=filename)
+    try:
+        module = ast.parse(text, filename=filename)
+    except SyntaxError as exc:
+        message = f"cannot parse source of {_name_of(fn)!r}: {exc.msg}"
+        line = None
+        if exc.lineno is not None:
+            line = exc.lineno + line_delta
+        # SyntaxError.offset is already a one-based character column and,
+        # because the text is parsed with its original indentation, it
+        # points into the real file line; a zero (no usable column) is
+        # normalized to None.
+        column = exc.offset or None
+        raise SourceExtractionError(
+            message,
+            diagnostics=[_error(message, filename, line, column)],
+        ) from exc
     if indented:
         body = cast("ast.If", module.body[0]).body
     else:
