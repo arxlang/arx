@@ -5,8 +5,12 @@ title: Tests for source extraction.
 import ast
 import dataclasses
 import functools
+import importlib.util
 import inspect
+import linecache
+import pathlib
 import sys
+import tokenize
 
 from typing import Any, Callable
 
@@ -16,7 +20,12 @@ import pytest
 from arxjit.core import JitFunction, jit
 from arxjit.diagnostics import DiagnosticSeverity
 from arxjit.errors import SourceExtractionError
-from arxjit.source import ExtractedSource, _column_of, extract_source
+from arxjit.source import (
+    ExtractedSource,
+    _column_of,
+    _retrieval_reason,
+    extract_source,
+)
 
 PyFunc = Callable[..., Any]
 
@@ -544,6 +553,135 @@ def test_malformed_fstring_column_is_validated(
         assert diagnostic.column is None or diagnostic.column <= len(
             'x = f"prefix {a b}"'
         )
+
+
+def test_corrupted_source_file_is_rejected(
+    tmp_path: pathlib.Path,
+) -> None:
+    """
+    title: A file corrupted after import raises SourceExtractionError.
+    summary: >-
+      inspect.getsourcelines tokenizes the file, so a source that becomes
+      unparseable after import (here an unterminated triple-quoted string)
+      makes retrieval raise a raw tokenize.TokenError. It must be translated
+      like every other extraction failure, with no misleading location.
+    parameters:
+      tmp_path:
+        type: pathlib.Path
+    """
+    module_path = tmp_path / "corrupt_after_import.py"
+    module_path.write_text("def valid_fn(x):\n    return x + 1\n")
+    spec = importlib.util.spec_from_file_location(
+        "corrupt_after_import", module_path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    with module_path.open("a") as stream:
+        stream.write('    y = """unterminated\n')
+    linecache.clearcache()
+
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(module.valid_fn)
+    assert isinstance(
+        caught.value.__cause__, (tokenize.TokenError, SyntaxError)
+    )
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.message.startswith("cannot extract source of")
+    assert diagnostic.line is None
+    assert diagnostic.column is None
+
+
+def test_retrieval_token_error_is_translated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: A TokenError from retrieval becomes SourceExtractionError.
+    summary: >-
+      The diagnostic uses the tokenizer's own message rather than its raw
+      (message, position) args tuple, and attaches no file location because
+      retrieval fails before the block's start line is known.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
+        """
+        title: Raise a TokenError like a truncated multi-line string.
+        parameters:
+          fn:
+            type: Any
+        returns:
+          type: tuple[list[str], int]
+        """
+        raise tokenize.TokenError("EOF in multi-line string", (3, 8))
+
+    monkeypatch.setattr(inspect, "getsourcelines", fake_getsourcelines)
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(sample_add)
+    assert isinstance(caught.value.__cause__, tokenize.TokenError)
+    (diagnostic,) = caught.value.diagnostics
+    assert "EOF in multi-line string" in diagnostic.message
+    assert "(3, 8)" not in diagnostic.message
+    assert diagnostic.line is None
+    assert diagnostic.column is None
+
+
+def test_retrieval_syntax_error_is_translated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: A SyntaxError from retrieval becomes SourceExtractionError.
+    summary: >-
+      inspect.getblock can re-raise a SyntaxError during retrieval; unlike a
+      parse-time SyntaxError it arrives before the block's start line is known,
+      so no file location is attached, and the message drops the block-relative
+      position that str(SyntaxError) would otherwise embed.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def fake_getsourcelines(fn: Any) -> tuple[list[str], int]:
+        """
+        title: Raise a located SyntaxError like a retrieval failure.
+        parameters:
+          fn:
+            type: Any
+        returns:
+          type: tuple[list[str], int]
+        """
+        raise SyntaxError("bad token", ("<unknown>", 3, 5, "    bad\n"))
+
+    monkeypatch.setattr(inspect, "getsourcelines", fake_getsourcelines)
+    with pytest.raises(SourceExtractionError) as caught:
+        extract_source(sample_add)
+    assert isinstance(caught.value.__cause__, SyntaxError)
+    (diagnostic,) = caught.value.diagnostics
+    assert diagnostic.message.startswith("cannot extract source of")
+    assert diagnostic.message.endswith("bad token")
+    assert "line 3" not in diagnostic.message
+    assert diagnostic.line is None
+    assert diagnostic.column is None
+
+
+def test_retrieval_reason_strips_embedded_locations() -> None:
+    """
+    title: The retrieval-reason helper keeps only the human message.
+    summary: >-
+      Exercises each branch directly: a TokenError's (message, position) tuple
+      reduces to its message, a SyntaxError drops its location suffix, and any
+      other exception falls back to str().
+    """
+    token_error = tokenize.TokenError("EOF in multi-line string", (3, 8))
+    assert _retrieval_reason(token_error) == "EOF in multi-line string"
+
+    syntax_error = SyntaxError("bad token", ("<unknown>", 3, 5, "    bad\n"))
+    assert _retrieval_reason(syntax_error) == "bad token"
+
+    assert _retrieval_reason(OSError("no source")) == "no source"
 
 
 def test_parse_valueerror_is_translated(

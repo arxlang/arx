@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import tokenize
 
 from dataclasses import dataclass
 from typing import Any, Callable, cast
@@ -65,6 +66,29 @@ def _name_of(fn: PyFunc) -> str:
       type: str
     """
     return cast(str, getattr(fn, "__qualname__", repr(fn)))
+
+
+def _retrieval_reason(exc: Exception) -> str:
+    """
+    title: Return a clean, location-free message for a retrieval failure.
+    summary: >-
+      inspect.getsourcelines can fail with exception types whose str() embeds a
+      location: a tokenize.TokenError carries a (message, position) tuple, and
+      a SyntaxError appends its own line number. No reliable file location
+      exists at retrieval time (it fails before the block's start line is
+      known), so only the human-readable message is used, never an embedded
+      position.
+    parameters:
+      exc:
+        type: Exception
+    returns:
+      type: str
+    """
+    if isinstance(exc, tokenize.TokenError):
+        return str(exc.args[0]) if exc.args else str(exc)
+    if isinstance(exc, SyntaxError):
+        return exc.msg or str(exc)
+    return str(exc)
 
 
 def _column_of(exc: SyntaxError, text: str) -> int | None:
@@ -234,15 +258,27 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
     raises:
       SourceExtractionError: >-
         If the source cannot be retrieved (REPL- or exec-defined functions, C
-        builtins, self-referential wrappers), cannot be parsed (including
-        source containing null bytes), or is not a single function definition
-        (for example a lambda).
+        builtins, self-referential wrappers, or a corrupted or since-modified
+        source file), cannot be parsed (including source containing null
+        bytes), or is not a single function definition (for example a lambda).
     """
     filename = _filename_of(fn)
     try:
         block_lines, block_start = inspect.getsourcelines(fn)
-    except (OSError, TypeError, ValueError) as exc:
-        message = f"cannot extract source of {_name_of(fn)!r}: {exc}"
+    except (
+        OSError,
+        TypeError,
+        ValueError,
+        SyntaxError,
+        tokenize.TokenError,
+    ) as exc:
+        # inspect.getsourcelines tokenizes the file, so a corrupted or
+        # since-modified source (for example an unterminated triple-quoted
+        # string) can surface a raw tokenize.TokenError or SyntaxError from
+        # retrieval, before block_start is known. No reliable file location
+        # exists at this point, so the diagnostic carries none.
+        reason = _retrieval_reason(exc)
+        message = f"cannot extract source of {_name_of(fn)!r}: {reason}"
         raise SourceExtractionError(
             message,
             diagnostics=[_error(message, filename)],
