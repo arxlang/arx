@@ -6,16 +6,17 @@ summary: >-
   decorators. The source text is never modified: an indented definition (a
   nested function or a method) is parsed inside a synthetic "if True:" wrapper
   instead of being dedented, which preserves string literal content and keeps
-  every node's line and column pointing into the real file. A retrieved source
-  that is not a single function definition raises SourceExtractionError
-  carrying structured diagnostics; validating the parsed body against the
-  supported Python subset is a later stage and is not done here.
+  every node's line and column pointing into the real file. Every failure
+  raises SourceExtractionError carrying structured diagnostics; validating the
+  parsed body against the supported Python subset is a later stage and is not
+  done here.
 """
 
 from __future__ import annotations
 
 import ast
 import inspect
+import tokenize
 
 from dataclasses import dataclass
 from typing import Any, Callable, cast
@@ -44,7 +45,12 @@ def _filename_of(fn: PyFunc) -> str:
     returns:
       type: str
     """
-    fn = inspect.unwrap(fn)
+    try:
+        fn = inspect.unwrap(fn)
+    except ValueError:
+        # A __wrapped__ cycle: attribute the wrapper itself and let the
+        # source retrieval report the cycle.
+        pass
     code = getattr(fn, "__code__", None)
     filename = getattr(code, "co_filename", None)
     return filename or "<unknown>"
@@ -60,6 +66,59 @@ def _name_of(fn: PyFunc) -> str:
       type: str
     """
     return cast(str, getattr(fn, "__qualname__", repr(fn)))
+
+
+def _retrieval_reason(exc: Exception) -> str:
+    """
+    title: Return a clean, location-free message for a retrieval failure.
+    summary: >-
+      inspect.getsourcelines can fail with exception types whose str() embeds a
+      location: a tokenize.TokenError carries a (message, position) tuple, and
+      a SyntaxError appends its own line number. No reliable file location
+      exists at retrieval time (it fails before the block's start line is
+      known), so only the human-readable message is used, never an embedded
+      position.
+    parameters:
+      exc:
+        type: Exception
+    returns:
+      type: str
+    """
+    if isinstance(exc, tokenize.TokenError):
+        return str(exc.args[0]) if exc.args else str(exc)
+    if isinstance(exc, SyntaxError):
+        return exc.msg or str(exc)
+    return str(exc)
+
+
+def _column_of(exc: SyntaxError, text: str) -> int | None:
+    """
+    title: Return the validated one-based column of a syntax error.
+    summary: >-
+      SyntaxError.offset is a one-based character column, but it does not
+      always point into the parsed source: for malformed f-string replacement
+      fields, Python 3.10 and 3.11 report an offset into a synthetic string
+      built from the replacement expression. The offset is therefore only
+      trusted when the error's reported text matches the parsed line it claims
+      to come from; otherwise, and when there is no usable offset at all, None
+      is returned.
+    parameters:
+      exc:
+        type: SyntaxError
+      text:
+        type: str
+        description: The exact text that was passed to ast.parse.
+    returns:
+      type: int | None
+    """
+    if not exc.offset or exc.lineno is None or exc.text is None:
+        return None
+    lines = text.splitlines()
+    if not 1 <= exc.lineno <= len(lines):
+        return None
+    if exc.text.rstrip("\r\n") != lines[exc.lineno - 1]:
+        return None
+    return exc.offset
 
 
 def _error(
@@ -89,6 +148,59 @@ def _error(
         line=line,
         column=column,
     )
+
+
+def _parse_block(
+    fn: PyFunc,
+    text: str,
+    filename: str,
+    line_delta: int,
+) -> ast.Module:
+    """
+    title: Parse source text, translating parse failures.
+    summary: >-
+      Wraps ast.parse so that every parse failure becomes a
+      SourceExtractionError with a located diagnostic. SyntaxError locations
+      are shifted by line_delta to point at the real file line; the column is
+      only kept when _column_of can validate it. Python 3.10 raises ValueError
+      instead of SyntaxError for source containing a null byte, which carries
+      no location attributes at all.
+    parameters:
+      fn:
+        type: PyFunc
+        description: The function being extracted, used for the message.
+      text:
+        type: str
+        description: The exact text to parse.
+      filename:
+        type: str
+      line_delta:
+        type: int
+        description: Shift from text line numbers to real file lines.
+    returns:
+      type: ast.Module
+    """
+    try:
+        return ast.parse(text, filename=filename)
+    except SyntaxError as exc:
+        message = f"cannot parse source of {_name_of(fn)!r}: {exc.msg}"
+        line = None
+        if exc.lineno is not None:
+            line = exc.lineno + line_delta
+        # The text is parsed with its original indentation, so a trusted
+        # offset points into the real file line; _column_of rejects
+        # offsets that do not (for example synthetic f-string locations).
+        column = _column_of(exc, text)
+        raise SourceExtractionError(
+            message,
+            diagnostics=[_error(message, filename, line, column)],
+        ) from exc
+    except ValueError as exc:
+        message = f"cannot parse source of {_name_of(fn)!r}: {exc}"
+        raise SourceExtractionError(
+            message,
+            diagnostics=[_error(message, filename)],
+        ) from exc
 
 
 @dataclass(frozen=True)
@@ -145,11 +257,33 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
       type: ExtractedSource
     raises:
       SourceExtractionError: >-
-        If the retrieved source is not a single function definition (for
-        example a lambda).
+        If the source cannot be retrieved (REPL- or exec-defined functions, C
+        builtins, self-referential wrappers, or a corrupted or since-modified
+        source file), cannot be parsed (including source containing null
+        bytes), or is not a single function definition (for example a lambda).
     """
     filename = _filename_of(fn)
-    block_lines, block_start = inspect.getsourcelines(fn)
+    try:
+        block_lines, block_start = inspect.getsourcelines(fn)
+    except (
+        OSError,
+        TypeError,
+        ValueError,
+        SyntaxError,
+        tokenize.TokenError,
+    ) as exc:
+        # inspect.getsourcelines tokenizes the file, so a corrupted or
+        # since-modified source (for example an unterminated triple-quoted
+        # string) can surface a raw tokenize.TokenError or SyntaxError from
+        # retrieval, before block_start is known. No reliable file location
+        # exists at this point, so the diagnostic carries none.
+        reason = _retrieval_reason(exc)
+        message = f"cannot extract source of {_name_of(fn)!r}: {reason}"
+        raise SourceExtractionError(
+            message,
+            diagnostics=[_error(message, filename)],
+        ) from exc
+
     block = "".join(block_lines)
     indented = block_lines[0] != block_lines[0].lstrip()
 
@@ -159,7 +293,7 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
     else:
         text = block
         line_delta = block_start - 1
-    module = ast.parse(text, filename=filename)
+    module = _parse_block(fn, text, filename, line_delta)
     if indented:
         body = cast("ast.If", module.body[0]).body
     else:
