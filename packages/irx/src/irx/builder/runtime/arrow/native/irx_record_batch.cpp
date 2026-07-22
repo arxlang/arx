@@ -12,6 +12,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 static thread_local std::string tl_errmsg;
@@ -49,6 +50,8 @@ static std::shared_ptr<arrow::DataType> arrow_type(IrxColumnType t) {
     case IRX_COL_FLOAT32: return arrow::float32();
     case IRX_COL_FLOAT64: return arrow::float64();
     case IRX_COL_BOOL:    return arrow::boolean();
+    case IRX_COL_UTF8:       return arrow::utf8();
+    case IRX_COL_LARGE_UTF8: return arrow::large_utf8();
     }
     return nullptr;
 }
@@ -66,6 +69,8 @@ static IrxColumnType col_type_from_arrow(const arrow::DataType &dt) {
     case arrow::Type::FLOAT:   return IRX_COL_FLOAT32;
     case arrow::Type::DOUBLE:  return IRX_COL_FLOAT64;
     case arrow::Type::BOOL:    return IRX_COL_BOOL;
+    case arrow::Type::STRING:       return IRX_COL_UTF8;
+    case arrow::Type::LARGE_STRING: return IRX_COL_LARGE_UTF8;
     default:                   return static_cast<IrxColumnType>(-1);
     }
 }
@@ -156,6 +161,8 @@ make_builder(IrxColumnType t, arrow::MemoryPool *pool) {
     case IRX_COL_FLOAT32: b = std::make_unique<arrow::FloatBuilder>(pool);   break;
     case IRX_COL_FLOAT64: b = std::make_unique<arrow::DoubleBuilder>(pool);  break;
     case IRX_COL_BOOL:    b = std::make_unique<arrow::BooleanBuilder>(pool); break;
+    case IRX_COL_UTF8:       b = std::make_unique<arrow::StringBuilder>(pool);      break;
+    case IRX_COL_LARGE_UTF8: b = std::make_unique<arrow::LargeStringBuilder>(pool); break;
     }
     return b;
 }
@@ -290,6 +297,38 @@ int irx_rb_builder_append_bool(IrxRbBuilder *b, int col, int v) {
     if (!st.ok()) return set_err(st);
     return IRX_OK;
 }
+/* Append a UTF-8 string to the specified column.
+ * Works with both UTF8 and LARGE_UTF8 column types.
+ * The string data is copied internally, so the input pointer does not need to remain valid.
+ * Interior NUL bytes are allowed; nbytes determines the string length. */
+int irx_rb_builder_append_utf8(IrxRbBuilder *b, int col,
+                               const char *data, int64_t nbytes)
+{
+    GUARD(b);
+    GUARD(data);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    std::string_view view(data, static_cast<size_t>(nbytes));
+    arrow::Status st;
+    switch (b->schema_ref->col_types[col])
+    {
+    case IRX_COL_UTF8:
+        st = static_cast<arrow::StringBuilder *>(
+                 b->builders[col].get())
+                 ->Append(view);
+        break;
+    case IRX_COL_LARGE_UTF8:
+        st = static_cast<arrow::LargeStringBuilder *>(
+                 b->builders[col].get())
+                 ->Append(view);
+        break;
+    default:
+        return set_err("type mismatch on append", IRX_ERR_TYPE);
+    }
+    if (!st.ok())
+        return set_err(st);
+    return IRX_OK;
+}
 int irx_rb_builder_append_null(IrxRbBuilder *b, int col) {
     GUARD(b);
     if (col < 0 || col >= (int)b->builders.size())
@@ -387,6 +426,35 @@ int irx_rb_batch_get_bool(const IrxRbBatch *b, int col, int64_t row, int *out) {
         return set_err("type mismatch on get", IRX_ERR_TYPE);
     auto *arr = static_cast<const arrow::BooleanArray *>(b->batch->column(col).get());
     *out = arr->Value(row) ? 1 : 0;
+    return IRX_OK;
+}
+
+int irx_rb_batch_get_utf8(const IrxRbBatch *b, int col, int64_t row,
+                          const char **out, int64_t *len)
+{
+    GUARD(b);
+    GUARD(out);
+    GUARD(len);
+    if (check_bounds(b, col, row))
+        return IRX_ERR_OOB;
+    std::string_view view;
+    switch (b->col_types[col])
+    {
+    case IRX_COL_UTF8:
+        view = static_cast<const arrow::StringArray *>(
+                   b->batch->column(col).get())
+                   ->GetView(row);
+        break;
+    case IRX_COL_LARGE_UTF8:
+        view = static_cast<const arrow::LargeStringArray *>(
+                   b->batch->column(col).get())
+                   ->GetView(row);
+        break;
+    default:
+        return set_err("type mismatch on get", IRX_ERR_TYPE);
+    }
+    *out = view.data();
+    *len = static_cast<int64_t>(view.size());
     return IRX_OK;
 }
 

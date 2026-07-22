@@ -553,3 +553,208 @@ class TestPyArrowInterop:
         assert table.column("u32").to_pylist() == [4_000_000_000]
         assert math.isclose(table.column("f32").to_pylist()[0], 1.25)
         assert table.column("b").to_pylist() == [True]
+
+
+# UTF-8 string types — utf8 and large_utf8
+
+
+class TestStringTypes:
+    """
+    title: TestStringTypes.
+    """
+
+    def test_build_and_inspect_utf8(self):
+        """
+        title: Build a utf8 column and read the values back.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["alpha", "", "gamma"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        assert batch.num_rows == len(words)
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_unicode_round_trip(self):
+        """
+        title: Ensure multi-byte UTF-8 survives a byte-length round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["héllo", "日本語", "😀🎉"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_string_nulls(self):
+        """
+        title: Ensure null slots in a string column read back as null.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=True)
+        builder = RecordBatchBuilder(schema)
+        builder.append_string(0, "present")
+        builder.append_null(0)
+        builder.append_string(0, "again")
+        batch = builder.finish()
+        assert batch.is_null(0, 0) is False
+        assert batch.is_null(0, 1) is True
+        assert batch.get_string(0, 0) == "present"
+        assert batch.get_string(0, 2) == "again"
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_large_utf8(self):
+        """
+        title: Ensure the large_utf8 (64-bit offset) column works.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.LARGE_UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["one", "two", "three"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_wrong_column_type_raises(self):
+        """
+        title: Ensure appending a string to a numeric column is rejected.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError):
+            builder.append_string(0, "nope")
+        builder.release()
+        schema.release()
+
+    def test_get_string_on_non_string_column_raises(self):
+        """
+        title: Ensure get_string on a numeric column raises a type error.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        builder.append_int32(0, 42)
+        batch = builder.finish()
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_string(0, 0)
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_buffer_round_trip(self):
+        """
+        title: Ensure string columns survive an in-memory stream round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("name", IrxColumnType.UTF8, nullable=True)
+        schema.add_field("tag", IrxColumnType.LARGE_UTF8, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        names = ["ann", None, "cat"]
+        for i, nm in enumerate(names):
+            if nm is None:
+                builder.append_null(0)
+            else:
+                builder.append_string(0, nm)
+            builder.append_string(1, f"t{i}")
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        for i, nm in enumerate(names):
+            if nm is None:
+                assert rb.is_null(0, i) is True
+            else:
+                assert rb.get_string(0, i) == nm
+            assert rb.get_string(1, i) == f"t{i}"
+        rb.release()
+        reader.close()
+        schema.release()
+
+    def test_irx_strings_read_by_pyarrow(self):
+        """
+        title: Ensure PyArrow reads IRx-written utf8 and large_utf8 columns.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("name", IrxColumnType.UTF8, nullable=True)
+        schema.add_field("tag", IrxColumnType.LARGE_UTF8, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_string(0, "x")
+        builder.append_null(0)
+        builder.append_string(1, "a")
+        builder.append_string(1, "b")
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("name").type == pa.utf8()
+        assert table.schema.field("tag").type == pa.large_utf8()
+        assert table.column("name").to_pylist() == ["x", None]
+        assert table.column("tag").to_pylist() == ["a", "b"]
+
+    def test_pyarrow_strings_read_by_irx(self):
+        """
+        title: Ensure the IRx reader imports PyArrow-written string columns.
+        """
+        pa_schema = pa.schema(
+            [
+                pa.field("name", pa.utf8(), nullable=True),
+                pa.field("tag", pa.large_utf8(), nullable=False),
+            ]
+        )
+        record_batch = pa.record_batch(
+            [
+                pa.array(["foo", None, "baz"], type=pa.utf8()),
+                pa.array(["p", "q", "r"], type=pa.large_utf8()),
+            ],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_string(0, 0) == "foo"
+        assert rb.is_null(0, 1) is True
+        assert rb.get_string(0, 2) == "baz"
+        assert rb.get_string(1, 0) == "p"
+        assert rb.get_string(1, 2) == "r"
+        rb.release()
+        reader.close()
