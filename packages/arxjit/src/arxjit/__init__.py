@@ -11,6 +11,7 @@ from arxjit.errors import (
     SourceExtractionError,
     UnsupportedSyntaxError,
 )
+from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import (
     Signature,
     SigType,
@@ -44,6 +45,7 @@ __all__ = [
     "ArxJitError",
     "Diagnostic",
     "DiagnosticSeverity",
+    "ExtractedSource",
     "JitFunction",
     "SigType",
     "Signature",
@@ -51,6 +53,7 @@ __all__ = [
     "UnsupportedSyntaxError",
     "__version__",
     "bool_",
+    "extract_source",
     "f32",
     "f64",
     "get_version",
