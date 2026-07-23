@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 
 import pyarrow as pa
@@ -34,6 +35,7 @@ PYARROW_BATCH_COLUMN_COUNT = 2
 PYARROW_FIRST_INT32_VALUE = 10
 PYARROW_LAST_INT32_VALUE = 30
 PYARROW_CONTEXT_MANAGER_INT32_VALUE = 99
+RAW_DATE32_DAYS = 20651
 
 
 def make_simple_schema() -> RecordBatchSchema:
@@ -553,3 +555,534 @@ class TestPyArrowInterop:
         assert table.column("u32").to_pylist() == [4_000_000_000]
         assert math.isclose(table.column("f32").to_pylist()[0], 1.25)
         assert table.column("b").to_pylist() == [True]
+
+
+# UTF-8 string types — utf8 and large_utf8
+
+
+class TestStringTypes:
+    """
+    title: TestStringTypes.
+    """
+
+    def test_build_and_inspect_utf8(self):
+        """
+        title: Build a utf8 column and read the values back.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["alpha", "", "gamma"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        assert batch.num_rows == len(words)
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_unicode_round_trip(self):
+        """
+        title: Ensure multi-byte UTF-8 survives a byte-length round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["héllo", "日本語", "😀🎉"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_string_nulls(self):
+        """
+        title: Ensure null slots in a string column read back as null.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.UTF8, nullable=True)
+        builder = RecordBatchBuilder(schema)
+        builder.append_string(0, "present")
+        builder.append_null(0)
+        builder.append_string(0, "again")
+        batch = builder.finish()
+        assert batch.is_null(0, 0) is False
+        assert batch.is_null(0, 1) is True
+        assert batch.get_string(0, 0) == "present"
+        assert batch.get_string(0, 2) == "again"
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_large_utf8(self):
+        """
+        title: Ensure the large_utf8 (64-bit offset) column works.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("s", IrxColumnType.LARGE_UTF8, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        words = ["one", "two", "three"]
+        for w in words:
+            builder.append_string(0, w)
+        batch = builder.finish()
+        for i, w in enumerate(words):
+            assert batch.get_string(0, i) == w
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_wrong_column_type_raises(self):
+        """
+        title: Ensure appending a string to a numeric column is rejected.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError):
+            builder.append_string(0, "nope")
+        builder.release()
+        schema.release()
+
+    def test_get_string_on_non_string_column_raises(self):
+        """
+        title: Ensure get_string on a numeric column raises a type error.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        builder.append_int32(0, 42)
+        batch = builder.finish()
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_string(0, 0)
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_buffer_round_trip(self):
+        """
+        title: Ensure string columns survive an in-memory stream round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("name", IrxColumnType.UTF8, nullable=True)
+        schema.add_field("tag", IrxColumnType.LARGE_UTF8, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        names = ["ann", None, "cat"]
+        for i, nm in enumerate(names):
+            if nm is None:
+                builder.append_null(0)
+            else:
+                builder.append_string(0, nm)
+            builder.append_string(1, f"t{i}")
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        for i, nm in enumerate(names):
+            if nm is None:
+                assert rb.is_null(0, i) is True
+            else:
+                assert rb.get_string(0, i) == nm
+            assert rb.get_string(1, i) == f"t{i}"
+        rb.release()
+        reader.close()
+        schema.release()
+
+    def test_irx_strings_read_by_pyarrow(self):
+        """
+        title: Ensure PyArrow reads IRx-written utf8 and large_utf8 columns.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("name", IrxColumnType.UTF8, nullable=True)
+        schema.add_field("tag", IrxColumnType.LARGE_UTF8, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_string(0, "x")
+        builder.append_null(0)
+        builder.append_string(1, "a")
+        builder.append_string(1, "b")
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("name").type == pa.utf8()
+        assert table.schema.field("tag").type == pa.large_utf8()
+        assert table.column("name").to_pylist() == ["x", None]
+        assert table.column("tag").to_pylist() == ["a", "b"]
+
+    def test_pyarrow_strings_read_by_irx(self):
+        """
+        title: Ensure the IRx reader imports PyArrow-written string columns.
+        """
+        pa_schema = pa.schema(
+            [
+                pa.field("name", pa.utf8(), nullable=True),
+                pa.field("tag", pa.large_utf8(), nullable=False),
+            ]
+        )
+        record_batch = pa.record_batch(
+            [
+                pa.array(["foo", None, "baz"], type=pa.utf8()),
+                pa.array(["p", "q", "r"], type=pa.large_utf8()),
+            ],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_string(0, 0) == "foo"
+        assert rb.is_null(0, 1) is True
+        assert rb.get_string(0, 2) == "baz"
+        assert rb.get_string(1, 0) == "p"
+        assert rb.get_string(1, 2) == "r"
+        rb.release()
+        reader.close()
+
+
+class TestTemporalTypes:
+    """
+    title: TestTemporalTypes.
+    """
+
+    def test_date32_round_trip(self):
+        """
+        title: >-
+          Ensure date32 accepts datetime.date and returns days-since-epoch.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        values = [date(1970, 1, 1), date(2026, 7, 17), date(1965, 3, 4)]
+        for v in values:
+            builder.append_date(0, v)
+        batch = builder.finish()
+        for i, v in enumerate(values):
+            expected = (v - date(1970, 1, 1)).days
+            assert batch.get_date(0, i) == expected
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_date64_round_trip(self):
+        """
+        title: Ensure date64 stores milliseconds since epoch.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE64, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        v = date(2026, 7, 17)
+        builder.append_date(0, v)
+        batch = builder.finish()
+        expected_ms = (v - date(1970, 1, 1)).days * 86_400_000
+        assert batch.get_date(0, 0) == expected_ms
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_date_accepts_raw_int(self):
+        """
+        title: Ensure append_date also accepts raw storage ints.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        builder.append_date(0, RAW_DATE32_DAYS)
+        batch = builder.finish()
+        assert batch.get_date(0, 0) == RAW_DATE32_DAYS
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_timestamp_all_units_round_trip(self):
+        """
+        title: Ensure every timestamp unit round-trips at its native scale.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("ts_s", IrxColumnType.TIMESTAMP_S, nullable=False)
+        schema.add_field("ts_ms", IrxColumnType.TIMESTAMP_MS, nullable=False)
+        schema.add_field("ts_us", IrxColumnType.TIMESTAMP_US, nullable=False)
+        schema.add_field("ts_ns", IrxColumnType.TIMESTAMP_NS, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        dt = datetime(2026, 7, 17, 12, 34, 56, 789012, tzinfo=timezone.utc)
+        for col in range(4):
+            builder.append_timestamp(col, dt)
+        batch = builder.finish()
+
+        total_us = (
+            (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).days
+            * 86_400_000_000
+            + (dt.hour * 3600 + dt.minute * 60 + dt.second) * 1_000_000
+            + dt.microsecond
+        )
+        assert batch.get_timestamp(0, 0) == total_us // 1_000_000
+        assert batch.get_timestamp(1, 0) == total_us // 1_000
+        assert batch.get_timestamp(2, 0) == total_us
+        assert batch.get_timestamp(3, 0) == total_us * 1_000
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_timestamp_naive_treated_as_utc(self):
+        """
+        title: Ensure a naive datetime is interpreted as UTC on append.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("ts", IrxColumnType.TIMESTAMP_S, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        naive = datetime(2026, 7, 17, 12, 0, 0)
+        aware = datetime(2026, 7, 17, 12, 0, 0, tzinfo=timezone.utc)
+        builder.append_timestamp(0, naive)
+        builder.append_timestamp(0, aware)
+        batch = builder.finish()
+        assert batch.get_timestamp(0, 0) == batch.get_timestamp(0, 1)
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_time_all_units_round_trip(self):
+        """
+        title: Ensure every time unit round-trips at its native scale.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("t_s", IrxColumnType.TIME32_S, nullable=False)
+        schema.add_field("t_ms", IrxColumnType.TIME32_MS, nullable=False)
+        schema.add_field("t_us", IrxColumnType.TIME64_US, nullable=False)
+        schema.add_field("t_ns", IrxColumnType.TIME64_NS, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        tv = time(12, 34, 56, 789012)
+        for col in range(4):
+            builder.append_time(col, tv)
+        batch = builder.finish()
+
+        total_us = (
+            tv.hour * 3600 + tv.minute * 60 + tv.second
+        ) * 1_000_000 + tv.microsecond
+        assert batch.get_time(0, 0) == total_us // 1_000_000
+        assert batch.get_time(1, 0) == total_us // 1_000
+        assert batch.get_time(2, 0) == total_us
+        assert batch.get_time(3, 0) == total_us * 1_000
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_temporal_nulls(self):
+        """
+        title: Ensure null slots in temporal columns read back as null.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=True)
+        schema.add_field("ts", IrxColumnType.TIMESTAMP_US, nullable=True)
+        schema.add_field("t", IrxColumnType.TIME64_NS, nullable=True)
+        builder = RecordBatchBuilder(schema)
+        builder.append_date(0, date(2026, 7, 17))
+        builder.append_null(0)
+        builder.append_timestamp(1, datetime(2026, 7, 17, tzinfo=timezone.utc))
+        builder.append_null(1)
+        builder.append_time(2, time(1, 2, 3))
+        builder.append_null(2)
+        batch = builder.finish()
+        assert batch.is_null(0, 0) is False
+        assert batch.is_null(0, 1) is True
+        assert batch.is_null(1, 1) is True
+        assert batch.is_null(2, 1) is True
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_append_wrong_type_raises(self):
+        """
+        title: Ensure temporal appenders reject non-matching column types.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            builder.append_date(0, 0)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            builder.append_timestamp(0, 0)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            builder.append_time(0, 0)
+        builder.release()
+        schema.release()
+
+    def test_get_wrong_type_raises(self):
+        """
+        title: Ensure temporal getters reject non-matching column types.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("n", IrxColumnType.INT32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        builder.append_int32(0, 42)
+        batch = builder.finish()
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_date(0, 0)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_timestamp(0, 0)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            batch.get_time(0, 0)
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_temporal_family_mismatch_raises(self):
+        """
+        title: Ensure append_date rejects a timestamp column and vice versa.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("ts", IrxColumnType.TIMESTAMP_US, nullable=False)
+        schema.add_field("d", IrxColumnType.DATE32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            builder.append_date(0, 0)
+        with pytest.raises(RuntimeError, match="type mismatch"):
+            builder.append_timestamp(1, 0)
+        builder.release()
+        schema.release()
+
+    def test_buffer_round_trip(self):
+        """
+        title: Ensure temporal columns survive a stream round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=True)
+        schema.add_field("ts", IrxColumnType.TIMESTAMP_MS, nullable=False)
+        schema.add_field("t", IrxColumnType.TIME64_US, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        d = date(2026, 7, 17)
+        dt = datetime(2026, 7, 17, 9, 30, tzinfo=timezone.utc)
+        tv = time(9, 30, 15, 250000)
+        builder.append_date(0, d)
+        builder.append_null(0)
+        builder.append_timestamp(1, dt)
+        builder.append_timestamp(1, dt)
+        builder.append_time(2, tv)
+        builder.append_time(2, tv)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_date(0, 0) == (d - date(1970, 1, 1)).days
+        assert rb.is_null(0, 1) is True
+        expected_ms = int(
+            (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
+            * 1000
+        )
+        assert rb.get_timestamp(1, 0) == expected_ms
+        expected_us = (
+            tv.hour * 3600 + tv.minute * 60 + tv.second
+        ) * 1_000_000 + tv.microsecond
+        assert rb.get_time(2, 0) == expected_us
+        rb.release()
+        reader.close()
+
+    def test_irx_temporal_read_by_pyarrow(self):
+        """
+        title: Ensure PyArrow reads IRx-written temporal columns.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=False)
+        schema.add_field("ts", IrxColumnType.TIMESTAMP_US, nullable=False)
+        schema.add_field("t", IrxColumnType.TIME64_NS, nullable=False)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        d = date(2026, 7, 17)
+        dt = datetime(2026, 7, 17, 9, 30, tzinfo=timezone.utc)
+        tv = time(9, 30, 15, 250000)
+        builder.append_date(0, d)
+        builder.append_timestamp(1, dt)
+        builder.append_time(2, tv)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("d").type == pa.date32()
+        assert table.schema.field("ts").type == pa.timestamp("us")
+        assert table.schema.field("t").type == pa.time64("ns")
+        assert table.column("d").to_pylist() == [d]
+        assert table.column("ts").to_pylist() == [dt.replace(tzinfo=None)]
+        assert table.column("t").to_pylist() == [tv]
+
+    def test_pyarrow_temporal_read_by_irx(self):
+        """
+        title: Ensure the IRx reader imports PyArrow-written temporal columns.
+        """
+        d = date(2026, 7, 17)
+        dt = datetime(2026, 7, 17, 9, 30)
+        tv = time(9, 30, 15, 250000)
+        pa_schema = pa.schema(
+            [
+                pa.field("d", pa.date32(), nullable=False),
+                pa.field("ts", pa.timestamp("us"), nullable=False),
+                pa.field("t", pa.time64("ns"), nullable=False),
+            ]
+        )
+        record_batch = pa.record_batch(
+            [
+                pa.array([d], type=pa.date32()),
+                pa.array([dt], type=pa.timestamp("us")),
+                pa.array([tv], type=pa.time64("ns")),
+            ],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_date(0, 0) == (d - date(1970, 1, 1)).days
+        expected_us = int(
+            (
+                dt.replace(tzinfo=timezone.utc)
+                - datetime(1970, 1, 1, tzinfo=timezone.utc)
+            ).total_seconds()
+            * 1_000_000
+        )
+        assert rb.get_timestamp(1, 0) == expected_us
+        expected_ns = (
+            (tv.hour * 3600 + tv.minute * 60 + tv.second) * 1_000_000
+            + tv.microsecond
+        ) * 1_000
+        assert rb.get_time(2, 0) == expected_ns
+        rb.release()
+        reader.close()
