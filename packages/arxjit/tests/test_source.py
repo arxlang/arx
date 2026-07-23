@@ -9,7 +9,6 @@ import importlib.util
 import inspect
 import linecache
 import pathlib
-import sys
 import tokenize
 
 from typing import Any, Callable
@@ -516,11 +515,12 @@ def test_malformed_fstring_column_is_validated(
     """
     title: A malformed f-string never yields a misleading column.
     summary: >-
-      On Python 3.10 and 3.11 the parser reports f-string errors against a
-      synthetic string built from the replacement expression, so the offset
-      does not point into the real source line and the diagnostic column must
-      fall back to None; newer versions report real file locations and keep a
-      column.
+      For a malformed f-string, some Python versions report the error offset
+      against a synthetic string built from the replacement expression rather
+      than the real source line, and the exact behavior varies by CPython patch
+      level. The invariant _column_of guarantees is version-independent: the
+      diagnostic column is either absent or a real position within the source
+      line, never a bogus synthetic offset.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
@@ -543,16 +543,10 @@ def test_malformed_fstring_column_is_validated(
     assert isinstance(caught.value.__cause__, SyntaxError)
     (diagnostic,) = caught.value.diagnostics
     assert diagnostic.line == 5
-    if sys.version_info < (3, 12):
-        assert diagnostic.column is None
-    elif sys.version_info >= (3, 13):
-        assert diagnostic.column is not None
-    else:
-        # 3.12 straddles the PEP 701 transition; either a validated
-        # column or the None fallback is acceptable, never a bogus one.
-        assert diagnostic.column is None or diagnostic.column <= len(
-            'x = f"prefix {a b}"'
-        )
+    line_length = len('x = f"prefix {a b}"')
+    assert (
+        diagnostic.column is None or 1 <= diagnostic.column <= line_length + 1
+    )
 
 
 def test_corrupted_source_file_is_rejected(

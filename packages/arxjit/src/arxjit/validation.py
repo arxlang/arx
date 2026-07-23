@@ -1,24 +1,29 @@
+# mypy: disable-error-code=no-redef
 """
 title: Python-subset validation for arxjit.
 summary: >-
   Second stage of the arxjit pipeline: walk the ast node produced by
   arxjit.source and check it only uses the v1 supported subset of pure Python
-  (typed scalar arguments, arithmetic/comparison/boolean expressions, local
-  assignments, if/while, for over range, return). Every rejected construct is
-  collected into its own Diagnostic so a function using several unsupported
-  constructs reports all of them at once via UnsupportedSyntaxError; lowering
-  the accepted subset to astx is a later stage and is not done here.
+  (typed scalar arguments, arithmetic/comparison/boolean expressions, single-
+  target local assignments, if/else, while, for over range, return). Dispatch
+  is by node type via plum, matching the visitor convention used across the Arx
+  packages. Every rejected construct is collected into its own Diagnostic so a
+  function using several unsupported constructs reports all of them at once via
+  UnsupportedSyntaxError; lowering the accepted subset to astx is a later stage
+  and is not done here.
 """
 
 from __future__ import annotations
 
 import ast
 
-from typing import cast
+from plum import dispatch
 
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
 from arxjit.errors import UnsupportedSyntaxError
 from arxjit.source import ExtractedSource
+
+FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 
 _ALLOWED_BINOPS: tuple[type[ast.operator], ...] = (
     ast.Add,
@@ -34,7 +39,6 @@ _ALLOWED_UNARYOPS: tuple[type[ast.unaryop], ...] = (
     ast.USub,
     ast.Not,
 )
-_ALLOWED_BOOLOPS: tuple[type[ast.boolop], ...] = (ast.And, ast.Or)
 _ALLOWED_COMPAREOPS: tuple[type[ast.cmpop], ...] = (
     ast.Eq,
     ast.NotEq,
@@ -72,6 +76,8 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
     ast.DictComp: "comprehensions are not supported",
     ast.SetComp: "comprehensions are not supported",
     ast.GeneratorExp: "generator expressions are not supported",
+    ast.Break: "break statements are not supported",
+    ast.Continue: "continue statements are not supported",
     ast.Delete: "del statements are not supported",
     ast.AnnAssign: "annotated assignments are not supported",
     ast.AugAssign: "augmented assignment (e.g. +=) is not supported",
@@ -87,27 +93,6 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
 # module still imports cleanly on 3.10.
 if (_try_star := getattr(ast, "TryStar", None)) is not None:
     _UNSUPPORTED_MESSAGES[_try_star] = "try/except* is not supported"
-
-
-def _is_range_call(node: ast.expr) -> bool:
-    """
-    title: Return whether a node is a call to the builtin range().
-    summary: >-
-      Only the exact shape range(...) with no keyword arguments is accepted;
-      range is looked up by name only, so a shadowed or attribute-qualified
-      "range" is rejected like any other call.
-    parameters:
-      node:
-        type: ast.expr
-    returns:
-      type: bool
-    """
-    return (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "range"
-        and not node.keywords
-    )
 
 
 def _char_column(line: str, byte_offset: int) -> int:
@@ -142,12 +127,10 @@ def _diagnostic(
     summary: >-
       Reads the node's lineno/col_offset when present and converts the column
       to the one-based character contract via _char_column; falls back to no
-      location when the node carries none (rare for real parsed nodes, but kept
-      safe for synthetic ones). node.lineno is a real file line number
-      (extract_source already shifted it), while extracted.source is indexed
-      from its own first line, so the node's line is looked up at
-      extracted.source.splitlines()[lineno - extracted.lineno] rather than
-      lineno - 1.
+      location when the node carries none. node.lineno is a real file line
+      number (extract_source already shifted it), while extracted.source is
+      indexed from its own first line, so the node's line is looked up at
+      splitlines()[lineno - extracted.lineno] rather than lineno - 1.
     parameters:
       extracted:
         type: ExtractedSource
@@ -175,30 +158,74 @@ def _diagnostic(
     )
 
 
-class _SubsetValidator(ast.NodeVisitor):
+def _bound_names(node: FunctionNode) -> set[str]:
     """
-    title: Collect one diagnostic per Python construct outside the v1 subset.
+    title: Collect every name bound as a local of the function.
     summary: >-
-      A rejected node's children are not descended into, so a single bad
-      expression tree reports one diagnostic rather than one per nested node;
-      independent sibling statements (including inside if/while/for bodies) are
-      still each visited and validated in full.
+      A name is bound if it is a parameter or is assigned anywhere in the body
+      (an ordinary assignment target or a for-loop target). Any name that is
+      read but not bound is therefore a free variable (a closure capture) or a
+      module global, both of which are outside the pure v1 subset. Assignments
+      in never-executed branches still bind, matching Python's own rule that
+      any assigned name is a local.
+    parameters:
+      node:
+        type: FunctionNode
+    returns:
+      type: set[str]
+    """
+    names: set[str] = set()
+    args = node.args
+    for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs):
+        names.add(arg.arg)
+    if args.vararg is not None:
+        names.add(args.vararg.arg)
+    if args.kwarg is not None:
+        names.add(args.kwarg.arg)
+    for descendant in ast.walk(node):
+        if isinstance(descendant, ast.Assign):
+            for target in descendant.targets:
+                if isinstance(target, ast.Name):
+                    names.add(target.id)
+        elif isinstance(descendant, (ast.For, ast.AsyncFor)) and isinstance(
+            descendant.target, ast.Name
+        ):
+            names.add(descendant.target.id)
+    return names
+
+
+class _SubsetValidator:
+    """
+    title: Collect one diagnostic per construct outside the v1 subset.
+    summary: >-
+      Dispatches by node type via plum: each accepted construct has its own
+      visit overload, and the ast.AST overload is the fail-closed default that
+      rejects everything else, so a known-unsupported construct (with a
+      specific message) or a future Python node this pass was not updated for
+      both fail safe. A rejected node's children are not descended into, so one
+      bad subtree yields one diagnostic; independent sibling statements are
+      each validated in full.
     attributes:
       extracted:
         description: The extracted source being validated.
+      bound:
+        description: Names bound as locals or arguments of the function.
       diagnostics:
         type: list[Diagnostic]
         description: One entry per rejected construct.
     """
 
-    def __init__(self, extracted: ExtractedSource) -> None:
+    def __init__(self, extracted: ExtractedSource, bound: set[str]) -> None:
         """
         title: Initialize the validator for one function's source.
         parameters:
           extracted:
             type: ExtractedSource
+          bound:
+            type: set[str]
         """
         self.extracted = extracted
+        self.bound = bound
         self.diagnostics: list[Diagnostic] = []
 
     def _reject(self, node: ast.AST, message: str) -> None:
@@ -212,9 +239,36 @@ class _SubsetValidator(ast.NodeVisitor):
         """
         self.diagnostics.append(_diagnostic(self.extracted, node, message))
 
-    # -- statements --------------------------------------------------
+    def visit_all(self, statements: list[ast.stmt]) -> None:
+        """
+        title: Visit each statement in a block in order.
+        parameters:
+          statements:
+            type: list[ast.stmt]
+        """
+        for statement in statements:
+            self.visit(statement)
 
-    def visit_Return(self, node: ast.Return) -> None:
+    @dispatch
+    def visit(self, node: ast.AST) -> None:
+        """
+        title: Reject any node with no accepting overload (fail closed).
+        summary: >-
+          Reaching this default means the node is a known-unsupported construct
+          (looked up for a specific message) or one this validator does not
+          recognize at all; both are rejected so new or unhandled syntax fails
+          closed instead of silently passing.
+        parameters:
+          node:
+            type: ast.AST
+        """
+        message = _UNSUPPORTED_MESSAGES.get(
+            type(node), f"{type(node).__name__} is not supported"
+        )
+        self._reject(node, message)
+
+    @dispatch
+    def visit(self, node: ast.Return) -> None:
         """
         title: Validate a return statement's value, if any.
         parameters:
@@ -224,7 +278,8 @@ class _SubsetValidator(ast.NodeVisitor):
         if node.value is not None:
             self.visit(node.value)
 
-    def visit_Assign(self, node: ast.Assign) -> None:
+    @dispatch
+    def visit(self, node: ast.Assign) -> None:
         """
         title: Validate a single-target local variable assignment.
         parameters:
@@ -238,7 +293,8 @@ class _SubsetValidator(ast.NodeVisitor):
             )
         self.visit(node.value)
 
-    def visit_If(self, node: ast.If) -> None:
+    @dispatch
+    def visit(self, node: ast.If) -> None:
         """
         title: Validate an if/else statement and both branches.
         parameters:
@@ -246,23 +302,36 @@ class _SubsetValidator(ast.NodeVisitor):
             type: ast.If
         """
         self.visit(node.test)
-        for stmt in (*node.body, *node.orelse):
-            self.visit(stmt)
+        self.visit_all(node.body)
+        self.visit_all(node.orelse)
 
-    def visit_While(self, node: ast.While) -> None:
+    @dispatch
+    def visit(self, node: ast.While) -> None:
         """
         title: Validate a while loop and its body.
+        summary: >-
+          The loop's else clause is rejected: it only runs when the loop exits
+          without break, and break is itself outside the subset, so a while-
+          else is dead and needlessly complicates lowering.
         parameters:
           node:
             type: ast.While
         """
         self.visit(node.test)
-        for stmt in (*node.body, *node.orelse):
-            self.visit(stmt)
+        if node.orelse:
+            self._reject(
+                node.orelse[0], "while-else clauses are not supported"
+            )
+        self.visit_all(node.body)
 
-    def visit_For(self, node: ast.For) -> None:
+    @dispatch
+    def visit(self, node: ast.For) -> None:
         """
         title: Validate a for loop, restricted to iterating over range().
+        summary: >-
+          The iterable must be a call to the builtin range with one to three
+          positional arguments and no keywords; a range shadowed by a local or
+          argument is rejected, as is a loop else clause.
         parameters:
           node:
             type: ast.For
@@ -272,28 +341,56 @@ class _SubsetValidator(ast.NodeVisitor):
                 node.target,
                 "for-loop targets must be a single local variable",
             )
-        if _is_range_call(node.iter):
-            for arg in cast(ast.Call, node.iter).args:
-                self.visit(arg)
-        else:
+        self._visit_for_iter(node.iter)
+        if node.orelse:
+            self._reject(node.orelse[0], "for-else clauses are not supported")
+        self.visit_all(node.body)
+
+    def _visit_for_iter(self, iterable: ast.expr) -> None:
+        """
+        title: Validate a for loop's iterable as a builtin range() call.
+        parameters:
+          iterable:
+            type: ast.expr
+        """
+        if not (
+            isinstance(iterable, ast.Call)
+            and isinstance(iterable.func, ast.Name)
+            and iterable.func.id == "range"
+        ):
             self._reject(
-                node.iter,
+                iterable,
                 "for loops are only supported over range(...)",
             )
-        for stmt in (*node.body, *node.orelse):
-            self.visit(stmt)
+            return
+        if "range" in self.bound:
+            self._reject(
+                iterable,
+                "range is shadowed by a local variable or argument",
+            )
+            return
+        if iterable.keywords:
+            self._reject(iterable, "range() does not accept keyword arguments")
+            return
+        if not 1 <= len(iterable.args) <= 3:
+            self._reject(
+                iterable,
+                "range() takes one to three positional arguments",
+            )
+            return
+        for argument in iterable.args:
+            self.visit(argument)
 
-    def visit_Expr(self, node: ast.Expr) -> None:
+    @dispatch
+    def visit(self, node: ast.Expr) -> None:
         """
         title: Accept a standalone string literal, reject anything else.
         summary: >-
-          A bare string statement (a docstring, or a no-op string anywhere in
-          the body) has no compilable effect and is silently allowed. A bare
-          "yield x" is the common generator-function form and is delegated to
-          the generic unsupported-construct lookup so it gets the specific
-          generators message instead of a generic one; any other standalone
-          expression statement computes a value that is immediately discarded
-          and is rejected directly.
+          A bare string statement (a docstring, or a no-op string) has no
+          compilable effect and is allowed. A bare yield is delegated to the
+          default so it gets the specific generators message; any other
+          standalone expression computes a value that is discarded and is
+          rejected directly.
         parameters:
           node:
             type: ast.Expr
@@ -309,7 +406,8 @@ class _SubsetValidator(ast.NodeVisitor):
             node, "standalone expression statements are not supported"
         )
 
-    def visit_Pass(self, node: ast.Pass) -> None:
+    @dispatch
+    def visit(self, node: ast.Pass) -> None:
         """
         title: Accept a pass statement; it has no effect.
         parameters:
@@ -317,17 +415,28 @@ class _SubsetValidator(ast.NodeVisitor):
             type: ast.Pass
         """
 
-    # -- expressions -------------------------------------------------
-
-    def visit_Name(self, node: ast.Name) -> None:
+    @dispatch
+    def visit(self, node: ast.Name) -> None:
         """
-        title: Accept a variable reference.
+        title: Accept a bound variable reference, reject a free one.
+        summary: >-
+          Only names read in an expression reach this overload (assignment and
+          loop targets are checked without being visited). A name that is not
+          bound as a local or argument is a closure capture or a module global,
+          both outside the pure subset.
         parameters:
           node:
             type: ast.Name
         """
+        if isinstance(node.ctx, ast.Load) and node.id not in self.bound:
+            self._reject(
+                node,
+                f"reference to {node.id!r}, which is not a local variable"
+                " or argument (closures and globals are not supported)",
+            )
 
-    def visit_Constant(self, node: ast.Constant) -> None:
+    @dispatch
+    def visit(self, node: ast.Constant) -> None:
         """
         title: Accept only int, float, and bool literals.
         parameters:
@@ -339,7 +448,8 @@ class _SubsetValidator(ast.NodeVisitor):
         kind = type(node.value).__name__
         self._reject(node, f"{kind} literals are not supported")
 
-    def visit_BinOp(self, node: ast.BinOp) -> None:
+    @dispatch
+    def visit(self, node: ast.BinOp) -> None:
         """
         title: Validate an arithmetic binary expression.
         parameters:
@@ -347,12 +457,15 @@ class _SubsetValidator(ast.NodeVisitor):
             type: ast.BinOp
         """
         if not isinstance(node.op, _ALLOWED_BINOPS):
-            kind = type(node.op).__name__
-            self._reject(node, f"the {kind} operator is not supported")
+            self._reject(
+                node,
+                f"the {type(node.op).__name__} operator is not supported",
+            )
         self.visit(node.left)
         self.visit(node.right)
 
-    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+    @dispatch
+    def visit(self, node: ast.UnaryOp) -> None:
         """
         title: Validate a unary expression.
         parameters:
@@ -360,48 +473,53 @@ class _SubsetValidator(ast.NodeVisitor):
             type: ast.UnaryOp
         """
         if not isinstance(node.op, _ALLOWED_UNARYOPS):
-            kind = type(node.op).__name__
-            self._reject(node, f"the {kind} operator is not supported")
+            self._reject(
+                node,
+                f"the {type(node.op).__name__} operator is not supported",
+            )
         self.visit(node.operand)
 
-    def visit_BoolOp(self, node: ast.BoolOp) -> None:
+    @dispatch
+    def visit(self, node: ast.BoolOp) -> None:
         """
-        title: Validate a boolean and/or expression.
+        title: Validate a boolean and/or expression's operands.
+        summary: >-
+          Python has only ``and`` and ``or`` as boolean operators, both
+          supported, so only the operands need validation.
         parameters:
           node:
             type: ast.BoolOp
         """
-        if not isinstance(node.op, _ALLOWED_BOOLOPS):  # pragma: no cover
-            # And and Or are the only boolean operators, so this guard is
-            # unreachable today; it is kept for parity with the other
-            # operator visitors and to fail closed if Python adds one.
-            kind = type(node.op).__name__
-            self._reject(node, f"the {kind} operator is not supported")
         for value in node.values:
             self.visit(value)
 
-    def visit_Compare(self, node: ast.Compare) -> None:
+    @dispatch
+    def visit(self, node: ast.Compare) -> None:
         """
         title: Validate a (possibly chained) comparison expression.
         parameters:
           node:
             type: ast.Compare
         """
-        for op in node.ops:
-            if not isinstance(op, _ALLOWED_COMPAREOPS):
-                kind = type(op).__name__
-                self._reject(node, f"the {kind} comparison is not supported")
+        for operator in node.ops:
+            if not isinstance(operator, _ALLOWED_COMPAREOPS):
+                self._reject(
+                    node,
+                    f"the {type(operator).__name__} comparison is not"
+                    " supported",
+                )
         self.visit(node.left)
         for comparator in node.comparators:
             self.visit(comparator)
 
-    def visit_Call(self, node: ast.Call) -> None:
+    @dispatch
+    def visit(self, node: ast.Call) -> None:
         """
         title: Reject a function call.
         summary: >-
-          Only reachable for calls that are not a for-loop's range(...)
-          iterator, which visit_For special-cases before it ever reaches the
-          generic expression visitor.
+          Only reachable for calls that are not a for loop's range(...)
+          iterator, which _visit_for_iter special-cases before it ever reaches
+          the generic expression walk.
         parameters:
           node:
             type: ast.Call
@@ -410,25 +528,6 @@ class _SubsetValidator(ast.NodeVisitor):
             node,
             "calling functions is not supported (only range() in a for loop)",
         )
-
-    def generic_visit(self, node: ast.AST) -> None:
-        """
-        title: Reject any node with no explicit visit_* handler.
-        summary: >-
-          Every accepted statement and expression kind has its own visit_*
-          method above; reaching this method means the node is either a known-
-          unsupported construct (looked up for a specific message) or one this
-          validator does not recognize at all, which is rejected the same way
-          so new Python syntax fails closed instead of silently passing
-          through.
-        parameters:
-          node:
-            type: ast.AST
-        """
-        message = _UNSUPPORTED_MESSAGES.get(type(node))
-        if message is None:
-            message = f"{type(node).__name__} is not supported"
-        self._reject(node, message)
 
 
 def _validate_arguments(
@@ -493,19 +592,21 @@ def validate(extracted: ExtractedSource) -> None:
     """
     title: Validate that a function uses only the supported Python subset.
     summary: >-
-      Checks the function's argument shape and walks its body, collecting one
-      diagnostic per rejected construct. A function using several unsupported
-      constructs is reported in a single UnsupportedSyntaxError carrying all of
-      them, so a user fixes everything in one pass instead of one error at a
-      time.
+      Rejects async definitions and generic (PEP 695) type parameters, checks
+      the argument shape, then walks the body collecting one diagnostic per
+      rejected construct, including free-variable reads (closures and globals).
+      A function with several unsupported constructs is reported in a single
+      UnsupportedSyntaxError carrying all of them, so a user fixes everything
+      in one pass.
     parameters:
       extracted:
         type: ExtractedSource
         description: The result of arxjit.source.extract_source.
     raises:
       UnsupportedSyntaxError: >-
-        If the function is async, has an unsupported argument shape, or its
-        body uses any construct outside the v1 subset.
+        If the function is async or generic, has an unsupported argument shape,
+        reads a free variable, or its body uses any construct outside the v1
+        subset.
     """
     node = extracted.node
     diagnostics: list[Diagnostic] = []
@@ -518,12 +619,19 @@ def validate(extracted: ExtractedSource) -> None:
                 "async function definitions are not supported",
             )
         )
+    if getattr(node, "type_params", ()):
+        diagnostics.append(
+            _diagnostic(
+                extracted,
+                node,
+                "generic functions (type parameters) are not supported",
+            )
+        )
 
     diagnostics.extend(_validate_arguments(extracted, node.args))
 
-    visitor = _SubsetValidator(extracted)
-    for stmt in node.body:
-        visitor.visit(stmt)
+    visitor = _SubsetValidator(extracted, _bound_names(node))
+    visitor.visit_all(node.body)
     diagnostics.extend(visitor.diagnostics)
 
     if diagnostics:

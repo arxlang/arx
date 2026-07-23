@@ -13,7 +13,6 @@ from arxjit.errors import UnsupportedSyntaxError
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.validation import (
     _char_column,
-    _is_range_call,
     _SubsetValidator,
     validate,
 )
@@ -408,8 +407,60 @@ def test_for_tuple_target_is_rejected() -> None:
             total = total + i
         return total
 
+    diagnostics = _rejected(sample)
+    assert any("for-loop targets" in d.message for d in diagnostics)
+
+
+def test_for_else_clause_is_rejected() -> None:
+    """
+    title: A for-else clause is rejected.
+    summary: >-
+      The loop else pairs with break, which is outside the subset, so it is
+      rejected rather than silently accepted and left for lowering.
+    """
+
+    def sample(x: int) -> int:
+        """
+        title: Attach an else clause to a for loop.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        total = 0
+        for i in range(x):
+            total = total + i
+        else:  # noqa: PLW0120
+            total = 0
+        return total
+
     (diagnostic,) = _rejected(sample)
-    assert "for-loop targets" in diagnostic.message
+    assert "for-else clauses are not supported" in diagnostic.message
+
+
+def test_while_else_clause_is_rejected() -> None:
+    """
+    title: A while-else clause is rejected.
+    """
+
+    def sample(x: int) -> int:
+        """
+        title: Attach an else clause to a while loop.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        while x > 0:
+            x = x - 1
+        else:  # noqa: PLW0120
+            x = 0
+        return x
+
+    (diagnostic,) = _rejected(sample)
+    assert "while-else clauses are not supported" in diagnostic.message
 
 
 def test_varargs_are_rejected() -> None:
@@ -582,15 +633,141 @@ def test_char_column_converts_multibyte_prefixes() -> None:
     assert _char_column(line, real_byte_offset) == char_index + 1
 
 
-def test_is_range_call_rejects_non_range_shapes() -> None:
+def test_free_variable_read_is_rejected() -> None:
     """
-    title: _is_range_call only accepts a bare name call to range().
+    title: Reading a name that is neither an argument nor a local is rejected.
+    summary: >-
+      The extracted node of a nested function keeps its free variables as plain
+      ast.Name loads; without binding analysis a closure capture would pass
+      validation, so this pins that a free read is rejected.
     """
-    assert _is_range_call(ast.parse("range(5)", mode="eval").body)
-    assert not _is_range_call(ast.parse("range(stop=5)", mode="eval").body)
-    assert not _is_range_call(ast.parse("mod.range(5)", mode="eval").body)
-    assert not _is_range_call(ast.parse("[1, 2]", mode="eval").body)
-    assert not _is_range_call(ast.parse("x", mode="eval").body)
+
+    def sample(x: int) -> int:
+        """
+        title: Multiply by an undefined free variable.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * scale  # noqa: F821
+
+    (diagnostic,) = _rejected(sample)
+    assert "'scale'" in diagnostic.message
+    assert "closures and globals are not supported" in diagnostic.message
+
+
+def test_global_read_is_rejected() -> None:
+    """
+    title: Reading a module global is rejected like a closure capture.
+    """
+
+    def sample(x: int) -> int:
+        """
+        title: Multiply by a module-level constant.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * _SAMPLE_GLOBAL
+
+    (diagnostic,) = _rejected(sample)
+    assert "'_SAMPLE_GLOBAL'" in diagnostic.message
+
+
+def test_shadowed_range_is_rejected() -> None:
+    """
+    title: A range shadowed by an argument is not treated as the builtin.
+    """
+
+    def sample(range: int) -> int:
+        """
+        title: Loop over a parameter named range.
+        parameters:
+          range:
+            type: int
+        returns:
+          type: int
+        """
+        total = 0
+        for i in range(3):
+            total = total + i
+        return total
+
+    (diagnostic,) = _rejected(sample)
+    assert "range is shadowed" in diagnostic.message
+
+
+def test_range_with_too_many_arguments_is_rejected() -> None:
+    """
+    title: A range() call with four arguments is rejected.
+    """
+
+    def sample(n: int) -> int:
+        """
+        title: Loop over range with four arguments.
+        parameters:
+          n:
+            type: int
+        returns:
+          type: int
+        """
+        total = 0
+        for i in range(1, 2, 3, 4):
+            total = total + i
+        return total
+
+    (diagnostic,) = _rejected(sample)
+    assert "one to three positional arguments" in diagnostic.message
+
+
+def test_range_with_no_arguments_is_rejected() -> None:
+    """
+    title: A range() call with no arguments is rejected.
+    """
+
+    def sample(n: int) -> int:
+        """
+        title: Loop over range with no arguments.
+        parameters:
+          n:
+            type: int
+        returns:
+          type: int
+        """
+        total = 0
+        for i in range():
+            total = total + i
+        return total
+
+    (diagnostic,) = _rejected(sample)
+    assert "one to three positional arguments" in diagnostic.message
+
+
+def test_range_with_keyword_argument_is_rejected() -> None:
+    """
+    title: A keyword-argument call to range(...) is rejected.
+    """
+
+    def sample(n: int) -> int:
+        """
+        title: Call range with a keyword argument.
+        parameters:
+          n:
+            type: int
+        returns:
+          type: int
+        """
+        total = 0
+        for i in range(stop=n):
+            total = total + i
+        return total
+
+    (diagnostic,) = _rejected(sample)
+    assert "does not accept keyword arguments" in diagnostic.message
 
 
 def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:
@@ -599,9 +776,9 @@ def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:
       A node type absent from the whitelist and the message table still gets a
       rejection, not a silent pass.
     summary: >-
-      Exercises generic_visit's fail-closed fallback directly, covering any
-      future Python syntax this validator was not updated for, without
-      depending on a specific version-gated construct being available.
+      Exercises the fail-closed ast.AST dispatch fallback directly, covering
+      any future Python syntax this validator was not updated for, without
+      depending on a version-gated construct being available.
     """
 
     class _Unknown(ast.AST):
@@ -622,7 +799,35 @@ def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:
         lineno=1,
         node=ast.parse("def f():\n    pass\n").body[0],
     )
-    validator = _SubsetValidator(extracted)
-    validator.generic_visit(_Unknown())
+    validator = _SubsetValidator(extracted, set())
+    validator.visit(_Unknown())
     (diagnostic,) = validator.diagnostics
     assert "_Unknown is not supported" in diagnostic.message
+
+
+def test_generic_function_is_rejected() -> None:
+    """
+    title: A PEP 695 generic function (type parameters) is rejected.
+    summary: >-
+      The type-parameter syntax parses only on Python 3.12+, so rather than
+      version-gate the test, type_params is set on a parsed node directly
+      (validate only checks that the list is non-empty); this exercises the
+      rejection on every supported Python version.
+    """
+    source = "def identity(x: int) -> int:\n    return x\n"
+    node = ast.parse(source).body[0]
+    node.type_params = ["T"]  # type: ignore[attr-defined,list-item]
+    extracted = ExtractedSource(
+        filename="<generic>",
+        source=source,
+        lineno=1,
+        node=node,  # type: ignore[arg-type]
+    )
+    with pytest.raises(UnsupportedSyntaxError) as caught:
+        validate(extracted)
+    assert any(
+        "generic functions" in d.message for d in caught.value.diagnostics
+    )
+
+
+_SAMPLE_GLOBAL = 2
