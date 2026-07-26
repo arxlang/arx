@@ -12,6 +12,7 @@ from arxjit.diagnostics import DiagnosticSeverity
 from arxjit.errors import UnsupportedSyntaxError
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.validation import (
+    _bound_names,
     _char_column,
     _SubsetValidator,
     validate,
@@ -701,6 +702,133 @@ def test_shadowed_range_is_rejected() -> None:
     assert "range is shadowed" in diagnostic.message
 
 
+def test_module_level_range_shadow_is_rejected() -> None:
+    """
+    title: A module-global that shadows range is rejected.
+    summary: >-
+      A module-level ``range = 42`` makes the call a TypeError in Python, so
+      compiling it as the range intrinsic would silently change behavior. The
+      shadowing is invisible in the AST, so the defining module's namespace
+      carried by extraction is what reveals it.
+    """
+    source = (
+        "def kernel(n: int) -> int:\n"
+        "    total = 0\n"
+        "    for i in range(n):\n"
+        "        total = total + i\n"
+        "    return total\n"
+    )
+    extracted = ExtractedSource(
+        filename="<shadowed>",
+        source=source,
+        lineno=1,
+        node=ast.parse(source).body[0],  # type: ignore[arg-type]
+        globalns={"range": 42},
+    )
+    with pytest.raises(UnsupportedSyntaxError) as caught:
+        validate(extracted)
+    (diagnostic,) = caught.value.diagnostics
+    assert "shadowed by a module-level name" in diagnostic.message
+
+
+def test_module_namespace_without_shadowing_is_accepted() -> None:
+    """
+    title: A module namespace that leaves range alone validates cleanly.
+    summary: >-
+      Covers both an unrelated global and the builtin bound explicitly under
+      its own name, neither of which shadows the intrinsic.
+    """
+    source = (
+        "def kernel(n: int) -> int:\n"
+        "    total = 0\n"
+        "    for i in range(n):\n"
+        "        total = total + i\n"
+        "    return total\n"
+    )
+    for namespace in ({"other": 1}, {"range": range}, None):
+        extracted = ExtractedSource(
+            filename="<clean>",
+            source=source,
+            lineno=1,
+            node=ast.parse(source).body[0],  # type: ignore[arg-type]
+            globalns=namespace,
+        )
+        validate(extracted)
+
+
+def test_nested_scope_binding_does_not_leak_outward() -> None:
+    """
+    title: A name assigned in a nested scope is not a binding of this one.
+    summary: >-
+      Regression test: collecting bindings with ast.walk descended into the
+      nested function and treated its ``range`` local as shadowing the builtin
+      in the outer scope, producing a misleading diagnostic. Only the nested
+      definition itself should be reported.
+    """
+
+    def sample(n: int) -> int:
+        """
+        title: Loop over range while a nested helper binds the name range.
+        parameters:
+          n:
+            type: int
+        returns:
+          type: int
+        """
+
+        def helper() -> int:
+            """
+            title: Bind and return a local named range.
+            returns:
+              type: int
+            """
+            range = 10
+            return range
+
+        total = 0
+        for i in range(n):
+            total = total + i
+        return total
+
+    diagnostics = _rejected(sample)
+    messages = [d.message for d in diagnostics]
+    assert any("nested function definitions" in m for m in messages)
+    assert not any("range is shadowed" in m for m in messages)
+
+
+def test_nested_scope_binding_does_not_hide_a_free_variable() -> None:
+    """
+    title: A nested scope's local does not mask an outer free-variable read.
+    summary: >-
+      Regression test for the collect-all-at-once guarantee: the nested
+      function's ``scale`` local made the outer read of ``scale`` look bound,
+      so only one of the two problems was reported.
+    """
+
+    def sample() -> int:
+        """
+        title: Read a name that only a nested helper binds.
+        returns:
+          type: int
+        """
+
+        def helper() -> int:
+            """
+            title: Bind and return a local named scale.
+            returns:
+              type: int
+            """
+            scale = 2
+            return scale
+
+        return scale  # noqa: F821
+
+    diagnostics = _rejected(sample)
+    messages = [d.message for d in diagnostics]
+    assert any("nested function definitions" in m for m in messages)
+    assert any("'scale'" in m for m in messages)
+
+
 def test_range_with_too_many_arguments_is_rejected() -> None:
     """
     title: A range() call with four arguments is rejected.
@@ -768,6 +896,57 @@ def test_range_with_keyword_argument_is_rejected() -> None:
 
     (diagnostic,) = _rejected(sample)
     assert "does not accept keyword arguments" in diagnostic.message
+
+
+def test_binding_collector_handles_every_target_shape() -> None:
+    """
+    title: The binding collector records each binding form of one scope.
+    summary: >-
+      Tuple, list, and starred targets each bind their names, while an
+      attribute or subscript target binds none. The annotated, augmented, and
+      walrus forms bind their target even though the subset rejects the
+      statements themselves, so a rejected statement does not also report a
+      spurious free variable. A nested scope contributes its own name but never
+      its locals.
+    """
+    source = (
+        "def kernel(a, /, b, *args, c=1, **kwargs):\n"
+        "    first, *rest = b\n"
+        "    [second, third] = b\n"
+        "    holder.attr = b\n"
+        "    holder[0] = b\n"
+        "    annotated: int = b\n"
+        "    counter = 0\n"
+        "    counter += 1\n"
+        "    while (walrus := b):\n"
+        "        pass\n"
+        "    for i in range(3):\n"
+        "        pass\n"
+        "    def nested():\n"
+        "        hidden = 1\n"
+        "        return hidden\n"
+        "    class Local:\n"
+        "        member = 1\n"
+        "    return a\n"
+    )
+    node = ast.parse(source).body[0]
+    assert _bound_names(node) == {  # type: ignore[arg-type]
+        "a",
+        "b",
+        "args",
+        "c",
+        "kwargs",
+        "first",
+        "rest",
+        "second",
+        "third",
+        "annotated",
+        "counter",
+        "walrus",
+        "i",
+        "nested",
+        "Local",
+    }
 
 
 def test_unrecognized_node_type_falls_back_to_a_generic_message() -> None:

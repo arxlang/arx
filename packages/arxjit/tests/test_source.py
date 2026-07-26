@@ -758,6 +758,63 @@ def test_column_validation_of_syntax_errors() -> None:
     assert _column_of(syntax_error(1, 2, "(a b)\n"), text) is None
 
 
+def test_defining_module_namespace_is_preserved() -> None:
+    """
+    title: Extraction carries the function's defining module namespace.
+    summary: >-
+      Later stages need it to detect module-level shadowing of a name the
+      compiler treats as a builtin, which the AST alone cannot reveal. The
+      namespace is the real module globals, so a name defined in this test
+      module is visible through it.
+    """
+    extracted = extract_source(sample_add)
+    assert extracted.globalns is not None
+    assert extracted.globalns["sample_add"] is sample_add
+
+
+def test_namespace_is_taken_from_the_wrapped_function() -> None:
+    """
+    title: A wrapper's namespace resolves to the wrapped function's module.
+    summary: >-
+      getsourcelines follows __wrapped__, so the namespace must come from the
+      same function as the retrieved source; here the wrapper is compiled in a
+      bare namespace while the wrapped function belongs to this module.
+    """
+    namespace: dict[str, Any] = {
+        "functools": functools,
+        "sample_add": sample_add,
+    }
+    exec(
+        compile(
+            "@functools.wraps(sample_add)\n"
+            "def wrapper(*args, **kwargs):\n"
+            "    return sample_add(*args, **kwargs)\n",
+            "<wrapper>",
+            "exec",
+        ),
+        namespace,
+    )
+    extracted = extract_source(namespace["wrapper"])
+    assert extracted.globalns is not None
+    assert extracted.globalns["sample_add"] is sample_add
+    # A name of this module that the wrapper's own namespace never held,
+    # proving the namespace is the wrapped function's, not the exec one.
+    assert "sample_decorated" not in namespace
+    assert extracted.globalns["sample_decorated"] is sample_decorated
+
+
+def test_namespace_is_excluded_from_repr_and_equality() -> None:
+    """
+    title: The carried namespace does not affect repr or equality.
+    summary: >-
+      It is incidental runtime context rather than part of the extracted
+      source, and a module namespace would otherwise dominate the repr.
+    """
+    extracted = extract_source(sample_add)
+    assert "globalns" not in repr(extracted)
+    assert extracted == dataclasses.replace(extracted, globalns={"x": 1})
+
+
 def test_extracted_source_is_frozen() -> None:
     """
     title: ExtractedSource instances are immutable.

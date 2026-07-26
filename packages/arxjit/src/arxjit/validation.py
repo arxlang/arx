@@ -16,6 +16,7 @@ summary: >-
 from __future__ import annotations
 
 import ast
+import builtins
 
 from plum import dispatch
 
@@ -24,6 +25,15 @@ from arxjit.errors import UnsupportedSyntaxError
 from arxjit.source import ExtractedSource
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
+
+# Nodes that open a new scope: their bodies hold their own locals, so the
+# binding collector records their name but does not descend into them.
+_SCOPE_NODES: tuple[type[ast.AST], ...] = (
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.Lambda,
+    ast.ClassDef,
+)
 
 _ALLOWED_BINOPS: tuple[type[ast.operator], ...] = (
     ast.Add,
@@ -158,39 +168,117 @@ def _diagnostic(
     )
 
 
+def _target_names(target: ast.expr) -> set[str]:
+    """
+    title: Collect the names bound by an assignment or loop target.
+    summary: >-
+      Handles the tuple, list, and starred forms as well as a plain name, so a
+      target the subset rejects still registers its bindings and does not also
+      produce a spurious free-variable diagnostic for the same name.
+    parameters:
+      target:
+        type: ast.expr
+    returns:
+      type: set[str]
+    """
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, (ast.Tuple, ast.List)):
+        names: set[str] = set()
+        for element in target.elts:
+            names |= _target_names(element)
+        return names
+    if isinstance(target, ast.Starred):
+        return _target_names(target.value)
+    return set()
+
+
+def _parameter_names(args: ast.arguments) -> set[str]:
+    """
+    title: Collect the names bound by a function's parameter list.
+    summary: >-
+      Includes the parameter kinds the subset rejects (variadic and keyword-
+      only), so a rejected signature does not also report its own parameters as
+      free variables.
+    parameters:
+      args:
+        type: ast.arguments
+    returns:
+      type: set[str]
+    """
+    names = {
+        arg.arg for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs)
+    }
+    for variadic in (args.vararg, args.kwarg):
+        if variadic is not None:
+            names.add(variadic.arg)
+    return names
+
+
+def _statement_bindings(node: ast.AST) -> set[str]:
+    """
+    title: Collect the names a single statement or expression binds.
+    summary: >-
+      Covers ordinary and loop assignment as well as the annotated, augmented,
+      and walrus forms the subset rejects, so a rejected statement does not
+      also produce a free-variable diagnostic for the name it binds.
+    parameters:
+      node:
+        type: ast.AST
+    returns:
+      type: set[str]
+    """
+    if isinstance(node, ast.Assign):
+        names: set[str] = set()
+        for target in node.targets:
+            names |= _target_names(target)
+        return names
+    if isinstance(
+        node,
+        (
+            ast.For,
+            ast.AsyncFor,
+            ast.AnnAssign,
+            ast.AugAssign,
+            ast.NamedExpr,
+        ),
+    ):
+        return _target_names(node.target)
+    return set()
+
+
 def _bound_names(node: FunctionNode) -> set[str]:
     """
-    title: Collect every name bound as a local of the function.
-    summary: >-
-      A name is bound if it is a parameter or is assigned anywhere in the body
-      (an ordinary assignment target or a for-loop target). Any name that is
-      read but not bound is therefore a free variable (a closure capture) or a
-      module global, both of which are outside the pure v1 subset. Assignments
-      in never-executed branches still bind, matching Python's own rule that
-      any assigned name is a local.
+    title: Collect every name bound as a local of the function's own scope.
+    summary: |-
+      A name is bound if it is a parameter or is assigned in the body. Any name
+      read but not bound is a free variable (a closure capture) or a module
+      global, both outside the pure v1 subset. Assignments in never-executed
+      branches still bind, matching Python's rule that any assigned name is a
+      local.
+      Nested scopes are deliberately not descended into: a nested function,
+      lambda, or class has its own locals, so collecting them here would both
+      mask free-variable reads in this scope and misreport a nested binding as
+      shadowing an outer name. The nested definition's own name does bind in
+      this scope, so it is collected while its body is skipped.
     parameters:
       node:
         type: FunctionNode
     returns:
       type: set[str]
     """
-    names: set[str] = set()
-    args = node.args
-    for arg in (*args.posonlyargs, *args.args, *args.kwonlyargs):
-        names.add(arg.arg)
-    if args.vararg is not None:
-        names.add(args.vararg.arg)
-    if args.kwarg is not None:
-        names.add(args.kwarg.arg)
-    for descendant in ast.walk(node):
-        if isinstance(descendant, ast.Assign):
-            for target in descendant.targets:
-                if isinstance(target, ast.Name):
-                    names.add(target.id)
-        elif isinstance(descendant, (ast.For, ast.AsyncFor)) and isinstance(
-            descendant.target, ast.Name
-        ):
-            names.add(descendant.target.id)
+    names = _parameter_names(node.args)
+    pending: list[ast.AST] = list(node.body)
+    while pending:
+        current = pending.pop()
+        if isinstance(current, _SCOPE_NODES):
+            # A nested scope: its name binds here, its body does not.
+            nested_name = getattr(current, "name", None)
+            if isinstance(nested_name, str):
+                names.add(nested_name)
+            continue
+        names |= _statement_bindings(current)
+        pending.extend(ast.iter_child_nodes(current))
     return names
 
 
@@ -238,6 +326,23 @@ class _SubsetValidator:
             type: str
         """
         self.diagnostics.append(_diagnostic(self.extracted, node, message))
+
+    def _range_is_builtin(self) -> bool:
+        """
+        title: Return whether range resolves to the builtin at module level.
+        summary: >-
+          Checks the defining module's namespace, which extraction carries
+          alongside the source. When that namespace is unavailable (only for a
+          hand-built ExtractedSource; extract_source always provides it for a
+          real function) module-level shadowing cannot be observed and the name
+          is taken to be the builtin.
+        returns:
+          type: bool
+        """
+        namespace = self.extracted.globalns
+        if namespace is None:
+            return True
+        return namespace.get("range", builtins.range) is builtins.range
 
     def visit_all(self, statements: list[ast.stmt]) -> None:
         """
@@ -349,6 +454,12 @@ class _SubsetValidator:
     def _visit_for_iter(self, iterable: ast.expr) -> None:
         """
         title: Validate a for loop's iterable as a builtin range() call.
+        summary: >-
+          The callee must resolve to the builtin range, so it is rejected when
+          shadowed by a local or argument and when shadowed by a module-level
+          name in the defining module's namespace, which the AST alone cannot
+          reveal. Compiling a shadowed range as the range intrinsic would
+          silently disagree with the Python fallback.
         parameters:
           iterable:
             type: ast.expr
@@ -367,6 +478,13 @@ class _SubsetValidator:
             self._reject(
                 iterable,
                 "range is shadowed by a local variable or argument",
+            )
+            return
+        if not self._range_is_builtin():
+            self._reject(
+                iterable,
+                "range is shadowed by a module-level name, so it is not"
+                " the builtin range",
             )
             return
         if iterable.keywords:
