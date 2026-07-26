@@ -21,6 +21,7 @@ from arxjit.types import (
     i32,
     i64,
 )
+from arxjit.validation import validate
 
 _DISTRIBUTION_NAME = "arxjit"
 
@@ -60,4 +61,5 @@ __all__ = [
     "i32",
     "i64",
     "jit",
+    "validate",
 ]

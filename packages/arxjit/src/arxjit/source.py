@@ -18,7 +18,8 @@ import ast
 import inspect
 import tokenize
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any, Callable, cast
 
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
@@ -30,30 +31,80 @@ _WRAPPER = "if True:\n"
 _WRAPPER_LINES = 1
 
 
+def _unwrapped(fn: PyFunc) -> PyFunc:
+    """
+    title: Follow __wrapped__ chains to the underlying function.
+    summary: >-
+      inspect.getsourcelines unwraps before reading source, so anything derived
+      from the function (its filename, its globals) must unwrap too or it would
+      describe a different function than the retrieved source. A __wrapped__
+      cycle yields the wrapper itself, leaving the source retrieval to report
+      the cycle.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: PyFunc
+    """
+    try:
+        return cast(PyFunc, inspect.unwrap(fn))
+    except ValueError:
+        return fn
+
+
 def _filename_of(fn: PyFunc) -> str:
     """
     title: Return the filename a function was defined in.
     summary: >-
-      Follows __wrapped__ chains first, because inspect.getsourcelines does the
-      same and the filename must match the source it returns; a JitFunction
-      wrapper is therefore attributed to the file of the function it wraps.
-      Reads the unwrapped function's code object; falls back to "<unknown>" for
-      objects without one (for example C builtins).
+      Reads the unwrapped function's code object, so a JitFunction wrapper is
+      attributed to the file of the function it wraps; falls back to
+      "<unknown>" for objects without one (for example C builtins).
     parameters:
       fn:
         type: PyFunc
     returns:
       type: str
     """
-    try:
-        fn = inspect.unwrap(fn)
-    except ValueError:
-        # A __wrapped__ cycle: attribute the wrapper itself and let the
-        # source retrieval report the cycle.
-        pass
-    code = getattr(fn, "__code__", None)
+    code = getattr(_unwrapped(fn), "__code__", None)
     filename = getattr(code, "co_filename", None)
     return filename or "<unknown>"
+
+
+def _globals_of(fn: PyFunc) -> Mapping[str, Any] | None:
+    """
+    title: Return the module namespace a function was defined in.
+    summary: >-
+      Carried through extraction so later stages can tell whether a name the
+      compiler treats as a builtin (currently only range) is shadowed at module
+      level, which no amount of AST inspection can reveal. Reads the unwrapped
+      function so it matches the retrieved source; None when the object has no
+      globals (for example a C builtin).
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: Mapping[str, Any] | None
+    """
+    namespace = getattr(_unwrapped(fn), "__globals__", None)
+    return cast("Mapping[str, Any] | None", namespace)
+
+
+def _freevars_of(fn: PyFunc) -> frozenset[str]:
+    """
+    title: Return the names a function captures from enclosing scopes.
+    summary: >-
+      Carried through extraction for the same reason as the module namespace: a
+      name the compiler treats as a builtin may instead be a closure capture,
+      which the extracted AST cannot distinguish from the builtin. Empty for a
+      function that captures nothing and for objects without a code object.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: frozenset[str]
+    """
+    code = getattr(_unwrapped(fn), "__code__", None)
+    return frozenset(getattr(code, "co_freevars", ()) or ())
 
 
 def _name_of(fn: PyFunc) -> str:
@@ -230,12 +281,30 @@ class ExtractedSource:
           the source is parsed without modifying its indentation; only the
           byte-to-character conversion is needed at the boundary that produces
           a diagnostic.
+      globalns:
+        type: Mapping[str, Any] | None
+        description: >-
+          The module namespace the function was defined in, or None when the
+          object has no globals. Carried so later stages can detect module-
+          level shadowing of a name the compiler treats as a builtin, which the
+          AST alone cannot reveal. Excluded from repr and equality: it is
+          incidental runtime context, not part of the extracted source.
+      freevars:
+        type: frozenset[str]
+        description: >-
+          The names the function captures from enclosing scopes, empty when it
+          captures nothing. Carried for the same reason as ``globalns``: a
+          captured name is indistinguishable from a builtin in the AST alone.
     """
 
     filename: str
     source: str
     lineno: int
     node: ast.FunctionDef | ast.AsyncFunctionDef
+    globalns: Mapping[str, Any] | None = field(
+        default=None, repr=False, compare=False
+    )
+    freevars: frozenset[str] = frozenset()
 
 
 def extract_source(fn: PyFunc) -> ExtractedSource:
@@ -319,6 +388,8 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
         source=source,
         lineno=def_lineno,
         node=node,
+        globalns=_globals_of(fn),
+        freevars=_freevars_of(fn),
     )
 
 

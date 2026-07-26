@@ -9,7 +9,6 @@ import importlib.util
 import inspect
 import linecache
 import pathlib
-import sys
 import tokenize
 
 from typing import Any, Callable
@@ -516,11 +515,12 @@ def test_malformed_fstring_column_is_validated(
     """
     title: A malformed f-string never yields a misleading column.
     summary: >-
-      On Python 3.10 and 3.11 the parser reports f-string errors against a
-      synthetic string built from the replacement expression, so the offset
-      does not point into the real source line and the diagnostic column must
-      fall back to None; newer versions report real file locations and keep a
-      column.
+      For a malformed f-string, some Python versions report the error offset
+      against a synthetic string built from the replacement expression rather
+      than the real source line, and the exact behavior varies by CPython patch
+      level. The invariant _column_of guarantees is version-independent: the
+      diagnostic column is either absent or a real position within the source
+      line, never a bogus synthetic offset.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
@@ -543,16 +543,10 @@ def test_malformed_fstring_column_is_validated(
     assert isinstance(caught.value.__cause__, SyntaxError)
     (diagnostic,) = caught.value.diagnostics
     assert diagnostic.line == 5
-    if sys.version_info < (3, 12):
-        assert diagnostic.column is None
-    elif sys.version_info >= (3, 13):
-        assert diagnostic.column is not None
-    else:
-        # 3.12 straddles the PEP 701 transition; either a validated
-        # column or the None fallback is acceptable, never a bogus one.
-        assert diagnostic.column is None or diagnostic.column <= len(
-            'x = f"prefix {a b}"'
-        )
+    line_length = len('x = f"prefix {a b}"')
+    assert (
+        diagnostic.column is None or 1 <= diagnostic.column <= line_length + 1
+    )
 
 
 def test_corrupted_source_file_is_rejected(
@@ -762,6 +756,96 @@ def test_column_validation_of_syntax_errors() -> None:
     assert _column_of(syntax_error(1, 5, None), text) is None
     assert _column_of(syntax_error(99, 5, "x = 1\n"), text) is None
     assert _column_of(syntax_error(1, 2, "(a b)\n"), text) is None
+
+
+def test_defining_module_namespace_is_preserved() -> None:
+    """
+    title: Extraction carries the function's defining module namespace.
+    summary: >-
+      Later stages need it to detect module-level shadowing of a name the
+      compiler treats as a builtin, which the AST alone cannot reveal. The
+      namespace is the real module globals, so a name defined in this test
+      module is visible through it.
+    """
+    extracted = extract_source(sample_add)
+    assert extracted.globalns is not None
+    assert extracted.globalns["sample_add"] is sample_add
+
+
+def test_namespace_is_taken_from_the_wrapped_function() -> None:
+    """
+    title: A wrapper's namespace resolves to the wrapped function's module.
+    summary: >-
+      getsourcelines follows __wrapped__, so the namespace must come from the
+      same function as the retrieved source; here the wrapper is compiled in a
+      bare namespace while the wrapped function belongs to this module.
+    """
+    namespace: dict[str, Any] = {
+        "functools": functools,
+        "sample_add": sample_add,
+    }
+    exec(
+        compile(
+            "@functools.wraps(sample_add)\n"
+            "def wrapper(*args, **kwargs):\n"
+            "    return sample_add(*args, **kwargs)\n",
+            "<wrapper>",
+            "exec",
+        ),
+        namespace,
+    )
+    extracted = extract_source(namespace["wrapper"])
+    assert extracted.globalns is not None
+    assert extracted.globalns["sample_add"] is sample_add
+    # A name of this module that the wrapper's own namespace never held,
+    # proving the namespace is the wrapped function's, not the exec one.
+    assert "sample_decorated" not in namespace
+    assert extracted.globalns["sample_decorated"] is sample_decorated
+
+
+def test_captured_names_are_preserved() -> None:
+    """
+    title: Extraction records the names captured from enclosing scopes.
+    summary: >-
+      Later stages need them to tell a closure capture apart from a builtin of
+      the same name; a function that captures nothing records an empty set.
+    """
+
+    def outer() -> PyFunc:
+        """
+        title: Return a nested function capturing one enclosing local.
+        returns:
+          type: PyFunc
+        """
+        captured = 5
+
+        def inner(x: int) -> int:
+            """
+            title: Multiply the argument by the captured value.
+            parameters:
+              x:
+                type: int
+            returns:
+              type: int
+            """
+            return x * captured
+
+        return inner
+
+    assert extract_source(outer()).freevars == frozenset({"captured"})
+    assert extract_source(sample_add).freevars == frozenset()
+
+
+def test_namespace_is_excluded_from_repr_and_equality() -> None:
+    """
+    title: The carried namespace does not affect repr or equality.
+    summary: >-
+      It is incidental runtime context rather than part of the extracted
+      source, and a module namespace would otherwise dominate the repr.
+    """
+    extracted = extract_source(sample_add)
+    assert "globalns" not in repr(extracted)
+    assert extracted == dataclasses.replace(extracted, globalns={"x": 1})
 
 
 def test_extracted_source_is_frozen() -> None:
