@@ -803,6 +803,39 @@ def test_namespace_is_taken_from_the_wrapped_function() -> None:
     assert extracted.globalns["sample_decorated"] is sample_decorated
 
 
+def test_captured_names_are_preserved() -> None:
+    """
+    title: Extraction records the names captured from enclosing scopes.
+    summary: >-
+      Later stages need them to tell a closure capture apart from a builtin of
+      the same name; a function that captures nothing records an empty set.
+    """
+
+    def outer() -> PyFunc:
+        """
+        title: Return a nested function capturing one enclosing local.
+        returns:
+          type: PyFunc
+        """
+        captured = 5
+
+        def inner(x: int) -> int:
+            """
+            title: Multiply the argument by the captured value.
+            parameters:
+              x:
+                type: int
+            returns:
+              type: int
+            """
+            return x * captured
+
+        return inner
+
+    assert extract_source(outer()).freevars == frozenset({"captured"})
+    assert extract_source(sample_add).freevars == frozenset()
+
+
 def test_namespace_is_excluded_from_repr_and_equality() -> None:
     """
     title: The carried namespace does not affect repr or equality.

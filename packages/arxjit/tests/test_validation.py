@@ -702,6 +702,45 @@ def test_shadowed_range_is_rejected() -> None:
     assert "range is shadowed" in diagnostic.message
 
 
+def test_closure_captured_range_shadow_is_rejected() -> None:
+    """
+    title: A range captured from an enclosing scope is rejected.
+    summary: >-
+      An enclosing function's local shadows the builtin for the whole nested
+      function, which Python resolves through the closure (a TypeError when it
+      is not callable). The capture is a plain Name load in the extracted AST,
+      indistinguishable from the builtin, so the captured names carried by
+      extraction are what reveal it.
+    """
+
+    def outer() -> PyFunc:
+        """
+        title: Return a kernel that captures a local named range.
+        returns:
+          type: PyFunc
+        """
+        range = 5
+
+        def kernel(n: int) -> int:
+            """
+            title: Loop over the captured range.
+            parameters:
+              n:
+                type: int
+            returns:
+              type: int
+            """
+            total = 0
+            for i in range(n):
+                total = total + i
+            return total
+
+        return kernel
+
+    (diagnostic,) = _rejected(outer())
+    assert "enclosing function's variable" in diagnostic.message
+
+
 def test_module_level_range_shadow_is_rejected() -> None:
     """
     title: A module-global that shadows range is rejected.

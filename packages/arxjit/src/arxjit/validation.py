@@ -327,22 +327,33 @@ class _SubsetValidator:
         """
         self.diagnostics.append(_diagnostic(self.extracted, node, message))
 
-    def _range_is_builtin(self) -> bool:
+    def _range_shadow(self) -> str | None:
         """
-        title: Return whether range resolves to the builtin at module level.
+        title: Return what shadows range, or None when it is the builtin.
         summary: >-
-          Checks the defining module's namespace, which extraction carries
-          alongside the source. When that namespace is unavailable (only for a
-          hand-built ExtractedSource; extract_source always provides it for a
-          real function) module-level shadowing cannot be observed and the name
-          is taken to be the builtin.
+          A for loop's range must resolve to builtins.range, and it can be
+          shadowed in three places: this function's own locals and arguments,
+          an enclosing function's scope (a closure capture), and the defining
+          module's namespace. Only the first is visible in the AST, so the
+          other two are read from the context extraction carries alongside the
+          source. When that namespace is unavailable (only for a hand-built
+          ExtractedSource; extract_source always provides it for a real
+          function) module-level shadowing cannot be observed and the name is
+          taken to be the builtin.
         returns:
-          type: bool
+          type: str | None
         """
+        if "range" in self.bound:
+            return "a local variable or argument"
+        if "range" in self.extracted.freevars:
+            return "an enclosing function's variable"
         namespace = self.extracted.globalns
-        if namespace is None:
-            return True
-        return namespace.get("range", builtins.range) is builtins.range
+        if (
+            namespace is not None
+            and namespace.get("range", builtins.range) is not builtins.range
+        ):
+            return "a module-level name"
+        return None
 
     def visit_all(self, statements: list[ast.stmt]) -> None:
         """
@@ -455,11 +466,11 @@ class _SubsetValidator:
         """
         title: Validate a for loop's iterable as a builtin range() call.
         summary: >-
-          The callee must resolve to the builtin range, so it is rejected when
-          shadowed by a local or argument and when shadowed by a module-level
-          name in the defining module's namespace, which the AST alone cannot
-          reveal. Compiling a shadowed range as the range intrinsic would
-          silently disagree with the Python fallback.
+          The callee must resolve to builtins.range, so it is rejected whenever
+          the name is shadowed, whether by a local or argument, an enclosing
+          function's variable, or a module-level name. Compiling a shadowed
+          range as the range intrinsic would silently disagree with the Python
+          fallback, which raises TypeError.
         parameters:
           iterable:
             type: ast.expr
@@ -474,17 +485,12 @@ class _SubsetValidator:
                 "for loops are only supported over range(...)",
             )
             return
-        if "range" in self.bound:
+        shadow = self._range_shadow()
+        if shadow is not None:
             self._reject(
                 iterable,
-                "range is shadowed by a local variable or argument",
-            )
-            return
-        if not self._range_is_builtin():
-            self._reject(
-                iterable,
-                "range is shadowed by a module-level name, so it is not"
-                " the builtin range",
+                f"range is shadowed by {shadow}, so it is not the"
+                " builtin range",
             )
             return
         if iterable.keywords:

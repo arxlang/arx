@@ -89,6 +89,24 @@ def _globals_of(fn: PyFunc) -> Mapping[str, Any] | None:
     return cast("Mapping[str, Any] | None", namespace)
 
 
+def _freevars_of(fn: PyFunc) -> frozenset[str]:
+    """
+    title: Return the names a function captures from enclosing scopes.
+    summary: >-
+      Carried through extraction for the same reason as the module namespace: a
+      name the compiler treats as a builtin may instead be a closure capture,
+      which the extracted AST cannot distinguish from the builtin. Empty for a
+      function that captures nothing and for objects without a code object.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: frozenset[str]
+    """
+    code = getattr(_unwrapped(fn), "__code__", None)
+    return frozenset(getattr(code, "co_freevars", ()) or ())
+
+
 def _name_of(fn: PyFunc) -> str:
     """
     title: Return a human-readable name for a function.
@@ -271,6 +289,12 @@ class ExtractedSource:
           level shadowing of a name the compiler treats as a builtin, which the
           AST alone cannot reveal. Excluded from repr and equality: it is
           incidental runtime context, not part of the extracted source.
+      freevars:
+        type: frozenset[str]
+        description: >-
+          The names the function captures from enclosing scopes, empty when it
+          captures nothing. Carried for the same reason as ``globalns``: a
+          captured name is indistinguishable from a builtin in the AST alone.
     """
 
     filename: str
@@ -280,6 +304,7 @@ class ExtractedSource:
     globalns: Mapping[str, Any] | None = field(
         default=None, repr=False, compare=False
     )
+    freevars: frozenset[str] = frozenset()
 
 
 def extract_source(fn: PyFunc) -> ExtractedSource:
@@ -364,6 +389,7 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
         lineno=def_lineno,
         node=node,
         globalns=_globals_of(fn),
+        freevars=_freevars_of(fn),
     )
 
 
