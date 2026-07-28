@@ -88,12 +88,14 @@ class TestSchema:
 
     def test_all_types(self):
         """
-        title: Ensure every supported column type can be registered.
+        title: Ensure every supported scalar column type can be registered.
         """
         s = RecordBatchSchema()
-        for ct in IrxColumnType:
+        # LIST is a nested type registered via add_list_field, not add_field.
+        scalar_types = [ct for ct in IrxColumnType if ct != IrxColumnType.LIST]
+        for ct in scalar_types:
             s.add_field(ct.name.lower(), ct)
-        assert s.num_fields == len(IrxColumnType)
+        assert s.num_fields == len(scalar_types)
         s.release()
 
     def test_double_release_is_safe(self):
@@ -1113,5 +1115,197 @@ class TestTemporalTypes:
             + tv.microsecond
         ) * 1_000
         assert rb.get_time(2, 0) == expected_ns
+        rb.release()
+        reader.close()
+
+
+# List column tests
+
+
+class TestListColumns:
+    """
+    title: List column build, inspection, streaming, and PyArrow interop.
+    """
+
+    def test_build_and_read_int_lists(self):
+        """
+        title: Build a list<int32> column and read every row back.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("id", IrxColumnType.INT32, nullable=False)
+        schema.add_list_field("xs", IrxColumnType.INT32, nullable=True)
+        builder = RecordBatchBuilder(schema)
+        rows = [[10, 20, 30], [], [42]]
+        for i, xs in enumerate(rows):
+            builder.append_int32(0, i)
+            builder.append_list(1, xs)
+        batch = builder.finish()
+
+        assert batch.num_rows == len(rows)
+        for i, xs in enumerate(rows):
+            assert batch.get_int32(0, i) == i
+            assert batch.get_list(1, i) == xs
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_null_list_slot(self):
+        """
+        title: A null list slot reads back as None, unlike an empty list.
+        """
+        schema = RecordBatchSchema()
+        schema.add_list_field("xs", IrxColumnType.INT64, nullable=True)
+        builder = RecordBatchBuilder(schema)
+        builder.append_list(0, [1, 2])
+        builder.append_null(0)
+        builder.append_list(0, [])
+        batch = builder.finish()
+
+        assert batch.get_list(0, 0) == [1, 2]
+        assert batch.is_null(0, 1) is True
+        assert batch.get_list(0, 1) is None
+        assert batch.is_null(0, 2) is False
+        assert batch.get_list(0, 2) == []
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_float_lists(self):
+        """
+        title: Build and read a list<float64> column.
+        """
+        schema = RecordBatchSchema()
+        schema.add_list_field("fs", IrxColumnType.FLOAT64)
+        builder = RecordBatchBuilder(schema)
+        builder.append_list(0, [1.5, 2.5, 3.5])
+        batch = builder.finish()
+
+        result = batch.get_list(0, 0)
+        assert result is not None
+        assert all(math.isclose(a, b) for a, b in zip(result, [1.5, 2.5, 3.5]))
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_date_element_lists(self):
+        """
+        title: Temporal list elements accept date objects and read back raw.
+        """
+        schema = RecordBatchSchema()
+        schema.add_list_field("ds", IrxColumnType.DATE32)
+        builder = RecordBatchBuilder(schema)
+        days = [date(2026, 7, 17), date(1970, 1, 1)]
+        builder.append_list(0, days)
+        batch = builder.finish()
+
+        expected = [(d - date(1970, 1, 1)).days for d in days]
+        assert batch.get_list(0, 0) == expected
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_unsupported_element_type_raises(self):
+        """
+        title: Schema rejects list element types outside the supported set.
+        """
+        schema = RecordBatchSchema()
+        with pytest.raises(ValueError):
+            schema.add_list_field("bad", IrxColumnType.BOOL)
+        with pytest.raises(ValueError):
+            schema.add_list_field("bad", IrxColumnType.UTF8)
+        schema.release()
+
+    def test_append_list_on_scalar_column_raises(self):
+        """
+        title: append_list on a non-list column raises rather than corrupting.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("id", IrxColumnType.INT32)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(ValueError):
+            builder.append_list(0, [1, 2, 3])
+        builder.release()
+        schema.release()
+
+    def test_list_buffer_round_trip(self):
+        """
+        title: A list column survives an IPC buffer round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_list_field("xs", IrxColumnType.INT32, nullable=True)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        rows = [[1, 2, 3], [], None, [7]]
+        for xs in rows:
+            if xs is None:
+                builder.append_null(0)
+            else:
+                builder.append_list(0, xs)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_list(0, 0) == [1, 2, 3]
+        assert rb.get_list(0, 1) == []
+        assert rb.get_list(0, 2) is None
+        assert rb.get_list(0, 3) == [7]
+        rb.release()
+        reader.close()
+
+    def test_irx_list_read_by_pyarrow(self):
+        """
+        title: PyArrow can read an IRx-written list column.
+        """
+        schema = RecordBatchSchema()
+        schema.add_list_field("xs", IrxColumnType.INT32, nullable=True)
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_list(0, [1, 2])
+        builder.append_null(0)
+        builder.append_list(0, [3, 4, 5])
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("xs").type == pa.list_(pa.int32())
+        assert table.column("xs").to_pylist() == [[1, 2], None, [3, 4, 5]]
+
+    def test_pyarrow_list_read_by_irx(self):
+        """
+        title: The IRx reader imports a PyArrow-written list column.
+        """
+        pa_schema = pa.schema(
+            [pa.field("xs", pa.list_(pa.int32()), nullable=True)]
+        )
+        record_batch = pa.record_batch(
+            [pa.array([[10, 20], None, [], [30]], type=pa.list_(pa.int32()))],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_list(0, 0) == [10, 20]
+        assert rb.get_list(0, 1) is None
+        assert rb.get_list(0, 2) == []
+        assert rb.get_list(0, 3) == [30]
         rb.release()
         reader.close()
