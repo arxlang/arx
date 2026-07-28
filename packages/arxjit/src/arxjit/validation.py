@@ -168,6 +168,27 @@ def _diagnostic(
     )
 
 
+def _is_method(qualname: str) -> bool:
+    """
+    title: Report whether a qualified name belongs to a class body.
+    summary: >-
+      A method is a function defined inside a class, which the extracted ast
+      alone cannot reveal: the decorated object is an ordinary function and its
+      first parameter is only conventionally named self. __qualname__ does
+      record it, as a dotted path whose second-to-last part is the owning
+      class. A function nested inside another function is also dotted, but
+      Python inserts the "<locals>" marker there, which distinguishes the two.
+      An empty qualname (a hand-built ExtractedSource) is not a method.
+    parameters:
+      qualname:
+        type: str
+    returns:
+      type: bool
+    """
+    parts = qualname.split(".")
+    return len(parts) > 1 and parts[-2] != "<locals>"
+
+
 def _target_names(target: ast.expr) -> set[str]:
     """
     title: Collect the names bound by an assignment or loop target.
@@ -716,25 +737,33 @@ def validate(extracted: ExtractedSource) -> None:
     """
     title: Validate that a function uses only the supported Python subset.
     summary: >-
-      Rejects async definitions and generic (PEP 695) type parameters, checks
-      the argument shape, then walks the body collecting one diagnostic per
-      rejected construct, including free-variable reads (closures and globals).
-      A function with several unsupported constructs is reported in a single
-      UnsupportedSyntaxError carrying all of them, so a user fixes everything
-      in one pass.
+      Rejects methods, async definitions and generic (PEP 695) type parameters,
+      checks the argument shape, then walks the body collecting one diagnostic
+      per rejected construct, including free-variable reads (closures and
+      globals). A function with several unsupported constructs is reported in a
+      single UnsupportedSyntaxError carrying all of them, so a user fixes
+      everything in one pass.
     parameters:
       extracted:
         type: ExtractedSource
         description: The result of arxjit.source.extract_source.
     raises:
       UnsupportedSyntaxError: >-
-        If the function is async or generic, has an unsupported argument shape,
-        reads a free variable, or its body uses any construct outside the v1
-        subset.
+        If the function is a method, is async or generic, has an unsupported
+        argument shape, reads a free variable, or its body uses any construct
+        outside the v1 subset.
     """
     node = extracted.node
     diagnostics: list[Diagnostic] = []
 
+    if _is_method(extracted.qualname):
+        diagnostics.append(
+            _diagnostic(
+                extracted,
+                node,
+                "methods are not supported (only module-level functions)",
+            )
+        )
     if isinstance(node, ast.AsyncFunctionDef):
         diagnostics.append(
             _diagnostic(
