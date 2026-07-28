@@ -200,6 +200,7 @@ develop = true
 
 [package.dependencies]
 astx = "1.23.1"
+plum-dispatch = ">=2"
 pyirx = "1.23.1"
 
 [package.source]
