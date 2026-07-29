@@ -3,6 +3,7 @@ title: Tests for Python-subset validation.
 """
 
 import ast
+import functools
 
 from typing import Any, Callable
 
@@ -1053,29 +1054,196 @@ def test_generic_function_is_rejected() -> None:
     )
 
 
-def test_method_is_rejected() -> None:
+def sample_module_level(self: Any, x: int) -> int:
     """
-    title: A function defined in a class body is rejected as a method.
+    title: Double the argument (test helper defined outside any class).
+    parameters:
+      self:
+        type: Any
+      x:
+        type: int
+    returns:
+      type: int
+    """
+    return x * 2
+
+
+def _wraps_preserving(fn: PyFunc) -> PyFunc:
+    """
+    title: Replace a function, preserving its identity metadata.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: PyFunc
     """
 
-    class Calc:
+    @functools.wraps(fn)
+    def inner(self: Any, x: int) -> int:
         """
-        title: Hold a method to validate (test helper).
+        title: Double the argument.
+        parameters:
+          self:
+            type: Any
+          x:
+            type: int
+        returns:
+          type: int
         """
+        return x * 2
 
-        def scaled(self, x: int) -> int:
-            """
-            title: Double the argument.
-            parameters:
-              x:
-                type: int
-            returns:
-              type: int
-            """
-            return x * 2
+    return inner
 
-    (diagnostic,) = _rejected(Calc.scaled)
+
+def _replacing(fn: PyFunc) -> PyFunc:
+    """
+    title: Replace a function without preserving its identity metadata.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: PyFunc
+    """
+
+    def replacement(self: Any, x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          self:
+            type: Any
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    return replacement
+
+
+class SampleCalc:
+    """
+    title: Hold every method form to validate (test helper).
+    """
+
+    def scaled(self, x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @staticmethod
+    def stat(x: int) -> int:
+        """
+        title: Double the argument, without an instance.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @classmethod
+    def klass(cls, x: int) -> int:
+        """
+        title: Double the argument, given the class.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @_wraps_preserving
+    def wrapped(self, x: int) -> int:
+        """
+        title: Double the argument, behind a functools.wraps decorator.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    assigned = sample_module_level
+
+
+class SampleCalc2:
+    """
+    title: Hold a method replaced by a non-wraps decorator (test helper).
+    """
+
+    @_replacing
+    def replaced(self, x: int) -> int:
+        """
+        title: Return the argument unchanged.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["scaled", "stat", "klass", "wrapped"],
+)
+def test_method_is_rejected(attribute: str) -> None:
+    """
+    title: Every method form defined in a class body is rejected.
+    summary: >-
+      An instance method and a staticmethod resolve to plain functions when
+      accessed through the class, while a classmethod resolves to a bound
+      method object, so all three are pinned rather than assumed equivalent. A
+      functools.wraps decorator chain stays covered because it copies
+      __qualname__ and sets __wrapped__ for extraction to follow.
+    parameters:
+      attribute:
+        type: str
+    """
+    (diagnostic,) = _rejected(getattr(SampleCalc, attribute))
     assert "methods are not supported" in diagnostic.message
+
+
+def test_class_body_assignment_is_not_detected() -> None:
+    """
+    title: A module-level function assigned in a class body is accepted.
+    summary: >-
+      Documented limitation rather than an oversight: SampleCalc.assigned is a
+      genuine method, but __qualname__ records where the function was defined,
+      so nothing in the extracted source or its metadata reveals the class that
+      now owns it. Closing this needs the decorator layer, where
+      JitFunction.__set_name__ receives the owning class. Pinned so the
+      contract is explicit and a future fix has a test to flip.
+    """
+    extracted = extract_source(SampleCalc.assigned)
+    assert extracted.qualname == "sample_module_level"
+    validate(extracted)
+
+
+def test_decorator_dropping_qualname_is_not_detected() -> None:
+    """
+    title: A method behind a non-wraps decorator is accepted.
+    summary: >-
+      The second documented limitation: a decorator that returns a different
+      function without functools.wraps preserves neither __qualname__ nor
+      __wrapped__, so the replacement reports the decorator's own scope and
+      extraction has no chain to follow back. Pinned for the same reason as the
+      assignment case.
+    """
+    extracted = extract_source(SampleCalc2.replaced)
+    assert extracted.qualname.endswith("<locals>.replacement")
+    validate(extracted)
 
 
 def test_nested_function_is_not_treated_as_a_method() -> None:

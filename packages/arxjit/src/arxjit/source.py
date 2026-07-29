@@ -319,7 +319,9 @@ class ExtractedSource:
           The function's __qualname__, or "" when the object has none. Carried
           for the same reason as ``globalns``: a method is an ordinary function
           in the AST, and only the qualified name records the class it was
-          defined in.
+          defined in. It records the *definition site*, not which class owns
+          the descriptor now, so it cannot reveal a function assigned into a
+          class body or attached to a class afterwards.
     """
 
     filename: str
