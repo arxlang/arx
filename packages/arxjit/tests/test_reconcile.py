@@ -73,7 +73,9 @@ def test_explicit_signature_short_circuits() -> None:
         title: Add two values of unknown type.
         parameters:
           a:
+            description: The left operand, deliberately unannotated.
           b:
+            description: The right operand, deliberately unannotated.
         returns:
           type: object
         """
@@ -172,7 +174,9 @@ def test_no_annotations_warns_once() -> None:
         title: Add two values of unknown type.
         parameters:
           a:
+            description: The left operand, deliberately unannotated.
           b:
+            description: The right operand, deliberately unannotated.
         returns:
           type: object
         """
@@ -285,6 +289,7 @@ def test_every_bad_parameter_is_reported() -> None:
           a:
             type: str
           b:
+            description: The middle operand, deliberately unannotated.
           c:
             type: int
         returns:
