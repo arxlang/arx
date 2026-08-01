@@ -9,6 +9,7 @@
 #include <arrow/status.h>
 #include <arrow/type.h>
 
+#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -391,6 +392,8 @@ int irx_rb_builder_append_date(IrxRbBuilder *b, int col, int64_t v) {
     switch (b->schema_ref->col_types[col])
     {
     case IRX_COL_DATE32:
+        if (v < INT32_MIN || v > INT32_MAX)
+            return set_err("value out of int32 range", IRX_ERR_OOB);
         st = static_cast<arrow::Date32Builder *>(
                  b->builders[col].get())
                  ->Append(static_cast<int32_t>(v));
@@ -437,6 +440,8 @@ int irx_rb_builder_append_time(IrxRbBuilder *b, int col, int64_t v) {
     {
     case IRX_COL_TIME32_S:
     case IRX_COL_TIME32_MS:
+        if (v < INT32_MIN || v > INT32_MAX)
+            return set_err("value out of int32 range", IRX_ERR_OOB);
         st = static_cast<arrow::Time32Builder *>(
                  b->builders[col].get())
                  ->Append(static_cast<int32_t>(v));

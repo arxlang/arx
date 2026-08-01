@@ -962,6 +962,35 @@ class TestTemporalTypes:
         builder.release()
         schema.release()
 
+    def test_date32_overflow_rejected(self):
+        """
+        title: append_date rejects values outside int32 range for DATE32.
+        summary: |-
+          A millisecond-epoch value passed to a DATE32 column would silently
+          narrow to a bogus day count; the native guard must reject it instead.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("d", IrxColumnType.DATE32, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError, match="out of int32 range"):
+            builder.append_date(0, 2**40)
+        with pytest.raises(RuntimeError, match="out of int32 range"):
+            builder.append_date(0, -(2**40))
+        builder.release()
+        schema.release()
+
+    def test_time32_overflow_rejected(self):
+        """
+        title: append_time rejects values outside int32 range for TIME32.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("t", IrxColumnType.TIME32_MS, nullable=False)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError, match="out of int32 range"):
+            builder.append_time(0, 2**40)
+        builder.release()
+        schema.release()
+
     def test_buffer_round_trip(self):
         """
         title: Ensure temporal columns survive a stream round-trip.
