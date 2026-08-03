@@ -3,6 +3,7 @@ title: Tests for Python-subset validation.
 """
 
 import ast
+import functools
 
 from typing import Any, Callable
 
@@ -12,6 +13,7 @@ from arxjit.diagnostics import DiagnosticSeverity
 from arxjit.errors import UnsupportedSyntaxError
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.validation import (
+    _UNSUPPORTED_MESSAGES,
     _bound_names,
     _char_column,
     _SubsetValidator,
@@ -19,6 +21,10 @@ from arxjit.validation import (
 )
 
 PyFunc = Callable[..., Any]
+
+# except* parses only on Python 3.11+; the validator guards its table entry
+# the same way, so the matrix below has to agree with whichever it is.
+_TRY_STAR = getattr(ast, "TryStar", None)
 
 
 def _rejected(fn: PyFunc) -> list[Any]:
@@ -1046,6 +1052,398 @@ def test_generic_function_is_rejected() -> None:
     assert any(
         "generic functions" in d.message for d in caught.value.diagnostics
     )
+
+
+def sample_module_level(self: Any, x: int) -> int:
+    """
+    title: Double the argument (test helper defined outside any class).
+    parameters:
+      self:
+        type: Any
+      x:
+        type: int
+    returns:
+      type: int
+    """
+    return x * 2
+
+
+def _wraps_preserving(fn: PyFunc) -> PyFunc:
+    """
+    title: Replace a function, preserving its identity metadata.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: PyFunc
+    """
+
+    @functools.wraps(fn)
+    def inner(self: Any, x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          self:
+            type: Any
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    return inner
+
+
+def _replacing(fn: PyFunc) -> PyFunc:
+    """
+    title: Replace a function without preserving its identity metadata.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: PyFunc
+    """
+
+    def replacement(self: Any, x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          self:
+            type: Any
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    return replacement
+
+
+class SampleCalc:
+    """
+    title: Hold every method form to validate (test helper).
+    """
+
+    def scaled(self, x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @staticmethod
+    def stat(x: int) -> int:
+        """
+        title: Double the argument, without an instance.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @classmethod
+    def klass(cls, x: int) -> int:
+        """
+        title: Double the argument, given the class.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    @_wraps_preserving
+    def wrapped(self, x: int) -> int:
+        """
+        title: Double the argument, behind a functools.wraps decorator.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    assigned = sample_module_level
+
+
+class SampleCalc2:
+    """
+    title: Hold a method replaced by a non-wraps decorator (test helper).
+    """
+
+    @_replacing
+    def replaced(self, x: int) -> int:
+        """
+        title: Return the argument unchanged.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["scaled", "stat", "klass", "wrapped"],
+)
+def test_method_is_rejected(attribute: str) -> None:
+    """
+    title: Every method form defined in a class body is rejected.
+    summary: >-
+      An instance method and a staticmethod resolve to plain functions when
+      accessed through the class, while a classmethod resolves to a bound
+      method object, so all three are pinned rather than assumed equivalent. A
+      functools.wraps decorator chain stays covered because it copies
+      __qualname__ and sets __wrapped__ for extraction to follow.
+    parameters:
+      attribute:
+        type: str
+    """
+    (diagnostic,) = _rejected(getattr(SampleCalc, attribute))
+    assert "methods are not supported" in diagnostic.message
+
+
+def test_class_body_assignment_is_not_detected() -> None:
+    """
+    title: A module-level function assigned in a class body is accepted.
+    summary: >-
+      Documented limitation rather than an oversight: SampleCalc.assigned is a
+      genuine method, but __qualname__ records where the function was defined,
+      so nothing in the extracted source or its metadata reveals the class that
+      now owns it. Closing this needs the decorator layer, where
+      JitFunction.__set_name__ receives the owning class. Pinned so the
+      contract is explicit and a future fix has a test to flip.
+    """
+    extracted = extract_source(SampleCalc.assigned)
+    assert extracted.qualname == "sample_module_level"
+    validate(extracted)
+
+
+def test_decorator_dropping_qualname_is_not_detected() -> None:
+    """
+    title: A method behind a non-wraps decorator is accepted.
+    summary: >-
+      The second documented limitation: a decorator that returns a different
+      function without functools.wraps preserves neither __qualname__ nor
+      __wrapped__, so the replacement reports the decorator's own scope and
+      extraction has no chain to follow back. Pinned for the same reason as the
+      assignment case.
+    """
+    extracted = extract_source(SampleCalc2.replaced)
+    assert extracted.qualname.endswith("<locals>.replacement")
+    validate(extracted)
+
+
+def test_nested_function_is_not_treated_as_a_method() -> None:
+    """
+    title: A function nested in another function is not a method.
+    summary: >-
+      Both are dotted qualified names; only a method's has a class as its
+      second-to-last part, where a nested function has "<locals>".
+    """
+
+    def sample(x: int) -> int:
+        """
+        title: Double the argument.
+        parameters:
+          x:
+            type: int
+        returns:
+          type: int
+        """
+        return x * 2
+
+    assert "<locals>" in sample.__qualname__
+    validate(extract_source(sample))
+
+
+# Every construct outside the v1 subset, paired with the smallest function
+# body that produces it. The parametrized test below asserts each one is
+# routed to its own entry in _UNSUPPORTED_MESSAGES rather than to a more
+# general one, and test_every_unsupported_message_has_a_case asserts this
+# list stays exhaustive as the table grows.
+_UNSUPPORTED_CASES: list[tuple[type[ast.AST], str]] = [
+    (ast.ClassDef, "class C:\n    pass"),
+    (ast.Lambda, "f = lambda: 1"),
+    (ast.FunctionDef, "def inner():\n    return 1"),
+    (ast.AsyncFunctionDef, "async def inner():\n    return 1"),
+    (ast.AsyncFor, "async for i in x:\n    pass"),
+    (ast.AsyncWith, "async with x:\n    pass"),
+    (ast.With, "with x:\n    pass"),
+    (ast.Try, "try:\n    pass\nexcept Exception:\n    pass"),
+    (ast.Raise, "raise ValueError"),
+    (ast.Assert, "assert x"),
+    (ast.Import, "import math"),
+    (ast.ImportFrom, "from math import sqrt"),
+    (ast.Global, "global g"),
+    (ast.Nonlocal, "nonlocal n"),
+    (ast.Yield, "yield x"),
+    (ast.YieldFrom, "yield from x"),
+    (ast.List, "v = [1]"),
+    (ast.Dict, "v = {1: 2}"),
+    (ast.Set, "v = {1}"),
+    (ast.Tuple, "v = (1, 2)"),
+    (ast.ListComp, "v = [i for i in range(x)]"),
+    (ast.DictComp, "v = {i: i for i in range(x)}"),
+    (ast.SetComp, "v = {i for i in range(x)}"),
+    (ast.GeneratorExp, "v = (i for i in range(x))"),
+    (ast.Break, "while x:\n    break"),
+    (ast.Continue, "while x:\n    continue"),
+    (ast.Delete, "del x"),
+    (ast.AnnAssign, "v: int = 1"),
+    (ast.AugAssign, "x += 1"),
+    (ast.JoinedStr, 'v = f"{x}"'),
+    (ast.NamedExpr, "if (v := x):\n    pass"),
+    (ast.Attribute, "v = x.real"),
+    (ast.Subscript, "v = x[0]"),
+    (ast.Match, "match x:\n    case 1:\n        pass"),
+    # Await and Starred are shadowed in the positions one reaches for first:
+    # a bare "await x" is an expression statement and "[*x]" is a list
+    # literal, so each reports the enclosing construct instead. These are the
+    # positions where the node itself is what gets rejected.
+    (ast.Await, "v = await x"),
+    (ast.Starred, "for i in range(*x):\n    pass"),
+]
+
+if _TRY_STAR is not None:  # pragma: no cover - version dependent
+    _UNSUPPORTED_CASES.append(
+        (_TRY_STAR, "try:\n    pass\nexcept* Exception:\n    pass")
+    )
+
+# ast.Slice has a message in the table but no reachable position: a slice can
+# only appear inside a Subscript, and Subscript is rejected without descending
+# into it. The entry is kept as a safety net in case that ever changes, and is
+# named here so the exhaustiveness test stays honest about it.
+_SHADOWED_MESSAGES: frozenset[type[ast.AST]] = frozenset({ast.Slice})
+
+_ASYNC_ONLY: tuple[type[ast.AST], ...] = (
+    ast.Await,
+    ast.AsyncFor,
+    ast.AsyncWith,
+)
+
+
+def _validate_snippet(body: str, is_async: bool = False) -> list[str]:
+    """
+    title: Validate a function built around a body snippet (test helper).
+    summary: >-
+      Builds the smallest function containing the snippet, hand-constructs an
+      ExtractedSource around it, and returns the rejection messages. The source
+      is built as text rather than as a real nested function so that a lint
+      autofix cannot rewrite the construct under test, which has happened
+      before with unused in-function imports.
+    parameters:
+      body:
+        type: str
+        description: The statements to place in the function body.
+      is_async:
+        type: bool
+        description: Whether the containing function must be async.
+    returns:
+      type: list[str]
+    """
+    prefix = "async def" if is_async else "def"
+    indented = "\n".join(
+        f"    {line}" if line else "" for line in body.splitlines()
+    )
+    source = f"{prefix} sample(x: int) -> int:\n{indented}\n    return x\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    with pytest.raises(UnsupportedSyntaxError) as caught:
+        validate(extracted)
+    return [d.message for d in caught.value.diagnostics]
+
+
+@pytest.mark.parametrize(
+    ("node_type", "body"),
+    _UNSUPPORTED_CASES,
+    ids=[node_type.__name__ for node_type, _ in _UNSUPPORTED_CASES],
+)
+def test_unsupported_construct_uses_its_own_message(
+    node_type: type[ast.AST],
+    body: str,
+) -> None:
+    """
+    title: Every unsupported construct reports its own diagnostic message.
+    summary: >-
+      Guards against a construct being swallowed by a more general rule: the
+      message produced must be the one the table assigns to that node type, not
+      one belonging to an enclosing node.
+    parameters:
+      node_type:
+        type: type[ast.AST]
+      body:
+        type: str
+    """
+    messages = _validate_snippet(body, is_async=node_type in _ASYNC_ONLY)
+    assert _UNSUPPORTED_MESSAGES[node_type] in messages
+
+
+def test_every_unsupported_message_has_a_case() -> None:
+    """
+    title: The rejection matrix covers every entry in the message table.
+    summary: >-
+      Adding a message to _UNSUPPORTED_MESSAGES without a matching case here
+      fails this test, so the matrix cannot quietly fall behind the validator.
+    """
+    covered = {node_type for node_type, _ in _UNSUPPORTED_CASES}
+    assert covered | _SHADOWED_MESSAGES == set(_UNSUPPORTED_MESSAGES)
+
+
+def test_walrus_does_not_also_report_a_free_variable() -> None:
+    """
+    title: A rejected walrus binds its name, so it reports exactly once.
+    summary: >-
+      The binding collector records NamedExpr targets precisely so a rejected
+      statement does not also emit a spurious free-variable read for the name
+      it introduces.
+    """
+    messages = _validate_snippet("if (v := x):\n    pass\nv = v + 1")
+    assert messages == ["walrus assignment expressions are not supported"]
+
+
+def test_annotated_assignment_does_not_also_report_a_free_variable() -> None:
+    """
+    title: A rejected annotated assignment binds its target.
+    """
+    messages = _validate_snippet("v: int = 1\nv = v + 1")
+    assert messages == ["annotated assignments are not supported"]
+
+
+def test_augmented_assignment_does_not_also_report_a_free_variable() -> None:
+    """
+    title: A rejected augmented assignment binds its target.
+    """
+    messages = _validate_snippet("v = 1\nv += 1\nv = v + 1")
+    assert messages == ["augmented assignment (e.g. +=) is not supported"]
+
+
+def test_call_nested_inside_range_args_is_rejected() -> None:
+    """
+    title: A non-range call inside range(...)'s arguments is rejected.
+    summary: >-
+      range() itself is the one permitted call, so its arguments still have to
+      be walked rather than trusted.
+    """
+    messages = _validate_snippet("for i in range(abs(x)):\n    pass")
+    assert messages == [
+        "calling functions is not supported (only range() in a for loop)"
+    ]
 
 
 _SAMPLE_GLOBAL = 2
