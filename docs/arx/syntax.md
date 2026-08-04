@@ -4,7 +4,7 @@ Status: draft `0.2.0`
 
 This page documents token-level behavior used by the lexer and editor tooling.
 The normative source is `packages/arx/src/arx/lexer/syntax.json`. Parser and
-semantic rules live in the [language reference](library/index.md).
+semantic rules live in the [language reference](index.md#language-reference).
 
 ## Source files and whitespace
 
@@ -39,7 +39,7 @@ summary: Optional description.
 ````
 
 Docstring placement and schema validation are parser concerns documented in
-[Docstrings](library/docstrings.md).
+[Docstrings](docstrings.md).
 
 ## Identifiers
 

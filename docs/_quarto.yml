@@ -29,7 +29,7 @@ website:
       - text: Home
         href: index.md
       - text: Arx
-        href: library/index.md
+        href: arx/index.md
       - text: ASTx
         href: astx/index.md
       - text: IRx
@@ -38,6 +38,18 @@ website:
         href: pyarx/index.md
       - text: ArxJIT
         href: arxjit/index.md
+      - text: Tools
+        menu:
+          - text: Tooling Overview
+            href: tools/index.md
+          - text: ArxPM
+            href: tools/arxpm.md
+          - text: VS Code
+            href: tools/vscode.md
+          - text: Jupyter Kernel
+            href: tools/jupyter.md
+          - text: Douki
+            href: tools/douki.md
     right:
       - icon: github
         aria-label: ArxLang on GitHub
@@ -50,8 +62,6 @@ website:
       contents:
         - section: Start
           contents:
-            - text: Getting Started
-              href: getting-started.md
             - text: Ecosystem Status
               href: ecosystem.md
             - text: Native Apache Arrow
@@ -83,28 +93,38 @@ website:
       style: floating
       collapse-level: 1
       contents:
-        - text: Language Overview
-          href: library/index.md
-        - text: Lexical Syntax
-          href: syntax.md
+        - text: Arx Overview
+          href: arx/index.md
+        - text: Getting Started
+          href: arx/getting-started.md
+        - section: Compiler
+          contents:
+            - text: Compiler CLI
+              href: arx/compiler-cli.md
+            - text: Projects and Imports
+              href: arx/projects.md
+            - text: Compiled Tests
+              href: arx/testing.md
         - section: Language Reference
           contents:
+            - text: Lexical Syntax
+              href: arx/syntax.md
             - text: Modules
-              href: library/modules.md
+              href: arx/modules.md
             - text: Functions
-              href: library/functions.md
+              href: arx/functions.md
             - text: Classes
-              href: library/classes.md
+              href: arx/classes.md
             - text: Data Types
-              href: library/datatypes.md
+              href: arx/datatypes.md
             - text: Built-in Types
-              href: library/built-in-types.md
+              href: arx/built-in-types.md
             - text: Collections and Arrow
-              href: library/collections.md
+              href: arx/collections.md
             - text: Control Flow
-              href: library/control-flow.md
+              href: arx/control-flow.md
             - text: Docstrings
-              href: library/docstrings.md
+              href: arx/docstrings.md
         - section: Python API
           contents:
             - auto: api/arx
@@ -198,6 +218,27 @@ website:
         - section: Python API
           contents:
             - auto: api/arxjit
+    - id: tools
+      title: Tools
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Tooling Overview
+          href: tools/index.md
+        - section: Project Workflows
+          contents:
+            - text: ArxPM
+              href: tools/arxpm.md
+        - section: Editors and Notebooks
+          contents:
+            - text: VS Code Extension
+              href: tools/vscode.md
+            - text: Jupyter Kernel
+              href: tools/jupyter.md
+        - section: Documentation
+          contents:
+            - text: Douki
+              href: tools/douki.md
   page-footer:
     left: "Copyright &copy; 2022-2026 ArxLang"
     center:

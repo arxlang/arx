@@ -30,7 +30,7 @@ provides runtime components for Apache Arrow-backed collections.
 
 <div class="arx-hero-actions">
 
-[Getting started](getting-started.md){.btn .btn-primary}
+[Getting started](arx/getting-started.md){.btn .btn-primary}
 [Apache Arrow support](apache-arrow.md){.btn .btn-outline-primary}
 
 </div>
@@ -133,7 +133,7 @@ work. The labels below summarize the current maturity of each primary package.
 The source language, lexer, parser, project model, test runner, and native
 compiler CLI.
 
-[Arx documentation →](library/index.md)
+[Arx documentation →](arx/index.md)
 
 </div>
 
@@ -186,6 +186,72 @@ A developing decorator route from a restricted Python subset to ASTx and IRx;
 decorated calls still use Python fallback today.
 
 [ArxJIT documentation →](arxjit/index.md)
+
+</div>
+</div>
+</div>
+
+<div class="arx-home-section">
+<div class="arx-section-heading">
+
+## Related tools
+
+These projects provide project management, editor integration, notebook
+execution, and structured docstring tooling. They are maintained in separate
+repositories.
+
+</div>
+
+<div class="arx-package-grid">
+<div class="arx-package-card">
+
+<span class="arx-status">Project workflows</span>
+
+### ArxPM
+
+Manages Arx projects, environments, dependencies, builds, runs, packaging, and
+publishing workflows.
+
+[ArxPM documentation →](tools/arxpm.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Syntax highlighting</span>
+
+### VS Code extension
+
+Provides TextMate highlighting, language configuration, file associations, and
+icons for Arx source files.
+
+[VS Code documentation →](tools/vscode.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Wrapper kernel</span>
+
+### Jupyter kernel
+
+Compiles notebook cells with the Arx CLI and returns native program output to
+Jupyter.
+
+[Jupyter kernel documentation →](tools/jupyter.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Docstring tooling</span>
+
+### Douki
+
+Validates and synchronizes YAML docstrings. Arx uses the Douki structure for
+source and Python documentation.
+
+[Douki documentation →](tools/douki.md)
 
 </div>
 </div>

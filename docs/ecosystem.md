@@ -1,8 +1,8 @@
 # Ecosystem Status
 
-This page describes the current source tree rather than an aspirational product
-map. Core packages are pre-production unless stated otherwise. AIX is included
-for completeness but is a toy project, not a promoted product.
+This page describes the current monorepo packages and related ArxLang tools.
+Core compiler packages are pre-production unless stated otherwise. AIX is
+included for completeness but is a toy project, not a promoted product.
 
 ## Status summary
 
@@ -17,6 +17,20 @@ for completeness but is a toy project, not a promoted product.
 
 Distribution names, Python imports, and CLIs are listed separately where they
 are not identical.
+
+## Related repositories
+
+These tools are maintained outside the main Arx monorepo:
+
+| Project                              | Role                          | Current state                                                                                          |
+| ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [ArxPM](tools/arxpm.md)              | project and workspace manager | implements project, environment, build, packaging, and publishing workflows; compatibility is evolving |
+| [VS Code extension](tools/vscode.md) | editor support                | syntax highlighting and language configuration; no language server                                     |
+| [Jupyter kernel](tools/jupyter.md)   | notebook support              | wrapper kernel implementation; compiler command integration still requires alignment                   |
+| [Douki](tools/douki.md)              | YAML docstring tooling        | standalone validation, synchronization, and migration tool used by Arx documentation conventions       |
+
+See the [tooling overview](tools/index.md) for the boundary between these
+projects and the compiler.
 
 ## Arx
 

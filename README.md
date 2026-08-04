@@ -109,7 +109,7 @@ and lockstep versions.
 - [Getting started](https://arxlang.org/getting-started.html)
 - [Ecosystem status](https://arxlang.org/ecosystem.html)
 - [Apache Arrow support](https://arxlang.org/apache-arrow.html)
-- [Arx language reference](https://arxlang.org/library/)
+- [Arx language and compiler](https://arxlang.org/arx/)
 - [ASTx](https://arxlang.org/astx/)
 - [IRx](https://arxlang.org/irx/)
 - [Roadmap](https://arxlang.org/roadmap.html)
