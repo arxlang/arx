@@ -1,82 +1,112 @@
-# AIX MVP Syntax
+# AIX MVP syntax
 
-AIX uses explicit symbolic block terminators. Indentation improves readability
-but does not define block structure.
+AIX is a Unicode-first, indentation-insensitive frontend. Whitespace and
+newlines improve readability, but `∎` or `{...}` determines function block
+boundaries. The current grammar is an experimental MVP and can change.
 
 ## Definitions
 
+`∴` begins a top-level definition. A function places typed parameters in
+semantic brackets and may declare a return type:
+
 ```aix
-∴ identity ⟦ value:ℕ ⟧ → ℕ
-  ⊢ value
+∴ add ⟦ left:ℤ, right:ℤ ⟧ → ℤ
+  ⊢ left + right
 ∎
 ```
 
-- `∴` begins a function or constant definition.
-- `⟦...⟧` contains typed parameters and is also used for calls.
-- `→` introduces a function return type.
-- `∎` terminates a pretty-layout block.
-- `{...}` terminates a compact inline block; `;` separates statements.
+Omitting `→ type` produces a unit-returning function. A top-level constant uses
+`:` and `≔` instead of a parameter block:
+
+```aix
+∴ answer:ℕ ≔ 42 ∎
+```
 
 ## Statements
 
+| Form                  | Current meaning                                              |
+| --------------------- | ------------------------------------------------------------ |
+| `⊢ value`             | Return `value`                                               |
+| `⊢ condition ⇒ value` | Return `value` when `condition` is true                      |
+| `⌁ name:T ≔ value`    | Create a mutable typed local binding                         |
+| `⌁ name ≔ value`      | Create a mutable local with literal inference when available |
+| `name ≔ value`        | Assign an existing local                                     |
+| `⟣ value`             | Print a value through the shared ASTx/IRx print node         |
+| `expression`          | Expression statement                                         |
+
+The conditional-return form builds an `if` with no `else`; it is not a general
+conditional statement.
+
+## Blocks and separators
+
+Pretty form ends with `∎`:
+
 ```aix
 ∴ main ⟦⟧ → ∅
-  ⌁ answer:ℕ ≔ 42
-  ⟣ answer
+  ⟣ "hello"
 ∎
 ```
 
-- `⌁ name:T ≔ value` declares a local binding.
-- `name ≔ value` assigns an existing local binding.
-- `⟣ expression` emits a value through the print node.
-- `⊢ expression` returns a value.
-- `⊢ condition ⇒ expression` conditionally returns an expression.
+Compact form uses braces and optional semicolons:
 
-The conditional-return form is an `if` with no `else`, not a general conditional
-statement.
+```aix
+∴main⟦⟧→∅{⌁x:ℕ≔41;⟣x+1}
+```
 
-## Calls and operators
+## Calls and expressions
 
-Calls use semantic brackets, for example `fib⟦10⟧`. Parentheses only group an
-expression. Supported operators are `∨`, `∧`, equality/comparison operators,
-`+`, `-`, `*`, `×`, `/`, `%`, and right-associative `^`; unary `-` and `¬` are
-also supported.
+Function calls also use semantic brackets: `add⟦1, 2⟧`. Parentheses group
+expressions but do not call functions.
 
-## Scalar types
+Supported operators, from lower to higher precedence:
 
-The MVP recognizes symbolic names including:
+1. `∨`
+2. `∧`
+3. `=`, `==`, `≠`, `!=`, `<`, `>`, `≤`, `>=`, `≥`, `<=`, `≡`, `≅`
+4. `+`, `-`
+5. `*`, `×`, `/`, `%`
+6. `^` (right associative)
 
-| Symbol | Meaning                                                 |
-| ------ | ------------------------------------------------------- |
-| `ℕ`    | natural/integer value                                   |
-| `ℤ`    | integer value                                           |
-| `ℝ`    | real value                                              |
-| `ℂ`    | Reserved complex type; currently rejected by the parser |
-| `𝔹`    | Boolean value                                           |
-| `∅`    | unit / no meaningful value                              |
+Unary `-` and `¬` are supported. `≡` and `≅` currently lower to equality.
 
-The ASCII scalar spellings `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`,
-`f32`, `f64`, `bool`/`boolean`, and `str`/`string` are also accepted. Only
-mappings exercised by the MVP backend should be treated as stable.
+## Types and literals
 
-Literals include integers, decimal floats, strings, `⊤`/`true`, `⊥`/`false`, and
-`∅`.
+| AIX spelling              | Current ASTx type              |
+| ------------------------- | ------------------------------ |
+| `ℕ`, `ℤ`                  | `Int64`                        |
+| `ℝ`                       | `Float64`                      |
+| `𝔹`                       | `Boolean`                      |
+| `∅`                       | `NoneType`                     |
+| `i8`, `i16`, `i32`, `i64` | corresponding signed integer   |
+| `u8`, `u16`, `u32`, `u64` | corresponding unsigned integer |
+| `f32`, `f64`              | corresponding float            |
+| `bool`, `boolean`         | `Boolean`                      |
+| `str`, `string`           | `String`                       |
 
-## Metadata and comments
+`ℂ` is tokenized as a primitive type but intentionally rejected because the
+current IRx backend has no complex-number lowering.
 
-`κ⟦...⟧` introduces a metadata block. Metadata is parsed but ignored after
-parsing in the current implementation. Line comments start with `⍝`.
+Literals include decimal integers and floats, single- or double-quoted strings,
+`⊤`/`true`, `⊥`/`false`, and `∅`. Line comments begin with `⍝`.
 
-## Reserved operators
+Unicode identifiers are normalized to NFC by the lexer.
 
-APL-inspired operators such as `⍴`, `⍳`, `¨`, `∘`, `↑`, `↓`, `⍋`, `⍒`, `∊`, and
-`∪` are tokens reserved for future designs. Using one in a parsed expression
-raises an explicit unsupported-feature error.
+## Metadata
 
-Index brackets `⟬...⟭`, field access, `λ`, tuple brackets `⟨...⟩`, and ranges
-are also reserved without parser/backend semantics.
+`κ⟦...⟧` introduces a balanced metadata block before a definition:
 
-## Current limits
+```aix
+κ⟦ι: hello.v1, χ: example⟧
+∴ main ⟦⟧ → ∅
+  ⟣ "metadata parsed"
+∎
+```
 
-Imports, classes, templates, exceptions, comprehensive control flow, and
-Arrow-backed collection types do not yet have an AIX surface.
+The parser currently accepts and skips metadata content; it does not attach it
+to ASTx or IRx output.
+
+## Reserved, not implemented
+
+Index brackets `⟬...⟭`, field access, `λ`, tuple brackets `⟨...⟩`, ranges, and
+the APL-inspired operators documented separately are lexed or reserved but do
+not have MVP parser/backend semantics.

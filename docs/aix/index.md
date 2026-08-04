@@ -52,5 +52,10 @@ define Tensor, DataFrame, Series, RecordBatch, or other Arrow-backed syntax.
 Those features should be described symbolically before the frontend exposes them
 rather than copied mechanically from Arx.
 
-Read the [AIX syntax](syntax.md) for the current forms and the
-[ecosystem status](../ecosystem.md) for project boundaries.
+Continue with:
+
+- [AIX syntax](syntax.md)
+- [MVP grammar](grammar.md)
+- [Examples](examples.md)
+- [Reserved APL-inspired operators](apl-inspired-operators.md)
+- [Ecosystem status](../ecosystem.md) for project boundaries

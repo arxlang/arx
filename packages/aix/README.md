@@ -57,6 +57,7 @@ and LLVM. It does not yet expose Arx imports, classes, templates, Tensors,
 DataFrames, RecordBatches, or other Arrow-backed language types. Native Arrow
 support remains available in the shared IRx backend for future AIX syntax.
 
-See `packages/aix/docs/` for the grammar and lexical reference.
+Canonical documentation, including the grammar and lexical reference, is at
+<https://arxlang.org/aix/>.
 
 License: Apache-2.0.

@@ -41,6 +41,7 @@ Not implemented:
 - signature inference and artifact caching
 - array, Tensor, or Apache Arrow signatures
 
-See `docs/design/python-to-astx.md` for the staged design.
+See the [staged design](https://arxlang.org/arxjit/design.html) for the
+Python-to-ASTx pipeline.
 
 License: Apache-2.0.

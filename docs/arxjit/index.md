@@ -44,3 +44,6 @@ Python function
 
 Arrow-backed arrays and tensors are intentionally deferred until scalar
 compilation and runtime marshalling are stable.
+
+See the [Python-to-ASTx design](design.md) for the implemented frontend stages
+and remaining compilation work.

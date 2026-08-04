@@ -107,12 +107,20 @@ website:
             href: pyarx/index.md
           - text: ArxJIT
             href: arxjit/index.md
+          - text: ArxJIT Design
+            href: arxjit/design.md
       - section: AIX
         contents:
           - text: Overview
             href: aix/index.md
           - text: Syntax
             href: aix/syntax.md
+          - text: Grammar
+            href: aix/grammar.md
+          - text: Examples
+            href: aix/examples.md
+          - text: Reserved Operators
+            href: aix/apl-inspired-operators.md
       - text: API Docs
         href: api/index.md
       - text: Syntax

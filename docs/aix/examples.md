@@ -1,7 +1,7 @@
 # AIX examples
 
-Runnable samples live in [`packages/aix/examples`](../examples). From the
-repository root, inspect or execute them with:
+Runnable samples live in `packages/aix/examples` in the source checkout. From
+the repository root, inspect or execute them with:
 
 ```bash
 aix --show-tokens packages/aix/examples/hello.aix
