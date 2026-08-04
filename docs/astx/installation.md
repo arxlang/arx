@@ -1,58 +1,38 @@
-# Installation
+# Installing ASTx
 
-## Stable release
-
-To install ASTx, run this command in your terminal:
+## Published package
 
 ```bash
-$ pip install astx
+pip install astx
 ```
 
-This is the preferred method to install ASTx, as it will always install the most
-recent stable release.
+ASTx supports Python 3.10 or newer.
 
-### Optional dependencies
-
-For ASCII visualization of the AST in the console (using `mermaid-ascii`),
-install with the `console` extra:
+For console ASCII rendering through `mermaid-ascii`:
 
 ```bash
-$ pip install 'astx[console]'
+pip install 'astx[console]'
 ```
 
-Or install all optional dependencies at once:
+The `all` extra currently installs the same optional visualization dependency:
 
 ```bash
-$ pip install 'astx[all]'
+pip install 'astx[all]'
 ```
 
-Without the `console` extra, the console representation falls back to YAML
-output.
+Without the optional console dependency, console rendering falls back to YAML.
 
-If you don't have [pip](https://pip.pypa.io) installed, this
-[Python installation guide](http://docs.python-guide.org/en/latest/starting/installation/)
-can guide you through the process.
+## Source checkout
 
-## From sources
-
-The sources for ASTx can be downloaded from the
-[Github repo](https://github.com/arxlang/arx).
-
-You can either clone the public repository:
+ASTx is developed in the Arx monorepo:
 
 ```bash
-$ git clone https://github.com/arxlang/arx
-$ cd arx
+git clone https://github.com/arxlang/arx.git
+cd arx
+mamba env create --file conda/dev.yaml
+conda activate arx
+poetry install
+makim astx.unittests
 ```
 
-Or download the [tarball](https://github.com/arxlang/arx/tarball/main):
-
-```bash
-$ curl -OJL https://github.com/arxlang/arx/tarball/main
-```
-
-Once you have a copy of the source, you can install it with:
-
-```bash
-$ poetry install
-```
+The root Poetry project installs `packages/astx` as an editable dependency.

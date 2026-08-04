@@ -1,7 +1,7 @@
 [project]
 name = "arx-dev"
 version = "1.23.1"  # semantic-release
-description = "Arx metapackage for development of Arx, IRx, and ASTx."
+description = "Development metaproject for the ArxLang compiler ecosystem."
 readme = "docs/index.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}

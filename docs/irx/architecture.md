@@ -308,9 +308,10 @@ That split keeps the data-container roles explicit:
 
 - `tensor` is the homogeneous N-dimensional semantic abstraction
 - `array` remains the one-dimensional Arrow array/runtime abstraction for
-  column-like values and future `Series` work
-- future `DataFrame` support should wrap heterogeneous named columns backed by
-  Arrow C++ `arrow::Table` storage
+  low-level columnar values
+- `DataFrame` wraps heterogeneous named columns backed by Arrow C++
+  `arrow::Table`, while `Series` uses `arrow::ChunkedArray`
+- `record_batch` provides a separate Arrow RecordBatch and IPC streaming bridge
 - `buffer/view` remains the low-level layout and ownership substrate
 
 Current tensor lowering stays intentionally conservative:

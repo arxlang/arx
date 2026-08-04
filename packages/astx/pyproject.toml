@@ -1,7 +1,7 @@
 [project]
 name = "astx"
 version = "1.23.1"  # semantic-release
-description = "ASTx is an agnostic expression structure for AST."
+description = "Language-agnostic typed abstract syntax tree model."
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}

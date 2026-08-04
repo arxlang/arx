@@ -16,6 +16,7 @@ in IRx rather than in Arx-local code.
 - [Classes](classes.md)
 - [Data Types](datatypes.md)
 - [Built-in Types](built-in-types.md)
+- [Collections and Apache Arrow](collections.md)
 - [Control Flow](control-flow.md)
 - [Docstrings](docstrings.md)
 
@@ -27,6 +28,7 @@ This reference currently focuses on:
 - function definitions and calls
 - type system and annotations
 - built-in type reference
+- lists and native Arrow-backed tensors, DataFrames, and Series
 - class declarations and member modifiers
 - control-flow syntax
 - docstring placement rules

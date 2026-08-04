@@ -16,7 +16,9 @@ summary: Optional summary value.
 ## Supported Targets (Current)
 
 - module docstring
+- class docstring
 - function docstring
+- method docstring
 
 ## Required Field
 
@@ -80,11 +82,20 @@ fn main() -> i32:
   ```
 ````
 
+## Class and method docstrings
+
+A class docstring may appear as the first item in an indented class body, before
+fields or methods. Method docstrings follow the same first-body-item rule as
+function docstrings.
+
+Abstract methods can use a docstring-only body so the docstring still belongs to
+the method block.
+
 ## Current Compiler Behavior
 
 Docstrings are currently lexed and validated for:
 
-- placement rules (module/function positions)
+- placement rules (module, class, function, and method positions)
 - Douki YAML schema conformance
 
 After validation, they are intentionally ignored during AST/IR generation until

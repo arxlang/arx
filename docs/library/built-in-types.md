@@ -99,7 +99,7 @@ annotations.
 
 ## Collections, tensors, and dataframes
 
-Arx exposes two public collection constructors:
+Arx exposes the following public collection type families:
 
 - `list[T]` for generic collection values
 - `tensor[T, N]` for fixed-shape 1D numeric tensors
@@ -206,4 +206,6 @@ fn type_name(value: Count) -> str:
 ## See Also
 
 - [Data Types](datatypes.md) for annotation rules and placement
+- [Collections and Apache Arrow](collections.md) for runtime storage and current
+  collection limits
 - [Functions](functions.md) for function signatures and returns

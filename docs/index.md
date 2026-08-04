@@ -1,62 +1,84 @@
 # ArxLang
 
-Arx is a multi-purpose compiler that aims to provide native list, tensor, and
-dataframe abstractions backed internally by IRx runtime support. It uses the
-power of [LLVM](https://llvm.org/) to provide multi-architecture machine target
-code generation.
+ArxLang is an experimental compiler ecosystem for statically typed,
+data-oriented programs. The Arx frontend turns indentation-based source into
+ASTx nodes; IRx performs semantic analysis, lowers the program to LLVM IR, and
+builds native artifacts.
 
-The language syntax is influenced by Python, C++, and YAML, featuring
-significant whitespace, static typing (planned), and a focus on data-oriented
-computing.
+## Apache Arrow, natively
 
-## Quick Example
+Apache Arrow is not an optional serialization afterthought in ArxLang. IRx owns
+a native C++ runtime that stores and exchanges data through Arrow containers:
+
+- arrays use Arrow C++ builders and Arrow C Data interoperability
+- tensors use `arrow::Tensor`
+- DataFrames use `arrow::Table`
+- Series use `arrow::ChunkedArray`
+- RecordBatch streams use Arrow IPC in files or memory buffers
+
+Generated LLVM calls a stable IRx-owned C ABI, keeping Arrow ownership and
+container implementation in native runtime code. Native artifacts are linked
+only when the compilation unit activates the corresponding runtime feature.
+
+[Explore native Apache Arrow support](apache-arrow.md){.btn .btn-primary}
+[View ecosystem status](ecosystem.md){.btn .btn-secondary}
+
+## Quick example
 
 ````arx
 ```
-title: Quick average example
-summary: Demonstrates a function with module and function docstrings.
+title: Arrow-backed DataFrame example
+summary: Builds named columns and reads native table metadata.
 ```
-fn average(x: f32, y: f32) -> f32:
-  ```
-  title: average
-  summary: Returns the arithmetic mean of x and y.
-  ```
-  return (x + y) * 0.5
+
+fn main() -> i32:
+  var rows: dataframe[id: i32, score: f64] = dataframe({
+    id: [1, 2, 3],
+    score: [0.5, 0.8, 1.0],
+  })
+  var scores: series[f64] = rows.score
+  return cast(rows.nrows(), i32)
 ````
 
 ```bash
-arx --show-llvm-ir examples/average.x
+arx --show-llvm-ir example.x
+arx --run example.x
 ```
 
-See the [Getting Started](getting-started.md) guide for installation and more
-examples. For language details, see the [Library Reference](library/index.md).
+## Compiler pipeline
 
-## Architecture Boundary
+```text
+Arx or AIX source
+  -> frontend lexer and parser
+  -> ASTx nodes
+  -> IRx semantic analysis
+  -> LLVM lowering
+  -> on-demand native runtime features, including Arrow C++
+  -> object file or executable
+```
 
-Arx is the surface-language front end. It owns source syntax, lexing, parsing,
-CLI flow, tests, examples, and docs. IRx owns the AST model (`astx`), semantic
-analysis, lowering, and backend code generation. When a new feature needs AST or
-lowering support, that support should be added in IRx first and then consumed
-from Arx.
+ASTx, IRx, and the language frontends have deliberately separate ownership:
 
-## Key Features
+- **ASTx** models syntax trees but does not parse source or generate code.
+- **IRx** owns semantics, lowering, runtime features, and LLVM code generation.
+- **Arx** and **AIX** own their source syntax, lexers, parsers, and CLIs.
+- **PyArx** and **ArxJIT** are developing Python-facing entry points.
 
-- **LLVM-powered** -- compiles to native machine code via LLVM
-- **Python-like syntax** -- indentation-based blocks, familiar keywords
-- **Lists, tensors, and dataframes** -- generic collections, Arrow-backed
-  numeric tensors with compiler-known shapes, and Arrow-backed named-column
-  DataFrames
-- **Multiple output modes** -- inspect tokens, AST, LLVM IR, or compile to
-  object files
+## Current status
 
-## Project Status
+The project is a pre-production prototype. Arx can compile functions, typed
+variables, control flow, imports, classes, templates, lists, tensors,
+DataFrames, assertions, and tests. Supported behavior is covered by the local
+test suites, but language and package APIs are not yet stable.
 
-Arx is currently a prototype built on the
-[Kaleidoscope](https://llvm.org/docs/tutorial/) tutorial compiler. It supports
-functions, control flow (`if`/`else`, `for`), variables, and extern
-declarations. See the [Roadmap](roadmap.md) for what's planned next.
+The [ecosystem status](ecosystem.md) distinguishes implemented behavior from
+planned work for all six subprojects. The [roadmap](roadmap.md) tracks only
+remaining work rather than presenting completed features as pending.
 
-## Arx Enhancement Proposals
+## Next steps
 
-Any change to the language syntax should be done using an Enhancement Proposal
-via the [arx-proposals](https://github.com/arxlang/arx-proposals) repository.
+- [Install Arx and compile a program](getting-started.md)
+- [Read the language reference](library/index.md)
+- [Understand ASTx](astx/index.md)
+- [Understand IRx](irx/index.md)
+- [Contribute](contributing.md)
