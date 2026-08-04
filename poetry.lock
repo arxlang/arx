@@ -2,8 +2,8 @@
 
 [[package]]
 name = "airx"
-version = "0.1.0"
-description = "AIX is an AI-oriented symbolic programming language frontend"
+version = "1.24.0"
+description = "Toy symbolic-language experiment built on ASTx and IRx"
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
@@ -11,10 +11,10 @@ files = []
 develop = true
 
 [package.dependencies]
-astx = "1.23.1"
+astx = "1.24.0"
 jsonschema = ">=4.0.0"
 packaging = ">=23"
-pyirx = "1.23.1"
+pyirx = "1.24.0"
 pyyaml = ">=4"
 tomli = {version = ">=2.0.0", markers = "python_version < \"3.11\""}
 types-pyyaml = ">=6.0.12.20250516"
@@ -190,8 +190,8 @@ pyarrow = ">=24.0.0,<25.0.0"
 
 [[package]]
 name = "arxjit"
-version = "1.23.1"
-description = "arxjit is a Numba-style JIT decorator that compiles a subset of pure Python through the Arx compiler stack."
+version = "1.24.0"
+description = "ArxJIT is a developing Numba-style JIT frontend for the Arx compiler stack."
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
@@ -199,9 +199,9 @@ files = []
 develop = true
 
 [package.dependencies]
-astx = "1.23.1"
+astx = "1.24.0"
 plum-dispatch = ">=2"
-pyirx = "1.23.1"
+pyirx = "1.24.0"
 
 [package.source]
 type = "directory"
@@ -209,8 +209,8 @@ url = "packages/arxjit"
 
 [[package]]
 name = "arxlang"
-version = "1.23.1"
-description = "Arx is a compiler built with llvm"
+version = "1.24.0"
+description = "LLVM-based language compiler with native Apache Arrow-backed collections."
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
@@ -218,10 +218,10 @@ files = []
 develop = true
 
 [package.dependencies]
-astx = "1.23.1"
+astx = "1.24.0"
 jsonschema = ">=4.0.0"
 packaging = ">=23"
-pyirx = "1.23.1"
+pyirx = "1.24.0"
 pyyaml = ">=4"
 tomli = {version = ">=2.0.0", markers = "python_version < \"3.11\""}
 types-pyyaml = ">=6.0.12.20250516"
@@ -248,8 +248,8 @@ test = ["astroid (>=2,<5)", "pytest (<9.0)", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "astx"
-version = "1.23.1"
-description = "ASTx is an agnostic expression structure for AST."
+version = "1.24.0"
+description = "Language-agnostic typed abstract syntax tree model."
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
@@ -2927,7 +2927,7 @@ files = [
 
 [[package]]
 name = "pyarx"
-version = "1.23.1"
+version = "1.24.0"
 description = "PyArx is a Python API layer for the Arx compiler."
 optional = false
 python-versions = ">=3.10,<4"
@@ -2936,7 +2936,7 @@ files = []
 develop = true
 
 [package.dependencies]
-arxlang = "1.23.1"
+arxlang = "1.24.0"
 
 [package.source]
 type = "directory"
@@ -2972,8 +2972,8 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyirx"
-version = "1.23.1"
-description = "IRx"
+version = "1.24.0"
+description = "Semantic analysis, LLVM lowering, and native runtime for ASTx programs."
 optional = false
 python-versions = ">=3.10,<4"
 groups = ["main"]
@@ -2982,7 +2982,7 @@ develop = true
 
 [package.dependencies]
 arx-arrowcpp-sources = "24.0.0"
-astx = "1.23.1"
+astx = "1.24.0"
 atpublic = ">=4.0"
 llvmlite = ">=0.44.0"
 plum-dispatch = ">=2.2.2"

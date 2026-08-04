@@ -1,6 +1,30 @@
 # Release Notes
 ---
 
+# [1.24.0](https://github.com/arxlang/arx/compare/1.23.1...1.24.0) (2026-08-04)
+
+
+### Bug Fixes
+
+* Improve the syntax.json definition ([#83](https://github.com/arxlang/arx/issues/83)) ([7e2eccc](https://github.com/arxlang/arx/commit/7e2ecccd4202953dd3397427152170a5be253b31))
+
+
+### Features
+
+* Add initial version of aix ([#84](https://github.com/arxlang/arx/issues/84)) ([008a7dd](https://github.com/arxlang/arx/commit/008a7dd70b831769c2f8a9c440bbd73976efc311))
+* **arxjit:** add clear errors when source extraction is unavailable ([#98](https://github.com/arxlang/arx/issues/98)) ([0cc3c12](https://github.com/arxlang/arx/commit/0cc3c128f9c8f1923247dc224df8f6edf44701c2))
+* **arxjit:** add Python-subset validation for decorated functions ([#99](https://github.com/arxlang/arx/issues/99)) ([8fb8ffc](https://github.com/arxlang/arx/commit/8fb8ffc620a9c2825f4a3d7c41a356c7ebc84468))
+* **arxjit:** add scalar type and signature API ([#91](https://github.com/arxlang/arx/issues/91)) ([7442764](https://github.com/arxlang/arx/commit/744276484a27e31783682eb6408f2d536948d3d2))
+* **arxjit:** add source extraction for decorated functions ([#96](https://github.com/arxlang/arx/issues/96)) ([f2580d5](https://github.com/arxlang/arx/commit/f2580d5c26f8f781146490d066574e29fc260712))
+* **arxjit:** add source extraction for decorated functions ([#96](https://github.com/arxlang/arx/issues/96)) ([77536dc](https://github.com/arxlang/arx/commit/77536dcda25bcd64f5d1574b61045aab1b3e5d75))
+* **arxjit:** add structured diagnostics and the public error hierarchy ([#95](https://github.com/arxlang/arx/issues/95)) ([b6b35e0](https://github.com/arxlang/arx/commit/b6b35e06c0b52a50cdeaa7fae48c9804432d1cf2))
+* **arxjit:** add the [@jit](https://github.com/jit) decorator + Python-to-ASTx design notes ([#92](https://github.com/arxlang/arx/issues/92)) ([f3e8f3b](https://github.com/arxlang/arx/commit/f3e8f3bc935ae5a39a2b1718b161c8dc5e287607))
+* **arxjit:** reject methods and make the rejection matrix exhaustive ([#102](https://github.com/arxlang/arx/issues/102)) ([2fcd661](https://github.com/arxlang/arx/commit/2fcd6611e45c1bbb90dcc076ed3e860260060a17))
+* **arxjit:** scaffold arxjit JIT decorator package ([#90](https://github.com/arxlang/arx/issues/90)) ([48508c3](https://github.com/arxlang/arx/commit/48508c363329f88ab90f220271098f915417a79f))
+* **irx:** add utf8 and large_utf8 string columns to record batch ([#93](https://github.com/arxlang/arx/issues/93)) ([31c409c](https://github.com/arxlang/arx/commit/31c409c11f00a25e21bbecb1729da65e96de6e8c))
+* **pyarx:** add error and diagnostic layer ([#86](https://github.com/arxlang/arx/issues/86)) ([3c3602c](https://github.com/arxlang/arx/commit/3c3602c72fd4d849a694033d06e72559737cfca5))
+* scaffold pyarx Python API package ([#85](https://github.com/arxlang/arx/issues/85)) ([336eabf](https://github.com/arxlang/arx/commit/336eabf42eac59ce03fe7794b63e9b7788be94c9))
+
 ## [1.23.1](https://github.com/arxlang/arx/compare/1.23.0...1.23.1) (2026-04-29)
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "pyarx"
-version = "1.23.1"  # semantic-release
+version = "1.24.0"  # semantic-release
 description = "PyArx is a Python API layer for the Arx compiler."
 readme = "README.md"
 authors = [
@@ -9,7 +9,7 @@ authors = [
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
-  "arxlang == 1.23.1",  # semantic-release
+  "arxlang == 1.24.0",  # semantic-release
 ]
 
 [build-system]
