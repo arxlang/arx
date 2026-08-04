@@ -23,6 +23,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -45,9 +80,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-bb1a7616eef61b9235a650cadac21922.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-e58b94d5b32bfa7fd060a1e8a1552805.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -315,6 +350,18 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Getting Started</span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ecosystem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Ecosystem Status</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../apache-arrow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Apache Arrow</span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
@@ -358,6 +405,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../library/built-in-types.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Built-in Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/collections.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Collections and Arrow</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -550,6 +603,76 @@ ul.task-list li input[type="checkbox"] {
 </li>
       </ul>
   </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Python Tools</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pyarx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">PyArx</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arxjit/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ArxJIT</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arxjit/design.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ArxJIT Design</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">AIX</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/syntax.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Syntax</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/grammar.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Grammar</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/examples.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Examples</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/apl-inspired-operators.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reserved Operators</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/index.html" class="sidebar-item-text sidebar-link">
@@ -620,18 +743,12 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#astx-library-a-versatile-toolkit-for-language-representation" id="toc-astx-library-a-versatile-toolkit-for-language-representation" class="nav-link active" data-scroll-target="#astx-library-a-versatile-toolkit-for-language-representation">ASTx Library: A Versatile Toolkit for Language Representation</a>
+  <li><a href="#astx" id="toc-astx" class="nav-link active" data-scroll-target="#astx">ASTx</a>
   <ul class="collapse">
-  <li><a href="#core-features" id="toc-core-features" class="nav-link" data-scroll-target="#core-features">Core Features</a>
-  <ul class="collapse">
-  <li><a href="#expressive-language-components" id="toc-expressive-language-components" class="nav-link" data-scroll-target="#expressive-language-components">1. <strong>Expressive Language Components</strong></a></li>
-  <li><a href="#symbol-table-class" id="toc-symbol-table-class" class="nav-link" data-scroll-target="#symbol-table-class">2. <strong>Symbol Table Class</strong></a></li>
-  <li><a href="#language-agnostic-design" id="toc-language-agnostic-design" class="nav-link" data-scroll-target="#language-agnostic-design">3. <strong>Language Agnostic Design</strong></a></li>
-  <li><a href="#integration-with-projects-like-irx" id="toc-integration-with-projects-like-irx" class="nav-link" data-scroll-target="#integration-with-projects-like-irx">4. <strong>Integration with Projects like IRx</strong></a></li>
-  </ul></li>
-  <li><a href="#transpiler-system" id="toc-transpiler-system" class="nav-link" data-scroll-target="#transpiler-system">Transpiler System</a></li>
-  <li><a href="#why-choose-astx" id="toc-why-choose-astx" class="nav-link" data-scroll-target="#why-choose-astx">Why Choose ASTx?</a></li>
-  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">Getting Started</a></li>
+  <li><a href="#current-capabilities" id="toc-current-capabilities" class="nav-link" data-scroll-target="#current-capabilities">Current capabilities</a></li>
+  <li><a href="#architecture-boundary" id="toc-architecture-boundary" class="nav-link" data-scroll-target="#architecture-boundary">Architecture boundary</a></li>
+  <li><a href="#small-example" id="toc-small-example" class="nav-link" data-scroll-target="#small-example">Small example</a></li>
+  <li><a href="#license" id="toc-license" class="nav-link" data-scroll-target="#license">License</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -643,62 +760,59 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="astx-library-a-versatile-toolkit-for-language-representation" class="level1">
-<h1>ASTx Library: A Versatile Toolkit for Language Representation</h1>
-<p>ASTx is a groundbreaking library designed to encapsulate language components in an agnostic and pythonic way. It provides a comprehensive set of classes and functionalities, allowing developers to articulate the core elements of any programming language.</p>
+<section id="astx" class="level1">
+<h1>ASTx</h1>
+<p>ASTx is the language-agnostic abstract syntax tree model shared by the ArxLang ecosystem. It lets frontends and compiler tools exchange typed Python objects without sharing a source grammar.</p>
+<blockquote class="blockquote">
+<p>Status: functional and evolving. ASTx can model constructs that IRx or a particular source language does not yet lower.</p>
+</blockquote>
+<section id="current-capabilities" class="level2">
+<h2 class="anchored" data-anchor-id="current-capabilities">Current capabilities</h2>
 <ul>
-<li>License: BSD 3 Clause</li>
-<li>Documentation: https://arxlang.org/astx/</li>
+<li>common AST base classes, source locations, parents, and structured output</li>
+<li>identifiers, variables, literals, operators, statements, and blocks</li>
+<li>scalar, text, temporal, collection, generic, and finite-union types</li>
+<li>functions, modules, packages, imports, defaults, and templates</li>
+<li>conditionals, loops, comprehensions, generators, and context managers</li>
+<li>classes, structs, inheritance, member access, visibility, and mutability</li>
+<li>FFI pointers and opaque handles</li>
+<li>list, buffer-view, Tensor, DataFrame, and Series nodes</li>
+<li>YAML, JSON, Mermaid, PNG, and optional ASCII visualization</li>
 </ul>
-<section id="core-features" class="level2">
-<h2 class="anchored" data-anchor-id="core-features">Core Features</h2>
-<section id="expressive-language-components" class="level3">
-<h3 class="anchored" data-anchor-id="expressive-language-components">1. <strong>Expressive Language Components</strong></h3>
-<p>ASTx offers a rich suite of classes to describe essential language constructs such as:</p>
+</section>
+<section id="architecture-boundary" class="level2">
+<h2 class="anchored" data-anchor-id="architecture-boundary">Architecture boundary</h2>
+<p>ASTx does not:</p>
 <ul>
-<li><code>If</code> statements</li>
-<li><code>For</code> loops</li>
-<li><code>Function</code> declarations and usages</li>
-<li>Variables</li>
-<li>Data Types</li>
-<li>Operations</li>
-<li>And more</li>
+<li>lex or parse source code</li>
+<li>decide Arx or AIX language syntax</li>
+<li>perform IRx semantic analysis</li>
+<li>provide native storage or depend on Apache Arrow</li>
+<li>guarantee backend lowering for every modeled node</li>
 </ul>
-<p>These classes enable a concise and clear representation, providing an intuitive way to model various programming constructs.</p>
+<p>IRx consumes ASTx nodes and owns analysis, LLVM lowering, and the native Arrow C++ runtime. Arx and AIX construct ASTx nodes from their respective languages.</p>
 </section>
-<section id="symbol-table-class" class="level3">
-<h3 class="anchored" data-anchor-id="symbol-table-class">2. <strong>Symbol Table Class</strong></h3>
-<p>An integral part of ASTx, the Symbol Table class facilitates the translation of ASTx expressions to other languages like LLVM-IR. This class acts as a mapping layer, allowing a seamless connection between ASTx expressions and target language representations.</p>
+<section id="small-example" class="level2">
+<h2 class="anchored" data-anchor-id="small-example">Small example</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> astx</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>body <span class="op">=</span> astx.Block()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>body.append(astx.FunctionReturn(astx.LiteralInt32(<span class="dv">0</span>)))</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>main <span class="op">=</span> astx.FunctionDef(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    prototype<span class="op">=</span>astx.FunctionPrototype(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">"main"</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        args<span class="op">=</span>astx.Arguments(),</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        return_type<span class="op">=</span>astx.Int32(),</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    body<span class="op">=</span>body,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(main.to_yaml())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="language-agnostic-design" class="level3">
-<h3 class="anchored" data-anchor-id="language-agnostic-design">3. <strong>Language Agnostic Design</strong></h3>
-<p>Uniquely tailored to be independent of specific programming languages, ASTx offers a flexible foundation. It strives to provide initial components that can describe any programming language, giving users the freedom to work with multiple languages effortlessly.</p>
-</section>
-<section id="integration-with-projects-like-irx" class="level3">
-<h3 class="anchored" data-anchor-id="integration-with-projects-like-irx">4. <strong>Integration with Projects like IRx</strong></h3>
-<p>ASTx has proven to be a vital tool in projects like IRx, where it’s leveraged to translate Abstract Syntax Trees (AST) into LLVM-IR. This showcases the library’s adaptability and potential to serve as a foundational layer in various applications.</p>
-<hr>
-</section>
-</section>
-<section id="transpiler-system" class="level2">
-<h2 class="anchored" data-anchor-id="transpiler-system">Transpiler System</h2>
-<p>The companion <code>astx-transpilers</code> package provides helpers that convert ASTx nodes into Python code. Its architecture separates the process into two distinct steps:</p>
-<ol type="1">
-<li><strong>ASTx → Python AST Objects</strong>: Converts ASTx nodes into Python’s built-in AST objects.</li>
-<li><strong>ASTx → Python Source Code</strong>: Converts ASTx nodes directly into executable Python code.</li>
-</ol>
-<p>This separation improves maintainability, eliminates circular dependencies, and makes the transpiler system more extensible.</p>
-<hr>
-</section>
-<section id="why-choose-astx" class="level2">
-<h2 class="anchored" data-anchor-id="why-choose-astx">Why Choose ASTx?</h2>
-<p>ASTx is not just a library; it’s a robust framework that fosters creativity and efficiency in language processing. Its pythonic design, combined with the power to handle different language constructs, positions ASTx as an invaluable resource for developers and researchers alike.</p>
-<p>Whether you’re building a compiler, working on language translation, or exploring new frontiers in programming language design, ASTx offers a reliable and extensible toolkit to support your endeavors.</p>
-</section>
-<section id="getting-started" class="level2">
-<h2 class="anchored" data-anchor-id="getting-started">Getting Started</h2>
-<p>You can explore the ASTx library and dive into its capabilities by accessing the official documentation. For those interested in contributing or seeking further insights, the ASTx community provides extensive support and collaboration opportunities.</p>
-<p>Unlock the potential of language representation with ASTx, and join us in shaping the future of programming languages.</p>
+<section id="license" class="level2">
+<h2 class="anchored" data-anchor-id="license">License</h2>
+<p>ASTx is licensed under Apache-2.0 as part of the ArxLang monorepo.</p>
 
 
 </section>
@@ -1130,7 +1244,7 @@ ul.task-list li input[type="checkbox"] {
       &nbsp;
     </div>   
     <div class="nav-footer-center">
-<p>Copyright © 2022, ArxLang Team</p>
+<p>Copyright © 2022-2026, ArxLang Team</p>
 </div>
     <div class="nav-footer-right">
       &nbsp;

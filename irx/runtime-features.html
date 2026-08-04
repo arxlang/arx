@@ -23,6 +23,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -45,9 +80,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-bb1a7616eef61b9235a650cadac21922.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8cd85180eade9418ced28e9bd3c23312.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-e58b94d5b32bfa7fd060a1e8a1552805.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -315,6 +350,18 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text">Getting Started</span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ecosystem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Ecosystem Status</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../apache-arrow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Apache Arrow</span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
@@ -358,6 +405,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../library/built-in-types.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Built-in Types</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../library/collections.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Collections and Arrow</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -550,6 +603,76 @@ ul.task-list li input[type="checkbox"] {
 </li>
       </ul>
   </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Python Tools</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pyarx/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">PyArx</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arxjit/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ArxJIT</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arxjit/design.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ArxJIT Design</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">AIX</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/syntax.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Syntax</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/grammar.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Grammar</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/examples.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Examples</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../aix/apl-inspired-operators.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reserved Operators</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/index.html" class="sidebar-item-text sidebar-link">
@@ -622,22 +745,19 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#runtime-features" id="toc-runtime-features" class="nav-link active" data-scroll-target="#runtime-features">Runtime Features</a>
   <ul class="collapse">
-  <li><a href="#why-this-exists" id="toc-why-this-exists" class="nav-link" data-scroll-target="#why-this-exists">Why This Exists</a></li>
-  <li><a href="#architecture" id="toc-architecture" class="nav-link" data-scroll-target="#architecture">Architecture</a></li>
-  <li><a href="#activation-model" id="toc-activation-model" class="nav-link" data-scroll-target="#activation-model">Activation Model</a></li>
-  <li><a href="#dynamic-list-runtime-caveat" id="toc-dynamic-list-runtime-caveat" class="nav-link" data-scroll-target="#dynamic-list-runtime-caveat">Dynamic List Runtime Caveat</a></li>
-  <li><a href="#extern-declarations-and-feature-backed-linking" id="toc-extern-declarations-and-feature-backed-linking" class="nav-link" data-scroll-target="#extern-declarations-and-feature-backed-linking">Extern Declarations And Feature-Backed Linking</a></li>
-  <li><a href="#external-symbols" id="toc-external-symbols" class="nav-link" data-scroll-target="#external-symbols">External Symbols</a></li>
-  <li><a href="#native-linking" id="toc-native-linking" class="nav-link" data-scroll-target="#native-linking">Native Linking</a></li>
-  <li><a href="#assertion-failure-reporting" id="toc-assertion-failure-reporting" class="nav-link" data-scroll-target="#assertion-failure-reporting">Assertion Failure Reporting</a></li>
-  <li><a href="#builtin-array-runtime" id="toc-builtin-array-runtime" class="nav-link" data-scroll-target="#builtin-array-runtime">Builtin Array Runtime</a></li>
-  <li><a href="#abi-boundary" id="toc-abi-boundary" class="nav-link" data-scroll-target="#abi-boundary">ABI Boundary</a></li>
-  <li><a href="#ownership-rules" id="toc-ownership-rules" class="nav-link" data-scroll-target="#ownership-rules">Ownership Rules</a></li>
-  <li><a href="#nullability-and-buffer-bridges" id="toc-nullability-and-buffer-bridges" class="nav-link" data-scroll-target="#nullability-and-buffer-bridges">Nullability And Buffer Bridges</a></li>
-  <li><a href="#arrow-c-runtime-backend" id="toc-arrow-c-runtime-backend" class="nav-link" data-scroll-target="#arrow-c-runtime-backend">Arrow C++ Runtime Backend</a></li>
-  <li><a href="#buffer-as-a-runtime-feature" id="toc-buffer-as-a-runtime-feature" class="nav-link" data-scroll-target="#buffer-as-a-runtime-feature">Buffer As A Runtime Feature</a></li>
-  <li><a href="#what-exists-now" id="toc-what-exists-now" class="nav-link" data-scroll-target="#what-exists-now">What Exists Now</a></li>
-  <li><a href="#follow-up-roadmap" id="toc-follow-up-roadmap" class="nav-link" data-scroll-target="#follow-up-roadmap">Follow-up Roadmap</a></li>
+  <li><a href="#activation-model" id="toc-activation-model" class="nav-link" data-scroll-target="#activation-model">Activation model</a></li>
+  <li><a href="#extern-declarations" id="toc-extern-declarations" class="nav-link" data-scroll-target="#extern-declarations">Extern declarations</a></li>
+  <li><a href="#native-apache-arrow-backend" id="toc-native-apache-arrow-backend" class="nav-link" data-scroll-target="#native-apache-arrow-backend">Native Apache Arrow backend</a></li>
+  <li><a href="#array-runtime" id="toc-array-runtime" class="nav-link" data-scroll-target="#array-runtime">Array runtime</a>
+  <ul class="collapse">
+  <li><a href="#import-and-export-ownership" id="toc-import-and-export-ownership" class="nav-link" data-scroll-target="#import-and-export-ownership">Import and export ownership</a></li>
+  </ul></li>
+  <li><a href="#tensor-runtime" id="toc-tensor-runtime" class="nav-link" data-scroll-target="#tensor-runtime">Tensor runtime</a></li>
+  <li><a href="#dataframe-and-series-runtime" id="toc-dataframe-and-series-runtime" class="nav-link" data-scroll-target="#dataframe-and-series-runtime">DataFrame and Series runtime</a></li>
+  <li><a href="#recordbatch-runtime" id="toc-recordbatch-runtime" class="nav-link" data-scroll-target="#recordbatch-runtime">RecordBatch runtime</a></li>
+  <li><a href="#assertions" id="toc-assertions" class="nav-link" data-scroll-target="#assertions">Assertions</a></li>
+  <li><a href="#dynamic-list-caveat" id="toc-dynamic-list-caveat" class="nav-link" data-scroll-target="#dynamic-list-caveat">Dynamic list caveat</a></li>
+  <li><a href="#deliberate-limits" id="toc-deliberate-limits" class="nav-link" data-scroll-target="#deliberate-limits">Deliberate limits</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -651,258 +771,179 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="runtime-features" class="level1">
 <h1>Runtime Features</h1>
-<p>IRx lowers ASTx nodes to LLVM IR with <code>llvmlite</code>, but some capabilities are better modeled as calls into a native runtime instead of handwritten container logic in LLVM IR. The runtime-feature system exists for exactly that boundary.</p>
-<section id="why-this-exists" class="level2">
-<h2 class="anchored" data-anchor-id="why-this-exists">Why This Exists</h2>
-<p>IRx already had a small precedent for external/native symbols such as <code>puts</code>. That worked for a few direct libc calls, but it did not provide a maintainable way to:</p>
-<ul>
-<li>declare external symbols once per feature</li>
-<li>activate native capabilities per compilation unit</li>
-<li>compile and link native C/C++ sources only when they are actually needed</li>
-<li>keep native runtime ownership rules outside the LLVM IR middle-end</li>
-</ul>
-<p>This runtime-feature layer keeps IRx focused on lowering while allowing Arx to grow additional native integrations later. It is also the public native-dependency side of IRx’s stable FFI contract.</p>
-</section>
-<section id="architecture" class="level2">
-<h2 class="anchored" data-anchor-id="architecture">Architecture</h2>
-<p>The runtime stack is layered in four parts:</p>
-<ol type="1">
-<li><code>irx.builder.runtime.features</code> Defines feature specs: external symbols, native artifacts, linker flags, and metadata.</li>
-<li><code>irx.builder.runtime.registry</code> Registers features by name and tracks activation/declarations for one LLVM module.</li>
-<li><code>irx.builder.runtime.linking</code> Compiles native C/C++ sources and links optional objects only for active features.</li>
-<li>Feature packages such as <code>libc</code> and <code>array</code> Consume the generic system without special cases in the builder.</li>
-</ol>
-</section>
+<p>IRx lowers ASTx nodes to LLVM IR, but container ownership, system libraries, and other native capabilities belong in runtime code rather than handwritten LLVM implementations. Runtime features declare those capabilities and activate them per compilation unit.</p>
 <section id="activation-model" class="level2">
-<h2 class="anchored" data-anchor-id="activation-model">Activation Model</h2>
-<p>Runtime features are named and activated per compilation unit. The builtin array runtime is packaged with IRx even though its native artifacts are linked only when needed.</p>
+<h2 class="anchored" data-anchor-id="activation-model">Activation model</h2>
+<p>A runtime feature can contribute:</p>
 <ul>
-<li><code>libc</code> Declares symbols such as <code>puts</code>, <code>malloc</code>, and <code>snprintf</code>.</li>
-<li><code>assertions</code> Declares <code>__arx_assert_fail(...)</code> and links the native fatal assertion helper that emits machine-readable stderr reports.</li>
-<li><code>libm</code> Declares math symbols such as <code>sqrt</code> and contributes <code>-lm</code>.</li>
-<li><code>buffer</code> Declares the low-level buffer owner/view lifetime helper ABI.</li>
-<li><code>array</code> Declares the builtin one-dimensional Arrow array runtime surface.</li>
-<li><code>tensor</code> Declares the builtin homogeneous N-dimensional Arrow tensor runtime surface.</li>
-<li><code>dataframe</code> Declares the builtin heterogeneous named-column Arrow table runtime surface.</li>
-<li><code>list</code> Declares the minimal dynamic-list runtime used by <code>ListCreate</code>, <code>ListAppend</code>, and lowered list indexing.</li>
+<li>external symbol declarations</li>
+<li>C or C++ sources</li>
+<li>prebuilt object files or static libraries</li>
+<li>include paths, compiler flags, and linker flags</li>
+<li>metadata describing its ABI and dependencies</li>
 </ul>
-<p>The builder and visitor cooperate as follows:</p>
-<ul>
-<li>explicit extern declarations may declare <code>runtime_feature</code> or <code>runtime_features</code> on <code>FunctionPrototype</code></li>
-<li>lowering requests feature-owned symbols through <code>require_runtime_symbol(feature, symbol)</code></li>
-<li>the request activates the feature for that compilation unit</li>
-<li>the linker step collects native artifacts only from active features</li>
-<li>inactive features contribute nothing to the link command</li>
-</ul>
-<p>This is intentionally separate from any future language-level import or module system. A future Arx array-facing layer can decide when to activate <code>array</code>, but the native integration remains owned by IRx.</p>
+<p>Lowering requests a feature-owned symbol with <code>require_runtime_symbol(feature, symbol)</code>. That request activates the feature, reuses its declaration within the LLVM module, and makes its native artifacts available to the final link. Inactive features contribute nothing.</p>
+<p>Registered features:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 79%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>libc</code></td>
+<td><code>puts</code>, allocation, formatting, and related C symbols</td>
+</tr>
+<tr class="even">
+<td><code>libm</code></td>
+<td>math symbols and the platform math linker flag</td>
+</tr>
+<tr class="odd">
+<td><code>assertions</code></td>
+<td>fatal assertion helper and machine-readable reports</td>
+</tr>
+<tr class="even">
+<td><code>buffer</code></td>
+<td>buffer-owner and view lifetime helpers</td>
+</tr>
+<tr class="odd">
+<td><code>list</code></td>
+<td>minimal dynamic list creation, growth, and indexing</td>
+</tr>
+<tr class="even">
+<td><code>array</code></td>
+<td>one-dimensional Apache Arrow array runtime</td>
+</tr>
+<tr class="odd">
+<td><code>tensor</code></td>
+<td>homogeneous N-dimensional Arrow Tensor runtime</td>
+</tr>
+<tr class="even">
+<td><code>dataframe</code></td>
+<td>Arrow Table and ChunkedArray runtime</td>
+</tr>
+<tr class="odd">
+<td><code>record_batch</code></td>
+<td>Arrow RecordBatch and IPC streaming bridge</td>
+</tr>
+</tbody>
+</table>
+<p>The runtime layer is independent of Arx imports. Importing a source module and activating a native feature are different compiler operations.</p>
 </section>
-<section id="dynamic-list-runtime-caveat" class="level2">
-<h2 class="anchored" data-anchor-id="dynamic-list-runtime-caveat">Dynamic List Runtime Caveat</h2>
-<p>The current list runtime is intentionally narrow:</p>
+<section id="extern-declarations" class="level2">
+<h2 class="anchored" data-anchor-id="extern-declarations">Extern declarations</h2>
+<p>Public extern prototypes can name <code>runtime_feature</code> or <code>runtime_features</code>.</p>
 <ul>
-<li>it supports append/growth</li>
-<li>it supports indexed access</li>
-<li>it does not yet expose a destroy/release helper</li>
+<li>a plain extern emits an LLVM declaration and relies on the platform linker</li>
+<li>a feature-backed extern also activates the feature’s artifacts and flags</li>
+<li>a symbol already owned by a feature reuses the feature declaration rather than creating a parallel native path</li>
 </ul>
-<p>That means dynamically produced list storage is currently process-lifetime. This is acceptable for the current MVP surface, but it is not a complete ownership model yet and should not be read as a final memory-management contract.</p>
+<p>This is the same mechanism used by built-in lowering; it is not a special path only for handwritten externs.</p>
 </section>
-<section id="extern-declarations-and-feature-backed-linking" class="level2">
-<h2 class="anchored" data-anchor-id="extern-declarations-and-feature-backed-linking">Extern Declarations And Feature-Backed Linking</h2>
-<p>Public FFI declarations now use one consistent rule:</p>
-<ul>
-<li>extern declarations with no runtime features emit only an LLVM external declaration and rely on the system linker/toolchain to resolve the symbol</li>
-<li>extern declarations with <code>runtime_feature</code> / <code>runtime_features</code> still lower as ordinary externs, but they also activate the named runtime features for that compilation unit</li>
-<li>if a runtime feature already owns a matching symbol declaration, lowering reuses that feature-owned declaration instead of inventing a parallel native path</li>
-<li>runtime features remain the only place where IRx packages native objects, native C/C++ sources, or extra linker flags</li>
-</ul>
-<p>Example split:</p>
-<ul>
-<li>plain <code>puts</code> extern: system linker resolution only</li>
-<li><code>sqrt</code> extern with <code>runtime_feature = "libm"</code>: LLVM declaration plus the <code>libm</code> feature’s <code>-lm</code> linker flag</li>
-<li>Array helpers: IRx-owned nodes imply the <code>array</code> feature and its packaged native runtime</li>
-</ul>
+<section id="native-apache-arrow-backend" class="level2">
+<h2 class="anchored" data-anchor-id="native-apache-arrow-backend">Native Apache Arrow backend</h2>
+<p>IRx uses a C++ wrapper with a stable C ABI. Arrow C++ containers remain opaque to generated LLVM.</p>
+<pre class="text"><code>ASTx collection node
+  -&gt; IRx lowering
+  -&gt; irx_arrow_* or irx_rb_* C ABI call
+  -&gt; Arrow C++ container and ownership</code></pre>
+<p><code>pyarrow</code> and <code>arx-arrowcpp-sources</code> provide Arrow C++ library, include, source, and linker metadata. Native feature builds use that metadata rather than vendoring a second Arrow implementation in IRx.</p>
 </section>
-<section id="external-symbols" class="level2">
-<h2 class="anchored" data-anchor-id="external-symbols">External Symbols</h2>
-<p>External declarations are centralized inside each feature definition instead of being scattered through visitor methods.</p>
-<p>Benefits:</p>
+<section id="array-runtime" class="level2">
+<h2 class="anchored" data-anchor-id="array-runtime">Array runtime</h2>
+<p>The <code>array</code> feature provides:</p>
 <ul>
-<li>declarations are reused per module</li>
-<li>function signatures live in one place</li>
-<li>future features can add their own symbol sets without changing the linker or builder architecture</li>
+<li>opaque schema, builder, and array handles</li>
+<li>signed and unsigned 8-, 16-, 32-, and 64-bit integers</li>
+<li><code>float32</code>, <code>float64</code>, and Boolean storage</li>
+<li>explicit build, inspect, retain/release, import, and export operations</li>
+<li>Arrow C Data copy import, move/adopt import, and export</li>
+<li>nullable-array metadata and validity-bitmap inspection</li>
+<li>readonly projection of byte-addressable fixed-width value buffers into <code>irx_buffer_view</code></li>
 </ul>
+<p>Boolean arrays are valid Arrow handles but are not projected through the generic buffer view because Arrow stores Boolean values as packed bits.</p>
+<section id="import-and-export-ownership" class="level3">
+<h3 class="anchored" data-anchor-id="import-and-export-ownership">Import and export ownership</h3>
+<ul>
+<li>copy import leaves the caller’s Arrow C Data ownership unchanged</li>
+<li>move/adopt import transfers ownership on success and leaves the input moved from</li>
+<li>export produces an independent Arrow C Data pair that the caller releases</li>
+<li>bridged buffer views are borrowed and readonly; callers keep the array handle alive</li>
+</ul>
+<p>Generic buffer operations stay null-agnostic. Code that needs null semantics must inspect the Arrow handle and validity bitmap explicitly.</p>
 </section>
-<section id="native-linking" class="level2">
-<h2 class="anchored" data-anchor-id="native-linking">Native Linking</h2>
-<p>IRx still emits the main object file with <code>llvmlite</code> and links with <code>clang</code>. The difference now is that runtime features may add native artifacts such as:</p>
-<ul>
-<li>C source files</li>
-<li>C++ source files</li>
-<li>prebuilt objects</li>
-<li>static libraries</li>
-</ul>
-<p>The current builtin Arrow runtime uses a small C++ wrapper with a stable C ABI, which keeps Arrow C++ container ownership behind runtime feature declarations without introducing dynamic loading.</p>
 </section>
-<section id="assertion-failure-reporting" class="level2">
-<h2 class="anchored" data-anchor-id="assertion-failure-reporting">Assertion Failure Reporting</h2>
-<p>The <code>assertions</code> runtime feature exists for fatal <code>AssertStmt</code> lowering. Its native helper writes one machine-readable line to <code>stderr</code> before exiting the process with a non-zero status:</p>
-<pre class="text"><code>ARX_ASSERT_FAIL|&lt;source&gt;|&lt;line&gt;|&lt;col&gt;|&lt;message&gt;</code></pre>
-<p>IRx also exposes small Python-side parsing helpers under <code>irx.builder.runtime.assertions</code> so higher-level runners can extract one stable report from <code>stderr</code> without scraping human-oriented text. Source and message payloads escape backslashes, newlines, carriage returns, tabs, and protocol delimiters before printing so the report always remains one physical line. The source field uses the analyzed module display name when available and otherwise falls back to the module name stored in the AST.</p>
+<section id="tensor-runtime" class="level2">
+<h2 class="anchored" data-anchor-id="tensor-runtime">Tensor runtime</h2>
+<p>The <code>tensor</code> feature stores homogeneous N-dimensional data in <code>arrow::Tensor</code>:</p>
+<ul>
+<li>fixed-width numeric element types</li>
+<li>shape, stride, rank, offset, and contiguous-layout metadata</li>
+<li>indexing through the canonical <code>irx_buffer_view</code> descriptor</li>
+<li>shallow metadata-only views over shared storage</li>
+<li>explicit external-owner lifetime tracking</li>
+</ul>
+<p>Arrow-backed Tensor storage is readonly in the current phase. Dynamic-rank validation, broadcasting, reductions, tensor algebra, and source-language slicing are not part of this layer.</p>
 </section>
-<section id="builtin-array-runtime" class="level2">
-<h2 class="anchored" data-anchor-id="builtin-array-runtime">Builtin Array Runtime</h2>
-<p>IRx array support is implemented as a builtin native runtime backed by Arrow C++, not as handwritten LLVM IR container logic.</p>
-<p>Current array substrate:</p>
+<section id="dataframe-and-series-runtime" class="level2">
+<h2 class="anchored" data-anchor-id="dataframe-and-series-runtime">DataFrame and Series runtime</h2>
+<p>The <code>dataframe</code> feature provides:</p>
 <ul>
-<li>opaque runtime handles for schemas, array builders, and arrays</li>
-<li>supported primitive storage types: <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code>, <code>float32</code>, <code>float64</code>, and <code>bool</code></li>
-<li>explicit builder / import / inspect / export / release lifecycle</li>
-<li>Arrow C Data import/export support with copy and move/adopt imports</li>
-<li>explicit nullability and validity-bitmap inspection on Arrow handles</li>
-<li>readonly bridge from supported fixed-width numeric arrays into <code>irx_buffer_view</code></li>
-<li>Python <code>pyarrow</code> dependency installed by default in IRx for Arrow C Data interop tests and linkable Arrow C++ libraries</li>
-<li><code>arx-arrowcpp-sources</code> installed by default for Arrow C++ headers/source metadata used by native runtime builds</li>
+<li>DataFrames backed by <code>arrow::Table</code></li>
+<li>Series views backed by <code>arrow::ChunkedArray</code></li>
+<li>fixed-width numeric and Boolean column construction</li>
+<li>static column-index resolution during semantic analysis</li>
+<li>row and column count queries</li>
+<li>explicit retain/release operations</li>
 </ul>
-<p>Current initial Tensor layer alongside that substrate:</p>
-<ul>
-<li>tensor values are created through <code>irx_arrow_tensor_*</code> runtime symbols</li>
-<li>tensor construction stores homogeneous fixed-width values in Arrow C++ <code>arrow::Tensor</code> handles with dtype, shape, and stride metadata</li>
-<li>tensor values lower through the same <code>irx_buffer_view</code> descriptor used by the low-level buffer/view model for indexing and lifetime management</li>
-<li>indexing and byte-offset calculation reuse descriptor <code>shape</code>, <code>strides</code>, and <code>offset_bytes</code></li>
-<li>shallow tensor views may replace shape/stride/offset metadata without copying storage</li>
-<li>current tensor lowering supports fixed-width numeric element types only</li>
-</ul>
-<p>Current initial DataFrame layer alongside that substrate:</p>
-<ul>
-<li>dataframe values are created through <code>irx_arrow_table_*</code> runtime symbols</li>
-<li>dataframe construction stores named columns in Arrow C++ <code>arrow::Table</code> handles</li>
-<li>series values are column views backed by Arrow C++ <code>arrow::ChunkedArray</code> handles</li>
-<li>static column access resolves to a known column index during semantic analysis</li>
-<li>current dataframe lowering supports fixed-width numeric and <code>bool</code> columns only</li>
-</ul>
-<p>What IRx does not do here:</p>
-<ul>
-<li>no direct LLVM struct encoding of Arrow containers</li>
-<li>no full Arrow type system</li>
-<li>no Arx language syntax or module layer</li>
-<li>no RecordBatch, Table, or ArrowArrayStream runtime yet</li>
-<li>no dataframe/query semantics or compute-kernel surface</li>
-</ul>
+<p>This native layer supports the current Arx <code>dataframe[...]</code>, <code>dataframe({...})</code>, and <code>series[T]</code> surface. It does not provide query planning or Arrow Compute kernels.</p>
 </section>
-<section id="abi-boundary" class="level2">
-<h2 class="anchored" data-anchor-id="abi-boundary">ABI Boundary</h2>
-<p>The public high-level abstraction is array-oriented, while the low-level ABI exposed to generated LLVM IR and native harnesses remains the IRx-owned Arrow C ABI under <code>irx_arrow_*</code>.</p>
-<p>Key rules:</p>
+<section id="recordbatch-runtime" class="level2">
+<h2 class="anchored" data-anchor-id="recordbatch-runtime">RecordBatch runtime</h2>
+<p>The <code>record_batch</code> feature and <code>irx.record_batch</code> Python API provide a separate streaming/interoperability layer:</p>
 <ul>
-<li>handles are opaque pointers</li>
-<li>runtime-owned memory is released with explicit <code>irx_arrow_*_release()</code></li>
-<li>Arrow C++ stays internal to the implementation</li>
-<li>Arrow C Data structs are the interchange boundary</li>
-<li>import is explicit:
-<ul>
-<li><code>irx_arrow_array_import_copy(...)</code> copies external C Data into a new runtime-owned array handle</li>
-<li><code>irx_arrow_array_import_move(...)</code> adopts external C Data into a new runtime-owned array handle and leaves the input structs moved-from on success</li>
-</ul></li>
-<li>export is explicit:
-<ul>
-<li><code>irx_arrow_array_export(...)</code> copies a runtime-owned array handle into an independent Arrow C Data pair that the caller releases separately</li>
-</ul></li>
-<li>schema handles use the same pattern through <code>irx_arrow_schema_import_copy(...)</code> and <code>irx_arrow_schema_export(...)</code></li>
+<li>schema construction with nullable fields</li>
+<li>batch builders and scalar inspection</li>
+<li>signed/unsigned integers, <code>float32</code>, <code>float64</code>, and <code>bool</code></li>
+<li>UTF-8 and large UTF-8 strings</li>
+<li><code>date32</code>, <code>date64</code>, timestamp units, <code>time32</code>, and <code>time64</code></li>
+<li>null append and inspection</li>
+<li>Arrow IPC stream readers/writers for files and memory buffers</li>
+<li>multiple batches per stream</li>
+<li>interoperability in both directions with PyArrow</li>
 </ul>
+<p>The Python API uses a standalone ctypes-loaded shared library. Build it in a source checkout before direct use:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import build_record_batch_shared_library; build_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is RecordBatch IPC support, not an implementation of the Arrow C Stream <code>ArrowArrayStream</code> interface.</p>
 </section>
-<section id="ownership-rules" class="level2">
-<h2 class="anchored" data-anchor-id="ownership-rules">Ownership Rules</h2>
-<p>Current ownership model:</p>
-<ul>
-<li>builder handles own their mutable Arrow builder state</li>
-<li>finishing a builder transfers ownership into an immutable array handle</li>
-<li>schema and array handles are refcounted through explicit retain/release calls</li>
-<li>array handles own their schema plus array resources</li>
-<li>exported Arrow C Data structs own their copied resources and must be released independently</li>
-<li>copied imports leave the caller’s Arrow C Data ownership unchanged</li>
-<li>move/adopt imports transfer ownership into IRx on success</li>
-</ul>
+<section id="assertions" class="level2">
+<h2 class="anchored" data-anchor-id="assertions">Assertions</h2>
+<p>The <code>assertions</code> feature owns <code>__arx_assert_fail(...)</code>. On failure it writes one escaped, machine-readable line to <code>stderr</code> and exits nonzero:</p>
+<pre class="text"><code>ARX_ASSERT_FAIL|&lt;source&gt;|&lt;line&gt;|&lt;column&gt;|&lt;message&gt;</code></pre>
+<p>Python helpers under <code>irx.builder.runtime.assertions</code> parse this protocol for the Arx test runner.</p>
 </section>
-<section id="nullability-and-buffer-bridges" class="level2">
-<h2 class="anchored" data-anchor-id="nullability-and-buffer-bridges">Nullability And Buffer Bridges</h2>
-<p>Arrow nullability stays Arrow-specific in this layer.</p>
-<ul>
-<li>Arrow arrays may be nullable independently of <code>irx_buffer_view</code></li>
-<li><code>irx_arrow_array_is_nullable(...)</code>, <code>irx_arrow_array_null_count(...)</code>, and <code>irx_arrow_array_has_validity_bitmap(...)</code> expose Arrow-side null metadata</li>
-<li><code>irx_arrow_array_validity_bitmap(...)</code> exposes the physical validity bitmap pointer plus bit offset and length</li>
-<li><code>irx_buffer_view</code> remains a plain physical view; generic indexing and writes do not become null-aware</li>
-<li><code>irx_arrow_array_borrow_buffer_view(...)</code> projects only the physical value buffer and always returns a borrowed readonly <code>irx_buffer_view</code></li>
-<li>when a bridged Arrow array has a validity bitmap, the returned view sets <code>IRX_BUFFER_FLAG_VALIDITY_BITMAP</code></li>
-<li>bool arrays are supported as Arrow handles but are not buffer-view compatible because their values are bit-packed</li>
-<li>caller code that needs null semantics must keep using Arrow inspection APIs</li>
-</ul>
-<p>The buffer bridge is intentionally conservative:</p>
-<ul>
-<li>only fixed-width byte-addressable primitive arrays are bridged</li>
-<li>the bridge is 1-D and columnar (<code>shape[0] == length</code>, <code>stride == element_size</code>)</li>
-<li>writable views are not exposed in this phase</li>
-<li>borrowed views use a null owner handle, so the caller must keep the Arrow array handle alive explicitly</li>
-</ul>
-<p>The Tensor layer uses Arrow C++ <code>arrow::Tensor</code> handles and then projects tensors through the canonical buffer/view descriptor:</p>
-<ul>
-<li>fresh tensor literals allocate Arrow tensor handles, then wrap borrowed tensor buffers in external-owner <code>irx_buffer_view</code> values</li>
-<li>tensor views stay shallow and metadata-driven</li>
-<li>readonly semantics are preserved for Arrow C++ backed <code>Tensor</code> values in this phase</li>
-</ul>
+<section id="dynamic-list-caveat" class="level2">
+<h2 class="anchored" data-anchor-id="dynamic-list-caveat">Dynamic list caveat</h2>
+<p>The <code>list</code> runtime supports append/growth and indexed access but does not yet expose a destroy helper. Dynamically produced list storage is therefore process-lifetime in the current MVP.</p>
 </section>
-<section id="arrow-c-runtime-backend" class="level2">
-<h2 class="anchored" data-anchor-id="arrow-c-runtime-backend">Arrow C++ Runtime Backend</h2>
-<p>IRx now depends on <code>pyarrow</code> and <code>arx-arrowcpp-sources</code> by default for the native Arrow runtime.</p>
-<p><code>arx-arrowcpp-sources</code> provides the vendored Apache Arrow C++ 24.0.0 source and header snapshot used for native runtime includes and build metadata. <code>pyarrow</code> provides the installed Arrow C++ shared library used by local builds and tests.</p>
-<p>Reasons:</p>
+<section id="deliberate-limits" class="level2">
+<h2 class="anchored" data-anchor-id="deliberate-limits">Deliberate limits</h2>
+<p>IRx currently does not provide:</p>
 <ul>
-<li>real Arrow C++ containers now own array and tensor runtime data</li>
-<li><code>Tensor</code> values are backed by <code>arrow::Tensor</code> while IRx keeps the stable <code>irx_arrow_tensor_*</code> C ABI</li>
-<li>array import/export still uses Arrow C Data structs as the interop boundary</li>
-<li>reproducible headers/source metadata in CI and local development without keeping a second Arrow C++ copy inside the IRx repo</li>
-<li>clear ownership of the native runtime surface while keeping Arrow C++ hidden behind the IRx ABI</li>
+<li>direct Arrow C++ types in generated LLVM IR</li>
+<li>a complete Arrow type system</li>
+<li>the Arrow C Stream <code>ArrowArrayStream</code> interface</li>
+<li>general nested, dictionary, decimal, or extension-type support</li>
+<li>a source-language module system inside the runtime layer</li>
+<li>DataFrame query semantics or a general compute-kernel API</li>
 </ul>
-<p>IRx does not expose C++ types such as <code>std::shared_ptr</code>, <code>arrow::Array</code>, or <code>arrow::Tensor</code> through generated LLVM IR. They remain implementation details of the native runtime wrapper.</p>
-</section>
-<section id="buffer-as-a-runtime-feature" class="level2">
-<h2 class="anchored" data-anchor-id="buffer-as-a-runtime-feature">Buffer As A Runtime Feature</h2>
-<p>The <code>buffer</code> feature owns lifetime-sensitive helper operations for the canonical buffer/view substrate. Plain <code>irx_buffer_view</code> descriptors lower as structs and do not activate this feature. Explicit helper calls such as <code>irx_buffer_view_retain</code> and <code>irx_buffer_view_release</code> activate it.</p>
-<p>The feature keeps owner handles opaque at the IR level. Native code may retain or release an owner handle, but generic lowering does not infer ownership transfer or emit hidden retains/releases for descriptor copies. Statically known borrowed views are rejected before retain/release lowering; descriptor-pointer runtime calls are reserved for owned or external-owner views.</p>
-</section>
-<section id="what-exists-now" class="level2">
-<h2 class="anchored" data-anchor-id="what-exists-now">What Exists Now</h2>
-<p>Implemented in this phase:</p>
-<ul>
-<li>generic runtime-feature registry/state/linking</li>
-<li><code>libc</code> routed through the new feature system</li>
-<li>low-level <code>buffer</code> runtime feature for owner/view retain-release helpers</li>
-<li>builtin array runtime feature backed by Arrow C++ <code>arrow::Array</code></li>
-<li>builtin tensor runtime feature backed by Arrow C++ <code>arrow::Tensor</code></li>
-<li>Python <code>pyarrow</code> dependency and direct Arrow C Data interop tests</li>
-<li>centralized Arrow runtime symbol declarations</li>
-<li>one internal array lowering path: <code>astx.ArrayInt32ArrayLength</code></li>
-<li>tests for registry behavior, IR declarations, build integration, primitive type coverage, nullability, move/copy ownership, and Arrow-to-buffer-view projection</li>
-</ul>
-</section>
-<section id="follow-up-roadmap" class="level2">
-<h2 class="anchored" data-anchor-id="follow-up-roadmap">Follow-up Roadmap</h2>
-<p>Phase 2:</p>
-<ul>
-<li>string and binary arrays</li>
-<li>richer schema helpers</li>
-<li>better Arrow import/export diagnostics</li>
-</ul>
-<p>Phase 3:</p>
-<ul>
-<li>RecordBatch and Table handles</li>
-<li>ArrowArrayStream support</li>
-<li>richer stream-oriented interop helpers</li>
-</ul>
-<p>Phase 4:</p>
-<ul>
-<li>limited native compute kernels where justified</li>
-<li>optional Arrow compute backend evaluation if a future Arx layer needs it</li>
-</ul>
+<p>See <a href="../apache-arrow.html">Native Apache Arrow Support</a> for the cross-project view and <a href="../irx/buffer-view-model.html">Buffer View Model</a> for the low-level descriptor.</p>
 
 
 </section>
@@ -1334,7 +1375,7 @@ ul.task-list li input[type="checkbox"] {
       &nbsp;
     </div>   
     <div class="nav-footer-center">
-<p>Copyright © 2022, ArxLang Team</p>
+<p>Copyright © 2022-2026, ArxLang Team</p>
 </div>
     <div class="nav-footer-right">
       &nbsp;
