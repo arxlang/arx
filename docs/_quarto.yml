@@ -6,151 +6,267 @@ project:
 
 website:
   title: ArxLang
+  description: >-
+    A statically typed compiler ecosystem with LLVM and native Apache Arrow
+    support.
   site-url: https://arxlang.org
   repo-url: https://github.com/arxlang/arx
   favicon: favicon.ico
-  page-footer: "Copyright &copy; 2022-2026, ArxLang Team"
+  page-navigation: true
+  back-to-top-navigation: true
+  bread-crumbs: true
+  search:
+    location: navbar
+    type: overlay
+    limit: 8
+    keyboard-shortcut: ["/", "s"]
   navbar:
     logo: images/arx.png
-    right:
-      - icon: github
-        href: https://github.com/arxlang/arx
-      - text: Community
-        href: discord.md
-  sidebar:
-    style: docked
-    search: true
-    contents:
+    logo-alt: ArxLang
+    pinned: true
+    collapse-below: lg
+    left:
       - text: Home
         href: index.md
-      - text: Getting Started
-        href: getting-started.md
-      - text: Ecosystem Status
-        href: ecosystem.md
-      - text: Apache Arrow
-        href: apache-arrow.md
-      - section: Library
-        contents:
-          - text: Overview
-            href: library/index.md
-          - text: Modules
-            href: library/modules.md
-          - text: Functions
-            href: library/functions.md
-          - text: Classes
-            href: library/classes.md
-          - text: Data Types
-            href: library/datatypes.md
-          - text: Built-in Types
-            href: library/built-in-types.md
-          - text: Collections and Arrow
-            href: library/collections.md
-          - text: Control Flow
-            href: library/control-flow.md
-          - text: Docstrings
-            href: library/docstrings.md
-      - section: ASTx
-        contents:
-          - text: Overview
-            href: astx/index.md
-          - text: Installation
-            href: astx/installation.md
-          - text: Conventions
-            href: astx/conventions.md
-          - text: Contributing
-            href: astx/contributing.md
-          - section: Tutorials
-            contents:
-              - text: Getting Started
-                href: astx/tutorials/get-started.ipynb
-              - text: Literals
-                href: astx/tutorials/literals.ipynb
-              - text: Variables
-                href: astx/tutorials/variables.ipynb
-              - text: Functions
-                href: astx/tutorials/functions.ipynb
-              - text: For Loops
-                href: astx/tutorials/for-loop.ipynb
-              - text: Context
-                href: astx/tutorials/context.ipynb
-              - text: Fibonacci
-                href: astx/tutorials/fibonacci.ipynb
-          - text: Historical Changelog
-            href: astx/changelog.md
-      - section: IRx
-        contents:
-          - text: Overview
-            href: irx/index.md
-          - text: Installation
-            href: irx/installation.md
-          - text: Architecture
-            href: irx/architecture.md
-          - text: Semantic Contract
-            href: irx/semantic-contract.md
-          - text: Runtime Features
-            href: irx/runtime-features.md
-          - text: Buffer View Model
-            href: irx/buffer-view-model.md
-          - text: Class Model
-            href: irx/class-model.md
-          - text: Contributing
-            href: irx/contributing.md
-          - section: Tutorials
-            contents:
-              - text: Getting Started
-                href: irx/tutorials/get-started.ipynb
-          - text: Historical Changelog
-            href: irx/changelog.md
-      - section: Python Tools
-        contents:
-          - text: PyArx
-            href: pyarx/index.md
-          - text: ArxJIT
-            href: arxjit/index.md
-          - text: ArxJIT Design
-            href: arxjit/design.md
-      - section: AIX
-        contents:
-          - text: Overview
-            href: aix/index.md
-          - text: Syntax
-            href: aix/syntax.md
-          - text: Grammar
-            href: aix/grammar.md
-          - text: Examples
-            href: aix/examples.md
-          - text: Reserved Operators
-            href: aix/apl-inspired-operators.md
-      - text: API Docs
-        href: api/index.md
-      - text: Syntax
-        href: syntax.md
-      - text: Roadmap
-        href: roadmap.md
-      - text: Contributing Guide
-        href: contributing.md
-      - text: Sponsor
-        href: sponsor.md
-      - text: Partners
-        href: partners.md
+      - text: Arx
+        href: arx/index.md
+      - text: ASTx
+        href: astx/index.md
+      - text: IRx
+        href: irx/index.md
+      - text: PyArx
+        href: pyarx/index.md
+      - text: ArxJIT
+        href: arxjit/index.md
+      - text: Tools
+        menu:
+          - text: Tooling Overview
+            href: tools/index.md
+          - text: ArxPM
+            href: tools/arxpm.md
+          - text: VS Code
+            href: tools/vscode.md
+          - text: Jupyter Kernel
+            href: tools/jupyter.md
+          - text: Douki
+            href: tools/douki.md
+    right:
+      - icon: github
+        aria-label: ArxLang on GitHub
+        href: https://github.com/arxlang/arx
+  sidebar:
+    - id: project
+      title: ArxLang
+      style: floating
+      collapse-level: 1
+      contents:
+        - section: Start
+          contents:
+            - text: Ecosystem Status
+              href: ecosystem.md
+            - text: Native Apache Arrow
+              href: apache-arrow.md
+        - section: Project
+          contents:
+            - text: Roadmap
+              href: roadmap.md
+            - text: Contributing
+              href: contributing.md
+            - text: API Documentation
+              href: api/index.md
+            - text: Changelog
+              href: changelog.md
+        - section: Community
+          contents:
+            - text: Community Chat
+              href: discord.md
+            - text: Code of Conduct
+              href: coc.md
+            - text: Governance
+              href: governance.md
+            - text: Partners
+              href: partners.md
+            - text: Sponsor
+              href: sponsor.md
+    - id: arx
+      title: Arx
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Arx Overview
+          href: arx/index.md
+        - text: Getting Started
+          href: arx/getting-started.md
+        - section: Compiler
+          contents:
+            - text: Compiler CLI
+              href: arx/compiler-cli.md
+            - text: Projects and Imports
+              href: arx/projects.md
+            - text: Compiled Tests
+              href: arx/testing.md
+        - section: Language Reference
+          contents:
+            - text: Lexical Syntax
+              href: arx/syntax.md
+            - text: Modules
+              href: arx/modules.md
+            - text: Functions
+              href: arx/functions.md
+            - text: Classes
+              href: arx/classes.md
+            - text: Data Types
+              href: arx/datatypes.md
+            - text: Built-in Types
+              href: arx/built-in-types.md
+            - text: Collections and Arrow
+              href: arx/collections.md
+            - text: Control Flow
+              href: arx/control-flow.md
+            - text: Docstrings
+              href: arx/docstrings.md
+        - section: Python API
+          contents:
+            - auto: api/arx
+    - id: astx
+      title: ASTx
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Overview
+          href: astx/index.md
+        - text: Installation
+          href: astx/installation.md
+        - section: Tutorials
+          contents:
+            - text: Getting Started
+              href: astx/tutorials/get-started.ipynb
+            - text: Literals
+              href: astx/tutorials/literals.ipynb
+            - text: Variables
+              href: astx/tutorials/variables.ipynb
+            - text: Functions
+              href: astx/tutorials/functions.ipynb
+            - text: For Loops
+              href: astx/tutorials/for-loop.ipynb
+            - text: Context
+              href: astx/tutorials/context.ipynb
+            - text: Fibonacci
+              href: astx/tutorials/fibonacci.ipynb
+        - section: Development
+          contents:
+            - text: Conventions
+              href: astx/conventions.md
+            - text: Contributing
+              href: astx/contributing.md
+            - text: Historical Changelog
+              href: astx/changelog.md
+        - section: Python API
+          contents:
+            - auto: api/astx
+    - id: irx
+      title: IRx
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Overview
+          href: irx/index.md
+        - text: Installation
+          href: irx/installation.md
+        - section: Architecture
+          contents:
+            - text: Architecture Overview
+              href: irx/architecture.md
+            - text: Semantic Contract
+              href: irx/semantic-contract.md
+            - text: Runtime Features
+              href: irx/runtime-features.md
+            - text: Buffer View Model
+              href: irx/buffer-view-model.md
+            - text: Class Model
+              href: irx/class-model.md
+        - section: Learn and Contribute
+          contents:
+            - text: Getting Started Tutorial
+              href: irx/tutorials/get-started.ipynb
+            - text: Contributing
+              href: irx/contributing.md
+            - text: Historical Changelog
+              href: irx/changelog.md
+        - section: Python API
+          contents:
+            - auto: api/irx
+    - id: pyarx
+      title: PyArx
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Overview
+          href: pyarx/index.md
+        - section: Python API
+          contents:
+            - auto: api/pyarx
+    - id: arxjit
+      title: ArxJIT
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Overview
+          href: arxjit/index.md
+        - text: Python-to-ASTx Design
+          href: arxjit/design.md
+        - section: Python API
+          contents:
+            - auto: api/arxjit
+    - id: tools
+      title: Tools
+      style: floating
+      collapse-level: 1
+      contents:
+        - text: Tooling Overview
+          href: tools/index.md
+        - section: Project Workflows
+          contents:
+            - text: ArxPM
+              href: tools/arxpm.md
+        - section: Editors and Notebooks
+          contents:
+            - text: VS Code Extension
+              href: tools/vscode.md
+            - text: Jupyter Kernel
+              href: tools/jupyter.md
+        - section: Documentation
+          contents:
+            - text: Douki
+              href: tools/douki.md
+  page-footer:
+    left: "Copyright &copy; 2022-2026 ArxLang"
+    center:
+      - text: Apache-2.0
+        href: https://github.com/arxlang/arx/blob/main/LICENSE
+    right:
+      - text: GitHub
+        href: https://github.com/arxlang/arx
       - text: Code of Conduct
         href: coc.md
-      - text: Community
-        href: discord.md
-      - text: Governance
-        href: governance.md
-      - text: Changelog
-        href: changelog.md
 
 format:
   html:
     theme:
-      light: cosmo
-      dark: darkly
+      light: [cosmo, styles.scss]
+      dark: [darkly, styles.scss]
     toc: true
+    toc-depth: 3
     code-copy: true
     code-overflow: wrap
+    anchor-sections: true
+    smooth-scroll: true
     link-external-newwindow: true
+    grid:
+      sidebar-width: 280px
+      body-width: 900px
+      margin-width: 260px
+      gutter-width: 2rem
 
 execute:
   enabled: false

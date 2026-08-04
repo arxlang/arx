@@ -1,8 +1,8 @@
-# AIX MVP syntax
+# AIX toy syntax reference
 
-AIX is a Unicode-first, indentation-insensitive frontend. Whitespace and
+AIX is a Unicode-first, indentation-insensitive toy frontend. Whitespace and
 newlines improve readability, but `∎` or `{...}` determines function block
-boundaries. The current grammar is an experimental MVP and can change.
+boundaries. The grammar is an experiment and can change freely.
 
 ## Definitions
 
@@ -109,4 +109,4 @@ to ASTx or IRx output.
 
 Index brackets `⟬...⟭`, field access, `λ`, tuple brackets `⟨...⟩`, ranges, and
 the APL-inspired operators documented separately are lexed or reserved but do
-not have MVP parser/backend semantics.
+not have parser/backend semantics.

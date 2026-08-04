@@ -1,15 +1,15 @@
 # AIX
 
-AIX is an experimental AI-oriented symbolic language frontend in the ArxLang
-ecosystem.
+AIX is a toy symbolic-language experiment built for fun on top of ASTx and IRx.
+It is not a primary ArxLang product or a stability commitment.
 
 - PyPI distribution: `airx`
 - Python import: `aix`
 - CLI command: `aix`
 - Source extension: `.aix`
 
-> Status: MVP. The lexer, parser, CLI inspection modes, and IRx backend handoff
-> work for the documented subset. The symbolic grammar is not stable.
+> Status: toy project. The lexer, limited parser, CLI inspection modes, and IRx
+> handoff work for the documented subset. The grammar can change freely.
 
 ## Install and inspect
 
@@ -22,7 +22,7 @@ aix --show-llvm-ir program.aix
 aix --run program.aix
 ```
 
-## MVP syntax
+## Toy syntax
 
 ```aix
 ∴ fib ⟦ n:ℕ ⟧ → ℕ
@@ -44,18 +44,18 @@ Implemented forms:
 - `⌁ name:T ≔ expr` local bindings
 - `⟣ expr` output through the existing print node
 - `∎` blocks and compact `{...}` / `;` layout
-- `κ⟦...⟧` metadata parsing (ignored after parsing in the MVP)
+- `κ⟦...⟧` metadata parsing (ignored after parsing)
 - Unicode identifiers, scalar literals, arithmetic, and comparisons
 
 Reserved APL-inspired operators such as `⍴`, `⍳`, `¨`, `↑`, `↓`, `⍋`, and `⍒`
 are tokenized but rejected until semantics and backend mappings exist.
 
-## Current boundaries
+## Scope
 
-AIX maps supported constructs directly to ASTx and relies on IRx for semantics
-and LLVM. It does not yet expose Arx imports, classes, templates, Tensors,
-DataFrames, RecordBatches, or other Arrow-backed language types. Native Arrow
-support remains available in the shared IRx backend for future AIX syntax.
+AIX maps its small supported subset to ASTx and relies on IRx for semantics and
+LLVM. It does not expose Arx imports, classes, templates, Tensors, DataFrames,
+RecordBatches, or other Arrow-backed language types. There is no committed
+feature roadmap.
 
 Canonical documentation, including the grammar and lexical reference, is at
 <https://arxlang.org/aix/>.

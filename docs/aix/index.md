@@ -1,18 +1,19 @@
-# AIX
+# AIX: a toy symbolic-language experiment
 
-AIX is an experimental AI-oriented symbolic language frontend built on ASTx and
-IRx.
+AIX is a small project built for fun while exploring Unicode-heavy symbolic
+syntax on top of ASTx and IRx. It is not a primary ArxLang product, supported
+language, or committed roadmap item.
 
 - distribution: `airx`
 - Python import: `aix`
 - CLI: `aix`
 - source files: `.aix`
 
-## Current status
+## What currently works
 
-The MVP includes a Unicode lexer, symbolic parser, token/AST/LLVM inspection,
-and native backend handoff for supported programs. Its grammar and semantics are
-intentionally experimental.
+The toy implementation includes a Unicode lexer, limited parser, token/AST/LLVM
+inspection, and native backend handoff for its documented subset. Its grammar
+and semantics can change freely.
 
 ```aix
 ∴ fib ⟦ n:ℕ ⟧ → ℕ
@@ -34,10 +35,9 @@ APL-inspired symbols such as `⍴`, `⍳`, `¨`, `↑`, and `↓` are reserved. 
 recognizes them, but the parser reports that their semantics are not yet
 implemented.
 
-## Install
+## Explore locally
 
 ```bash
-pip install airx
 aix --help
 aix --show-tokens program.aix
 aix --show-ast program.aix
@@ -45,17 +45,14 @@ aix --show-llvm-ir program.aix
 aix --run program.aix
 ```
 
-## Relationship to Arrow
-
-AIX shares IRx's native runtime architecture, but the AIX language does not yet
-define Tensor, DataFrame, Series, RecordBatch, or other Arrow-backed syntax.
-Those features should be described symbolically before the frontend exposes them
-rather than copied mechanically from Arx.
+There is no product or compatibility commitment. In particular, AIX does not
+define the Tensor, DataFrame, Series, or RecordBatch syntax promoted by the main
+Arx and IRx documentation.
 
 Continue with:
 
 - [AIX syntax](syntax.md)
-- [MVP grammar](grammar.md)
+- [Toy grammar](grammar.md)
 - [Examples](examples.md)
 - [Reserved APL-inspired operators](apl-inspired-operators.md)
 - [Ecosystem status](../ecosystem.md) for project boundaries

@@ -49,5 +49,5 @@ except ArxError as error:
         print(item.message)
 ```
 
-Use the [Arx CLI](../getting-started.md) for current end-to-end compilation. The
-[roadmap](../roadmap.md) lists the compiler facade planned for PyArx.
+Use the [Arx CLI](../arx/compiler-cli.md) for current end-to-end compilation.
+The [roadmap](../roadmap.md) lists the compiler facade planned for PyArx.

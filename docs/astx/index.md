@@ -24,13 +24,13 @@ without sharing a source grammar.
 ASTx does not:
 
 - lex or parse source code
-- decide Arx or AIX language syntax
+- decide source-language syntax
 - perform IRx semantic analysis
 - provide native storage or depend on Apache Arrow
 - guarantee backend lowering for every modeled node
 
 IRx consumes ASTx nodes and owns analysis, LLVM lowering, and the native Arrow
-C++ runtime. Arx and AIX construct ASTx nodes from their respective languages.
+C++ runtime. Source frontends such as Arx construct ASTx nodes.
 
 ## Small example
 
