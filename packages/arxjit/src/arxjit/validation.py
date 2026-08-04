@@ -168,6 +168,40 @@ def _diagnostic(
     )
 
 
+def _defined_in_class_body(qualname: str) -> bool:
+    """
+    title: Report whether a function was lexically defined in a class body.
+    summary: |-
+      The extracted ast cannot reveal this on its own: the decorated object is
+      an ordinary function and its first parameter is only conventionally named
+      self. __qualname__ does record it, as a dotted path whose second-to-last
+      part is the owning class; a function nested inside another function is
+      dotted too, but Python inserts the "<locals>" marker there, which
+      distinguishes the two. An empty qualname (only reachable with a hand-
+      built ExtractedSource) is not a class body.
+      This is deliberately narrower than "is a method". __qualname__ records
+      where a function was defined, not whether a class currently owns the
+      descriptor, so three cases are outside the contract and validate cleanly:
+      a decorator that returns a different function without preserving
+      __qualname__ or setting __wrapped__, a function defined at module level
+      and assigned in a class body, and a function attached to a class after it
+      was created. Ownership is not knowable from source metadata. The first
+      two are reachable from the decorator layer, where
+      JitFunction.__set_name__ is called with the owning class for anything
+      bound in a class body; the third is not, because __set_name__ is only
+      called during class creation. A decorator chain that uses functools.wraps
+      stays covered here, because it copies __qualname__ and sets __wrapped__
+      for extraction to follow.
+    parameters:
+      qualname:
+        type: str
+    returns:
+      type: bool
+    """
+    parts = qualname.split(".")
+    return len(parts) > 1 and parts[-2] != "<locals>"
+
+
 def _target_names(target: ast.expr) -> set[str]:
     """
     title: Collect the names bound by an assignment or loop target.
@@ -716,25 +750,34 @@ def validate(extracted: ExtractedSource) -> None:
     """
     title: Validate that a function uses only the supported Python subset.
     summary: >-
-      Rejects async definitions and generic (PEP 695) type parameters, checks
-      the argument shape, then walks the body collecting one diagnostic per
-      rejected construct, including free-variable reads (closures and globals).
-      A function with several unsupported constructs is reported in a single
-      UnsupportedSyntaxError carrying all of them, so a user fixes everything
-      in one pass.
+      Rejects functions defined in a class body, async definitions and generic
+      (PEP 695) type parameters, checks the argument shape, then walks the body
+      collecting one diagnostic per rejected construct, including free-variable
+      reads (closures and globals). A function with several unsupported
+      constructs is reported in a single UnsupportedSyntaxError carrying all of
+      them, so a user fixes everything in one pass. See _defined_in_class_body
+      for the method forms this cannot detect from source metadata alone.
     parameters:
       extracted:
         type: ExtractedSource
         description: The result of arxjit.source.extract_source.
     raises:
       UnsupportedSyntaxError: >-
-        If the function is async or generic, has an unsupported argument shape,
-        reads a free variable, or its body uses any construct outside the v1
-        subset.
+        If the function is defined in a class body, is async or generic, has an
+        unsupported argument shape, reads a free variable, or its body uses any
+        construct outside the v1 subset.
     """
     node = extracted.node
     diagnostics: list[Diagnostic] = []
 
+    if _defined_in_class_body(extracted.qualname):
+        diagnostics.append(
+            _diagnostic(
+                extracted,
+                node,
+                "methods are not supported (only module-level functions)",
+            )
+        )
     if isinstance(node, ast.AsyncFunctionDef):
         diagnostics.append(
             _diagnostic(

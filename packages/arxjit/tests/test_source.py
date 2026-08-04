@@ -848,6 +848,34 @@ def test_namespace_is_excluded_from_repr_and_equality() -> None:
     assert extracted == dataclasses.replace(extracted, globalns={"x": 1})
 
 
+def test_qualified_name_is_carried() -> None:
+    """
+    title: Extraction records the function's qualified name.
+    summary: >-
+      A method and a module-level function are indistinguishable in the
+      extracted ast, so validation needs the qualified name to tell them apart.
+    """
+
+    class Calc:
+        """
+        title: Hold a method to extract (test helper).
+        """
+
+        def scaled(self, x: int) -> int:
+            """
+            title: Double the argument.
+            parameters:
+              x:
+                type: int
+            returns:
+              type: int
+            """
+            return x * 2
+
+    assert extract_source(sample_add).qualname == "sample_add"
+    assert extract_source(Calc.scaled).qualname.endswith("Calc.scaled")
+
+
 def test_extracted_source_is_frozen() -> None:
     """
     title: ExtractedSource instances are immutable.

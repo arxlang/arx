@@ -107,6 +107,24 @@ def _freevars_of(fn: PyFunc) -> frozenset[str]:
     return frozenset(getattr(code, "co_freevars", ()) or ())
 
 
+def _qualname_of(fn: PyFunc) -> str:
+    """
+    title: Return the qualified name a function was defined under.
+    summary: >-
+      Carried through extraction for the same reason as the module namespace: a
+      method is an ordinary function in the AST, and only __qualname__ records
+      the class it belongs to. Reads the unwrapped function so it matches the
+      retrieved source; empty for objects without a qualified name.
+    parameters:
+      fn:
+        type: PyFunc
+    returns:
+      type: str
+    """
+    qualname = getattr(_unwrapped(fn), "__qualname__", "")
+    return cast(str, qualname or "")
+
+
 def _name_of(fn: PyFunc) -> str:
     """
     title: Return a human-readable name for a function.
@@ -295,6 +313,15 @@ class ExtractedSource:
           The names the function captures from enclosing scopes, empty when it
           captures nothing. Carried for the same reason as ``globalns``: a
           captured name is indistinguishable from a builtin in the AST alone.
+      qualname:
+        type: str
+        description: >-
+          The function's __qualname__, or "" when the object has none. Carried
+          for the same reason as ``globalns``: a method is an ordinary function
+          in the AST, and only the qualified name records the class it was
+          defined in. It records the *definition site*, not which class owns
+          the descriptor now, so it cannot reveal a function assigned into a
+          class body or attached to a class afterwards.
     """
 
     filename: str
@@ -305,6 +332,7 @@ class ExtractedSource:
         default=None, repr=False, compare=False
     )
     freevars: frozenset[str] = frozenset()
+    qualname: str = ""
 
 
 def extract_source(fn: PyFunc) -> ExtractedSource:
@@ -390,6 +418,7 @@ def extract_source(fn: PyFunc) -> ExtractedSource:
         node=node,
         globalns=_globals_of(fn),
         freevars=_freevars_of(fn),
+        qualname=_qualname_of(fn),
     )
 
 
