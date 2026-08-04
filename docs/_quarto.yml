@@ -28,18 +28,16 @@ website:
     left:
       - text: Home
         href: index.md
-      - text: Packages
-        menu:
-          - text: Arx
-            href: library/index.md
-          - text: ASTx
-            href: astx/index.md
-          - text: IRx
-            href: irx/index.md
-          - text: PyArx
-            href: pyarx/index.md
-          - text: ArxJIT
-            href: arxjit/index.md
+      - text: Arx
+        href: library/index.md
+      - text: ASTx
+        href: astx/index.md
+      - text: IRx
+        href: irx/index.md
+      - text: PyArx
+        href: pyarx/index.md
+      - text: ArxJIT
+        href: arxjit/index.md
     right:
       - icon: github
         aria-label: ArxLang on GitHub

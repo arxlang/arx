@@ -1,34 +1,51 @@
 ---
 title: ""
-pagetitle: ArxLang — LLVM-native, Arrow-native compiler ecosystem
+pagetitle: ArxLang compiler ecosystem
 description: >-
-  Build statically typed, data-oriented programs through ASTx, IRx, LLVM, and a
-  native Apache Arrow C++ runtime.
+  Documentation for the Arx language, ASTx, IRx, LLVM compilation, and native
+  Apache Arrow support.
 page-layout: full
 toc: false
 sidebar: false
 ---
 
-:::::: {.arx-home}
+<div class="arx-home">
 
-::::: {.arx-hero} :::: {.arx-hero-inner} ::: {.arx-hero-copy}
+<div class="arx-hero">
+<div class="arx-hero-inner">
+<div class="arx-hero-copy">
 
-<div class="arx-eyebrow">LLVM-native compiler ecosystem</div>
+<div class="arx-eyebrow">ArxLang</div>
 
-# Typed programs. Native data. Arrow at the core.
+# ArxLang compiler ecosystem
 
-::: {.arx-hero-lead} ArxLang is an experimental compiler ecosystem for
-statically typed, data-oriented programs. Arx produces ASTx nodes, IRx resolves
-their semantics, and LLVM builds native artifacts backed by an on-demand Apache
-Arrow C++ runtime. :::
+<div class="arx-hero-lead">
 
-::: {.arx-hero-actions} [Get started](getting-started.md){.btn .btn-primary}
-[Explore native Arrow](apache-arrow.md){.btn .btn-outline-primary} :::
+ArxLang is an experimental statically typed language and compiler toolchain. The
+Arx frontend parses source into ASTx nodes. IRx performs semantic analysis,
+lowers supported nodes to LLVM IR, and builds native artifacts. IRx also
+provides runtime components for Apache Arrow-backed collections.
 
-::: {.arx-tech-list} <span>Python 3.10+</span> <span>LLVM</span> <span>Apache
-Arrow C++</span> <span>Apache-2.0</span> ::: :::
+</div>
 
-::: {.arx-code-window} ::: {.arx-code-window-header} example.x :::
+<div class="arx-hero-actions">
+
+[Getting started](getting-started.md){.btn .btn-primary}
+[Apache Arrow support](apache-arrow.md){.btn .btn-outline-primary}
+
+</div>
+
+<div class="arx-tech-list">
+<span>Python 3.10+</span>
+<span>LLVM</span>
+<span>Apache Arrow C++</span>
+<span>Apache-2.0</span>
+</div>
+
+</div>
+
+<div class="arx-code-window">
+<div class="arx-code-window-header">example.x</div>
 
 ````arx
 ```
@@ -42,53 +59,73 @@ fn main() -> i32:
   return cast(rows.nrows(), i32)
 ````
 
-::: :::: :::::
+</div>
+</div>
+</div>
 
-:::: {.arx-home-section} ::: {.arx-section-heading}
+<div class="arx-home-section">
+<div class="arx-section-heading">
 
-## A deliberately layered compiler
+## Compiler architecture
 
-Each project has a focused responsibility. Frontends define syntax, ASTx defines
-reusable program structure, and IRx owns semantics, lowering, and native runtime
-integration. :::
+The compilation path separates source parsing, program representation, semantic
+analysis, LLVM lowering, and runtime integration. Each package owns a defined
+part of that path.
 
-:::: {.arx-feature-grid} ::: {.arx-feature-card}
+</div>
 
-<div class="arx-card-kicker">01 · Frontend</div>
+<div class="arx-feature-grid">
+<div class="arx-feature-card">
 
-### Parse typed source
+<div class="arx-card-kicker">Arx</div>
+
+### Source frontend
 
 Arx owns indentation-sensitive syntax, modules, classes, templates, tests, and
-the compiler CLI. It emits shared ASTx nodes rather than a private AST model.
-:::
+the compiler CLI. The parser emits ASTx nodes rather than an Arx-specific AST
+model.
 
-::: {.arx-feature-card}
+</div>
 
-<div class="arx-card-kicker">02 · Semantics</div>
+<div class="arx-feature-card">
 
-### Resolve before lowering
+<div class="arx-card-kicker">ASTx</div>
+
+### Shared AST model
+
+ASTx provides language-independent nodes for types, expressions, statements,
+functions, control flow, classes, templates, and collections. Frontends and
+backends use the same model.
+
+</div>
+
+<div class="arx-feature-card">
+
+<div class="arx-card-kicker">IRx</div>
+
+### Analysis and LLVM backend
 
 IRx analyzes symbols, calls, types, control flow, templates, classes, and FFI
-contracts before lowering the supported ASTx subset to LLVM IR. :::
+contracts. It lowers the supported ASTx subset to LLVM IR and activates native
+runtime features when they are required.
 
-::: {.arx-feature-card}
+</div>
+</div>
+</div>
 
-<div class="arx-card-kicker">03 · Runtime</div>
+<div class="arx-home-section">
+<div class="arx-section-heading">
 
-### Activate only what is used
+## Packages
 
-Native features contribute symbols, sources, objects, and linker flags only when
-a compilation unit needs them—including the Apache Arrow C++ runtime. ::: ::::
-::::
+Package pages describe implemented behavior, known limitations, and planned
+work. The labels below summarize the current maturity of each primary package.
 
-:::: {.arx-home-section} ::: {.arx-section-heading}
+</div>
 
-## Packages with clear boundaries
+<div class="arx-package-grid">
+<div class="arx-package-card">
 
-The ecosystem is intentionally modular. Package maturity differs, so every
-overview distinguishes working behavior from planned work. :::
-
-:::: {.arx-package-grid} ::: {.arx-package-card}
 <span class="arx-status">Functional prototype</span>
 
 ### Arx
@@ -96,57 +133,82 @@ overview distinguishes working behavior from planned work. :::
 The source language, lexer, parser, project model, test runner, and native
 compiler CLI.
 
-[Read the language reference →](library/index.md) :::
+[Arx documentation →](library/index.md)
 
-::: {.arx-package-card} <span class="arx-status">Functional, evolving</span>
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Functional, evolving</span>
 
 ### ASTx
 
 A language-agnostic Python model for typed abstract syntax trees and compiler
 tooling.
 
-[Explore ASTx →](astx/index.md) :::
+[ASTx documentation →](astx/index.md)
 
-::: {.arx-package-card} <span class="arx-status">Experimental backend</span>
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Functional experimental backend</span>
 
 ### IRx
 
 Semantic analysis, LLVM lowering, native artifacts, diagnostics, and runtime
 feature activation.
 
-[Explore IRx →](irx/index.md) :::
+[IRx documentation →](irx/index.md)
 
-::: {.arx-package-card} <span class="arx-status">API foundation</span>
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">API foundation only</span>
 
 ### PyArx
 
 The developing Python-facing compiler API, currently focused on structured
 diagnostics and public error types.
 
-[View PyArx status →](pyarx/index.md) :::
+[PyArx documentation →](pyarx/index.md)
 
-::: {.arx-package-card} <span class="arx-status">Frontend foundations</span>
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Frontend foundations only</span>
 
 ### ArxJIT
 
 A developing decorator route from a restricted Python subset to ASTx and IRx;
 decorated calls still use Python fallback today.
 
-[View ArxJIT status →](arxjit/index.md) ::: :::: ::::
+[ArxJIT documentation →](arxjit/index.md)
 
-:::: {.arx-home-section} :::: {.arx-arrow-band} ::: {.arx-arrow-copy}
+</div>
+</div>
+</div>
 
-<div class="arx-eyebrow">Native Apache Arrow</div>
+<div class="arx-home-section">
+<div class="arx-arrow-band">
+<div class="arx-arrow-copy">
 
-## Data infrastructure, not an afterthought
+<div class="arx-eyebrow">IRx native runtime</div>
 
-Generated LLVM calls a stable IRx-owned C ABI while Arrow C++ retains container
-layout and ownership. Runtime artifacts are compiled and linked on demand.
+## Apache Arrow integration
 
-[See the architecture and current limits →](apache-arrow.md) :::
+IRx includes a native Apache Arrow C++ runtime. Generated LLVM calls an
+IRx-owned C ABI, while Arrow C++ manages container layout and ownership. The
+required runtime artifacts are compiled and linked when a program uses the
+corresponding feature.
 
-::: {.arx-arrow-details}
+[Implementation details and current limits →](apache-arrow.md)
 
+</div>
+
+<div class="arx-arrow-details">
 <ul class="arx-arrow-list">
   <li>Arrays with Arrow C Data interoperability</li>
   <li>Tensors backed by <code>arrow::Tensor</code></li>
@@ -154,14 +216,19 @@ layout and ownership. Runtime artifacts are compiled and linked on demand.
   <li>Series backed by <code>arrow::ChunkedArray</code></li>
   <li>RecordBatch IPC and PyArrow round trips</li>
 </ul>
-:::
-::::
-::::
+</div>
+</div>
+</div>
 
-:::: {.arx-home-section} ::: {.arx-status-note} **Current status:** ArxLang is a
-pre-production compiler ecosystem. The documented surface is tested, but
-language semantics and package APIs can still change. Review the
-[ecosystem status](ecosystem.md) and [roadmap](roadmap.md) before adopting
-unstable interfaces. ::: ::::
+<div class="arx-home-section">
+<div class="arx-status-note">
 
-::::::
+**Project status:** The primary packages are pre-production. Documented
+implemented behavior is tested, but language semantics and package APIs can
+still change. See the [ecosystem status](ecosystem.md) for current capabilities
+and limitations, and the [roadmap](roadmap.md) for planned work.
+
+</div>
+</div>
+
+</div>
