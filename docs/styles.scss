@@ -104,9 +104,15 @@ a:hover {
   letter-spacing: -0.025em;
 }
 
-.navbar-logo {
-  width: 2.15rem;
+.navbar .navbar-logo {
+  width: auto;
   height: 2.15rem;
+  min-height: 0;
+  max-height: 2.15rem;
+  margin-right: 0;
+  padding-right: 0;
+  object-fit: contain;
+  aspect-ratio: 1 / 1;
   filter: drop-shadow(0 5px 10px rgb(0 0 0 / 24%));
 }
 
