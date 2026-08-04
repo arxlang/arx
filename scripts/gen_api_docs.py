@@ -20,6 +20,9 @@ SOURCE_ROOTS = (
     ROOT / "packages" / "arx" / "src",
     ROOT / "packages" / "astx" / "src",
     ROOT / "packages" / "irx" / "src",
+    ROOT / "packages" / "pyarx" / "src",
+    ROOT / "packages" / "aix" / "src",
+    ROOT / "packages" / "arxjit" / "src",
 )
 PRIVATE_PREFIX = "_"
 
@@ -292,7 +295,7 @@ def write_api_tree(modules: list[ModuleDoc]) -> None:
         shutil.rmtree(API_DIR)
     API_DIR.mkdir(parents=True)
 
-    packages: dict[str, list[ModuleDoc]] = {"arx": [], "astx": [], "irx": []}
+    packages: dict[str, list[ModuleDoc]] = {}
     for module in modules:
         package = module.name.split(".", maxsplit=1)[0]
         packages.setdefault(package, []).append(module)
@@ -317,7 +320,8 @@ def write_api_index(packages: dict[str, list[ModuleDoc]]) -> None:
         "",
         "# API Docs",
         "",
-        "Generated from the Python sources for Arx, ASTx, and IRx.",
+        "Generated from the Python sources for all packages in the ArxLang "
+        "monorepo.",
         "",
     ]
     for package in sorted(packages):

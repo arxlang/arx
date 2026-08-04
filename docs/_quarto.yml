@@ -9,7 +9,7 @@ website:
   site-url: https://arxlang.org
   repo-url: https://github.com/arxlang/arx
   favicon: favicon.ico
-  page-footer: "Copyright &copy; 2022, ArxLang Team"
+  page-footer: "Copyright &copy; 2022-2026, ArxLang Team"
   navbar:
     logo: images/arx.png
     right:
@@ -25,6 +25,10 @@ website:
         href: index.md
       - text: Getting Started
         href: getting-started.md
+      - text: Ecosystem Status
+        href: ecosystem.md
+      - text: Apache Arrow
+        href: apache-arrow.md
       - section: Library
         contents:
           - text: Overview
@@ -39,6 +43,8 @@ website:
             href: library/datatypes.md
           - text: Built-in Types
             href: library/built-in-types.md
+          - text: Collections and Arrow
+            href: library/collections.md
           - text: Control Flow
             href: library/control-flow.md
           - text: Docstrings
@@ -95,6 +101,18 @@ website:
                 href: irx/tutorials/get-started.ipynb
           - text: Historical Changelog
             href: irx/changelog.md
+      - section: Python Tools
+        contents:
+          - text: PyArx
+            href: pyarx/index.md
+          - text: ArxJIT
+            href: arxjit/index.md
+      - section: AIX
+        contents:
+          - text: Overview
+            href: aix/index.md
+          - text: Syntax
+            href: aix/syntax.md
       - text: API Docs
         href: api/index.md
       - text: Syntax

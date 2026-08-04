@@ -1,7 +1,7 @@
 [project]
 name = "arxlang"
 version = "1.23.1"  # semantic-release
-description = "Arx is a compiler built with llvm"
+description = "LLVM-based language compiler with native Apache Arrow-backed collections."
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}

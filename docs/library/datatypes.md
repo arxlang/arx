@@ -93,6 +93,9 @@ of the current model.
 For the catalog of built-in types, aliases, and examples, see
 [Built-in Types](built-in-types.md).
 
+For native storage and the current Tensor, DataFrame, and Series boundaries, see
+[Collections and Apache Arrow](collections.md).
+
 That page covers:
 
 - numeric types and aliases

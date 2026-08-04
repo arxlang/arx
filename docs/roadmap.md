@@ -1,89 +1,88 @@
 # Roadmap
 
-The roadmap document define the direction that the project is taking.
+This roadmap lists remaining work. For implemented behavior, see the
+[ecosystem status](ecosystem.md) and language reference.
 
-The initial and decisive part of the project is the implementation of native
-tensor abstractions backed by Apache Arrow. But in order to get to that point,
-we need first implement a bunch of small pieces across the Arx + IRx stack. Arx
-owns the surface front end (lexer, parser, docs, examples), while IRx owns AST
-definitions, semantic analysis, lowering, and code generation.
+## Completed foundations
 
-## Improve the language structure
+The current monorepo already provides:
 
-- [ ] Currently, almost everything is a expression, but some structure should be
-      converted to statements.
-  - [ ] `For` loop
-  - [ ] `If`
-  - [ ] Implement `return` keyword
-- [ ] Allow multiple lines in a block
-- [ ] Add support for `while` loop
-- [ ] Add support for `switch`
-- [ ] Add support for code structure defined by indentation
-- [ ] Add support packaging and `import`
-- [ ] Add support for `docstring`
-- [x] Add support for file objects generation
-- [ ] Add support for generating executable files
-- [ ] Add support for mutable variables
-- [ ] Add support for classes (details TBA)
+- indentation-sensitive Arx parsing with typed functions and variables
+- structured control flow, imports, classes, templates, assertions, and tests
+- ASTx as the shared node model
+- IRx semantic analysis, structured diagnostics, LLVM lowering, and linking
+- on-demand native runtime features
+- Apache Arrow C++ arrays, tensors, tables, Series, and RecordBatch IPC
+- static-schema Arx DataFrames and fixed-shape numeric tensors
+- AIX, PyArx, and ArxJIT package foundations
 
-## Data type support
+## Native Arrow and collections
 
-ArxLang is based on [Kaleidoscope compiler](https://llvm.org/docs/tutorial/), so
-it just implements float data type for now.
+- [ ] Add dynamic indexing for runtime-shaped Tensor parameters.
+- [ ] Define ownership and return semantics for runtime-shaped Tensor values.
+- [ ] Add runtime validation when an unknown shape or row count flows into a
+      statically sized target.
+- [ ] Support partial Tensor constraints such as `tensor[f64, 2, ...]`.
+- [ ] Add symbolic shape parameters for generic algorithms.
+- [ ] Expand the Arx DataFrame surface to UTF-8, nullable, and temporal columns
+      already represented by lower-level Arrow facilities.
+- [ ] Define an Arx-facing RecordBatch and streaming surface.
+- [ ] Add selected Arrow Compute operations without turning IRx into a general
+      query engine.
+- [ ] Complete dynamic-list storage reclamation and collection ownership.
 
-In order to accept more datatypes, the language should have a way to specify the
-type for each variable and function returning.
+## Arx language
 
-- [x] Wave 1: float32
-- [ ] Wave 2: static typing
-- [ ] Wave 3: int8, int16, int32, int64
-- [ ] Wave 4: float16, float64
-- [ ] Wave 5: string
-- [ ] Wave 6: datetime
+- [ ] Stabilize language semantics and publish a versioned language
+      specification beyond the lexical manifest.
+- [ ] Decide the final `const` declaration behavior; it is currently reserved
+      lexically but not a general parsed declaration form.
+- [ ] Add `break` and `continue` to the Arx surface after aligning parser, ASTx,
+      IRx, and documentation behavior.
+- [ ] Expand string, temporal, and collection operations.
+- [ ] Define constructor arguments and richer class lifecycle behavior.
+- [ ] Implement the interactive `arx --shell` mode.
+- [ ] Grow the bundled pure-Arx standard library.
 
-## Implement native tensors
+## IRx and ASTx
 
-Native tensors now have an initial Arrow C++ backed implementation. Remaining
-work should continue to make runtime-shaped tensor values usable in more
-contexts, while preserving the same runtime-layout rules for every collection
-type that uses that approach.
+- [ ] Continue separating stable public APIs from internal helper nodes.
+- [ ] Expand lowering coverage without implying that every ASTx node must have
+      an LLVM implementation.
+- [ ] Stabilize native runtime ownership and ABI compatibility guarantees.
+- [ ] Improve API documentation generated from Douki Python docstrings.
+- [ ] Add explicit compatibility documentation for Python, llvmlite, LLVM, and
+      native C++ toolchains.
 
-- [ ] Expand runtime-layout annotations beyond function and extern parameters
-      once default values, ownership, and type checking are ready for local
-      declarations and expression contexts.
-- [ ] Keep tensor semantics aligned with the Arrow-backed runtime rather than
-      adding Arx-local lowering behavior.
+## Python entry points
 
-## DataFrames and Series
+### PyArx
 
-DataFrames are a distinct public collection abstraction for heterogeneous named
-columns. Static-schema values use `dataframe[name: T, ...]`, column views use
-`series[T]`, and literals are constructed with `dataframe({...})`.
+- [ ] Add parse-from-string and parse-from-file APIs.
+- [ ] Add compile, artifact, and execution result objects.
+- [ ] Translate all Arx and IRx failures into the public PyArx hierarchy.
 
-- [x] Add the builtin `dataframe[...]` type.
-- [x] Add the builtin `series[T]` type for typed DataFrame columns.
-- [x] Add the builtin `dataframe({...})` constructor for column-oriented
-      literals.
-- [x] Back DataFrame values with Arrow C++ `arrow::Table`.
-- [x] Back Series values with Arrow C++ `arrow::ChunkedArray`.
-- [x] Keep the MVP limited to fixed-width numeric and `bool` columns.
-- [ ] Add string, nullable, nested, temporal, and user-defined column support
-      after the fixed-width MVP is stable.
-- [ ] Expand runtime-layout/schema annotations beyond function and extern
-      parameters, applying the same behavior to both `dataframe[...]` and
-      `tensor[T, ...]`.
+### ArxJIT
 
-## Type System Follow-ups
+- [ ] Connect source extraction and validation to `@jit`.
+- [ ] Lower the accepted Python subset to ASTx.
+- [ ] Compile and call native functions through IRx.
+- [ ] Implement signature inference, runtime marshalling, and caching.
+- [ ] Add Arrow-backed array and tensor signatures after scalar compilation is
+      stable.
 
-- [ ] Add parser-level support for optional list, tensor, series, and dataframe
-      size/shape annotations once the surface-syntax restrictions are ready to
-      change.
-- [ ] Add runtime check sidecars for assigning unknown-size values to sized
-      targets, including list length, tensor shape, series length, and dataframe
-      row count; sized annotations must not become trusted metadata until the
-      runtime check has passed.
-- [ ] Add support for partial tensor shape constraints using ellipsis, such as
-      `tensor[f64, 2, ...]`, `tensor[f64, ..., 3]`, and
-      `tensor[f64, 2, ..., 3]`.
-- [ ] Add symbolic shape variables for generic algorithms, such as
-      `fn dot[N](a: tensor[f64, N], b: tensor[f64, N])`.
+### AIX
+
+- [ ] Stabilize the symbolic grammar and metadata contract.
+- [ ] Expand control flow and module support.
+- [ ] Decide semantics for the reserved APL-inspired operator set.
+- [ ] Expose data-oriented and Arrow-backed types only after their symbolic
+      surface is specified.
+
+## Release readiness
+
+- [ ] Define stability levels and compatibility policies for each package.
+- [ ] Publish complete migration notes for breaking language or API changes.
+- [ ] Expand cross-platform native-runtime coverage.
+- [ ] Provide end-user binary/toolchain installation guidance for supported
+      platforms.

@@ -1,5 +1,7 @@
 # Partners
 
+Organizations and communities collaborating with ArxLang are listed here.
+
 <div>
   <div class="card-columns">
     <div class="card cols-3">
@@ -13,7 +15,9 @@
       </div>
       <div class="card-body">
         <p class="card-text">
-          Open science labs is a community that aims to gather people from all parts of the world, specially from latin america countries and create an open space for teaching, learning and sharing topics around open science and computational tools. An english group is very important in this context because it increases the possibilities of collaboration in open projects.
+          Open Science Labs is a global community, with a strong Latin American
+          presence, that creates open spaces for teaching, learning, and
+          sharing work on open science and computational tools.
         </p>
         <p class="card-text">
           <a href="https://github.com/opensciencelabs/opensciencelabs.github.io">

@@ -1,235 +1,209 @@
-# Arx Syntax Specification (Lexical)
+# Arx Lexical Syntax Specification
 
-Status: draft `0.1.0`
+Status: draft `0.2.0`
 
-This document defines Arx lexical/token-level behavior for editor tooling.
+This page documents token-level behavior used by the lexer and editor tooling.
+The normative source is `packages/arx/src/arx/lexer/syntax.json`. Parser and
+semantic rules live in the [language reference](library/index.md).
 
-Normative source: `packages/arx/src/arx/lexer/syntax.json`
+## Source files and whitespace
 
-Non-goal: full parsing or AST semantics.
-
-## 1) Source of Truth
-
-- `syntax.json` is canonical.
-- Any derived editor grammar or tokenizer should be generated from, or manually
-  validated against, that file.
-- If this Markdown and the JSON disagree, the JSON wins.
-
-## 2) Whitespace and Newlines
-
-- Indentation is significant.
-- Canonical indentation unit is 2 spaces.
-- Newlines are significant boundaries for indentation handling.
-- Blank lines reset indentation tracking for that line.
-- Tabs policy is not finalized.
-- TODO(ARX-LEX-WS-001): decide whether tabs are forbidden or normalized.
-
-### Example
+- recognized extensions: `.x` and `.arx`
+- indentation is significant
+- the canonical indentation unit is 2 spaces
+- the syntax manifest forbids tabs; current lexer diagnostics do not enforce
+  that rule consistently, so source must use spaces
+- newlines delimit logical lines
+- blank lines do not create indentation transitions
 
 ```arx
-fn abs(x):
-  if x < 0:
-    return 0 - x
+fn absolute(value: i32) -> i32:
+  if value < 0:
+    return 0 - value
   else:
-    return x
+    return value
 ```
 
-## 3) Comments
+## Comments and docstrings
 
-- Line comments start with `#` and continue to end of line.
-- Block comments are not specified.
+`#` starts a line comment. Block comments are not supported.
 
-### Example
+Triple backticks delimit Douki YAML docstrings and produce a dedicated
+`docstring` token:
 
-```arx
-fn print_star(n):
-  putchard(42)  # ascii '*'
+````text
 ```
+title: Module documentation
+summary: Optional description.
+```
+````
 
-### Edge Cases
+Docstring placement and schema validation are parser concerns documented in
+[Docstrings](library/docstrings.md).
 
-- `#` inside future string syntax is undefined until strings are specified.
-- TODO(ARX-LEX-COMMENT-002): decide whether `//` should become a comment
-  delimiter.
+## Identifiers
 
-## 4) Strings and Escapes
+Identifiers start with a Unicode letter or `_` and continue with Unicode
+alphanumeric characters or `_`.
 
-Current status: not yet specified for Arx lexical v0.1.0.
-
-- No official quote delimiters.
-- No official escape sequences.
-- No triple-quoted or raw string prefixes.
-- No string interpolation syntax.
-
-TODO(ARX-LEX-STRINGS-001): define `"..."` / `'...'` behavior and escapes.
-TODO(ARX-LEX-STRINGS-002): define raw strings and interpolation policy.
-
-### Highlighter Guidance (current)
-
-- Treat quote characters as plain punctuation/operators.
-- Avoid speculative string scopes unless a tool explicitly opts into
-  future-preview rules.
-
-## 5) Numbers
-
-Supported lexical number classes:
-
-- Decimal integers (e.g., `0`, `42`)
-- Decimal floats with one dot (e.g., `3.14`, `.5`, `5.`)
-
-Not currently specified:
-
-- Non-decimal bases (`0x`, `0b`, `0o`)
-- Exponent forms (`1e9`)
-- Numeric separators (`1_000`)
-- Type suffixes (`42u32`, `1.0f32`)
-
-### Edge Cases
-
-- `1.2.3` is invalid (multiple decimal points).
-- `.` alone is invalid as a numeric literal.
-
-## 6) Identifiers and Unicode Policy
-
-Identifier shape:
-
-- Start: Unicode letter or `_`
-- Continue: Unicode alphanumeric or `_`
-
-Reference regex for tooling:
+Reference pattern for Unicode-aware tooling:
 
 ```regex
 (?:[_\p{L}])(?:[_\p{L}\p{N}])*
 ```
 
-Policy status:
+The exact Unicode categories currently follow the Python runtime. Matching is
+case-sensitive.
 
-- Current behavior tracks host-runtime Unicode character categories.
-- TODO(ARX-LEX-IDENT-001): lock policy to either XID\_\* classes or ASCII-only.
+## Keywords
 
-## 7) Keywords
+Reserved lexical keywords:
 
-Reserved keywords:
-
-- `class`
-- `const`
-- `else`
-- `extern`
-- `fn`
-- `for`
-- `if`
-- `import`
-- `in`
-- `return`
-- `then`
-- `var`
+```text
+assert class const else extern fn for if import in return then var while
+```
 
 Contextual keywords:
 
-- `as`
-- `from`
-- `type`
-
-### Edge Cases
-
-- `fnx`, `if_else`, `returnValue` are identifiers, not keywords.
-- Case-sensitive matching: `Fn` and `IF` are identifiers.
-
-## 8) Operators and Punctuation
-
-Current operator/punctuation set for lexical highlighting:
-
-- Assignment/comparison/arithmetic: `=`, `<`, `>`, `+`, `-`, `*`, `/`
-- Structural punctuation: `.`, `@`, `:`, `,`, `;`
-
-Brackets:
-
-- `()`
-- `[]`
-- `{}`
-
-Notes:
-
-- Multi-character operators are not finalized.
-- Annotation lines use `@[` followed by comma-separated modifier names and a
-  closing `]`.
-- Grouped named imports use parentheses, require `from`, and allow trailing
-  commas.
-- TODO(ARX-LEX-OPS-001): decide on `==`, `!=`, `<=`, `>=`, `->`.
-
-## 9) Canonical Lexical Examples
-
-### Keywords vs identifiers
-
-```arx
-fn fnx(x):
-  var if_else = x in
-    return if_else
+```text
+as binary from operator type unary
 ```
 
-### Numeric forms
+Literal keywords:
 
-```arx
-fn demo() -> none:
-  var a = 42 in
-    var b = 3.14 in
-      var c = .5 in
-        var d = 5. in
-          a + b + c + d
+```text
+true false none
 ```
 
-### Comments
+Lexical reservation does not by itself promise a complete parser or lowering for
+every word. In particular, `const`, `then`, and operator-declaration words
+remain reserved while their general language forms are incomplete.
 
-```arx
-extern putchard(x)  # imported symbol
+## Numeric literals
+
+Supported forms:
+
+- decimal integers: `0`, `42`
+- decimal floats with one dot: `3.14`, `.5`, `5.`
+
+Not supported:
+
+- hexadecimal, binary, or octal prefixes
+- exponent notation such as `1e9`
+- separators such as `1_000`
+- literal suffixes such as `42u32`
+
+Multiple dots are invalid, and `.` by itself is punctuation rather than a
+number.
+
+## Strings and characters
+
+Double quotes create string literals. Single quotes create character literals.
+The lexer recognizes these escapes:
+
+| Escape | Value           |
+| ------ | --------------- |
+| `\\`   | backslash       |
+| `\n`   | newline         |
+| `\r`   | carriage return |
+| `\t`   | tab             |
+| `\"`   | double quote    |
+| `\'`   | single quote    |
+
+Raw strings, triple-quoted strings, and interpolation are not supported. Triple
+backticks are reserved for Douki docstrings, not ordinary string values.
+
+## Operators and punctuation
+
+Single-character tokens:
+
+```text
+= < > + - * / . : , ; @ | ! ( ) [ ] { }
 ```
 
-### Annotation lines
+Multi-character operators:
+
+```text
+== != <= >= -> && || ++ --
+```
+
+Word-form logical operators:
+
+```text
+and or
+```
+
+Current groups:
+
+- assignment: `=`
+- comparison: `<`, `>`, `<=`, `>=`, `==`, `!=`
+- arithmetic: `+`, `-`, `*`, `/`
+- logical: `&&`, `||`, `and`, `or`, `!`
+- type union: `|`
+- punctuation: `@`, `:`, `,`, `;`, `.`
+
+`++` and `--` are lexed as unary operators. Availability in a particular
+semantic context depends on the parser and IRx type rules.
+
+## Structural forms
+
+### Declaration modifiers
 
 ```arx
-@[public, static]
-class Math:
-  @[public, constant]
-  version: int32 = 1
+@[public, static, constant]
+version: i32 = 1
 ```
+
+Recognized modifiers are `public`, `private`, `protected`, `static`, `constant`,
+`mutable`, `abstract`, and `extern`.
+
+### Templates
+
+```arx
+@<T: i32 | f64>
+fn identity(value: T) -> T:
+  return value
+```
+
+Explicit template calls use angle brackets: `identity<f64>(1.5)`.
 
 ### Imports
 
+Grouped imports use parentheses, require `from`, and allow a trailing comma:
+
 ```arx
-import std.math
-import std.math as math
-
-import sin from std.math
-import sin as sine from std.math
-
-import (sin, cos, tan as tangent) from std.math
-
 import (
   sin,
   cos,
   tan as tangent,
-) from std.math
+) from math
 ```
 
-## 10) Lightweight Consistency Checks (Repo-Agnostic)
+### Collection type forms
 
-1. Canonical check:
+```text
+list[T]
+tensor[T, D0, D1]
+tensor[T, ...]
+dataframe[name: T, ...]
+dataframe[...]
+series[T]
+```
 
-   - Parse `packages/arx/src/arx/lexer/syntax.json`.
-   - Verify required keys exist (`keywords`, `comment`, `strings`, `numbers`,
-     `identifiers`, `whitespace`, `brackets`).
+The literal `...` is accepted only in the runtime-layout parameter forms
+described by the type reference.
 
-2. Derived artifacts check:
+## Builtin lexical names
 
-   - If/when an editor grammar exists, assert it was generated from or validated
-     against the JSON manifest.
-   - Fail CI if keyword arrays differ.
+Builtin type names include numeric aliases, `bool`, `none`, text and temporal
+types, plus `list`, `tensor`, `dataframe`, and `series`. Builtin callable names
+include `cast`, `dataframe`, `isinstance`, `print`, `range`, and `type`.
 
-3. Drift check:
+These names are recorded for syntax tooling. Parser resolution still decides
+whether a name is a type, constructor, ambient builtin, local binding, or
+ordinary identifier in context.
 
-   - Add a simple script that loads JSON and scans corpus snippets (if present)
-     to ensure each declared keyword/operator appears in at least one sample.
+## Consistency rule
 
-4. Change discipline:
-   - Require PRs touching syntax tooling to update `syntax.json` first, then
-     derived files.
+Changes to lexical syntax must update `syntax.json` first, then the lexer,
+tests, this document, examples, and any derived editor grammars.

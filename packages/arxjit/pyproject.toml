@@ -1,7 +1,8 @@
 [project]
 name = "arxjit"
 version = "1.23.1"  # semantic-release
-description = "arxjit is a Numba-style JIT decorator that compiles a subset of pure Python through the Arx compiler stack."
+description = "ArxJIT is a developing Numba-style JIT frontend for the Arx compiler stack."
+readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]

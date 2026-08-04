@@ -1,113 +1,116 @@
-# Design notes: Python AST to ASTx lowering
+# Design: Python AST to ASTx lowering
 
-Status: draft for Sprint 1. Describes the intended pipeline for `arxjit`; only
-the type API (`SigType` / `Signature`) and the `@jit` decorator surface exist
-today. Lowering and compilation land in later sprints.
+Status: staged design. Source extraction and Python-subset validation are
+implemented; ASTx lowering, IRx compilation, and native dispatch are not.
 
 ## Goal
 
 Compile a restricted subset of pure, built-in Python through the existing Arx
-stack, so a user writes ordinary Python and adds `@jit` — no Arx source strings,
-no new compiler backend.
+compiler stack. Users write ordinary Python and add `@jit`; they do not embed
+Arx source strings or opt into another compiler backend.
 
-## Pipeline
+## Pipeline status
 
-```
+```text
 pure Python function
-  -> Python AST            (stdlib `ast`)
-  -> validation            (accept only the supported subset)
-  -> ASTx                  (astx nodes)
-  -> irx.builder.Builder   (translate / build / run -> LLVM -> native)
-  -> Python-callable wrapper
+  -> source extraction       implemented
+  -> Python AST validation   implemented
+  -> ASTx lowering           not implemented
+  -> IRx/LLVM compilation    not implemented
+  -> native call bridge      not implemented
 ```
 
-`arxjit` owns only the first three arrows plus the wrapper. `astx` provides the
-node model; `irx` (dist `pyirx`) owns everything from ASTx down to the native
-binary. `arxlang` is intentionally not involved — this path reaches ASTx from
-Python, not from Arx source.
+`arxjit` owns source handling, validation, the future Python-to-ASTx lowering,
+and the callable wrapper. ASTx owns the node model, while IRx owns semantic
+analysis, LLVM lowering, native runtime features, and artifact generation. The
+Arx source frontend is intentionally not in this path.
 
-## Where the current code plugs in
+## Implemented frontend stages
 
-- `arxjit.types.SigType` / `Signature` — the type vocabulary the user writes
-  (`i64(i64, i64)`). Each `SigType` already records its target astx class name
-  (`i64 -> "Int64"`).
-- `arxjit.core.jit` / `JitFunction` — the decorator surface. `JitFunction`
-  stores `py_func`, `signature`, and `cache`, and preserves the original
-  function.
-- Today `JitFunction.__call__` runs `py_func` directly (Python fallback). In
-  later sprints it will, on first call for a given signature: extract source,
-  parse, validate, lower to an `astx.Module`, compile via `irx`, cache the
-  compiled callable, then convert arguments and dispatch.
+### Decorator and signatures
 
-## Type mapping (SigType to astx)
+`arxjit.core.jit` returns a `JitFunction` that preserves the original function
+and records an optional explicit `Signature` plus the requested `cache` flag.
+`JitFunction.__call__` currently calls the original Python function directly.
 
-Driven by `SigType.astx_name`; the literal node is used when lowering a constant
-of that type.
+The current scalar signature vocabulary is:
 
-- `i32` -> `astx.Int32` (literal: `astx.LiteralInt32`)
-- `i64` -> `astx.Int64` (literal: `astx.LiteralInt64`)
-- `f32` -> `astx.Float32` (literal: `astx.LiteralFloat32`)
-- `f64` -> `astx.Float64` (literal: `astx.LiteralFloat64`)
-- `bool` -> `astx.Boolean` (literal: `astx.LiteralBoolean`)
+- `i32` -> `astx.Int32`
+- `i64` -> `astx.Int64`
+- `f32` -> `astx.Float32`
+- `f64` -> `astx.Float64`
+- `bool_` -> `astx.Boolean`
 
-## Node mapping (Python AST to astx)
+The `astx_name` metadata records the future lowering target; it does not mean
+that lowering already happens.
 
-For the v1 supported subset only. Unsupported nodes are rejected by the
-validation pass with a clear diagnostic.
+### Source extraction
 
-- Module wrapper -> `astx.Module`
-- `ast.FunctionDef` -> `astx.FunctionDef` (via `astx.FunctionPrototype` for the
-  signature and an `astx.Block` for the body)
-- `ast.arg` (typed parameter) -> `astx.Argument`, grouped in `astx.Arguments`;
-  the argument type comes from the `Signature`
-- `ast.Return` -> `astx.FunctionReturn`
-- `ast.Assign` (single local target) -> `astx.VariableAssignment` (first binding
-  may emit `astx.VariableDeclaration`)
-- `ast.Name` (load) -> `astx.Variable` / `astx.Identifier`
-- `ast.Constant`:
-  - `int` -> `astx.LiteralInt64` (or `LiteralInt32` per the declared type)
-  - `float` -> `astx.LiteralFloat64`
-  - `bool` -> `astx.LiteralBoolean`
-- `ast.BinOp` (`+ - * /`) -> `astx.BinaryOp`
-- `ast.UnaryOp` -> `astx.UnaryOp`
-- `ast.Compare` (`< <= > >= == !=`) -> `astx.CompareOp`
-- `ast.BoolOp` (`and` / `or`) -> `astx.BinaryOp` (boolean operator)
-- `ast.If` -> `astx.IfStmt`
-- `ast.While` -> `astx.WhileStmt`
-- `ast.For` over `range(...)` -> `astx.ForRangeLoopStmt`
-- function body / block -> `astx.Block`
+`arxjit.source.extract_source()`:
 
-## Lowering approach
+- unwraps decorated functions before inspection
+- retrieves the defining file and exact function source
+- removes decorators from the parsed function node
+- preserves real-file line and column locations, including nested functions
+- carries globals, closure names, and qualified-name context for validation
+- translates retrieval and parse failures into structured diagnostics
 
-A visitor walks the validated Python AST and builds one `astx.Module` containing
-a single `astx.FunctionDef`:
+Source defined only through `exec`, lambdas, builtins, and other objects without
+retrievable function source are rejected.
 
-1. Build the prototype from the `Signature` (return type + argument types) and
-   the parameter names from the Python function.
-2. Lower the body statement by statement into an `astx.Block`.
-3. Lower expressions bottom-up (constants and variables first, then operators),
-   so each parent node receives already-lowered children.
+### Validation
 
-Keeping one function per module for v1 mirrors how the Arx compiler feeds ASTx
-into `irx`, and sidesteps cross-function resolution.
+`arxjit.validation.validate()` fails closed: an AST form must have an explicit
+accepted handler. The current proposed scalar subset includes:
 
-## Compilation handoff
+- positional scalar arguments
+- numeric and Boolean constants
+- arithmetic, comparisons, Boolean expressions, and supported unary operators
+- single-name assignments
+- `if`/`else` and `while` without loop `else`
+- `for` over the unshadowed builtin `range` with one to three positional args
+- `return`, docstrings, and `pass`
 
-The `astx.Module` is handed to `irx.builder.Builder`:
+Unsupported forms produce one structured diagnostic per violation. Examples
+include imports, closures, methods, async code, exceptions, generators,
+collections, attributes, subscripting, comprehensions, `break`/`continue`,
+variadic/default arguments, and arbitrary calls.
 
-- `.translate(node)` -> LLVM IR as text (useful for debug output).
-- `.build(node, output_file)` -> native object / executable artifact.
-- `.run(...)` -> build and execute.
+## Proposed ASTx mapping
 
-`arxjit` calls into this; it does not reimplement any of it. The runtime bridge
-(converting Python scalars to native values and back) is a separate concern
-handled in the runtime sprint.
+The following mapping is a design target, not current runtime behavior:
 
-## Deferred / open questions
+| Python AST                        | Proposed ASTx target                            |
+| --------------------------------- | ----------------------------------------------- |
+| `ast.FunctionDef`                 | `astx.FunctionDef` and `astx.FunctionPrototype` |
+| argument                          | `astx.Argument` inside `astx.Arguments`         |
+| `ast.Return`                      | `astx.FunctionReturn`                           |
+| single-name `ast.Assign`          | variable declaration or assignment              |
+| `ast.Name`                        | identifier/variable reference                   |
+| numeric or Boolean `ast.Constant` | matching typed literal node                     |
+| `ast.BinOp`                       | `astx.BinaryOp`                                 |
+| `ast.UnaryOp`                     | `astx.UnaryOp`                                  |
+| `ast.Compare`                     | comparison expression                           |
+| `ast.If`                          | `astx.IfStmt`                                   |
+| `ast.While`                       | `astx.WhileStmt`                                |
+| `ast.For` over `range`            | `astx.ForRangeLoopStmt`                         |
+| statement body                    | `astx.Block`                                    |
 
-- Annotations vs. explicit `signature=`: v1 treats `signature=` as the source of
-  truth; annotation-based inference is a later enhancement.
-- Array types (`i64[2, 2]`): `SigType` was named to stay neutral so array forms
-  can be added later via subscripting; not in v1.
-- Cache-key contents (source, signature, tool versions, platform): defined in
-  the caching sprint.
+The lowerer should build a single-function `astx.Module`, derive parameter and
+return types from the explicit `Signature`, and lower expressions bottom-up. IRx
+must remain the only owner of semantic analysis and feature lowering.
+
+## Compilation and runtime work remaining
+
+After lowering, the design hands the module to `irx.builder.Builder` for
+translation and native artifact generation. ArxJIT still needs:
+
+1. the Python-AST-to-ASTx lowerer
+2. signature/argument consistency checks at the compiler boundary
+3. an in-process native callable bridge and scalar marshalling
+4. compilation and dispatch integration in `JitFunction.__call__`
+5. a cache key covering source, signature, tool versions, and platform
+
+Signature inference is deferred; an explicit `signature=` remains the intended
+first compilation contract. Array, Tensor, and Apache Arrow-backed signatures
+are also deferred until scalar compilation and marshalling are stable.
