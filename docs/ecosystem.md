@@ -1,22 +1,22 @@
 # Ecosystem Status
 
 This page describes the current source tree rather than an aspirational product
-map. Every package is under active development and should be treated as
-pre-production unless stated otherwise.
+map. Core packages are pre-production unless stated otherwise. AIX is included
+for completeness but is a toy project, not a promoted product.
 
 ## Status summary
 
-| Project | Package identity              | Role                                         | Maturity                        |
-| ------- | ----------------------------- | -------------------------------------------- | ------------------------------- |
-| Arx     | `arxlang` / `arx` / `arx` CLI | Main language frontend and compiler CLI      | Functional prototype            |
-| ASTx    | `astx` / `astx`               | Shared AST model                             | Functional, evolving library    |
-| IRx     | `pyirx` / `irx`               | Analysis, lowering, LLVM, and native runtime | Functional experimental backend |
-| PyArx   | `pyarx` / `pyarx`             | Python API for compiling and running Arx     | API foundation only             |
-| AIX     | `airx` / `aix` / `aix` CLI    | Symbolic AI-oriented language frontend       | Experimental MVP                |
-| ArxJIT  | `arxjit` / `arxjit`           | JIT decorator for a Python subset            | Frontend foundations only       |
+| Project | Package identity              | Role                                         | Maturity                         |
+| ------- | ----------------------------- | -------------------------------------------- | -------------------------------- |
+| Arx     | `arxlang` / `arx` / `arx` CLI | Main language frontend and compiler CLI      | Functional prototype             |
+| ASTx    | `astx` / `astx`               | Shared AST model                             | Functional, evolving library     |
+| IRx     | `pyirx` / `irx`               | Analysis, lowering, LLVM, and native runtime | Functional experimental backend  |
+| PyArx   | `pyarx` / `pyarx`             | Python API for compiling and running Arx     | API foundation only              |
+| ArxJIT  | `arxjit` / `arxjit`           | JIT decorator for a Python subset            | Frontend foundations only        |
+| AIX     | `airx` / `aix` / `aix` CLI    | Toy symbolic-language experiment             | For fun; no stability commitment |
 
-The distribution name, Python import, and CLI are intentionally listed
-separately because they are not identical for IRx and AIX.
+Distribution names, Python imports, and CLIs are listed separately where they
+are not identical.
 
 ## Arx
 
@@ -88,20 +88,6 @@ It does not yet provide public parse, compile, run, or artifact-management
 functions. Applications needing compilation must currently use the Arx CLI or
 lower-level Arx/IRx APIs.
 
-## AIX
-
-AIX is an experimental symbolic frontend distributed as `airx`. It uses `.aix`
-files and maps its MVP syntax to ASTx and IRx.
-
-The current MVP provides Unicode-aware lexing, function and constant
-definitions, typed parameters, local bindings, return/conditional-return forms,
-printing, compact or explicit block terminators, token/AST/LLVM inspection, and
-native backend handoff for supported programs.
-
-APL-inspired operators such as `⍴`, `⍳`, `¨`, `↑`, and `↓` are reserved and
-tokenized but rejected by the parser. AIX does not yet expose Arx's module,
-class, template, tensor, or DataFrame surface.
-
 ## ArxJIT
 
 ArxJIT is the planned Numba-style path from ordinary Python functions to ASTx
@@ -114,6 +100,14 @@ and IRx. The current package implements:
 
 The decorator does not yet lower Python AST to ASTx or compile native callable
 code. Calling a decorated function executes the original Python function.
+
+## AIX (toy project)
+
+AIX is a small symbolic-language experiment built for fun. It has a Unicode
+lexer, a limited parser, CLI inspection modes, and an IRx handoff for its toy
+subset. It is not a primary ArxLang product and carries no stability or roadmap
+commitment. Its [low-profile reference](aix/index.md) is retained for anyone
+exploring the source tree.
 
 ## Release model
 

@@ -21,9 +21,17 @@ SOURCE_ROOTS = (
     ROOT / "packages" / "astx" / "src",
     ROOT / "packages" / "irx" / "src",
     ROOT / "packages" / "pyarx" / "src",
-    ROOT / "packages" / "aix" / "src",
     ROOT / "packages" / "arxjit" / "src",
+    ROOT / "packages" / "aix" / "src",
 )
+PACKAGE_ORDER = {
+    "arx": 0,
+    "astx": 1,
+    "irx": 2,
+    "pyarx": 3,
+    "arxjit": 4,
+    "aix": 5,
+}
 PRIVATE_PREFIX = "_"
 
 
@@ -302,7 +310,12 @@ def write_api_tree(modules: list[ModuleDoc]) -> None:
         write_module_page(module)
 
     write_api_index(packages)
-    for package, package_modules in sorted(packages.items()):
+    ordered_packages = sorted(
+        packages,
+        key=lambda name: (PACKAGE_ORDER.get(name, len(PACKAGE_ORDER)), name),
+    )
+    for package in ordered_packages:
+        package_modules = packages[package]
         write_package_index(package, package_modules)
 
 
@@ -324,7 +337,11 @@ def write_api_index(packages: dict[str, list[ModuleDoc]]) -> None:
         "monorepo.",
         "",
     ]
-    for package in sorted(packages):
+    ordered_packages = sorted(
+        packages,
+        key=lambda name: (PACKAGE_ORDER.get(name, len(PACKAGE_ORDER)), name),
+    )
+    for package in ordered_packages:
         if not packages[package]:
             continue
         lines.append(f"- [{package}](./{package}/index.md)")

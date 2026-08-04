@@ -1,4 +1,4 @@
-# AIX MVP grammar
+# AIX toy grammar
 
 This EBNF describes the subset accepted by the current recursive-descent parser.
 Newlines are ordinary whitespace; `;` can separate statements.

@@ -48,8 +48,8 @@ arx --run example.x
 ## Compiler pipeline
 
 ```text
-Arx or AIX source
-  -> frontend lexer and parser
+Arx source
+  -> Arx lexer and parser
   -> ASTx nodes
   -> IRx semantic analysis
   -> LLVM lowering
@@ -61,7 +61,7 @@ ASTx, IRx, and the language frontends have deliberately separate ownership:
 
 - **ASTx** models syntax trees but does not parse source or generate code.
 - **IRx** owns semantics, lowering, runtime features, and LLVM code generation.
-- **Arx** and **AIX** own their source syntax, lexers, parsers, and CLIs.
+- **Arx** owns its source syntax, lexer, parser, and compiler CLI.
 - **PyArx** and **ArxJIT** are developing Python-facing entry points.
 
 ## Current status

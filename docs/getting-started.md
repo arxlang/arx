@@ -37,7 +37,8 @@ poetry install
 ```
 
 The root environment installs all six workspace packages as editable path
-dependencies: Arx, ASTx, IRx, PyArx, AIX, and ArxJIT.
+dependencies. AIX is included as a toy experiment rather than a primary ArxLang
+product.
 
 ## Your first program
 

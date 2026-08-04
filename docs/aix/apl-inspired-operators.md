@@ -1,7 +1,7 @@
 # Reserved APL-inspired operators
 
-AIX reserves a vocabulary for future array-oriented syntax, but reserving a
-glyph is not an implementation claim.
+AIX reserves a vocabulary for experimenting with array-oriented syntax, but
+reserving a glyph is not an implementation or roadmap claim.
 
 | Reserved glyph | Conventional inspiration only          |
 | -------------- | -------------------------------------- |

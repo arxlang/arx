@@ -14,7 +14,7 @@ The current monorepo already provides:
 - on-demand native runtime features
 - Apache Arrow C++ arrays, tensors, tables, Series, and RecordBatch IPC
 - static-schema Arx DataFrames and fixed-shape numeric tensors
-- AIX, PyArx, and ArxJIT package foundations
+- PyArx and ArxJIT package foundations
 
 ## Native Arrow and collections
 
@@ -70,14 +70,6 @@ The current monorepo already provides:
 - [ ] Implement signature inference, runtime marshalling, and caching.
 - [ ] Add Arrow-backed array and tensor signatures after scalar compilation is
       stable.
-
-### AIX
-
-- [ ] Stabilize the symbolic grammar and metadata contract.
-- [ ] Expand control flow and module support.
-- [ ] Decide semantics for the reserved APL-inspired operator set.
-- [ ] Expose data-oriented and Arrow-backed types only after their symbolic
-      surface is specified.
 
 ## Release readiness
 

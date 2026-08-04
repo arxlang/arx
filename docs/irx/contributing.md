@@ -1,8 +1,8 @@
 # Contributing to IRx
 
 IRx lives in `packages/irx` and owns semantic analysis, lowering, native runtime
-features, and LLVM-backed artifact generation. Parser syntax belongs in Arx or
-AIX; reusable node definitions belong in ASTx.
+features, and LLVM-backed artifact generation. Parser syntax belongs in the
+relevant frontend; reusable node definitions belong in ASTx.
 
 ## Setup
 

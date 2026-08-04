@@ -33,6 +33,5 @@ See [Runtime Features](runtime-features.md) and
 
 ## Boundary
 
-IRx does not parse Arx or AIX source and does not define a query language. ASTx
-owns the node model; frontends own syntax; IRx owns semantic meaning and
-lowering.
+IRx does not parse source languages or define a query language. ASTx owns the
+node model; frontends own syntax; IRx owns semantic meaning and lowering.

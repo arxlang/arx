@@ -10,7 +10,7 @@ runtime behavior.
 - `packages/astx`: shared language-agnostic AST nodes
 - `packages/irx`: semantics, LLVM lowering, diagnostics, and native runtime
 - `packages/pyarx`: Python-facing compiler API
-- `packages/aix`: symbolic AIX frontend and CLI
+- `packages/aix`: toy symbolic-language experiment and CLI
 - `packages/arxjit`: Python decorator, extraction, validation, and future JIT
 
 New language syntax belongs in a frontend. New reusable nodes belong in ASTx.
