@@ -1,11 +1,11 @@
-# PyArx
+# ArxPy
 
-PyArx is the planned stable Python API for parsing, compiling, and running Arx
+ArxPy is the planned stable Python API for parsing, compiling, and running Arx
 programs without invoking the CLI.
 
 ## Current status
 
-PyArx is currently an API foundation, not an end-to-end compiler facade.
+ArxPy is currently an API foundation, not an end-to-end compiler facade.
 
 Implemented:
 
@@ -25,13 +25,13 @@ Not implemented:
 ## Install
 
 ```bash
-pip install pyarx
+pip install arxpy
 ```
 
 ## Current usage
 
 ```python
-from pyarx import ArxError, Diagnostic, DiagnosticSeverity
+from arxpy import ArxError, Diagnostic, DiagnosticSeverity
 
 diagnostic = Diagnostic(
     severity=DiagnosticSeverity.ERROR,
@@ -50,4 +50,4 @@ except ArxError as error:
 ```
 
 Use the [Arx CLI](../arx/compiler-cli.md) for current end-to-end compilation.
-The [roadmap](../roadmap.md) lists the compiler facade planned for PyArx.
+The [roadmap](../roadmap.md) lists the compiler facade planned for ArxPy.

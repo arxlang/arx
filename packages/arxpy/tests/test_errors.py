@@ -1,13 +1,13 @@
 """
-title: Unit tests for the PyArx exception hierarchy.
+title: Unit tests for the ArxPy exception hierarchy.
 """
 
 from __future__ import annotations
 
-import pyarx
+import arxpy
 
-from pyarx.diagnostics import Diagnostic, DiagnosticSeverity
-from pyarx.errors import ArxError, CompileError, ExecutionError, ParseError
+from arxpy.diagnostics import Diagnostic, DiagnosticSeverity
+from arxpy.errors import ArxError, CompileError, ExecutionError, ParseError
 
 
 def _diagnostic(message: str) -> Diagnostic:
@@ -30,16 +30,16 @@ def _diagnostic(message: str) -> Diagnostic:
 
 def test_hierarchy_and_public_exports() -> None:
     """
-    title: Subclasses share ArxError and are re-exported from pyarx.
+    title: Subclasses share ArxError and are re-exported from arxpy.
     """
     for error_type in (ParseError, CompileError, ExecutionError):
         assert issubclass(error_type, ArxError)
-    assert pyarx.ArxError is ArxError
-    assert pyarx.ParseError is ParseError
-    assert pyarx.CompileError is CompileError
-    assert pyarx.ExecutionError is ExecutionError
-    assert pyarx.Diagnostic is Diagnostic
-    assert pyarx.DiagnosticSeverity is DiagnosticSeverity
+    assert arxpy.ArxError is ArxError
+    assert arxpy.ParseError is ParseError
+    assert arxpy.CompileError is CompileError
+    assert arxpy.ExecutionError is ExecutionError
+    assert arxpy.Diagnostic is Diagnostic
+    assert arxpy.DiagnosticSeverity is DiagnosticSeverity
 
 
 def test_error_carries_diagnostics() -> None:

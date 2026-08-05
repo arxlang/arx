@@ -34,8 +34,8 @@ website:
         href: astx/index.md
       - text: IRx
         href: irx/index.md
-      - text: PyArx
-        href: pyarx/index.md
+      - text: ArxPy
+        href: arxpy/index.md
       - text: ArxJIT
         href: arxjit/index.md
       - text: Tools
@@ -196,16 +196,16 @@ website:
         - section: Python API
           contents:
             - auto: api/irx
-    - id: pyarx
-      title: PyArx
+    - id: arxpy
+      title: ArxPy
       style: floating
       collapse-level: 1
       contents:
         - text: Overview
-          href: pyarx/index.md
+          href: arxpy/index.md
         - section: Python API
           contents:
-            - auto: api/pyarx
+            - auto: api/arxpy
     - id: arxjit
       title: ArxJIT
       style: floating

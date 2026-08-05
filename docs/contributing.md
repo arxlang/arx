@@ -9,7 +9,7 @@ runtime behavior.
 - `packages/arx`: Arx syntax, lexer, parser, CLI, projects, tests, and stdlib
 - `packages/astx`: shared language-agnostic AST nodes
 - `packages/irx`: semantics, LLVM lowering, diagnostics, and native runtime
-- `packages/pyarx`: Python-facing compiler API
+- `packages/arxpy`: Python-facing compiler API
 - `packages/aix`: toy symbolic-language experiment and CLI
 - `packages/arxjit`: Python decorator, extraction, validation, and future JIT
 
@@ -37,7 +37,7 @@ Run package-specific checks while iterating:
 makim arx.unittests
 makim astx.unittests
 makim irx.unittests
-makim pyarx.unittests
+makim arxpy.unittests
 makim aix.unittests
 makim arxjit.unittests
 ```

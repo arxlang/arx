@@ -1,7 +1,7 @@
 [project]
-name = "pyarx"
+name = "arxpy"
 version = "1.24.0"  # semantic-release
-description = "PyArx is a Python API layer for the Arx compiler."
+description = "ArxPy is a Python API layer for the Arx compiler."
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
@@ -22,9 +22,9 @@ exclude = [
   ".env*",
 ]
 packages = [
-  {include = "pyarx", from="src"},
+  {include = "arxpy", from="src"},
 ]
-include = ["src/pyarx/py.typed"]
+include = ["src/arxpy/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = [

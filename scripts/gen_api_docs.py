@@ -20,7 +20,7 @@ SOURCE_ROOTS = (
     ROOT / "packages" / "arx" / "src",
     ROOT / "packages" / "astx" / "src",
     ROOT / "packages" / "irx" / "src",
-    ROOT / "packages" / "pyarx" / "src",
+    ROOT / "packages" / "arxpy" / "src",
     ROOT / "packages" / "arxjit" / "src",
     ROOT / "packages" / "aix" / "src",
 )
@@ -28,7 +28,7 @@ PACKAGE_ORDER = {
     "arx": 0,
     "astx": 1,
     "irx": 2,
-    "pyarx": 3,
+    "arxpy": 3,
     "arxjit": 4,
     "aix": 5,
 }

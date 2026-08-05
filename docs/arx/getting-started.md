@@ -35,7 +35,7 @@ conda activate arx
 poetry install
 ```
 
-The repository is a monorepo containing Arx, ASTx, IRx, PyArx, ArxJIT, and the
+The repository is a monorepo containing Arx, ASTx, IRx, ArxPy, ArxJIT, and the
 low-profile AIX experiment.
 
 ## Compile a program

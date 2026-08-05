@@ -221,6 +221,13 @@ Repository policy:
 - In YAML-backed task/config files, prefer plain shell commands or direct
   Python/xonsh statements instead of embedded `<<EOF` / `<<'PY'` blocks.
 
+### Poetry lockfile rule
+
+- Never edit `poetry.lock` manually.
+- Make dependency, package-name, and path changes in `pyproject.toml`.
+- Regenerate the lockfile only by running `poetry lock` from the repository
+  root.
+
 ### Python docstring convention in this repo
 
 - Python docstrings are Douki-style content blocks (for example `title: ...`).

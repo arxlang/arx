@@ -167,12 +167,12 @@ feature activation.
 
 <span class="arx-status">API foundation only</span>
 
-### PyArx
+### ArxPy
 
 The developing Python-facing compiler API, currently focused on structured
 diagnostics and public error types.
 
-[PyArx documentation →](pyarx/index.md)
+[ArxPy documentation →](arxpy/index.md)
 
 </div>
 

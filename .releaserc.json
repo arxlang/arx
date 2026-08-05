@@ -148,12 +148,12 @@
             "countMatches": true
           },
           {
-            "files": ["packages/pyarx/pyproject.toml"],
+            "files": ["packages/arxpy/pyproject.toml"],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
             "results": [
               {
-                "file": "packages/pyarx/pyproject.toml",
+                "file": "packages/arxpy/pyproject.toml",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
@@ -162,12 +162,12 @@
             "countMatches": true
           },
           {
-            "files": ["packages/pyarx/pyproject.toml"],
+            "files": ["packages/arxpy/pyproject.toml"],
             "from": "  \"arxlang == .*\",  # semantic-release",
             "to": "  \"arxlang == ${nextRelease.version}\",  # semantic-release",
             "results": [
               {
-                "file": "packages/pyarx/pyproject.toml",
+                "file": "packages/arxpy/pyproject.toml",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
@@ -176,12 +176,12 @@
             "countMatches": true
           },
           {
-            "files": ["packages/pyarx/src/pyarx/__init__.py"],
+            "files": ["packages/arxpy/src/arxpy/__init__.py"],
             "from": "return \".*\"  # semantic-release",
             "to": "return \"${nextRelease.version}\"  # semantic-release",
             "results": [
               {
-                "file": "packages/pyarx/src/pyarx/__init__.py",
+                "file": "packages/arxpy/src/arxpy/__init__.py",
                 "hasChanged": true,
                 "numMatches": 1,
                 "numReplacements": 1
@@ -329,8 +329,8 @@
           "packages/irx/dist/*.tar.gz",
           "packages/arx/dist/*.whl",
           "packages/arx/dist/*.tar.gz",
-          "packages/pyarx/dist/*.whl",
-          "packages/pyarx/dist/*.tar.gz",
+          "packages/arxpy/dist/*.whl",
+          "packages/arxpy/dist/*.tar.gz",
           "packages/aix/dist/*.whl",
           "packages/aix/dist/*.tar.gz",
           "packages/arxjit/dist/*.whl",
@@ -351,8 +351,8 @@
           "packages/irx/src/irx/__init__.py",
           "packages/arx/pyproject.toml",
           "packages/arx/src/arx/__init__.py",
-          "packages/pyarx/pyproject.toml",
-          "packages/pyarx/src/pyarx/__init__.py",
+          "packages/arxpy/pyproject.toml",
+          "packages/arxpy/src/arxpy/__init__.py",
           "packages/aix/pyproject.toml",
           "packages/aix/src/aix/__init__.py",
           "packages/arxjit/pyproject.toml",

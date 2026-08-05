@@ -1,18 +1,18 @@
 """
-title: Top-level package for PyArx.
+title: Top-level package for ArxPy.
 """
 
 from importlib import metadata as importlib_metadata
 
-from pyarx.diagnostics import Diagnostic, DiagnosticSeverity
-from pyarx.errors import (
+from arxpy.diagnostics import Diagnostic, DiagnosticSeverity
+from arxpy.errors import (
     ArxError,
     CompileError,
     ExecutionError,
     ParseError,
 )
 
-_DISTRIBUTION_NAME = "pyarx"
+_DISTRIBUTION_NAME = "arxpy"
 
 
 def get_version() -> str:
