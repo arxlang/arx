@@ -33,7 +33,7 @@ groups:
             - task: arx.typecheck
             - task: astx.typecheck
             - task: irx.typecheck
-            - task: pyarx.typecheck
+            - task: arxpy.typecheck
             - task: aix.typecheck
             - task: arxjit.typecheck
 
@@ -48,7 +48,7 @@ groups:
             - task: arx.unittests
             - task: astx.unittests
             - task: irx.unittests
-            - task: pyarx.unittests
+            - task: arxpy.unittests
             - task: aix.unittests
             - task: arxjit.unittests
             - task: arx.test-compiled
@@ -431,56 +431,56 @@ groups:
             - task: irx.lint
             - task: irx.build
 
-  pyarx:
+  arxpy:
     tasks:
       unittests:
-        help: run PyArx unit tests
+        help: run ArxPy unit tests
         args:
           path:
             help: Specify the location of the tests
             type: string
-            default: "packages/pyarx/tests"
+            default: "packages/arxpy/tests"
           params:
             help: Specify parameters to be used for tests
             type: string
             default: >-
-              -vv --cov=pyarx --cov-fail-under=86
+              -vv --cov=arxpy --cov-fail-under=86
               --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 
       format:
-        help: format PyArx Python files
-        run: pre-commit run ruff-format-pyarx --all-files
+        help: format ArxPy Python files
+        run: pre-commit run ruff-format-arxpy --all-files
 
       lint:
-        help: run PyArx package lint hooks
+        help: run ArxPy package lint hooks
         run: |
-          pre-commit run ruff-check-pyarx --all-files
-          pre-commit run douki-pyarx --all-files
-          pre-commit run bandit-pyarx --all-files
-          pre-commit run vulture-pyarx --all-files
-          pre-commit run mccabe-pyarx --all-files
+          pre-commit run ruff-check-arxpy --all-files
+          pre-commit run douki-arxpy --all-files
+          pre-commit run bandit-arxpy --all-files
+          pre-commit run vulture-arxpy --all-files
+          pre-commit run mccabe-arxpy --all-files
 
       typecheck:
-        help: run PyArx type checks
+        help: run ArxPy type checks
         run: |
-          cd packages/pyarx
+          cd packages/arxpy
           mypy src
 
       build:
-        help: build the PyArx package
+        help: build the ArxPy package
         run: |
-          cd packages/pyarx
+          cd packages/arxpy
           poetry build
 
       ci:
-        help: run PyArx package CI checks
+        help: run ArxPy package CI checks
         hooks:
           pre-run:
-            - task: pyarx.unittests
-            - task: pyarx.typecheck
-            - task: pyarx.lint
-            - task: pyarx.build
+            - task: arxpy.unittests
+            - task: arxpy.typecheck
+            - task: arxpy.lint
+            - task: arxpy.build
 
   arxjit:
     tasks:

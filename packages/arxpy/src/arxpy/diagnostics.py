@@ -1,12 +1,12 @@
 """
-title: Structured diagnostic records for the PyArx public API.
+title: Structured diagnostic records for the ArxPy public API.
 summary: >-
   Define the stable, frozen Diagnostic record and the DiagnosticSeverity enum
-  that PyArx exposes to callers, plus the duck-typed helpers that translate
+  that ArxPy exposes to callers, plus the duck-typed helpers that translate
   upstream irx structured diagnostics and arx parser exceptions into it. The
   Diagnostic type strips the astx.AST node reference that irx records carry, so
   external callers never see raw compiler internals. These modules never import
-  arx or irx at module load time, so importing pyarx.diagnostics stays free of
+  arx or irx at module load time, so importing arxpy.diagnostics stays free of
   the LLVM toolchain.
 """
 
@@ -30,7 +30,7 @@ class DiagnosticSeverity(Enum):
 @dataclass(frozen=True)
 class Diagnostic:
     """
-    title: One structured diagnostic exposed by the PyArx API.
+    title: One structured diagnostic exposed by the ArxPy API.
     attributes:
       severity:
         type: DiagnosticSeverity
@@ -122,7 +122,7 @@ def _from_irx(
     filename: str | None = None,
 ) -> Diagnostic:
     """
-    title: Translate one irx structured diagnostic into a PyArx Diagnostic.
+    title: Translate one irx structured diagnostic into an ArxPy Diagnostic.
     summary: >-
       Reads the upstream record by attribute so it accepts any irx.diagnostics
       Diagnostic without importing irx, and discards the astx.AST node
@@ -156,7 +156,7 @@ def _from_parser_exception(
     filename: str = "<string>",
 ) -> Diagnostic:
     """
-    title: Translate an arx ParserException into a PyArx Diagnostic.
+    title: Translate an arx ParserException into an ArxPy Diagnostic.
     summary: >-
       ParserException.__init__ discards the offending token's location, so line
       and column are None by design rather than fabricated.

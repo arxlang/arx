@@ -5,7 +5,7 @@ packages=(
   packages/astx
   packages/irx
   packages/arx
-  packages/pyarx
+  packages/arxpy
   packages/aix
   packages/arxjit
 )

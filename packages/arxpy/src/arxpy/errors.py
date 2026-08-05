@@ -1,25 +1,25 @@
 """
-title: Public exception hierarchy for the PyArx API.
+title: Public exception hierarchy for the ArxPy API.
 summary: >-
-  Define the single error hierarchy PyArx raises to callers: ArxError as the
+  Define the single error hierarchy ArxPy raises to callers: ArxError as the
   base, with ParseError, CompileError, and ExecutionError for the lex/parse,
   analysis/lowering, and execution stages of the pipeline. Each error carries a
   list of structured Diagnostic records so callers can inspect failures
   programmatically instead of scraping message text. The pipeline modules catch
   upstream arx and irx exceptions and re-raise them as these types, building
-  diagnostics via the helpers in pyarx.diagnostics.
+  diagnostics via the helpers in arxpy.diagnostics.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from pyarx.diagnostics import Diagnostic
+from arxpy.diagnostics import Diagnostic
 
 
 class ArxError(Exception):
     """
-    title: Base class for every error raised by the PyArx API.
+    title: Base class for every error raised by the ArxPy API.
     attributes:
       diagnostics:
         type: list[Diagnostic]

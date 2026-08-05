@@ -11,7 +11,7 @@ included for completeness but is a toy project, not a promoted product.
 | Arx     | `arxlang` / `arx` / `arx` CLI | Main language frontend and compiler CLI      | Functional prototype             |
 | ASTx    | `astx` / `astx`               | Shared AST model                             | Functional, evolving library     |
 | IRx     | `pyirx` / `irx`               | Analysis, lowering, LLVM, and native runtime | Functional experimental backend  |
-| PyArx   | `pyarx` / `pyarx`             | Python API for compiling and running Arx     | API foundation only              |
+| ArxPy   | `arxpy` / `arxpy`             | Python API for compiling and running Arx     | API foundation only              |
 | ArxJIT  | `arxjit` / `arxjit`           | JIT decorator for a Python subset            | Frontend foundations only        |
 | AIX     | `airx` / `aix` / `aix` CLI    | Toy symbolic-language experiment             | For fun; no stability commitment |
 
@@ -89,9 +89,9 @@ large UTF-8, date, timestamp, and time columns.
 IRx is not a source-language parser, a general query engine, or a complete
 implementation of every ASTx node.
 
-## PyArx
+## ArxPy
 
-PyArx is intended to become the stable Python-facing compiler API. The current
+ArxPy is intended to become the stable Python-facing compiler API. The current
 package provides:
 
 - immutable structured diagnostics and severity values

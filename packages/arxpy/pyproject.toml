@@ -1,7 +1,7 @@
 [project]
-name = "pyarx"
+name = "arxpy"
 version = "1.24.0"  # semantic-release
-description = "PyArx is a Python API layer for the Arx compiler."
+description = "ArxPy is a Python API layer for the Arx compiler."
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
@@ -22,9 +22,9 @@ exclude = [
   ".env*",
 ]
 packages = [
-  {include = "pyarx", from="src"},
+  {include = "arxpy", from="src"},
 ]
-include = ["src/pyarx/py.typed"]
+include = ["src/arxpy/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -65,6 +65,7 @@ ignore = [
   "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
   "PLR0913",  # Too many arguments in a function definition
+  "PLR0917",  # Too many positional arguments
   "RUF012",  # mutable-class-default
   "PLR0915",  # Too many statements
 ]

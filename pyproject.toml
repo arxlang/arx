@@ -21,7 +21,7 @@ package-mode = false
 arxlang = { path = "packages/arx/", develop = true }
 pyirx = { path = "packages/irx/", develop = true }
 astx = { path = "packages/astx/", develop = true }
-pyarx = { path = "packages/pyarx/", develop = true }
+arxpy = { path = "packages/arxpy/", develop = true }
 airx = { path = "packages/aix/", develop = true }
 arxjit = { path = "packages/arxjit/", develop = true }
 
@@ -44,6 +44,7 @@ makim = "1.27.0"
 nbmake = ">=1.5.3"
 types-requests = ">=2.31.0.20240406"
 douki = ">=0.12.1"
+click = ">=8.2.1"
 
 [build-system]
 requires = ["poetry-core>=2"]
@@ -57,7 +58,7 @@ testpaths = [
     "packages/arx/tests/python",
     "packages/astx/tests",
     "packages/irx/tests",
-    "packages/pyarx/tests",
+    "packages/arxpy/tests",
     "packages/aix/tests/python",
     "packages/arxjit/tests",
 ]
@@ -88,7 +89,7 @@ src = [
   "packages/arx/src",
   "packages/astx/src",
   "packages/irx/src",
-  "packages/pyarx/src",
+  "packages/arxpy/src",
   "packages/aix/src",
   "packages/arxjit/src",
 ]
@@ -104,6 +105,7 @@ ignore = [
   "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
   "PLR0913",
+  "PLR0917",  # Too many positional arguments
   "PLC0415",  # `import` should be at the top-level of a file
 ]
 select = [

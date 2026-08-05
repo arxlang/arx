@@ -1,10 +1,10 @@
 """
-title: Unit tests for the PyArx Diagnostic record and translation helpers.
+title: Unit tests for the ArxPy Diagnostic record and translation helpers.
 """
 
 from __future__ import annotations
 
-from pyarx.diagnostics import (
+from arxpy.diagnostics import (
     Diagnostic,
     DiagnosticSeverity,
     _from_irx,

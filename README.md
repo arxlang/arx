@@ -23,7 +23,7 @@ encoding those containers directly in LLVM IR.
 | `packages/arx`    | `arxlang` / `arx`     | Arx lexer, parser, CLI, and language frontend        | Prototype compiler with native build/run support          |
 | `packages/astx`   | `astx` / `astx`       | Language-agnostic AST node model                     | Functional and broadly modeled; still evolving            |
 | `packages/irx`    | `pyirx` / `irx`       | Semantic analysis, LLVM lowering, and native runtime | Functional experimental backend with Arrow C++ support    |
-| `packages/pyarx`  | `pyarx` / `pyarx`     | Python-facing Arx compiler API                       | API foundation: diagnostics and error hierarchy only      |
+| `packages/arxpy`  | `arxpy` / `arxpy`     | Python-facing Arx compiler API                       | API foundation: diagnostics and error hierarchy only      |
 | `packages/arxjit` | `arxjit` / `arxjit`   | Numba-style Python decorator path                    | Frontend foundations; calls still use the Python fallback |
 | `packages/aix`    | `airx` / `aix`        | Toy symbolic-language experiment                     | For fun; no stability or product commitment               |
 

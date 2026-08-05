@@ -14,7 +14,7 @@ The current monorepo already provides:
 - on-demand native runtime features
 - Apache Arrow C++ arrays, tensors, tables, Series, and RecordBatch IPC
 - static-schema Arx DataFrames and fixed-shape numeric tensors
-- PyArx and ArxJIT package foundations
+- ArxPy and ArxJIT package foundations
 
 ## Native Arrow and collections
 
@@ -56,11 +56,11 @@ The current monorepo already provides:
 
 ## Python entry points
 
-### PyArx
+### ArxPy
 
 - [ ] Add parse-from-string and parse-from-file APIs.
 - [ ] Add compile, artifact, and execution result objects.
-- [ ] Translate all Arx and IRx failures into the public PyArx hierarchy.
+- [ ] Translate all Arx and IRx failures into the public ArxPy hierarchy.
 
 ### ArxJIT
 
