@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.10.18">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -12,10 +12,13 @@
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
 */
-code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
@@ -27,12 +30,12 @@ ul.task-list li input[type="checkbox"] {
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
 <script src="site_libs/clipboard/clipboard.min.js"></script>
 <script src="site_libs/quarto-search/autocomplete.umd.js"></script>
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./apache-arrow.html" rel="next">
 <link href="./favicon.ico" rel="icon">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -40,27 +43,25 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-d0ae9245876894da5ac7e18953ecc5cc.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-e58b94d5b32bfa7fd060a1e8a1552805.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
   "panel-placement": "end",
   "type": "overlay",
-  "limit": 50,
+  "limit": 8,
   "keyboard-shortcut": [
-    "f",
     "/",
     "s"
   ],
-  "show-item-context": false,
   "language": {
     "search-no-results-text": "No results",
     "search-matching-documents-text": "matching documents",
@@ -75,11 +76,12 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<style>html{ scroll-behavior: smooth; }</style>
 
 
 </head>
 
-<body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
       const bodyEl = window.document.querySelector("body");
@@ -249,8 +251,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx.png" alt="" class="navbar-logo light-content">
-    <img src="./images/arx.png" alt="" class="navbar-logo dark-content">
+    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="./index.html">
     <span class="navbar-title">ArxLang</span>
@@ -261,15 +263,64 @@ ul.task-list li input[type="checkbox"] {
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img">
-</i> 
-<span class="menu-text"></span></a>
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./discord.html" aria-current="page"> 
-<span class="menu-text">Community</span></a>
+    <a class="nav-link" href="./arx/index.html"> 
+<span class="menu-text">Arx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./astx/index.html"> 
+<span class="menu-text">ASTx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./irx/index.html"> 
+<span class="menu-text">IRx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./arxpy/index.html"> 
+<span class="menu-text">ArxPy</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./arxjit/index.html"> 
+<span class="menu-text">ArxJIT</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tools</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
+        <li>
+    <a class="dropdown-item" href="./tools/index.html">
+ <span class="dropdown-text">Tooling Overview</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/arxpm.html">
+ <span class="dropdown-text">ArxPM</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/vscode.html">
+ <span class="dropdown-text">VS Code</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/jupyter.html">
+ <span class="dropdown-text">Jupyter Kernel</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/douki.html">
+ <span class="dropdown-text">Douki</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
+</i> 
+<span class="menu-text"></span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -283,54 +334,22 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ecosystem.html">Ecosystem Status</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ecosystem.html">Start</a></li><li class="breadcrumb-item"><a href="./ecosystem.html">Ecosystem Status</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
-      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
-        <i class="bi bi-search"></i>
-      </button>
     </div>
   </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
-        <div class="mt-2 flex-shrink-0 align-items-center">
-        <div class="sidebar-search">
-        <div id="quarto-search" class="" title="Search"></div>
-        </div>
-        </div>
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Home</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./getting-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./ecosystem.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Ecosystem Status</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./apache-arrow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Apache Arrow</span></a>
-  </div>
-</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Library</span></a>
+ <span class="menu-text">Start</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -338,366 +357,94 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./library/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
+  <a href="./ecosystem.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Ecosystem Status</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./library/modules.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Modules</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/datatypes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Data Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/built-in-types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Built-in Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Collections and Arrow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/control-flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Control Flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/docstrings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Docstrings</span></a>
+  <a href="./apache-arrow.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Native Apache Arrow</span></a>
   </div>
 </li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">ASTx</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
+ <span class="menu-text">Project</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 ">  
           <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/conventions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Conventions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Tutorials</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/variables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Variables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/for-loop.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">For Loops</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/context.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Context</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/fibonacci.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Fibonacci</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">IRx</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/architecture.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Architecture</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/semantic-contract.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Semantic Contract</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/runtime-features.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Runtime Features</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Buffer View Model</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/class-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Class Model</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
- <span class="menu-text">Tutorials</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
- <span class="menu-text">Python Tools</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./pyarx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">PyArx</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./arxjit/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ArxJIT</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./arxjit/design.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ArxJIT Design</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
- <span class="menu-text">AIX</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Syntax</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/grammar.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Grammar</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/examples.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Examples</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/apl-inspired-operators.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Reserved Operators</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">API Docs</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Syntax</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./roadmap.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Roadmap</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing Guide</span></a>
+ <span class="menu-text">Contributing</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Sponsor</span></a>
+  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Documentation</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./partners.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Partners</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./coc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Code of Conduct</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./discord.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Community</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./governance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Governance</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./changelog.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Changelog</span></a>
   </div>
 </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Community</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./discord.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community Chat</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./coc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Code of Conduct</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Governance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./partners.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Partners</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Sponsor</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
     </ul>
     </div>
 </nav>
@@ -711,19 +458,20 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#ecosystem-status" id="toc-ecosystem-status" class="nav-link active" data-scroll-target="#ecosystem-status">Ecosystem Status</a>
   <ul class="collapse">
   <li><a href="#status-summary" id="toc-status-summary" class="nav-link" data-scroll-target="#status-summary">Status summary</a></li>
+  <li><a href="#related-repositories" id="toc-related-repositories" class="nav-link" data-scroll-target="#related-repositories">Related repositories</a></li>
   <li><a href="#arx" id="toc-arx" class="nav-link" data-scroll-target="#arx">Arx</a></li>
   <li><a href="#astx" id="toc-astx" class="nav-link" data-scroll-target="#astx">ASTx</a></li>
   <li><a href="#irx" id="toc-irx" class="nav-link" data-scroll-target="#irx">IRx</a></li>
-  <li><a href="#pyarx" id="toc-pyarx" class="nav-link" data-scroll-target="#pyarx">PyArx</a></li>
-  <li><a href="#aix" id="toc-aix" class="nav-link" data-scroll-target="#aix">AIX</a></li>
+  <li><a href="#arxpy" id="toc-arxpy" class="nav-link" data-scroll-target="#arxpy">ArxPy</a></li>
   <li><a href="#arxjit" id="toc-arxjit" class="nav-link" data-scroll-target="#arxjit">ArxJIT</a></li>
+  <li><a href="#aix-toy-project" id="toc-aix-toy-project" class="nav-link" data-scroll-target="#aix-toy-project">AIX (toy project)</a></li>
   <li><a href="#release-model" id="toc-release-model" class="nav-link" data-scroll-target="#release-model">Release model</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ecosystem.html">Start</a></li><li class="breadcrumb-item"><a href="./ecosystem.html">Ecosystem Status</a></li></ol></nav></header>
 
 
 
@@ -731,15 +479,15 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="ecosystem-status" class="level1">
 <h1>Ecosystem Status</h1>
-<p>This page describes the current source tree rather than an aspirational product map. Every package is under active development and should be treated as pre-production unless stated otherwise.</p>
+<p>This page describes the current monorepo packages and related ArxLang tools. Core compiler packages are pre-production unless stated otherwise. AIX is included for completeness but is a toy project, not a promoted product.</p>
 <section id="status-summary" class="level2">
 <h2 class="anchored" data-anchor-id="status-summary">Status summary</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 26%">
+<col style="width: 25%">
 <col style="width: 39%">
-<col style="width: 27%">
+<col style="width: 28%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -769,26 +517,62 @@ ul.task-list li input[type="checkbox"] {
 <td>Functional experimental backend</td>
 </tr>
 <tr class="even">
-<td>PyArx</td>
-<td><code>pyarx</code> / <code>pyarx</code></td>
+<td>ArxPy</td>
+<td><code>arxpy</code> / <code>arxpy</code></td>
 <td>Python API for compiling and running Arx</td>
 <td>API foundation only</td>
 </tr>
 <tr class="odd">
-<td>AIX</td>
-<td><code>airx</code> / <code>aix</code> / <code>aix</code> CLI</td>
-<td>Symbolic AI-oriented language frontend</td>
-<td>Experimental MVP</td>
-</tr>
-<tr class="even">
 <td>ArxJIT</td>
 <td><code>arxjit</code> / <code>arxjit</code></td>
 <td>JIT decorator for a Python subset</td>
 <td>Frontend foundations only</td>
 </tr>
+<tr class="even">
+<td>AIX</td>
+<td><code>airx</code> / <code>aix</code> / <code>aix</code> CLI</td>
+<td>Toy symbolic-language experiment</td>
+<td>For fun; no stability commitment</td>
+</tr>
 </tbody>
 </table>
-<p>The distribution name, Python import, and CLI are intentionally listed separately because they are not identical for IRx and AIX.</p>
+<p>Distribution names, Python imports, and CLIs are listed separately where they are not identical.</p>
+</section>
+<section id="related-repositories" class="level2">
+<h2 class="anchored" data-anchor-id="related-repositories">Related repositories</h2>
+<p>These tools are maintained outside the main Arx monorepo:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Project</th>
+<th>Role</th>
+<th>Current state</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="./tools/arxpm.html">ArxPM</a></td>
+<td>project and workspace manager</td>
+<td>implements project, environment, build, packaging, and publishing workflows; compatibility is evolving</td>
+</tr>
+<tr class="even">
+<td><a href="./tools/vscode.html">VS Code extension</a></td>
+<td>editor support</td>
+<td>syntax highlighting and language configuration; no language server</td>
+</tr>
+<tr class="odd">
+<td><a href="./tools/jupyter.html">Jupyter kernel</a></td>
+<td>notebook support</td>
+<td>wrapper kernel implementation; compiler command integration still requires alignment</td>
+</tr>
+<tr class="even">
+<td><a href="./tools/douki.html">Douki</a></td>
+<td>YAML docstring tooling</td>
+<td>standalone validation, synchronization, and migration tool used by Arx documentation conventions</td>
+</tr>
+</tbody>
+</table>
+<p>See the <a href="./tools/index.html">tooling overview</a> for the boundary between these projects and the compiler.</p>
 </section>
 <section id="arx" class="level2">
 <h2 class="anchored" data-anchor-id="arx">Arx</h2>
@@ -827,21 +611,15 @@ ul.task-list li input[type="checkbox"] {
 <p>IRx also exposes a Python RecordBatch API backed by a native Arrow C++ bridge. It supports schemas, builders, nullable values, scalar inspection, Arrow IPC file/buffer streams, and PyArrow interoperability for numeric, Boolean, UTF-8, large UTF-8, date, timestamp, and time columns.</p>
 <p>IRx is not a source-language parser, a general query engine, or a complete implementation of every ASTx node.</p>
 </section>
-<section id="pyarx" class="level2">
-<h2 class="anchored" data-anchor-id="pyarx">PyArx</h2>
-<p>PyArx is intended to become the stable Python-facing compiler API. The current package provides:</p>
+<section id="arxpy" class="level2">
+<h2 class="anchored" data-anchor-id="arxpy">ArxPy</h2>
+<p>ArxPy is intended to become the stable Python-facing compiler API. The current package provides:</p>
 <ul>
 <li>immutable structured diagnostics and severity values</li>
 <li>adapters for IRx diagnostics and Arx parser failures</li>
 <li><code>ArxError</code>, <code>ParseError</code>, <code>CompileError</code>, and <code>ExecutionError</code></li>
 </ul>
 <p>It does not yet provide public parse, compile, run, or artifact-management functions. Applications needing compilation must currently use the Arx CLI or lower-level Arx/IRx APIs.</p>
-</section>
-<section id="aix" class="level2">
-<h2 class="anchored" data-anchor-id="aix">AIX</h2>
-<p>AIX is an experimental symbolic frontend distributed as <code>airx</code>. It uses <code>.aix</code> files and maps its MVP syntax to ASTx and IRx.</p>
-<p>The current MVP provides Unicode-aware lexing, function and constant definitions, typed parameters, local bindings, return/conditional-return forms, printing, compact or explicit block terminators, token/AST/LLVM inspection, and native backend handoff for supported programs.</p>
-<p>APL-inspired operators such as <code>⍴</code>, <code>⍳</code>, <code>¨</code>, <code>↑</code>, and <code>↓</code> are reserved and tokenized but rejected by the parser. AIX does not yet expose Arx’s module, class, template, tensor, or DataFrame surface.</p>
 </section>
 <section id="arxjit" class="level2">
 <h2 class="anchored" data-anchor-id="arxjit">ArxJIT</h2>
@@ -854,6 +632,10 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 <p>The decorator does not yet lower Python AST to ASTx or compile native callable code. Calling a decorated function executes the original Python function.</p>
 </section>
+<section id="aix-toy-project" class="level2">
+<h2 class="anchored" data-anchor-id="aix-toy-project">AIX (toy project)</h2>
+<p>AIX is a small symbolic-language experiment built for fun. It has a Unicode lexer, a limited parser, CLI inspection modes, and an IRx handoff for its toy subset. It is not a primary ArxLang product and carries no stability or roadmap commitment. Its <a href="./aix/index.html">low-profile reference</a> is retained for anyone exploring the source tree.</p>
+</section>
 <section id="release-model" class="level2">
 <h2 class="anchored" data-anchor-id="release-model">Release model</h2>
 <p>The build and publish scripts cover all six packages. Semantic release keeps the ecosystem dependency versions aligned at release time. A newly introduced package can temporarily show a scaffold version in the source tree until the next lockstep release updates it.</p>
@@ -862,7 +644,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 
-</main> <!-- /main -->
+<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
@@ -1281,17 +1063,43 @@ ul.task-list li input[type="checkbox"] {
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./apache-arrow.html" class="pagination-link" aria-label="Native Apache Arrow">
+        <span class="nav-page-text">Native Apache Arrow</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
     <div class="nav-footer-left">
-      &nbsp;
-    </div>   
+<p>Copyright © 2022-2026 ArxLang</p>
+</div>   
     <div class="nav-footer-center">
-<p>Copyright © 2022-2026, ArxLang Team</p>
-</div>
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
+<p>Apache-2.0</p>
+</a>
+  </li>  
+</ul>
+    </div>
     <div class="nav-footer-right">
-      &nbsp;
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/arxlang/arx">
+<p>GitHub</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link active" href="./coc.html" aria-current="page">
+<p>Code of Conduct</p>
+</a>
+  </li>  
+</ul>
     </div>
   </div>
 </footer>
@@ -1299,4 +1107,5 @@ ul.task-list li input[type="checkbox"] {
 
 
 
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
 </body></html>

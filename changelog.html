@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.10.18">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -12,10 +12,13 @@
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
 */
-code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
 div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
 ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
@@ -27,12 +30,13 @@ ul.task-list li input[type="checkbox"] {
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
 <script src="site_libs/clipboard/clipboard.min.js"></script>
 <script src="site_libs/quarto-search/autocomplete.umd.js"></script>
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./discord.html" rel="next">
+<link href="./api/index.html" rel="prev">
 <link href="./favicon.ico" rel="icon">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -40,27 +44,25 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-d0ae9245876894da5ac7e18953ecc5cc.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-e58b94d5b32bfa7fd060a1e8a1552805.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-1b7da60b26a47d4c32e12cd6c71bb08b.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
   "panel-placement": "end",
   "type": "overlay",
-  "limit": 50,
+  "limit": 8,
   "keyboard-shortcut": [
-    "f",
     "/",
     "s"
   ],
-  "show-item-context": false,
   "language": {
     "search-no-results-text": "No results",
     "search-matching-documents-text": "matching documents",
@@ -75,11 +77,12 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<style>html{ scroll-behavior: smooth; }</style>
 
 
 </head>
 
-<body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
       const bodyEl = window.document.querySelector("body");
@@ -249,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx.png" alt="" class="navbar-logo light-content">
-    <img src="./images/arx.png" alt="" class="navbar-logo dark-content">
+    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="./index.html">
     <span class="navbar-title">ArxLang</span>
@@ -261,15 +264,64 @@ ul.task-list li input[type="checkbox"] {
   <span class="navbar-toggler-icon"></span>
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img">
-</i> 
-<span class="menu-text"></span></a>
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link active" href="./discord.html" aria-current="page"> 
-<span class="menu-text">Community</span></a>
+    <a class="nav-link" href="./arx/index.html"> 
+<span class="menu-text">Arx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./astx/index.html"> 
+<span class="menu-text">ASTx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./irx/index.html"> 
+<span class="menu-text">IRx</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./arxpy/index.html"> 
+<span class="menu-text">ArxPy</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./arxjit/index.html"> 
+<span class="menu-text">ArxJIT</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tools</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
+        <li>
+    <a class="dropdown-item" href="./tools/index.html">
+ <span class="dropdown-text">Tooling Overview</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/arxpm.html">
+ <span class="dropdown-text">ArxPM</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/vscode.html">
+ <span class="dropdown-text">VS Code</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/jupyter.html">
+ <span class="dropdown-text">Jupyter Kernel</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./tools/douki.html">
+ <span class="dropdown-text">Douki</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
+</i> 
+<span class="menu-text"></span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -283,111 +335,37 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./changelog.html">Changelog</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./roadmap.html">Project</a></li><li class="breadcrumb-item"><a href="./changelog.html">Changelog</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
-      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
-        <i class="bi bi-search"></i>
-      </button>
     </div>
   </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
-        <div class="mt-2 flex-shrink-0 align-items-center">
-        <div class="sidebar-search">
-        <div id="quarto-search" class="" title="Search"></div>
-        </div>
-        </div>
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
     <div class="sidebar-menu-container"> 
     <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Home</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./getting-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false">
+ <span class="menu-text">Start</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 ">  
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./ecosystem.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Ecosystem Status</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./apache-arrow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Apache Arrow</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Library</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/modules.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Modules</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/datatypes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Data Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/built-in-types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Built-in Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Collections and Arrow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/control-flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Control Flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./library/docstrings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Docstrings</span></a>
+ <span class="menu-text">Native Apache Arrow</span></a>
   </div>
 </li>
       </ul>
@@ -395,7 +373,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">ASTx</span></a>
+ <span class="menu-text">Project</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -403,301 +381,71 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./astx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/conventions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Conventions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Tutorials</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/variables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Variables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/for-loop.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">For Loops</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/context.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Context</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/tutorials/fibonacci.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Fibonacci</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./astx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
- <span class="menu-text">IRx</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/architecture.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Architecture</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/semantic-contract.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Semantic Contract</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/runtime-features.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Runtime Features</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Buffer View Model</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/class-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Class Model</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
- <span class="menu-text">Tutorials</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./irx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
- <span class="menu-text">Python Tools</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./pyarx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">PyArx</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./arxjit/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ArxJIT</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./arxjit/design.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ArxJIT Design</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
- <span class="menu-text">AIX</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Syntax</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/grammar.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Grammar</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/examples.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Examples</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./aix/apl-inspired-operators.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Reserved Operators</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">API Docs</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Syntax</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="./roadmap.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Roadmap</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing Guide</span></a>
+ <span class="menu-text">Contributing</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Sponsor</span></a>
+  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">API Documentation</span></a>
   </div>
 </li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./partners.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Partners</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./coc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Code of Conduct</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./discord.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Community</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./governance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Governance</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
+          <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./changelog.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Changelog</span></a>
   </div>
 </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Community</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./discord.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community Chat</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./coc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Code of Conduct</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Governance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./partners.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Partners</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Sponsor</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
     </ul>
     </div>
 </nav>
@@ -709,133 +457,142 @@ ul.task-list li input[type="checkbox"] {
    
   <ul>
   <li><a href="#release-notes" id="toc-release-notes" class="nav-link active" data-scroll-target="#release-notes"># Release Notes</a></li>
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">1.23.1 (2026-04-29)</a>
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">1.24.1 (2026-08-05)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug Fixes</a></li>
   </ul></li>
-  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">1.23.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features" id="toc-features" class="nav-link" data-scroll-target="#features">Features</a></li>
-  </ul></li>
-  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">1.22.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features-1" id="toc-features-1" class="nav-link" data-scroll-target="#features-1">Features</a></li>
-  </ul></li>
-  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">1.21.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features-2" id="toc-features-2" class="nav-link" data-scroll-target="#features-2">Features</a></li>
-  </ul></li>
-  <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">1.20.0 (2026-04-27)</a>
-  <ul class="collapse">
-  <li><a href="#features-3" id="toc-features-3" class="nav-link" data-scroll-target="#features-3">Features</a></li>
-  <li><a href="#section-5" id="toc-section-5" class="nav-link" data-scroll-target="#section-5">1.19.2 (2026-04-27)</a>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">1.24.0 (2026-08-04)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug Fixes</a></li>
-  </ul></li>
-  <li><a href="#section-6" id="toc-section-6" class="nav-link" data-scroll-target="#section-6">1.19.1 (2026-04-27)</a>
+  <li><a href="#features" id="toc-features" class="nav-link" data-scroll-target="#features">Features</a></li>
+  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">1.23.1 (2026-04-29)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug Fixes</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#section-7" id="toc-section-7" class="nav-link" data-scroll-target="#section-7">1.19.0 (2026-04-26)</a>
+  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">1.23.0 (2026-04-28)</a>
+  <ul class="collapse">
+  <li><a href="#features-1" id="toc-features-1" class="nav-link" data-scroll-target="#features-1">Features</a></li>
+  </ul></li>
+  <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">1.22.0 (2026-04-28)</a>
+  <ul class="collapse">
+  <li><a href="#features-2" id="toc-features-2" class="nav-link" data-scroll-target="#features-2">Features</a></li>
+  </ul></li>
+  <li><a href="#section-5" id="toc-section-5" class="nav-link" data-scroll-target="#section-5">1.21.0 (2026-04-28)</a>
+  <ul class="collapse">
+  <li><a href="#features-3" id="toc-features-3" class="nav-link" data-scroll-target="#features-3">Features</a></li>
+  </ul></li>
+  <li><a href="#section-6" id="toc-section-6" class="nav-link" data-scroll-target="#section-6">1.20.0 (2026-04-27)</a>
   <ul class="collapse">
   <li><a href="#features-4" id="toc-features-4" class="nav-link" data-scroll-target="#features-4">Features</a></li>
-  </ul></li>
-  <li><a href="#section-8" id="toc-section-8" class="nav-link" data-scroll-target="#section-8">0.16.0 (2026-04-25)</a>
-  <ul class="collapse">
-  <li><a href="#features-5" id="toc-features-5" class="nav-link" data-scroll-target="#features-5">Features</a></li>
-  </ul></li>
-  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
-  <ul class="collapse">
-  <li><a href="#features-6" id="toc-features-6" class="nav-link" data-scroll-target="#features-6">Features</a></li>
-  </ul></li>
-  <li><a href="#section-9" id="toc-section-9" class="nav-link" data-scroll-target="#section-9">0.15.0 (2026-04-22)</a>
-  <ul class="collapse">
-  <li><a href="#features-7" id="toc-features-7" class="nav-link" data-scroll-target="#features-7">Features</a></li>
-  </ul></li>
-  <li><a href="#section-10" id="toc-section-10" class="nav-link" data-scroll-target="#section-10">0.14.0 (2026-04-21)</a>
+  <li><a href="#section-7" id="toc-section-7" class="nav-link" data-scroll-target="#section-7">1.19.2 (2026-04-27)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-3" id="toc-bug-fixes-3" class="nav-link" data-scroll-target="#bug-fixes-3">Bug Fixes</a></li>
-  <li><a href="#features-8" id="toc-features-8" class="nav-link" data-scroll-target="#features-8">Features</a></li>
   </ul></li>
-  <li><a href="#section-11" id="toc-section-11" class="nav-link" data-scroll-target="#section-11">0.13.0 (2026-04-20)</a>
-  <ul class="collapse">
-  <li><a href="#features-9" id="toc-features-9" class="nav-link" data-scroll-target="#features-9">Features</a></li>
-  </ul></li>
-  <li><a href="#section-12" id="toc-section-12" class="nav-link" data-scroll-target="#section-12">0.12.0 (2026-04-20)</a>
-  <ul class="collapse">
-  <li><a href="#features-10" id="toc-features-10" class="nav-link" data-scroll-target="#features-10">Features</a></li>
-  </ul></li>
-  <li><a href="#section-13" id="toc-section-13" class="nav-link" data-scroll-target="#section-13">0.11.0 (2026-04-19)</a>
-  <ul class="collapse">
-  <li><a href="#features-11" id="toc-features-11" class="nav-link" data-scroll-target="#features-11">Features</a></li>
-  </ul></li>
-  <li><a href="#section-14" id="toc-section-14" class="nav-link" data-scroll-target="#section-14">0.10.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-12" id="toc-features-12" class="nav-link" data-scroll-target="#features-12">Features</a></li>
-  </ul></li>
-  <li><a href="#section-15" id="toc-section-15" class="nav-link" data-scroll-target="#section-15">0.9.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-13" id="toc-features-13" class="nav-link" data-scroll-target="#features-13">Features</a></li>
-  </ul></li>
-  <li><a href="#section-16" id="toc-section-16" class="nav-link" data-scroll-target="#section-16">0.8.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-14" id="toc-features-14" class="nav-link" data-scroll-target="#features-14">Features</a></li>
-  </ul></li>
-  <li><a href="#section-17" id="toc-section-17" class="nav-link" data-scroll-target="#section-17">0.7.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-15" id="toc-features-15" class="nav-link" data-scroll-target="#features-15">Features</a></li>
-  <li><a href="#section-18" id="toc-section-18" class="nav-link" data-scroll-target="#section-18">0.6.1 (2026-04-18)</a>
+  <li><a href="#section-8" id="toc-section-8" class="nav-link" data-scroll-target="#section-8">1.19.1 (2026-04-27)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-4" id="toc-bug-fixes-4" class="nav-link" data-scroll-target="#bug-fixes-4">Bug Fixes</a></li>
   </ul></li>
   </ul></li>
-  <li><a href="#section-19" id="toc-section-19" class="nav-link" data-scroll-target="#section-19">0.6.0 (2026-04-18)</a>
+  <li><a href="#section-9" id="toc-section-9" class="nav-link" data-scroll-target="#section-9">1.19.0 (2026-04-26)</a>
   <ul class="collapse">
-  <li><a href="#features-16" id="toc-features-16" class="nav-link" data-scroll-target="#features-16">Features</a></li>
+  <li><a href="#features-5" id="toc-features-5" class="nav-link" data-scroll-target="#features-5">Features</a></li>
   </ul></li>
-  <li><a href="#section-20" id="toc-section-20" class="nav-link" data-scroll-target="#section-20">0.5.0 (2026-04-16)</a>
+  <li><a href="#section-10" id="toc-section-10" class="nav-link" data-scroll-target="#section-10">0.16.0 (2026-04-25)</a>
   <ul class="collapse">
-  <li><a href="#features-17" id="toc-features-17" class="nav-link" data-scroll-target="#features-17">Features</a></li>
+  <li><a href="#features-6" id="toc-features-6" class="nav-link" data-scroll-target="#features-6">Features</a></li>
   </ul></li>
-  <li><a href="#section-21" id="toc-section-21" class="nav-link" data-scroll-target="#section-21">0.4.0 (2026-04-16)</a>
+  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
   <ul class="collapse">
-  <li><a href="#features-18" id="toc-features-18" class="nav-link" data-scroll-target="#features-18">Features</a></li>
-  <li><a href="#section-22" id="toc-section-22" class="nav-link" data-scroll-target="#section-22">0.3.4 (2026-04-02)</a>
+  <li><a href="#features-7" id="toc-features-7" class="nav-link" data-scroll-target="#features-7">Features</a></li>
+  </ul></li>
+  <li><a href="#section-11" id="toc-section-11" class="nav-link" data-scroll-target="#section-11">0.15.0 (2026-04-22)</a>
+  <ul class="collapse">
+  <li><a href="#features-8" id="toc-features-8" class="nav-link" data-scroll-target="#features-8">Features</a></li>
+  </ul></li>
+  <li><a href="#section-12" id="toc-section-12" class="nav-link" data-scroll-target="#section-12">0.14.0 (2026-04-21)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-5" id="toc-bug-fixes-5" class="nav-link" data-scroll-target="#bug-fixes-5">Bug Fixes</a></li>
+  <li><a href="#features-9" id="toc-features-9" class="nav-link" data-scroll-target="#features-9">Features</a></li>
   </ul></li>
-  <li><a href="#section-23" id="toc-section-23" class="nav-link" data-scroll-target="#section-23">0.3.3 (2026-03-06)</a>
+  <li><a href="#section-13" id="toc-section-13" class="nav-link" data-scroll-target="#section-13">0.13.0 (2026-04-20)</a>
+  <ul class="collapse">
+  <li><a href="#features-10" id="toc-features-10" class="nav-link" data-scroll-target="#features-10">Features</a></li>
+  </ul></li>
+  <li><a href="#section-14" id="toc-section-14" class="nav-link" data-scroll-target="#section-14">0.12.0 (2026-04-20)</a>
+  <ul class="collapse">
+  <li><a href="#features-11" id="toc-features-11" class="nav-link" data-scroll-target="#features-11">Features</a></li>
+  </ul></li>
+  <li><a href="#section-15" id="toc-section-15" class="nav-link" data-scroll-target="#section-15">0.11.0 (2026-04-19)</a>
+  <ul class="collapse">
+  <li><a href="#features-12" id="toc-features-12" class="nav-link" data-scroll-target="#features-12">Features</a></li>
+  </ul></li>
+  <li><a href="#section-16" id="toc-section-16" class="nav-link" data-scroll-target="#section-16">0.10.0 (2026-04-18)</a>
+  <ul class="collapse">
+  <li><a href="#features-13" id="toc-features-13" class="nav-link" data-scroll-target="#features-13">Features</a></li>
+  </ul></li>
+  <li><a href="#section-17" id="toc-section-17" class="nav-link" data-scroll-target="#section-17">0.9.0 (2026-04-18)</a>
+  <ul class="collapse">
+  <li><a href="#features-14" id="toc-features-14" class="nav-link" data-scroll-target="#features-14">Features</a></li>
+  </ul></li>
+  <li><a href="#section-18" id="toc-section-18" class="nav-link" data-scroll-target="#section-18">0.8.0 (2026-04-18)</a>
+  <ul class="collapse">
+  <li><a href="#features-15" id="toc-features-15" class="nav-link" data-scroll-target="#features-15">Features</a></li>
+  </ul></li>
+  <li><a href="#section-19" id="toc-section-19" class="nav-link" data-scroll-target="#section-19">0.7.0 (2026-04-18)</a>
+  <ul class="collapse">
+  <li><a href="#features-16" id="toc-features-16" class="nav-link" data-scroll-target="#features-16">Features</a></li>
+  <li><a href="#section-20" id="toc-section-20" class="nav-link" data-scroll-target="#section-20">0.6.1 (2026-04-18)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-6" id="toc-bug-fixes-6" class="nav-link" data-scroll-target="#bug-fixes-6">Bug Fixes</a></li>
   </ul></li>
-  <li><a href="#section-24" id="toc-section-24" class="nav-link" data-scroll-target="#section-24">0.3.2 (2026-03-06)</a>
+  </ul></li>
+  <li><a href="#section-21" id="toc-section-21" class="nav-link" data-scroll-target="#section-21">0.6.0 (2026-04-18)</a>
+  <ul class="collapse">
+  <li><a href="#features-17" id="toc-features-17" class="nav-link" data-scroll-target="#features-17">Features</a></li>
+  </ul></li>
+  <li><a href="#section-22" id="toc-section-22" class="nav-link" data-scroll-target="#section-22">0.5.0 (2026-04-16)</a>
+  <ul class="collapse">
+  <li><a href="#features-18" id="toc-features-18" class="nav-link" data-scroll-target="#features-18">Features</a></li>
+  </ul></li>
+  <li><a href="#section-23" id="toc-section-23" class="nav-link" data-scroll-target="#section-23">0.4.0 (2026-04-16)</a>
+  <ul class="collapse">
+  <li><a href="#features-19" id="toc-features-19" class="nav-link" data-scroll-target="#features-19">Features</a></li>
+  <li><a href="#section-24" id="toc-section-24" class="nav-link" data-scroll-target="#section-24">0.3.4 (2026-04-02)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-7" id="toc-bug-fixes-7" class="nav-link" data-scroll-target="#bug-fixes-7">Bug Fixes</a></li>
   </ul></li>
-  <li><a href="#section-25" id="toc-section-25" class="nav-link" data-scroll-target="#section-25">0.3.1 (2026-03-06)</a>
+  <li><a href="#section-25" id="toc-section-25" class="nav-link" data-scroll-target="#section-25">0.3.3 (2026-03-06)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-8" id="toc-bug-fixes-8" class="nav-link" data-scroll-target="#bug-fixes-8">Bug Fixes</a></li>
   </ul></li>
-  </ul></li>
-  <li><a href="#section-26" id="toc-section-26" class="nav-link" data-scroll-target="#section-26">0.3.0 (2026-03-06)</a>
-  <ul class="collapse">
-  <li><a href="#features-19" id="toc-features-19" class="nav-link" data-scroll-target="#features-19">Features</a></li>
-  </ul></li>
-  <li><a href="#section-27" id="toc-section-27" class="nav-link" data-scroll-target="#section-27">0.2.0 (2025-08-07)</a>
+  <li><a href="#section-26" id="toc-section-26" class="nav-link" data-scroll-target="#section-26">0.3.2 (2026-03-06)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-9" id="toc-bug-fixes-9" class="nav-link" data-scroll-target="#bug-fixes-9">Bug Fixes</a></li>
-  <li><a href="#features-20" id="toc-features-20" class="nav-link" data-scroll-target="#features-20">Features</a></li>
-  <li><a href="#section-28" id="toc-section-28" class="nav-link" data-scroll-target="#section-28">0.1.1 (2023-06-26)</a>
+  </ul></li>
+  <li><a href="#section-27" id="toc-section-27" class="nav-link" data-scroll-target="#section-27">0.3.1 (2026-03-06)</a>
   <ul class="collapse">
   <li><a href="#bug-fixes-10" id="toc-bug-fixes-10" class="nav-link" data-scroll-target="#bug-fixes-10">Bug Fixes</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#section-28" id="toc-section-28" class="nav-link" data-scroll-target="#section-28">0.3.0 (2026-03-06)</a>
+  <ul class="collapse">
+  <li><a href="#features-20" id="toc-features-20" class="nav-link" data-scroll-target="#features-20">Features</a></li>
+  </ul></li>
+  <li><a href="#section-29" id="toc-section-29" class="nav-link" data-scroll-target="#section-29">0.2.0 (2025-08-07)</a>
+  <ul class="collapse">
+  <li><a href="#bug-fixes-11" id="toc-bug-fixes-11" class="nav-link" data-scroll-target="#bug-fixes-11">Bug Fixes</a></li>
+  <li><a href="#features-21" id="toc-features-21" class="nav-link" data-scroll-target="#features-21">Features</a></li>
+  <li><a href="#section-30" id="toc-section-30" class="nav-link" data-scroll-target="#section-30">0.1.1 (2023-06-26)</a>
+  <ul class="collapse">
+  <li><a href="#bug-fixes-12" id="toc-bug-fixes-12" class="nav-link" data-scroll-target="#bug-fixes-12">Bug Fixes</a></li>
   </ul></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./roadmap.html">Project</a></li><li class="breadcrumb-item"><a href="./changelog.html">Changelog</a></li></ol></nav></header>
 
 
 
@@ -845,82 +602,118 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="release-notes"># Release Notes</h2>
 </section>
 <section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section"><a href="https://github.com/arxlang/arx/compare/1.23.0...1.23.1">1.23.1</a> (2026-04-29)</h2>
+<h2 class="anchored" data-anchor-id="section"><a href="https://github.com/arxlang/arx/compare/1.24.0...1.24.1">1.24.1</a> (2026-08-05)</h2>
 <section id="bug-fixes" class="level3">
 <h3 class="anchored" data-anchor-id="bug-fixes">Bug Fixes</h3>
+<ul>
+<li>Fix arxpy release (<a href="https://github.com/arxlang/arx/issues/106">#106</a>) (<a href="https://github.com/arxlang/arx/commit/66de68d467477aa5fc93ffd11c4c8a180df63e87">66de68d</a>)</li>
+</ul>
+</section>
+</section>
+<section id="section-1" class="level1">
+<h1><a href="https://github.com/arxlang/arx/compare/1.23.1...1.24.0">1.24.0</a> (2026-08-04)</h1>
+<section id="bug-fixes-1" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug Fixes</h3>
+<ul>
+<li>Improve the syntax.json definition (<a href="https://github.com/arxlang/arx/issues/83">#83</a>) (<a href="https://github.com/arxlang/arx/commit/7e2ecccd4202953dd3397427152170a5be253b31">7e2eccc</a>)</li>
+</ul>
+</section>
+<section id="features" class="level3">
+<h3 class="anchored" data-anchor-id="features">Features</h3>
+<ul>
+<li>Add initial version of aix (<a href="https://github.com/arxlang/arx/issues/84">#84</a>) (<a href="https://github.com/arxlang/arx/commit/008a7dd70b831769c2f8a9c440bbd73976efc311">008a7dd</a>)</li>
+<li><strong>arxjit:</strong> add clear errors when source extraction is unavailable (<a href="https://github.com/arxlang/arx/issues/98">#98</a>) (<a href="https://github.com/arxlang/arx/commit/0cc3c128f9c8f1923247dc224df8f6edf44701c2">0cc3c12</a>)</li>
+<li><strong>arxjit:</strong> add Python-subset validation for decorated functions (<a href="https://github.com/arxlang/arx/issues/99">#99</a>) (<a href="https://github.com/arxlang/arx/commit/8fb8ffc620a9c2825f4a3d7c41a356c7ebc84468">8fb8ffc</a>)</li>
+<li><strong>arxjit:</strong> add scalar type and signature API (<a href="https://github.com/arxlang/arx/issues/91">#91</a>) (<a href="https://github.com/arxlang/arx/commit/744276484a27e31783682eb6408f2d536948d3d2">7442764</a>)</li>
+<li><strong>arxjit:</strong> add source extraction for decorated functions (<a href="https://github.com/arxlang/arx/issues/96">#96</a>) (<a href="https://github.com/arxlang/arx/commit/f2580d5c26f8f781146490d066574e29fc260712">f2580d5</a>)</li>
+<li><strong>arxjit:</strong> add source extraction for decorated functions (<a href="https://github.com/arxlang/arx/issues/96">#96</a>) (<a href="https://github.com/arxlang/arx/commit/77536dcda25bcd64f5d1574b61045aab1b3e5d75">77536dc</a>)</li>
+<li><strong>arxjit:</strong> add structured diagnostics and the public error hierarchy (<a href="https://github.com/arxlang/arx/issues/95">#95</a>) (<a href="https://github.com/arxlang/arx/commit/b6b35e06c0b52a50cdeaa7fae48c9804432d1cf2">b6b35e0</a>)</li>
+<li><strong>arxjit:</strong> add the <a href="https://github.com/jit"><span class="citation" data-cites="jit">@jit</span></a> decorator + Python-to-ASTx design notes (<a href="https://github.com/arxlang/arx/issues/92">#92</a>) (<a href="https://github.com/arxlang/arx/commit/f3e8f3bc935ae5a39a2b1718b161c8dc5e287607">f3e8f3b</a>)</li>
+<li><strong>arxjit:</strong> reject methods and make the rejection matrix exhaustive (<a href="https://github.com/arxlang/arx/issues/102">#102</a>) (<a href="https://github.com/arxlang/arx/commit/2fcd6611e45c1bbb90dcc076ed3e860260060a17">2fcd661</a>)</li>
+<li><strong>arxjit:</strong> scaffold arxjit JIT decorator package (<a href="https://github.com/arxlang/arx/issues/90">#90</a>) (<a href="https://github.com/arxlang/arx/commit/48508c363329f88ab90f220271098f915417a79f">48508c3</a>)</li>
+<li><strong>irx:</strong> add utf8 and large_utf8 string columns to record batch (<a href="https://github.com/arxlang/arx/issues/93">#93</a>) (<a href="https://github.com/arxlang/arx/commit/31c409c11f00a25e21bbecb1729da65e96de6e8c">31c409c</a>)</li>
+<li><strong>pyarx:</strong> add error and diagnostic layer (<a href="https://github.com/arxlang/arx/issues/86">#86</a>) (<a href="https://github.com/arxlang/arx/commit/3c3602c72fd4d849a694033d06e72559737cfca5">3c3602c</a>)</li>
+<li>scaffold pyarx Python API package (<a href="https://github.com/arxlang/arx/issues/85">#85</a>) (<a href="https://github.com/arxlang/arx/commit/336eabf42eac59ce03fe7794b63e9b7788be94c9">336eabf</a>)</li>
+</ul>
+</section>
+<section id="section-2" class="level2">
+<h2 class="anchored" data-anchor-id="section-2"><a href="https://github.com/arxlang/arx/compare/1.23.0...1.23.1">1.23.1</a> (2026-04-29)</h2>
+<section id="bug-fixes-2" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug Fixes</h3>
 <ul>
 <li>Fix the config dependencies format (<a href="https://github.com/arxlang/arx/issues/81">#81</a>) (<a href="https://github.com/arxlang/arx/commit/309091a37fe30a654696ced2a512f7aebfc5956a">309091a</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-1" class="level1">
+</section>
+<section id="section-3" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/1.22.0...1.23.0">1.23.0</a> (2026-04-28)</h1>
-<section id="features" class="level3">
-<h3 class="anchored" data-anchor-id="features">Features</h3>
+<section id="features-1" class="level3">
+<h3 class="anchored" data-anchor-id="features-1">Features</h3>
 <ul>
 <li><strong>config:</strong> Add support for requires-arx in the .arxproject.toml (<a href="https://github.com/arxlang/arx/issues/79">#79</a>) (<a href="https://github.com/arxlang/arx/commit/d0ab51327d329649003a1df55dc35035dc20200b">d0ab513</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-2" class="level1">
+<section id="section-4" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/1.21.0...1.22.0">1.22.0</a> (2026-04-28)</h1>
-<section id="features-1" class="level3">
-<h3 class="anchored" data-anchor-id="features-1">Features</h3>
+<section id="features-2" class="level3">
+<h3 class="anchored" data-anchor-id="features-2">Features</h3>
 <ul>
 <li>Improve the discovery of installed libraries (<a href="https://github.com/arxlang/arx/issues/78">#78</a>) (<a href="https://github.com/arxlang/arx/commit/c00776d76e2d7e8e0040da88bcbadeed315763bc">c00776d</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-3" class="level1">
+<section id="section-5" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/1.20.0...1.21.0">1.21.0</a> (2026-04-28)</h1>
-<section id="features-2" class="level3">
-<h3 class="anchored" data-anchor-id="features-2">Features</h3>
+<section id="features-3" class="level3">
+<h3 class="anchored" data-anchor-id="features-3">Features</h3>
 <ul>
 <li>Add type alias, builtin functions about typing (<a href="https://github.com/arxlang/arx/issues/77">#77</a>) (<a href="https://github.com/arxlang/arx/commit/87b7e2817df3b4360c163ce7efea16c83e35289e">87b7e28</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-4" class="level1">
+<section id="section-6" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/1.19.2...1.20.0">1.20.0</a> (2026-04-27)</h1>
-<section id="features-3" class="level3">
-<h3 class="anchored" data-anchor-id="features-3">Features</h3>
+<section id="features-4" class="level3">
+<h3 class="anchored" data-anchor-id="features-4">Features</h3>
 <ul>
 <li>Add support for dataframes/series (<a href="https://github.com/arxlang/arx/issues/75">#75</a>) (<a href="https://github.com/arxlang/arx/commit/bbc76e44070dcf03b25bf5b0b78948fd151c2d0a">bbc76e4</a>)</li>
 <li>Standardize unsize types for collections/tensors/dataframes etc (<a href="https://github.com/arxlang/arx/issues/76">#76</a>) (<a href="https://github.com/arxlang/arx/commit/99bf4f2b7d60c2ecff0288ece0b198a5b0f85e6b">99bf4f2</a>)</li>
 </ul>
 </section>
-<section id="section-5" class="level2">
-<h2 class="anchored" data-anchor-id="section-5"><a href="https://github.com/arxlang/arx/compare/1.19.1...1.19.2">1.19.2</a> (2026-04-27)</h2>
-<section id="bug-fixes-1" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug Fixes</h3>
+<section id="section-7" class="level2">
+<h2 class="anchored" data-anchor-id="section-7"><a href="https://github.com/arxlang/arx/compare/1.19.1...1.19.2">1.19.2</a> (2026-04-27)</h2>
+<section id="bug-fixes-3" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-3">Bug Fixes</h3>
 <ul>
 <li>Move irx.astx wrappers back to astx (<a href="https://github.com/arxlang/arx/issues/74">#74</a>) (<a href="https://github.com/arxlang/arx/commit/0c37e1b2e0f18fe2306fc4e3416c779554eb00a1">0c37e1b</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-6" class="level2">
-<h2 class="anchored" data-anchor-id="section-6"><a href="https://github.com/arxlang/arx/compare/1.19.0...1.19.1">1.19.1</a> (2026-04-27)</h2>
-<section id="bug-fixes-2" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug Fixes</h3>
+<section id="section-8" class="level2">
+<h2 class="anchored" data-anchor-id="section-8"><a href="https://github.com/arxlang/arx/compare/1.19.0...1.19.1">1.19.1</a> (2026-04-27)</h2>
+<section id="bug-fixes-4" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-4">Bug Fixes</h3>
 <ul>
 <li>Fix readme files (<a href="https://github.com/arxlang/arx/issues/73">#73</a>) (<a href="https://github.com/arxlang/arx/commit/48df1fe7637ee8f66ce92b6b239d5093d48fc6cc">48df1fe</a>)</li>
 </ul>
 </section>
 </section>
 </section>
-<section id="section-7" class="level1">
+<section id="section-9" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/1.18.1...1.19.0">1.19.0</a> (2026-04-26)</h1>
-<section id="features-4" class="level3">
-<h3 class="anchored" data-anchor-id="features-4">Features</h3>
+<section id="features-5" class="level3">
+<h3 class="anchored" data-anchor-id="features-5">Features</h3>
 <ul>
 <li>Add initial version for monorepo for Arx, IRx, and ASTx (<a href="https://github.com/arxlang/arx/issues/72">#72</a>) (<a href="https://github.com/arxlang/arx/commit/d7a6bcfb99302fd9c0f8eef9763257aeca1a874c">d7a6bcf</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-8" class="level1">
+<section id="section-10" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.15.0...0.16.0">0.16.0</a> (2026-04-25)</h1>
-<section id="features-5" class="level3">
-<h3 class="anchored" data-anchor-id="features-5">Features</h3>
+<section id="features-6" class="level3">
+<h3 class="anchored" data-anchor-id="features-6">Features</h3>
 <ul>
 <li>Add initial stdlib (<a href="https://github.com/arxlang/arx/issues/67">#67</a>) (<a href="https://github.com/arxlang/arx/commit/3e74ca7ae858533865f9139c6310bdd9c68aed35">3e74ca7</a>)</li>
 <li>Add support for NDArray (<a href="https://github.com/arxlang/arx/issues/66">#66</a>) (<a href="https://github.com/arxlang/arx/commit/d473ae3ef572549cf7095da0decf4f8fc5a5e806">d473ae3</a>)</li>
@@ -931,196 +724,196 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="unreleased" class="level1">
 <h1>Unreleased</h1>
-<section id="features-6" class="level3">
-<h3 class="anchored" data-anchor-id="features-6">Features</h3>
+<section id="features-7" class="level3">
+<h3 class="anchored" data-anchor-id="features-7">Features</h3>
 <ul>
 <li>migrate Arx tensor syntax to IRx Tensor APIs and Arrow C++ runtime terminology</li>
 </ul>
 </section>
 </section>
-<section id="section-9" class="level1">
+<section id="section-11" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.14.0...0.15.0">0.15.0</a> (2026-04-22)</h1>
-<section id="features-7" class="level3">
-<h3 class="anchored" data-anchor-id="features-7">Features</h3>
+<section id="features-8" class="level3">
+<h3 class="anchored" data-anchor-id="features-8">Features</h3>
 <ul>
 <li>align Arx surface syntax with IRx array-first naming (<a href="https://github.com/arxlang/arx/issues/65">#65</a>) (<a href="https://github.com/arxlang/arx/commit/b7ae1b1b8996cfbff908f24e133acbf509301cfa">b7ae1b1</a>)</li>
 <li>Improve lexer layout; Update syntax.json (<a href="https://github.com/arxlang/arx/issues/64">#64</a>) (<a href="https://github.com/arxlang/arx/commit/a3e6285c4b74fceb377cd24552ece09a3e5ca519">a3e6285</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-10" class="level1">
+<section id="section-12" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.13.0...0.14.0">0.14.0</a> (2026-04-21)</h1>
-<section id="bug-fixes-3" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-3">Bug Fixes</h3>
+<section id="bug-fixes-5" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-5">Bug Fixes</h3>
 <ul>
 <li><strong>parser:</strong> harden template call parsing (<a href="https://github.com/arxlang/arx/issues/62">#62</a>) (<a href="https://github.com/arxlang/arx/commit/8f1a5ff263cd6cb42578c96f07d6eb929c50fb32">8f1a5ff</a>)</li>
 </ul>
 </section>
-<section id="features-8" class="level3">
-<h3 class="anchored" data-anchor-id="features-8">Features</h3>
+<section id="features-9" class="level3">
+<h3 class="anchored" data-anchor-id="features-9">Features</h3>
 <ul>
 <li>Split Parser into multiple files with mixin (<a href="https://github.com/arxlang/arx/issues/63">#63</a>) (<a href="https://github.com/arxlang/arx/commit/e704fb6e03aecdbc62d6aa36b6ea79f53f46561c">e704fb6</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-11" class="level1">
+<section id="section-13" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.12.0...0.13.0">0.13.0</a> (2026-04-20)</h1>
-<section id="features-9" class="level3">
-<h3 class="anchored" data-anchor-id="features-9">Features</h3>
+<section id="features-10" class="level3">
+<h3 class="anchored" data-anchor-id="features-10">Features</h3>
 <ul>
 <li>Improve arx settings for build (<a href="https://github.com/arxlang/arx/issues/61">#61</a>) (<a href="https://github.com/arxlang/arx/commit/fba708aba980e2e7e2cf6a6bb40403a516132237">fba708a</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-12" class="level1">
+<section id="section-14" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.11.0...0.12.0">0.12.0</a> (2026-04-20)</h1>
-<section id="features-10" class="level3">
-<h3 class="anchored" data-anchor-id="features-10">Features</h3>
+<section id="features-11" class="level3">
+<h3 class="anchored" data-anchor-id="features-11">Features</h3>
 <ul>
 <li>Improve the import statement (<a href="https://github.com/arxlang/arx/issues/59">#59</a>) (<a href="https://github.com/arxlang/arx/commit/7199c83558d0f6fe0ed55de2b2161c5995b31401">7199c83</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-13" class="level1">
+<section id="section-15" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.10.0...0.11.0">0.11.0</a> (2026-04-19)</h1>
-<section id="features-11" class="level3">
-<h3 class="anchored" data-anchor-id="features-11">Features</h3>
+<section id="features-12" class="level3">
+<h3 class="anchored" data-anchor-id="features-12">Features</h3>
 <ul>
 <li>Improve usage of none type; fix tests (<a href="https://github.com/arxlang/arx/issues/58">#58</a>) (<a href="https://github.com/arxlang/arx/commit/3e52e6e8c44f25601de264479ae15beaf159e728">3e52e6e</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-14" class="level1">
+<section id="section-16" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.9.0...0.10.0">0.10.0</a> (2026-04-18)</h1>
-<section id="features-12" class="level3">
-<h3 class="anchored" data-anchor-id="features-12">Features</h3>
+<section id="features-13" class="level3">
+<h3 class="anchored" data-anchor-id="features-13">Features</h3>
 <ul>
 <li><strong>settings:</strong> Add support for dependency-groups (<a href="https://github.com/arxlang/arx/issues/57">#57</a>) (<a href="https://github.com/arxlang/arx/commit/926084b69de8b7e640140af60fc9735d8609ad58">926084b</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-15" class="level1">
+<section id="section-17" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.8.0...0.9.0">0.9.0</a> (2026-04-18)</h1>
-<section id="features-13" class="level3">
-<h3 class="anchored" data-anchor-id="features-13">Features</h3>
+<section id="features-14" class="level3">
+<h3 class="anchored" data-anchor-id="features-14">Features</h3>
 <ul>
 <li>Add typing support with py.typed (<a href="https://github.com/arxlang/arx/issues/56">#56</a>) (<a href="https://github.com/arxlang/arx/commit/4045c41a0e9a6d7ff7bc6d8df8db820d066afc75">4045c41</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-16" class="level1">
+<section id="section-18" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.7.0...0.8.0">0.8.0</a> (2026-04-18)</h1>
-<section id="features-14" class="level3">
-<h3 class="anchored" data-anchor-id="features-14">Features</h3>
+<section id="features-15" class="level3">
+<h3 class="anchored" data-anchor-id="features-15">Features</h3>
 <ul>
 <li>Improve arx.settings to handle requirements fro arxpm (<a href="https://github.com/arxlang/arx/issues/55">#55</a>) (<a href="https://github.com/arxlang/arx/commit/c18d52e499e9c51fc1a5460161864e46f0c309b7">c18d52e</a>)</li>
 <li>Improve test configuration (<a href="https://github.com/arxlang/arx/issues/54">#54</a>) (<a href="https://github.com/arxlang/arx/commit/b97c9eb6dc3287988b99f01b451e55dc06e1c3e0">b97c9eb</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-17" class="level1">
+<section id="section-19" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.6.1...0.7.0">0.7.0</a> (2026-04-18)</h1>
-<section id="features-15" class="level3">
-<h3 class="anchored" data-anchor-id="features-15">Features</h3>
+<section id="features-16" class="level3">
+<h3 class="anchored" data-anchor-id="features-16">Features</h3>
 <ul>
 <li>Improve unknown subcommand handling; add settings API (<a href="https://github.com/arxlang/arx/issues/53">#53</a>) (<a href="https://github.com/arxlang/arx/commit/701bd7874f42081cc8adbffa76f5978b940af12f">701bd78</a>)</li>
 </ul>
 </section>
-<section id="section-18" class="level2">
-<h2 class="anchored" data-anchor-id="section-18"><a href="https://github.com/arxlang/arx/compare/0.6.0...0.6.1">0.6.1</a> (2026-04-18)</h2>
-<section id="bug-fixes-4" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-4">Bug Fixes</h3>
+<section id="section-20" class="level2">
+<h2 class="anchored" data-anchor-id="section-20"><a href="https://github.com/arxlang/arx/compare/0.6.0...0.6.1">0.6.1</a> (2026-04-18)</h2>
+<section id="bug-fixes-6" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-6">Bug Fixes</h3>
 <ul>
 <li>Fix arx test implementation (<a href="https://github.com/arxlang/arx/issues/52">#52</a>) (<a href="https://github.com/arxlang/arx/commit/4fe9e85c160fa1fd997b2e0a099a98d67b9dc174">4fe9e85</a>)</li>
 </ul>
 </section>
 </section>
 </section>
-<section id="section-19" class="level1">
+<section id="section-21" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.5.0...0.6.0">0.6.0</a> (2026-04-18)</h1>
-<section id="features-16" class="level3">
-<h3 class="anchored" data-anchor-id="features-16">Features</h3>
+<section id="features-17" class="level3">
+<h3 class="anchored" data-anchor-id="features-17">Features</h3>
 <ul>
 <li><strong>testing:</strong> preserve shared top-level declarations in arx test wrappers; Add assert statement (<a href="https://github.com/arxlang/arx/issues/51">#51</a>) (<a href="https://github.com/arxlang/arx/commit/83a6591c2317dc6d6ea52d12ad4a95096a5a8443">83a6591</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-20" class="level1">
+<section id="section-22" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.4.0...0.5.0">0.5.0</a> (2026-04-16)</h1>
-<section id="features-17" class="level3">
-<h3 class="anchored" data-anchor-id="features-17">Features</h3>
+<section id="features-18" class="level3">
+<h3 class="anchored" data-anchor-id="features-18">Features</h3>
 <ul>
 <li>Add support for import/import-from (<a href="https://github.com/arxlang/arx/issues/50">#50</a>) (<a href="https://github.com/arxlang/arx/commit/08c53ab1aed5c21399193f9387f9cd93f8bb91ae">08c53ab</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-21" class="level1">
+<section id="section-23" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.3.4...0.4.0">0.4.0</a> (2026-04-16)</h1>
-<section id="features-18" class="level3">
-<h3 class="anchored" data-anchor-id="features-18">Features</h3>
+<section id="features-19" class="level3">
+<h3 class="anchored" data-anchor-id="features-19">Features</h3>
 <ul>
 <li>Add support for classes (<a href="https://github.com/arxlang/arx/issues/49">#49</a>) (<a href="https://github.com/arxlang/arx/commit/7c8b073a2aeb780b3601f683478c0a6b17511477">7c8b073</a>)</li>
 </ul>
 </section>
-<section id="section-22" class="level2">
-<h2 class="anchored" data-anchor-id="section-22"><a href="https://github.com/arxlang/arx/compare/0.3.3...0.3.4">0.3.4</a> (2026-04-02)</h2>
-<section id="bug-fixes-5" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-5">Bug Fixes</h3>
+<section id="section-24" class="level2">
+<h2 class="anchored" data-anchor-id="section-24"><a href="https://github.com/arxlang/arx/compare/0.3.3...0.3.4">0.3.4</a> (2026-04-02)</h2>
+<section id="bug-fixes-7" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-7">Bug Fixes</h3>
 <ul>
 <li>correct _default_value_for_type for temporal and unsupported types (<a href="https://github.com/arxlang/arx/issues/36">#36</a>) (<a href="https://github.com/arxlang/arx/commit/93d7b13fdd4626c75cd7c722ea473392b2f3e650">93d7b13</a>)</li>
 <li><strong>refactor:</strong> Update irx and update its usage; rename classes (<a href="https://github.com/arxlang/arx/issues/39">#39</a>) (<a href="https://github.com/arxlang/arx/commit/c95c47ce320069759a022623a6b1064280d0459b">c95c47c</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-23" class="level2">
-<h2 class="anchored" data-anchor-id="section-23"><a href="https://github.com/arxlang/arx/compare/0.3.2...0.3.3">0.3.3</a> (2026-03-06)</h2>
-<section id="bug-fixes-6" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-6">Bug Fixes</h3>
+<section id="section-25" class="level2">
+<h2 class="anchored" data-anchor-id="section-25"><a href="https://github.com/arxlang/arx/compare/0.3.2...0.3.3">0.3.3</a> (2026-03-06)</h2>
+<section id="bug-fixes-8" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-8">Bug Fixes</h3>
 <ul>
 <li>Update astx and irx; mermaid is optional now (<a href="https://github.com/arxlang/arx/issues/35">#35</a>) (<a href="https://github.com/arxlang/arx/commit/37b341539eb4dd6989721dc43beb0d1d0e4d2327">37b3415</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-24" class="level2">
-<h2 class="anchored" data-anchor-id="section-24"><a href="https://github.com/arxlang/arx/compare/0.3.1...0.3.2">0.3.2</a> (2026-03-06)</h2>
-<section id="bug-fixes-7" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-7">Bug Fixes</h3>
+<section id="section-26" class="level2">
+<h2 class="anchored" data-anchor-id="section-26"><a href="https://github.com/arxlang/arx/compare/0.3.1...0.3.2">0.3.2</a> (2026-03-06)</h2>
+<section id="bug-fixes-9" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-9">Bug Fixes</h3>
 <ul>
 <li>Fix compilation issues with PIE (<a href="https://github.com/arxlang/arx/issues/34">#34</a>) (<a href="https://github.com/arxlang/arx/commit/4d043b20f9d175e29d0469e563b543ccc1eff536">4d043b2</a>)</li>
 <li>Returning type is now required (<a href="https://github.com/arxlang/arx/issues/33">#33</a>) (<a href="https://github.com/arxlang/arx/commit/938a8b1b847983fea06576e88324785c090f0c19">938a8b1</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-25" class="level2">
-<h2 class="anchored" data-anchor-id="section-25"><a href="https://github.com/arxlang/arx/compare/0.3.0...0.3.1">0.3.1</a> (2026-03-06)</h2>
-<section id="bug-fixes-8" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-8">Bug Fixes</h3>
+<section id="section-27" class="level2">
+<h2 class="anchored" data-anchor-id="section-27"><a href="https://github.com/arxlang/arx/compare/0.3.0...0.3.1">0.3.1</a> (2026-03-06)</h2>
+<section id="bug-fixes-10" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-10">Bug Fixes</h3>
 <ul>
 <li>Fix typing, tests, print, system; add more tests (<a href="https://github.com/arxlang/arx/issues/32">#32</a>) (<a href="https://github.com/arxlang/arx/commit/21e4639c416666f3cf09a345350c1da9ab5e090e">21e4639</a>)</li>
 </ul>
 </section>
 </section>
 </section>
-<section id="section-26" class="level1">
+<section id="section-28" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.2.0...0.3.0">0.3.0</a> (2026-03-06)</h1>
-<section id="features-19" class="level3">
-<h3 class="anchored" data-anchor-id="features-19">Features</h3>
+<section id="features-20" class="level3">
+<h3 class="anchored" data-anchor-id="features-20">Features</h3>
 <ul>
 <li>Add support for loops, cast, print, datatypes, etc (<a href="https://github.com/arxlang/arx/issues/31">#31</a>) (<a href="https://github.com/arxlang/arx/commit/3b9b27ab068ed5cd8eeafbae79d5d11372bc63c3">3b9b27a</a>)</li>
 <li><strong>syntax:</strong> Support for Docstring syntax (<a href="https://github.com/arxlang/arx/issues/29">#29</a>) (<a href="https://github.com/arxlang/arx/commit/2bb1f8b0a784efe221d2ad890edc0a55014e741e">2bb1f8b</a>)</li>
 </ul>
 </section>
 </section>
-<section id="section-27" class="level1">
+<section id="section-29" class="level1">
 <h1><a href="https://github.com/arxlang/arx/compare/0.1.1...0.2.0">0.2.0</a> (2025-08-07)</h1>
-<section id="bug-fixes-9" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-9">Bug Fixes</h3>
+<section id="bug-fixes-11" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-11">Bug Fixes</h3>
 <ul>
 <li>Fix usage of FunctionCall (<a href="https://github.com/arxlang/arx/issues/15">#15</a>) (<a href="https://github.com/arxlang/arx/commit/f7f61c014cc7f400ae6af2e89cbbf9f3907f9b3a">f7f61c0</a>)</li>
 </ul>
 </section>
-<section id="features-20" class="level3">
-<h3 class="anchored" data-anchor-id="features-20">Features</h3>
+<section id="features-21" class="level3">
+<h3 class="anchored" data-anchor-id="features-21">Features</h3>
 <ul>
 <li>Add support for blocks of nodes (<a href="https://github.com/arxlang/arx/issues/6">#6</a>) (<a href="https://github.com/arxlang/arx/commit/1fd099fa7b505998e853b867039c6041005afe87">1fd099f</a>)</li>
 <li>Move the AST output to YAML format (<a href="https://github.com/arxlang/arx/issues/7">#7</a>) (<a href="https://github.com/arxlang/arx/commit/6a8e10f8a3a7d49af466342483cc42849b263153">6a8e10f</a>)</li>
@@ -1128,10 +921,10 @@ ul.task-list li input[type="checkbox"] {
 <li>Use ASTx and IRx as core libraries for AST and code generation (<a href="https://github.com/arxlang/arx/issues/14">#14</a>) (<a href="https://github.com/arxlang/arx/commit/b730859e98ecc1f3e09a346ba634377d777e6617">b730859</a>)</li>
 </ul>
 </section>
-<section id="section-28" class="level2">
-<h2 class="anchored" data-anchor-id="section-28"><a href="https://github.com/arxlang/arx/compare/0.1.0...0.1.1">0.1.1</a> (2023-06-26)</h2>
-<section id="bug-fixes-10" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-10">Bug Fixes</h3>
+<section id="section-30" class="level2">
+<h2 class="anchored" data-anchor-id="section-30"><a href="https://github.com/arxlang/arx/compare/0.1.0...0.1.1">0.1.1</a> (2023-06-26)</h2>
+<section id="bug-fixes-12" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-12">Bug Fixes</h3>
 <ul>
 <li>Change package name to arxlang (<a href="https://github.com/arxlang/arx/issues/2">#2</a>) (<a href="https://github.com/arxlang/arx/commit/e30c9378ed9489887eb19786e1d8810af91267e9">e30c937</a>)</li>
 <li>Fix semantic release configuration (<a href="https://github.com/arxlang/arx/issues/5">#5</a>) (<a href="https://github.com/arxlang/arx/commit/78ca1df453df91a59b8d1d1d763c9382a4d9e958">78ca1df</a>)</li>
@@ -1144,7 +937,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 </section>
 
-</main> <!-- /main -->
+<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
@@ -1563,17 +1356,46 @@ ul.task-list li input[type="checkbox"] {
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./api/index.html" class="pagination-link" aria-label="API Documentation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">API Documentation</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./discord.html" class="pagination-link" aria-label="Community Chat">
+        <span class="nav-page-text">Community Chat</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
 <footer class="footer">
   <div class="nav-footer">
     <div class="nav-footer-left">
-      &nbsp;
-    </div>   
+<p>Copyright © 2022-2026 ArxLang</p>
+</div>   
     <div class="nav-footer-center">
-<p>Copyright © 2022-2026, ArxLang Team</p>
-</div>
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
+<p>Apache-2.0</p>
+</a>
+  </li>  
+</ul>
+    </div>
     <div class="nav-footer-right">
-      &nbsp;
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/arxlang/arx">
+<p>GitHub</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link active" href="./coc.html" aria-current="page">
+<p>Code of Conduct</p>
+</a>
+  </li>  
+</ul>
     </div>
   </div>
 </footer>
@@ -1581,4 +1403,5 @@ ul.task-list li input[type="checkbox"] {
 
 
 
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
 </body></html>
