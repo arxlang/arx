@@ -1,6 +1,6 @@
 [project]
 name = "arxjit"
-version = "1.24.0"  # semantic-release
+version = "1.24.1"  # semantic-release
 description = "ArxJIT is a developing Numba-style JIT frontend for the Arx compiler stack."
 readme = "README.md"
 authors = [
@@ -9,8 +9,8 @@ authors = [
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
-  "astx == 1.24.0",  # semantic-release
-  "pyirx == 1.24.0",  # semantic-release
+  "astx == 1.24.1",  # semantic-release
+  "pyirx == 1.24.1",  # semantic-release
   "plum-dispatch >= 2",
 ]
 

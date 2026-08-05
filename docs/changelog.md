@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [1.24.1](https://github.com/arxlang/arx/compare/1.24.0...1.24.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* Fix arxpy release ([#106](https://github.com/arxlang/arx/issues/106)) ([66de68d](https://github.com/arxlang/arx/commit/66de68d467477aa5fc93ffd11c4c8a180df63e87))
+
 # [1.24.0](https://github.com/arxlang/arx/compare/1.23.1...1.24.0) (2026-08-04)
 
 

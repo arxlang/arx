@@ -1,6 +1,6 @@
 [project]
 name = "astx"
-version = "1.24.0"  # semantic-release
+version = "1.24.1"  # semantic-release
 description = "Language-agnostic typed abstract syntax tree model."
 readme = "README.md"
 authors = [

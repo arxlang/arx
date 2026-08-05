@@ -1,6 +1,6 @@
 [project]
 name = "arx-dev"
-version = "1.24.0"  # semantic-release
+version = "1.24.1"  # semantic-release
 description = "Development metaproject for the ArxLang compiler ecosystem."
 readme = "docs/index.md"
 authors = [
