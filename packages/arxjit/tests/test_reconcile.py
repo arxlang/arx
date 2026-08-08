@@ -507,6 +507,51 @@ def test_absent_namespace_assumes_the_builtin() -> None:
     assert signature == i64(i64)
 
 
+def test_enclosing_scope_shadowing_is_not_detected() -> None:
+    """
+    title: An annotation rebound by an enclosing function is not detected.
+    summary: >-
+      Documented limitation rather than an oversight, pinned in the same spirit
+      as the method forms validation cannot detect from source metadata alone.
+      The annotation here denotes str, as __annotations__ confirms, but the
+      rebinding is neither a module global nor a name the body reads, so
+      nothing extraction carries reveals it and a signature is derived from the
+      builtin the annotation is spelled after. Pinned so the contract is
+      explicit and a future fix has a test to flip.
+    """
+
+    def outer() -> PyFunc:
+        """
+        title: Return a function annotated against a rebound builtin.
+        returns:
+          type: PyFunc
+        """
+        int = str
+
+        def kernel(x: int) -> int:
+            """
+            title: Return the argument unchanged.
+            parameters:
+              x:
+                type: int
+            returns:
+              type: int
+            """
+            return x
+
+        return kernel
+
+    kernel = outer()
+    # Establishes that the annotation really does denote str, which is what
+    # makes this a gap rather than a preference. Reads as the evaluated type
+    # only because this module does not stringify its annotations; under
+    # "from __future__ import annotations" it would hold the string "int".
+    assert kernel.__annotations__ == {"x": str, "return": str}
+    signature, diagnostics = _resolve(kernel)
+    assert diagnostics == []
+    assert signature == i64(i64)
+
+
 def test_diagnostic_points_at_the_annotation() -> None:
     """
     title: An unsupported annotation is located at the annotation itself.

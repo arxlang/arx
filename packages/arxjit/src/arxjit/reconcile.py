@@ -162,18 +162,26 @@ def _annotation_shadow(
 ) -> str | None:
     """
     title: Return what shadows a builtin annotation name, or None.
-    summary: >-
+    summary: |-
       An annotation is matched by spelling, so ``int`` must still resolve to
       builtins.int for that match to mean anything; rebinding the name makes
       the annotation denote something else entirely. Only the defining module's
       namespace is consulted. A function's own locals cannot apply, because
-      annotations are evaluated in the enclosing scope when the def executes,
-      and an enclosing function's rebinding is not observable here: freevars
-      records only the names the body reads, and an annotation is not part of
-      the body. When the namespace is unavailable (only for a hand-built
-      ExtractedSource; extract_source always provides it for a real function)
-      shadowing cannot be observed and the name is taken to be the builtin,
-      matching how validation treats a shadowed range.
+      annotations are evaluated in the enclosing scope when the def executes.
+      When the namespace is unavailable (only for a hand-built ExtractedSource;
+      extract_source always provides it for a real function) shadowing cannot
+      be observed and the name is taken to be the builtin, matching how
+      validation treats a shadowed range.
+      Rebinding by an enclosing *function* is a documented limitation: such a
+      function derives a signature from the builtin its annotation is spelled
+      after, with no diagnostic, even though the annotation denotes the rebound
+      value. Nothing extraction carries can reveal it, because the binding is
+      not a module global and freevars records only the names the body reads,
+      which an annotation is not. Reading __annotations__ instead would not
+      settle it: under "from __future__ import annotations" they hold strings,
+      and inspect.get_annotations(eval_str=True) evaluates those against
+      __globals__, which cannot see an enclosing scope, so it answers with the
+      builtin on every supported CPython.
     parameters:
       extracted:
         type: ExtractedSource
@@ -362,10 +370,11 @@ def resolve_signature(
       type-mismatch error. It does not override the structure of the
       definition: the argument shape and the number of parameters are checked
       against the function first, on both paths, because those are facts rather
-      than choices. Without an explicit signature, the annotations are used.
-      The returned signature is None exactly when the returned diagnostics are
-      non-empty, which is the caller's signal that the function cannot be
-      compiled.
+      than choices. Without an explicit signature, the annotations are used;
+      see _annotation_shadow for the one rebinding of a builtin annotation name
+      that this cannot detect. The returned signature is None exactly when the
+      returned diagnostics are non-empty, which is the caller's signal that the
+      function cannot be compiled.
     parameters:
       extracted:
         type: ExtractedSource
