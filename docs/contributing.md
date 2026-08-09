@@ -1,197 +1,89 @@
 # Contributing
 
-In order to be able to contribute, it is important that you understand the
-project layout. This project uses the _src layout_, which means that the package
-code is located at `./packages/arx/src/arx`.
+ArxLang is developed as a six-package monorepo. Contributions should respect the
+boundary between source frontends, AST modeling, semantic analysis, and native
+runtime behavior.
 
-For my information, check the official documentation:
-https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
+## Package ownership
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
-helps, and credit will always be given.
+- `packages/arx`: Arx syntax, lexer, parser, CLI, projects, tests, and stdlib
+- `packages/astx`: shared language-agnostic AST nodes
+- `packages/irx`: semantics, LLVM lowering, diagnostics, and native runtime
+- `packages/arxpy`: Python-facing compiler API
+- `packages/aix`: toy symbolic-language experiment and CLI
+- `packages/arxjit`: Python decorator, extraction, validation, and future JIT
 
-You can contribute in many ways:
+New language syntax belongs in a frontend. New reusable nodes belong in ASTx.
+Semantic rules, LLVM lowering, and Arrow C++ integrations belong in IRx.
 
-## Types of Contributions
-
-### Report Bugs
-
-Report bugs at https://github.com/arxlang/arx/issues.
-
-If you are reporting a bug, please include:
-
-- Your operating system name and version.
-- Any details about your local setup that might be helpful in troubleshooting.
-- Detailed steps to reproduce the bug.
-
-### Fix Bugs
-
-Look through the GitHub issues for bugs. Anything tagged with “bug” and “help
-wanted” is open to whoever wants to implement it.
-
-### Implement Features
-
-Look through the GitHub issues for features. Anything tagged with “enhancement”
-and “help wanted” is open to whoever wants to implement it.
-
-### Write Documentation
-
-Arx could always use more documentation, whether as part of the official Arx
-docs, in docstrings, or even on the web in blog posts, articles, and such.
-
-### Submit Feedback
-
-The best way to send feedback is to file an issue at
-https://github.com/arxlang/arx/issues.
-
-If you are proposing a feature:
-
-- Explain in detail how it would work.
-- Keep the scope as narrow as possible, to make it easier to implement.
-- Remember that this is a volunteer-driven project, and that contributions are
-  welcome :)
-
-## Get Started!
-
-Ready to contribute? Here’s how to set up `arx` for local development.
-
-1. Fork the `arx` repo on GitHub.
-2. Clone your fork locally:
+## Development setup
 
 ```bash
-$ git clone git@github.com:your_name_here/arx.git
-$ cd arx
+git clone https://github.com/arxlang/arx.git
+cd arx
+mamba env create --file conda/dev.yaml
+conda activate arx
+poetry install
 ```
 
-3. Create the conda environment (using mamba or conda) and install the project:
+Create a focused branch, make minimal changes, and add tests close to the
+behavior being changed.
+
+## Quality checks
+
+Run package-specific checks while iterating:
 
 ```bash
-$ mamba env create --file conda/dev.yaml
-$ conda activate arx
-$ poetry install
+makim arx.unittests
+makim astx.unittests
+makim irx.unittests
+makim arxpy.unittests
+makim aix.unittests
+makim arxjit.unittests
 ```
 
-4. Create a branch for local development:
+Before opening a pull request:
 
 ```bash
-$ git checkout -b name-of-your-bugfix-or-feature
+makim all.typecheck
+makim all.lint
+makim all.ci
+makim docs.build
 ```
 
-5. Now you can make your changes locally.
+Native toolchain-dependent checks require Clang and, for Arrow features, a C++
+compiler.
 
-6. When you’re done making changes, check that your changes pass the linter and
-   the tests:
+## Documentation and examples
 
-```bash
-$ makim all.lint
-$ makim arx.unittests
-$ makim astx.unittests
-$ makim irx.unittests
-$ makim arx.test-compiled
-```
+- Update reference docs and examples with every behavior change.
+- Every committed `.x` file begins with a valid Douki module docstring.
+- Class, function, and method docstrings use Douki YAML inside triple backticks.
+- Use quadruple Markdown fences around Arx examples containing docstrings.
+- Keep `packages/arx/src/arx/lexer/syntax.json`, lexer behavior, and the lexical
+  syntax page aligned.
+- State experimental limits explicitly; do not document planned behavior as
+  implemented.
 
-## Arx Source File Docstrings
+## Python code
 
-Every committed `.x` file in this repository must start with a valid Douki
-module docstring.
+- Python 3.10 is the minimum supported runtime.
+- Ruff uses a 79-character line length.
+- Mypy is strict.
+- Public and internal symbols follow the repository's Douki-style Python
+  docstring convention.
+- Prefer guard clauses and small focused helpers.
+- Avoid unrelated formatting or refactoring churn.
 
-Use triple backticks with a YAML mapping, for example:
+## Configuration
 
-````text
-```
-title: Example source file
-summary: Short optional summary.
-```
-````
+Never use heredocs inside YAML-backed files such as `.makim.yaml` or GitHub
+Actions workflows. Use direct commands or plain Python/xonsh statements.
 
-If you add a function docstring inside a `.x` file, it must also use the same
-Douki YAML format and remain the first statement in that function body.
+## Pull requests
 
-When a `.x` file defines classes or methods, add Douki docstrings for those
-declarations too. Keep class-body docstrings inside the class block and keep
-method docstrings in valid parser-supported positions.
-
-7. Commit your changes and push your branch to GitHub:
-
-```bash
-$ git add .
-$ git commit -m "Your detailed description of your changes."
-$ git push origin name-of-your-bugfix-or-feature
-```
-
-8.  Submit a pull request through the GitHub website.
-
-## Configuration Style
-
-When editing YAML-backed configuration in this repo, keep command bodies simple
-and avoid heredocs.
-
-- Never use heredocs inside any YAML file.
-- This includes CI configuration and local automation such as
-  `.github/workflows/*.yaml` and `.makim.yaml`.
-- Prefer direct Python/xonsh statements or straightforward shell commands that
-  fit naturally inside the YAML block.
-
-## Pull Request Guidelines
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1. The pull request should include tests.
-2. If the pull request adds functionality, the docs should be updated. Put your
-   new functionality into a function with a docstring, and add the feature to
-   the list in README.md.
-3. YAML configuration changes should avoid heredocs and follow the repo's
-   plain-command style for files such as `.makim.yaml` and CI workflows.
-4. New or updated `.x` files should include valid Douki docstrings.
-5. The pull request should work for Python >= 3.10.
-
-## Tips
-
-To run a subset of tests:
-
-```bash
-$ pytest packages/arx/tests/python/test_io.py
-$ arx test packages/arx/tests/arx/test_math.x --list
-```
-
-## Release
-
-This project uses semantic-release in order to cut a new release based on the
-commit-message.
-
-### Commit message format
-
-**semantic-release** uses the commit messages to determine the consumer impact
-of changes in the codebase. Following formalized conventions for commit
-messages, **semantic-release** automatically determines the next
-[semantic version](https://semver.org) number, generates a changelog and
-publishes the release.
-
-By default, **semantic-release** uses
-[Angular Commit Message Conventions](https://github.com/angular/angular/blob/master/CONTRIBUTING.md#-commit-message-format).
-The commit message format can be changed with the `preset` or `config` options\_
-of the
-[@semantic-release/commit-analyzer](https://github.com/semantic-release/commit-analyzer#options)
-and
-[@semantic-release/release-notes-generator](https://github.com/semantic-release/release-notes-generator#options)
-plugins.
-
-Tools such as [commitizen](https://github.com/commitizen/cz-cli) or
-[commitlint](https://github.com/conventional-changelog/commitlint) can be used
-to help contributors and enforce valid commit messages.
-
-The table below shows which commit message gets you which release type when
-`semantic-release` runs (using the default configuration):
-
-| Commit message                                                 | Release type     |
-| -------------------------------------------------------------- | ---------------- |
-| `fix(pencil): stop graphite breaking when pressure is applied` | Fix Release      |
-| `feat(pencil): add 'graphiteWidth' option`                     | Feature Release  |
-| `perf(pencil): remove graphiteWidth option`                    | Chore            |
-| `fix(pencil)!: The graphiteWidth option has been removed`      | Breaking Release |
-
-source:
-<https://github.com/semantic-release/semantic-release/blob/master/README.md#commit-message-format>
-
-As this project uses the `squash and merge` strategy, ensure to apply the commit
-message format to the PR's title.
+- Include focused tests and documentation.
+- Report checks that could not run and why.
+- Use a Conventional Commit title; releases use squash merge and
+  semantic-release.
+- Report bugs and proposals at <https://github.com/arxlang/arx/issues>.

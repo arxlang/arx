@@ -1,174 +1,115 @@
-# Arx
+# ArxLang
 
-Arx is a new programming language that uses the power of LLVM to provide
-multi-architecture machine target code generation. Arx aims to provide native
-list and tensor abstractions with a builtin runtime backed internally by IRx.
+ArxLang is an experimental compiler ecosystem for statically typed,
+data-oriented programming. Arx source is parsed into ASTx, analyzed and lowered
+by IRx, and compiled to native code through LLVM.
 
-Arx is a prototype that should replace the current Arx compiler in c++.
+Apache Arrow is a native part of the runtime architecture. IRx uses Arrow C++
+for arrays, tensors, tables, column views, and RecordBatch IPC instead of
+encoding those containers directly in LLVM IR.
 
-- Free software: Apache Software License 2.0
-- Documentation: https://arxlang.org
+> **Project status:** the ecosystem is functional but pre-production. The
+> supported surface is tested, while APIs and language semantics may still
+> change between releases.
 
-If you want more information about ArxLang, please check the original project in
-c++: https://github.com/arxlang/arx
+- Documentation: <https://arxlang.org>
+- Issue tracker: <https://github.com/arxlang/arx/issues>
+- License: Apache-2.0
 
-## Monorepo Workflow
+## Ecosystem
 
-This repository contains the lockstep-released Arx ecosystem packages:
+| Directory         | Distribution / import | Responsibility                                       | Current state                                             |
+| ----------------- | --------------------- | ---------------------------------------------------- | --------------------------------------------------------- |
+| `packages/arx`    | `arxlang` / `arx`     | Arx lexer, parser, CLI, and language frontend        | Prototype compiler with native build/run support          |
+| `packages/astx`   | `astx` / `astx`       | Language-agnostic AST node model                     | Functional and broadly modeled; still evolving            |
+| `packages/irx`    | `pyirx` / `irx`       | Semantic analysis, LLVM lowering, and native runtime | Functional experimental backend with Arrow C++ support    |
+| `packages/arxpy`  | `arxpy` / `arxpy`     | Python-facing Arx compiler API                       | API foundation: diagnostics and error hierarchy only      |
+| `packages/arxjit` | `arxjit` / `arxjit`   | Numba-style Python decorator path                    | Frontend foundations; calls still use the Python fallback |
+| `packages/aix`    | `airx` / `aix`        | Toy symbolic-language experiment                     | For fun; no stability or product commitment               |
 
-- `packages/astx`: `astx`
-- `packages/irx`: `pyirx`
-- `packages/arx`: `arxlang`
+See the [ecosystem status](https://arxlang.org/ecosystem.html) for the exact
+implemented and deferred scope of every package.
 
-Root Poetry installs these packages as editable path dependencies for local
-development. The package sources should still depend on released package names
-and versions; local checkout wiring belongs in the root `pyproject.toml`.
+## Native Apache Arrow support
 
-Releases are intentionally lockstep. A semantic-release run updates one shared
-version across the root project and all three package projects, then
-`scripts/build.sh` and `scripts/publish.sh` build and publish `astx`, `pyirx`,
-and `arxlang` together.
+IRx provides an on-demand native runtime backed by Arrow C++:
 
-Common local tasks:
+- primitive Arrow arrays with Arrow C Data import/export
+- homogeneous N-dimensional `arrow::Tensor` values
+- Arx DataFrames backed by `arrow::Table`
+- Series views backed by `arrow::ChunkedArray`
+- RecordBatch construction and Arrow IPC file/buffer streaming
+- interoperability tests against PyArrow
 
-```bash
-makim arx.unittests
-makim astx.unittests
-makim irx.unittests
-makim all.lint
-makim docs.build
+The RecordBatch layer currently supports signed and unsigned integers,
+`float32`, `float64`, booleans, UTF-8 and large UTF-8 strings, dates,
+timestamps, times, and nullable fields. The higher-level Arx DataFrame surface
+is deliberately narrower: fixed-width numeric and Boolean columns only.
+
+Read [Apache Arrow in ArxLang](https://arxlang.org/apache-arrow.html) for the
+architecture, supported types, and current limitations.
+
+## Arx example
+
+````arx
 ```
-
-## Link Modes
-
-Arx supports explicit executable link modes:
-
-```bash
-arx program.x --link-mode auto    # default, use toolchain default
-arx program.x --link-mode pie     # force PIE executable
-arx program.x --link-mode no-pie  # force non-PIE executable
+title: Native Arrow-backed collections
 ```
-
-## Troubleshooting (PIE / Colab / Conda)
-
-If you hit an error like:
-
-```text
-relocation R_X86_64_32 ... can not be used when making a PIE object
-```
-
-use:
-
-```bash
-arx program.x --link-mode no-pie
-```
-
-This typically happens on environments where the linker defaults to PIE while
-objects were not compiled in a PIE-compatible mode.
-
-## Testing
-
-Arx now exposes `list[...]` and `tensor[...]` as distinct public collection
-forms:
-
-```arx
-fn pick(grid: tensor[i32, 2, 2]) -> i32:
-  return grid[1, 0]
 
 fn main() -> i32:
   var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  var ids: list[i32] = [5, 6, 7, 8]
-  return pick(grid) + ids[2]
-```
-
-Use:
-
-- `list[T]` for generic collection values
-- `tensor[T, N]` and `tensor[T, D0, D1, ..., DN]` for fixed-shape tensors
-- `tensor[T, ...]` for runtime-shaped tensor parameters
-
-Tensor details stay user-facing in terms of element types, shape, dimensions,
-and indexing. In this phase, variable, field, and return tensor annotations must
-declare at least one static shape dimension. IRx owns the Arrow C++ backed
-Tensor runtime and lowering. Current tensor element types are fixed-width
-numeric types: `i8`, `i16`, `i32`, `i64`, `f32`, and `f64`. For fixed-shape
-tensors, `...` in documentation is descriptive notation for additional integer
-dimensions, not the runtime-shaped marker. Runtime-shaped tensor parameters can
-be passed through function boundaries, but indexed access requires static-shape
-annotations until dynamic tensor indexing lands in IRx.
-
-Arx uses `Tensor` for homogeneous N-dimensional data and reserves `Array` for
-one-dimensional Arrow-style data where the language exposes it. Future
-heterogeneous dataframe or table support will use a separate surface type.
-
-Arx also ships a bundled pure-Arx standard library under the reserved `stdlib`
-namespace:
-
-```arx
-import math from stdlib
-
-fn main() -> i32:
-  return math.square(4)
-```
-
-Compiler-provided builtins stay separate from stdlib. Builtin sources live in
-`packages/arx/src/arx/builtins/*.x`, are bundled inside the installed `arx`
-package, and are resolved by dedicated compiler logic instead of user-project
-module lookup. Those bundled builtin modules are internal compiler assets, not a
-public stdlib-style import namespace. User code does not import `builtins`;
-builtin functions such as `range(...)` are available automatically.
-
-```arx
-fn main() -> none:
-  print(range(0, 4)[2])
-```
-
-The first builtin module is `generators`. Its current MVP exposes
-`range(start, stop[, step]) -> list[i32]`, while future overloads and
-`yield`-backed generator semantics will grow in the same area. Positive steps
-count up, negative steps count down, and `step == 0` raises an assertion
-failure. For-in loops can iterate over list-valued expressions such as
-`range(...)`, list literals, and list variables. Ambient builtin names such as
-`range` are injected only when not shadowed, so a local function or import with
-the same name overrides the builtin in that module.
-
-Arx now supports fatal assertion statements in the language surface:
-
-```arx
-fn test_add() -> none:
-  assert 1 + 1 == 2
-  assert 2 + 2 == 4, "2 + 2 should be 4"
-```
-
-You can run compiled tests with the new `arx test` subcommand:
+  var rows: dataframe[id: i32, score: f64] = dataframe({
+    id: [1, 2, 3],
+    score: [0.5, 0.8, 1.0],
+  })
+  print(rows.nrows())
+  return grid[1, 0]
+````
 
 ```bash
-arx test
-arx test packages/arx/tests/arx/test_math.x --list
-arx test -k square
-arx test -x
-arx test --keep-artifacts
-arx test --exclude "packages/arx/tests/arx/slow_*.x"
+arx --show-llvm-ir program.x
+arx --run program.x
 ```
 
-By default the runner searches `tests/` for files matching `test_*.x`, discovers
-zero-argument `test_*` functions that return `none`, and executes each test in
-its own compiled subprocess. Test identifiers use the cwd-relative path of the
-source file (without the `.x` suffix) joined to the function name via `::`, for
-example `packages/arx/tests/arx/test_math::test_square`, so same-named files in
-parallel directories stay distinct.
+## Installation
 
-You can override discovery from `.arxproject.toml`:
+Install the language compiler from PyPI:
 
-```toml
-[tests]
-paths = ["tests", "integration"]
-exclude = ["tests/experimental_*.x"]
-file_pattern = "test_*.x"
-function_pattern = "test_*"
+```bash
+pip install arxlang
 ```
 
-CLI flags always win over `[tests]` settings. In v1, shared top-level support is
-intentionally narrow: imports, extern declarations, class declarations, and
-helper functions are preserved, while module-scope variable declarations and
-other top-level executable code are not supported yet.
+Native executable generation requires a working LLVM/Clang-compatible toolchain.
+Arrow-backed features also require a C++ compiler; IRx obtains Arrow C++ build
+metadata from its installed `pyarrow` and `arx-arrowcpp-sources` dependencies.
+
+For development:
+
+```bash
+git clone https://github.com/arxlang/arx.git
+cd arx
+mamba env create --file conda/dev.yaml
+conda activate arx
+poetry install
+```
+
+Common checks:
+
+```bash
+makim all.ci
+makim docs.build
+```
+
+The root Poetry environment wires every package to its local source directory.
+Published package dependencies continue to use the released distribution names
+and lockstep versions.
+
+## Documentation map
+
+- [Getting started](https://arxlang.org/getting-started.html)
+- [Ecosystem status](https://arxlang.org/ecosystem.html)
+- [Apache Arrow support](https://arxlang.org/apache-arrow.html)
+- [Arx language and compiler](https://arxlang.org/arx/)
+- [ASTx](https://arxlang.org/astx/)
+- [IRx](https://arxlang.org/irx/)
+- [Roadmap](https://arxlang.org/roadmap.html)

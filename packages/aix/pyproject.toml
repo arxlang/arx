@@ -1,7 +1,7 @@
 [project]
 name = "airx"
-version = "0.1.0"  # semantic-release
-description = "AIX is an AI-oriented symbolic programming language frontend"
+version = "1.24.1"  # semantic-release
+description = "Toy symbolic-language experiment built on ASTx and IRx"
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
@@ -10,8 +10,8 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "pyyaml >=4",
-  "astx == 1.23.1",  # semantic-release
-  "pyirx == 1.23.1",  # semantic-release
+  "astx == 1.24.1",  # semantic-release
+  "pyirx == 1.24.1",  # semantic-release
   "jsonschema (>=4.0.0)",
   "packaging >=23",
   "types-pyyaml (>=6.0.12.20250516)",
@@ -83,6 +83,7 @@ ignore = [
   "PLR0911",
   "PLR0912",
   "PLR0913",
+  "PLR0917",
   "RUF012",
   "PLR0915",
   "PLR2004",

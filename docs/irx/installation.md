@@ -1,69 +1,46 @@
-# Installation
+# Installing IRx
 
-## Stable release
-
-To install IRx, run this command in your terminal:
+## Published package
 
 ```bash
-$ pip install pyirx
+pip install pyirx
 ```
 
-This is the preferred method to install IRx, as it will always install the most
-recent stable release.
+The distribution is named `pyirx`; Python code imports `irx`.
 
-If you don't have [pip](https://pip.pypa.io) installed, this
-[Python installation guide](http://docs.python-guide.org/en/latest/starting/installation/)
-can guide you through the process.
+IRx requires Python 3.10 or newer. Translation uses `llvmlite`. Native object
+and executable workflows require an LLVM/Clang-compatible toolchain, while
+Arrow-backed features additionally require a C++ compiler.
 
-## From sources
+PyArrow and `arx-arrowcpp-sources` are installed dependencies. IRx uses their
+Arrow C++ include, source, library, and linker metadata for native runtime
+builds.
 
-The sources for IRx can be downloaded from the
-[Github repo](https://github.com/arxlang/arx).
-
-You can either clone the public repository:
+## Source checkout
 
 ```bash
-$ git clone https://github.com/arxlang/arx
-$ cd arx
+git clone https://github.com/arxlang/arx.git
+cd arx
+mamba env create --file conda/dev.yaml
+conda activate arx
+poetry install
+makim irx.unittests
 ```
 
-Or download the [tarball](https://github.com/arxlang/arx/tarball/main):
+## Direct RecordBatch Python API
+
+The direct `irx.record_batch` ctypes API currently loads a standalone shared
+library. Build it from the checkout before first use:
 
 ```bash
-$ curl -OJL https://github.com/arxlang/arx/tarball/main
+python -c "from irx.builder.runtime.record_batch import build_record_batch_shared_library; build_record_batch_shared_library()"
 ```
 
-Once you have a copy of the source, you can install it with:
+IRx programs compiled through the Builder use runtime-feature artifact
+collection instead of this standalone ctypes setup.
 
-```bash
-$ poetry install
-```
+## Link modes
 
-> Note for contributors
->
-> If you are setting up a development environment to run tests or contribute
-> code, please follow the steps in the Contributing guide instead. The
-> development workflow requires creating the Conda environment first, then
-> installing Poetry dependencies:
->
-> ```bash
-> mamba env create --file conda/dev.yaml
-> conda activate irx
-> poetry install
-> ```
->
-> See the full instructions at: https://arxlang.org/irx/contributing/
-
-## Toolchain notes
-
-IRx emits PIC-compatible object files by default so they can link on toolchains
-that default to PIE executables (common on modern Linux distributions and Conda
-environments).
-
-If you still hit a PIE mismatch linker error (for example `R_X86_64_32` while
-linking), verify you are using a recent IRx/Arx version. As a temporary
-workaround for external/manual linking, use:
-
-```bash
-clang -no-pie file.o -o program
-```
+IRx emits PIC-compatible objects by default for modern PIE-default linkers. If a
+downstream manual link still requires non-PIE output, pass the equivalent of
+`clang -no-pie` or use Arx's `--link-mode no-pie` option.

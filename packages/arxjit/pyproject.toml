@@ -1,15 +1,16 @@
 [project]
 name = "arxjit"
-version = "1.23.1"  # semantic-release
-description = "arxjit is a Numba-style JIT decorator that compiles a subset of pure Python through the Arx compiler stack."
+version = "1.24.1"  # semantic-release
+description = "ArxJIT is a developing Numba-style JIT frontend for the Arx compiler stack."
+readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
 ]
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
-  "astx == 1.23.1",  # semantic-release
-  "pyirx == 1.23.1",  # semantic-release
+  "astx == 1.24.1",  # semantic-release
+  "pyirx == 1.24.1",  # semantic-release
   "plum-dispatch >= 2",
 ]
 
@@ -66,6 +67,7 @@ ignore = [
   "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
   "PLR0913",  # Too many arguments in a function definition
+  "PLR0917",  # Too many positional arguments
   "RUF012",  # mutable-class-default
   "PLR0915",  # Too many statements
 ]

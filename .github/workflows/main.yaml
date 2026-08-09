@@ -38,7 +38,7 @@ jobs:
           - arx
           - astx
           - irx
-          - pyarx
+          - arxpy
           - aix
           - arxjit
         python_version:
