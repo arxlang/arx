@@ -879,10 +879,12 @@ Tensor layering rules:
 
 Intentionally out of scope here:
 
-- ArrowArrayStream, RecordBatch, and Table runtime handles
-- dataframe/query semantics
+- the Arrow C Stream `ArrowArrayStream` interface (RecordBatch IPC file and
+  buffer streaming is implemented through the native RecordBatch bridge)
+- dataframe query semantics
 - compute kernels
-- nested, dictionary, temporal, decimal, and other non-primitive Arrow layouts
+- nested, dictionary, decimal, and other general Arrow layouts (the RecordBatch
+  bridge separately supports UTF-8 and temporal primitives)
 - implicit null-aware scalar semantics on generic buffer views
 
 Example scalar wrapper:

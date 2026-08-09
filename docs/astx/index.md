@@ -1,87 +1,57 @@
-# ASTx Library: A Versatile Toolkit for Language Representation
+# ASTx
 
-ASTx is a groundbreaking library designed to encapsulate language components in
-an agnostic and pythonic way. It provides a comprehensive set of classes and
-functionalities, allowing developers to articulate the core elements of any
-programming language.
+ASTx is the language-agnostic abstract syntax tree model shared by the ArxLang
+ecosystem. It lets frontends and compiler tools exchange typed Python objects
+without sharing a source grammar.
 
-- License: BSD 3 Clause
-- Documentation: https://arxlang.org/astx/
+> Status: functional and evolving. ASTx can model constructs that IRx or a
+> particular source language does not yet lower.
 
-## Core Features
+## Current capabilities
 
-### 1. **Expressive Language Components**
+- common AST base classes, source locations, parents, and structured output
+- identifiers, variables, literals, operators, statements, and blocks
+- scalar, text, temporal, collection, generic, and finite-union types
+- functions, modules, packages, imports, defaults, and templates
+- conditionals, loops, comprehensions, generators, and context managers
+- classes, structs, inheritance, member access, visibility, and mutability
+- FFI pointers and opaque handles
+- list, buffer-view, Tensor, DataFrame, and Series nodes
+- YAML, JSON, Mermaid, PNG, and optional ASCII visualization
 
-ASTx offers a rich suite of classes to describe essential language constructs
-such as:
+## Architecture boundary
 
-- `If` statements
-- `For` loops
-- `Function` declarations and usages
-- Variables
-- Data Types
-- Operations
-- And more
+ASTx does not:
 
-These classes enable a concise and clear representation, providing an intuitive
-way to model various programming constructs.
+- lex or parse source code
+- decide source-language syntax
+- perform IRx semantic analysis
+- provide native storage or depend on Apache Arrow
+- guarantee backend lowering for every modeled node
 
-### 2. **Symbol Table Class**
+IRx consumes ASTx nodes and owns analysis, LLVM lowering, and the native Arrow
+C++ runtime. Source frontends such as Arx construct ASTx nodes.
 
-An integral part of ASTx, the Symbol Table class facilitates the translation of
-ASTx expressions to other languages like LLVM-IR. This class acts as a mapping
-layer, allowing a seamless connection between ASTx expressions and target
-language representations.
+## Small example
 
-### 3. **Language Agnostic Design**
+```python
+import astx
 
-Uniquely tailored to be independent of specific programming languages, ASTx
-offers a flexible foundation. It strives to provide initial components that can
-describe any programming language, giving users the freedom to work with
-multiple languages effortlessly.
+body = astx.Block()
+body.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
-### 4. **Integration with Projects like IRx**
+main = astx.FunctionDef(
+    prototype=astx.FunctionPrototype(
+        name="main",
+        args=astx.Arguments(),
+        return_type=astx.Int32(),
+    ),
+    body=body,
+)
 
-ASTx has proven to be a vital tool in projects like IRx, where it's leveraged to
-translate Abstract Syntax Trees (AST) into LLVM-IR. This showcases the library's
-adaptability and potential to serve as a foundational layer in various
-applications.
+print(main.to_yaml())
+```
 
----
+## License
 
-## Transpiler System
-
-The companion `astx-transpilers` package provides helpers that convert ASTx
-nodes into Python code. Its architecture separates the process into two distinct
-steps:
-
-1. **ASTx → Python AST Objects**: Converts ASTx nodes into Python's built-in AST
-   objects.
-2. **ASTx → Python Source Code**: Converts ASTx nodes directly into executable
-   Python code.
-
-This separation improves maintainability, eliminates circular dependencies, and
-makes the transpiler system more extensible.
-
----
-
-## Why Choose ASTx?
-
-ASTx is not just a library; it's a robust framework that fosters creativity and
-efficiency in language processing. Its pythonic design, combined with the power
-to handle different language constructs, positions ASTx as an invaluable
-resource for developers and researchers alike.
-
-Whether you're building a compiler, working on language translation, or
-exploring new frontiers in programming language design, ASTx offers a reliable
-and extensible toolkit to support your endeavors.
-
-## Getting Started
-
-You can explore the ASTx library and dive into its capabilities by accessing the
-official documentation. For those interested in contributing or seeking further
-insights, the ASTx community provides extensive support and collaboration
-opportunities.
-
-Unlock the potential of language representation with ASTx, and join us in
-shaping the future of programming languages.
+ASTx is licensed under Apache-2.0 as part of the ArxLang monorepo.

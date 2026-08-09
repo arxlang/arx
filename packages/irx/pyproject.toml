@@ -1,7 +1,7 @@
 [project]
 name = "pyirx"
-version = "1.23.1"  # semantic-release
-description = "IRx"
+version = "1.24.1"  # semantic-release
+description = "Semantic analysis, LLVM lowering, and native runtime for ASTx programs."
 readme = "README.md"
 authors = [
   {name = "Ivan Ogasawara", email = "ivan.ogasawara@gmail.com"}
@@ -10,7 +10,7 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "atpublic >= 4.0",
-  "astx == 1.23.1",  # semantic-release
+  "astx == 1.24.1",  # semantic-release
   "llvmlite  >= 0.44.0",
   "plum-dispatch >= 2.2.2",
   "xhell (>=0.2.1)",
@@ -98,6 +98,7 @@ ignore = [
   "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
   "PLR0913",  # Too many arguments in a function definition
+  "PLR0917",  # Too many positional arguments
   "RUF012",  # mutable-class-default
   "PLR0915",  # Too many statements
 ]

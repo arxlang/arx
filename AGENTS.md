@@ -221,6 +221,13 @@ Repository policy:
 - In YAML-backed task/config files, prefer plain shell commands or direct
   Python/xonsh statements instead of embedded `<<EOF` / `<<'PY'` blocks.
 
+### Poetry lockfile rule
+
+- Never edit `poetry.lock` manually.
+- Make dependency, package-name, and path changes in `pyproject.toml`.
+- Regenerate the lockfile only by running `poetry lock` from the repository
+  root.
+
 ### Python docstring convention in this repo
 
 - Python docstrings are Douki-style content blocks (for example `title: ...`).
@@ -303,7 +310,7 @@ Do not merge feature work that only passes on one Python version assumption.
 When behavior changes, update docs in same PR:
 
 - language overview and getting-started examples
-- `docs/library/*` for syntax/placement rules
+- `docs/arx/*` for language, compiler, and syntax rules
 - API docs are generated for Quarto via `scripts/gen_api_docs.py`
 
 If embedding Arx docstrings inside Markdown code examples, prefer quadruple
@@ -353,7 +360,7 @@ fences around the code block to safely include inner triple backticks.
 
 1. Update `docstrings.py` and/or parser integration.
 2. Add valid and invalid schema tests.
-3. Update `docs/library/docstrings.md` and related examples.
+3. Update `docs/arx/docstrings.md` and related examples.
 4. Keep AST/IR behavior explicit if unchanged.
 
 ## Contributor Workflow Expectations

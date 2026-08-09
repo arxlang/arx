@@ -338,66 +338,66 @@ repos:
         types:
           - python
 
-      - id: ruff-format-pyarx
-        name: ruff-format-pyarx
-        entry: ruff format --config packages/pyarx/pyproject.toml
-        files: ^packages/pyarx/.*\.py$
+      - id: ruff-format-arxpy
+        name: ruff-format-arxpy
+        entry: ruff format --config packages/arxpy/pyproject.toml
+        files: ^packages/arxpy/.*\.py$
         language: system
         pass_filenames: true
         types:
           - python
 
-      - id: ruff-check-pyarx
-        name: ruff-check-pyarx
-        entry: ruff check --config packages/pyarx/pyproject.toml
-        files: ^packages/pyarx/.*\.py$
+      - id: ruff-check-arxpy
+        name: ruff-check-arxpy
+        entry: ruff check --config packages/arxpy/pyproject.toml
+        files: ^packages/arxpy/.*\.py$
         language: system
         pass_filenames: true
         types:
           - python
 
-      - id: douki-pyarx
-        name: douki-pyarx
+      - id: douki-arxpy
+        name: douki-arxpy
         entry: douki sync
-        files: ^packages/pyarx/.*\.py$
+        files: ^packages/arxpy/.*\.py$
         language: system
         pass_filenames: true
         require_serial: yes
         types:
           - python
 
-      - id: mypy-pyarx
-        name: mypy-pyarx
-        entry: bash -c 'cd packages/pyarx && mypy src'
-        files: ^packages/pyarx/.*\.py$
+      - id: mypy-arxpy
+        name: mypy-arxpy
+        entry: bash -c 'cd packages/arxpy && mypy src'
+        files: ^packages/arxpy/.*\.py$
         language: system
         pass_filenames: false
 
-      - id: bandit-pyarx
-        name: bandit-pyarx
+      - id: bandit-arxpy
+        name: bandit-arxpy
         entry: bandit
         language: system
-        args: ["--configfile", "packages/pyarx/pyproject.toml", "-iii", "-lll"]
-        files: ^packages/pyarx/.*\.py$
+        args: ["--configfile", "packages/arxpy/pyproject.toml", "-iii", "-lll"]
+        files: ^packages/arxpy/.*\.py$
         pass_filenames: true
         types:
           - python
 
-      - id: vulture-pyarx
-        name: vulture-pyarx
+      - id: vulture-arxpy
+        name: vulture-arxpy
         entry: vulture --min-confidence 80
         language: system
-        files: ^packages/pyarx/.*\.py$
-        description: Find unused PyArx Python code.
+        files: ^packages/arxpy/.*\.py$
+        description: Find unused ArxPy Python code.
         pass_filenames: true
         types:
           - python
 
-      - id: mccabe-pyarx
-        name: mccabe-pyarx
+      - id: mccabe-arxpy
+        name: mccabe-arxpy
         entry: python -m mccabe --min 10
         language: system
-        files: ^packages/pyarx/.*\.py$
+        files: ^packages/arxpy/.*\.py$
         pass_filenames: true
         types:
           - python

@@ -1,62 +1,300 @@
-# ArxLang
+---
+title: ""
+pagetitle: ArxLang compiler ecosystem
+description: >-
+  Documentation for the Arx language, ASTx, IRx, LLVM compilation, and native
+  Apache Arrow support.
+page-layout: full
+toc: false
+sidebar: false
+---
 
-Arx is a multi-purpose compiler that aims to provide native list, tensor, and
-dataframe abstractions backed internally by IRx runtime support. It uses the
-power of [LLVM](https://llvm.org/) to provide multi-architecture machine target
-code generation.
+<div class="arx-home">
 
-The language syntax is influenced by Python, C++, and YAML, featuring
-significant whitespace, static typing (planned), and a focus on data-oriented
-computing.
+<div class="arx-hero">
+<div class="arx-hero-inner">
+<div class="arx-hero-copy">
 
-## Quick Example
+<div class="arx-eyebrow">ArxLang</div>
+
+# ArxLang compiler ecosystem
+
+<div class="arx-hero-lead">
+
+ArxLang is an experimental statically typed language and compiler toolchain. The
+Arx frontend parses source into ASTx nodes. IRx performs semantic analysis,
+lowers supported nodes to LLVM IR, and builds native artifacts. IRx also
+provides runtime components for Apache Arrow-backed collections.
+
+</div>
+
+<div class="arx-hero-actions">
+
+[Getting started](arx/getting-started.md){.btn .btn-primary}
+[Apache Arrow support](apache-arrow.md){.btn .btn-outline-primary}
+
+</div>
+
+<div class="arx-tech-list">
+<span>Python 3.10+</span>
+<span>LLVM</span>
+<span>Apache Arrow C++</span>
+<span>Apache-2.0</span>
+</div>
+
+</div>
+
+<div class="arx-code-window">
+<div class="arx-code-window-header">example.x</div>
 
 ````arx
 ```
-title: Quick average example
-summary: Demonstrates a function with module and function docstrings.
+title: Arrow-backed rows
 ```
-fn average(x: f32, y: f32) -> f32:
-  ```
-  title: average
-  summary: Returns the arithmetic mean of x and y.
-  ```
-  return (x + y) * 0.5
+fn main() -> i32:
+  var rows: dataframe[id: i32, score: f64] = dataframe({
+    id: [1, 2, 3],
+    score: [0.5, 0.8, 1.0],
+  })
+  return cast(rows.nrows(), i32)
 ````
 
-```bash
-arx --show-llvm-ir examples/average.x
-```
+</div>
+</div>
+</div>
 
-See the [Getting Started](getting-started.md) guide for installation and more
-examples. For language details, see the [Library Reference](library/index.md).
+<div class="arx-home-section">
+<div class="arx-section-heading">
 
-## Architecture Boundary
+## Compiler architecture
 
-Arx is the surface-language front end. It owns source syntax, lexing, parsing,
-CLI flow, tests, examples, and docs. IRx owns the AST model (`astx`), semantic
-analysis, lowering, and backend code generation. When a new feature needs AST or
-lowering support, that support should be added in IRx first and then consumed
-from Arx.
+The compilation path separates source parsing, program representation, semantic
+analysis, LLVM lowering, and runtime integration. Each package owns a defined
+part of that path.
 
-## Key Features
+</div>
 
-- **LLVM-powered** -- compiles to native machine code via LLVM
-- **Python-like syntax** -- indentation-based blocks, familiar keywords
-- **Lists, tensors, and dataframes** -- generic collections, Arrow-backed
-  numeric tensors with compiler-known shapes, and Arrow-backed named-column
-  DataFrames
-- **Multiple output modes** -- inspect tokens, AST, LLVM IR, or compile to
-  object files
+<div class="arx-feature-grid">
+<div class="arx-feature-card">
 
-## Project Status
+<div class="arx-card-kicker">Arx</div>
 
-Arx is currently a prototype built on the
-[Kaleidoscope](https://llvm.org/docs/tutorial/) tutorial compiler. It supports
-functions, control flow (`if`/`else`, `for`), variables, and extern
-declarations. See the [Roadmap](roadmap.md) for what's planned next.
+### Source frontend
 
-## Arx Enhancement Proposals
+Arx owns indentation-sensitive syntax, modules, classes, templates, tests, and
+the compiler CLI. The parser emits ASTx nodes rather than an Arx-specific AST
+model.
 
-Any change to the language syntax should be done using an Enhancement Proposal
-via the [arx-proposals](https://github.com/arxlang/arx-proposals) repository.
+</div>
+
+<div class="arx-feature-card">
+
+<div class="arx-card-kicker">ASTx</div>
+
+### Shared AST model
+
+ASTx provides language-independent nodes for types, expressions, statements,
+functions, control flow, classes, templates, and collections. Frontends and
+backends use the same model.
+
+</div>
+
+<div class="arx-feature-card">
+
+<div class="arx-card-kicker">IRx</div>
+
+### Analysis and LLVM backend
+
+IRx analyzes symbols, calls, types, control flow, templates, classes, and FFI
+contracts. It lowers the supported ASTx subset to LLVM IR and activates native
+runtime features when they are required.
+
+</div>
+</div>
+</div>
+
+<div class="arx-home-section">
+<div class="arx-section-heading">
+
+## Packages
+
+Package pages describe implemented behavior, known limitations, and planned
+work. The labels below summarize the current maturity of each primary package.
+
+</div>
+
+<div class="arx-package-grid">
+<div class="arx-package-card">
+
+<span class="arx-status">Functional prototype</span>
+
+### Arx
+
+The source language, lexer, parser, project model, test runner, and native
+compiler CLI.
+
+[Arx documentation →](arx/index.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Functional, evolving</span>
+
+### ASTx
+
+A language-agnostic Python model for typed abstract syntax trees and compiler
+tooling.
+
+[ASTx documentation →](astx/index.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Functional experimental backend</span>
+
+### IRx
+
+Semantic analysis, LLVM lowering, native artifacts, diagnostics, and runtime
+feature activation.
+
+[IRx documentation →](irx/index.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">API foundation only</span>
+
+### ArxPy
+
+The developing Python-facing compiler API, currently focused on structured
+diagnostics and public error types.
+
+[ArxPy documentation →](arxpy/index.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Frontend foundations only</span>
+
+### ArxJIT
+
+A developing decorator route from a restricted Python subset to ASTx and IRx;
+decorated calls still use Python fallback today.
+
+[ArxJIT documentation →](arxjit/index.md)
+
+</div>
+</div>
+</div>
+
+<div class="arx-home-section">
+<div class="arx-section-heading">
+
+## Related tools
+
+These projects provide project management, editor integration, notebook
+execution, and structured docstring tooling. They are maintained in separate
+repositories.
+
+</div>
+
+<div class="arx-package-grid">
+<div class="arx-package-card">
+
+<span class="arx-status">Project workflows</span>
+
+### ArxPM
+
+Manages Arx projects, environments, dependencies, builds, runs, packaging, and
+publishing workflows.
+
+[ArxPM documentation →](tools/arxpm.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Syntax highlighting</span>
+
+### VS Code extension
+
+Provides TextMate highlighting, language configuration, file associations, and
+icons for Arx source files.
+
+[VS Code documentation →](tools/vscode.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Wrapper kernel</span>
+
+### Jupyter kernel
+
+Compiles notebook cells with the Arx CLI and returns native program output to
+Jupyter.
+
+[Jupyter kernel documentation →](tools/jupyter.md)
+
+</div>
+
+<div class="arx-package-card">
+
+<span class="arx-status">Docstring tooling</span>
+
+### Douki
+
+Validates and synchronizes YAML docstrings. Arx uses the Douki structure for
+source and Python documentation.
+
+[Douki documentation →](tools/douki.md)
+
+</div>
+</div>
+</div>
+
+<div class="arx-home-section">
+<div class="arx-arrow-band">
+<div class="arx-arrow-copy">
+
+<div class="arx-eyebrow">IRx native runtime</div>
+
+## Apache Arrow integration
+
+IRx includes a native Apache Arrow C++ runtime. Generated LLVM calls an
+IRx-owned C ABI, while Arrow C++ manages container layout and ownership. The
+required runtime artifacts are compiled and linked when a program uses the
+corresponding feature.
+
+[Implementation details and current limits →](apache-arrow.md)
+
+</div>
+
+<div class="arx-arrow-details">
+<ul class="arx-arrow-list">
+  <li>Arrays with Arrow C Data interoperability</li>
+  <li>Tensors backed by <code>arrow::Tensor</code></li>
+  <li>DataFrames backed by <code>arrow::Table</code></li>
+  <li>Series backed by <code>arrow::ChunkedArray</code></li>
+  <li>RecordBatch IPC and PyArrow round trips</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="arx-home-section">
+<div class="arx-status-note">
+
+**Project status:** The primary packages are pre-production. Documented
+implemented behavior is tested, but language semantics and package APIs can
+still change. See the [ecosystem status](ecosystem.md) for current capabilities
+and limitations, and the [roadmap](roadmap.md) for planned work.
+
+</div>
+</div>
+
+</div>

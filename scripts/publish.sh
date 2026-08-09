@@ -5,7 +5,7 @@ packages=(
   packages/astx
   packages/irx
   packages/arx
-  packages/pyarx
+  packages/arxpy
   packages/aix
   packages/arxjit
 )
@@ -13,6 +13,6 @@ packages=(
 for package_dir in "${packages[@]}"; do
   (
     cd "${package_dir}"
-    poetry publish
+    poetry publish --skip-existing
   )
 done
