@@ -3,13 +3,15 @@ title: Tests for signature reconciliation.
 """
 
 import ast
+import importlib.util
+import pathlib
 
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import pytest
 
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
-from arxjit.reconcile import resolve_signature
+from arxjit.reconcile import _ANNOTATION_TYPES, resolve_signature
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import Signature, bool_, f64, i64
 
@@ -427,97 +429,146 @@ def test_every_bad_parameter_is_reported() -> None:
     assert "parameter 'b'" in messages[1]
 
 
-def _with_namespace(
-    source: str,
-    globalns: dict[str, Any] | None,
-) -> ExtractedSource:
+_REBOUND_THEN_RESTORED = """import builtins
+
+int = str
+
+
+def kernel(x: int) -> int:
+    return x
+
+
+int = builtins.int
+"""
+
+_REBOUND_AFTER_DEF = """def kernel(x: int) -> int:
+    return x
+
+
+int = str
+"""
+
+
+def _module_function(tmp_path: pathlib.Path, name: str, source: str) -> PyFunc:
     """
-    title: Build an ExtractedSource with a chosen namespace (test helper).
+    title: Import a written-out module and return its kernel (test helper).
+    summary: >-
+      A real module is needed rather than a hand-built ExtractedSource: the
+      point of these cases is what the module's live globals do after the
+      function is defined, which only a real import reproduces.
     parameters:
+      tmp_path:
+        type: pathlib.Path
+      name:
+        type: str
       source:
         type: str
-      globalns:
-        type: dict[str, Any] | None
     returns:
-      type: ExtractedSource
+      type: PyFunc
     """
-    node = ast.parse(source).body[0]
-    assert isinstance(node, ast.FunctionDef)
-    return ExtractedSource(
-        filename="<test>",
-        source=source,
-        lineno=1,
-        node=node,
-        globalns=globalns,
-    )
+    path = tmp_path / f"{name}.py"
+    path.write_text(source, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return cast(PyFunc, module.kernel)
 
 
 @pytest.mark.parametrize("name", ["int", "float", "bool"])
-def test_shadowed_builtin_annotation_is_rejected(name: str) -> None:
+def test_reserved_spelling_wins_over_the_defining_namespace(
+    name: str,
+) -> None:
     """
-    title: An annotation naming a rebound builtin is not that builtin.
+    title: A rebound builtin name still denotes the reserved scalar type.
     summary: >-
-      Annotations are matched by spelling, so the name has to still resolve to
-      the builtin for the match to mean anything. Rebinding it at module level
-      makes the annotation denote something else entirely, which no amount of
-      ast inspection can reveal; the namespace extraction carries is what
-      settles it.
+      int, float and bool are reserved annotation spellings, so a module that
+      rebinds one does not change what the annotation means to the compiler.
+      The namespace is deliberately not consulted; see _annotation_type for why
+      resolving through it cannot be made sound.
     parameters:
       name:
         type: str
     """
     source = f"def sample(value: {name}) -> {name}:\n    return value\n"
-    extracted = _with_namespace(source, {name: str})
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>",
+        source=source,
+        lineno=1,
+        node=node,
+        globalns={name: str},
+    )
     signature, diagnostics = resolve_signature(extracted)
-    assert signature is None
-    assert len(diagnostics) == 2
-    for diagnostic in diagnostics:
-        assert f"{name!r} is bound to a module-level name" in (
-            diagnostic.message
-        )
-        assert "does not refer to the builtin" in diagnostic.message
+    assert diagnostics == []
+    assert (
+        str(signature)
+        == f"{_ANNOTATION_TYPES[name]}({_ANNOTATION_TYPES[name]})"
+    )
 
 
-def test_unshadowed_module_namespace_is_accepted() -> None:
+def test_rebinding_restored_after_definition_still_resolves(
+    tmp_path: pathlib.Path,
+) -> None:
     """
-    title: A namespace that leaves the builtins alone resolves normally.
+    title: A name rebound at definition and restored after resolves the same.
     summary: >-
-      The control for the shadowing test: carrying a namespace must not by
-      itself make an annotation suspect.
+      One of the two directions live globals get wrong: __annotations__ records
+      str, because that was the binding when the def ran, but the module now
+      says int is the builtin. A namespace-based check would answer from the
+      restored binding and derive a signature the annotation never meant. The
+      reserved spelling answers the same either way.
+    parameters:
+      tmp_path:
+        type: pathlib.Path
     """
-    source = "def sample(value: int) -> int:\n    return value\n"
-    extracted = _with_namespace(source, {"unrelated": 1})
-    signature, diagnostics = resolve_signature(extracted)
+    kernel = _module_function(
+        tmp_path, "rebound_restored", _REBOUND_THEN_RESTORED
+    )
+    # What __annotations__ reports is itself version-dependent, which is the
+    # point: up to 3.13 it holds the object captured when the def ran, while
+    # 3.14 defers evaluation (PEP 649) and resolves on first access against
+    # the module as it is by then. The resolver must not vary with either.
+    assert kernel.__annotations__["x"] in (int, str)
+    signature, diagnostics = _resolve(kernel)
     assert diagnostics == []
     assert signature == i64(i64)
 
 
-def test_absent_namespace_assumes_the_builtin() -> None:
+def test_rebinding_after_definition_still_resolves(
+    tmp_path: pathlib.Path,
+) -> None:
     """
-    title: Without a namespace, shadowing is unobservable and assumed absent.
+    title: A name rebound only after the def resolves the same.
     summary: >-
-      Documented fail-open, matching how validation treats a shadowed range:
-      only a hand-built ExtractedSource lacks a namespace, since extract_source
-      always provides one for a real function.
+      The other direction: the annotation genuinely denoted the builtin when
+      the function was defined, and a namespace-based check would reject it
+      because the module was rebound afterwards. Nothing about the function
+      changed, so nothing about its signature does.
+    parameters:
+      tmp_path:
+        type: pathlib.Path
     """
-    source = "def sample(value: int) -> int:\n    return value\n"
-    extracted = _with_namespace(source, None)
-    signature, diagnostics = resolve_signature(extracted)
+    kernel = _module_function(tmp_path, "rebound_after", _REBOUND_AFTER_DEF)
+    # What __annotations__ reports is itself version-dependent, which is the
+    # point: up to 3.13 it holds the object captured when the def ran, while
+    # 3.14 defers evaluation (PEP 649) and resolves on first access against
+    # the module as it is by then. The resolver must not vary with either.
+    assert kernel.__annotations__["x"] in (int, str)
+    signature, diagnostics = _resolve(kernel)
     assert diagnostics == []
     assert signature == i64(i64)
 
 
-def test_enclosing_scope_shadowing_is_not_detected() -> None:
+def test_enclosing_scope_rebinding_still_resolves() -> None:
     """
-    title: An annotation rebound by an enclosing function is not detected.
+    title: A name rebound by an enclosing function resolves the same.
     summary: >-
-      Documented limitation rather than an oversight, pinned in the same spirit
-      as the method forms validation cannot detect from source metadata alone.
-      The annotation here denotes str, as __annotations__ confirms, but the
-      rebinding is neither a module global nor a name the body reads, so
-      nothing extraction carries reveals it and a signature is derived from the
-      builtin the annotation is spelled after. Pinned so the contract is
-      explicit and a future fix has a test to flip.
+      The annotation here denotes str, as __annotations__ confirms, and under
+      the reserved-spelling contract that does not matter: the spelling is what
+      selects the type. This was previously pinned as a limitation of the
+      namespace check; it is now an instance of the rule.
     """
 
     def outer() -> PyFunc:
@@ -542,10 +593,6 @@ def test_enclosing_scope_shadowing_is_not_detected() -> None:
         return kernel
 
     kernel = outer()
-    # Establishes that the annotation really does denote str, which is what
-    # makes this a gap rather than a preference. Reads as the evaluated type
-    # only because this module does not stringify its annotations; under
-    # "from __future__ import annotations" it would hold the string "int".
     assert kernel.__annotations__ == {"x": str, "return": str}
     signature, diagnostics = _resolve(kernel)
     assert diagnostics == []

@@ -8,13 +8,17 @@ summary: >-
   and stays interpreted. Annotations are read from the ast rather than from
   __annotations__ so that a module using "from __future__ import annotations"
   behaves identically, and so every diagnostic can point at the exact
-  annotation that caused it.
+  annotation that caused it. Following from that, ``int``, ``float`` and
+  ``bool`` are reserved annotation spellings in a @jit function: they select
+  i64, f64 and bool_ by name, independently of Python name resolution, so what
+  those names are bound to where the function was defined does not change what
+  the compiler is asked for. See _annotation_type for why resolving them
+  through the defining namespace cannot be made sound.
 """
 
 from __future__ import annotations
 
 import ast
-import builtins
 
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
 from arxjit.locations import diagnostic
@@ -156,87 +160,43 @@ def _structural_diagnostics(
     return _arity_mismatch(extracted, explicit)
 
 
-def _annotation_shadow(
-    extracted: ExtractedSource,
-    name: str,
-) -> str | None:
+def _annotation_type(annotation: ast.expr | None) -> SigType | None:
     """
-    title: Return what shadows a builtin annotation name, or None.
+    title: Map an annotation to a scalar type by its spelling.
     summary: |-
-      An annotation is matched by spelling, so ``int`` must still resolve to
-      builtins.int for that match to mean anything; rebinding the name makes
-      the annotation denote something else entirely. Only the defining module's
-      namespace is consulted. A function's own locals cannot apply, because
-      annotations are evaluated in the enclosing scope when the def executes.
-      When the namespace is unavailable (only for a hand-built ExtractedSource;
-      extract_source always provides it for a real function) shadowing cannot
-      be observed and the name is taken to be the builtin, matching how
-      validation treats a shadowed range.
-      Rebinding by an enclosing *function* is a documented limitation: such a
-      function derives a signature from the builtin its annotation is spelled
-      after, with no diagnostic, even though the annotation denotes the rebound
-      value. Nothing extraction carries can reveal it, because the binding is
-      not a module global and freevars records only the names the body reads,
-      which an annotation is not. Reading __annotations__ instead would not
-      settle it: under "from __future__ import annotations" they hold strings,
-      and inspect.get_annotations(eval_str=True) evaluates those against
-      __globals__, which cannot see an enclosing scope, so it answers with the
-      builtin on every supported CPython.
-    parameters:
-      extracted:
-        type: ExtractedSource
-      name:
-        type: str
-    returns:
-      type: str | None
-    """
-    namespace = extracted.globalns
-    if namespace is None:
-        return None
-    # Every key of _ANNOTATION_TYPES names a builtin, and this is only
-    # reached for a name already found there, so the lookup cannot fail. A
-    # default would be worse than an error: with one, a name absent from
-    # builtins would compare unequal to itself and report every module that
-    # merely defines it as shadowing.
-    builtin = getattr(builtins, name)
-    if namespace.get(name, builtin) is not builtin:
-        return "a module-level name"
-    return None
+      ``int``, ``float`` and ``bool`` are reserved annotation spellings in a
+      @jit function: they always denote i64, f64 and bool_, whatever those
+      names happen to be bound to where the function was defined. Only a bare
+      name is accepted, which is what they parse to; anything structural (a
+      subscript such as list[int], an attribute such as np.float64, or a
+      string) yields None so the caller reports it against its own location.
 
-
-def _resolve_annotation(
-    extracted: ExtractedSource,
-    annotation: ast.expr | None,
-) -> tuple[SigType | None, str | None]:
-    """
-    title: Resolve an annotation to a scalar type, or say why it cannot be.
-    summary: >-
-      Returns the type and no reason, or no type and the reason to report. An
-      annotation has to clear two hurdles: it must be a bare name this package
-      maps, and that name must still refer to the builtin it is spelled after.
-      Only a bare name is accepted, which is what int, float and bool parse to;
-      anything else (a subscript such as list[int], an attribute such as
-      np.float64, or a string) is refused against its own location.
+      Resolving the name through the defining namespace instead was tried and
+      cannot be made sound. A function's __globals__ is live and mutable, so
+      it answers with whatever the module means *now* rather than at
+      definition: rebinding int and then restoring it derives a signature from
+      the builtin though the annotation captured str, and rebinding it after
+      the def rejects a function whose annotation genuinely was the builtin.
+      Per-function metadata does not settle it either, and gets less stable
+      over time rather than more. Up to 3.13 without PEP 563, __annotations__
+      holds the definition-time object; under "from __future__ import
+      annotations" it holds strings, and inspect.get_annotations(eval_str=True)
+      evaluates them against those same live globals. On 3.14, PEP 649 defers
+      evaluation by default, so __annotations__ resolves on first *access*
+      against the module as it is by then — the two rebinding cases above
+      report the opposite of what they report on 3.13. There is therefore no
+      per-function binding that is stable across the supported versions. A
+      reserved spelling is deterministic, needs no runtime context, and matches
+      how the annotations are already read: from the ast, by name.
     parameters:
-      extracted:
-        type: ExtractedSource
       annotation:
         type: ast.expr | None
     returns:
-      type: tuple[SigType | None, str | None]
+      type: SigType | None
     """
     if not isinstance(annotation, ast.Name):
-        return None, _SUPPORTED
-    sig_type = _ANNOTATION_TYPES.get(annotation.id)
-    if sig_type is None:
-        return None, _SUPPORTED
-    shadow = _annotation_shadow(extracted, annotation.id)
-    if shadow is not None:
-        return None, (
-            f"{annotation.id!r} is bound to {shadow} here, so it does not"
-            " refer to the builtin"
-        )
-    return sig_type, None
+        return None
+    return _ANNOTATION_TYPES.get(annotation.id)
 
 
 def _argument_types(
@@ -270,14 +230,14 @@ def _argument_types(
                 )
             )
             continue
-        arg_type, reason = _resolve_annotation(extracted, parameter.annotation)
+        arg_type = _annotation_type(parameter.annotation)
         if arg_type is None:
             diagnostics.append(
                 diagnostic(
                     extracted,
                     parameter.annotation,
                     f"unsupported type annotation for parameter"
-                    f" {parameter.arg!r}: {reason}",
+                    f" {parameter.arg!r}: {_SUPPORTED}",
                 )
             )
             continue
@@ -305,13 +265,13 @@ def _return_type(
                 f"{node.name!r} has no return type annotation",
             )
         ]
-    return_type, reason = _resolve_annotation(extracted, node.returns)
+    return_type = _annotation_type(node.returns)
     if return_type is None:
         return None, [
             diagnostic(
                 extracted,
                 node.returns,
-                f"unsupported return type annotation: {reason}",
+                f"unsupported return type annotation: {_SUPPORTED}",
             )
         ]
     return return_type, []
@@ -371,10 +331,10 @@ def resolve_signature(
       definition: the argument shape and the number of parameters are checked
       against the function first, on both paths, because those are facts rather
       than choices. Without an explicit signature, the annotations are used;
-      see _annotation_shadow for the one rebinding of a builtin annotation name
-      that this cannot detect. The returned signature is None exactly when the
-      returned diagnostics are non-empty, which is the caller's signal that the
-      function cannot be compiled.
+      int, float and bool are reserved spellings there, so see _annotation_type
+      for why they are not resolved through the defining namespace. The
+      returned signature is None exactly when the returned diagnostics are non-
+      empty, which is the caller's signal that the function cannot be compiled.
     parameters:
       extracted:
         type: ExtractedSource
