@@ -11,11 +11,11 @@ import pytest
 
 from arxjit.diagnostics import DiagnosticSeverity
 from arxjit.errors import UnsupportedSyntaxError
+from arxjit.locations import char_column
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.validation import (
     _UNSUPPORTED_MESSAGES,
     _bound_names,
-    _char_column,
     _SubsetValidator,
     validate,
 )
@@ -625,7 +625,7 @@ def test_nested_function_diagnostics_point_at_the_real_file() -> None:
 
 def test_char_column_converts_multibyte_prefixes() -> None:
     """
-    title: _char_column converts a UTF-8 byte offset to a character column.
+    title: char_column converts a UTF-8 byte offset to a character column.
     summary: >-
       A non-ASCII character earlier on the line makes the byte offset diverge
       from the character index; this directly pins the conversion independent
@@ -637,7 +637,7 @@ def test_char_column_converts_multibyte_prefixes() -> None:
     # makes it exceed the character index by exactly one.
     real_byte_offset = len(line[:char_index].encode("utf-8"))
     assert real_byte_offset == char_index + 1
-    assert _char_column(line, real_byte_offset) == char_index + 1
+    assert char_column(line, real_byte_offset) == char_index + 1
 
 
 def test_free_variable_read_is_rejected() -> None:
