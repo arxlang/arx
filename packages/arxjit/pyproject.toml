@@ -12,6 +12,7 @@ dependencies = [
   "astx == 1.24.1",  # semantic-release
   "pyirx == 1.24.1",  # semantic-release
   "plum-dispatch >= 2",
+  "atpublic >= 4.0",
 ]
 
 [build-system]
