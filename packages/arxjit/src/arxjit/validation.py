@@ -20,8 +20,9 @@ import builtins
 
 from plum import dispatch
 
-from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
+from arxjit.diagnostics import Diagnostic
 from arxjit.errors import UnsupportedSyntaxError
+from arxjit.locations import diagnostic as _diagnostic
 from arxjit.source import ExtractedSource
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -103,69 +104,6 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
 # module still imports cleanly on 3.10.
 if (_try_star := getattr(ast, "TryStar", None)) is not None:
     _UNSUPPORTED_MESSAGES[_try_star] = "try/except* is not supported"
-
-
-def _char_column(line: str, byte_offset: int) -> int:
-    """
-    title: Convert a zero-based UTF-8 byte offset to a one-based column.
-    summary: >-
-      ast column offsets are zero-based UTF-8 byte offsets into their source
-      line, but Diagnostic.column is documented as a one-based Unicode
-      character column. Decoding the byte prefix back to text and measuring its
-      length performs the conversion exactly, including when multi-byte
-      characters appear before the target column.
-    parameters:
-      line:
-        type: str
-        description: The real source line the offset was reported against.
-      byte_offset:
-        type: int
-    returns:
-      type: int
-    """
-    prefix = line.encode("utf-8")[:byte_offset]
-    return len(prefix.decode("utf-8", errors="replace")) + 1
-
-
-def _diagnostic(
-    extracted: ExtractedSource,
-    node: ast.AST,
-    message: str,
-) -> Diagnostic:
-    """
-    title: Build an ERROR diagnostic located at an ast node.
-    summary: >-
-      Reads the node's lineno/col_offset when present and converts the column
-      to the one-based character contract via _char_column; falls back to no
-      location when the node carries none. node.lineno is a real file line
-      number (extract_source already shifted it), while extracted.source is
-      indexed from its own first line, so the node's line is looked up at
-      splitlines()[lineno - extracted.lineno] rather than lineno - 1.
-    parameters:
-      extracted:
-        type: ExtractedSource
-      node:
-        type: ast.AST
-      message:
-        type: str
-    returns:
-      type: Diagnostic
-    """
-    lineno = getattr(node, "lineno", None)
-    col_offset = getattr(node, "col_offset", None)
-    column = None
-    if lineno is not None and col_offset is not None:
-        lines = extracted.source.splitlines()
-        index = lineno - extracted.lineno
-        if 0 <= index < len(lines):
-            column = _char_column(lines[index], col_offset)
-    return Diagnostic(
-        severity=DiagnosticSeverity.ERROR,
-        message=message,
-        filename=extracted.filename,
-        line=lineno,
-        column=column,
-    )
 
 
 def _defined_in_class_body(qualname: str) -> bool:

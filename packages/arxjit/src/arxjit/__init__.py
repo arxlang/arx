@@ -11,6 +11,7 @@ from arxjit.errors import (
     SourceExtractionError,
     UnsupportedSyntaxError,
 )
+from arxjit.reconcile import resolve_signature
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import (
     Signature,
@@ -61,5 +62,6 @@ __all__ = [
     "i32",
     "i64",
     "jit",
+    "resolve_signature",
     "validate",
 ]
