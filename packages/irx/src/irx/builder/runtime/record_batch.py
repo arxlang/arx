@@ -65,9 +65,14 @@ def _native_source() -> Path:
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     # Error reporting
     "irx_record_batch_errmsg": ("p", ()),
+    # Type descriptors (nested types)
+    "irx_type_primitive": ("p", ("i32",)),
+    "irx_type_list": ("p", ("p",)),
+    "irx_type_release": ("v", ("p",)),
     # Schema
     "irx_rb_schema_create": ("i32", ("p",)),
     "irx_rb_schema_add_field": ("i32", ("p", "p", "i32", "i32")),
+    "irx_rb_schema_add_field2": ("i32", ("p", "p", "p", "i32")),
     "irx_rb_schema_num_fields": ("i32", ("p",)),
     "irx_rb_schema_release": ("v", ("p",)),
     # Builder
@@ -88,6 +93,7 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_builder_append_timestamp": ("i32", ("p", "i32", "i64")),
     "irx_rb_builder_append_time": ("i32", ("p", "i32", "i64")),
     "irx_rb_builder_append_null": ("i32", ("p", "i32")),
+    "irx_rb_builder_append_list": ("i32", ("p", "i32", "p", "i64")),
     "irx_rb_builder_finish": ("i32", ("p", "p")),
     "irx_rb_builder_release": ("v", ("p",)),
     # RecordBatch inspection
@@ -110,6 +116,9 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_batch_get_time": ("i32", ("p", "i32", "i64", "p")),
     "irx_rb_batch_is_null": ("i32", ("p", "i32", "i64", "p")),
     "irx_rb_batch_value_buffer": ("i32", ("p", "i32", "p", "p")),
+    "irx_rb_batch_list_elem_type": ("i32", ("p", "i32", "p")),
+    "irx_rb_batch_list_offsets": ("i32", ("p", "i32", "p", "p")),
+    "irx_rb_batch_list_child_buffer": ("i32", ("p", "i32", "p", "p")),
     "irx_rb_batch_release": ("v", ("p",)),
     # Stream writer
     "irx_rb_stream_writer_open_file": ("i32", ("p", "p", "p")),
