@@ -42,8 +42,10 @@ typedef enum IrxColumnType {
     IRX_COL_TIME32_MS    = 20,
     IRX_COL_TIME64_US    = 21,
     IRX_COL_TIME64_NS    = 22,
+    IRX_COL_LIST         = 23,
 } IrxColumnType;
 
+typedef struct IrxRbType_         IrxRbType;
 typedef struct IrxRbSchema_       IrxRbSchema;
 typedef struct IrxRbBuilder_      IrxRbBuilder;
 typedef struct IrxRbBatch_        IrxRbBatch;
@@ -52,11 +54,24 @@ typedef struct IrxRbStreamReader_ IrxRbStreamReader;
 
 const char *irx_record_batch_errmsg(void);
 
+/* Nested-type descriptors. A descriptor is a heap-owned handle wrapping an
+ * Arrow DataType; build one, pass it to irx_rb_schema_add_field2, then release
+ * it. irx_type_list copies its element descriptor, so the caller keeps
+ * ownership of the element and must release it separately. */
+IrxRbType *irx_type_primitive(IrxColumnType type);
+IrxRbType *irx_type_list(const IrxRbType *element);
+void irx_type_release(IrxRbType *type);
+
 int irx_rb_schema_create(IrxRbSchema **out);
 int irx_rb_schema_add_field(IrxRbSchema *schema,
                              const char  *name,
                              IrxColumnType type,
                              int           nullable);
+/* Add a field from a (possibly nested) type descriptor. */
+int irx_rb_schema_add_field2(IrxRbSchema     *schema,
+                              const char      *name,
+                              const IrxRbType *type,
+                              int              nullable);
 int irx_rb_schema_num_fields(const IrxRbSchema *schema);
 void irx_rb_schema_release(IrxRbSchema *schema);
 
@@ -77,6 +92,12 @@ int irx_rb_builder_append_date     (IrxRbBuilder *b, int col, int64_t v);
 int irx_rb_builder_append_timestamp(IrxRbBuilder *b, int col, int64_t v);
 int irx_rb_builder_append_time     (IrxRbBuilder *b, int col, int64_t v);
 int irx_rb_builder_append_null   (IrxRbBuilder *b, int col);
+/* Append one list slot to a list column. `data` points to `n` contiguous
+ * elements of the column's (fixed-width primitive) element type; the element
+ * type determines how the bytes are read. A null list slot is produced with
+ * irx_rb_builder_append_null instead. */
+int irx_rb_builder_append_list   (IrxRbBuilder *b, int col,
+                                    const void *data, int64_t n);
 int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out);
 void irx_rb_builder_release(IrxRbBuilder *b);
 
@@ -100,6 +121,15 @@ int irx_rb_batch_get_time     (const IrxRbBatch *b, int col, int64_t row, int64_
 int irx_rb_batch_is_null(const IrxRbBatch *b, int col, int64_t row, int *out);
 int irx_rb_batch_value_buffer(const IrxRbBatch *b, int col,
                                const void **buf, int64_t *len);
+/* List column readers (zero-copy). list_elem_type reports the element type.
+ * list_offsets exposes the int32 offset array (length = num_rows + 1); the
+ * elements of row r occupy child indices [offs[r], offs[r+1]). list_child_buffer
+ * exposes the flattened fixed-width child value buffer (len = element count). */
+int irx_rb_batch_list_elem_type(const IrxRbBatch *b, int col, IrxColumnType *out);
+int irx_rb_batch_list_offsets(const IrxRbBatch *b, int col,
+                               const int32_t **offs, int64_t *n);
+int irx_rb_batch_list_child_buffer(const IrxRbBatch *b, int col,
+                                    const void **buf, int64_t *len);
 void irx_rb_batch_release(IrxRbBatch *batch);
 
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,

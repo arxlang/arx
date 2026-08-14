@@ -9,7 +9,7 @@ import ctypes.util
 import os
 import sys
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
@@ -114,6 +114,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     pcstr = c.POINTER(c.c_char_p)
     pui8 = c.POINTER(c.c_uint8)
     ppui8 = c.POINTER(pui8)
+    ppi32 = c.POINTER(pi32)
 
     def fn(name: str, restype: Any, *argtypes: Any) -> None:
         """
@@ -133,8 +134,13 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
 
     fn("irx_record_batch_errmsg", cstr)
 
+    fn("irx_type_primitive", vp, i32)
+    fn("irx_type_list", vp, vp)
+    fn("irx_type_release", None, vp)
+
     fn("irx_rb_schema_create", i32, pvp)
     fn("irx_rb_schema_add_field", i32, vp, cstr, i32, i32)
+    fn("irx_rb_schema_add_field2", i32, vp, cstr, vp, i32)
     fn("irx_rb_schema_num_fields", i32, vp)
     fn("irx_rb_schema_release", None, vp)
 
@@ -155,6 +161,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_builder_append_timestamp", i32, vp, i32, i64)
     fn("irx_rb_builder_append_time", i32, vp, i32, i64)
     fn("irx_rb_builder_append_null", i32, vp, i32)
+    fn("irx_rb_builder_append_list", i32, vp, i32, vp, i64)
     fn("irx_rb_builder_finish", i32, vp, pvp)
     fn("irx_rb_builder_release", None, vp)
 
@@ -177,6 +184,9 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_batch_get_time", i32, vp, i32, i64, pi64)
     fn("irx_rb_batch_is_null", i32, vp, i32, i64, pi32)
     fn("irx_rb_batch_value_buffer", i32, vp, i32, ppui8, pi64)
+    fn("irx_rb_batch_list_elem_type", i32, vp, i32, pi32)
+    fn("irx_rb_batch_list_offsets", i32, vp, i32, ppi32, pi64)
+    fn("irx_rb_batch_list_child_buffer", i32, vp, i32, pvp, pi64)
     fn("irx_rb_batch_release", None, vp)
 
     fn("irx_rb_stream_writer_open_file", i32, vp, cstr, pvp)
@@ -329,6 +339,63 @@ class IrxColumnType(IntEnum):
     TIME32_MS = 20
     TIME64_US = 21
     TIME64_NS = 22
+    LIST = 23
+
+
+# Fixed-width element types supported inside a list column, mapped to the
+# ctypes scalar used to read/write their flattened value buffer. bool, utf8,
+# and nested element types are intentionally excluded from this first cut.
+_LIST_ELEM_CTYPE: dict[IrxColumnType, type[Any]] = {
+    IrxColumnType.INT8: ctypes.c_int8,
+    IrxColumnType.INT16: ctypes.c_int16,
+    IrxColumnType.INT32: ctypes.c_int32,
+    IrxColumnType.INT64: ctypes.c_int64,
+    IrxColumnType.UINT8: ctypes.c_uint8,
+    IrxColumnType.UINT16: ctypes.c_uint16,
+    IrxColumnType.UINT32: ctypes.c_uint32,
+    IrxColumnType.UINT64: ctypes.c_uint64,
+    IrxColumnType.FLOAT32: ctypes.c_float,
+    IrxColumnType.FLOAT64: ctypes.c_double,
+    IrxColumnType.DATE32: ctypes.c_int32,
+    IrxColumnType.DATE64: ctypes.c_int64,
+    IrxColumnType.TIMESTAMP_S: ctypes.c_int64,
+    IrxColumnType.TIMESTAMP_MS: ctypes.c_int64,
+    IrxColumnType.TIMESTAMP_US: ctypes.c_int64,
+    IrxColumnType.TIMESTAMP_NS: ctypes.c_int64,
+    IrxColumnType.TIME32_S: ctypes.c_int32,
+    IrxColumnType.TIME32_MS: ctypes.c_int32,
+    IrxColumnType.TIME64_US: ctypes.c_int64,
+    IrxColumnType.TIME64_NS: ctypes.c_int64,
+}
+
+
+@typechecked
+def _encode_list_elem(v: Any, elem_type: IrxColumnType) -> int | float:
+    """
+    title: Encode one list element to its raw storage value.
+    summary: |-
+      datetime/date/time elements are converted through the same scale rules
+      as the scalar temporal appenders; numeric elements pass through
+      unchanged.
+    parameters:
+      v:
+        type: Any
+      elem_type:
+        type: IrxColumnType
+    returns:
+      type: int | float
+    """
+    if isinstance(v, datetime):
+        return _datetime_to_int(v, elem_type)
+    if isinstance(v, date):
+        return _date_to_int(v, elem_type)
+    if isinstance(v, time):
+        return _time_to_int(v, elem_type)
+    if isinstance(v, (int, float)):
+        return v
+    raise TypeError(
+        f"unsupported list element value of type {type(v).__name__}"
+    )
 
 
 # RecordBatchSchema
@@ -347,12 +414,15 @@ class RecordBatchSchema:
         type: bool
       _col_types:
         type: list[IrxColumnType]
+      _elem_types:
+        type: list[Optional[IrxColumnType]]
     """
 
     _handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
     _col_types: list[IrxColumnType]
+    _elem_types: list[Optional[IrxColumnType]]
 
     def __init__(self) -> None:
         """
@@ -365,6 +435,7 @@ class RecordBatchSchema:
         self._lib = lib
         self._released = False
         self._col_types = []
+        self._elem_types = []
 
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
@@ -391,6 +462,59 @@ class RecordBatchSchema:
             self._lib,
         )
         self._col_types.append(col_type)
+        self._elem_types.append(None)
+        return self
+
+    def add_list_field(
+        self,
+        name: str,
+        elem_type: IrxColumnType,
+        nullable: bool = True,
+    ) -> "RecordBatchSchema":
+        """
+        title: Add a list column with the given fixed-width element type.
+        summary: |-
+          elem_type must be one of the fixed-width primitive or temporal types
+          (see _LIST_ELEM_CTYPE); bool, utf8, and nested element types are not
+          supported yet.
+        parameters:
+          name:
+            type: str
+          elem_type:
+            type: IrxColumnType
+          nullable:
+            type: bool
+        returns:
+          type: RecordBatchSchema
+        """
+        if elem_type not in _LIST_ELEM_CTYPE:
+            raise ValueError(
+                f"list element type {elem_type.name} is not supported"
+            )
+        t_elem = self._lib.irx_type_primitive(int(elem_type))
+        if not t_elem:
+            raise RuntimeError("failed to create list element type descriptor")
+        t_list = self._lib.irx_type_list(t_elem)
+        try:
+            if not t_list:
+                raise RuntimeError("failed to create list type descriptor")
+            _check(
+                self._lib.irx_rb_schema_add_field2(
+                    self._handle,
+                    name.encode(),
+                    t_list,
+                    int(nullable),
+                ),
+                self._lib,
+            )
+        finally:
+            # irx_type_list copies its element, so both descriptors are owned
+            # here and must be released regardless of the outcome.
+            if t_list:
+                self._lib.irx_type_release(t_list)
+            self._lib.irx_type_release(t_elem)
+        self._col_types.append(IrxColumnType.LIST)
+        self._elem_types.append(elem_type)
         return self
 
     @property
@@ -441,12 +565,15 @@ class RecordBatchBuilder:
         type: bool
       _col_types:
         type: list[IrxColumnType]
+      _elem_types:
+        type: list[Optional[IrxColumnType]]
     """
 
     _handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
     _col_types: list[IrxColumnType]
+    _elem_types: list[Optional[IrxColumnType]]
 
     def __init__(self, schema: RecordBatchSchema) -> None:
         """
@@ -464,6 +591,7 @@ class RecordBatchBuilder:
         self._lib = lib
         self._released = False
         self._col_types = list(schema._col_types)
+        self._elem_types = list(schema._elem_types)
 
     # --- typed appends ---
 
@@ -734,6 +862,37 @@ class RecordBatchBuilder:
         """
         _check(
             self._lib.irx_rb_builder_append_null(self._handle, col), self._lib
+        )
+
+    def append_list(self, col: int, values: Sequence[Any]) -> None:
+        """
+        title: Append one list slot to a list column.
+        summary: |-
+          values is a sequence of the column's element type. Temporal elements
+          accept datetime.date/datetime/time objects or raw storage ints;
+          numeric elements accept plain numbers. Use append_null(col) for a
+          null list slot.
+        parameters:
+          col:
+            type: int
+          values:
+            type: Sequence[Any]
+        """
+        elem_type = self._elem_types[col]
+        if elem_type is None:
+            raise ValueError(f"column {col} is not a list column")
+        ctype = _LIST_ELEM_CTYPE[elem_type]
+        encoded = [_encode_list_elem(v, elem_type) for v in values]
+        n = len(encoded)
+        arr = (ctype * n)(*encoded)
+        _check(
+            self._lib.irx_rb_builder_append_list(
+                self._handle,
+                col,
+                ctypes.cast(arr, ctypes.c_void_p),
+                ctypes.c_int64(n),
+            ),
+            self._lib,
         )
 
     def finish(self) -> "RecordBatch":
@@ -1134,6 +1293,56 @@ class RecordBatch:
             self._lib,
         )
         return int(out.value)
+
+    def get_list(self, col: int, row: int) -> Optional[list[Any]]:
+        """
+        title: Return the list at a list-column row, or None if it is null.
+        summary: |-
+          Elements come back as raw storage values: numbers for numeric
+          element types and raw storage ints for temporal element types
+          (matching the scalar getters). An empty list slot returns an empty
+          list; a null list slot returns None.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: Optional[list[Any]]
+        """
+        if self.is_null(col, row):
+            return None
+        elem = ctypes.c_int32()
+        _check(
+            self._lib.irx_rb_batch_list_elem_type(
+                self._handle, col, ctypes.byref(elem)
+            ),
+            self._lib,
+        )
+        ctype = _LIST_ELEM_CTYPE[IrxColumnType(elem.value)]
+
+        offs = ctypes.POINTER(ctypes.c_int32)()
+        n = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_list_offsets(
+                self._handle, col, ctypes.byref(offs), ctypes.byref(n)
+            ),
+            self._lib,
+        )
+        buf = ctypes.c_void_p()
+        blen = ctypes.c_int64()
+        _check(
+            self._lib.irx_rb_batch_list_child_buffer(
+                self._handle, col, ctypes.byref(buf), ctypes.byref(blen)
+            ),
+            self._lib,
+        )
+        start = offs[row]
+        end = offs[row + 1]
+        if end == start:
+            return []
+        child = ctypes.cast(buf, ctypes.POINTER(ctype))
+        return [child[i] for i in range(start, end)]
 
     def is_null(self, col: int, row: int) -> bool:
         """

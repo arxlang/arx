@@ -114,9 +114,55 @@ static IrxColumnType col_type_from_arrow(const arrow::DataType &dt) {
     }
 }
 
+struct IrxRbType_ {
+    std::shared_ptr<arrow::DataType> dt;
+};
+
+IrxRbType *irx_type_primitive(IrxColumnType type) {
+    auto dt = arrow_type(type);
+    if (!dt) return nullptr;
+    auto *t = new IrxRbType_();
+    t->dt = std::move(dt);
+    return t;
+}
+
+IrxRbType *irx_type_list(const IrxRbType *element) {
+    if (!element || !element->dt) return nullptr;
+    auto *t = new IrxRbType_();
+    t->dt = arrow::list(element->dt);
+    return t;
+}
+
+void irx_type_release(IrxRbType *type) {
+    delete type;
+}
+
+/* Fill the parallel (col_types, col_elem_types) vectors for one field.
+ * col_elem_types holds the element type for list columns and -1 otherwise.
+ * Returns false (leaving the vectors untouched) for an unsupported type. */
+static bool classify_field(const arrow::DataType &dt,
+                            std::vector<IrxColumnType> &types,
+                            std::vector<IrxColumnType> &elem_types) {
+    if (dt.id() == arrow::Type::LIST) {
+        const auto &lt = static_cast<const arrow::ListType &>(dt);
+        auto et = col_type_from_arrow(*lt.value_type());
+        if (static_cast<int>(et) < 0) return false;
+        types.push_back(IRX_COL_LIST);
+        elem_types.push_back(et);
+        return true;
+    }
+    auto ct = col_type_from_arrow(dt);
+    if (static_cast<int>(ct) < 0) return false;
+    types.push_back(ct);
+    elem_types.push_back(static_cast<IrxColumnType>(-1));
+    return true;
+}
+
 struct IrxRbSchema_ {
     std::shared_ptr<arrow::Schema>             schema;
     std::vector<IrxColumnType>                 col_types;
+    /* Element type per column: set for list columns, -1 for scalar columns. */
+    std::vector<IrxColumnType>                 col_elem_types;
     /* Parallel vector used by the reader-side schema handle (owned). */
     bool                                       reader_owned{false};
 };
@@ -130,6 +176,8 @@ struct IrxRbBatch_ {
     std::shared_ptr<arrow::RecordBatch>        batch;
     /* Cached col_types mirrored from the schema for fast type checks. */
     std::vector<IrxColumnType>                 col_types;
+    /* Element type per column: set for list columns, -1 for scalar columns. */
+    std::vector<IrxColumnType>                 col_elem_types;
 };
 
 struct IrxRbStreamWriter_ {
@@ -173,6 +221,28 @@ int irx_rb_schema_add_field(IrxRbSchema *s,
         return set_err(new_schema.status());
     s->schema = *new_schema;
     s->col_types.push_back(type);
+    s->col_elem_types.push_back(static_cast<IrxColumnType>(-1));
+    return IRX_OK;
+}
+
+int irx_rb_schema_add_field2(IrxRbSchema     *s,
+                              const char      *name,
+                              const IrxRbType *type,
+                              int              nullable) {
+    GUARD(s); GUARD(name); GUARD(type);
+    if (!type->dt)
+        return set_err("null type descriptor", IRX_ERR_TYPE);
+    if (!classify_field(*type->dt, s->col_types, s->col_elem_types))
+        return set_err("unsupported field type for record batch", IRX_ERR_TYPE);
+
+    auto field = arrow::field(name, type->dt, nullable != 0);
+    auto new_schema = s->schema->AddField(s->schema->num_fields(), field);
+    if (!new_schema.ok()) {
+        s->col_types.pop_back();
+        s->col_elem_types.pop_back();
+        return set_err(new_schema.status());
+    }
+    s->schema = *new_schema;
     return IRX_OK;
 }
 
@@ -227,8 +297,20 @@ int irx_rb_builder_create(const IrxRbSchema *schema, IrxRbBuilder **out) {
     auto *b = new IrxRbBuilder_();
     b->schema_ref = schema;
     auto *pool = arrow::default_memory_pool();
-    for (auto ct : schema->col_types) {
-        auto bldr = make_builder(ct, pool);
+    for (int i = 0; i < (int)schema->col_types.size(); ++i) {
+        std::unique_ptr<arrow::ArrayBuilder> bldr;
+        if (schema->col_types[i] == IRX_COL_LIST) {
+            /* Nested types are built straight from the Arrow field type so the
+             * value builder is wired up for us. */
+            auto st = arrow::MakeBuilder(pool, schema->schema->field(i)->type(),
+                                         &bldr);
+            if (!st.ok()) {
+                delete b;
+                return set_err(st);
+            }
+        } else {
+            bldr = make_builder(schema->col_types[i], pool);
+        }
         if (!bldr) {
             delete b;
             return set_err("failed to create column builder", IRX_ERR_ARROW);
@@ -459,6 +541,62 @@ int irx_rb_builder_append_time(IrxRbBuilder *b, int col, int64_t v) {
     return IRX_OK;
 }
 
+/* Append `n` contiguous elements of CType from `data` to a typed value builder. */
+template <typename Builder, typename CType>
+static arrow::Status append_values_as(arrow::ArrayBuilder *vb,
+                                      const void *data, int64_t n) {
+    return static_cast<Builder *>(vb)->AppendValues(
+        static_cast<const CType *>(data), n);
+}
+
+int irx_rb_builder_append_list(IrxRbBuilder *b, int col,
+                               const void *data, int64_t n) {
+    GUARD(b);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->schema_ref->col_types[col] != IRX_COL_LIST)
+        return set_err("type mismatch on append", IRX_ERR_TYPE);
+    if (n < 0)
+        return set_err("negative list length", IRX_ERR_OOB);
+    if (n > 0) GUARD(data);
+
+    auto *lb = static_cast<arrow::ListBuilder *>(b->builders[col].get());
+    /* Open a new (non-null) list slot; elements follow in the value builder. */
+    auto st = lb->Append();
+    if (!st.ok()) return set_err(st);
+
+    arrow::ArrayBuilder *vb = lb->value_builder();
+    switch (b->schema_ref->col_elem_types[col]) {
+    case IRX_COL_INT8:    st = append_values_as<arrow::Int8Builder,   int8_t>(vb, data, n);   break;
+    case IRX_COL_INT16:   st = append_values_as<arrow::Int16Builder,  int16_t>(vb, data, n);  break;
+    case IRX_COL_INT32:   st = append_values_as<arrow::Int32Builder,  int32_t>(vb, data, n);  break;
+    case IRX_COL_INT64:   st = append_values_as<arrow::Int64Builder,  int64_t>(vb, data, n);  break;
+    case IRX_COL_UINT8:   st = append_values_as<arrow::UInt8Builder,  uint8_t>(vb, data, n);  break;
+    case IRX_COL_UINT16:  st = append_values_as<arrow::UInt16Builder, uint16_t>(vb, data, n); break;
+    case IRX_COL_UINT32:  st = append_values_as<arrow::UInt32Builder, uint32_t>(vb, data, n); break;
+    case IRX_COL_UINT64:  st = append_values_as<arrow::UInt64Builder, uint64_t>(vb, data, n); break;
+    case IRX_COL_FLOAT32: st = append_values_as<arrow::FloatBuilder,  float>(vb, data, n);    break;
+    case IRX_COL_FLOAT64: st = append_values_as<arrow::DoubleBuilder, double>(vb, data, n);   break;
+    case IRX_COL_DATE32:  st = append_values_as<arrow::Date32Builder, int32_t>(vb, data, n);  break;
+    case IRX_COL_DATE64:  st = append_values_as<arrow::Date64Builder, int64_t>(vb, data, n);  break;
+    case IRX_COL_TIMESTAMP_S:
+    case IRX_COL_TIMESTAMP_MS:
+    case IRX_COL_TIMESTAMP_US:
+    case IRX_COL_TIMESTAMP_NS:
+        st = append_values_as<arrow::TimestampBuilder, int64_t>(vb, data, n); break;
+    case IRX_COL_TIME32_S:
+    case IRX_COL_TIME32_MS:
+        st = append_values_as<arrow::Time32Builder, int32_t>(vb, data, n); break;
+    case IRX_COL_TIME64_US:
+    case IRX_COL_TIME64_NS:
+        st = append_values_as<arrow::Time64Builder, int64_t>(vb, data, n); break;
+    default:
+        return set_err("unsupported list element type", IRX_ERR_TYPE);
+    }
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
 int irx_rb_builder_append_null(IrxRbBuilder *b, int col) {
     GUARD(b);
     if (col < 0 || col >= (int)b->builders.size())
@@ -493,8 +631,9 @@ int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out) {
                                         arrays.empty() ? 0 : arrays[0]->length(),
                                         arrays);
     auto *batch = new IrxRbBatch_();
-    batch->batch     = std::move(rb);
-    batch->col_types = b->schema_ref->col_types;
+    batch->batch          = std::move(rb);
+    batch->col_types      = b->schema_ref->col_types;
+    batch->col_elem_types = b->schema_ref->col_elem_types;
     *out = batch;
     return IRX_OK;
 }
@@ -671,6 +810,52 @@ int irx_rb_batch_value_buffer(const IrxRbBatch *b, int col,
     return IRX_OK;
 }
 
+int irx_rb_batch_list_elem_type(const IrxRbBatch *b, int col,
+                                IrxColumnType *out) {
+    GUARD(b); GUARD(out);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_LIST)
+        return set_err("column is not a list column", IRX_ERR_TYPE);
+    *out = b->col_elem_types[col];
+    return IRX_OK;
+}
+
+int irx_rb_batch_list_offsets(const IrxRbBatch *b, int col,
+                              const int32_t **offs, int64_t *n) {
+    GUARD(b); GUARD(offs); GUARD(n);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_LIST)
+        return set_err("column is not a list column", IRX_ERR_TYPE);
+    auto *arr = static_cast<const arrow::ListArray *>(b->batch->column(col).get());
+    *offs = arr->raw_value_offsets();
+    *n = arr->length() + 1;
+    return IRX_OK;
+}
+
+int irx_rb_batch_list_child_buffer(const IrxRbBatch *b, int col,
+                                   const void **buf, int64_t *len) {
+    GUARD(b); GUARD(buf); GUARD(len);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_LIST)
+        return set_err("column is not a list column", IRX_ERR_TYPE);
+    auto *arr = static_cast<const arrow::ListArray *>(b->batch->column(col).get());
+    auto values = arr->values();
+    auto &data = *values->data();
+    if (data.buffers.size() < 2 || !data.buffers[1])
+        return set_err("list child has no value buffer", IRX_ERR_TYPE);
+    const auto *fw = dynamic_cast<const arrow::FixedWidthType *>(values->type().get());
+    if (fw == nullptr)
+        return set_err("list child is not a fixed-width type", IRX_ERR_TYPE);
+    const int64_t byte_width = fw->bit_width() / 8;
+    const uint8_t *base = data.buffers[1]->data();
+    *buf = base + data.offset * byte_width;
+    *len = values->length();
+    return IRX_OK;
+}
+
 void irx_rb_batch_release(IrxRbBatch *batch) {
     delete batch;
 }
@@ -775,8 +960,9 @@ static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
     r->schema_handle.reader_owned = true;
     for (int i = 0; i < arrow_schema->num_fields(); ++i) {
         auto &field = *arrow_schema->field(i);
-        auto ct = col_type_from_arrow(*field.type());
-        if (static_cast<int>(ct) < 0) {
+        if (!classify_field(*field.type(),
+                            r->schema_handle.col_types,
+                            r->schema_handle.col_elem_types)) {
             delete r;
             return set_err(
                 "stream column '" + field.name() + "' has type '" +
@@ -784,7 +970,6 @@ static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
                     "' which is not supported by this reader",
                 IRX_ERR_TYPE);
         }
-        r->schema_handle.col_types.push_back(ct);
     }
 
     *out = r;
@@ -826,8 +1011,9 @@ int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
         return IRX_EOF;
     }
     auto *b = new IrxRbBatch_();
-    b->batch     = std::move(rb);
-    b->col_types = r->schema_handle.col_types;
+    b->batch          = std::move(rb);
+    b->col_types      = r->schema_handle.col_types;
+    b->col_elem_types = r->schema_handle.col_elem_types;
     *batch = b;
     return IRX_OK;
 }
