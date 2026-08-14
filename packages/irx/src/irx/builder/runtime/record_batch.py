@@ -15,6 +15,7 @@ from llvmlite import ir
 
 from irx.builder.runtime.arrowcpp import (
     arrowcpp_compile_flags,
+    arrowcpp_compute_linker_flags,
     arrowcpp_include_dirs,
     arrowcpp_linker_flags,
     arrowcpp_runtime_metadata,
@@ -128,6 +129,11 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_batch_struct_field_type": ("i32", ("p", "i32", "i32", "p")),
     "irx_rb_batch_struct_field_buffer": ("i32", ("p", "i32", "i32", "p", "p")),
     "irx_rb_batch_release": ("v", ("p",)),
+    # Compute layer (arrow::compute wrappers)
+    "irx_compute_aggregate": ("i32", ("p", "i32", "i32", "p", "p", "p")),
+    "irx_compute_binary": ("i32", ("p", "i32", "i32", "i32", "p")),
+    "irx_compute_filter": ("i32", ("p", "i32", "p")),
+    "irx_compute_sort_indices": ("i32", ("p", "i32", "i32", "p", "i64")),
     # Stream writer
     "irx_rb_stream_writer_open_file": ("i32", ("p", "p", "p")),
     "irx_rb_stream_writer_open_buffer": ("i32", ("p", "p")),
@@ -244,7 +250,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         name="record_batch",
         symbols=symbols,
         artifacts=artifacts,
-        linker_flags=arrowcpp_linker_flags(),
+        linker_flags=arrowcpp_linker_flags() + arrowcpp_compute_linker_flags(),
         metadata={
             "canonical_name": "record_batch",
             "depends_on": ("array",),

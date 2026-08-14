@@ -3,6 +3,8 @@
 #include "irx_record_batch.h"
 
 #include <arrow/api.h>
+#include <arrow/compute/api.h>
+#include <arrow/compute/initialize.h>
 #include <arrow/io/api.h>
 #include <arrow/ipc/api.h>
 #include <arrow/result.h>
@@ -1100,6 +1102,167 @@ int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
 
 void irx_rb_batch_release(IrxRbBatch *batch) {
     delete batch;
+}
+
+/* Populate arrow::compute's kernel registry once. Since the compute split the
+ * registry lives in a separate library that must be initialized explicitly
+ * before any kernel is looked up; the function-local static runs it once. */
+static arrow::Status ensure_compute_init() {
+    static arrow::Status init = arrow::compute::Initialize();
+    return init;
+}
+
+/* Wrap an Arrow RecordBatch produced by a compute kernel in a batch handle,
+ * classifying each column so the existing readers work on the result. */
+static int make_batch_handle(std::shared_ptr<arrow::RecordBatch> rb,
+                             IrxRbBatch **out) {
+    auto *batch = new IrxRbBatch_();
+    batch->batch = std::move(rb);
+    for (int i = 0; i < batch->batch->num_columns(); ++i) {
+        if (!classify_field(*batch->batch->schema()->field(i)->type(),
+                            batch->col_types, batch->col_descs)) {
+            delete batch;
+            return set_err("unsupported column type in compute result",
+                           IRX_ERR_TYPE);
+        }
+    }
+    *out = batch;
+    return IRX_OK;
+}
+
+/* Read a numeric Arrow scalar into the (int, double) out-params, reporting the
+ * source type so the caller knows which one was written. */
+static int scalar_to_out(const std::shared_ptr<arrow::Scalar> &s,
+                         IrxColumnType *out_type, int64_t *i_out,
+                         double *f_out) {
+    if (!s || !s->is_valid)
+        return set_err("aggregation over no valid values", IRX_ERR_ARROW);
+    switch (s->type->id()) {
+    case arrow::Type::INT8:
+        *i_out = static_cast<const arrow::Int8Scalar &>(*s).value;
+        *out_type = IRX_COL_INT8; return IRX_OK;
+    case arrow::Type::INT16:
+        *i_out = static_cast<const arrow::Int16Scalar &>(*s).value;
+        *out_type = IRX_COL_INT16; return IRX_OK;
+    case arrow::Type::INT32:
+        *i_out = static_cast<const arrow::Int32Scalar &>(*s).value;
+        *out_type = IRX_COL_INT32; return IRX_OK;
+    case arrow::Type::INT64:
+        *i_out = static_cast<const arrow::Int64Scalar &>(*s).value;
+        *out_type = IRX_COL_INT64; return IRX_OK;
+    case arrow::Type::UINT8:
+        *i_out = static_cast<const arrow::UInt8Scalar &>(*s).value;
+        *out_type = IRX_COL_UINT8; return IRX_OK;
+    case arrow::Type::UINT16:
+        *i_out = static_cast<const arrow::UInt16Scalar &>(*s).value;
+        *out_type = IRX_COL_UINT16; return IRX_OK;
+    case arrow::Type::UINT32:
+        *i_out = static_cast<const arrow::UInt32Scalar &>(*s).value;
+        *out_type = IRX_COL_UINT32; return IRX_OK;
+    case arrow::Type::UINT64:
+        *i_out = static_cast<int64_t>(
+            static_cast<const arrow::UInt64Scalar &>(*s).value);
+        *out_type = IRX_COL_UINT64; return IRX_OK;
+    case arrow::Type::FLOAT:
+        *f_out = static_cast<const arrow::FloatScalar &>(*s).value;
+        *out_type = IRX_COL_FLOAT32; return IRX_OK;
+    case arrow::Type::DOUBLE:
+        *f_out = static_cast<const arrow::DoubleScalar &>(*s).value;
+        *out_type = IRX_COL_FLOAT64; return IRX_OK;
+    default:
+        return set_err("unsupported aggregation result type", IRX_ERR_TYPE);
+    }
+}
+
+int irx_compute_aggregate(const IrxRbBatch *b, int col, int op,
+                          IrxColumnType *out_type, int64_t *i_out,
+                          double *f_out) {
+    GUARD(b); GUARD(out_type); GUARD(i_out); GUARD(f_out);
+    if (auto st = ensure_compute_init(); !st.ok()) return set_err(st);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    arrow::Datum in(b->batch->column(col));
+    arrow::Result<arrow::Datum> res;
+    switch (op) {
+    case IRX_AGG_SUM:   res = arrow::compute::Sum(in);   break;
+    case IRX_AGG_MEAN:  res = arrow::compute::Mean(in);  break;
+    case IRX_AGG_COUNT: res = arrow::compute::Count(in); break;
+    case IRX_AGG_MIN:
+    case IRX_AGG_MAX: {
+        auto mm = arrow::compute::MinMax(in);
+        if (!mm.ok()) return set_err(mm.status());
+        const auto &sc =
+            static_cast<const arrow::StructScalar &>(*mm->scalar());
+        return scalar_to_out(sc.value[op == IRX_AGG_MIN ? 0 : 1], out_type,
+                             i_out, f_out);
+    }
+    default:
+        return set_err("unknown aggregation op", IRX_ERR_TYPE);
+    }
+    if (!res.ok()) return set_err(res.status());
+    return scalar_to_out(res->scalar(), out_type, i_out, f_out);
+}
+
+int irx_compute_binary(const IrxRbBatch *b, int col_a, int col_b, int op,
+                       IrxRbBatch **out) {
+    GUARD(b); GUARD(out);
+    if (auto st = ensure_compute_init(); !st.ok()) return set_err(st);
+    const int ncol = b->batch->num_columns();
+    if (col_a < 0 || col_a >= ncol || col_b < 0 || col_b >= ncol)
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    const char *fn = nullptr;
+    switch (op) {
+    case IRX_BINOP_ADD: fn = "add";      break;
+    case IRX_BINOP_SUB: fn = "subtract"; break;
+    case IRX_BINOP_MUL: fn = "multiply"; break;
+    case IRX_BINOP_DIV: fn = "divide";   break;
+    default:
+        return set_err("unknown binary op", IRX_ERR_TYPE);
+    }
+    arrow::Datum lhs(b->batch->column(col_a));
+    arrow::Datum rhs(b->batch->column(col_b));
+    auto res = arrow::compute::CallFunction(fn, {lhs, rhs});
+    if (!res.ok()) return set_err(res.status());
+    auto arr = res->make_array();
+    auto schema = arrow::schema({arrow::field("result", arr->type())});
+    auto rb = arrow::RecordBatch::Make(schema, arr->length(), {arr});
+    return make_batch_handle(std::move(rb), out);
+}
+
+int irx_compute_filter(const IrxRbBatch *b, int mask_col, IrxRbBatch **out) {
+    GUARD(b); GUARD(out);
+    if (auto st = ensure_compute_init(); !st.ok()) return set_err(st);
+    if (mask_col < 0 || mask_col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[mask_col] != IRX_COL_BOOL)
+        return set_err("mask column is not a boolean column", IRX_ERR_TYPE);
+    arrow::Datum batch_datum(b->batch);
+    arrow::Datum mask(b->batch->column(mask_col));
+    auto res = arrow::compute::CallFunction("filter", {batch_datum, mask});
+    if (!res.ok()) return set_err(res.status());
+    return make_batch_handle(res->record_batch(), out);
+}
+
+int irx_compute_sort_indices(const IrxRbBatch *b, int col, int ascending,
+                             int64_t *out, int64_t out_len) {
+    GUARD(b); GUARD(out);
+    if (auto st = ensure_compute_init(); !st.ok()) return set_err(st);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    const int64_t nrows = b->batch->num_rows();
+    if (out_len < nrows)
+        return set_err("output buffer too small for sort indices", IRX_ERR_OOB);
+    arrow::compute::ArraySortOptions options(
+        ascending ? arrow::compute::SortOrder::Ascending
+                  : arrow::compute::SortOrder::Descending);
+    arrow::Datum in(b->batch->column(col));
+    auto res = arrow::compute::CallFunction("array_sort_indices", {in},
+                                            &options);
+    if (!res.ok()) return set_err(res.status());
+    auto idx = std::static_pointer_cast<arrow::UInt64Array>(res->make_array());
+    for (int64_t i = 0; i < nrows; ++i)
+        out[i] = static_cast<int64_t>(idx->Value(i));
+    return IRX_OK;
 }
 
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
