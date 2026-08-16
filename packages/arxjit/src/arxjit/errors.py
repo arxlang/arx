@@ -73,8 +73,24 @@ class UnsupportedSyntaxError(ArxJitError):
     """
 
 
+class LoweringError(ArxJitError):
+    """
+    title: Raised when a validated function cannot be lowered to astx.
+    summary: >-
+      Lowering runs on a function validation has already accepted, so this
+      reports a disagreement between the two stages rather than a mistake by
+      the user: a construct the subset admits that the lowerer has no astx
+      mapping for. It stays a distinct error because the fix is a change to
+      arxjit, not to the decorated function.
+    attributes:
+      diagnostics:
+        type: list[Diagnostic]
+    """
+
+
 __all__ = [
     "ArxJitError",
+    "LoweringError",
     "SourceExtractionError",
     "UnsupportedSyntaxError",
 ]
