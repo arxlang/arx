@@ -22,6 +22,7 @@ from arxjit.lowering import (
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import Signature, SigType, bool_, f32, f64, i32, i64
 from astx.base import NO_SOURCE_LOCATION
+from astx.binary_op import _BINARY_OP_TYPES
 from irx.analysis.api import analyze
 from irx.analysis.registry import MAIN_FUNCTION_NAME
 
@@ -395,21 +396,193 @@ def test_a_float_overflow_reported_by_exception_is_rejected(
     assert "out of range" in str(excinfo.value)
 
 
-def test_a_negative_literal_is_not_a_literal_yet() -> None:
+def test_a_negated_literal_folds_into_one_negative_literal() -> None:
     """
-    title: A negative number reaches this stage as a unary minus.
+    title: A negative number lowers as a literal, not as an operator.
     summary: >-
-      Pinned because it is a trap for the operator lowering that follows.
-      Python parses -1 as USub applied to the constant 1, so no negative value
-      ever reaches the constant overload, and the range check only ever sees
-      the magnitude. Applying that check before the negation would refuse the
-      exact minimum of a signed type, which is one larger in magnitude than its
-      maximum: -2147483648 is a valid i32 while 2147483648 is not.
+      Python parses -1 as USub applied to the constant 1, so a negative value
+      never reaches the constant overload on its own. Folding is what makes it
+      lowerable at all, since IRx implements no unary minus, and it is also
+      what admits the exact minimum of a signed type: -2147483648 is a valid
+      i32 while its magnitude, 2147483648, is not. This is the test the
+      previous PR left failing for this one to flip.
     """
-    source = f"def sample():\n    return -{2**31}\n"
+    definition = _from_source(f"def sample():\n    return -{2**31}\n", i32())
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.LiteralInt32)
+    assert returned.value.value == -(2**31)
+
+
+def test_a_negated_literal_below_the_minimum_is_still_rejected() -> None:
+    """
+    title: Folding widens what is accepted by exactly one value, not more.
+    summary: >-
+      The boundary partner of the test above: the fold must admit the minimum
+      without also admitting everything past it.
+    """
     with pytest.raises(LoweringError) as excinfo:
-        _from_source(source, i32())
-    assert "cannot lower a UnaryOp expression" in str(excinfo.value)
+        _from_source(f"def sample():\n    return -{2**31 + 1}\n", i32())
+    assert "out of range" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    ("operator", "op_code"),
+    [("+", "+"), ("-", "-"), ("*", "*"), ("/", "/"), ("%", "%")],
+)
+def test_each_arithmetic_operator_lowers_and_analyses(
+    operator: str, op_code: str
+) -> None:
+    """
+    title: Every supported binary operator survives IRx analysis.
+    summary: >-
+      Run through analysis rather than only inspected, because an op_code astx
+      does not know specializes to no node and only fails later, in codegen.
+    parameters:
+      operator:
+        type: str
+      op_code:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    module = lower(
+        ExtractedSource(filename="<test>", source=source, lineno=1, node=node),
+        f64(f64, f64),
+    )
+    definition = module.block[0]
+    assert isinstance(definition, astx.FunctionDef)
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.BinaryOp)
+    assert returned.value.op_code == op_code
+    analyze(module)
+
+
+def test_a_parameter_read_lowers_to_a_variable() -> None:
+    """
+    title: A name reads the parameter of that name.
+    summary: >-
+      The reference carries no type: the prototype already declares it, and
+      reconciling a variable with its context is IRx's to do, unlike a literal
+      whose width this stage chooses.
+    """
+    definition = _from_source("def sample(a):\n    return a\n", i64(i64))
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.Variable)
+    assert returned.value.name == "a"
+
+
+def test_operand_literals_take_the_expected_width() -> None:
+    """
+    title: A literal inside an expression is built at the declared width.
+    summary: >-
+      The expected type is propagated into both operands, so the same rule that
+      governs a returned literal governs one buried in an expression; an Int64
+      literal here would fail analysis in an i32 function.
+    """
+    definition = _from_source("def sample(a):\n    return a + 1\n", i32(i32))
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.BinaryOp)
+    assert isinstance(returned.value.rhs, astx.LiteralInt32)
+
+
+def test_a_unary_plus_lowers_to_its_operand() -> None:
+    """
+    title: A unary plus contributes no node.
+    summary: >-
+      It is the identity, and IRx has no operator for it, so the operand is
+      lowered alone rather than wrapped in something codegen would reject.
+    """
+    definition = _from_source("def sample(a):\n    return +a\n", i64(i64))
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.Variable)
+
+
+def test_a_logical_not_lowers_to_the_astx_operator() -> None:
+    """
+    title: not lowers to the one unary operator IRx implements.
+    """
+    source = "def sample(a):\n    return not a\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    module = lower(
+        ExtractedSource(filename="<test>", source=source, lineno=1, node=node),
+        bool_(bool_),
+    )
+    definition = module.block[0]
+    assert isinstance(definition, astx.FunctionDef)
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.UnaryOp)
+    assert returned.value.op_code == "!"
+    analyze(module)
+
+
+@pytest.mark.parametrize(
+    ("operator", "name"), [("//", "FloorDiv"), ("**", "Pow")]
+)
+def test_an_operator_astx_lacks_is_rejected(operator: str, name: str) -> None:
+    """
+    title: An operator with no astx entry is refused, not emitted.
+    summary: >-
+      Validation admits both of these, but astx maps neither to a specialized
+      node, so each would reach codegen as "not implemented yet". Refusing here
+      keeps the disagreement between the subset and the backend visible as a
+      diagnostic rather than as a failure much later.
+    parameters:
+      operator:
+        type: str
+      name:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, i64(i64, i64))
+    assert f"cannot lower the {name} operator" in str(excinfo.value)
+
+
+def test_negating_a_variable_is_rejected() -> None:
+    """
+    title: Only a literal can be negated.
+    summary: >-
+      IRx implements ++, -- and ! and no unary minus, so a negated variable has
+      no operator to lower onto. Emitting one anyway would produce a module
+      that analyses cleanly and then fails in codegen.
+    """
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source("def sample(a):\n    return -a\n", i64(i64))
+    assert "IRx implements no unary minus" in str(excinfo.value)
+
+
+def test_a_unary_operator_astx_lacks_is_rejected() -> None:
+    """
+    title: A unary operator with no astx entry is refused.
+    summary: >-
+      Validation rejects ~ before lowering runs, so this is reached only
+      through the public entry point; IRx implements no bitwise inversion, so
+      it must not be emitted.
+    """
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source("def sample(a):\n    return ~a\n", i64(i64))
+    assert "cannot lower the Invert operator" in str(excinfo.value)
+
+
+def test_the_operator_tables_agree_with_astx() -> None:
+    """
+    title: Every operator this stage emits is one astx specializes.
+    summary: >-
+      astx falls back to a plain BinaryOp for an unknown op_code rather than
+      raising, so an operator added here without an entry there would lower
+      quietly and only fail in codegen. Read from astx directly so the check
+      cannot go stale.
+    """
+    for op_code in lowering._BINARY_OPS.values():
+        assert op_code in _BINARY_OP_TYPES
 
 
 def test_docstring_and_pass_lower_to_nothing() -> None:
@@ -506,11 +679,15 @@ def test_an_unlowerable_statement_fails_closed() -> None:
 def test_an_unlowerable_expression_fails_closed() -> None:
     """
     title: An expression with no overload is reported, not skipped.
+    summary: >-
+      Validation admits comparisons, so reaching one here means the subset and
+      the lowerer disagree. They lower with the conditionals that give them a
+      purpose, not before.
     """
-    source = "def sample(x):\n    return x\n"
+    source = "def sample(x):\n    return x < 1\n"
     with pytest.raises(LoweringError) as excinfo:
-        _from_source(source, i64(i64))
-    assert "cannot lower a Name expression" in str(excinfo.value)
+        _from_source(source, bool_(i64))
+    assert "cannot lower a Compare expression" in str(excinfo.value)
 
 
 def test_a_standalone_expression_statement_is_rejected() -> None:
