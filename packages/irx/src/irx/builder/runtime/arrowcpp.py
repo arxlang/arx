@@ -67,18 +67,13 @@ def arrowcpp_compute_linker_flags() -> tuple[str, ...]:
     summary: >-
       arrow::compute's kernel registry ("sum", "add", "filter", ...) lives in a
       separate libarrow_compute whose static initializers must run at load, so
-      features that call compute kernels link it alongside libarrow.
+      features that call compute kernels link it alongside libarrow. It ships
+      in the same PyArrow directory as libarrow, whose rpath (added by
+      arrowcpp_linker_flags) already covers it, so no rpath is repeated here.
     returns:
       type: tuple[str, Ellipsis]
     """
-    library = _find_pyarrow_library("arrow_compute")
-    library_dir = library.parent
-    flags = [str(library)]
-
-    if sys.platform != "win32":
-        flags.append(f"-Wl,-rpath,{library_dir}")
-
-    return tuple(flags)
+    return (str(_find_pyarrow_library("arrow_compute")),)
 
 
 @typechecked
