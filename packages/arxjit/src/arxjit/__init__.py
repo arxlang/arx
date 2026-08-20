@@ -8,9 +8,11 @@ from arxjit.core import JitFunction, jit
 from arxjit.diagnostics import Diagnostic, DiagnosticSeverity
 from arxjit.errors import (
     ArxJitError,
+    LoweringError,
     SourceExtractionError,
     UnsupportedSyntaxError,
 )
+from arxjit.lowering import lower
 from arxjit.reconcile import resolve_signature
 from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import (
@@ -49,6 +51,7 @@ __all__ = [
     "DiagnosticSeverity",
     "ExtractedSource",
     "JitFunction",
+    "LoweringError",
     "SigType",
     "Signature",
     "SourceExtractionError",
@@ -62,6 +65,7 @@ __all__ = [
     "i32",
     "i64",
     "jit",
+    "lower",
     "resolve_signature",
     "validate",
 ]
