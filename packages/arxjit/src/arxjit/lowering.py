@@ -5,12 +5,14 @@ summary: >-
   Fourth stage of the arxjit pipeline: turn the ast node of a validated
   function, plus the Signature reconciliation settled on, into the astx module
   IRx compiles. Dispatch is by node type via plum, matching the visitor
-  convention used across the Arx packages. This first version lowers the
-  function shell — the prototype, its typed arguments, and a body of literal
-  returns; variables, arithmetic, and control flow follow in later stages, and
-  until then any other construct fails closed with LoweringError. The decorator
-  does not call this stage yet, so nothing here changes what @jit does; that
-  wiring lands once the lowerer covers the whole validated subset.
+  convention used across the Arx packages. What is lowered so far is the
+  function shell — the prototype and its typed arguments — and straight-line
+  expressions: literals, parameter reads, and the arithmetic, unary and
+  comparison-free operators astx shares with IRx. Local assignments and control
+  flow follow in later stages, and until then any other construct fails closed
+  with LoweringError. The decorator does not call this stage yet, so nothing
+  here changes what @jit does; that wiring lands once the lowerer covers the
+  whole validated subset.
 """
 
 from __future__ import annotations
@@ -94,6 +96,28 @@ _SCALARS: dict[str, _Scalar] = {
     "Int64": _Scalar(
         astx.Int64, astx.LiteralInt64, "int", (-(2**63), 2**63 - 1), False
     ),
+}
+
+# The operator vocabulary astx and IRx share, taken from astx's own
+# _BINARY_OP_TYPES table: an op_code outside it specializes to no node and
+# reaches codegen as "not implemented yet". Validation admits two Python
+# operators with no entry there, ast.FloorDiv and ast.Pow, so they are
+# rejected here rather than lowered into a module that cannot be compiled;
+# test_the_operator_tables_agree_with_astx pins this table to astx's.
+_BINARY_OPS: dict[type[ast.operator], str] = {
+    ast.Add: "+",
+    ast.Sub: "-",
+    ast.Mult: "*",
+    ast.Div: "/",
+    ast.Mod: "%",
+}
+
+# Unary is narrower still. IRx implements "!", "++" and "--" and nothing
+# else, so there is no operator to lower a negation onto; ast.UAdd needs none,
+# being the identity. A negation of a literal is folded instead, which is also
+# the only way a negative constant can arrive: see _literal_value.
+_UNARY_OPS: dict[type[ast.unaryop], str] = {
+    ast.Not: "!",
 }
 
 # IRx reserves "main" as the program entry point and requires it to take no
@@ -394,12 +418,145 @@ class Lowerer:
         raises:
           LoweringError: If the literal's kind or value does not fit.
         """
+        return self.literal(node, node.value, expected)
+
+    def literal(
+        self, node: ast.expr, value: object, expected: SigType
+    ) -> astx.DataType:
+        """
+        title: Build an astx literal for a value at its expected type.
+        summary: >-
+          Takes the value separately from the node it is located at, so that a
+          negated constant can be folded through here as one literal rather
+          than lowered as an operator applied to its magnitude. That is not
+          only a convenience: it is what lets the exact minimum of a signed
+          type through, since its magnitude is one larger than the maximum.
+        parameters:
+          node:
+            type: ast.expr
+          value:
+            type: object
+          expected:
+            type: SigType
+        returns:
+          type: astx.DataType
+        raises:
+          LoweringError: If the value's kind or magnitude does not fit.
+        """
         target = scalar(expected)
-        value = self._literal_value(node, expected, target)
-        return target.literal(value, loc=location(self.extracted, node))
+        checked = self._literal_value(node, value, expected, target)
+        return target.literal(checked, loc=location(self.extracted, node))
+
+    @dispatch
+    def expression(self, node: ast.Name, expected: SigType) -> astx.DataType:
+        """
+        title: Lower a variable read.
+        summary: >-
+          Only the parameters are in scope at this stage, and their types are
+          already declared on the prototype, so the reference carries no type
+          of its own and IRx resolves it from the declaration. The expected
+          type is therefore not applied here: unlike a literal, a variable has
+          the type it was given, and reconciling it with its context is IRx's
+          to do.
+        parameters:
+          node:
+            type: ast.Name
+          expected:
+            type: SigType
+        returns:
+          type: astx.DataType
+        """
+        return astx.Variable(name=node.id, loc=location(self.extracted, node))
+
+    @dispatch
+    def expression(self, node: ast.BinOp, expected: SigType) -> astx.DataType:
+        """
+        title: Lower an arithmetic binary operation.
+        summary: >-
+          Both operands are lowered at the expected type, so a literal in
+          either position takes the width of its context rather than Python's.
+          The result type is IRx's to compute from the operands.
+        parameters:
+          node:
+            type: ast.BinOp
+          expected:
+            type: SigType
+        returns:
+          type: astx.DataType
+        raises:
+          LoweringError: If the operator has no astx equivalent.
+        """
+        op_code = _BINARY_OPS.get(type(node.op))
+        if op_code is None:
+            name = type(node.op).__name__
+            raise self.reject(
+                node,
+                f"cannot lower the {name} operator: astx has no binary"
+                " operator for it",
+            )
+        return astx.BinaryOp(
+            op_code,
+            self.expression(node.left, expected),
+            self.expression(node.right, expected),
+            loc=location(self.extracted, node),
+        )
+
+    @dispatch
+    def expression(
+        self, node: ast.UnaryOp, expected: SigType
+    ) -> astx.DataType:
+        """
+        title: Lower a unary operation.
+        summary: >-
+          A unary plus is the identity and lowers to its operand alone. A
+          negated literal is folded into one negative literal, which is the
+          only form a negative constant takes in Python and the only negation
+          that can be lowered at all: IRx implements no unary minus, so
+          negating anything else is refused rather than emitted as a node
+          codegen would later reject.
+        parameters:
+          node:
+            type: ast.UnaryOp
+          expected:
+            type: SigType
+        returns:
+          type: astx.DataType
+        raises:
+          LoweringError: If the operator has no astx equivalent.
+        """
+        if isinstance(node.op, ast.UAdd):
+            return self.expression(node.operand, expected)
+        if isinstance(node.op, ast.USub):
+            operand = node.operand
+            if isinstance(operand, ast.Constant) and isinstance(
+                operand.value, (int, float)
+            ):
+                return self.literal(node, -operand.value, expected)
+            raise self.reject(
+                node,
+                "cannot lower a negation of anything but a literal: IRx"
+                " implements no unary minus",
+            )
+        op_code = _UNARY_OPS.get(type(node.op))
+        if op_code is None:
+            name = type(node.op).__name__
+            raise self.reject(
+                node,
+                f"cannot lower the {name} operator: astx has no unary"
+                " operator for it",
+            )
+        return astx.UnaryOp(
+            op_code,
+            self.expression(node.operand, expected),
+            loc=location(self.extracted, node),
+        )
 
     def _literal_value(
-        self, node: ast.Constant, expected: SigType, target: _Scalar
+        self,
+        node: ast.expr,
+        value: object,
+        expected: SigType,
+        target: _Scalar,
     ) -> bool | int | float:
         """
         title: Check a literal against its expected type and convert it.
@@ -408,14 +565,15 @@ class Lowerer:
           that order True would satisfy an integer context. An integer in a
           float context is converted, which is the widening Python itself
           performs; the reverse is not, because a float has no integer value to
-          preserve. Note that a negative literal never arrives here as one:
-          Python parses it as a unary minus applied to a positive constant, so
-          when that operator is lowered the range check has to be applied to
-          the negated value, or the exact minimum of a signed type would be
-          refused for exceeding its own maximum.
+          preserve. The value is passed in rather than read off the node so a
+          negated constant is checked as the negative number it is, which is
+          what admits the exact minimum of a signed type: its magnitude alone
+          is one larger than that type's maximum.
         parameters:
           node:
-            type: ast.Constant
+            type: ast.expr
+          value:
+            type: object
           expected:
             type: SigType
           target:
@@ -425,7 +583,6 @@ class Lowerer:
         raises:
           LoweringError: If the literal's kind or value does not fit.
         """
-        value = node.value
         if isinstance(value, bool):
             if target.kind != "bool":
                 raise self.reject(
@@ -452,7 +609,7 @@ class Lowerer:
 
     def _in_range(
         self,
-        node: ast.Constant,
+        node: ast.expr,
         value: int,
         expected: SigType,
         target: _Scalar,
@@ -465,7 +622,7 @@ class Lowerer:
           still be labelled Int64 and misstate its own value.
         parameters:
           node:
-            type: ast.Constant
+            type: ast.expr
           value:
             type: int
           expected:
@@ -487,7 +644,7 @@ class Lowerer:
 
     def _as_float(
         self,
-        node: ast.Constant,
+        node: ast.expr,
         value: int | float,
         expected: SigType,
         target: _Scalar,
@@ -500,7 +657,7 @@ class Lowerer:
           steps are checked rather than left to produce an infinity.
         parameters:
           node:
-            type: ast.Constant
+            type: ast.expr
           value:
             type: int | float
           expected:
