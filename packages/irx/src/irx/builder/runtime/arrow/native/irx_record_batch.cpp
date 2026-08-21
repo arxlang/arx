@@ -133,36 +133,79 @@ IrxRbType *irx_type_list(const IrxRbType *element) {
     return t;
 }
 
+IrxRbType *irx_type_struct(const char *const *names,
+                           const IrxRbType *const *fields, int n) {
+    if (n < 0) return nullptr;
+    if (n > 0 && (!names || !fields)) return nullptr;
+    std::vector<std::shared_ptr<arrow::Field>> arrow_fields;
+    arrow_fields.reserve(n);
+    for (int i = 0; i < n; ++i) {
+        if (!names[i] || !fields[i] || !fields[i]->dt) return nullptr;
+        arrow_fields.push_back(arrow::field(names[i], fields[i]->dt));
+    }
+    auto *t = new IrxRbType_();
+    t->dt = arrow::struct_(arrow_fields);
+    return t;
+}
+
 void irx_type_release(IrxRbType *type) {
     delete type;
 }
 
-/* Fill the parallel (col_types, col_elem_types) vectors for one field.
- * col_elem_types holds the element type for list columns and -1 otherwise.
- * Returns false (leaving the vectors untouched) for an unsupported type. */
-static bool classify_field(const arrow::DataType &dt,
-                            std::vector<IrxColumnType> &types,
-                            std::vector<IrxColumnType> &elem_types) {
+/* Per-column type descriptor. Leaf columns carry just `type`; a list column
+ * carries one child (the element) and a struct column carries one child per
+ * field (each with its `name`). The tree keeps nesting composable, so a
+ * list-of-struct or struct-of-list slots in without a second representation. */
+struct ColDesc {
+    IrxColumnType            type{static_cast<IrxColumnType>(-1)};
+    std::string              name;
+    std::vector<ColDesc>     children;
+};
+
+/* Recursively describe one Arrow type. Returns false for an unsupported type,
+ * leaving `out` partially filled (the caller discards it on failure). */
+static bool build_desc(const arrow::DataType &dt, ColDesc &out) {
     if (dt.id() == arrow::Type::LIST) {
+        out.type = IRX_COL_LIST;
         const auto &lt = static_cast<const arrow::ListType &>(dt);
-        auto et = col_type_from_arrow(*lt.value_type());
-        if (static_cast<int>(et) < 0) return false;
-        types.push_back(IRX_COL_LIST);
-        elem_types.push_back(et);
+        out.children.emplace_back();
+        return build_desc(*lt.value_type(), out.children.back());
+    }
+    if (dt.id() == arrow::Type::STRUCT) {
+        out.type = IRX_COL_STRUCT;
+        const auto &st = static_cast<const arrow::StructType &>(dt);
+        for (int i = 0; i < st.num_fields(); ++i) {
+            out.children.emplace_back();
+            out.children.back().name = st.field(i)->name();
+            if (!build_desc(*st.field(i)->type(), out.children.back()))
+                return false;
+        }
         return true;
     }
     auto ct = col_type_from_arrow(dt);
     if (static_cast<int>(ct) < 0) return false;
-    types.push_back(ct);
-    elem_types.push_back(static_cast<IrxColumnType>(-1));
+    out.type = ct;
+    return true;
+}
+
+/* Append the descriptor for one top-level field to the parallel (col_types,
+ * col_descs) vectors. Returns false (leaving both untouched) for an
+ * unsupported type. */
+static bool classify_field(const arrow::DataType &dt,
+                            std::vector<IrxColumnType> &types,
+                            std::vector<ColDesc> &descs) {
+    ColDesc d;
+    if (!build_desc(dt, d)) return false;
+    types.push_back(d.type);
+    descs.push_back(std::move(d));
     return true;
 }
 
 struct IrxRbSchema_ {
     std::shared_ptr<arrow::Schema>             schema;
     std::vector<IrxColumnType>                 col_types;
-    /* Element type per column: set for list columns, -1 for scalar columns. */
-    std::vector<IrxColumnType>                 col_elem_types;
+    /* Full type descriptor per column, parallel to col_types. */
+    std::vector<ColDesc>                       col_descs;
     /* Parallel vector used by the reader-side schema handle (owned). */
     bool                                       reader_owned{false};
 };
@@ -176,8 +219,8 @@ struct IrxRbBatch_ {
     std::shared_ptr<arrow::RecordBatch>        batch;
     /* Cached col_types mirrored from the schema for fast type checks. */
     std::vector<IrxColumnType>                 col_types;
-    /* Element type per column: set for list columns, -1 for scalar columns. */
-    std::vector<IrxColumnType>                 col_elem_types;
+    /* Full type descriptor per column, parallel to col_types. */
+    std::vector<ColDesc>                       col_descs;
 };
 
 struct IrxRbStreamWriter_ {
@@ -221,7 +264,7 @@ int irx_rb_schema_add_field(IrxRbSchema *s,
         return set_err(new_schema.status());
     s->schema = *new_schema;
     s->col_types.push_back(type);
-    s->col_elem_types.push_back(static_cast<IrxColumnType>(-1));
+    s->col_descs.push_back(ColDesc{type, {}, {}});
     return IRX_OK;
 }
 
@@ -232,14 +275,14 @@ int irx_rb_schema_add_field2(IrxRbSchema     *s,
     GUARD(s); GUARD(name); GUARD(type);
     if (!type->dt)
         return set_err("null type descriptor", IRX_ERR_TYPE);
-    if (!classify_field(*type->dt, s->col_types, s->col_elem_types))
+    if (!classify_field(*type->dt, s->col_types, s->col_descs))
         return set_err("unsupported field type for record batch", IRX_ERR_TYPE);
 
     auto field = arrow::field(name, type->dt, nullable != 0);
     auto new_schema = s->schema->AddField(s->schema->num_fields(), field);
     if (!new_schema.ok()) {
         s->col_types.pop_back();
-        s->col_elem_types.pop_back();
+        s->col_descs.pop_back();
         return set_err(new_schema.status());
     }
     s->schema = *new_schema;
@@ -299,9 +342,10 @@ int irx_rb_builder_create(const IrxRbSchema *schema, IrxRbBuilder **out) {
     auto *pool = arrow::default_memory_pool();
     for (int i = 0; i < (int)schema->col_types.size(); ++i) {
         std::unique_ptr<arrow::ArrayBuilder> bldr;
-        if (schema->col_types[i] == IRX_COL_LIST) {
+        if (schema->col_types[i] == IRX_COL_LIST ||
+            schema->col_types[i] == IRX_COL_STRUCT) {
             /* Nested types are built straight from the Arrow field type so the
-             * value builder is wired up for us. */
+             * child builders are wired up for us. */
             auto st = arrow::MakeBuilder(pool, schema->schema->field(i)->type(),
                                          &bldr);
             if (!st.ok()) {
@@ -566,7 +610,7 @@ int irx_rb_builder_append_list(IrxRbBuilder *b, int col,
     if (!st.ok()) return set_err(st);
 
     arrow::ArrayBuilder *vb = lb->value_builder();
-    switch (b->schema_ref->col_elem_types[col]) {
+    switch (b->schema_ref->col_descs[col].children[0].type) {
     case IRX_COL_INT8:    st = append_values_as<arrow::Int8Builder,   int8_t>(vb, data, n);   break;
     case IRX_COL_INT16:   st = append_values_as<arrow::Int16Builder,  int16_t>(vb, data, n);  break;
     case IRX_COL_INT32:   st = append_values_as<arrow::Int32Builder,  int32_t>(vb, data, n);  break;
@@ -592,6 +636,142 @@ int irx_rb_builder_append_list(IrxRbBuilder *b, int col,
         st = append_values_as<arrow::Time64Builder, int64_t>(vb, data, n); break;
     default:
         return set_err("unsupported list element type", IRX_ERR_TYPE);
+    }
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
+/* Range-checked narrowing append onto a fixed-width struct field builder. The
+ * int64 carrier holds every supported field value except uint64, which cannot
+ * round-trip and is rejected. Mirrors the int32 guards on the scalar date/time
+ * appenders so a too-wide value is refused rather than silently truncated. */
+static int append_struct_field_int(arrow::ArrayBuilder *fb, IrxColumnType t,
+                                    int64_t v) {
+    arrow::Status st;
+    switch (t) {
+    case IRX_COL_INT8:
+        if (v < INT8_MIN || v > INT8_MAX)
+            return set_err("value out of int8 range", IRX_ERR_OOB);
+        st = static_cast<arrow::Int8Builder *>(fb)->Append(static_cast<int8_t>(v));
+        break;
+    case IRX_COL_INT16:
+        if (v < INT16_MIN || v > INT16_MAX)
+            return set_err("value out of int16 range", IRX_ERR_OOB);
+        st = static_cast<arrow::Int16Builder *>(fb)->Append(static_cast<int16_t>(v));
+        break;
+    case IRX_COL_INT32:
+        if (v < INT32_MIN || v > INT32_MAX)
+            return set_err("value out of int32 range", IRX_ERR_OOB);
+        st = static_cast<arrow::Int32Builder *>(fb)->Append(static_cast<int32_t>(v));
+        break;
+    case IRX_COL_INT64:
+        st = static_cast<arrow::Int64Builder *>(fb)->Append(v);
+        break;
+    case IRX_COL_UINT8:
+        if (v < 0 || v > UINT8_MAX)
+            return set_err("value out of uint8 range", IRX_ERR_OOB);
+        st = static_cast<arrow::UInt8Builder *>(fb)->Append(static_cast<uint8_t>(v));
+        break;
+    case IRX_COL_UINT16:
+        if (v < 0 || v > UINT16_MAX)
+            return set_err("value out of uint16 range", IRX_ERR_OOB);
+        st = static_cast<arrow::UInt16Builder *>(fb)->Append(static_cast<uint16_t>(v));
+        break;
+    case IRX_COL_UINT32:
+        if (v < 0 || v > UINT32_MAX)
+            return set_err("value out of uint32 range", IRX_ERR_OOB);
+        st = static_cast<arrow::UInt32Builder *>(fb)->Append(static_cast<uint32_t>(v));
+        break;
+    case IRX_COL_BOOL:
+        st = static_cast<arrow::BooleanBuilder *>(fb)->Append(v != 0);
+        break;
+    case IRX_COL_DATE32:
+        if (v < INT32_MIN || v > INT32_MAX)
+            return set_err("value out of int32 range", IRX_ERR_OOB);
+        st = static_cast<arrow::Date32Builder *>(fb)->Append(static_cast<int32_t>(v));
+        break;
+    case IRX_COL_DATE64:
+        st = static_cast<arrow::Date64Builder *>(fb)->Append(v);
+        break;
+    case IRX_COL_TIMESTAMP_S:
+    case IRX_COL_TIMESTAMP_MS:
+    case IRX_COL_TIMESTAMP_US:
+    case IRX_COL_TIMESTAMP_NS:
+        st = static_cast<arrow::TimestampBuilder *>(fb)->Append(v);
+        break;
+    case IRX_COL_TIME32_S:
+    case IRX_COL_TIME32_MS:
+        if (v < INT32_MIN || v > INT32_MAX)
+            return set_err("value out of int32 range", IRX_ERR_OOB);
+        st = static_cast<arrow::Time32Builder *>(fb)->Append(static_cast<int32_t>(v));
+        break;
+    case IRX_COL_TIME64_US:
+    case IRX_COL_TIME64_NS:
+        st = static_cast<arrow::Time64Builder *>(fb)->Append(v);
+        break;
+    default:
+        return set_err("unsupported struct field type for integer append",
+                       IRX_ERR_TYPE);
+    }
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
+/* Resolve a struct column's child builder and declared field type, validating
+ * the column is a struct and the field index is in range. */
+static int resolve_struct_field(IrxRbBuilder *b, int col, int field,
+                                arrow::ArrayBuilder **fb, IrxColumnType *ftype) {
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->schema_ref->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    const auto &children = b->schema_ref->col_descs[col].children;
+    if (field < 0 || field >= (int)children.size())
+        return set_err("struct field index out of bounds", IRX_ERR_OOB);
+    *fb = static_cast<arrow::StructBuilder *>(b->builders[col].get())
+              ->field_builder(field);
+    *ftype = children[field].type;
+    return IRX_OK;
+}
+
+int irx_rb_builder_struct_append(IrxRbBuilder *b, int col) {
+    GUARD(b);
+    if (col < 0 || col >= (int)b->builders.size())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->schema_ref->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    auto st = static_cast<arrow::StructBuilder *>(b->builders[col].get())->Append();
+    if (!st.ok()) return set_err(st);
+    return IRX_OK;
+}
+
+int irx_rb_builder_struct_field_int(IrxRbBuilder *b, int col, int field,
+                                    int64_t v) {
+    GUARD(b);
+    arrow::ArrayBuilder *fb;
+    IrxColumnType ft;
+    int rc = resolve_struct_field(b, col, field, &fb, &ft);
+    if (rc != IRX_OK) return rc;
+    return append_struct_field_int(fb, ft, v);
+}
+
+int irx_rb_builder_struct_field_float(IrxRbBuilder *b, int col, int field,
+                                      double v) {
+    GUARD(b);
+    arrow::ArrayBuilder *fb;
+    IrxColumnType ft;
+    int rc = resolve_struct_field(b, col, field, &fb, &ft);
+    if (rc != IRX_OK) return rc;
+    arrow::Status st;
+    switch (ft) {
+    case IRX_COL_FLOAT32:
+        st = static_cast<arrow::FloatBuilder *>(fb)->Append(static_cast<float>(v));
+        break;
+    case IRX_COL_FLOAT64:
+        st = static_cast<arrow::DoubleBuilder *>(fb)->Append(v);
+        break;
+    default:
+        return set_err("struct field is not a float column", IRX_ERR_TYPE);
     }
     if (!st.ok()) return set_err(st);
     return IRX_OK;
@@ -633,7 +813,7 @@ int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out) {
     auto *batch = new IrxRbBatch_();
     batch->batch          = std::move(rb);
     batch->col_types      = b->schema_ref->col_types;
-    batch->col_elem_types = b->schema_ref->col_elem_types;
+    batch->col_descs      = b->schema_ref->col_descs;
     *out = batch;
     return IRX_OK;
 }
@@ -817,7 +997,7 @@ int irx_rb_batch_list_elem_type(const IrxRbBatch *b, int col,
         return set_err("column index out of bounds", IRX_ERR_OOB);
     if (b->col_types[col] != IRX_COL_LIST)
         return set_err("column is not a list column", IRX_ERR_TYPE);
-    *out = b->col_elem_types[col];
+    *out = b->col_descs[col].children[0].type;
     return IRX_OK;
 }
 
@@ -853,6 +1033,68 @@ int irx_rb_batch_list_child_buffer(const IrxRbBatch *b, int col,
     const uint8_t *base = data.buffers[1]->data();
     *buf = base + data.offset * byte_width;
     *len = values->length();
+    return IRX_OK;
+}
+
+int irx_rb_batch_struct_num_fields(const IrxRbBatch *b, int col, int *out) {
+    GUARD(b); GUARD(out);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    *out = static_cast<int>(b->col_descs[col].children.size());
+    return IRX_OK;
+}
+
+int irx_rb_batch_struct_field_name(const IrxRbBatch *b, int col, int field,
+                                   const char **out) {
+    GUARD(b); GUARD(out);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    const auto &children = b->col_descs[col].children;
+    if (field < 0 || field >= (int)children.size())
+        return set_err("struct field index out of bounds", IRX_ERR_OOB);
+    *out = children[field].name.c_str();
+    return IRX_OK;
+}
+
+int irx_rb_batch_struct_field_type(const IrxRbBatch *b, int col, int field,
+                                   IrxColumnType *out) {
+    GUARD(b); GUARD(out);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    const auto &children = b->col_descs[col].children;
+    if (field < 0 || field >= (int)children.size())
+        return set_err("struct field index out of bounds", IRX_ERR_OOB);
+    *out = children[field].type;
+    return IRX_OK;
+}
+
+int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
+                                     const void **buf, int64_t *len) {
+    GUARD(b); GUARD(buf); GUARD(len);
+    if (col < 0 || col >= b->batch->num_columns())
+        return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (b->col_types[col] != IRX_COL_STRUCT)
+        return set_err("column is not a struct column", IRX_ERR_TYPE);
+    auto *arr = static_cast<const arrow::StructArray *>(b->batch->column(col).get());
+    if (field < 0 || field >= arr->num_fields())
+        return set_err("struct field index out of bounds", IRX_ERR_OOB);
+    auto child = arr->field(field);
+    auto &data = *child->data();
+    if (data.buffers.size() < 2 || !data.buffers[1])
+        return set_err("struct field has no value buffer", IRX_ERR_TYPE);
+    const auto *fw = dynamic_cast<const arrow::FixedWidthType *>(child->type().get());
+    if (fw == nullptr)
+        return set_err("struct field is not a fixed-width type", IRX_ERR_TYPE);
+    const int64_t byte_width = fw->bit_width() / 8;
+    const uint8_t *base = data.buffers[1]->data();
+    *buf = base + data.offset * byte_width;
+    *len = child->length();
     return IRX_OK;
 }
 
@@ -962,7 +1204,7 @@ static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
         auto &field = *arrow_schema->field(i);
         if (!classify_field(*field.type(),
                             r->schema_handle.col_types,
-                            r->schema_handle.col_elem_types)) {
+                            r->schema_handle.col_descs)) {
             delete r;
             return set_err(
                 "stream column '" + field.name() + "' has type '" +
@@ -1013,7 +1255,7 @@ int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
     auto *b = new IrxRbBatch_();
     b->batch          = std::move(rb);
     b->col_types      = r->schema_handle.col_types;
-    b->col_elem_types = r->schema_handle.col_elem_types;
+    b->col_descs      = r->schema_handle.col_descs;
     *batch = b;
     return IRX_OK;
 }

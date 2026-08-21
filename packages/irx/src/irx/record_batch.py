@@ -9,7 +9,7 @@ import ctypes.util
 import os
 import sys
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
@@ -136,6 +136,7 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
 
     fn("irx_type_primitive", vp, i32)
     fn("irx_type_list", vp, vp)
+    fn("irx_type_struct", vp, ctypes.POINTER(cstr), ctypes.POINTER(vp), i32)
     fn("irx_type_release", None, vp)
 
     fn("irx_rb_schema_create", i32, pvp)
@@ -162,6 +163,9 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_builder_append_time", i32, vp, i32, i64)
     fn("irx_rb_builder_append_null", i32, vp, i32)
     fn("irx_rb_builder_append_list", i32, vp, i32, vp, i64)
+    fn("irx_rb_builder_struct_append", i32, vp, i32)
+    fn("irx_rb_builder_struct_field_int", i32, vp, i32, i32, i64)
+    fn("irx_rb_builder_struct_field_float", i32, vp, i32, i32, f64)
     fn("irx_rb_builder_finish", i32, vp, pvp)
     fn("irx_rb_builder_release", None, vp)
 
@@ -187,6 +191,10 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_batch_list_elem_type", i32, vp, i32, pi32)
     fn("irx_rb_batch_list_offsets", i32, vp, i32, ppi32, pi64)
     fn("irx_rb_batch_list_child_buffer", i32, vp, i32, pvp, pi64)
+    fn("irx_rb_batch_struct_num_fields", i32, vp, i32, pi32)
+    fn("irx_rb_batch_struct_field_name", i32, vp, i32, i32, pcstr)
+    fn("irx_rb_batch_struct_field_type", i32, vp, i32, i32, pi32)
+    fn("irx_rb_batch_struct_field_buffer", i32, vp, i32, i32, pvp, pi64)
     fn("irx_rb_batch_release", None, vp)
 
     fn("irx_rb_stream_writer_open_file", i32, vp, cstr, pvp)
@@ -340,6 +348,7 @@ class IrxColumnType(IntEnum):
     TIME64_US = 21
     TIME64_NS = 22
     LIST = 23
+    STRUCT = 24
 
 
 # Fixed-width element types supported inside a list column, mapped to the
@@ -367,6 +376,15 @@ _LIST_ELEM_CTYPE: dict[IrxColumnType, type[Any]] = {
     IrxColumnType.TIME64_US: ctypes.c_int64,
     IrxColumnType.TIME64_NS: ctypes.c_int64,
 }
+
+# Struct fields share the list element's fixed-width, byte-addressable set:
+# the same buffer-based reader backs both, so bool (bitmap), utf8 and nested
+# field types are likewise excluded from this first cut.
+_STRUCT_FIELD_CTYPE = _LIST_ELEM_CTYPE
+
+# Field types read/written through the floating-point struct-field entry point;
+# every other supported field type goes through the integer entry point.
+_FLOAT_TYPES = frozenset({IrxColumnType.FLOAT32, IrxColumnType.FLOAT64})
 
 
 @typechecked
@@ -416,6 +434,8 @@ class RecordBatchSchema:
         type: list[IrxColumnType]
       _elem_types:
         type: list[Optional[IrxColumnType]]
+      _struct_fields:
+        type: list[Optional[list[tuple[str, IrxColumnType]]]]
     """
 
     _handle: ctypes.c_void_p
@@ -423,6 +443,7 @@ class RecordBatchSchema:
     _released: bool
     _col_types: list[IrxColumnType]
     _elem_types: list[Optional[IrxColumnType]]
+    _struct_fields: list[Optional[list[tuple[str, IrxColumnType]]]]
 
     def __init__(self) -> None:
         """
@@ -436,6 +457,7 @@ class RecordBatchSchema:
         self._released = False
         self._col_types = []
         self._elem_types = []
+        self._struct_fields = []
 
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
@@ -463,6 +485,7 @@ class RecordBatchSchema:
         )
         self._col_types.append(col_type)
         self._elem_types.append(None)
+        self._struct_fields.append(None)
         return self
 
     def add_list_field(
@@ -515,6 +538,78 @@ class RecordBatchSchema:
             self._lib.irx_type_release(t_elem)
         self._col_types.append(IrxColumnType.LIST)
         self._elem_types.append(elem_type)
+        self._struct_fields.append(None)
+        return self
+
+    def add_struct_field(
+        self,
+        name: str,
+        fields: Sequence[tuple[str, IrxColumnType]],
+        nullable: bool = True,
+    ) -> "RecordBatchSchema":
+        """
+        title: Add a struct column with the given named fixed-width fields.
+        summary: |-
+          Each field is a (name, type) pair whose type must be one of the
+          fixed-width primitive or temporal types (see _STRUCT_FIELD_CTYPE);
+          bool, utf8, and nested field types are not supported yet.
+        parameters:
+          name:
+            type: str
+          fields:
+            type: Sequence[tuple[str, IrxColumnType]]
+          nullable:
+            type: bool
+        returns:
+          type: RecordBatchSchema
+        """
+        field_list = list(fields)
+        if not field_list:
+            raise ValueError("struct column must have at least one field")
+        for fname, ftype in field_list:
+            if ftype not in _STRUCT_FIELD_CTYPE:
+                raise ValueError(
+                    f"struct field type {ftype.name} is not supported"
+                )
+        # Build a child descriptor per field, then wrap them in a struct
+        # descriptor. irx_type_struct copies each field descriptor, so every
+        # descriptor allocated here is owned locally and released below.
+        names_arr = (ctypes.c_char_p * len(field_list))(
+            *(fname.encode() for fname, _ in field_list)
+        )
+        field_ptrs = (ctypes.c_void_p * len(field_list))()
+        try:
+            for i, (_, ftype) in enumerate(field_list):
+                t_field = self._lib.irx_type_primitive(int(ftype))
+                if not t_field:
+                    raise RuntimeError(
+                        "failed to create struct field type descriptor"
+                    )
+                field_ptrs[i] = t_field
+            t_struct = self._lib.irx_type_struct(
+                names_arr, field_ptrs, len(field_list)
+            )
+            if not t_struct:
+                raise RuntimeError("failed to create struct type descriptor")
+            try:
+                _check(
+                    self._lib.irx_rb_schema_add_field2(
+                        self._handle,
+                        name.encode(),
+                        t_struct,
+                        int(nullable),
+                    ),
+                    self._lib,
+                )
+            finally:
+                self._lib.irx_type_release(t_struct)
+        finally:
+            for i in range(len(field_list)):
+                if field_ptrs[i]:
+                    self._lib.irx_type_release(ctypes.c_void_p(field_ptrs[i]))
+        self._col_types.append(IrxColumnType.STRUCT)
+        self._elem_types.append(None)
+        self._struct_fields.append(field_list)
         return self
 
     @property
@@ -567,6 +662,8 @@ class RecordBatchBuilder:
         type: list[IrxColumnType]
       _elem_types:
         type: list[Optional[IrxColumnType]]
+      _struct_fields:
+        type: list[Optional[list[tuple[str, IrxColumnType]]]]
     """
 
     _handle: ctypes.c_void_p
@@ -574,6 +671,7 @@ class RecordBatchBuilder:
     _released: bool
     _col_types: list[IrxColumnType]
     _elem_types: list[Optional[IrxColumnType]]
+    _struct_fields: list[Optional[list[tuple[str, IrxColumnType]]]]
 
     def __init__(self, schema: RecordBatchSchema) -> None:
         """
@@ -592,6 +690,7 @@ class RecordBatchBuilder:
         self._released = False
         self._col_types = list(schema._col_types)
         self._elem_types = list(schema._elem_types)
+        self._struct_fields = list(schema._struct_fields)
 
     # --- typed appends ---
 
@@ -894,6 +993,56 @@ class RecordBatchBuilder:
             ),
             self._lib,
         )
+
+    def append_struct(
+        self, col: int, values: Mapping[str, Any] | Sequence[Any]
+    ) -> None:
+        """
+        title: Append one struct slot to a struct column.
+        summary: |-
+          values gives one value per field, either as a mapping keyed by field
+          name or as a positional sequence in field order. Temporal fields
+          accept datetime.date/datetime/time objects or raw storage ints;
+          numeric fields accept plain numbers. Use append_null(col) for a null
+          struct slot.
+        parameters:
+          col:
+            type: int
+          values:
+            type: Mapping[str, Any] | Sequence[Any]
+        """
+        fields = self._struct_fields[col]
+        if fields is None:
+            raise ValueError(f"column {col} is not a struct column")
+        if isinstance(values, Mapping):
+            ordered = [values[fname] for fname, _ in fields]
+        else:
+            ordered = list(values)
+            if len(ordered) != len(fields):
+                raise ValueError(
+                    f"struct column {col} expects {len(fields)} field values, "
+                    f"got {len(ordered)}"
+                )
+        _check(
+            self._lib.irx_rb_builder_struct_append(self._handle, col),
+            self._lib,
+        )
+        for i, ((_, ftype), v) in enumerate(zip(fields, ordered)):
+            if ftype in _FLOAT_TYPES:
+                _check(
+                    self._lib.irx_rb_builder_struct_field_float(
+                        self._handle, col, i, ctypes.c_double(v)
+                    ),
+                    self._lib,
+                )
+            else:
+                encoded = int(_encode_list_elem(v, ftype))
+                _check(
+                    self._lib.irx_rb_builder_struct_field_int(
+                        self._handle, col, i, ctypes.c_int64(encoded)
+                    ),
+                    self._lib,
+                )
 
     def finish(self) -> "RecordBatch":
         """
@@ -1343,6 +1492,64 @@ class RecordBatch:
             return []
         child = ctypes.cast(buf, ctypes.POINTER(ctype))
         return [child[i] for i in range(start, end)]
+
+    def get_struct(self, col: int, row: int) -> Optional[dict[str, Any]]:
+        """
+        title: Return the struct at a struct-column row, or None if it is null.
+        summary: |-
+          Fields come back keyed by name; values are raw storage values
+          (numbers for numeric fields, raw storage ints for temporal fields,
+          matching the scalar getters). A null struct slot returns None.
+        parameters:
+          col:
+            type: int
+          row:
+            type: int
+        returns:
+          type: Optional[dict[str, Any]]
+        """
+        if self.is_null(col, row):
+            return None
+        nfields = ctypes.c_int32()
+        _check(
+            self._lib.irx_rb_batch_struct_num_fields(
+                self._handle, col, ctypes.byref(nfields)
+            ),
+            self._lib,
+        )
+        result: dict[str, Any] = {}
+        for field in range(nfields.value):
+            name = ctypes.c_char_p()
+            _check(
+                self._lib.irx_rb_batch_struct_field_name(
+                    self._handle, col, field, ctypes.byref(name)
+                ),
+                self._lib,
+            )
+            ftype = ctypes.c_int32()
+            _check(
+                self._lib.irx_rb_batch_struct_field_type(
+                    self._handle, col, field, ctypes.byref(ftype)
+                ),
+                self._lib,
+            )
+            ctype = _STRUCT_FIELD_CTYPE[IrxColumnType(ftype.value)]
+            buf = ctypes.c_void_p()
+            blen = ctypes.c_int64()
+            _check(
+                self._lib.irx_rb_batch_struct_field_buffer(
+                    self._handle,
+                    col,
+                    field,
+                    ctypes.byref(buf),
+                    ctypes.byref(blen),
+                ),
+                self._lib,
+            )
+            child = ctypes.cast(buf, ctypes.POINTER(ctype))
+            field_name = name.value.decode() if name.value is not None else ""
+            result[field_name] = child[row]
+        return result
 
     def is_null(self, col: int, row: int) -> bool:
         """

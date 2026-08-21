@@ -43,6 +43,7 @@ typedef enum IrxColumnType {
     IRX_COL_TIME64_US    = 21,
     IRX_COL_TIME64_NS    = 22,
     IRX_COL_LIST         = 23,
+    IRX_COL_STRUCT       = 24,
 } IrxColumnType;
 
 typedef struct IrxRbType_         IrxRbType;
@@ -60,6 +61,11 @@ const char *irx_record_batch_errmsg(void);
  * ownership of the element and must release it separately. */
 IrxRbType *irx_type_primitive(IrxColumnType type);
 IrxRbType *irx_type_list(const IrxRbType *element);
+/* Build a struct descriptor from `n` named field descriptors. `names[i]` is the
+ * name of field `i` and `fields[i]` its type. The field descriptors are copied,
+ * so the caller keeps ownership and must release each separately. */
+IrxRbType *irx_type_struct(const char *const *names,
+                           const IrxRbType *const *fields, int n);
 void irx_type_release(IrxRbType *type);
 
 int irx_rb_schema_create(IrxRbSchema **out);
@@ -98,6 +104,17 @@ int irx_rb_builder_append_null   (IrxRbBuilder *b, int col);
  * irx_rb_builder_append_null instead. */
 int irx_rb_builder_append_list   (IrxRbBuilder *b, int col,
                                     const void *data, int64_t n);
+/* Open one (non-null) struct slot in a struct column, then set each field with
+ * the struct_field_* calls below before moving to the next row. A null struct
+ * slot is produced with irx_rb_builder_append_null instead. */
+int irx_rb_builder_struct_append     (IrxRbBuilder *b, int col);
+/* Append `v` to field `field` of the struct slot opened last. The integer
+ * variant covers integer, bool, date and time fields (the value is narrowed to
+ * the field's declared width); the float variant covers float32/float64. */
+int irx_rb_builder_struct_field_int  (IrxRbBuilder *b, int col, int field,
+                                        int64_t v);
+int irx_rb_builder_struct_field_float(IrxRbBuilder *b, int col, int field,
+                                        double v);
 int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out);
 void irx_rb_builder_release(IrxRbBuilder *b);
 
@@ -130,6 +147,18 @@ int irx_rb_batch_list_offsets(const IrxRbBatch *b, int col,
                                const int32_t **offs, int64_t *n);
 int irx_rb_batch_list_child_buffer(const IrxRbBatch *b, int col,
                                     const void **buf, int64_t *len);
+/* Struct column readers (zero-copy). struct_num_fields reports the field count;
+ * struct_field_type reports field `field`'s element type; struct_field_buffer
+ * exposes that field's flattened fixed-width value buffer (len = num_rows). */
+int irx_rb_batch_struct_num_fields (const IrxRbBatch *b, int col, int *out);
+/* Report field `field`'s name. The returned pointer is owned by the batch and
+ * stays valid until the batch is released. */
+int irx_rb_batch_struct_field_name (const IrxRbBatch *b, int col, int field,
+                                     const char **out);
+int irx_rb_batch_struct_field_type (const IrxRbBatch *b, int col, int field,
+                                     IrxColumnType *out);
+int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
+                                      const void **buf, int64_t *len);
 void irx_rb_batch_release(IrxRbBatch *batch);
 
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,

@@ -91,8 +91,10 @@ class TestSchema:
         title: Ensure every supported scalar column type can be registered.
         """
         s = RecordBatchSchema()
-        # LIST is a nested type registered via add_list_field, not add_field.
-        scalar_types = [ct for ct in IrxColumnType if ct != IrxColumnType.LIST]
+        # LIST and STRUCT are nested types registered via their own add_*
+        # helpers, not add_field.
+        nested_types = {IrxColumnType.LIST, IrxColumnType.STRUCT}
+        scalar_types = [ct for ct in IrxColumnType if ct not in nested_types]
         for ct in scalar_types:
             s.add_field(ct.name.lower(), ct)
         assert s.num_fields == len(scalar_types)
@@ -1307,5 +1309,238 @@ class TestListColumns:
         assert rb.get_list(0, 1) is None
         assert rb.get_list(0, 2) == []
         assert rb.get_list(0, 3) == [30]
+        rb.release()
+        reader.close()
+
+
+class TestStructColumns:
+    """
+    title: Struct column build, inspection, streaming, and PyArrow interop.
+    """
+
+    def test_build_and_read_struct(self):
+        """
+        title: Build a struct column with mixed field types and read it back.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("id", IrxColumnType.INT32, nullable=False)
+        schema.add_struct_field(
+            "point",
+            [("x", IrxColumnType.INT32), ("y", IrxColumnType.FLOAT64)],
+            nullable=True,
+        )
+        builder = RecordBatchBuilder(schema)
+        points = [{"x": 10, "y": 2.5}, {"x": 20, "y": 3.5}]
+        for i, point in enumerate(points):
+            builder.append_int32(0, i)
+            builder.append_struct(1, point)
+        batch = builder.finish()
+
+        assert batch.num_rows == len(points)
+        for i, point in enumerate(points):
+            assert batch.get_struct(1, i) == point
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_append_struct_positional(self):
+        """
+        title: append_struct accepts a positional sequence in field order.
+        """
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "p",
+            [("a", IrxColumnType.INT8), ("b", IrxColumnType.INT64)],
+            nullable=False,
+        )
+        builder = RecordBatchBuilder(schema)
+        builder.append_struct(0, [7, 1_000_000])
+        batch = builder.finish()
+
+        assert batch.get_struct(0, 0) == {"a": 7, "b": 1_000_000}
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_null_struct_slot(self):
+        """
+        title: A null struct slot reads back as None.
+        """
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "p", [("x", IrxColumnType.INT32)], nullable=True
+        )
+        builder = RecordBatchBuilder(schema)
+        builder.append_struct(0, {"x": 1})
+        builder.append_null(0)
+        builder.append_struct(0, {"x": 3})
+        batch = builder.finish()
+
+        assert batch.get_struct(0, 0) == {"x": 1}
+        assert batch.get_struct(0, 1) is None
+        assert batch.get_struct(0, 2) == {"x": 3}
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_temporal_struct_fields(self):
+        """
+        title: Struct date/time fields take Python temporals, read as ints.
+        """
+        one_hour_us = 3600 * 1_000_000
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "event",
+            [("d", IrxColumnType.DATE32), ("t", IrxColumnType.TIME64_US)],
+            nullable=False,
+        )
+        builder = RecordBatchBuilder(schema)
+        builder.append_struct(0, {"d": date(2020, 1, 1), "t": time(1, 0, 0)})
+        batch = builder.finish()
+
+        result = batch.get_struct(0, 0)
+        assert result["d"] == (date(2020, 1, 1) - date(1970, 1, 1)).days
+        assert result["t"] == one_hour_us
+        batch.release()
+        builder.release()
+        schema.release()
+
+    def test_int32_field_overflow_rejected(self):
+        """
+        title: A too-wide value for an INT32 struct field is refused.
+        """
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "p", [("x", IrxColumnType.INT32)], nullable=False
+        )
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(RuntimeError, match="out of int32 range"):
+            builder.append_struct(0, {"x": 2**40})
+        builder.release()
+        schema.release()
+
+    def test_unsupported_field_type_raises(self):
+        """
+        title: Schema rejects struct field types outside the supported set.
+        """
+        schema = RecordBatchSchema()
+        with pytest.raises(ValueError):
+            schema.add_struct_field("bad", [("f", IrxColumnType.BOOL)])
+        with pytest.raises(ValueError):
+            schema.add_struct_field("bad", [("f", IrxColumnType.UTF8)])
+        schema.release()
+
+    def test_empty_struct_rejected(self):
+        """
+        title: A struct column must declare at least one field.
+        """
+        schema = RecordBatchSchema()
+        with pytest.raises(ValueError):
+            schema.add_struct_field("empty", [])
+        schema.release()
+
+    def test_append_struct_on_scalar_column_raises(self):
+        """
+        title: append_struct on a non-struct column raises rather than corrupt.
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("id", IrxColumnType.INT32)
+        builder = RecordBatchBuilder(schema)
+        with pytest.raises(ValueError):
+            builder.append_struct(0, {"x": 1})
+        builder.release()
+        schema.release()
+
+    def test_struct_buffer_round_trip(self):
+        """
+        title: A struct column survives an IPC buffer round-trip.
+        """
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "point",
+            [("x", IrxColumnType.INT32), ("y", IrxColumnType.INT32)],
+            nullable=True,
+        )
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_struct(0, {"x": 1, "y": 2})
+        builder.append_null(0)
+        builder.append_struct(0, {"x": 3, "y": 4})
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_struct(0, 0) == {"x": 1, "y": 2}
+        assert rb.get_struct(0, 1) is None
+        assert rb.get_struct(0, 2) == {"x": 3, "y": 4}
+        rb.release()
+        reader.close()
+
+    def test_irx_struct_read_by_pyarrow(self):
+        """
+        title: PyArrow can read an IRx-written struct column.
+        """
+        schema = RecordBatchSchema()
+        schema.add_struct_field(
+            "point",
+            [("x", IrxColumnType.INT32), ("y", IrxColumnType.FLOAT64)],
+            nullable=True,
+        )
+        writer = RecordBatchStreamWriter.open_buffer(schema)
+        builder = RecordBatchBuilder(schema)
+        builder.append_struct(0, {"x": 1, "y": 1.5})
+        builder.append_null(0)
+        batch = builder.finish()
+        writer.write_batch(batch)
+        batch.release()
+        builder.release()
+        writer.close()
+        data = writer.buffer_data()
+        writer.release()
+        schema.release()
+
+        table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
+        assert table.schema.field("point").type == pa.struct(
+            [("x", pa.int32()), ("y", pa.float64())]
+        )
+        assert table.column("point").to_pylist() == [
+            {"x": 1, "y": 1.5},
+            None,
+        ]
+
+    def test_pyarrow_struct_read_by_irx(self):
+        """
+        title: The IRx reader imports a PyArrow-written struct column.
+        """
+        struct_type = pa.struct([("x", pa.int32()), ("y", pa.float64())])
+        pa_schema = pa.schema([pa.field("point", struct_type, nullable=True)])
+        record_batch = pa.record_batch(
+            [
+                pa.array(
+                    [{"x": 10, "y": 2.0}, None, {"x": 30, "y": 4.0}],
+                    type=struct_type,
+                )
+            ],
+            schema=pa_schema,
+        )
+        sink = pa.BufferOutputStream()
+        with pa.ipc.new_stream(sink, pa_schema) as pa_writer:
+            pa_writer.write_batch(record_batch)
+        data = sink.getvalue().to_pybytes()
+
+        reader = RecordBatchStreamReader.open_buffer(data)
+        rb = reader.next_batch()
+        assert rb is not None
+        assert rb.get_struct(0, 0) == {"x": 10, "y": 2.0}
+        assert rb.get_struct(0, 1) is None
+        assert rb.get_struct(0, 2) == {"x": 30, "y": 4.0}
         rb.release()
         reader.close()
