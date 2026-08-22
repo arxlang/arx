@@ -248,3 +248,286 @@ class TestSortIndices:
         with pytest.raises(RuntimeError):
             batch.sort_indices(99)
         batch.release()
+
+
+# Null / boundary helpers (PR 1)
+
+# Integer column with interspersed nulls; expectations derive from the
+# non-null subset so aggregations stay data-driven, not magic-valued.
+NULLABLE_INT = [10, None, 30, None, 50]
+NULLABLE_VALID = [v for v in NULLABLE_INT if v is not None]
+
+_APPENDERS = {
+    IrxColumnType.INT64: "append_int64",
+    IrxColumnType.UINT64: "append_uint64",
+    IrxColumnType.FLOAT64: "append_float64",
+    IrxColumnType.BOOL: "append_bool",
+    IrxColumnType.UTF8: "append_string",
+}
+
+
+def _build_single_col_batch(
+    col_type: IrxColumnType, values: list
+) -> RecordBatch:
+    """
+    title: Build a one-column batch, using append_null for None entries.
+    parameters:
+      col_type:
+        type: IrxColumnType
+      values:
+        type: list
+    returns:
+      type: RecordBatch
+    """
+    schema = RecordBatchSchema()
+    schema.add_field("c", col_type)
+    builder = RecordBatchBuilder(schema)
+    append = getattr(builder, _APPENDERS[col_type])
+    for v in values:
+        if v is None:
+            builder.append_null(0)
+        else:
+            append(0, v)
+    batch = builder.finish()
+    builder.release()
+    schema.release()
+    return batch
+
+
+def _build_two_int_batch(a: list, b: list) -> RecordBatch:
+    """
+    title: Build a two-column int64 batch (for binary ops).
+    parameters:
+      a:
+        type: list
+      b:
+        type: list
+    returns:
+      type: RecordBatch
+    """
+    schema = RecordBatchSchema()
+    schema.add_field("a", IrxColumnType.INT64)
+    schema.add_field("b", IrxColumnType.INT64)
+    builder = RecordBatchBuilder(schema)
+    for av, bv in zip(a, b):
+        builder.append_int64(0, av)
+        builder.append_int64(1, bv)
+    batch = builder.finish()
+    builder.release()
+    schema.release()
+    return batch
+
+
+class TestAggregationNulls:
+    """
+    title: Aggregations skip nulls and handle all-null / empty columns.
+    """
+
+    def test_sum_skips_nulls(self):
+        """
+        title: Sum ignores null slots.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, NULLABLE_INT)
+        assert batch.sum(0) == sum(NULLABLE_VALID)
+        batch.release()
+
+    def test_mean_skips_nulls(self):
+        """
+        title: Mean divides by the non-null count only.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, NULLABLE_INT)
+        assert math.isclose(
+            batch.mean(0), sum(NULLABLE_VALID) / len(NULLABLE_VALID)
+        )
+        batch.release()
+
+    def test_count_excludes_nulls(self):
+        """
+        title: Count returns the number of non-null values.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, NULLABLE_INT)
+        assert batch.count(0) == len(NULLABLE_VALID)
+        batch.release()
+
+    def test_minmax_skip_nulls(self):
+        """
+        title: Min/max ignore nulls.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, NULLABLE_INT)
+        assert batch.min(0) == min(NULLABLE_VALID)
+        assert batch.max(0) == max(NULLABLE_VALID)
+        batch.release()
+
+    def test_count_all_null_is_zero(self):
+        """
+        title: Count of an all-null column is 0, not an error.
+        """
+        batch = _build_single_col_batch(
+            IrxColumnType.INT64, [None, None, None]
+        )
+        assert batch.count(0) == 0
+        batch.release()
+
+    def test_sum_all_null_raises(self):
+        """
+        title: Non-count aggregation over no valid value raises (cpp:1139).
+        """
+        batch = _build_single_col_batch(
+            IrxColumnType.INT64, [None, None, None]
+        )
+        with pytest.raises(RuntimeError):
+            batch.sum(0)
+        batch.release()
+
+    def test_float_minmax(self):
+        """
+        title: Min/max on a float column return floats (MinMax float branch).
+        """
+        batch = _build_single_col_batch(
+            IrxColumnType.FLOAT64, [1.5, 2.5, 0.5, 4.0, 2.0]
+        )
+        assert isinstance(batch.min(0), float)
+        assert isinstance(batch.max(0), float)
+        assert math.isclose(batch.min(0), 0.5)
+        assert math.isclose(batch.max(0), 4.0)
+        batch.release()
+
+    def test_uint64_sum(self):
+        """
+        title: Sum of a uint64 column round-trips through the int out-param.
+        """
+        values = [1, 2, 3, 4, 5]
+        batch = _build_single_col_batch(IrxColumnType.UINT64, values)
+        assert batch.sum(0) == sum(values)
+        batch.release()
+
+    def test_sum_on_utf8_raises(self):
+        """
+        title: Summing a non-numeric (utf8) column raises rather than crash.
+        """
+        batch = _build_single_col_batch(IrxColumnType.UTF8, ["a", "b", "c"])
+        with pytest.raises(RuntimeError):
+            batch.sum(0)
+        batch.release()
+
+
+class TestEmptyBatchCompute:
+    """
+    title: Compute ops on a zero-row batch.
+    """
+
+    def test_sort_empty_returns_empty(self):
+        """
+        title: sort_indices on an empty column returns an empty list.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, [])
+        assert batch.sort_indices(0) == []
+        batch.release()
+
+    def test_count_empty_is_zero(self):
+        """
+        title: Count of an empty column is 0.
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, [])
+        assert batch.count(0) == 0
+        batch.release()
+
+    def test_sum_empty_raises(self):
+        """
+        title: Summing an empty column raises (no valid value).
+        """
+        batch = _build_single_col_batch(IrxColumnType.INT64, [])
+        with pytest.raises(RuntimeError):
+            batch.sum(0)
+        batch.release()
+
+
+class TestFilterNulls:
+    """
+    title: Filter behaviour with null mask slots.
+    """
+
+    def test_null_mask_slot_drops_row(self):
+        """
+        title: A null mask slot drops its row (header contract .h:201-202).
+        """
+        schema = RecordBatchSchema()
+        schema.add_field("v", IrxColumnType.INT64)
+        schema.add_field("m", IrxColumnType.BOOL)
+        builder = RecordBatchBuilder(schema)
+        vals = [10, 20, 30, 40, 50]
+        mask = [True, None, True, False, None]
+        for v, m in zip(vals, mask):
+            builder.append_int64(0, v)
+            if m is None:
+                builder.append_null(1)
+            else:
+                builder.append_bool(1, m)
+        batch = builder.finish()
+        builder.release()
+        schema.release()
+        result = batch.filter(1)
+        # Only rows 0 and 2 have mask == True; nulls (1, 4) drop, row 3 False.
+        kept = [v for v, m in zip(vals, mask) if m is True]
+        assert result.num_rows == len(kept)
+        assert [result.get_int64(0, r) for r in range(result.num_rows)] == kept
+        result.release()
+        batch.release()
+
+
+class TestSortNulls:
+    """
+    title: Sort ordering with nulls.
+    """
+
+    def test_nulls_sort_to_end_ascending(self):
+        """
+        title: Null slots sort after all valid values (ascending, .h:207).
+        """
+        batch = _build_single_col_batch(
+            IrxColumnType.INT64, [3, None, 1, None, 2]
+        )
+        indices = batch.sort_indices(0)
+        # Valid values 1,2,3 first (rows 2,4,0), nulls last (rows 1,3).
+        assert indices[:3] == [2, 4, 0]
+        assert sorted(indices[3:]) == [1, 3]
+        batch.release()
+
+    def test_nulls_sort_to_end_descending(self):
+        """
+        title: Null slots still sort to the end when descending.
+        """
+        batch = _build_single_col_batch(
+            IrxColumnType.INT64, [3, None, 1, None, 2]
+        )
+        indices = batch.sort_indices(0, ascending=False)
+        assert indices[:3] == [0, 4, 2]
+        assert sorted(indices[3:]) == [1, 3]
+        batch.release()
+
+
+class TestArithmeticEdgeCases:
+    """
+    title: Binary op edge cases.
+    """
+
+    def test_integer_divide_by_zero_raises(self):
+        """
+        title: Integer division by zero surfaces as an error.
+        """
+        batch = _build_two_int_batch([1, 2, 3], [1, 0, 3])
+        with pytest.raises(RuntimeError):
+            batch.divide(0, 1)
+        batch.release()
+
+    def test_add_overflow_wraps(self):
+        """
+        title: Non-checked add wraps int64 silently (cpp:1213 "add" kernel).
+        """
+        big = (1 << 63) - 1  # INT64_MAX
+        batch = _build_two_int_batch([big], [1])
+        result = batch.add(0, 1)
+        # Wrap, not error: INT64_MAX + 1 == INT64_MIN in two's complement.
+        assert result.get_int64(0, 0) == -(1 << 63)
+        result.release()
+        batch.release()
