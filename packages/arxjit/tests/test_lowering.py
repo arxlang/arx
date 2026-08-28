@@ -25,6 +25,7 @@ from astx.base import NO_SOURCE_LOCATION
 from astx.binary_op import _BINARY_OP_TYPES
 from irx.analysis.api import analyze
 from irx.analysis.registry import MAIN_FUNCTION_NAME
+from irx.analysis.typing import binary_result_type
 
 PyFunc = Callable[..., Any]
 
@@ -69,6 +70,44 @@ def _from_source(source: str, signature: Signature) -> astx.FunctionDef:
     definition = lower(extracted, signature).block[0]
     assert isinstance(definition, astx.FunctionDef)
     return definition
+
+
+def _module_from_source(source: str, signature: Signature) -> astx.Module:
+    """
+    title: Lower hand-built source and keep the module (test helper).
+    summary: >-
+      analyze takes the whole module rather than the definition alone, so a
+      test that checks an emitted node is one IRx accepts needs both.
+    parameters:
+      source:
+        type: str
+      signature:
+        type: Signature
+    returns:
+      type: astx.Module
+    """
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    return lower(extracted, signature)
+
+
+def _returned(module: astx.Module) -> astx.DataType:
+    """
+    title: Return the value of a single-statement function's return.
+    parameters:
+      module:
+        type: astx.Module
+    returns:
+      type: astx.DataType
+    """
+    definition = module.block[0]
+    assert isinstance(definition, astx.FunctionDef)
+    (returned,) = definition.body.nodes
+    assert isinstance(returned, astx.FunctionReturn)
+    return returned.value
 
 
 def test_literal_return_lowers_to_a_single_function_module() -> None:
@@ -572,6 +611,416 @@ def test_a_unary_operator_astx_lacks_is_rejected() -> None:
     assert "cannot lower the Invert operator" in str(excinfo.value)
 
 
+@pytest.mark.parametrize(
+    ("operator", "op_code"),
+    [
+        ("==", "=="),
+        ("!=", "!="),
+        ("<", "<"),
+        ("<=", "<="),
+        (">", ">"),
+        (">=", ">="),
+    ],
+)
+def test_a_comparison_lowers_to_a_binary_op(
+    operator: str, op_code: str
+) -> None:
+    """
+    title: Each comparison lowers to the binary node IRx implements.
+    summary: >-
+      astx.CompareOp is what a comparison looks like it should become, but
+      IRx's visitor for it is not implemented, so it would pass this stage and
+      fail codegen. analyze proves the emitted form is one IRx accepts.
+    parameters:
+      operator:
+        type: str
+      op_code:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    module = _module_from_source(source, bool_(i64, i64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == op_code
+    analyze(module)
+
+
+def test_a_chained_comparison_folds_into_a_conjunction() -> None:
+    """
+    title: A chain becomes the conjunction Python defines it as.
+    summary: >-
+      a < b < c means a < b and b < c, so it lowers to two comparisons joined
+      by &&. b is evaluated twice, which the subset makes safe: it admits no
+      expression with an effect that a second evaluation could repeat.
+    """
+    source = "def sample(a, b, c):\n    return a < b < c\n"
+    module = _module_from_source(source, bool_(i64, i64, i64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == "&&"
+    assert isinstance(returned.lhs, astx.BinaryOp)
+    assert returned.lhs.op_code == "<"
+    assert isinstance(returned.rhs, astx.BinaryOp)
+    assert returned.rhs.op_code == "<"
+    analyze(module)
+
+
+def test_a_comparison_lowers_its_operands_at_their_own_type() -> None:
+    """
+    title: An operand is not lowered at the type of the comparison.
+    summary: >-
+      The expected type at a comparison is the bool the comparison yields, and
+      lowering the literal in ``a < 3`` against it would ask for 3 as a bool
+      and refuse a correct program. The operands' own type is used instead.
+    """
+    source = "def sample(a):\n    return a < 3\n"
+    module = _module_from_source(source, bool_(i64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.rhs, astx.LiteralInt64)
+    analyze(module)
+
+
+def test_a_comparison_lowers_its_operands_at_the_wider_type() -> None:
+    """
+    title: Mixed operands compare at a type that can hold both.
+    summary: >-
+      An integer literal compared against a float parameter is lowered as a
+      float, which is the promotion Python performs, rather than narrowing the
+      parameter to meet the literal.
+    """
+    source = "def sample(a):\n    return a < 3\n"
+    module = _module_from_source(source, bool_(f64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.rhs, astx.LiteralFloat64)
+
+
+@pytest.mark.parametrize(
+    ("literal", "sig_type", "expected"),
+    [
+        ("3", i32, astx.LiteralInt64),
+        ("1.5", f32, astx.LiteralFloat64),
+    ],
+)
+def test_a_narrow_parameter_compares_against_a_wide_literal(
+    literal: str, sig_type: SigType, expected: type[astx.Literal]
+) -> None:
+    """
+    title: A narrow parameter is widened to meet its literal, not the reverse.
+    summary: >-
+      Inference gives a bare literal the widest type of its kind, so an i32 or
+      f32 parameter is compared against an Int64 or Float64. That is the one
+      place a literal is deliberately not built at the parameter's width: a
+      comparison widens both sides rather than assigning to either, and IRx
+      inserts exactly this widening, which analyze proves it accepts.
+    parameters:
+      literal:
+        type: str
+      sig_type:
+        type: SigType
+      expected:
+        type: type[astx.Literal]
+    """
+    source = f"def sample(a):\n    return a < {literal}\n"
+    module = _module_from_source(source, bool_(sig_type))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.rhs, expected)
+    analyze(module)
+
+
+@pytest.mark.parametrize(
+    ("operator", "op_code"), [("and", "&&"), ("or", "||")]
+)
+def test_a_boolean_operator_lowers_to_a_binary_op(
+    operator: str, op_code: str
+) -> None:
+    """
+    title: and and or lower to the logical operators IRx implements.
+    parameters:
+      operator:
+        type: str
+      op_code:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    module = _module_from_source(source, bool_(bool_, bool_))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == op_code
+    analyze(module)
+
+
+def test_an_n_ary_boolean_expression_folds_left() -> None:
+    """
+    title: Three operands become two binary nodes, associating left.
+    summary: >-
+      ast holds and/or as one node over all its operands while astx's is
+      strictly binary, so the operands are folded in the order they were
+      written.
+    """
+    source = "def sample(a, b, c):\n    return a and b and c\n"
+    module = _module_from_source(source, bool_(bool_, bool_, bool_))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == "&&"
+    assert isinstance(returned.lhs, astx.BinaryOp)
+    assert returned.lhs.op_code == "&&"
+    assert isinstance(returned.rhs, astx.Variable)
+    assert returned.rhs.name == "c"
+
+
+@pytest.mark.parametrize(
+    ("operator", "name"),
+    [("is", "Is"), ("is not", "IsNot"), ("in", "In"), ("not in", "NotIn")],
+)
+def test_a_comparison_irx_lacks_is_rejected(operator: str, name: str) -> None:
+    """
+    title: A comparison with no IRx op_code is refused, not emitted.
+    summary: >-
+      Validation rejects all four before lowering runs, so these are reached
+      only through the public entry point; none has an operator to lower onto.
+    parameters:
+      operator:
+        type: str
+      name:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_(i64, i64))
+    assert f"cannot lower the {name} comparison" in str(excinfo.value)
+
+
+def test_a_negated_bool_literal_is_rejected() -> None:
+    """
+    title: -True is refused rather than folded to an integer.
+    summary: >-
+      bool is a subclass of int and negating one in Python yields an int, so
+      folding -True would put an Int64 literal where the user wrote a bool and
+      slip past the bool-before-int check every other literal path makes.
+    """
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source("def sample():\n    return -True\n", i64())
+    assert "cannot lower a negated bool literal" in str(excinfo.value)
+
+
+def test_a_name_that_is_not_a_parameter_cannot_be_typed() -> None:
+    """
+    title: Inference refuses a name it has no type for.
+    summary: >-
+      Validation rejects a free variable before lowering runs, so this is
+      reached only through the public entry point; inferring some default type
+      for it would compile a program against a type the name does not have.
+    """
+    source = "def sample(a):\n    return a < missing\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_(i64))
+    assert "it is not a parameter" in str(excinfo.value)
+
+
+def test_an_expression_with_no_inference_overload_fails_closed() -> None:
+    """
+    title: Inference refuses a node it has no rule for.
+    summary: >-
+      Inference and lowering cover the same expressions, so a node reaching
+      inference without a rule means the two have drifted apart.
+    """
+    source = "def sample(a):\n    return a < (1 if a else 2)\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_(i64))
+    assert "cannot infer the type of a IfExp expression" in str(excinfo.value)
+
+
+def test_a_literal_of_no_supported_kind_cannot_be_typed() -> None:
+    """
+    title: Inference refuses a literal kind the subset does not admit.
+    summary: >-
+      Validation rejects a string before lowering runs; inference must not
+      assign it a numeric type on the way past.
+    """
+    source = "def sample(a):\n    return a < 'x'\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_(i64))
+    assert "cannot infer the type of a str literal" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("def sample(a):\n    return a == True\n", astx.LiteralBoolean),
+        ("def sample(a):\n    return a == 1.5\n", astx.LiteralFloat64),
+    ],
+)
+def test_a_literal_operand_is_typed_by_its_python_kind(
+    source: str, expected: type[astx.Literal]
+) -> None:
+    """
+    title: A literal standing alone is inferred at the widest type of its kind.
+    summary: >-
+      Nothing in the comparison declares a type for it, so Python's own notion
+      of the literal's type is all there is to go on: its floats are doubles,
+      and a bool is a bool rather than the integer it can stand in for.
+    parameters:
+      source:
+        type: str
+      expected:
+        type: type[astx.Literal]
+    """
+    module = _module_from_source(source, bool_(bool_))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.rhs, expected)
+
+
+def test_an_arithmetic_operand_is_typed_from_its_own_operands() -> None:
+    """
+    title: A comparison against an arithmetic expression infers through it.
+    summary: >-
+      The float parameter inside the sum makes the whole sum a float, so the
+      integer literal it is compared against is lowered as one too.
+    """
+    source = "def sample(a, b):\n    return a + 1 < b\n"
+    module = _module_from_source(source, bool_(f64, f64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.lhs, astx.BinaryOp)
+    assert isinstance(returned.lhs.rhs, astx.LiteralFloat64)
+
+
+def test_a_negated_operand_keeps_the_type_it_negates() -> None:
+    """
+    title: Unary minus does not change the type inference sees.
+    """
+    source = "def sample(a):\n    return -1 < a\n"
+    module = _module_from_source(source, bool_(f64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.lhs, astx.LiteralFloat64)
+
+
+@pytest.mark.parametrize(
+    ("source", "signature"),
+    [
+        ("def sample(a):\n    return (not a) == a\n", bool_(bool_)),
+        ("def sample(a, b):\n    return a + (not b)\n", i64(i64, bool_)),
+    ],
+)
+def test_a_unary_operand_of_a_binary_operator_is_rejected(
+    source: str, signature: Signature
+) -> None:
+    """
+    title: not in either operand position is refused with a location.
+    summary: >-
+      astx requires a DataType on both operands of a binary operator and gives
+      its UnaryOp the generic ExprType, so building one raises a bare Exception
+      out of astx with nothing pointing at the user's code. Refusing here
+      reports it the way every other unlowerable expression is reported. The
+      arithmetic form reaches the same wall without this stage lowering
+      comparisons at all, so the refusal covers a path that predates them.
+    parameters:
+      source:
+        type: str
+      signature:
+        type: Signature
+    """
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, signature)
+    assert "cannot lower a unary operation" in str(excinfo.value)
+
+
+def test_a_not_expression_is_inferred_as_a_bool() -> None:
+    """
+    title: not makes its operand's type irrelevant to what it yields.
+    summary: >-
+      Checked on the inference rule directly, because astx cannot yet hold a
+      unary operation as the operand of a binary one, so there is no expression
+      this stage can build that would show the inferred type instead.
+    """
+    source = "def sample(a):\n    return not a\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    lowerer = lowering.Lowerer(extracted, bool_(i64))
+    returned = node.body[0]
+    assert isinstance(returned, ast.Return)
+    assert returned.value is not None
+    assert lowerer.infer(returned.value) == bool_
+
+
+def test_a_comparison_operand_is_typed_as_a_bool() -> None:
+    """
+    title: A comparison nested in an and/or is inferred as the bool it is.
+    """
+    source = "def sample(a, b):\n    return a < b and b < a\n"
+    module = _module_from_source(source, bool_(i64, i64))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == "&&"
+    analyze(module)
+
+
+def test_a_nested_boolean_operand_is_typed_as_a_bool() -> None:
+    """
+    title: An and/or nested in another is inferred as the bool it is.
+    """
+    source = "def sample(a, b, c):\n    return a and (b or c)\n"
+    module = _module_from_source(source, bool_(bool_, bool_, bool_))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert returned.op_code == "&&"
+    assert isinstance(returned.rhs, astx.BinaryOp)
+    assert returned.rhs.op_code == "||"
+    analyze(module)
+
+
+def test_negating_a_literal_of_no_supported_kind_is_rejected() -> None:
+    """
+    title: Only a numeric literal can be folded into a negative one.
+    summary: >-
+      Validation rejects a string before lowering runs, so this is reached only
+      through the public entry point; it must not be folded into a value
+      negation does not define.
+    """
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source("def sample():\n    return -'x'\n", i64())
+    assert "IRx implements no unary minus" in str(excinfo.value)
+
+
+def test_the_comparison_tables_agree_with_irx() -> None:
+    """
+    title: Every comparison and logical op_code is one IRx resolves.
+    summary: >-
+      IRx returns a type for exactly the op codes it implements and None for
+      anything else, so an entry added here without one there would lower
+      quietly and fail semantic analysis. Read from IRx directly so the check
+      cannot go stale.
+    """
+    for op_code in lowering._COMPARE_OPS.values():
+        assert (
+            binary_result_type(op_code, astx.Int64(), astx.Int64()) is not None
+        )
+    for op_code in lowering._BOOL_OPS.values():
+        assert (
+            binary_result_type(op_code, astx.Boolean(), astx.Boolean())
+            is not None
+        )
+
+
+def test_every_sig_type_is_ranked() -> None:
+    """
+    title: Every type this stage can lower can also be ranked against another.
+    summary: >-
+      The two tables are keyed the same way, so a scalar added to one without
+      the other would lower on its own and fail the moment it met a different
+      type.
+    """
+    assert set(lowering._TYPE_RANK) == set(_SCALARS)
+
+
 def test_the_operator_tables_agree_with_astx() -> None:
     """
     title: Every operator this stage emits is one astx specializes.
@@ -680,14 +1129,14 @@ def test_an_unlowerable_expression_fails_closed() -> None:
     """
     title: An expression with no overload is reported, not skipped.
     summary: >-
-      Validation admits comparisons, so reaching one here means the subset and
-      the lowerer disagree. They lower with the conditionals that give them a
-      purpose, not before.
+      Validation rejects a conditional expression before lowering runs, so this
+      is reached only through the public entry point; an expression this stage
+      cannot map must be refused rather than dropped from the body.
     """
-    source = "def sample(x):\n    return x < 1\n"
+    source = "def sample(x):\n    return 1 if x else 2\n"
     with pytest.raises(LoweringError) as excinfo:
-        _from_source(source, bool_(i64))
-    assert "cannot lower a Compare expression" in str(excinfo.value)
+        _from_source(source, i64(bool_))
+    assert "cannot lower a IfExp expression" in str(excinfo.value)
 
 
 def test_a_standalone_expression_statement_is_rejected() -> None:

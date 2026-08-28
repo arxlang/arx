@@ -7,12 +7,14 @@ summary: >-
   IRx compiles. Dispatch is by node type via plum, matching the visitor
   convention used across the Arx packages. What is lowered so far is the
   function shell — the prototype and its typed arguments — and straight-line
-  expressions: literals, parameter reads, and the arithmetic, unary and
-  comparison-free operators astx shares with IRx. Local assignments and control
-  flow follow in later stages, and until then any other construct fails closed
-  with LoweringError. The decorator does not call this stage yet, so nothing
-  here changes what @jit does; that wiring lands once the lowerer covers the
-  whole validated subset.
+  expressions: literals, parameter reads, and the arithmetic, unary, comparison
+  and logical operators astx shares with IRx. Where an expression is not
+  lowered at a type its context declares, the type is inferred from the
+  expression itself, over a scope holding the parameters. Local assignments and
+  control flow follow in later stages, and until then any other construct fails
+  closed with LoweringError. The decorator does not call this stage yet, so
+  nothing here changes what @jit does; that wiring lands once the lowerer
+  covers the whole validated subset.
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ from public import private
 from arxjit.errors import LoweringError
 from arxjit.locations import diagnostic
 from arxjit.source import ExtractedSource
-from arxjit.types import Signature, SigType
+from arxjit.types import Signature, SigType, bool_, f64, i64
 
 
 class _Scalar(NamedTuple):
@@ -118,6 +120,40 @@ _BINARY_OPS: dict[type[ast.operator], str] = {
 # the only way a negative constant can arrive: see _literal_value.
 _UNARY_OPS: dict[type[ast.unaryop], str] = {
     ast.Not: "!",
+}
+
+# A comparison lowers to a BinaryOp carrying the comparison's op_code, not to
+# astx.CompareOp: IRx's visitor for that node is _not_implemented, so a
+# CompareOp would pass this stage and fail codegen, while these six op codes
+# are exactly the ones irx.analysis.typing resolves to Boolean.
+# test_the_comparison_tables_agree_with_irx pins the two together.
+_COMPARE_OPS: dict[type[ast.cmpop], str] = {
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+}
+
+# IRx accepts both spellings of each logical operator; the symbolic ones are
+# used here because that is what its BinaryOp handler special-cases first.
+_BOOL_OPS: dict[type[ast.boolop], str] = {
+    ast.And: "&&",
+    ast.Or: "||",
+}
+
+# How a type is chosen for operands of differing types: the wider one wins, so
+# a comparison happens at a type that can represent both sides rather than one
+# that silently narrows either. Float outranks every integer because mixing the
+# two compares as float, which is the promotion Python itself performs, and
+# bool ranks lowest because it is the only type every other one can hold.
+_TYPE_RANK: dict[str, int] = {
+    "Boolean": 0,
+    "Int32": 1,
+    "Int64": 2,
+    "Float32": 3,
+    "Float64": 4,
 }
 
 # IRx reserves "main" as the program entry point and requires it to take no
@@ -258,6 +294,9 @@ class Lowerer:
         description: The extracted source being lowered.
       signature:
         description: The signature reconciliation settled on.
+      scope:
+        type: dict[str, SigType]
+        description: The type of every name a lowered expression may read.
     """
 
     def __init__(
@@ -267,6 +306,13 @@ class Lowerer:
     ) -> None:
         """
         title: Initialize the lowerer for one function.
+        summary: >-
+          The scope is seeded with the parameters, which are the only names in
+          it until local assignment is lowered. It is built by zipping rather
+          than after checking the two agree, so that constructing a lowerer
+          raises nothing: a signature that declares the wrong number of types
+          is arguments' to report, and it says so in terms of the whole
+          function rather than of whichever parameter ran out first.
         parameters:
           extracted:
             type: ExtractedSource
@@ -275,6 +321,13 @@ class Lowerer:
         """
         self.extracted = extracted
         self.signature = signature
+        args = extracted.node.args
+        self.scope: dict[str, SigType] = {
+            parameter.arg: sig_type
+            for parameter, sig_type in zip(
+                [*args.posonlyargs, *args.args], signature.arg_types
+            )
+        }
 
     @private
     def reject(self, node: ast.AST, message: str) -> LoweringError:
@@ -494,11 +547,11 @@ class Lowerer:
                 f"cannot lower the {name} operator: astx has no binary"
                 " operator for it",
             )
-        return astx.BinaryOp(
+        return self._binary(
+            node,
             op_code,
             self.expression(node.left, expected),
             self.expression(node.right, expected),
-            loc=location(self.extracted, node),
         )
 
     @dispatch
@@ -528,10 +581,22 @@ class Lowerer:
             return self.expression(node.operand, expected)
         if isinstance(node.op, ast.USub):
             operand = node.operand
-            if isinstance(operand, ast.Constant) and isinstance(
-                operand.value, (int, float)
-            ):
-                return self.literal(node, -operand.value, expected)
+            if isinstance(operand, ast.Constant):
+                value = operand.value
+                # bool before int, as everywhere a literal's kind is read:
+                # bool is a subclass of int, but negating one in Python
+                # produces an integer, so folding -True would put an int
+                # literal where the user wrote a bool and lose the rejection
+                # _literal_value would otherwise make.
+                if isinstance(value, bool):
+                    raise self.reject(
+                        node,
+                        "cannot lower a negated bool literal: negation makes"
+                        " it an integer, changing the type of a value the"
+                        " subset admits only as a bool",
+                    )
+                if isinstance(value, (int, float)):
+                    return self.literal(node, -value, expected)
             raise self.reject(
                 node,
                 "cannot lower a negation of anything but a literal: IRx"
@@ -550,6 +615,303 @@ class Lowerer:
             self.expression(node.operand, expected),
             loc=location(self.extracted, node),
         )
+
+    @dispatch
+    def expression(
+        self, node: ast.Compare, expected: SigType
+    ) -> astx.DataType:
+        """
+        title: Lower a comparison, chained or not.
+        summary: >-
+          The operands are lowered at one type wide enough for all of them
+          rather than at the expected type, which is the type of the comparison
+          itself and never the type being compared: at a condition the expected
+          type is bool, and lowering ``a < 3`` there would ask for 3 as a bool.
+          A chain becomes the conjunction Python defines it as, which repeats
+          every operand but the outermost. That is safe only because the subset
+          admits no expression with an effect to repeat, so an operand
+          evaluated twice yields what it yielded the first time.
+        parameters:
+          node:
+            type: ast.Compare
+          expected:
+            type: SigType
+            description: Unused; a comparison is a bool whatever its context.
+        returns:
+          type: astx.DataType
+        raises:
+          LoweringError: If a comparison operator has no IRx equivalent.
+        """
+        del expected
+        operands = [node.left, *node.comparators]
+        operand_type = self.infer(operands[0])
+        for operand in operands[1:]:
+            operand_type = self._wider(operand_type, self.infer(operand))
+        links = []
+        for index, operator in enumerate(node.ops):
+            op_code = _COMPARE_OPS.get(type(operator))
+            if op_code is None:
+                name = type(operator).__name__
+                raise self.reject(
+                    node,
+                    f"cannot lower the {name} comparison: IRx has no"
+                    " comparison operator for it",
+                )
+            links.append(
+                self._binary(
+                    node,
+                    op_code,
+                    self.expression(operands[index], operand_type),
+                    self.expression(operands[index + 1], operand_type),
+                )
+            )
+        return self._fold(node, links, "&&")
+
+    @dispatch
+    def expression(self, node: ast.BoolOp, expected: SigType) -> astx.DataType:
+        """
+        title: Lower an and/or expression.
+        summary: >-
+          Each operand is lowered at its own type rather than at the expected
+          one, for the same reason a comparison's are. Python's and/or evaluate
+          to one of their operands rather than to a bool; lowered they are the
+          logical operators IRx implements, which is the same answer only where
+          the operands are already bools, and IRx is what rejects the operands
+          where they are not. An n-ary chain folds left into the binary node
+          IRx has, which preserves the order the operands were written in. The
+          operator is looked up without a guard, unlike every other table here:
+          Python defines exactly two boolean operators and both are mapped, so
+          there is no third one a lookup could fail to find.
+        parameters:
+          node:
+            type: ast.BoolOp
+          expected:
+            type: SigType
+            description: Unused; the result is logical whatever its context.
+        returns:
+          type: astx.DataType
+        """
+        del expected
+        op_code = _BOOL_OPS[type(node.op)]
+        values = [
+            self.expression(value, self.infer(value)) for value in node.values
+        ]
+        return self._fold(node, values, op_code)
+
+    @private
+    def _binary(
+        self,
+        node: ast.expr,
+        op_code: str,
+        lhs: astx.DataType,
+        rhs: astx.DataType,
+    ) -> astx.BinaryOp:
+        """
+        title: Build a binary node, refusing operands astx cannot combine.
+        summary: >-
+          astx requires both operands of a binary operator to carry a DataType,
+          and its UnaryOp carries the generic ExprType instead, so ``not a`` in
+          either position raises a bare Exception out of astx's constructor
+          with no source location on it. Checked here so the user gets a
+          located diagnostic naming the construct, the way every other
+          unlowerable expression is reported. The real fix belongs upstream in
+          astx, where giving UnaryOp the type of its operand would make these
+          compose.
+        parameters:
+          node:
+            type: ast.expr
+          op_code:
+            type: str
+          lhs:
+            type: astx.DataType
+          rhs:
+            type: astx.DataType
+        returns:
+          type: astx.BinaryOp
+        raises:
+          LoweringError: If either operand carries no astx DataType.
+        """
+        for operand in (lhs, rhs):
+            if not isinstance(operand.type_, astx.DataType):
+                raise self.reject(
+                    node,
+                    "cannot lower a unary operation as the operand of a"
+                    " binary one: astx gives it no data type to combine",
+                )
+        return astx.BinaryOp(
+            op_code, lhs, rhs, loc=location(self.extracted, node)
+        )
+
+    @private
+    def _fold(
+        self, node: ast.expr, operands: list[astx.DataType], op_code: str
+    ) -> astx.DataType:
+        """
+        title: Combine two or more operands with one left-associative operator.
+        summary: >-
+          astx's binary node takes exactly two operands, so anything wider has
+          to be folded; left is the association Python gives both the operators
+          this serves.
+        parameters:
+          node:
+            type: ast.expr
+          operands:
+            type: list[astx.DataType]
+          op_code:
+            type: str
+        returns:
+          type: astx.DataType
+        """
+        folded = operands[0]
+        for operand in operands[1:]:
+            folded = self._binary(node, op_code, folded, operand)
+        return folded
+
+    @private
+    def _wider(self, left: SigType, right: SigType) -> SigType:
+        """
+        title: Pick the type that can represent both of two operand types.
+        summary: >-
+          Every type reaching here is ranked: a signature naming one this stage
+          has no astx class for is refused while the prototype is built, before
+          any of the body is lowered, and test_every_sig_type_is_ranked pins
+          the rank table to the scalar table so the two cannot drift apart.
+        parameters:
+          left:
+            type: SigType
+          right:
+            type: SigType
+        returns:
+          type: SigType
+        """
+        return max((left, right), key=lambda t: _TYPE_RANK[t.astx_name])
+
+    @dispatch
+    def infer(self, node: ast.AST) -> SigType:
+        """
+        title: Refuse to infer a type for a node with no overload.
+        summary: >-
+          Fails closed for the same reason the lowering dispatch does: this
+          runs on a validated function, so a node reaching here means inference
+          and the subset disagree, which must surface rather than resolve to
+          some default type the expression does not have.
+        parameters:
+          node:
+            type: ast.AST
+        returns:
+          type: SigType
+        raises:
+          LoweringError: Always.
+        """
+        kind = type(node).__name__
+        raise self.reject(
+            node, f"cannot infer the type of a {kind} expression"
+        )
+
+    @dispatch
+    def infer(self, node: ast.Constant) -> SigType:
+        """
+        title: Infer the type of a literal from its Python kind.
+        summary: >-
+          The widest type of each kind, because a literal standing on its own
+          has only Python's own notion of its type to go on: Python integers
+          are unbounded and its floats are doubles. A narrower type is still
+          reached wherever the context declares one, which is what the expected
+          type passed to lowering is for.
+        parameters:
+          node:
+            type: ast.Constant
+        returns:
+          type: SigType
+        raises:
+          LoweringError: If the literal is of no kind the subset admits.
+        """
+        value = node.value
+        if isinstance(value, bool):
+            return bool_
+        if isinstance(value, int):
+            return i64
+        if isinstance(value, float):
+            return f64
+        name = type(value).__name__
+        raise self.reject(node, f"cannot infer the type of a {name} literal")
+
+    @dispatch
+    def infer(self, node: ast.Name) -> SigType:
+        """
+        title: Infer the type of a name from the scope it was declared in.
+        parameters:
+          node:
+            type: ast.Name
+        returns:
+          type: SigType
+        raises:
+          LoweringError: If the name is not in scope.
+        """
+        sig_type = self.scope.get(node.id)
+        if sig_type is None:
+            raise self.reject(
+                node,
+                f"cannot infer the type of {node.id!r}: it is not a parameter"
+                " of this function",
+            )
+        return sig_type
+
+    @dispatch
+    def infer(self, node: ast.BinOp) -> SigType:
+        """
+        title: Infer the type of an arithmetic operation from its operands.
+        parameters:
+          node:
+            type: ast.BinOp
+        returns:
+          type: SigType
+        """
+        return self._wider(self.infer(node.left), self.infer(node.right))
+
+    @dispatch
+    def infer(self, node: ast.UnaryOp) -> SigType:
+        """
+        title: Infer the type of a unary operation.
+        summary: >-
+          Only ``not`` changes the type of what it is applied to; the other
+          operators the subset admits leave it as it was.
+        parameters:
+          node:
+            type: ast.UnaryOp
+        returns:
+          type: SigType
+        """
+        if isinstance(node.op, ast.Not):
+            return bool_
+        return self.infer(node.operand)
+
+    @dispatch
+    def infer(self, node: ast.Compare) -> SigType:
+        """
+        title: Infer the type of a comparison.
+        parameters:
+          node:
+            type: ast.Compare
+        returns:
+          type: SigType
+        """
+        return bool_
+
+    @dispatch
+    def infer(self, node: ast.BoolOp) -> SigType:
+        """
+        title: Infer the type of an and/or expression.
+        summary: >-
+          Logical once lowered, whatever its operands were, which is what makes
+          it usable as a condition.
+        parameters:
+          node:
+            type: ast.BoolOp
+        returns:
+          type: SigType
+        """
+        return bool_
 
     def _literal_value(
         self,
