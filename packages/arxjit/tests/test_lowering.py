@@ -3,6 +3,7 @@ title: Tests for Python AST to ASTx lowering.
 """
 
 import ast
+import ctypes
 
 from typing import Any, Callable
 
@@ -13,9 +14,9 @@ import pytest
 from arxjit import lowering
 from arxjit.errors import LoweringError
 from arxjit.lowering import (
-    _MANGLE_PREFIX,
-    _RESERVED_NAMES,
-    _SCALARS,
+    MANGLE_PREFIX,
+    RESERVED_NAMES,
+    SCALARS,
     location,
     lower,
 )
@@ -25,7 +26,10 @@ from astx.base import NO_SOURCE_LOCATION
 from astx.binary_op import _BINARY_OP_TYPES
 from irx.analysis.api import analyze
 from irx.analysis.registry import MAIN_FUNCTION_NAME
+from irx.analysis.types import common_numeric_type
 from irx.analysis.typing import binary_result_type
+from irx.builder import Builder
+from llvmlite import binding as llvm
 
 PyFunc = Callable[..., Any]
 
@@ -108,6 +112,58 @@ def _returned(module: astx.Module) -> astx.DataType:
     (returned,) = definition.body.nodes
     assert isinstance(returned, astx.FunctionReturn)
     return returned.value
+
+
+def execute_bool(module: astx.Module, symbol: str) -> bool:
+    """
+    title: Translate and JIT-run a no-argument Boolean function.
+    parameters:
+      module:
+        type: astx.Module
+      symbol:
+        type: str
+    returns:
+      type: bool
+    """
+    llvm_module = llvm.parse_assembly(Builder().translate(module))
+    llvm_module.verify()
+    target_machine = llvm.Target.from_default_triple().create_target_machine()
+    engine = llvm.create_mcjit_compiler(
+        llvm.parse_assembly(""), target_machine
+    )
+    engine.add_module(llvm_module)
+    engine.finalize_object()
+    address = engine.get_function_address(symbol)
+    assert address != 0
+    function = ctypes.CFUNCTYPE(ctypes.c_bool)(address)
+    return bool(function())
+
+
+def execute_bool_f32(module: astx.Module, symbol: str, value: float) -> bool:
+    """
+    title: Translate and JIT-run a one-Float32-argument Boolean function.
+    parameters:
+      module:
+        type: astx.Module
+      symbol:
+        type: str
+      value:
+        type: float
+    returns:
+      type: bool
+    """
+    llvm_module = llvm.parse_assembly(Builder().translate(module))
+    llvm_module.verify()
+    target_machine = llvm.Target.from_default_triple().create_target_machine()
+    engine = llvm.create_mcjit_compiler(
+        llvm.parse_assembly(""), target_machine
+    )
+    engine.add_module(llvm_module)
+    engine.finalize_object()
+    address = engine.get_function_address(symbol)
+    assert address != 0
+    function = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_float)(address)
+    return bool(function(value))
 
 
 def test_literal_return_lowers_to_a_single_function_module() -> None:
@@ -275,7 +331,7 @@ def test_a_function_named_main_does_not_become_the_irx_entry_point() -> None:
     )
     definition = module.block[0]
     assert isinstance(definition, astx.FunctionDef)
-    assert definition.prototype.name == f"{_MANGLE_PREFIX}main"
+    assert definition.prototype.name == f"{MANGLE_PREFIX}main"
     assert module.name == "main"
     analyze(module)
 
@@ -300,7 +356,7 @@ def test_reserved_names_match_irx() -> None:
       adds an entry point, this fails rather than the mangling quietly ceasing
       to apply.
     """
-    assert MAIN_FUNCTION_NAME in _RESERVED_NAMES
+    assert MAIN_FUNCTION_NAME in RESERVED_NAMES
 
 
 @pytest.mark.parametrize(
@@ -645,24 +701,19 @@ def test_a_comparison_lowers_to_a_binary_op(
     analyze(module)
 
 
-def test_a_chained_comparison_folds_into_a_conjunction() -> None:
+def test_a_chained_comparison_is_rejected_until_it_can_short_circuit() -> None:
     """
-    title: A chain becomes the conjunction Python defines it as.
+    title: A chained comparison is not lowered to eager logical operations.
     summary: >-
-      a < b < c means a < b and b < c, so it lowers to two comparisons joined
-      by &&. b is evaluated twice, which the subset makes safe: it admits no
-      expression with an effect that a second evaluation could repeat.
+      The final modulo must be unreachable after the first comparison is false.
+      Until lowering can express that control flow and evaluate middle operands
+      exactly once, rejecting the expression preserves Python semantics.
     """
-    source = "def sample(a, b, c):\n    return a < b < c\n"
-    module = _module_from_source(source, bool_(i64, i64, i64))
-    returned = _returned(module)
-    assert isinstance(returned, astx.BinaryOp)
-    assert returned.op_code == "&&"
-    assert isinstance(returned.lhs, astx.BinaryOp)
-    assert returned.lhs.op_code == "<"
-    assert isinstance(returned.rhs, astx.BinaryOp)
-    assert returned.rhs.op_code == "<"
-    analyze(module)
+    source = "def sample():\n    return 0 > 1 > (1 % 0)\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_())
+    assert "chained comparison" in str(excinfo.value)
+    assert "short-circuit control flow" in str(excinfo.value)
 
 
 def test_a_comparison_lowers_its_operands_at_their_own_type() -> None:
@@ -731,44 +782,35 @@ def test_a_narrow_parameter_compares_against_a_wide_literal(
 
 
 @pytest.mark.parametrize(
-    ("operator", "op_code"), [("and", "&&"), ("or", "||")]
+    "expression",
+    ["False and (1 % 0 > 0)", "True or (1 % 0 > 0)"],
 )
-def test_a_boolean_operator_lowers_to_a_binary_op(
-    operator: str, op_code: str
+def test_a_boolean_operator_is_rejected_until_it_can_short_circuit(
+    expression: str,
 ) -> None:
     """
-    title: and and or lower to the logical operators IRx implements.
-    parameters:
-      operator:
-        type: str
-      op_code:
-        type: str
-    """
-    source = f"def sample(a, b):\n    return a {operator} b\n"
-    module = _module_from_source(source, bool_(bool_, bool_))
-    returned = _returned(module)
-    assert isinstance(returned, astx.BinaryOp)
-    assert returned.op_code == op_code
-    analyze(module)
-
-
-def test_an_n_ary_boolean_expression_folds_left() -> None:
-    """
-    title: Three operands become two binary nodes, associating left.
+    title: and/or are not lowered to eager logical binary operations.
     summary: >-
-      ast holds and/or as one node over all its operands while astx's is
-      strictly binary, so the operands are folded in the order they were
-      written.
+      The modulo is unreachable in Python for both expressions. Rejecting them
+      is safer than emitting an IRx logical operation that evaluates it.
+    parameters:
+      expression:
+        type: str
+    """
+    source = f"def sample():\n    return {expression}\n"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_())
+    assert "short-circuit control flow" in str(excinfo.value)
+
+
+def test_an_n_ary_boolean_expression_is_rejected() -> None:
+    """
+    title: Wider and/or expressions remain rejected too.
     """
     source = "def sample(a, b, c):\n    return a and b and c\n"
-    module = _module_from_source(source, bool_(bool_, bool_, bool_))
-    returned = _returned(module)
-    assert isinstance(returned, astx.BinaryOp)
-    assert returned.op_code == "&&"
-    assert isinstance(returned.lhs, astx.BinaryOp)
-    assert returned.lhs.op_code == "&&"
-    assert isinstance(returned.rhs, astx.Variable)
-    assert returned.rhs.name == "c"
+    with pytest.raises(LoweringError) as excinfo:
+        _from_source(source, bool_(bool_, bool_, bool_))
+    assert "short-circuit control flow" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
@@ -889,6 +931,42 @@ def test_an_arithmetic_operand_is_typed_from_its_own_operands() -> None:
     assert isinstance(returned.lhs.rhs, astx.LiteralFloat64)
 
 
+@pytest.mark.parametrize("expression", ["1 / 2 > 0", "3 / 2 == 1.5"])
+def test_integer_true_division_executes_with_python_semantics(
+    expression: str,
+) -> None:
+    """
+    title: Integer true division produces a floating-point result at runtime.
+    parameters:
+      expression:
+        type: str
+    """
+    source = f"def sample():\n    return {expression}\n"
+    module = _module_from_source(source, bool_())
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.lhs, astx.BinaryOp)
+    assert returned.lhs.op_code == "/"
+    assert isinstance(returned.lhs.lhs, astx.LiteralFloat64)
+    assert isinstance(returned.lhs.rhs, astx.LiteralFloat64)
+    assert execute_bool(module, "sample__sample") is True
+
+
+def test_int64_and_float32_comparison_executes_at_float64() -> None:
+    """
+    title: Int64 literals are not rounded to Float32 before comparison.
+    summary: >-
+      16,777,217 is the first integer Float32 cannot represent exactly. A
+      Float32 value of 16,777,216 must remain less than that literal.
+    """
+    source = "def sample(a):\n    return a < 16777217\n"
+    module = _module_from_source(source, bool_(f32))
+    returned = _returned(module)
+    assert isinstance(returned, astx.BinaryOp)
+    assert isinstance(returned.rhs, astx.LiteralFloat64)
+    assert execute_bool_f32(module, "sample__sample", 16777216.0) is True
+
+
 def test_a_negated_operand_keeps_the_type_it_negates() -> None:
     """
     title: Unary minus does not change the type inference sees.
@@ -951,30 +1029,57 @@ def test_a_not_expression_is_inferred_as_a_bool() -> None:
     assert lowerer.infer(returned.value) == bool_
 
 
-def test_a_comparison_operand_is_typed_as_a_bool() -> None:
+def test_a_comparison_is_inferred_as_a_bool() -> None:
     """
-    title: A comparison nested in an and/or is inferred as the bool it is.
+    title: A comparison result is inferred independently of its operands.
     """
-    source = "def sample(a, b):\n    return a < b and b < a\n"
-    module = _module_from_source(source, bool_(i64, i64))
-    returned = _returned(module)
-    assert isinstance(returned, astx.BinaryOp)
-    assert returned.op_code == "&&"
-    analyze(module)
+    source = "def sample(a, b):\n    return a < b\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    lowerer = lowering.Lowerer(extracted, bool_(i64, i64))
+    returned = node.body[0]
+    assert isinstance(returned, ast.Return)
+    assert returned.value is not None
+    assert lowerer.infer(returned.value) == bool_
 
 
-def test_a_nested_boolean_operand_is_typed_as_a_bool() -> None:
+@pytest.mark.parametrize(
+    ("source", "signature"),
+    [
+        (
+            "def sample(a, b):\n    return a < b and b < a\n",
+            bool_(i64, i64),
+        ),
+        (
+            "def sample(a, b, c):\n    return a and (b or c)\n",
+            bool_(bool_, bool_, bool_),
+        ),
+    ],
+)
+def test_a_boolean_expression_is_inferred_as_a_bool(
+    source: str, signature: Signature
+) -> None:
     """
-    title: An and/or nested in another is inferred as the bool it is.
+    title: Boolean inference remains available while lowering is deferred.
+    parameters:
+      source:
+        type: str
+      signature:
+        type: Signature
     """
-    source = "def sample(a, b, c):\n    return a and (b or c)\n"
-    module = _module_from_source(source, bool_(bool_, bool_, bool_))
-    returned = _returned(module)
-    assert isinstance(returned, astx.BinaryOp)
-    assert returned.op_code == "&&"
-    assert isinstance(returned.rhs, astx.BinaryOp)
-    assert returned.rhs.op_code == "||"
-    analyze(module)
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    lowerer = lowering.Lowerer(extracted, signature)
+    returned = node.body[0]
+    assert isinstance(returned, ast.Return)
+    assert returned.value is not None
+    assert lowerer.infer(returned.value) == bool_
 
 
 def test_negating_a_literal_of_no_supported_kind_is_rejected() -> None:
@@ -992,33 +1097,55 @@ def test_negating_a_literal_of_no_supported_kind_is_rejected() -> None:
 
 def test_the_comparison_tables_agree_with_irx() -> None:
     """
-    title: Every comparison and logical op_code is one IRx resolves.
+    title: Every comparison op_code is one IRx resolves.
     summary: >-
       IRx returns a type for exactly the op codes it implements and None for
       anything else, so an entry added here without one there would lower
       quietly and fail semantic analysis. Read from IRx directly so the check
       cannot go stale.
     """
-    for op_code in lowering._COMPARE_OPS.values():
+    for op_code in lowering.COMPARE_OPS.values():
         assert (
             binary_result_type(op_code, astx.Int64(), astx.Int64()) is not None
         )
-    for op_code in lowering._BOOL_OPS.values():
-        assert (
-            binary_result_type(op_code, astx.Boolean(), astx.Boolean())
-            is not None
-        )
 
 
-def test_every_sig_type_is_ranked() -> None:
+def test_numeric_promotion_agrees_with_irx_for_every_type_pair() -> None:
     """
-    title: Every type this stage can lower can also be ranked against another.
+    title: ArxJIT and IRx choose the same type for every numeric pair.
     summary: >-
-      The two tables are keyed the same way, so a scalar added to one without
-      the other would lower on its own and fail the moment it met a different
-      type.
+      In particular, Int32/Float32 stays Float32 while Int64/Float32 becomes
+      Float64. Checking the full product prevents either policy drifting.
     """
-    assert set(lowering._TYPE_RANK) == set(_SCALARS)
+    numeric_types = (i32, i64, f32, f64)
+    source = "def sample():\n    return 1\n"
+    node = ast.parse(source).body[0]
+    assert isinstance(node, ast.FunctionDef)
+    extracted = ExtractedSource(
+        filename="<test>", source=source, lineno=1, node=node
+    )
+    lowerer = lowering.Lowerer(extracted, i64())
+    for left in numeric_types:
+        for right in numeric_types:
+            promoted = lowerer.promote(left, right)
+            expected = common_numeric_type(
+                lowering.astx_type(left), lowering.astx_type(right)
+            )
+            assert expected is not None
+            assert type(lowering.astx_type(promoted)) is type(expected)
+
+
+def test_every_scalar_pair_has_a_frontend_promotion() -> None:
+    """
+    title: Every scalar pair this stage can infer has a promotion entry.
+    """
+    scalar_names = set(SCALARS)
+    expected = {
+        frozenset({left, right})
+        for left in scalar_names
+        for right in scalar_names
+    }
+    assert set(lowering.PROMOTIONS) == expected
 
 
 def test_the_operator_tables_agree_with_astx() -> None:
@@ -1030,7 +1157,7 @@ def test_the_operator_tables_agree_with_astx() -> None:
       quietly and only fail in codegen. Read from astx directly so the check
       cannot go stale.
     """
-    for op_code in lowering._BINARY_OPS.values():
+    for op_code in lowering.BINARY_OPS.values():
         assert op_code in _BINARY_OP_TYPES
 
 
@@ -1252,7 +1379,7 @@ def test_every_sig_type_is_mapped(sig_type: SigType) -> None:
       sig_type:
         type: SigType
     """
-    mapped = _SCALARS[sig_type.astx_name]
+    mapped = SCALARS[sig_type.astx_name]
     assert (mapped.bounds is not None) == (mapped.kind == "int")
 
 
@@ -1269,4 +1396,4 @@ def test_the_sig_type_list_covers_the_public_type_api() -> None:
         for name in arxjit.__all__
         if isinstance(value := getattr(arxjit, name), SigType)
     }
-    assert exported == set(_SCALARS)
+    assert exported == set(SCALARS)

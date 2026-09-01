@@ -7,14 +7,15 @@ summary: >-
   IRx compiles. Dispatch is by node type via plum, matching the visitor
   convention used across the Arx packages. What is lowered so far is the
   function shell — the prototype and its typed arguments — and straight-line
-  expressions: literals, parameter reads, and the arithmetic, unary, comparison
-  and logical operators astx shares with IRx. Where an expression is not
-  lowered at a type its context declares, the type is inferred from the
-  expression itself, over a scope holding the parameters. Local assignments and
-  control flow follow in later stages, and until then any other construct fails
-  closed with LoweringError. The decorator does not call this stage yet, so
-  nothing here changes what @jit does; that wiring lands once the lowerer
-  covers the whole validated subset.
+  expressions: literals, parameter reads, arithmetic and unary operators, and
+  single comparisons. Boolean operators and chained comparisons fail closed
+  until control-flow lowering can preserve their short-circuit behavior. Where
+  an expression is not lowered at a type its context declares, the type is
+  inferred from the expression itself, over a scope holding the parameters.
+  Local assignments and control flow follow in later stages, and until then any
+  other construct fails closed with LoweringError. The decorator does not call
+  this stage yet, so nothing here changes what @jit does; that wiring lands
+  once the lowerer covers the whole validated subset.
 """
 
 from __future__ import annotations
@@ -39,10 +40,11 @@ from public import private
 from arxjit.errors import LoweringError
 from arxjit.locations import diagnostic
 from arxjit.source import ExtractedSource
-from arxjit.types import Signature, SigType, bool_, f64, i64
+from arxjit.types import Signature, SigType, bool_, f32, f64, i32, i64
 
 
-class _Scalar(NamedTuple):
+@private
+class Scalar(NamedTuple):
     """
     title: Everything this stage needs to lower a value at one scalar type.
     summary: >-
@@ -86,16 +88,14 @@ class _Scalar(NamedTuple):
 # literal the user wrote perfectly correctly. Python integers are also
 # unbounded, so a value has to be checked against the range it is lowered
 # into rather than assumed to fit.
-_SCALARS: dict[str, _Scalar] = {
-    "Boolean": _Scalar(astx.Boolean, astx.LiteralBoolean, "bool", None, False),
-    "Float32": _Scalar(astx.Float32, astx.LiteralFloat32, "float", None, True),
-    "Float64": _Scalar(
-        astx.Float64, astx.LiteralFloat64, "float", None, False
-    ),
-    "Int32": _Scalar(
+SCALARS: dict[str, Scalar] = {
+    "Boolean": Scalar(astx.Boolean, astx.LiteralBoolean, "bool", None, False),
+    "Float32": Scalar(astx.Float32, astx.LiteralFloat32, "float", None, True),
+    "Float64": Scalar(astx.Float64, astx.LiteralFloat64, "float", None, False),
+    "Int32": Scalar(
         astx.Int32, astx.LiteralInt32, "int", (-(2**31), 2**31 - 1), False
     ),
-    "Int64": _Scalar(
+    "Int64": Scalar(
         astx.Int64, astx.LiteralInt64, "int", (-(2**63), 2**63 - 1), False
     ),
 }
@@ -106,7 +106,7 @@ _SCALARS: dict[str, _Scalar] = {
 # operators with no entry there, ast.FloorDiv and ast.Pow, so they are
 # rejected here rather than lowered into a module that cannot be compiled;
 # test_the_operator_tables_agree_with_astx pins this table to astx's.
-_BINARY_OPS: dict[type[ast.operator], str] = {
+BINARY_OPS: dict[type[ast.operator], str] = {
     ast.Add: "+",
     ast.Sub: "-",
     ast.Mult: "*",
@@ -117,8 +117,8 @@ _BINARY_OPS: dict[type[ast.operator], str] = {
 # Unary is narrower still. IRx implements "!", "++" and "--" and nothing
 # else, so there is no operator to lower a negation onto; ast.UAdd needs none,
 # being the identity. A negation of a literal is folded instead, which is also
-# the only way a negative constant can arrive: see _literal_value.
-_UNARY_OPS: dict[type[ast.unaryop], str] = {
+# the only way a negative constant can arrive: see literal_value.
+UNARY_OPS: dict[type[ast.unaryop], str] = {
     ast.Not: "!",
 }
 
@@ -127,7 +127,7 @@ _UNARY_OPS: dict[type[ast.unaryop], str] = {
 # CompareOp would pass this stage and fail codegen, while these six op codes
 # are exactly the ones irx.analysis.typing resolves to Boolean.
 # test_the_comparison_tables_agree_with_irx pins the two together.
-_COMPARE_OPS: dict[type[ast.cmpop], str] = {
+COMPARE_OPS: dict[type[ast.cmpop], str] = {
     ast.Eq: "==",
     ast.NotEq: "!=",
     ast.Lt: "<",
@@ -136,24 +136,27 @@ _COMPARE_OPS: dict[type[ast.cmpop], str] = {
     ast.GtE: ">=",
 }
 
-# IRx accepts both spellings of each logical operator; the symbolic ones are
-# used here because that is what its BinaryOp handler special-cases first.
-_BOOL_OPS: dict[type[ast.boolop], str] = {
-    ast.And: "&&",
-    ast.Or: "||",
-}
-
-# How a type is chosen for operands of differing types: the wider one wins, so
-# a comparison happens at a type that can represent both sides rather than one
-# that silently narrows either. Float outranks every integer because mixing the
-# two compares as float, which is the promotion Python itself performs, and
-# bool ranks lowest because it is the only type every other one can hold.
-_TYPE_RANK: dict[str, int] = {
-    "Boolean": 0,
-    "Int32": 1,
-    "Int64": 2,
-    "Float32": 3,
-    "Float64": 4,
+# Pairwise rather than ranked because Float32 can represent Int32 but cannot
+# represent every Int64. Numeric entries mirror IRx's canonical promotion
+# policy; the Boolean entries preserve the existing frontend inference rule
+# until validation can distinguish Python's numeric bool behavior from IRx's
+# strict logical Boolean type.
+PROMOTIONS: dict[frozenset[str], SigType] = {
+    frozenset({"Boolean"}): bool_,
+    frozenset({"Boolean", "Int32"}): i32,
+    frozenset({"Boolean", "Int64"}): i64,
+    frozenset({"Boolean", "Float32"}): f32,
+    frozenset({"Boolean", "Float64"}): f64,
+    frozenset({"Int32"}): i32,
+    frozenset({"Int32", "Int64"}): i64,
+    frozenset({"Int32", "Float32"}): f32,
+    frozenset({"Int32", "Float64"}): f64,
+    frozenset({"Int64"}): i64,
+    frozenset({"Int64", "Float32"}): f64,
+    frozenset({"Int64", "Float64"}): f64,
+    frozenset({"Float32"}): f32,
+    frozenset({"Float32", "Float64"}): f64,
+    frozenset({"Float64"}): f64,
 }
 
 # IRx reserves "main" as the program entry point and requires it to take no
@@ -161,8 +164,8 @@ _TYPE_RANK: dict[str, int] = {
 # cannot be emitted under its own name. Kept as a literal rather than imported
 # from irx.analysis.registry so that importing arxjit does not pull in the
 # compiler; test_reserved_names_match_irx pins the two together.
-_RESERVED_NAMES = frozenset({"main"})
-_MANGLE_PREFIX = "arxjit_"
+RESERVED_NAMES = frozenset({"main"})
+MANGLE_PREFIX = "arxjit_"
 
 
 @private
@@ -189,18 +192,18 @@ def location(extracted: ExtractedSource, node: ast.AST) -> astx.SourceLocation:
 
 
 @private
-def scalar(sig_type: SigType) -> _Scalar:
+def scalar(sig_type: SigType) -> Scalar:
     """
     title: Look up everything needed to lower values at a signature type.
     parameters:
       sig_type:
         type: SigType
     returns:
-      type: _Scalar
+      type: Scalar
     raises:
       LoweringError: If the type names an astx class this stage does not map.
     """
-    mapped = _SCALARS.get(sig_type.astx_name)
+    mapped = SCALARS.get(sig_type.astx_name)
     if mapped is None:
         raise LoweringError(
             f"cannot lower the {sig_type} type: no astx class is mapped for"
@@ -240,8 +243,8 @@ def function_name(python_name: str) -> str:
     returns:
       type: str
     """
-    if python_name in _RESERVED_NAMES:
-        return f"{_MANGLE_PREFIX}{python_name}"
+    if python_name in RESERVED_NAMES:
+        return f"{MANGLE_PREFIX}{python_name}"
     return python_name
 
 
@@ -497,7 +500,7 @@ class Lowerer:
           LoweringError: If the value's kind or magnitude does not fit.
         """
         target = scalar(expected)
-        checked = self._literal_value(node, value, expected, target)
+        checked = self.literal_value(node, value, expected, target)
         return target.literal(checked, loc=location(self.extracted, node))
 
     @dispatch
@@ -539,7 +542,7 @@ class Lowerer:
         raises:
           LoweringError: If the operator has no astx equivalent.
         """
-        op_code = _BINARY_OPS.get(type(node.op))
+        op_code = BINARY_OPS.get(type(node.op))
         if op_code is None:
             name = type(node.op).__name__
             raise self.reject(
@@ -547,7 +550,7 @@ class Lowerer:
                 f"cannot lower the {name} operator: astx has no binary"
                 " operator for it",
             )
-        return self._binary(
+        return self.binary(
             node,
             op_code,
             self.expression(node.left, expected),
@@ -587,7 +590,7 @@ class Lowerer:
                 # bool is a subclass of int, but negating one in Python
                 # produces an integer, so folding -True would put an int
                 # literal where the user wrote a bool and lose the rejection
-                # _literal_value would otherwise make.
+                # literal_value would otherwise make.
                 if isinstance(value, bool):
                     raise self.reject(
                         node,
@@ -602,7 +605,7 @@ class Lowerer:
                 "cannot lower a negation of anything but a literal: IRx"
                 " implements no unary minus",
             )
-        op_code = _UNARY_OPS.get(type(node.op))
+        op_code = UNARY_OPS.get(type(node.op))
         if op_code is None:
             name = type(node.op).__name__
             raise self.reject(
@@ -621,16 +624,14 @@ class Lowerer:
         self, node: ast.Compare, expected: SigType
     ) -> astx.DataType:
         """
-        title: Lower a comparison, chained or not.
+        title: Lower a single comparison.
         summary: >-
           The operands are lowered at one type wide enough for all of them
           rather than at the expected type, which is the type of the comparison
           itself and never the type being compared: at a condition the expected
           type is bool, and lowering ``a < 3`` there would ask for 3 as a bool.
-          A chain becomes the conjunction Python defines it as, which repeats
-          every operand but the outermost. That is safe only because the subset
-          admits no expression with an effect to repeat, so an operand
-          evaluated twice yields what it yielded the first time.
+          Chained comparisons are rejected until this stage can represent their
+          short-circuit control flow and evaluate each middle operand once.
         parameters:
           node:
             type: ast.Compare
@@ -640,48 +641,41 @@ class Lowerer:
         returns:
           type: astx.DataType
         raises:
-          LoweringError: If a comparison operator has no IRx equivalent.
+          LoweringError: >-
+            If the comparison is chained or its operator has no IRx equivalent.
         """
         del expected
-        operands = [node.left, *node.comparators]
-        operand_type = self.infer(operands[0])
-        for operand in operands[1:]:
-            operand_type = self._wider(operand_type, self.infer(operand))
-        links = []
-        for index, operator in enumerate(node.ops):
-            op_code = _COMPARE_OPS.get(type(operator))
-            if op_code is None:
-                name = type(operator).__name__
-                raise self.reject(
-                    node,
-                    f"cannot lower the {name} comparison: IRx has no"
-                    " comparison operator for it",
-                )
-            links.append(
-                self._binary(
-                    node,
-                    op_code,
-                    self.expression(operands[index], operand_type),
-                    self.expression(operands[index + 1], operand_type),
-                )
+        if len(node.ops) > 1:
+            raise self.reject(
+                node,
+                "cannot lower a chained comparison without short-circuit"
+                " control flow",
             )
-        return self._fold(node, links, "&&")
+
+        operator = node.ops[0]
+        op_code = COMPARE_OPS.get(type(operator))
+        if op_code is None:
+            name = type(operator).__name__
+            raise self.reject(
+                node,
+                f"cannot lower the {name} comparison: IRx has no"
+                " comparison operator for it",
+            )
+        comparator = node.comparators[0]
+        operand_type = self.promote(
+            self.infer(node.left), self.infer(comparator)
+        )
+        return self.binary(
+            node,
+            op_code,
+            self.expression(node.left, operand_type),
+            self.expression(comparator, operand_type),
+        )
 
     @dispatch
     def expression(self, node: ast.BoolOp, expected: SigType) -> astx.DataType:
         """
-        title: Lower an and/or expression.
-        summary: >-
-          Each operand is lowered at its own type rather than at the expected
-          one, for the same reason a comparison's are. Python's and/or evaluate
-          to one of their operands rather than to a bool; lowered they are the
-          logical operators IRx implements, which is the same answer only where
-          the operands are already bools, and IRx is what rejects the operands
-          where they are not. An n-ary chain folds left into the binary node
-          IRx has, which preserves the order the operands were written in. The
-          operator is looked up without a guard, unlike every other table here:
-          Python defines exactly two boolean operators and both are mapped, so
-          there is no third one a lookup could fail to find.
+        title: Reject and/or until short-circuit control flow is lowerable.
         parameters:
           node:
             type: ast.BoolOp
@@ -690,16 +684,18 @@ class Lowerer:
             description: Unused; the result is logical whatever its context.
         returns:
           type: astx.DataType
+        raises:
+          LoweringError: Always.
         """
         del expected
-        op_code = _BOOL_OPS[type(node.op)]
-        values = [
-            self.expression(value, self.infer(value)) for value in node.values
-        ]
-        return self._fold(node, values, op_code)
+        operator = "and" if isinstance(node.op, ast.And) else "or"
+        raise self.reject(
+            node,
+            f"cannot lower {operator} without short-circuit control flow",
+        )
 
     @private
-    def _binary(
+    def binary(
         self,
         node: ast.expr,
         op_code: str,
@@ -743,39 +739,13 @@ class Lowerer:
         )
 
     @private
-    def _fold(
-        self, node: ast.expr, operands: list[astx.DataType], op_code: str
-    ) -> astx.DataType:
-        """
-        title: Combine two or more operands with one left-associative operator.
-        summary: >-
-          astx's binary node takes exactly two operands, so anything wider has
-          to be folded; left is the association Python gives both the operators
-          this serves.
-        parameters:
-          node:
-            type: ast.expr
-          operands:
-            type: list[astx.DataType]
-          op_code:
-            type: str
-        returns:
-          type: astx.DataType
-        """
-        folded = operands[0]
-        for operand in operands[1:]:
-            folded = self._binary(node, op_code, folded, operand)
-        return folded
-
-    @private
-    def _wider(self, left: SigType, right: SigType) -> SigType:
+    def promote(self, left: SigType, right: SigType) -> SigType:
         """
         title: Pick the type that can represent both of two operand types.
         summary: >-
-          Every type reaching here is ranked: a signature naming one this stage
-          has no astx class for is refused while the prototype is built, before
-          any of the body is lowered, and test_every_sig_type_is_ranked pins
-          the rank table to the scalar table so the two cannot drift apart.
+          Promotion is pairwise because a single ordering cannot describe the
+          Int64/Float32 pair: IRx promotes it to Float64, while Int32/Float32
+          remains Float32.
         parameters:
           left:
             type: SigType
@@ -784,7 +754,7 @@ class Lowerer:
         returns:
           type: SigType
         """
-        return max((left, right), key=lambda t: _TYPE_RANK[t.astx_name])
+        return PROMOTIONS[frozenset({left.astx_name, right.astx_name})]
 
     @dispatch
     def infer(self, node: ast.AST) -> SigType:
@@ -860,14 +830,21 @@ class Lowerer:
     @dispatch
     def infer(self, node: ast.BinOp) -> SigType:
         """
-        title: Infer the type of an arithmetic operation from its operands.
+        title: Infer an arithmetic result from its operator and operands.
+        summary: >-
+          True division produces a float even when both operands are integers.
+          Other arithmetic operators use the same pairwise numeric promotion
+          policy as IRx.
         parameters:
           node:
             type: ast.BinOp
         returns:
           type: SigType
         """
-        return self._wider(self.infer(node.left), self.infer(node.right))
+        inferred = self.promote(self.infer(node.left), self.infer(node.right))
+        if isinstance(node.op, ast.Div) and inferred in (bool_, i32, i64):
+            return f64
+        return inferred
 
     @dispatch
     def infer(self, node: ast.UnaryOp) -> SigType:
@@ -913,12 +890,13 @@ class Lowerer:
         """
         return bool_
 
-    def _literal_value(
+    @private
+    def literal_value(
         self,
         node: ast.expr,
         value: object,
         expected: SigType,
-        target: _Scalar,
+        target: Scalar,
     ) -> bool | int | float:
         """
         title: Check a literal against its expected type and convert it.
@@ -939,7 +917,7 @@ class Lowerer:
           expected:
             type: SigType
           target:
-            type: _Scalar
+            type: Scalar
         returns:
           type: bool | int | float
         raises:
@@ -954,9 +932,9 @@ class Lowerer:
         if isinstance(value, int):
             # The one kind that also belongs in a float context.
             if target.kind == "int":
-                return self._in_range(node, value, expected, target)
+                return self.in_range(node, value, expected, target)
             if target.kind == "float":
-                return self._as_float(node, value, expected, target)
+                return self.as_float(node, value, expected, target)
             raise self.reject(
                 node, f"cannot lower an int literal as {expected}"
             )
@@ -965,16 +943,17 @@ class Lowerer:
                 raise self.reject(
                     node, f"cannot lower a float literal as {expected}"
                 )
-            return self._as_float(node, value, expected, target)
+            return self.as_float(node, value, expected, target)
         name = type(value).__name__
         raise self.reject(node, f"cannot lower a {name} literal to astx")
 
-    def _in_range(
+    @private
+    def in_range(
         self,
         node: ast.expr,
         value: int,
         expected: SigType,
-        target: _Scalar,
+        target: Scalar,
     ) -> int:
         """
         title: Check an integer literal fits the integer type it lowers into.
@@ -990,7 +969,7 @@ class Lowerer:
           expected:
             type: SigType
           target:
-            type: _Scalar
+            type: Scalar
         returns:
           type: int
         raises:
@@ -1004,12 +983,13 @@ class Lowerer:
             )
         return value
 
-    def _as_float(
+    @private
+    def as_float(
         self,
         node: ast.expr,
         value: int | float,
         expected: SigType,
-        target: _Scalar,
+        target: Scalar,
     ) -> float:
         """
         title: Convert a numeric literal to the float type it lowers into.
@@ -1025,7 +1005,7 @@ class Lowerer:
           expected:
             type: SigType
           target:
-            type: _Scalar
+            type: Scalar
         returns:
           type: float
         raises:
@@ -1060,7 +1040,7 @@ class Lowerer:
           LoweringError: If the argument shape or count cannot be lowered.
         """
         args = self.extracted.node.args
-        self._check_shape(args)
+        self.check_shape(args)
         parameters = [*args.posonlyargs, *args.args]
         declared = len(self.signature.arg_types)
         if declared != len(parameters):
@@ -1084,7 +1064,8 @@ class Lowerer:
             )
         )
 
-    def _check_shape(self, args: ast.arguments) -> None:
+    @private
+    def check_shape(self, args: ast.arguments) -> None:
         """
         title: Reject an argument shape astx.Arguments cannot express.
         summary: >-
