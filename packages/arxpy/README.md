@@ -63,6 +63,9 @@ executable). The API creates no implicit persistent temporary directory.
 Compiler operations are serialized across instances while the Arx frontend uses
 its process-wide input buffer; repeated calls use fresh lowering builders. `run`
 never invokes a shell, and a program's non-zero exit status is returned as data.
+Public annotations are enforced at runtime, including every collection item. The
+`args` input must be a non-string sequence of strings; scalar `str` and `bytes`
+values are rejected rather than expanded character by character.
 
 Use the `arx` CLI for test discovery and CLI-oriented workflows that the facade
 does not yet model.

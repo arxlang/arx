@@ -149,8 +149,9 @@ python -c "from irx.builder.runtime.record_batch import ensure_record_batch_shar
 Generated libraries live in an ABI-scoped user cache rather than the installed
 package tree. Set `IRX_NATIVE_CACHE_DIR` to select the cache root or
 `IRX_RECORD_BATCH_LIBRARY` to load/build one exact path. Concurrent builders use
-an atomic lock, outputs are replaced atomically, and the loader rejects a
-missing or mismatched ABI query before binding other symbols.
+an OS-managed file lock that is released if its owner terminates, outputs are
+replaced atomically, and the loader rejects a missing or mismatched ABI query
+before binding other symbols.
 
 This is RecordBatch IPC support, not an implementation of the Arrow C Stream
 `ArrowArrayStream` interface.

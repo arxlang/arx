@@ -9,6 +9,7 @@ import math
 import shutil
 import subprocess
 import sys
+import time as time_module
 
 from datetime import date, datetime, time, timezone
 from pathlib import Path
@@ -169,24 +170,161 @@ def test_record_batch_loader_rejects_missing_exact_override(
         record_batch_module._load_native_lib()
 
 
-def test_record_batch_build_lock_times_out_without_removing_owner_lock(
+def test_record_batch_build_lock_times_out_for_live_owner(
     tmp_path: Path,
 ) -> None:
     """
-    title: A competing native build times out without deleting another lock.
+    title: A competing native build times out while its owner is alive.
     parameters:
       tmp_path:
         type: Path
     """
     output = tmp_path / "libirx_record_batch.so"
     lock_path = output.with_name(f"{output.name}.lock")
-    lock_path.write_text("pid=another\n", encoding="utf-8")
+    ready_path = tmp_path / "lock-ready"
+    script = """
+import sys
+from pathlib import Path
+from irx.builder.runtime.record_batch import record_batch_build_lock
 
-    with pytest.raises(TimeoutError, match="native build lock"):
-        with record_batch_build_lock(output, timeout_seconds=0.0):
-            pytest.fail("a held build lock must not be acquired")
+with record_batch_build_lock(Path(sys.argv[1])):
+    Path(sys.argv[2]).write_text("locked", encoding="utf-8")
+    sys.stdin.read(1)
+"""
+    process = subprocess.Popen(
+        [sys.executable, "-c", script, str(output), str(ready_path)],
+        stdin=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time_module.monotonic() + 60.0
+        while not ready_path.is_file():
+            if process.poll() is not None:
+                assert process.stderr is not None
+                pytest.fail(
+                    "lock owner exited before acquiring the lock: "
+                    f"{process.stderr.read()}"
+                )
+            if time_module.monotonic() >= deadline:
+                pytest.fail("timed out waiting for the lock owner subprocess")
+            time_module.sleep(0.05)
+        with pytest.raises(TimeoutError, match="native build lock"):
+            with record_batch_build_lock(output, timeout_seconds=0.0):
+                pytest.fail("a held build lock must not be acquired")
+        assert lock_path.is_file()
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=10)
 
-    assert lock_path.read_text(encoding="utf-8") == "pid=another\n"
+
+def test_record_batch_build_lock_recovers_after_owner_exits(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: A killed lock owner cannot permanently disable native builds.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    output = tmp_path / "libirx_record_batch.so"
+    script = """
+import os
+import sys
+from pathlib import Path
+from irx.builder.runtime.record_batch import record_batch_build_lock
+
+with record_batch_build_lock(Path(sys.argv[1])):
+    print("locked", flush=True)
+    os._exit(0)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(output)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert completed.stdout.strip() == "locked"
+
+    build_calls: list[Path] = []
+
+    def fake_is_current(
+        output_path: Path | None = None,
+        cxx_binary: str = "c++",
+    ) -> bool:
+        """
+        title: Report the fixture library as stale.
+        parameters:
+          output_path:
+            type: Path | None
+          cxx_binary:
+            type: str
+        returns:
+          type: bool
+        """
+        del output_path, cxx_binary
+        return False
+
+    def fake_build(
+        output_path: Path | None = None,
+        build_dir: Path | None = None,
+        cxx_binary: str = "c++",
+    ) -> Path:
+        """
+        title: Materialize a fixture library after recovering the lock.
+        parameters:
+          output_path:
+            type: Path | None
+          build_dir:
+            type: Path | None
+          cxx_binary:
+            type: str
+        returns:
+          type: Path
+        """
+        del build_dir, cxx_binary
+        assert output_path is not None
+        output_path.write_bytes(b"fixture")
+        build_calls.append(output_path)
+        return output_path
+
+    monkeypatch.setattr(
+        record_batch_runtime,
+        "record_batch_shared_library_is_current",
+        fake_is_current,
+    )
+    monkeypatch.setattr(
+        record_batch_runtime,
+        "build_record_batch_shared_library",
+        fake_build,
+    )
+
+    assert ensure_record_batch_shared_library(output) == output
+    assert build_calls == [output]
+    assert output.read_bytes() == b"fixture"
+
+
+def test_record_batch_build_lock_ignores_untrusted_file_contents(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Lock ownership never depends on parseable lock-file contents.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    output = tmp_path / "libirx_record_batch.so"
+    lock_path = output.with_name(f"{output.name}.lock")
+    lock_path.write_text("not a pid or lease", encoding="utf-8")
+
+    with record_batch_build_lock(output, timeout_seconds=0.0):
+        assert lock_path.is_file()
+    assert lock_path.is_file()
 
 
 def test_record_batch_native_abi_version_matches_python_contract() -> None:

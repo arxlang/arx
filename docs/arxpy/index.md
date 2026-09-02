@@ -18,6 +18,7 @@ Implemented:
 - semantic checking and structured diagnostic translation
 - host LLVM IR, object, and executable artifacts
 - captured execution with arguments, environment, working directory, and timeout
+- runtime validation of public arguments and every collection item
 - serialized repeated/concurrent operations while the frontend uses global input
   state
 
@@ -71,7 +72,8 @@ defaults beside the source. No implicit persistent temporary directory is
 created. Compiler calls are safe to repeat and are serialized across instances
 because the current lexer reads a process-wide source buffer. Execution never
 uses a shell; a non-zero program exit is returned in `ExecutionResult` rather
-than raised.
+than raised. Command arguments must be supplied as a non-string sequence of
+strings; scalar `str` and `bytes` values are rejected.
 
 Use the [Arx CLI](../arx/compiler-cli.md) for compiler test discovery and other
 CLI-specific workflows. The [roadmap](../roadmap.md) tracks the remaining API

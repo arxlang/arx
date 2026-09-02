@@ -9,7 +9,6 @@ import json
 import os
 import shutil
 import subprocess
-import time
 
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -17,6 +16,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
+from filelock import FileLock
+from filelock import Timeout as FileLockTimeout
 from llvmlite import ir
 
 from irx.builder.runtime.arrowcpp import (
@@ -388,7 +389,11 @@ def record_batch_build_lock(
     timeout_seconds: float = 120.0,
 ) -> Iterator[None]:
     """
-    title: Serialize native library builds with an atomic lock file.
+    title: Serialize native library builds with an OS-managed file lock.
+    summary: >-
+      The lock file is a persistent rendezvous point, while ownership is held
+      by the operating system. Process termination therefore releases the lock
+      without trusting file contents, process identifiers, or cleanup code.
     parameters:
       output_path:
         type: Path
@@ -399,29 +404,15 @@ def record_batch_build_lock(
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = output_path.with_name(f"{output_path.name}.lock")
-    deadline = time.monotonic() + timeout_seconds
-    descriptor: int | None = None
-    while descriptor is None:
-        try:
-            descriptor = os.open(
-                lock_path,
-                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                0o600,
-            )
-        except FileExistsError:
-            if time.monotonic() >= deadline:
-                raise TimeoutError(
-                    "timed out waiting for the RecordBatch native build "
-                    f"lock '{lock_path}'"
-                ) from None
-            time.sleep(0.05)
-
+    lock = FileLock(lock_path, timeout=timeout_seconds)
     try:
-        os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
-        yield
-    finally:
-        os.close(descriptor)
-        lock_path.unlink(missing_ok=True)
+        with lock:
+            yield
+    except FileLockTimeout:
+        raise TimeoutError(
+            "timed out waiting for the RecordBatch native build "
+            f"lock '{lock_path}'"
+        ) from None
 
 
 @typechecked

@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import venv
 
 from dataclasses import dataclass
@@ -358,7 +358,6 @@ def _install_wheels(
 def run_smoke(
     workspace: Path,
     wheels: tuple[Path, ...],
-    work_dir: Path,
     current_environment: bool,
 ) -> None:
     """
@@ -368,36 +367,41 @@ def run_smoke(
         type: Path
       wheels:
         type: tuple[Path, Ellipsis]
-      work_dir:
-        type: Path
       current_environment:
         type: bool
     """
-    del workspace
-    if work_dir.exists():
-        shutil.rmtree(work_dir)
-    work_dir.mkdir(parents=True)
-    python, env = _install_wheels(wheels, work_dir, current_environment)
+    smoke_root = workspace / ".tmp" / "wheel-smoke"
+    smoke_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix="run-",
+        dir=smoke_root,
+    ) as temporary_path:
+        work_dir = Path(temporary_path)
+        python, env = _install_wheels(
+            wheels,
+            work_dir,
+            current_environment,
+        )
 
-    sources = {
-        "main.x": SCALAR_MODULE,
-        "support.x": SUPPORT_MODULE,
-        "class_smoke.x": CLASS_MODULE,
-        "list_smoke.x": LIST_MODULE,
-        "tensor_smoke.x": TENSOR_MODULE,
-    }
-    for name, content in sources.items():
-        (work_dir / name).write_text(content, encoding="utf-8")
-    driver = work_dir / "smoke.py"
-    driver.write_text(SMOKE_DRIVER, encoding="utf-8")
-    env["IRX_NATIVE_CACHE_DIR"] = str(work_dir / "native-cache")
-    subprocess.run(
-        [str(python), str(driver)],
-        cwd=work_dir,
-        env=env,
-        check=True,
-        timeout=300,
-    )
+        sources = {
+            "main.x": SCALAR_MODULE,
+            "support.x": SUPPORT_MODULE,
+            "class_smoke.x": CLASS_MODULE,
+            "list_smoke.x": LIST_MODULE,
+            "tensor_smoke.x": TENSOR_MODULE,
+        }
+        for name, content in sources.items():
+            (work_dir / name).write_text(content, encoding="utf-8")
+        driver = work_dir / "smoke.py"
+        driver.write_text(SMOKE_DRIVER, encoding="utf-8")
+        env["IRX_NATIVE_CACHE_DIR"] = str(work_dir / "native-cache")
+        subprocess.run(
+            [str(python), str(driver)],
+            cwd=work_dir,
+            env=env,
+            check=True,
+            timeout=300,
+        )
 
 
 def main() -> int:
@@ -417,11 +421,6 @@ def main() -> int:
         action="store_true",
         help="reuse installed third-party dependencies (not for CI/release)",
     )
-    parser.add_argument(
-        "--work-dir",
-        type=Path,
-        default=Path(".tmp/wheel-smoke"),
-    )
     args = parser.parse_args()
 
     workspace = Path(__file__).resolve().parents[1]
@@ -430,7 +429,6 @@ def main() -> int:
         run_smoke(
             workspace,
             wheels,
-            (workspace / args.work_dir).resolve(),
             args.current_environment,
         )
     print("wheel artifact audit passed")

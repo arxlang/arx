@@ -23,17 +23,23 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+import astx
+
+from public import private, public
+from typeguard import TypeCheckError
+
 from arxpy.diagnostics import Diagnostic, DiagnosticSeverity
 from arxpy.errors import CompileError, ExecutionError, ParseError
+from arxpy.typecheck import typechecked
 
 if TYPE_CHECKING:
-    import astx
-
     from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 
-_COMPILER_LOCK = threading.RLock()
+COMPILER_LOCK = threading.RLock()
 
 
+@public
+@typechecked
 class ArtifactKind(Enum):
     """
     title: Kind of output requested from the compiler.
@@ -45,7 +51,9 @@ class ArtifactKind(Enum):
     EXECUTABLE = "executable"
 
 
-@dataclass(frozen=True)
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
 class ParsedProgram:
     """
     title: Parsed Arx source plus stable source attribution.
@@ -71,8 +79,46 @@ class ParsedProgram:
     origin: Path | None = None
     has_source_imports: bool = False
 
+    def __init__(
+        self,
+        module: astx.Module,
+        source: str,
+        filename: str,
+        module_name: str,
+        origin: Path | None = None,
+        has_source_imports: bool = False,
+    ) -> None:
+        """
+        title: Initialize an attributed parsed program.
+        parameters:
+          module:
+            type: astx.Module
+          source:
+            type: str
+          filename:
+            type: str
+          module_name:
+            type: str
+          origin:
+            type: Path | None
+          has_source_imports:
+            type: bool
+        """
+        object.__setattr__(self, "module", module)
+        object.__setattr__(self, "source", source)
+        object.__setattr__(self, "filename", filename)
+        object.__setattr__(self, "module_name", module_name)
+        object.__setattr__(self, "origin", origin)
+        object.__setattr__(
+            self,
+            "has_source_imports",
+            has_source_imports,
+        )
 
-@dataclass(frozen=True)
+
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
 class CheckedProgram:
     """
     title: Program that completed semantic analysis successfully.
@@ -83,8 +129,19 @@ class CheckedProgram:
 
     parsed: ParsedProgram
 
+    def __init__(self, parsed: ParsedProgram) -> None:
+        """
+        title: Initialize a semantically checked program.
+        parameters:
+          parsed:
+            type: ParsedProgram
+        """
+        object.__setattr__(self, "parsed", parsed)
 
-@dataclass(frozen=True)
+
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
 class CompilationArtifact:
     """
     title: Materialized compiler output.
@@ -101,8 +158,30 @@ class CompilationArtifact:
     path: Path | None
     llvm_ir: str | None = None
 
+    def __init__(
+        self,
+        kind: ArtifactKind,
+        path: Path | None,
+        llvm_ir: str | None = None,
+    ) -> None:
+        """
+        title: Initialize a materialized compiler artifact.
+        parameters:
+          kind:
+            type: ArtifactKind
+          path:
+            type: Path | None
+          llvm_ir:
+            type: str | None
+        """
+        object.__setattr__(self, "kind", kind)
+        object.__setattr__(self, "path", path)
+        object.__setattr__(self, "llvm_ir", llvm_ir)
 
-@dataclass(frozen=True)
+
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
 class ExecutionResult:
     """
     title: Captured result of running an executable artifact.
@@ -119,8 +198,25 @@ class ExecutionResult:
     stdout: str
     stderr: str
 
+    def __init__(self, exit_code: int, stdout: str, stderr: str) -> None:
+        """
+        title: Initialize a captured execution result.
+        parameters:
+          exit_code:
+            type: int
+          stdout:
+            type: str
+          stderr:
+            type: str
+        """
+        object.__setattr__(self, "exit_code", exit_code)
+        object.__setattr__(self, "stdout", stdout)
+        object.__setattr__(self, "stderr", stderr)
 
-def _api_diagnostic(
+
+@private
+@typechecked
+def api_diagnostic(
     message: str,
     *,
     filename: str,
@@ -148,7 +244,9 @@ def _api_diagnostic(
     )
 
 
-def _compile_diagnostics(
+@private
+@typechecked
+def compile_diagnostics(
     error: object,
     *,
     filename: str,
@@ -163,18 +261,20 @@ def _compile_diagnostics(
     returns:
       type: list[Diagnostic]
     """
-    from arxpy.diagnostics import _from_irx
+    from arxpy.diagnostics import from_irx
 
     diagnostic = getattr(error, "diagnostic", None)
     if diagnostic is not None:
-        return [_from_irx(diagnostic, filename=filename)]
+        return [from_irx(diagnostic, filename=filename)]
 
     bag = getattr(error, "diagnostics", None)
     records = getattr(bag, "diagnostics", ())
-    return [_from_irx(record, filename=filename) for record in records]
+    return [from_irx(record, filename=filename) for record in records]
 
 
-def _has_imports(module: astx.Module) -> bool:
+@private
+@typechecked
+def has_imports(module: astx.Module) -> bool:
     """
     title: Return whether a parsed module contains source imports.
     parameters:
@@ -183,15 +283,15 @@ def _has_imports(module: astx.Module) -> bool:
     returns:
       type: bool
     """
-    import astx
-
     return any(
         isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
         for node in module.nodes
     )
 
 
-def _has_main(module: astx.Module) -> bool:
+@private
+@typechecked
+def has_main(module: astx.Module) -> bool:
     """
     title: Return whether a module defines the executable entry point.
     parameters:
@@ -200,15 +300,15 @@ def _has_main(module: astx.Module) -> bool:
     returns:
       type: bool
     """
-    import astx
-
     return any(
         isinstance(node, astx.FunctionDef) and node.prototype.name == "main"
         for node in module.nodes
     )
 
 
-def _program_context(
+@private
+@typechecked
+def program_context(
     program: ParsedProgram,
 ) -> tuple[ParsedModule, ImportResolver] | None:
     """
@@ -219,10 +319,10 @@ def _program_context(
     returns:
       type: tuple[ParsedModule, ImportResolver] | None
     """
-    if not _has_imports(program.module):
+    if not has_imports(program.module):
         return None
     if program.origin is None and program.has_source_imports:
-        diagnostic = _api_diagnostic(
+        diagnostic = api_diagnostic(
             "imports from in-memory source require a filesystem origin",
             filename=program.filename,
             code="ARXPY-IMPORT-001",
@@ -246,7 +346,9 @@ def _program_context(
     return root, resolver
 
 
-def _resolved_output_path(
+@private
+@typechecked
+def resolved_output_path(
     program: ParsedProgram,
     kind: ArtifactKind,
     output: str | Path | None,
@@ -266,7 +368,7 @@ def _resolved_output_path(
     if output is not None:
         return Path(output).expanduser().resolve()
     if program.origin is None:
-        diagnostic = _api_diagnostic(
+        diagnostic = api_diagnostic(
             "an output path is required when compiling in-memory source",
             filename=program.filename,
             code="ARXPY-OUTPUT-001",
@@ -277,6 +379,8 @@ def _resolved_output_path(
     return program.origin.with_suffix(suffix).resolve()
 
 
+@public
+@typechecked
 class Compiler:
     """
     title: Reusable facade for parse, check, compile, and run operations.
@@ -312,14 +416,14 @@ class Compiler:
         from arx.lexer import Lexer
         from arx.parser import Parser
 
-        from arxpy.diagnostics import _from_arx_error
+        from arxpy.diagnostics import from_arx_error
 
         try:
-            with _COMPILER_LOCK:
+            with COMPILER_LOCK:
                 ArxIO.string_to_buffer(source)
                 module = Parser().parse(Lexer().lex(), module_name)
         except FrontendError as error:
-            diagnostic = _from_arx_error(error, filename=filename)
+            diagnostic = from_arx_error(error, filename=filename)
             raise ParseError(
                 "source parsing failed",
                 diagnostics=[diagnostic],
@@ -330,7 +434,7 @@ class Compiler:
             source=source,
             filename=filename,
             module_name=module_name,
-            has_source_imports=_has_imports(module),
+            has_source_imports=has_imports(module),
         )
 
     def parse_file(self, path: str | Path) -> ParsedProgram:
@@ -348,7 +452,7 @@ class Compiler:
         try:
             source = source_path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as error:
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 str(error),
                 filename=str(source_path),
                 code="ARXPY-SOURCE-001",
@@ -386,16 +490,16 @@ class Compiler:
         from irx.diagnostics import IRxDiagnosticError, SemanticError
 
         try:
-            with _COMPILER_LOCK:
+            with COMPILER_LOCK:
                 inject_ambient_builtin_imports(program.module)
-                context = _program_context(program)
+                context = program_context(program)
                 if context is None:
                     analyze_module(program.module)
                 else:
                     root, resolver = context
                     analyze_modules(root, resolver)
         except (IRxDiagnosticError, SemanticError) as error:
-            diagnostics = _compile_diagnostics(
+            diagnostics = compile_diagnostics(
                 error,
                 filename=program.filename,
             )
@@ -439,20 +543,20 @@ class Compiler:
         if requested_kind is ArtifactKind.AUTO:
             requested_kind = (
                 ArtifactKind.EXECUTABLE
-                if _has_main(parsed.module)
+                if has_main(parsed.module)
                 else ArtifactKind.OBJECT
             )
-        if requested_kind is ArtifactKind.EXECUTABLE and not _has_main(
+        if requested_kind is ArtifactKind.EXECUTABLE and not has_main(
             parsed.module
         ):
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 "an executable requires a top-level 'main' function",
                 filename=parsed.filename,
                 code="ARXPY-ENTRY-001",
             )
             raise CompileError("compilation failed", diagnostics=[diagnostic])
         if link_mode not in {"auto", "pie", "no-pie"}:
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 "link_mode must be one of: auto, pie, no-pie",
                 filename=parsed.filename,
                 code="ARXPY-LINK-MODE-001",
@@ -460,9 +564,9 @@ class Compiler:
             raise CompileError("compilation failed", diagnostics=[diagnostic])
 
         try:
-            with _COMPILER_LOCK:
+            with COMPILER_LOCK:
                 inject_ambient_builtin_imports(parsed.module)
-                context = _program_context(parsed)
+                context = program_context(parsed)
                 builder = ArxBuilder()
                 if requested_kind is ArtifactKind.LLVM_IR:
                     if context is None:
@@ -480,7 +584,7 @@ class Compiler:
                         llvm_ir=llvm_ir,
                     )
 
-                output_path = _resolved_output_path(
+                output_path = resolved_output_path(
                     parsed,
                     requested_kind,
                     output,
@@ -506,7 +610,7 @@ class Compiler:
                     path=output_path,
                 )
         except (IRxDiagnosticError, SemanticError) as error:
-            diagnostics = _compile_diagnostics(
+            diagnostics = compile_diagnostics(
                 error,
                 filename=parsed.filename,
             )
@@ -515,7 +619,7 @@ class Compiler:
                 diagnostics=diagnostics,
             ) from None
         except OSError as error:
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 str(error),
                 filename=parsed.filename,
                 code="ARXPY-ARTIFACT-001",
@@ -579,11 +683,15 @@ class Compiler:
         returns:
           type: ExecutionResult
         """
+        if isinstance(args, (str, bytes)):
+            raise TypeCheckError(
+                "argument 'args' must be a non-string sequence of strings"
+            )
         if (
             artifact.kind is not ArtifactKind.EXECUTABLE
             or artifact.path is None
         ):
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 "only executable artifacts can be run",
                 filename=str(artifact.path or "<artifact>"),
                 code="ARXPY-EXECUTABLE-001",
@@ -595,7 +703,7 @@ class Compiler:
 
         try:
             completed = subprocess.run(
-                [str(artifact.path), *args],
+                [str(artifact.path), *tuple(args)],
                 cwd=None if cwd is None else str(cwd),
                 env=None if env is None else dict(env),
                 capture_output=True,
@@ -604,7 +712,7 @@ class Compiler:
                 check=False,
             )
         except subprocess.TimeoutExpired as error:
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 f"execution exceeded timeout of {error.timeout} seconds",
                 filename=str(artifact.path),
                 code="ARXPY-EXECUTION-TIMEOUT-001",
@@ -614,7 +722,7 @@ class Compiler:
                 diagnostics=[diagnostic],
             ) from None
         except OSError as error:
-            diagnostic = _api_diagnostic(
+            diagnostic = api_diagnostic(
                 str(error),
                 filename=str(artifact.path),
                 code="ARXPY-EXECUTION-001",

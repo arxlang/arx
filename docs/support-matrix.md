@@ -44,6 +44,9 @@ wheels together in a fresh virtual environment, and checks:
 - first-use RecordBatch native-cache construction and PyArrow IPC
   interoperability.
 
+Each run uses a tool-owned temporary directory below `.tmp/wheel-smoke/` and
+removes only that generated directory when the run finishes.
+
 Run the release-equivalent gate with:
 
 ```bash
