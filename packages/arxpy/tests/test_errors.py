@@ -40,6 +40,8 @@ def test_hierarchy_and_public_exports() -> None:
     assert arxpy.ExecutionError is ExecutionError
     assert arxpy.Diagnostic is Diagnostic
     assert arxpy.DiagnosticSeverity is DiagnosticSeverity
+    assert arxpy.Compiler
+    assert arxpy.ArtifactKind
 
 
 def test_error_carries_diagnostics() -> None:

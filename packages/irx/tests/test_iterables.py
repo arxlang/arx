@@ -432,6 +432,8 @@ def test_list_comprehension_lowers_to_dynamic_list_append() -> None:
 
     assert "list.comp.0.cond" in ir_text
     assert 'call i32 @"irx_list_append"' in ir_text
+    assert 'call void @"irx_list_require_ok"' in ir_text
+    assert 'call void @"irx_list_destroy"' in ir_text
     assert_ir_parses(ir_text)
 
 

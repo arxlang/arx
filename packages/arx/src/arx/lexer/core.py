@@ -12,10 +12,14 @@ from typing import Any, cast
 
 from astx import SourceLocation
 
+from arx.exceptions import ArxError
 from arx.io import ArxIO
 from arx.lexer.syntax import load_syntax_manifest
 
 EOF = ""
+MAX_NESTING_DEPTH = 256
+MAX_NUMERIC_LITERAL_CHARS = 4096
+MAX_TOKEN_COUNT = 250_000
 
 _MANIFEST = load_syntax_manifest()
 
@@ -273,6 +277,10 @@ class TokenList:
           type: Token
           description: The next token from standard input.
         """
+        if self.position >= len(self.tokens):
+            location = self.cur_tok.location
+            return Token(TokenKind.eof, "", location)
+
         tok = self.tokens[self.position]
         self.position += 1
         return tok
@@ -290,7 +298,7 @@ class TokenList:
         return self.cur_tok
 
 
-class LexerError(Exception):
+class LexerError(ArxError):
     """
     title: Custom exception for lexer errors.
     attributes:
@@ -298,7 +306,12 @@ class LexerError(Exception):
         description: The source location where the error occurred.
     """
 
-    def __init__(self, message: str, location: SourceLocation):
+    def __init__(
+        self,
+        message: str,
+        location: SourceLocation,
+        code: str = "ARX-LEX-001",
+    ) -> None:
         """
         title: Initialize LexerError.
         parameters:
@@ -306,11 +319,14 @@ class LexerError(Exception):
             type: str
           location:
             type: SourceLocation
+          code:
+            type: str
         """
         super().__init__(
-            f"{message} at line {location.line}, col {location.col}"
+            f"{message} at line {location.line}, col {location.col}",
+            code=code,
+            location=location,
         )
-        self.location = location
 
 
 class Lexer:
@@ -322,6 +338,8 @@ class Lexer:
         description: Source location for lexer.
       last_char:
         type: str
+      initialized:
+        type: bool
       new_line:
         type: bool
       _keyword_map:
@@ -336,8 +354,9 @@ class Lexer:
         type: dict[str, TokenKind]
     """
 
-    lex_loc: SourceLocation = SourceLocation(0, 0)
+    lex_loc: SourceLocation = SourceLocation(1, 0)
     last_char: str = ""
+    initialized: bool = False
     new_line: bool = True
     _keyword_map: dict[str, TokenKind]
 
@@ -371,8 +390,9 @@ class Lexer:
         """
         title: Initialize Lexer.
         """
-        self.lex_loc = SourceLocation(0, 0)
+        self.lex_loc = SourceLocation(1, 0)
         self.last_char = ""
+        self.initialized = False
         self.new_line = True
         self._keyword_map = copy.deepcopy(self._keyword_token_map)
 
@@ -380,8 +400,9 @@ class Lexer:
         """
         title: Reset the Lexer attributes.
         """
-        self.lex_loc = SourceLocation(0, 0)
+        self.lex_loc = SourceLocation(1, 0)
         self.last_char = ""
+        self.initialized = False
         self.new_line = True
 
     def get_token(self) -> Token:
@@ -391,12 +412,26 @@ class Lexer:
           type: Token
           description: The next token from standard input.
         """
-        if self.last_char == "":
+        buffer_was_replaced = (
+            self.last_char == EOF
+            and ArxIO.buffer.position == 0
+            and bool(ArxIO.buffer.buffer)
+        )
+        if not self.initialized or buffer_was_replaced:
+            if buffer_was_replaced:
+                self.lex_loc = SourceLocation(1, 0)
             self.new_line = True
             self.last_char = self.advance()
+            self.initialized = True
 
         indent = 0
         while self.last_char.isspace():
+            if self.last_char == "\t":
+                raise LexerError(
+                    "Tab characters are not allowed in Arx source",
+                    self.lex_loc,
+                    code="ARX-LEX-INDENT-001",
+                )
             if self.last_char == "\n":
                 self.new_line = True
                 indent = 0
@@ -415,6 +450,7 @@ class Lexer:
             return token
 
         self.new_line = False
+        token_location = copy.deepcopy(self.lex_loc)
 
         if self.last_char.isalpha() or self.last_char == "_":
             identifier = self.last_char
@@ -428,7 +464,7 @@ class Lexer:
                 return Token(
                     kind=TokenKind.operator,
                     value=identifier,
-                    location=self.lex_loc,
+                    location=token_location,
                 )
 
             if identifier in self._literal_keywords:
@@ -437,25 +473,25 @@ class Lexer:
                     return Token(
                         kind=TokenKind.bool_literal,
                         value=value,
-                        location=self.lex_loc,
+                        location=token_location,
                     )
                 return Token(
                     kind=TokenKind.none_literal,
                     value=value,
-                    location=self.lex_loc,
+                    location=token_location,
                 )
 
             if identifier in self._keyword_map:
                 return Token(
                     kind=self._keyword_map[identifier],
                     value=identifier,
-                    location=self.lex_loc,
+                    location=token_location,
                 )
 
             return Token(
                 kind=TokenKind.identifier,
                 value=identifier,
-                location=self.lex_loc,
+                location=token_location,
             )
 
         if self.last_char.isdigit() or self.last_char == ".":
@@ -469,7 +505,7 @@ class Lexer:
                     return Token(
                         kind=TokenKind.operator,
                         value=".",
-                        location=self.lex_loc,
+                        location=token_location,
                     )
                 num_str = "."
                 dot_count = 1
@@ -484,19 +520,26 @@ class Lexer:
                             self.lex_loc,
                         )
                 num_str += self.last_char
+                if len(num_str) > MAX_NUMERIC_LITERAL_CHARS:
+                    raise LexerError(
+                        "Numeric literal exceeds the maximum length of "
+                        f"{MAX_NUMERIC_LITERAL_CHARS} characters",
+                        token_location,
+                        code="ARX-LEX-NUMBER-SIZE-001",
+                    )
                 self.last_char = self.advance()
 
             if dot_count == 0:
                 return Token(
                     kind=TokenKind.int_literal,
                     value=int(num_str),
-                    location=self.lex_loc,
+                    location=token_location,
                 )
 
             return Token(
                 kind=TokenKind.float_literal,
                 value=float(num_str),
-                location=self.lex_loc,
+                location=token_location,
             )
 
         if self.last_char in ('"', "'"):
@@ -520,7 +563,7 @@ class Lexer:
             return Token(
                 kind=TokenKind.operator,
                 value=this_char,
-                location=self.lex_loc,
+                location=token_location,
             )
 
         return Token(kind=TokenKind.eof, value="", location=self.lex_loc)
@@ -650,9 +693,32 @@ class Lexer:
         self.clean()
         cur_tok = Token(kind=TokenKind.not_initialized, value="")
         tokens: list[Token] = []
+        nesting_depth = 0
 
         while cur_tok.kind != TokenKind.eof:
             cur_tok = self.get_token()
+            if cur_tok.kind == TokenKind.operator:
+                if cur_tok.value in {"(", "[", "{"}:
+                    nesting_depth += 1
+                    if nesting_depth > MAX_NESTING_DEPTH:
+                        raise LexerError(
+                            "Source nesting exceeds the maximum depth of "
+                            f"{MAX_NESTING_DEPTH}",
+                            cur_tok.location,
+                            code="ARX-LEX-NESTING-001",
+                        )
+                elif cur_tok.value in {")", "]", "}"}:
+                    nesting_depth = max(0, nesting_depth - 1)
+            if (
+                cur_tok.kind != TokenKind.eof
+                and len(tokens) >= MAX_TOKEN_COUNT
+            ):
+                raise LexerError(
+                    "Source exceeds the maximum token count of "
+                    f"{MAX_TOKEN_COUNT}",
+                    cur_tok.location,
+                    code="ARX-LEX-TOKEN-LIMIT-001",
+                )
             tokens.append(cur_tok)
 
         return TokenList(tokens)

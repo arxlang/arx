@@ -1,7 +1,8 @@
 # Design: Python AST to ASTx lowering
 
-Status: staged design. Source extraction and Python-subset validation are
-implemented; ASTx lowering, IRx compilation, and native dispatch are not.
+Status: staged implementation. Source extraction, Python-subset validation,
+signature reconciliation, and initial fail-closed ASTx lowering are implemented.
+IRx compilation, native bridging, caching, and dispatch are not.
 
 ## Goal
 
@@ -15,7 +16,8 @@ Arx source strings or opt into another compiler backend.
 pure Python function
   -> source extraction       implemented
   -> Python AST validation   implemented
-  -> ASTx lowering           not implemented
+  -> signature resolution    implemented
+  -> ASTx lowering           initial straight-line subset
   -> IRx/LLVM compilation    not implemented
   -> native call bridge      not implemented
 ```
@@ -76,40 +78,38 @@ include imports, closures, methods, async code, exceptions, generators,
 collections, attributes, subscripting, comprehensions, `break`/`continue`,
 variadic/default arguments, and arbitrary calls.
 
-## Proposed ASTx mapping
+## Implemented ASTx mapping
 
-The following mapping is a design target, not current runtime behavior:
+The following straight-line mappings are implemented by `arxjit.lowering`:
 
 | Python AST                        | Proposed ASTx target                            |
 | --------------------------------- | ----------------------------------------------- |
 | `ast.FunctionDef`                 | `astx.FunctionDef` and `astx.FunctionPrototype` |
 | argument                          | `astx.Argument` inside `astx.Arguments`         |
 | `ast.Return`                      | `astx.FunctionReturn`                           |
-| single-name `ast.Assign`          | variable declaration or assignment              |
 | `ast.Name`                        | identifier/variable reference                   |
 | numeric or Boolean `ast.Constant` | matching typed literal node                     |
 | `ast.BinOp`                       | `astx.BinaryOp`                                 |
 | `ast.UnaryOp`                     | `astx.UnaryOp`                                  |
 | `ast.Compare`                     | comparison expression                           |
-| `ast.If`                          | `astx.IfStmt`                                   |
-| `ast.While`                       | `astx.WhileStmt`                                |
-| `ast.For` over `range`            | `astx.ForRangeLoopStmt`                         |
 | statement body                    | `astx.Block`                                    |
 
-The lowerer should build a single-function `astx.Module`, derive parameter and
-return types from the explicit `Signature`, and lower expressions bottom-up. IRx
-must remain the only owner of semantic analysis and feature lowering.
+The lowerer builds a single-function `astx.Module`, uses the reconciled
+`Signature`, range-checks contextual literal widths, preserves source locations,
+mangles names reserved by IRx, and lowers expressions bottom-up. Boolean
+short-circuiting, chained comparisons, assignments, `if`, `while`, and `for`
+remain fail-closed because their Python evaluation semantics are not yet
+preserved. IRx remains the only owner of semantic analysis and feature lowering.
 
 ## Compilation and runtime work remaining
 
 After lowering, the design hands the module to `irx.builder.Builder` for
 translation and native artifact generation. ArxJIT still needs:
 
-1. the Python-AST-to-ASTx lowerer
-2. signature/argument consistency checks at the compiler boundary
-3. an in-process native callable bridge and scalar marshalling
-4. compilation and dispatch integration in `JitFunction.__call__`
-5. a cache key covering source, signature, tool versions, and platform
+1. assignment and control-flow ASTx lowering with Python semantics
+2. an in-process native callable bridge and scalar marshalling
+3. compilation and dispatch integration in `JitFunction.__call__`
+4. a cache key covering source, signature, tool versions, and platform
 
 Signature inference is deferred; an explicit `signature=` remains the intended
 first compilation contract. Array, Tensor, and Apache Arrow-backed signatures

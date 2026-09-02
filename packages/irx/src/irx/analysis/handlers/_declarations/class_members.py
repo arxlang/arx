@@ -19,9 +19,11 @@ from irx.analysis.handlers._declarations.class_methods import (
     DeclarationClassMethodVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     ClassMemberKind,
     ClassMemberResolutionKind,
+    OwnershipKind,
     SemanticClass,
     SemanticClassMember,
     SemanticClassMemberResolution,
@@ -78,6 +80,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 node=attribute,
                 unknown_message="Unknown attribute type '{name}'",
             )
+            if isinstance(attribute.type_, astx.ListType):
+                self.context.diagnostics.add(
+                    f"class field '{class_.name}.{attribute.name}' cannot "
+                    "own dynamic list storage because class destruction is "
+                    "not supported",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if attribute.value is not None and not isinstance(
                 attribute.value,
                 astx.Undefined,
@@ -95,6 +105,18 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         target_type=attribute.type_,
                         value_type=self._expr_type(attribute.value),
                         node=attribute,
+                    )
+                initializer_ownership = resource_ownership(attribute.value)
+                if (
+                    initializer_ownership is not None
+                    and initializer_ownership.kind is OwnershipKind.OWNED
+                ):
+                    self.context.diagnostics.add(
+                        f"class field '{class_.name}.{attribute.name}' "
+                        "cannot own runtime-managed storage because class "
+                        "destruction is not supported",
+                        node=attribute.value,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
             is_constant = attribute.mutability == astx.MutabilityKind.constant
             if is_constant and (

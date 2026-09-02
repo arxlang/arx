@@ -6,6 +6,32 @@ import os
 import sys
 import tempfile
 
+from arx.exceptions import SourceError
+
+MAX_SOURCE_BYTES = 4 * 1024 * 1024
+
+
+def validate_source_size(value: str) -> None:
+    """
+    title: Reject source text beyond the documented UTF-8 byte limit.
+    parameters:
+      value:
+        type: str
+    """
+    try:
+        source_size = len(value.encode("utf-8"))
+    except UnicodeEncodeError as error:
+        raise SourceError(
+            "Arx source must be valid UTF-8 text",
+            code="ARX-SOURCE-ENCODING-001",
+        ) from error
+    if source_size > MAX_SOURCE_BYTES:
+        raise SourceError(
+            "Arx source exceeds the maximum size of "
+            f"{MAX_SOURCE_BYTES} UTF-8 bytes",
+            code="ARX-SOURCE-SIZE-001",
+        )
+
 
 class ArxBuffer:
     """
@@ -97,10 +123,27 @@ class ArxIO:
             type: str
             description: The name of the file to be copied to the buffer.
         """
-        with open(filename, "r") as arxfile:
-            cls.buffer.clean()
-            for line in arxfile:
-                cls.buffer.write(line + "\n")
+        try:
+            if os.path.getsize(filename) > MAX_SOURCE_BYTES:
+                raise SourceError(
+                    "Arx source exceeds the maximum size of "
+                    f"{MAX_SOURCE_BYTES} UTF-8 bytes",
+                    code="ARX-SOURCE-SIZE-001",
+                )
+            with open(filename, "r", encoding="utf-8") as arxfile:
+                cls.string_to_buffer(arxfile.read())
+        except SourceError:
+            raise
+        except UnicodeError as error:
+            raise SourceError(
+                f"Arx source file is not valid UTF-8: {filename}",
+                code="ARX-SOURCE-ENCODING-001",
+            ) from error
+        except OSError as error:
+            raise SourceError(
+                f"Unable to read Arx source file '{filename}': {error}",
+                code="ARX-SOURCE-READ-001",
+            ) from error
 
     @classmethod
     def string_to_buffer(cls, value: str) -> None:
@@ -111,6 +154,7 @@ class ArxIO:
             type: str
             description: The string to be copied to the buffer.
         """
+        validate_source_size(value)
         cls.buffer.clean()
         cls.buffer.write(value)
 

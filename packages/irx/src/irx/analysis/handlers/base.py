@@ -18,9 +18,11 @@ from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
+from irx.analysis.ownership import resource_ownership
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import (
     CallResolution,
+    OwnershipKind,
     ResolvedAssignment,
     ResolvedBaseClassFieldAccess,
     ResolvedClassConstruction,
@@ -36,6 +38,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedOperator,
     ResolvedStaticClassFieldAccess,
     ResolvedYield,
+    ResourceOwnership,
     ReturnResolution,
     SemanticClass,
     SemanticFlags,
@@ -128,6 +131,41 @@ class SemanticVisitorMixinTypingBase:
             type: SemanticSymbol | None
         returns:
           type: SemanticSymbol | None
+        """
+        raise NotImplementedError
+
+    def _set_resource_ownership(
+        self,
+        node: astx.AST,
+        ownership: ResourceOwnership | None,
+    ) -> ResourceOwnership | None:
+        """
+        title: Attach resource ownership metadata to one node.
+        parameters:
+          node:
+            type: astx.AST
+          ownership:
+            type: ResourceOwnership | None
+        returns:
+          type: ResourceOwnership | None
+        """
+        raise NotImplementedError
+
+    def _resolve_call_resource_ownership(
+        self,
+        node: astx.AST,
+        args: list[astx.AST],
+        result_type: astx.DataType | None,
+    ) -> None:
+        """
+        title: Resolve resource borrowing and ownership for one call.
+        parameters:
+          node:
+            type: astx.AST
+          args:
+            type: list[astx.AST]
+          result_type:
+            type: astx.DataType | None
         """
         raise NotImplementedError
 
@@ -963,6 +1001,24 @@ class SemanticAnalyzerCore(BaseVisitor):
             self._set_type(node, symbol.type_)
         return symbol
 
+    def _set_resource_ownership(
+        self,
+        node: astx.AST,
+        ownership: ResourceOwnership | None,
+    ) -> ResourceOwnership | None:
+        """
+        title: Attach resource ownership metadata to one node.
+        parameters:
+          node:
+            type: astx.AST
+          ownership:
+            type: ResourceOwnership | None
+        returns:
+          type: ResourceOwnership | None
+        """
+        self._semantic(node).resource_ownership = ownership
+        return ownership
+
     def _set_iteration(
         self,
         node: astx.AST,
@@ -1652,7 +1708,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
         if info is not None and info.resolved_type is not None:
             return info.resolved_type
-        return getattr(node, "type_", None)
+        declared_type = getattr(node, "type_", None)
+        if isinstance(declared_type, astx.DataType):
+            return declared_type
+        return None
 
     def _argument_has_default(
         self,
@@ -1695,6 +1754,22 @@ class SemanticAnalyzerCore(BaseVisitor):
                             f"{display_type_name(default_type)}",
                             node=argument.default,
                             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                        )
+                    default_ownership = resource_ownership(argument.default)
+                    if (
+                        isinstance(argument.type_, astx.ListType)
+                        and default_ownership is not None
+                        and default_ownership.kind is OwnershipKind.STATIC
+                    ):
+                        self.context.diagnostics.add(
+                            "static list storage cannot be used as a list "
+                            f"default for parameter '{argument.name}'",
+                            node=argument.default,
+                            code=(DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP),
+                            notes=(
+                                "use a dynamic list-producing default or "
+                                "remove the default",
+                            ),
                         )
                 symbol_index = hidden_parameter_count + index
                 if symbol_index >= len(function.args):

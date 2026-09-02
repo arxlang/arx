@@ -27,7 +27,7 @@ exclude = [
 packages = [
   {include = "arxjit", from="src"},
 ]
-include = ["src/arxjit/py.typed"]
+include = ["LICENSE", "src/arxjit/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = [

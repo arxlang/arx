@@ -21,6 +21,7 @@ from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
     LIST_FIELD_INDICES,
+    LIST_REQUIRE_OK_SYMBOL,
     LIST_RUNTIME_FEATURE,
     list_element_type,
 )
@@ -197,7 +198,7 @@ class ListVisitorMixin(VisitorMixinBase):
         llvm_list_type = self._llvm_list_type()
         if value is None or value.type != llvm_list_type:
             raise Exception("dynamic list lowering requires a list value")
-        temp = self._llvm.ir_builder.alloca(llvm_list_type, name=name)
+        temp = self.create_entry_block_alloca(name, llvm_list_type)
         self._llvm.ir_builder.store(value, temp)
         return temp
 
@@ -637,13 +638,20 @@ class ListVisitorMixin(VisitorMixinBase):
             self._llvm.INT8_TYPE.as_pointer(),
             name="irx_list_comprehension_bytes",
         )
-        self._llvm.ir_builder.call(
+        append_status = self._llvm.ir_builder.call(
             self.require_runtime_symbol(
                 LIST_RUNTIME_FEATURE,
                 LIST_APPEND_SYMBOL,
             ),
             [output_ptr, raw_value_ptr],
             name="irx_list_comprehension_append_status",
+        )
+        self._llvm.ir_builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE,
+                LIST_REQUIRE_OK_SYMBOL,
+            ),
+            [append_status],
         )
 
     def _lower_list_comprehension_filters(
@@ -881,10 +889,20 @@ class ListVisitorMixin(VisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
             )
-        output_ptr = self._llvm.ir_builder.alloca(
+        current_block = self._llvm.ir_builder.block
+        output_ptr = self.create_entry_block_alloca(
+            "irx_list_comprehension_out",
             self._llvm_list_type(),
-            name="irx_list_comprehension_out",
         )
+        initializer_builder = ir.IRBuilder(
+            self._llvm.ir_builder.function.entry_basic_block
+        )
+        initializer_builder.position_after(output_ptr)
+        initializer_builder.store(
+            self._empty_list_value_for_type(result_type),
+            output_ptr,
+        )
+        self._llvm.ir_builder.position_at_end(current_block)
         self._llvm.ir_builder.store(
             self._empty_list_value_for_type(result_type),
             output_ptr,
@@ -905,6 +923,7 @@ class ListVisitorMixin(VisitorMixinBase):
                 element_type=element_type,
             )
 
+        self._register_owned_list_temporary(node, output_ptr)
         self.result_stack.append(
             self._llvm.ir_builder.load(
                 output_ptr,
@@ -1054,5 +1073,12 @@ class ListVisitorMixin(VisitorMixinBase):
             append_fn,
             [list_ptr, raw_value_ptr],
             name="irx_list_append_status",
+        )
+        self._llvm.ir_builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE,
+                LIST_REQUIRE_OK_SYMBOL,
+            ),
+            [result],
         )
         self.result_stack.append(result)

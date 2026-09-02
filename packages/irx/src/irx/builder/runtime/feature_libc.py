@@ -30,6 +30,7 @@ def build_libc_runtime_feature() -> RuntimeFeature:
         name="libc",
         symbols={
             "exit": ExternalSymbolSpec("exit", _declare_exit),
+            "free": ExternalSymbolSpec("free", _declare_free),
             "malloc": ExternalSymbolSpec("malloc", _declare_malloc),
             "puts": ExternalSymbolSpec("puts", _declare_puts),
             "snprintf": ExternalSymbolSpec("snprintf", _declare_snprintf),
@@ -69,6 +70,23 @@ def _declare_malloc(visitor: VisitorProtocol) -> ir.Function:
         [visitor._llvm.SIZE_T_TYPE],
     )
     return declare_external_function(visitor._llvm.module, "malloc", fn_type)
+
+
+@typechecked
+def _declare_free(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare the C heap-release function.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    fn_type = ir.FunctionType(
+        visitor._llvm.VOID_TYPE,
+        [visitor._llvm.INT8_TYPE.as_pointer()],
+    )
+    return declare_external_function(visitor._llvm.module, "free", fn_type)
 
 
 @typechecked

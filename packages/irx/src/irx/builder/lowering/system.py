@@ -57,7 +57,8 @@ class SystemVisitorMixin(VisitorMixinBase):
                     or is_boolean_type(source_type),
                 )
                 fmt_gv = self._get_or_create_format_global(fmt_str)
-                ptr = self._snprintf_heap(fmt_gv, [arg])
+                ptr = self._snprintf_heap(node, fmt_gv, [arg])
+                self._register_owned_string_temporary(node, ptr)
                 self.result_stack.append(ptr)
                 return
 
@@ -71,7 +72,8 @@ class SystemVisitorMixin(VisitorMixinBase):
                 else:
                     value_prom = value
                 fmt_gv = self._get_or_create_format_global("%.6f")
-                ptr = self._snprintf_heap(fmt_gv, [value_prom])
+                ptr = self._snprintf_heap(node, fmt_gv, [value_prom])
+                self._register_owned_string_temporary(node, ptr)
                 self.result_stack.append(ptr)
                 return
             raise Exception(
@@ -115,6 +117,7 @@ class SystemVisitorMixin(VisitorMixinBase):
         message_source_type = self._resolved_ast_type(node.message)
         message_type = message_value.type
         ptr: ir.Value
+        release_formatted_pointer = False
         if (
             isinstance(message_type, ir.PointerType)
             and message_type.pointee == self._llvm.INT8_TYPE
@@ -127,7 +130,8 @@ class SystemVisitorMixin(VisitorMixinBase):
                 or is_boolean_type(message_source_type),
             )
             int_fmt_gv = self._get_or_create_format_global(int_fmt)
-            ptr = self._snprintf_heap(int_fmt_gv, [int_arg])
+            ptr = self._snprintf_heap(node, int_fmt_gv, [int_arg])
+            release_formatted_pointer = True
         elif isinstance(
             message_type, (ir.HalfType, ir.FloatType, ir.DoubleType)
         ):
@@ -138,7 +142,8 @@ class SystemVisitorMixin(VisitorMixinBase):
             else:
                 float_arg = message_value
             float_fmt_gv = self._get_or_create_format_global("%.6f")
-            ptr = self._snprintf_heap(float_fmt_gv, [float_arg])
+            ptr = self._snprintf_heap(node, float_fmt_gv, [float_arg])
+            release_formatted_pointer = True
         else:
             raise Exception(
                 f"Unsupported message type in PrintExpr: {message_type}"
@@ -146,6 +151,9 @@ class SystemVisitorMixin(VisitorMixinBase):
 
         puts_fn = self.require_runtime_symbol("libc", "puts")
         self._llvm.ir_builder.call(puts_fn, [ptr])
+        if release_formatted_pointer:
+            free_fn = self.require_runtime_symbol("libc", "free")
+            self._llvm.ir_builder.call(free_fn, [ptr])
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     @VisitorCore.visit.dispatch

@@ -20,11 +20,23 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+    transfer_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
+    OwnershipEscapeKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedModuleMemberAccess,
+    ResourceKind,
     SemanticBinding,
     SemanticModule,
 )
+from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -35,6 +47,69 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression helpers for module namespaces and function calls
     """
+
+    def _resolve_call_resource_ownership(
+        self,
+        node: astx.AST,
+        args: list[astx.AST],
+        result_type: astx.DataType | None,
+    ) -> None:
+        """
+        title: Resolve list borrowing and result ownership for one call.
+        parameters:
+          node:
+            type: astx.AST
+          args:
+            type: list[astx.AST]
+          result_type:
+            type: astx.DataType | None
+        """
+        for arg in args:
+            ownership = resource_ownership(arg)
+            if ownership is None:
+                continue
+            if (
+                ownership.resource_kind is ResourceKind.LIST
+                and ownership.kind is OwnershipKind.STATIC
+            ):
+                self.context.diagnostics.add(
+                    "static list storage cannot cross a function-call "
+                    "boundary",
+                    node=arg,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=(
+                        "pass a dynamic list owner or an existing borrowed "
+                        "dynamic list",
+                    ),
+                )
+            self._set_resource_ownership(
+                arg,
+                transfer_resource_ownership(
+                    ownership,
+                    transfer_kind=OwnershipTransferKind.BORROW,
+                    escape_kind=OwnershipEscapeKind.CALL,
+                ),
+            )
+        if isinstance(result_type, astx.ListType):
+            self._set_resource_ownership(
+                node,
+                list_resource_ownership(OwnershipKind.OWNED),
+            )
+        elif is_string_type(result_type):
+            call = getattr(self._semantic(node), "resolved_call", None)
+            callee = getattr(getattr(call, "callee", None), "function", None)
+            if callee is not None and callee.definition is None:
+                self.context.diagnostics.add(
+                    "external string-returning calls require an explicit "
+                    "ownership ABI, which is not supported yet",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(OwnershipKind.OWNED),
+            )
 
     def _module_namespace_type(
         self,
@@ -279,6 +354,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self._set_function(node, target_function)
         self._set_call(node, call_resolution)
         self._set_type(node, call_resolution.result_type)
+        self._resolve_call_resource_ownership(
+            node,
+            list(node.args),
+            call_resolution.result_type,
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.Identifier) -> None:
@@ -292,6 +372,36 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if symbol is not None:
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
+            if isinstance(symbol.type_, astx.ListType):
+                declaration_ownership = symbol_resource_ownership(symbol)
+                self._set_resource_ownership(
+                    node,
+                    list_resource_ownership(
+                        OwnershipKind.BORROWED,
+                        owner_symbol_id=(
+                            declaration_ownership.owner_symbol_id
+                            if declaration_ownership is not None
+                            else None
+                        ),
+                        source_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.BORROW,
+                    ),
+                )
+            elif is_string_type(symbol.type_):
+                declaration_ownership = symbol_resource_ownership(symbol)
+                self._set_resource_ownership(
+                    node,
+                    string_resource_ownership(
+                        OwnershipKind.BORROWED,
+                        owner_symbol_id=(
+                            declaration_ownership.owner_symbol_id
+                            if declaration_ownership is not None
+                            else None
+                        ),
+                        source_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.BORROW,
+                    ),
+                )
             module = self._module_namespace_from_type(symbol.type_)
             if module is not None:
                 self._set_module(node, module)
@@ -375,3 +485,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             )
         self._set_call(node, call_resolution)
         self._set_type(node, call_resolution.result_type)
+        self._resolve_call_resource_ownership(
+            node,
+            list(node.args),
+            call_resolution.result_type,
+        )

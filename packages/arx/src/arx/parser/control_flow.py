@@ -136,13 +136,15 @@ class ControlFlowParserMixin(ParserMixinBase):
                     if not docstring_allowed_here:
                         raise ParserException(
                             "Docstrings are only allowed as the first "
-                            "statement inside a function body."
+                            "statement inside a function body.",
+                            code="ARX-PARSE-DOCSTRING-001",
                         )
                     try:
                         validate_docstring(self.tokens.cur_tok.value)
                     except ValueError as err:
                         raise ParserException(
-                            f"Invalid function docstring: {err}"
+                            f"Invalid function docstring: {err}",
+                            code="ARX-PARSE-DOCSTRING-001",
                         ) from err
                     self.tokens.get_next_token()
                     docstring_allowed_here = False

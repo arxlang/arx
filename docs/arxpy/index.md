@@ -1,11 +1,11 @@
 # ArxPy
 
-ArxPy is the planned stable Python API for parsing, compiling, and running Arx
+ArxPy is the typed Python API for parsing, checking, compiling, and running Arx
 programs without invoking the CLI.
 
 ## Current status
 
-ArxPy is currently an API foundation, not an end-to-end compiler facade.
+ArxPy now has a pre-stable end-to-end compiler facade.
 
 Implemented:
 
@@ -14,13 +14,21 @@ Implemented:
 - `ArxError` as the public base exception
 - `ParseError`, `CompileError`, and `ExecutionError`
 - lightweight imports that do not initialize LLVM at module import time
+- parse-from-string and parse-from-file entry points through `Compiler`
+- semantic checking and structured diagnostic translation
+- host LLVM IR, object, and executable artifacts
+- captured execution with arguments, environment, working directory, and timeout
+- runtime validation of public arguments and every collection item
+- serialized repeated/concurrent operations while the frontend uses global input
+  state
 
-Not implemented:
+Not yet stable or implemented:
 
-- parse-from-string or parse-from-file entry points
-- compiler/session configuration objects
-- native artifact and execution result APIs
-- an end-to-end exception translation boundary
+- cancellation and asynchronous compilation
+- cross-target selection and target discovery
+- compiler test-discovery facade
+- cache controls and a query/LSP protocol
+- compatibility guarantees for the pre-1.0 facade
 
 ## Install
 
@@ -28,26 +36,45 @@ Not implemented:
 pip install arxpy
 ```
 
-## Current usage
+## Usage
 
 ```python
-from arxpy import ArxError, Diagnostic, DiagnosticSeverity
+from pathlib import Path
 
-diagnostic = Diagnostic(
-    severity=DiagnosticSeverity.ERROR,
-    message="example failure",
-    filename="example.x",
-    line=3,
-    column=2,
-    code="S001",
+from arxpy import ArtifactKind, Compiler
+
+compiler = Compiler()
+parsed = compiler.parse_file("program.x")
+checked = compiler.check(parsed)
+artifact = compiler.compile(
+    checked,
+    kind=ArtifactKind.EXECUTABLE,
+    output=Path("build/program"),
 )
-
-try:
-    raise ArxError("compilation failed", diagnostics=[diagnostic])
-except ArxError as error:
-    for item in error.diagnostics:
-        print(item.message)
+result = compiler.run(artifact, timeout=10)
+print(result.exit_code, result.stdout, result.stderr)
 ```
 
-Use the [Arx CLI](../arx/compiler-cli.md) for current end-to-end compilation.
-The [roadmap](../roadmap.md) lists the compiler facade planned for ArxPy.
+Expected failures expose structured diagnostics:
+
+```python
+from arxpy import ArxError, Compiler
+
+try:
+    Compiler().check(Compiler().parse_file("program.x"))
+except ArxError as error:
+    for item in error.diagnostics:
+        print(item.code, item.filename, item.line, item.column, item.message)
+```
+
+In-memory native compilation requires an explicit output path. File compilation
+defaults beside the source. No implicit persistent temporary directory is
+created. Compiler calls are safe to repeat and are serialized across instances
+because the current lexer reads a process-wide source buffer. Execution never
+uses a shell; a non-zero program exit is returned in `ExecutionResult` rather
+than raised. Command arguments must be supplied as a non-string sequence of
+strings; scalar `str` and `bytes` values are rejected.
+
+Use the [Arx CLI](../arx/compiler-cli.md) for compiler test discovery and other
+CLI-specific workflows. The [roadmap](../roadmap.md) tracks the remaining API
+stability work.

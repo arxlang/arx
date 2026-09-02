@@ -20,6 +20,7 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver, get_module_name_from_file_path
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
+from irx.builder.runtime.errors import parse_runtime_failure_output
 from irx.builder.runtime.registry import RuntimeFeatureState
 from llvmlite import binding as llvm
 
@@ -136,6 +137,35 @@ def test_object_generation(code: str) -> None:
     bin_path = TMP_PATH / "testtmp"
     ir.build(module_ast, str(bin_path))
     bin_path.unlink()
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_integer_division_by_zero_reports_runtime_diagnostic(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Arx integer division failures use the stable runtime record.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    module_ast = _parse_min_module("fn main() -> i32:\n  return 1 / 0\n")
+    binary = tmp_path / "division_by_zero"
+    ArxBuilder().build(module_ast, str(binary))
+
+    result = subprocess.run(
+        [str(binary)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    report = parse_runtime_failure_output(result.stderr)
+    assert report is not None
+    assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
+    assert report.line == 2
+    assert report.col > 0
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")

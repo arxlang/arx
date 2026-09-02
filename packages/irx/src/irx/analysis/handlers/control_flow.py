@@ -21,9 +21,19 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+    transfer_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
     MethodDispatchKind,
+    OwnershipEscapeKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedContextManager,
     ResolvedGeneratorFunction,
     ResolvedMethodCall,
@@ -47,6 +57,190 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
+    def _resolve_return_resource_ownership(
+        self,
+        node: astx.FunctionReturn,
+    ) -> None:
+        """
+        title: Resolve ownership transfer for one list-valued return.
+        parameters:
+          node:
+            type: astx.FunctionReturn
+        """
+        if self.context.current_function is None:
+            return
+        if node.value is None:
+            return
+        return_type = self.context.current_function.signature.return_type
+        if is_string_type(return_type):
+            self._resolve_string_return_resource_ownership(node)
+            return
+        if not isinstance(return_type, astx.ListType):
+            return
+
+        value_ownership = resource_ownership(node.value)
+        if value_ownership is None:
+            self.context.diagnostics.add(
+                "list return expression is missing ownership metadata",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        source_symbol = getattr(
+            getattr(node.value, "semantic", None),
+            "resolved_symbol",
+            None,
+        )
+        source_ownership = (
+            symbol_resource_ownership(source_symbol)
+            if isinstance(source_symbol, SemanticSymbol)
+            else None
+        )
+        source_symbol_id: str | None
+        if value_ownership.kind is OwnershipKind.BORROWED:
+            if (
+                not isinstance(source_symbol, SemanticSymbol)
+                or source_ownership is None
+                or source_ownership.kind is not OwnershipKind.OWNED
+            ):
+                self.context.diagnostics.add(
+                    "cannot return a borrowed list as an owned result",
+                    node=node.value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=(
+                        "return a locally owned list or a freshly owned list "
+                        "expression",
+                    ),
+                )
+                return
+            source_symbol_id = source_symbol.symbol_id
+            moved = list_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=source_symbol_id,
+                source_symbol_id=source_symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            )
+        elif value_ownership.kind is OwnershipKind.OWNED:
+            source_symbol_id = value_ownership.source_symbol_id
+            moved = transfer_resource_ownership(
+                value_ownership,
+                transfer_kind=OwnershipTransferKind.MOVE,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            )
+        else:
+            self.context.diagnostics.add(
+                "cannot return static list storage as an owned result",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(node.value, moved)
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(
+                OwnershipKind.OWNED,
+                source_symbol_id=source_symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            ),
+        )
+
+    def _resolve_string_return_resource_ownership(
+        self,
+        node: astx.FunctionReturn,
+    ) -> None:
+        """
+        title: Resolve ownership transfer for one string-valued return.
+        parameters:
+          node:
+            type: astx.FunctionReturn
+        """
+        if node.value is None:
+            return
+        value_ownership = resource_ownership(node.value)
+        if value_ownership is None:
+            self.context.diagnostics.add(
+                "string return expression is missing ownership metadata",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        source_symbol = getattr(
+            getattr(node.value, "semantic", None),
+            "resolved_symbol",
+            None,
+        )
+        source_ownership = (
+            symbol_resource_ownership(source_symbol)
+            if isinstance(source_symbol, SemanticSymbol)
+            else None
+        )
+        source_symbol_id: str | None = None
+        if value_ownership.kind is OwnershipKind.BORROWED:
+            if (
+                isinstance(source_symbol, SemanticSymbol)
+                and source_ownership is not None
+                and source_ownership.kind is OwnershipKind.STATIC
+            ):
+                moved = string_resource_ownership(
+                    OwnershipKind.OWNED,
+                    source_symbol_id=source_symbol.symbol_id,
+                    transfer_kind=OwnershipTransferKind.COPY,
+                    escape_kind=OwnershipEscapeKind.RETURN,
+                )
+            elif (
+                isinstance(source_symbol, SemanticSymbol)
+                and source_ownership is not None
+                and source_ownership.kind is OwnershipKind.OWNED
+            ):
+                source_symbol_id = source_symbol.symbol_id
+                moved = string_resource_ownership(
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=source_symbol_id,
+                    source_symbol_id=source_symbol_id,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                    escape_kind=OwnershipEscapeKind.RETURN,
+                )
+            else:
+                self.context.diagnostics.add(
+                    "cannot return a borrowed string as an owned result",
+                    node=node.value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=(
+                        "return a literal, a locally owned string, or a "
+                        "freshly allocated string expression",
+                    ),
+                )
+                return
+        elif value_ownership.kind is OwnershipKind.STATIC:
+            moved = string_resource_ownership(
+                OwnershipKind.OWNED,
+                transfer_kind=OwnershipTransferKind.COPY,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            )
+        else:
+            source_symbol_id = value_ownership.source_symbol_id
+            moved = transfer_resource_ownership(
+                value_ownership,
+                transfer_kind=OwnershipTransferKind.MOVE,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            )
+
+        self._set_resource_ownership(node.value, moved)
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(
+                OwnershipKind.OWNED,
+                source_symbol_id=source_symbol_id,
+                transfer_kind=moved.transfer_kind,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            ),
+        )
+
     def _current_generator(
         self,
         node: astx.AST,
@@ -408,6 +602,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_return(node, return_resolution)
         self._set_type(node, return_resolution.expected_type)
+        self._resolve_return_resource_ownership(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.YieldStmt) -> None:

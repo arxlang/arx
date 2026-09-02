@@ -11,6 +11,7 @@ import astx as irx_astx
 import pytest
 
 from arx import main as main_module
+from irx.diagnostics import SemanticError
 
 try:
     import tomllib
@@ -146,7 +147,7 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
     )
 
     with pytest.raises(
-        ValueError,
+        SemanticError,
         match="reserved stdlib namespace 'stdlib' cannot be shadowed",
     ):
         app.compile()

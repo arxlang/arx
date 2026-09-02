@@ -14,9 +14,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from public import public
+
 from arxpy.diagnostics import Diagnostic
+from arxpy.typecheck import typechecked
 
 
+@public
+@typechecked
 class ArxError(Exception):
     """
     title: Base class for every error raised by the ArxPy API.
@@ -46,18 +51,22 @@ class ArxError(Exception):
         super().__init__(message)
 
 
+@public
+@typechecked
 class ParseError(ArxError):
     """
     title: Raised when lexing or parsing Arx source fails.
     summary: >-
-      Parser-origin diagnostics have no line or column in v1 because
-      ParserException discards token location.
+      Lexer and parser diagnostics include a source location when the frontend
+      can attribute one without fabrication.
     attributes:
       diagnostics:
         type: list[Diagnostic]
     """
 
 
+@public
+@typechecked
 class CompileError(ArxError):
     """
     title: >-
@@ -72,6 +81,8 @@ class CompileError(ArxError):
     """
 
 
+@public
+@typechecked
 class ExecutionError(ArxError):
     """
     title: Raised when running a compiled Arx program fails to execute.

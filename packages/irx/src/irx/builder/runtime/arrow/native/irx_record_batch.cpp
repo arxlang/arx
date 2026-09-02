@@ -38,6 +38,10 @@ const char *irx_record_batch_errmsg(void) {
     return consumed.c_str();
 }
 
+uint32_t irx_record_batch_abi_version(void) {
+    return IRX_RECORD_BATCH_ABI_VERSION;
+}
+
 static std::shared_ptr<arrow::DataType> arrow_type(IrxColumnType t) {
     switch (t) {
     case IRX_COL_INT8:    return arrow::int8();

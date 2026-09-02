@@ -10,20 +10,225 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
+from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
     semantic_symbol_key,
 )
-from irx.builder.diagnostics import raise_lowering_error
+from irx.builder.diagnostics import (
+    raise_lowering_error,
+    raise_lowering_internal_error,
+)
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.state import CleanupAction
+from irx.builtins.collections.list import (
+    LIST_DESTROY_SYMBOL,
+    LIST_RUNTIME_FEATURE,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
 @typechecked
 class VariableVisitorMixin(VisitorMixinBase):
+    def _register_owned_list_cleanup(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        list_ptr: ir.Value,
+    ) -> None:
+        """
+        title: Register lexical cleanup for one semantically owned list local.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          list_ptr:
+            type: ir.Value
+        """
+        if not isinstance(node.type_, astx.ListType):
+            return
+
+        ownership = resource_ownership(node)
+        if ownership is None:
+            raise_lowering_internal_error(
+                f"list declaration '{node.name}' is missing ownership "
+                "metadata",
+                node=node,
+            )
+        if ownership.kind is OwnershipKind.STATIC:
+            return
+        if ownership.kind is not OwnershipKind.OWNED:
+            raise_lowering_internal_error(
+                f"list declaration '{node.name}' reached lowering with "
+                f"unsupported {ownership.kind.value} storage",
+                node=node,
+            )
+        if ownership.owner_symbol_id is None:
+            raise_lowering_internal_error(
+                f"owned list declaration '{node.name}' is missing its "
+                "semantic owner id",
+                node=node,
+            )
+        if self._current_generator_frame_ptr is not None:
+            raise_lowering_internal_error(
+                "owned list locals in generator frames require generator "
+                "lifecycle cleanup",
+                node=node,
+            )
+
+        destroy_fn = self.require_runtime_symbol(
+            LIST_RUNTIME_FEATURE,
+            LIST_DESTROY_SYMBOL,
+        )
+
+        def destroy_list() -> None:
+            """
+            title: Destroy the captured list storage.
+            """
+            self._llvm.ir_builder.call(destroy_fn, [list_ptr])
+
+        self.cleanup_stack.append(
+            CleanupAction(
+                destroy_list,
+                owner_symbol_id=ownership.owner_symbol_id,
+            )
+        )
+
+    def _destroy_replaced_list(
+        self,
+        node: astx.AST,
+        list_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned list storage immediately before replacement.
+        parameters:
+          node:
+            type: astx.AST
+          list_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        ownership = resource_ownership(node)
+        if ownership is None or ownership.kind is not OwnershipKind.OWNED:
+            raise_lowering_internal_error(
+                f"list assignment to '{target_name}' is missing a validated "
+                "ownership transfer",
+                node=node,
+            )
+        destroy_fn = self.require_runtime_symbol(
+            LIST_RUNTIME_FEATURE,
+            LIST_DESTROY_SYMBOL,
+        )
+        self._llvm.ir_builder.call(destroy_fn, [list_ptr])
+
+    def _register_owned_string_cleanup(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        string_ptr: ir.Value,
+    ) -> None:
+        """
+        title: Register lexical cleanup for one semantically owned string.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          string_ptr:
+            type: ir.Value
+        """
+        if not is_string_type(node.type_):
+            return
+        ownership = resource_ownership(node)
+        if ownership is None:
+            raise_lowering_internal_error(
+                f"string declaration '{node.name}' is missing ownership "
+                "metadata",
+                node=node,
+            )
+        if ownership.kind is OwnershipKind.STATIC:
+            return
+        if (
+            ownership.resource_kind is not ResourceKind.STRING
+            or ownership.kind is not OwnershipKind.OWNED
+            or ownership.owner_symbol_id is None
+        ):
+            raise_lowering_internal_error(
+                f"string declaration '{node.name}' reached lowering with "
+                "an invalid ownership contract",
+                node=node,
+            )
+        if self._current_generator_frame_ptr is not None:
+            raise_lowering_internal_error(
+                "owned string locals in generator frames require generator "
+                "lifecycle cleanup",
+                node=node,
+            )
+
+        free_fn = self.require_runtime_symbol("libc", "free")
+
+        def destroy_string() -> None:
+            """
+            title: Destroy the currently stored string pointer.
+            """
+            pointer = self._llvm.ir_builder.load(
+                string_ptr,
+                name=f"{node.name}_string_cleanup",
+            )
+            self._llvm.ir_builder.call(free_fn, [pointer])
+
+        self.cleanup_stack.append(
+            CleanupAction(
+                destroy_string,
+                owner_symbol_id=ownership.owner_symbol_id,
+            )
+        )
+
+    def _destroy_replaced_string(
+        self,
+        node: astx.AST,
+        string_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned string storage before a validated replacement.
+        parameters:
+          node:
+            type: astx.AST
+          string_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        ownership = resource_ownership(node)
+        if ownership is None:
+            raise_lowering_internal_error(
+                f"string assignment to '{target_name}' is missing ownership "
+                "metadata",
+                node=node,
+            )
+        if ownership.kind is OwnershipKind.STATIC:
+            return
+        if (
+            ownership.resource_kind is not ResourceKind.STRING
+            or ownership.kind is not OwnershipKind.OWNED
+        ):
+            raise_lowering_internal_error(
+                f"string assignment to '{target_name}' is missing a "
+                "validated ownership transfer",
+                node=node,
+            )
+        old_pointer = self._llvm.ir_builder.load(
+            string_ptr,
+            name=f"{target_name}_replaced_string",
+        )
+        free_fn = self.require_runtime_symbol("libc", "free")
+        self._llvm.ir_builder.call(free_fn, [old_pointer])
+
     @VisitorCore.visit.dispatch
     def visit(self, expr: astx.VariableAssignment) -> None:
         """
@@ -56,6 +261,18 @@ class VariableVisitorMixin(VisitorMixinBase):
                 f"Identifier '{var_name}' not found in the named values."
             )
 
+        if isinstance(self._resolved_ast_type(expr), astx.ListType):
+            self._destroy_replaced_list(
+                expr,
+                llvm_var,
+                target_name=expr.name,
+            )
+        elif is_string_type(self._resolved_ast_type(expr)):
+            self._destroy_replaced_string(
+                expr,
+                llvm_var,
+                target_name=expr.name,
+            )
         self._llvm.ir_builder.store(llvm_value, llvm_var)
         self.result_stack.append(llvm_value)
 
@@ -290,6 +507,8 @@ class VariableVisitorMixin(VisitorMixinBase):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
+        self._register_owned_list_cleanup(node, alloca)
+        self._register_owned_string_cleanup(node, alloca)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
@@ -350,4 +569,6 @@ class VariableVisitorMixin(VisitorMixinBase):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
+        self._register_owned_list_cleanup(node, alloca)
+        self._register_owned_string_cleanup(node, alloca)
         self.result_stack.append(init_val)

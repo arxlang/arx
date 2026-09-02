@@ -41,6 +41,13 @@ groups:
         help: build all packages
         run: ./scripts/build.sh
 
+      wheel-smoke:
+        help: audit and test the package set in an isolated environment
+        hooks:
+          pre-run:
+            - task: all.build
+        run: python scripts/test_wheels.py
+
       ci:
         help: run the same checks executed on CI
         hooks:
@@ -58,6 +65,7 @@ groups:
             - task: aix.check-syntax
             - task: all.typecheck
             - task: all.lint
+            - task: all.wheel-smoke
 
   arx:
     tasks:

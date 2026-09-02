@@ -10,7 +10,7 @@ import pytest
 
 from arx.exceptions import ParserException
 from arx.io import ArxIO
-from arx.lexer import Lexer
+from arx.lexer import Lexer, TokenList
 from arx.parser import Parser
 
 
@@ -107,6 +107,49 @@ def test_parse() -> None:
     expr = parser.parse(lexer.lex())
     assert expr
     assert isinstance(expr, astx.Module)
+
+
+def test_parse_truncated_function_reports_located_parser_error() -> None:
+    """
+    title: Truncated signatures fail with a located parser diagnostic.
+    """
+    ArxIO.string_to_buffer("fn main( -> i32:\n  return 0\n")
+
+    with pytest.raises(ParserException) as exc_info:
+        Parser().parse(Lexer().lex())
+
+    assert exc_info.value.code == "ARX-PARSE-001"
+    assert exc_info.value.location is not None
+    assert "Expected argument name" in str(exc_info.value)
+
+
+def test_parse_empty_token_list_is_an_empty_module() -> None:
+    """
+    title: A manually empty token stream does not crash the parser.
+    """
+    module = Parser().parse(TokenList([]))
+    assert isinstance(module, astx.Module)
+    assert module.nodes == []
+
+
+def test_parse_empty_source_is_an_empty_module() -> None:
+    """
+    title: Empty source is accepted deterministically rather than crashing.
+    """
+    module = _parse_module("")
+    assert module.nodes == []
+
+
+def test_parser_location_uses_unicode_code_point_columns() -> None:
+    """
+    title: Parser diagnostics preserve one-based Unicode lexer columns.
+    """
+    ArxIO.string_to_buffer("fn α( -> i32:\n  return 0\n")  # noqa: RUF001
+    with pytest.raises(ParserException) as captured:
+        Parser().parse(Lexer().lex())
+    assert captured.value.location is not None
+    assert captured.value.location.line == 1
+    assert captured.value.location.col == 7
 
 
 def test_parse_if_stmt() -> None:
@@ -262,8 +305,9 @@ def test_parse_module_docstring_must_start_first_line() -> None:
     lexer = Lexer()
     parser = Parser()
 
-    with pytest.raises(ParserException):
+    with pytest.raises(ParserException) as captured:
         parser.parse(lexer.lex())
+    assert captured.value.code == "ARX-PARSE-DOCSTRING-001"
 
 
 def test_parse_function_docstring() -> None:
@@ -318,8 +362,12 @@ def test_parse_module_docstring_invalid_douki_schema() -> None:
     lexer = Lexer()
     parser = Parser()
 
-    with pytest.raises(ParserException, match="Invalid module docstring"):
+    with pytest.raises(
+        ParserException,
+        match="Invalid module docstring",
+    ) as captured:
         parser.parse(lexer.lex())
+    assert captured.value.code == "ARX-PARSE-DOCSTRING-001"
 
 
 def test_parse_function_docstring_invalid_douki_schema() -> None:
@@ -818,6 +866,21 @@ def test_parse_cast_rejects_union_target() -> None:
             "  var x: Number = cast(0.0, Number)\n"
             "  return 0\n"
         )
+
+
+def test_cast_result_can_participate_in_binary_expression() -> None:
+    """
+    title: Cast results are value expressions accepted by binary operators.
+    """
+    tree = _parse_module(
+        "fn main() -> bool:\n"
+        "  return cast(2147483648, i32) == cast(2147483648, i32)\n"
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    return_node = function.body.nodes[0]
+    assert isinstance(return_node, astx.FunctionReturn)
+    assert isinstance(return_node.value, astx.BinaryOp)
 
 
 def test_parse_block_with_comment_and_blank_lines() -> None:

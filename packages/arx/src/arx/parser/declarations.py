@@ -298,7 +298,8 @@ class DeclarationParserMixin(ParserMixinBase):
                     validate_docstring(cast(str, self.tokens.cur_tok.value))
                 except ValueError as err:
                     raise ParserException(
-                        f"Invalid class or member docstring: {err}"
+                        f"Invalid class or member docstring: {err}",
+                        code="ARX-PARSE-DOCSTRING-001",
                     ) from err
                 self.tokens.get_next_token()
                 continue

@@ -141,21 +141,23 @@ class ParserCore(ParserMixinBase):
             if self.tokens.cur_tok.kind == TokenKind.docstring:
                 if (
                     allow_module_docstring
-                    and self.tokens.cur_tok.location.line == 0
+                    and self.tokens.cur_tok.location.line == 1
                     and self.tokens.cur_tok.location.col == 1
                 ):
                     try:
                         validate_docstring(self.tokens.cur_tok.value)
                     except ValueError as err:
                         raise ParserException(
-                            f"Invalid module docstring: {err}"
+                            f"Invalid module docstring: {err}",
+                            code="ARX-PARSE-DOCSTRING-001",
                         ) from err
                     self.tokens.get_next_token()
                     allow_module_docstring = False
                     continue
                 raise ParserException(
                     "Module docstrings are only allowed as the first "
-                    "statement starting at line 1, column 1."
+                    "statement starting at line 1, column 1.",
+                    code="ARX-PARSE-DOCSTRING-001",
                 )
 
             if self._is_operator(";"):

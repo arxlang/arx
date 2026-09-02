@@ -59,6 +59,89 @@ class SemanticSymbol:
 
 @public
 @typechecked
+class ResourceKind(str, Enum):
+    """
+    title: Runtime-managed resource categories.
+    summary: >-
+      Identify the concrete runtime resource whose lifetime is described by an
+      ownership sidecar.
+    """
+
+    LIST = "list"
+    STRING = "string"
+
+
+@public
+@typechecked
+class OwnershipKind(str, Enum):
+    """
+    title: Semantic resource ownership classes.
+    summary: >-
+      Distinguish values responsible for cleanup from borrowed and static
+      values that must not be released by the current expression or binding.
+    """
+
+    OWNED = "owned"
+    BORROWED = "borrowed"
+    STATIC = "static"
+
+
+@public
+@typechecked
+class OwnershipTransferKind(str, Enum):
+    """
+    title: Semantic resource transfer operations.
+    """
+
+    NONE = "none"
+    BORROW = "borrow"
+    COPY = "copy"
+    MOVE = "move"
+
+
+@public
+@typechecked
+class OwnershipEscapeKind(str, Enum):
+    """
+    title: Semantic resource escape boundaries.
+    """
+
+    NONE = "none"
+    CALL = "call"
+    RETURN = "return"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResourceOwnership:
+    """
+    title: Resolved ownership and escape metadata for one resource value.
+    attributes:
+      resource_kind:
+        type: ResourceKind
+      kind:
+        type: OwnershipKind
+      owner_symbol_id:
+        type: str | None
+      source_symbol_id:
+        type: str | None
+      transfer_kind:
+        type: OwnershipTransferKind
+      escape_kind:
+        type: OwnershipEscapeKind
+    """
+
+    resource_kind: ResourceKind
+    kind: OwnershipKind
+    owner_symbol_id: str | None = None
+    source_symbol_id: str | None = None
+    transfer_kind: OwnershipTransferKind = OwnershipTransferKind.NONE
+    escape_kind: OwnershipEscapeKind = OwnershipEscapeKind.NONE
+
+
+@public
+@typechecked
 @dataclass(frozen=True)
 class SemanticStruct:
     """
@@ -1641,6 +1724,8 @@ class SemanticInfo:
         type: ResolvedIteration | None
       resolved_collection_method:
         type: ResolvedCollectionMethod | None
+      resource_ownership:
+        type: ResourceOwnership | None
       semantic_flags:
         type: SemanticFlags
       extras:
@@ -1675,5 +1760,6 @@ class SemanticInfo:
     resolved_yield: ResolvedYield | None = None
     resolved_iteration: ResolvedIteration | None = None
     resolved_collection_method: ResolvedCollectionMethod | None = None
+    resource_ownership: ResourceOwnership | None = None
     semantic_flags: SemanticFlags = field(default_factory=SemanticFlags)
     extras: dict[str, Any] = field(default_factory=dict)

@@ -5,17 +5,19 @@ title: Record batch streaming API.
 from __future__ import annotations
 
 import ctypes
-import ctypes.util
 import os
-import sys
 
 from collections.abc import Iterator, Mapping, Sequence
 from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
-from pathlib import Path
 from typing import Any, Optional
 
+from irx.record_batch_abi import (
+    IRX_RECORD_BATCH_LIBRARY_ENV,
+    RECORD_BATCH_ABI_VERSION,
+    record_batch_library_path,
+)
 from irx.typecheck import typechecked
 
 # Load the native shared library
@@ -28,40 +30,29 @@ def _load_native_lib() -> ctypes.CDLL:
     returns:
       type: ctypes.CDLL
     """
-    candidates = [
-        # Development build (in-tree)
-        Path(__file__).parent
-        / "builder"
-        / "runtime"
-        / "arrow"
-        / "libirx_record_batch.so",
-        Path(__file__).parent
-        / "builder"
-        / "runtime"
-        / "arrow"
-        / "libirx_record_batch.dylib",
-        Path(__file__).parent
-        / "builder"
-        / "runtime"
-        / "arrow"
-        / "irx_record_batch.dll",
-        # Installed package
-        Path(sys.prefix) / "lib" / "libirx_record_batch.so",
-        Path(sys.prefix) / "lib" / "libirx_record_batch.dylib",
-    ]
-    for p in candidates:
-        if p.exists():
-            return ctypes.CDLL(str(p))
+    configured = os.environ.get(IRX_RECORD_BATCH_LIBRARY_ENV)
+    if configured:
+        configured_path = record_batch_library_path()
+        if not configured_path.is_file():
+            raise RuntimeError(
+                f"{IRX_RECORD_BATCH_LIBRARY_ENV} does not name an existing "
+                f"native library: {configured_path}"
+            )
+        return ctypes.CDLL(str(configured_path))
 
-    # Fall back to ldconfig / PATH search
-    name = ctypes.util.find_library("irx_record_batch")
-    if name:
-        return ctypes.CDLL(name)
-
-    raise RuntimeError(
-        "Could not locate libirx_record_batch.  "
-        "Build the IRx native runtime first: `makim irx.build-native`"
+    # Build or refresh the ABI-scoped cache from wheel/source contents. The
+    # builder owns fingerprinting, locking, and atomic replacement.
+    from irx.builder.runtime.record_batch import (  # noqa: PLC0415
+        ensure_record_batch_shared_library,
     )
+
+    library_path = ensure_record_batch_shared_library()
+    try:
+        return ctypes.CDLL(str(library_path))
+    except OSError as error:
+        raise RuntimeError(
+            f"Unable to load RecordBatch native library: {library_path}"
+        ) from error
 
 
 # Lazy-load (cached) so importing this module does not fail where the native
@@ -131,6 +122,21 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
         f = getattr(lib, name)
         f.restype = restype
         f.argtypes = list(argtypes)
+
+    try:
+        fn("irx_record_batch_abi_version", u32)
+    except AttributeError as err:
+        raise RuntimeError(
+            "RecordBatch native ABI mismatch: the library does not expose "
+            "irx_record_batch_abi_version; rebuild the IRx native runtime"
+        ) from err
+    actual_abi = int(lib.irx_record_batch_abi_version())
+    if actual_abi != RECORD_BATCH_ABI_VERSION:
+        raise RuntimeError(
+            "RecordBatch native ABI mismatch: expected "
+            f"{RECORD_BATCH_ABI_VERSION}, found {actual_abi}; rebuild the "
+            "IRx native runtime"
+        )
 
     fn("irx_record_batch_errmsg", cstr)
 
@@ -449,15 +455,19 @@ class RecordBatchSchema:
         """
         title: Create a new Arrow schema handle.
         """
-        lib = _get_lib()
-        handle = ctypes.c_void_p()
-        _check(lib.irx_rb_schema_create(ctypes.byref(handle)), lib)
-        self._handle = handle
-        self._lib = lib
-        self._released = False
+        self._handle = ctypes.c_void_p()
+        self._released = True
         self._col_types = []
         self._elem_types = []
         self._struct_fields = []
+
+        lib = _get_lib()
+        self._lib = lib
+        _check(
+            lib.irx_rb_schema_create(ctypes.byref(self._handle)),
+            lib,
+        )
+        self._released = False
 
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
@@ -680,17 +690,22 @@ class RecordBatchBuilder:
           schema:
             type: RecordBatchSchema
         """
-        lib = _get_lib()
-        handle = ctypes.c_void_p()
-        _check(
-            lib.irx_rb_builder_create(schema._raw(), ctypes.byref(handle)), lib
-        )
-        self._handle = handle
-        self._lib = lib
-        self._released = False
+        self._handle = ctypes.c_void_p()
+        self._released = True
         self._col_types = list(schema._col_types)
         self._elem_types = list(schema._elem_types)
         self._struct_fields = list(schema._struct_fields)
+
+        lib = _get_lib()
+        self._lib = lib
+        _check(
+            lib.irx_rb_builder_create(
+                schema._raw(),
+                ctypes.byref(self._handle),
+            ),
+            lib,
+        )
+        self._released = False
 
     # --- typed appends ---
 

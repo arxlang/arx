@@ -19,10 +19,11 @@ from astx.callables import (
     YieldFromExpr,
     YieldStmt,
 )
-from astx.data import InlineVariableDeclaration, Variable
+from astx.data import Identifier, InlineVariableDeclaration, Variable
 from astx.flows import WhileStmt
 from astx.literals.numeric import LiteralInt32
 from astx.modifiers import ScopeKind, VisibilityKind
+from astx.subscript import SubscriptExpr
 from astx.types.numeric import Int32
 from astx.types.operators import BinaryOp, UnaryOp
 from astx.viz import visualize_image
@@ -111,6 +112,15 @@ def test_function_return() -> None:
     assert str(fn_return)
     assert fn_return.get_struct()
     assert fn_return.get_struct(simplified=True)
+
+
+def test_function_return_accepts_subscript_expression() -> None:
+    """
+    title: Subscript expressions are value expressions valid in returns.
+    """
+    subscript = SubscriptExpr(Identifier("values"), LiteralInt32(0))
+    fn_return = FunctionReturn(subscript)
+    assert fn_return.value is subscript
 
 
 def test_lambdaexpr() -> None:

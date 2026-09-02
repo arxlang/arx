@@ -88,7 +88,8 @@ class ExpressionParserMixin(ParserMixinBase):
         if self.tokens.cur_tok.kind == TokenKind.docstring:
             raise ParserException(
                 "Docstrings are only allowed at module start or as the "
-                "first statement inside a function body."
+                "first statement inside a function body.",
+                code="ARX-PARSE-DOCSTRING-001",
             )
 
         msg = (
@@ -772,9 +773,15 @@ class ExpressionParserMixin(ParserMixinBase):
             return self.parse_postfix()
 
         op_code = cast(str, self.tokens.cur_tok.value)
+        op_loc = self.tokens.cur_tok.location
         self.tokens.get_next_token()
         operand = self.parse_unary()
-        unary = astx.UnaryOp(op_code, cast(astx.DataType, operand))
+        if not isinstance(operand, astx.DataType):
+            raise ParserException(
+                f"Unary operator '{op_code}' requires an expression operand.",
+                op_loc,
+            )
+        unary = astx.UnaryOp(op_code, operand, loc=op_loc)
         unary.type_ = cast(
             astx.ExprType,
             getattr(operand, "type_", astx.ExprType()),
@@ -807,9 +814,18 @@ class ExpressionParserMixin(ParserMixinBase):
             if cur_prec < next_prec:
                 rhs = self.parse_bin_op_rhs(cur_prec + 1, rhs)
 
+            if not isinstance(lhs, astx.DataType) or not isinstance(
+                rhs,
+                astx.DataType,
+            ):
+                raise ParserException(
+                    f"Binary operator '{bin_op}' requires expression "
+                    "operands.",
+                    bin_loc,
+                )
             lhs = astx.BinaryOp(
                 bin_op,
-                cast(astx.DataType, lhs),
-                cast(astx.DataType, rhs),
+                lhs,
+                rhs,
                 loc=bin_loc,
             )

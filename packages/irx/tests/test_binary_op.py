@@ -9,7 +9,7 @@ from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 from irx.system import Cast, PrintExpr
 
-from .conftest import check_result
+from .conftest import assert_ir_parses, build_and_run, check_result
 
 
 @pytest.mark.parametrize(
@@ -253,3 +253,48 @@ def test_binary_op_logical_and_or(
     module.block.append(main_fn)
 
     check_result("build", builder, module, expected_output=expect)
+
+
+@pytest.mark.parametrize("operator", ["/", "%"])
+def test_scalar_integer_invalid_divisor_fails_deterministically(
+    operator: str,
+) -> None:
+    """
+    title: Integer division and remainder reject invalid divisors at runtime.
+    parameters:
+      operator:
+        type: str
+    """
+    module = astx.Module(name="arithmetic_failure")
+    body = astx.Block()
+    body.append(
+        astx.FunctionReturn(
+            astx.BinaryOp(
+                operator,
+                astx.LiteralInt32(1),
+                astx.LiteralInt32(0),
+            )
+        )
+    )
+    module.block.append(
+        astx.FunctionDef(
+            prototype=astx.FunctionPrototype(
+                "main",
+                args=astx.Arguments(),
+                return_type=astx.Int32(),
+            ),
+            body=body,
+        )
+    )
+
+    ir_text = LLVMBuilder().translate(module)
+    assert_ir_parses(ir_text)
+    assert "integer_divisor_is_zero" in ir_text
+    assert "integer_dividend_is_minimum" in ir_text
+    assert "__arx_runtime_fail" in ir_text
+    assert "unreachable" in ir_text
+
+    result = build_and_run(LLVMBuilder(), module)
+    assert result.returncode == 1
+    assert "ARX_RUNTIME_FAIL|ARX-RUNTIME-ARITHMETIC-001" in result.stderr
+    assert "zero divisor or an unrepresentable signed result" in result.stderr

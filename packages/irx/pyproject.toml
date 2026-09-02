@@ -11,6 +11,7 @@ requires-python = ">=3.10,<4"
 dependencies = [
   "atpublic >= 4.0",
   "astx == 1.24.1",  # semantic-release
+  "filelock >= 3.15.4",
   "llvmlite  >= 0.44.0",
   "plum-dispatch >= 2.2.2",
   "xhell (>=0.2.1)",
@@ -33,6 +34,7 @@ packages = [
   {include = "irx", from="src"},
 ]
 include = [
+  "LICENSE",
   "src/irx/py.typed",
   "src/irx/builder/runtime/**/*.c",
   "src/irx/builder/runtime/**/*.h",

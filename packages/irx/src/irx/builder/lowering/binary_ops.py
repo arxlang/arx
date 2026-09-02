@@ -6,6 +6,8 @@ title: Binary-operator visitor mixins for llvmliteir.
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import astx
 
 from astx.binary_op import (
@@ -31,7 +33,7 @@ from astx.binary_op import (
 )
 from llvmlite import ir
 
-from irx.analysis.types import common_numeric_type
+from irx.analysis.types import common_numeric_type, is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -39,8 +41,13 @@ from irx.builder.core import (
     semantic_fma_rhs,
     uses_unsigned_semantics,
 )
+from irx.builder.diagnostics import raise_lowering_internal_error
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.errors import (
+    RUNTIME_FAILURE_FEATURE_NAME,
+    RUNTIME_FAILURE_SYMBOL_NAME,
+)
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add, emit_int_div, is_vector
 from irx.typecheck import typechecked
@@ -181,6 +188,186 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
                 f"'{node.op_code}' must lower Boolean operands."
             )
         return llvm_lhs, llvm_rhs
+
+    def _lower_short_circuit_boolean(
+        self,
+        node: astx.BinaryOp,
+        *,
+        short_circuit_value: bool,
+        name: str,
+    ) -> None:
+        """
+        title: Lower one left-to-right short-circuit Boolean expression.
+        parameters:
+          node:
+            type: astx.BinaryOp
+          short_circuit_value:
+            type: bool
+          name:
+            type: str
+        """
+        self.visit_child(node.lhs)
+        llvm_lhs = safe_pop(self.result_stack)
+        if (
+            llvm_lhs is None
+            or not is_int_type(llvm_lhs.type)
+            or llvm_lhs.type.width != 1
+        ):
+            raise_lowering_internal_error(
+                "logical operator lhs must lower to Boolean i1",
+                node=node.lhs,
+            )
+
+        lhs_block = self._llvm.ir_builder.block
+        function = self._llvm.ir_builder.function
+        rhs_block = function.append_basic_block(f"logical.{name}.rhs")
+        merge_block = function.append_basic_block(f"logical.{name}.merge")
+        if short_circuit_value:
+            self._llvm.ir_builder.cbranch(
+                llvm_lhs,
+                merge_block,
+                rhs_block,
+            )
+        else:
+            self._llvm.ir_builder.cbranch(
+                llvm_lhs,
+                rhs_block,
+                merge_block,
+            )
+
+        self._llvm.ir_builder.position_at_start(rhs_block)
+        self.visit_child(node.rhs)
+        llvm_rhs = safe_pop(self.result_stack)
+        if (
+            llvm_rhs is None
+            or not is_int_type(llvm_rhs.type)
+            or llvm_rhs.type.width != 1
+        ):
+            raise_lowering_internal_error(
+                "logical operator rhs must lower to Boolean i1",
+                node=node.rhs,
+            )
+        rhs_end_block = self._llvm.ir_builder.block
+        if rhs_end_block.is_terminated:
+            raise_lowering_internal_error(
+                "logical operator rhs terminated its expression block",
+                node=node.rhs,
+            )
+        self._llvm.ir_builder.branch(merge_block)
+
+        self._llvm.ir_builder.position_at_start(merge_block)
+        result = self._llvm.ir_builder.phi(
+            self._llvm.BOOLEAN_TYPE,
+            name=name,
+        )
+        result.add_incoming(
+            ir.Constant(self._llvm.BOOLEAN_TYPE, short_circuit_value),
+            lhs_block,
+        )
+        result.add_incoming(llvm_rhs, rhs_end_block)
+        self.result_stack.append(result)
+
+    def _guard_scalar_integer_divisor(
+        self,
+        node: astx.BinaryOp,
+        llvm_lhs: ir.Value,
+        llvm_rhs: ir.Value,
+        *,
+        unsigned: bool,
+    ) -> None:
+        """
+        title: Reject zero and unrepresentable signed integer division.
+        parameters:
+          node:
+            type: astx.BinaryOp
+          llvm_lhs:
+            type: ir.Value
+          llvm_rhs:
+            type: ir.Value
+          unsigned:
+            type: bool
+        """
+        if not is_int_type(llvm_lhs.type) or not is_int_type(llvm_rhs.type):
+            raise_lowering_internal_error(
+                "integer division guard requires integer operands",
+                node=node,
+            )
+        if llvm_lhs.type != llvm_rhs.type:
+            raise_lowering_internal_error(
+                "integer division guard requires unified operand types",
+                node=node,
+            )
+
+        zero = ir.Constant(llvm_rhs.type, 0)
+        invalid = self._llvm.ir_builder.icmp_unsigned(
+            "==",
+            llvm_rhs,
+            zero,
+            name="integer_divisor_is_zero",
+        )
+        if not unsigned:
+            width = llvm_lhs.type.width
+            minimum = ir.Constant(llvm_lhs.type, -(1 << (width - 1)))
+            negative_one = ir.Constant(llvm_rhs.type, -1)
+            minimum_lhs = self._llvm.ir_builder.icmp_signed(
+                "==",
+                llvm_lhs,
+                minimum,
+                name="integer_dividend_is_minimum",
+            )
+            negative_one_rhs = self._llvm.ir_builder.icmp_signed(
+                "==",
+                llvm_rhs,
+                negative_one,
+                name="integer_divisor_is_negative_one",
+            )
+            overflow = self._llvm.ir_builder.and_(
+                minimum_lhs,
+                negative_one_rhs,
+                name="integer_division_overflows",
+            )
+            invalid = self._llvm.ir_builder.or_(
+                invalid,
+                overflow,
+                name="integer_division_is_invalid",
+            )
+
+        function = self._llvm.ir_builder.function
+        fail_block = function.append_basic_block("integer.division.fail")
+        pass_block = function.append_basic_block("integer.division.pass")
+        self._llvm.ir_builder.cbranch(invalid, fail_block, pass_block)
+
+        self._llvm.ir_builder.position_at_start(fail_block)
+        string_pointer = cast(Any, self)._constant_c_string_pointer
+        code_ptr = string_pointer(
+            "ARX-RUNTIME-ARITHMETIC-001",
+            name_hint="arithmetic_failure_code",
+        )
+        source_ptr = string_pointer(
+            cast(Any, self)._assert_source_name(node),
+            name_hint="arithmetic_failure_source",
+        )
+        message_ptr = string_pointer(
+            "integer division or remainder has a zero divisor or an "
+            "unrepresentable signed result",
+            name_hint="arithmetic_failure_message",
+        )
+        failure = self.require_runtime_symbol(
+            RUNTIME_FAILURE_FEATURE_NAME,
+            RUNTIME_FAILURE_SYMBOL_NAME,
+        )
+        self._llvm.ir_builder.call(
+            failure,
+            [
+                code_ptr,
+                source_ptr,
+                ir.Constant(self._llvm.INT32_TYPE, node.loc.line),
+                ir.Constant(self._llvm.INT32_TYPE, node.loc.col),
+                message_ptr,
+            ],
+        )
+        self._llvm.ir_builder.unreachable()
+        self._llvm.ir_builder.position_at_start(pass_block)
 
     def _emit_vector_sub(
         self,
@@ -380,6 +567,27 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
         )
 
         llvm_lhs = self._lvalue_address(var_lhs)
+        if isinstance(self._resolved_ast_type(node), astx.ListType):
+            if not isinstance(var_lhs, astx.Identifier):
+                raise_lowering_internal_error(
+                    "list field assignment reached lowering without an "
+                    "object-field ownership contract",
+                    node=node,
+                )
+            self._destroy_replaced_list(
+                node,
+                llvm_lhs,
+                target_name=lhs_name,
+            )
+        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
+            var_lhs,
+            astx.Identifier,
+        ):
+            self._destroy_replaced_string(
+                node,
+                llvm_lhs,
+                target_name=lhs_name,
+            )
         self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
         self.result_stack.append(llvm_rhs)
 
@@ -404,7 +612,12 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
             and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
             and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
         ):
-            result = self._handle_string_concatenation(llvm_lhs, llvm_rhs)
+            result = self._handle_string_concatenation(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+            )
+            self._register_owned_string_temporary(node, result)
         else:
             result = emit_add(
                 self._llvm.ir_builder, llvm_lhs, llvm_rhs, "addtmp"
@@ -482,8 +695,20 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
             result = self._llvm.ir_builder.fdiv(llvm_lhs, llvm_rhs, "divtmp")
             self._apply_fast_math(result)
         elif unsigned:
+            self._guard_scalar_integer_divisor(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+                unsigned=True,
+            )
             result = self._llvm.ir_builder.udiv(llvm_lhs, llvm_rhs, "divtmp")
         else:
+            self._guard_scalar_integer_divisor(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+                unsigned=False,
+            )
             result = self._llvm.ir_builder.sdiv(llvm_lhs, llvm_rhs, "divtmp")
         self.result_stack.append(result)
 
@@ -503,8 +728,20 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
         if is_fp_type(llvm_lhs.type) or is_fp_type(llvm_rhs.type):
             result = self._llvm.ir_builder.frem(llvm_lhs, llvm_rhs, "fremtmp")
         elif unsigned:
+            self._guard_scalar_integer_divisor(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+                unsigned=True,
+            )
             result = self._llvm.ir_builder.urem(llvm_lhs, llvm_rhs, "uremtmp")
         else:
+            self._guard_scalar_integer_divisor(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+                unsigned=False,
+            )
             result = self._llvm.ir_builder.srem(llvm_lhs, llvm_rhs, "sremtmp")
         self.result_stack.append(result)
 
@@ -516,9 +753,11 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LogicalAndBinOp
         """
-        llvm_lhs, llvm_rhs = self._load_boolean_operands(node)
-        result = self._llvm.ir_builder.and_(llvm_lhs, llvm_rhs, "andtmp")
-        self.result_stack.append(result)
+        self._lower_short_circuit_boolean(
+            node,
+            short_circuit_value=False,
+            name="andtmp",
+        )
 
     @VisitorCore.visit.dispatch
     def visit(self, node: LogicalOrBinOp) -> None:
@@ -528,9 +767,11 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LogicalOrBinOp
         """
-        llvm_lhs, llvm_rhs = self._load_boolean_operands(node)
-        result = self._llvm.ir_builder.or_(llvm_lhs, llvm_rhs, "ortmp")
-        self.result_stack.append(result)
+        self._lower_short_circuit_boolean(
+            node,
+            short_circuit_value=True,
+            name="ortmp",
+        )
 
     @VisitorCore.visit.dispatch
     def visit(self, node: LtBinOp) -> None:

@@ -313,6 +313,74 @@ def test_nested_yield_is_diagnosed() -> None:
         analyze(module)
 
 
+def test_owned_list_local_in_generator_is_diagnosed() -> None:
+    """
+    title: >-
+      Generator frames should reject owned lists until close cleanup exists.
+    """
+    list_type = astx.ListType([astx.Int32()])
+    module = astx.Module()
+    module.block.append(
+        astx.FunctionDef(
+            prototype=astx.FunctionPrototype(
+                "bad_list_owner",
+                args=astx.Arguments(),
+                return_type=astx.GeneratorType(astx.Int32()),
+            ),
+            body=_block_of(
+                astx.VariableDeclaration(
+                    "values",
+                    list_type,
+                    mutability=astx.MutabilityKind.mutable,
+                    value=astx.ListCreate(astx.Int32()),
+                ),
+                astx.YieldStmt(astx.LiteralInt32(1)),
+            ),
+        )
+    )
+
+    with pytest.raises(
+        SemanticError,
+        match="owned list locals in generators require generator lifecycle",
+    ):
+        analyze(module)
+
+
+def test_owned_string_local_in_generator_is_diagnosed() -> None:
+    """
+    title: >-
+      Generator frames should reject owned strings until close cleanup exists.
+    """
+    module = astx.Module()
+    module.block.append(
+        astx.FunctionDef(
+            prototype=astx.FunctionPrototype(
+                "bad_string_owner",
+                args=astx.Arguments(),
+                return_type=astx.GeneratorType(astx.Int32()),
+            ),
+            body=_block_of(
+                astx.VariableDeclaration(
+                    "message",
+                    astx.String(),
+                    value=astx.BinaryOp(
+                        "+",
+                        astx.LiteralString("owned"),
+                        astx.LiteralString(" string"),
+                    ),
+                ),
+                astx.YieldStmt(astx.LiteralInt32(1)),
+            ),
+        )
+    )
+
+    with pytest.raises(
+        SemanticError,
+        match="owned string locals in generators require generator lifecycle",
+    ):
+        analyze(module)
+
+
 def test_yield_from_is_diagnosed() -> None:
     """
     title: Yield-from should be rejected during analysis for this MVP.

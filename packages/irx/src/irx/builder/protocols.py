@@ -14,7 +14,7 @@ from llvmlite import ir
 from irx.analysis.resolved_nodes import FunctionSignature
 from irx.base.visitors.protocols import BaseVisitorProtocol
 from irx.builder.state import (
-    CleanupEmitter,
+    CleanupAction,
     LoopTargets,
     NamedValueMap,
     ResultStackValue,
@@ -47,7 +47,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
       loop_stack:
         type: list[LoopTargets]
       cleanup_stack:
-        type: list[CleanupEmitter]
+        type: list[CleanupAction]
       struct_types:
         type: dict[str, ir.Type]
       llvm_structs_by_qualified_name:
@@ -84,7 +84,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     result_stack: list[ResultStackValue]
     _buffer_view_global_counter: int
     loop_stack: list[LoopTargets]
-    cleanup_stack: list[CleanupEmitter]
+    cleanup_stack: list[CleanupAction]
     struct_types: dict[str, ir.Type]
     llvm_structs_by_qualified_name: dict[str, ir.IdentifiedStructType]
     runtime_features: RuntimeFeatureState
@@ -216,6 +216,44 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         ...
 
+    def _destroy_replaced_list(
+        self,
+        _node: astx.AST,
+        _list_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned list storage before a validated replacement.
+        parameters:
+          _node:
+            type: astx.AST
+          _list_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        ...
+
+    def _destroy_replaced_string(
+        self,
+        _node: astx.AST,
+        _string_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned string storage before a validated replacement.
+        parameters:
+          _node:
+            type: astx.AST
+          _string_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        ...
+
     def _llvm_function_type_for_signature(
         self,
         _signature: FunctionSignature,
@@ -244,9 +282,54 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         """
         ...
 
-    def _emit_active_cleanups(self, _start_depth: int = 0) -> None:
+    def _emit_active_cleanups(
+        self,
+        _start_depth: int = 0,
+        _excluded_owner_symbol_ids: frozenset[str] = frozenset(),
+    ) -> None:
         """
         title: Emit all active cleanup actions.
+        parameters:
+          _start_depth:
+            type: int
+          _excluded_owner_symbol_ids:
+            type: frozenset[str]
+        """
+        ...
+
+    def _register_owned_list_temporary(
+        self,
+        _node: astx.AST,
+        _list_ptr: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned list temporary.
+        parameters:
+          _node:
+            type: astx.AST
+          _list_ptr:
+            type: ir.Value
+        """
+        ...
+
+    def _register_owned_string_temporary(
+        self,
+        _node: astx.AST,
+        _pointer: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned string.
+        parameters:
+          _node:
+            type: astx.AST
+          _pointer:
+            type: ir.Value
+        """
+        ...
+
+    def _emit_temporary_cleanups(self, _start_depth: int) -> None:
+        """
+        title: Emit and remove temporary cleanups after one stack depth.
         parameters:
           _start_depth:
             type: int
@@ -365,14 +448,36 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         ...
 
     def _handle_string_concatenation(
-        self, _lhs: ir.Value, _rhs: ir.Value
+        self,
+        _node: astx.AST,
+        _lhs: ir.Value,
+        _rhs: ir.Value,
     ) -> ir.Value:
         """
         title: Handle string concatenation.
         parameters:
+          _node:
+            type: astx.AST
           _lhs:
             type: ir.Value
           _rhs:
+            type: ir.Value
+        returns:
+          type: ir.Value
+        """
+        ...
+
+    def _copy_string_to_heap(
+        self,
+        _node: astx.AST,
+        _pointer: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Copy one static string into owned heap storage.
+        parameters:
+          _node:
+            type: astx.AST
+          _pointer:
             type: ir.Value
         returns:
           type: ir.Value
@@ -503,11 +608,16 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         return cast(tuple[ir.Value, str], (None, ""))
 
     def _snprintf_heap(
-        self, _fmt_gv: ir.GlobalVariable, _args: list[ir.Value]
+        self,
+        _node: astx.AST,
+        _fmt_gv: ir.GlobalVariable,
+        _args: list[ir.Value],
     ) -> ir.Value:
         """
         title: Snprintf heap.
         parameters:
+          _node:
+            type: astx.AST
           _fmt_gv:
             type: ir.GlobalVariable
           _args:
@@ -551,7 +661,7 @@ class VisitorMixinTypingBase:
       loop_stack:
         type: list[LoopTargets]
       cleanup_stack:
-        type: list[CleanupEmitter]
+        type: list[CleanupAction]
       struct_types:
         type: dict[str, ir.Type]
       llvm_structs_by_qualified_name:
@@ -588,7 +698,7 @@ class VisitorMixinTypingBase:
     result_stack: list[ResultStackValue]
     _buffer_view_global_counter: int
     loop_stack: list[LoopTargets]
-    cleanup_stack: list[CleanupEmitter]
+    cleanup_stack: list[CleanupAction]
     struct_types: dict[str, ir.Type]
     llvm_structs_by_qualified_name: dict[str, ir.IdentifiedStructType]
     runtime_features: RuntimeFeatureState
@@ -725,6 +835,44 @@ class VisitorMixinTypingBase:
         """
         return cast(ir.Value, None)
 
+    def _destroy_replaced_list(
+        self,
+        _node: astx.AST,
+        _list_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned list storage before a validated replacement.
+        parameters:
+          _node:
+            type: astx.AST
+          _list_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        _ = (_node, _list_ptr, target_name)
+
+    def _destroy_replaced_string(
+        self,
+        _node: astx.AST,
+        _string_ptr: ir.Value,
+        *,
+        target_name: str,
+    ) -> None:
+        """
+        title: Destroy owned string storage before a validated replacement.
+        parameters:
+          _node:
+            type: astx.AST
+          _string_ptr:
+            type: ir.Value
+          target_name:
+            type: str
+        """
+        _ = (_node, _string_ptr, target_name)
+
     def _llvm_function_type_for_signature(
         self,
         _signature: FunctionSignature,
@@ -753,9 +901,54 @@ class VisitorMixinTypingBase:
         """
         return cast(ir.Function, None)
 
-    def _emit_active_cleanups(self, _start_depth: int = 0) -> None:
+    def _emit_active_cleanups(
+        self,
+        _start_depth: int = 0,
+        _excluded_owner_symbol_ids: frozenset[str] = frozenset(),
+    ) -> None:
         """
         title: Emit all active cleanup actions.
+        parameters:
+          _start_depth:
+            type: int
+          _excluded_owner_symbol_ids:
+            type: frozenset[str]
+        """
+        _ = _start_depth
+
+    def _register_owned_list_temporary(
+        self,
+        _node: astx.AST,
+        _list_ptr: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned list temporary.
+        parameters:
+          _node:
+            type: astx.AST
+          _list_ptr:
+            type: ir.Value
+        """
+        _ = (_node, _list_ptr)
+
+    def _register_owned_string_temporary(
+        self,
+        _node: astx.AST,
+        _pointer: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned string.
+        parameters:
+          _node:
+            type: astx.AST
+          _pointer:
+            type: ir.Value
+        """
+        _ = (_node, _pointer)
+
+    def _emit_temporary_cleanups(self, _start_depth: int) -> None:
+        """
+        title: Emit and remove temporary cleanups after one stack depth.
         parameters:
           _start_depth:
             type: int
@@ -993,14 +1186,36 @@ class VisitorMixinTypingBase:
         return False
 
     def _handle_string_concatenation(
-        self, _lhs: ir.Value, _rhs: ir.Value
+        self,
+        _node: astx.AST,
+        _lhs: ir.Value,
+        _rhs: ir.Value,
     ) -> ir.Value:
         """
         title: Handle string concatenation.
         parameters:
+          _node:
+            type: astx.AST
           _lhs:
             type: ir.Value
           _rhs:
+            type: ir.Value
+        returns:
+          type: ir.Value
+        """
+        return cast(ir.Value, None)
+
+    def _copy_string_to_heap(
+        self,
+        _node: astx.AST,
+        _pointer: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Copy one static string into owned heap storage.
+        parameters:
+          _node:
+            type: astx.AST
+          _pointer:
             type: ir.Value
         returns:
           type: ir.Value
@@ -1130,11 +1345,16 @@ class VisitorMixinTypingBase:
         return cast(tuple[ir.Value, str], (None, ""))
 
     def _snprintf_heap(
-        self, _fmt_gv: ir.GlobalVariable, _args: list[ir.Value]
+        self,
+        _node: astx.AST,
+        _fmt_gv: ir.GlobalVariable,
+        _args: list[ir.Value],
     ) -> ir.Value:
         """
         title: Snprintf heap.
         parameters:
+          _node:
+            type: astx.AST
           _fmt_gv:
             type: ir.GlobalVariable
           _args:

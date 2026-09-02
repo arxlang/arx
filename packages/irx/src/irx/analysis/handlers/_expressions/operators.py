@@ -25,6 +25,11 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.normalization import normalize_flags, normalize_operator
+from irx.analysis.ownership import (
+    resource_ownership,
+    string_resource_ownership,
+)
+from irx.analysis.resolved_nodes import OwnershipKind
 from irx.analysis.types import (
     display_type_name,
     is_boolean_type,
@@ -153,6 +158,22 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                     flags=flags,
                 ),
             )
+            self._resolve_list_assignment_ownership(
+                node,
+                node.rhs,
+                assignment_symbol,
+                target_name=target_name,
+                target_type=target_type,
+                is_local=isinstance(node.lhs, astx.Identifier),
+            )
+            self._resolve_string_assignment_ownership(
+                node,
+                node.rhs,
+                assignment_symbol,
+                target_name=target_name,
+                target_type=target_type,
+                is_local=isinstance(node.lhs, astx.Identifier),
+            )
             return
 
         lhs_has_value = self._require_value_expression(
@@ -221,6 +242,11 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 flags=flags,
             ),
         )
+        if node.op_code == "+" and is_string_type(result_type):
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(OwnershipKind.OWNED),
+            )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.Cast) -> None:
@@ -246,6 +272,30 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             node=node,
         )
         self._set_type(node, target_type)
+        if not is_string_type(target_type):
+            return
+        source_ownership = resource_ownership(node.value)
+        if is_string_type(source_type):
+            if source_ownership is None:
+                self.context.diagnostics.add(
+                    "string cast source is missing ownership metadata",
+                    node=node.value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            if source_ownership.kind is OwnershipKind.OWNED:
+                self.context.diagnostics.add(
+                    "identity casts of owned strings are not supported; "
+                    "remove the redundant cast to preserve the owner",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            self._set_resource_ownership(node, source_ownership)
+            return
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(OwnershipKind.OWNED),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.IsInstanceExpr) -> None:
@@ -313,5 +363,13 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             context="TypeOfExpr",
         ):
             self._set_type(node, astx.String())
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(OwnershipKind.STATIC),
+            )
             return
         self._set_type(node, astx.String())
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(OwnershipKind.STATIC),
+        )

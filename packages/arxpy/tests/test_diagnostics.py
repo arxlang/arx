@@ -7,8 +7,8 @@ from __future__ import annotations
 from arxpy.diagnostics import (
     Diagnostic,
     DiagnosticSeverity,
-    _from_irx,
-    _from_parser_exception,
+    from_irx,
+    from_parser_exception,
 )
 
 
@@ -130,7 +130,7 @@ def test_diagnostic_is_frozen() -> None:
 
 def test_from_irx_maps_every_field() -> None:
     """
-    title: _from_irx maps severity, message, location, code, and module key.
+    title: from_irx maps severity, message, location, code, and module key.
     """
     record = _FakeRecord(
         "unresolved name x",
@@ -138,7 +138,7 @@ def test_from_irx_maps_every_field() -> None:
         code="S001",
         module_key="main",
     )
-    assert _from_irx(record) == Diagnostic(
+    assert from_irx(record) == Diagnostic(
         severity=DiagnosticSeverity.ERROR,
         message="unresolved name x",
         filename="main",
@@ -153,14 +153,14 @@ def test_from_irx_explicit_filename_overrides_module_key() -> None:
     title: An explicit filename takes precedence over the module key.
     """
     record = _FakeRecord("oops", module_key="main")
-    assert _from_irx(record, filename="prog.x").filename == "prog.x"
+    assert from_irx(record, filename="prog.x").filename == "prog.x"
 
 
 def test_from_irx_without_source_or_module_key() -> None:
     """
     title: Missing source and module key yield None location and "<unknown>".
     """
-    diagnostic = _from_irx(_FakeRecord("oops"))
+    diagnostic = from_irx(_FakeRecord("oops"))
     assert diagnostic.line is None
     assert diagnostic.column is None
     assert diagnostic.filename == "<unknown>"
@@ -170,17 +170,17 @@ def test_from_irx_coerces_severity() -> None:
     """
     title: A string severity is coerced; unknown values fall back to ERROR.
     """
-    warning = _from_irx(_FakeRecord("w", severity="warning"))
+    warning = from_irx(_FakeRecord("w", severity="warning"))
     assert warning.severity is DiagnosticSeverity.WARNING
-    unknown = _from_irx(_FakeRecord("j", severity="weird"))
+    unknown = from_irx(_FakeRecord("j", severity="weird"))
     assert unknown.severity is DiagnosticSeverity.ERROR
 
 
 def test_from_parser_exception_has_no_location() -> None:
     """
-    title: _from_parser_exception yields an error with no line or column.
+    title: from_parser_exception yields an error with no line or column.
     """
-    diagnostic = _from_parser_exception(
+    diagnostic = from_parser_exception(
         Exception("ParserError: unexpected token")
     )
     assert diagnostic == Diagnostic(
@@ -194,7 +194,25 @@ def test_from_parser_exception_has_no_location() -> None:
 
 def test_from_parser_exception_custom_filename() -> None:
     """
-    title: _from_parser_exception accepts a filename override.
+    title: from_parser_exception accepts a filename override.
     """
-    diagnostic = _from_parser_exception(Exception("bad"), filename="prog.x")
+    diagnostic = from_parser_exception(Exception("bad"), filename="prog.x")
     assert diagnostic.filename == "prog.x"
+
+
+def test_from_parser_exception_maps_stable_frontend_fields() -> None:
+    """
+    title: Frontend code and trustworthy location are preserved.
+    """
+    error = Exception("rendered")
+    error.message = "raw parser failure"  # type: ignore[attr-defined]
+    error.code = "ARX-PARSE-001"  # type: ignore[attr-defined]
+    error.location = _FakeSource(4, 9)  # type: ignore[attr-defined]
+    assert from_parser_exception(error, filename="prog.x") == Diagnostic(
+        severity=DiagnosticSeverity.ERROR,
+        message="raw parser failure",
+        filename="prog.x",
+        line=4,
+        column=9,
+        code="ARX-PARSE-001",
+    )

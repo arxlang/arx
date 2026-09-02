@@ -18,11 +18,21 @@ from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+    transfer_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
     SemanticClassMember,
     SemanticInfo,
     SemanticSymbol,
 )
+from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -239,6 +249,201 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         )
         return None
 
+    def _resolve_list_assignment_ownership(
+        self,
+        node: astx.AST,
+        value: astx.AST,
+        symbol: SemanticSymbol,
+        *,
+        target_name: str,
+        target_type: astx.DataType | None,
+        is_local: bool,
+    ) -> None:
+        """
+        title: Validate and record one dynamic-list replacement transfer.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: astx.AST
+          symbol:
+            type: SemanticSymbol
+          target_name:
+            type: str
+          target_type:
+            type: astx.DataType | None
+          is_local:
+            type: bool
+        """
+        if not isinstance(target_type, astx.ListType):
+            return
+        if not is_local:
+            self.context.diagnostics.add(
+                f"cannot assign list storage to field '{target_name}': "
+                "object-field ownership and destruction are not supported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        target_ownership = symbol_resource_ownership(symbol)
+        value_ownership = resource_ownership(value)
+        if (
+            target_ownership is None
+            or target_ownership.kind is not OwnershipKind.OWNED
+        ):
+            self.context.diagnostics.add(
+                f"cannot replace list '{target_name}' because its storage "
+                "is not locally owned",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if (
+            value_ownership is None
+            or value_ownership.kind is not OwnershipKind.OWNED
+        ):
+            self.context.diagnostics.add(
+                f"assignment to list '{target_name}' requires a freshly "
+                "owned value; borrowed and static list copies are not "
+                "supported",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(
+            value,
+            transfer_resource_ownership(
+                value_ownership,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+
+    def _resolve_string_assignment_ownership(
+        self,
+        node: astx.AST,
+        value: astx.AST,
+        symbol: SemanticSymbol,
+        *,
+        target_name: str,
+        target_type: astx.DataType | None,
+        is_local: bool,
+    ) -> None:
+        """
+        title: Validate and record one string pointer replacement.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: astx.AST
+          symbol:
+            type: SemanticSymbol
+          target_name:
+            type: str
+          target_type:
+            type: astx.DataType | None
+          is_local:
+            type: bool
+        """
+        if not is_string_type(target_type):
+            return
+        value_ownership = resource_ownership(value)
+        if value_ownership is None:
+            self.context.diagnostics.add(
+                f"string assignment to '{target_name}' is missing value "
+                "ownership metadata",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        value_kind = value_ownership.kind
+        if value_kind is OwnershipKind.BORROWED:
+            source_symbol = getattr(
+                getattr(value, "semantic", None),
+                "resolved_symbol",
+                None,
+            )
+            source_ownership = (
+                symbol_resource_ownership(source_symbol)
+                if isinstance(source_symbol, SemanticSymbol)
+                else None
+            )
+            if (
+                source_ownership is not None
+                and source_ownership.kind is OwnershipKind.STATIC
+            ):
+                value_kind = OwnershipKind.STATIC
+        if not is_local:
+            if value_kind is OwnershipKind.OWNED:
+                self.context.diagnostics.add(
+                    f"cannot assign owned string storage to field "
+                    f"'{target_name}': object-field destruction is not "
+                    "supported",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            return
+
+        target_ownership = symbol_resource_ownership(symbol)
+        if target_ownership is None:
+            self.context.diagnostics.add(
+                f"string target '{target_name}' is missing ownership metadata",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if (
+            target_ownership.kind is OwnershipKind.STATIC
+            and value_kind is OwnershipKind.STATIC
+        ):
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(
+                    OwnershipKind.STATIC,
+                    owner_symbol_id=symbol.symbol_id,
+                ),
+            )
+            return
+        if (
+            target_ownership.kind is not OwnershipKind.OWNED
+            or value_kind is not OwnershipKind.OWNED
+        ):
+            self.context.diagnostics.add(
+                f"assignment to string '{target_name}' must preserve its "
+                "static or owned storage class; borrowed aliases and "
+                "static/owned replacement are not supported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(
+            value,
+            transfer_resource_ownership(
+                value_ownership,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.VariableAssignment) -> None:
         """
@@ -276,3 +481,19 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         self._set_symbol(node, symbol)
         self._set_assignment(node, symbol)
         self._set_type(node, symbol.type_)
+        self._resolve_list_assignment_ownership(
+            node,
+            node.value,
+            symbol,
+            target_name=node.name,
+            target_type=symbol.type_,
+            is_local=True,
+        )
+        self._resolve_string_assignment_ownership(
+            node,
+            node.value,
+            symbol,
+            target_name=node.name,
+            target_type=symbol.type_,
+            is_local=True,
+        )

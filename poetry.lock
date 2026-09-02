@@ -243,6 +243,8 @@ develop = true
 
 [package.dependencies]
 arxlang = "1.24.1"
+atpublic = ">=4.0"
+typeguard = ">=4"
 
 [package.source]
 type = "directory"
@@ -1169,7 +1171,7 @@ version = "3.32.2"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "filelock-3.32.2-py3-none-any.whl", hash = "sha256:87dd94cf281e586d135fa51132b8e3d9a598b316e90377a288663c9321036c82"},
     {file = "filelock-3.32.2.tar.gz", hash = "sha256:c33351e1f49cae33414acbc6d56784e6ecee82514ec90795da1161fc4836b5b8"},
@@ -3065,6 +3067,7 @@ develop = true
 arx-arrowcpp-sources = "24.0.0"
 astx = "1.24.1"
 atpublic = ">=4.0"
+filelock = ">=3.15.4"
 llvmlite = ">=0.44.0"
 plum-dispatch = ">=2.2.2"
 pyarrow = ">=24.0.0,<25.0.0"

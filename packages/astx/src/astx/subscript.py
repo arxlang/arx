@@ -10,6 +10,7 @@ from astx.base import (
     NO_SOURCE_LOCATION,
     ASTKind,
     ASTNodes,
+    DataType,
     DictDataTypesStruct,
     Expr,
     ReprStruct,
@@ -17,16 +18,19 @@ from astx.base import (
 )
 from astx.literals import LiteralNone
 from astx.tools.typing import typechecked
+from astx.types.base import AnyType
 
 
 @public
 @typechecked
-class SubscriptExpr(Expr):
+class SubscriptExpr(DataType):
     """
     title: AST class for subscript expressions.
     attributes:
       kind:
         type: ASTKind
+      type_:
+        type: DataType
       value:
         type: Expr
       index:
@@ -40,6 +44,7 @@ class SubscriptExpr(Expr):
     """
 
     kind: ASTKind
+    type_: DataType
 
     value: Expr
     index: Expr
@@ -95,6 +100,7 @@ class SubscriptExpr(Expr):
             type: Optional[ASTNodes]
         """
         super().__init__(loc=loc, parent=parent)
+        self.type_ = AnyType()
         self.value: Expr = value if value is not None else LiteralNone()
         self.index: Expr = index if index is not None else LiteralNone()
         self.lower: Expr = lower if lower is not None else LiteralNone()

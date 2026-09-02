@@ -9,7 +9,9 @@ authors = [
 license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
+  "atpublic >= 4.0",
   "arxlang == 1.24.1",  # semantic-release
+  "typeguard >= 4",
 ]
 
 [build-system]
@@ -24,7 +26,7 @@ exclude = [
 packages = [
   {include = "arxpy", from="src"},
 ]
-include = ["src/arxpy/py.typed"]
+include = ["LICENSE", "src/arxpy/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = [

@@ -16,6 +16,7 @@ from irx.analysis import (
 )
 from irx.analysis.module_symbols import qualified_function_name
 from irx.analysis.resolved_nodes import SemanticInfo
+from irx.diagnostics import DiagnosticCodes
 
 from ..conftest import StaticImportResolver, make_parsed_module
 
@@ -840,8 +841,48 @@ def test_analyze_modules_reports_missing_module() -> None:
 
     with pytest.raises(
         SemanticError, match="Unable to resolve module 'missing'"
-    ):
+    ) as captured:
         analyze_modules(root, StaticImportResolver({}))
+    assert captured.value.diagnostics.diagnostics[0].code == (
+        DiagnosticCodes.SEMANTIC_IMPORT_RESOLUTION
+    )
+
+
+def test_analyze_modules_propagates_unexpected_direct_resolver_failure() -> (
+    None
+):
+    """
+    title: Direct import resolution does not hide unexpected host failures.
+    """
+    root = make_parsed_module(
+        "app.main",
+        astx.ImportStmt([astx.AliasExpr("broken")]),
+    )
+
+    def resolver(
+        requesting_module_key: str,
+        import_node: astx.ImportStmt | astx.ImportFromStmt,
+        requested_specifier: str,
+    ) -> ParsedModule:
+        """
+        title: Raise one internal resolver failure.
+        parameters:
+          requesting_module_key:
+            type: str
+          import_node:
+            type: astx.ImportStmt | astx.ImportFromStmt
+          requested_specifier:
+            type: str
+        returns:
+          type: ParsedModule
+        """
+        _ = requesting_module_key
+        _ = import_node
+        _ = requested_specifier
+        raise RuntimeError("resolver bug")
+
+    with pytest.raises(RuntimeError, match="resolver bug"):
+        analyze_modules(root, resolver)
 
 
 def test_analyze_modules_reports_missing_imported_symbol() -> None:
@@ -934,11 +975,14 @@ def test_analyze_modules_rejects_import_cycles() -> None:
 
     with pytest.raises(
         SemanticError, match="Cyclic import detected: a -> b -> a"
-    ):
+    ) as captured:
         analyze_modules(
             module_a,
             StaticImportResolver({"a": module_a, "b": module_b}),
         )
+    assert captured.value.diagnostics.diagnostics[0].code == (
+        DiagnosticCodes.SEMANTIC_IMPORT_CYCLE
+    )
 
 
 def test_analyze_modules_keeps_same_bare_function_names_distinct() -> None:

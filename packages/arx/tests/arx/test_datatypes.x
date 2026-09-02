@@ -49,6 +49,14 @@ fn touch() -> none:
   ```
   var sentinel: bool = true
 
+fn fail_if_evaluated() -> bool:
+  ```
+  title: fail_if_evaluated
+  summary: Fails when a short-circuited Boolean right operand is evaluated.
+  ```
+  assert false
+  return true
+
 fn test_boolean_and_string_paths() -> none:
   ```
   title: test_boolean_and_string_paths
@@ -69,6 +77,17 @@ fn test_numeric_casts_and_widths() -> none:
   ```
   assert widened_total() == 40
 
+fn test_fixed_width_integer_wrapping() -> none:
+  ```
+  title: test_fixed_width_integer_wrapping
+  summary: Confirms fixed-width arithmetic and narrowing use modulo semantics.
+  ```
+  var maximum: i32 = 2147483647
+  var minimum: i32 = cast(2147483648, i32)
+  assert maximum + 1 == minimum
+  assert minimum - 1 == maximum
+  assert 65536 * 65536 == 0
+
 fn test_none_helpers() -> none:
   ```
   title: test_none_helpers
@@ -76,3 +95,11 @@ fn test_none_helpers() -> none:
   ```
   touch()
   assert choose(true, 1, 0) == 1
+
+fn test_boolean_short_circuit_evaluation() -> none:
+  ```
+  title: test_boolean_short_circuit_evaluation
+  summary: Confirms Boolean operands evaluate left to right and short circuit.
+  ```
+  assert (false && fail_if_evaluated()) == false
+  assert (true || fail_if_evaluated()) == true

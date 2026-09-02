@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import astx
 
+from arx.exceptions import ParserException
 from arx.lexer import TokenList
 from arx.parser.control_flow import ControlFlowParserMixin
 from arx.parser.core import ParserCore
@@ -61,6 +62,32 @@ class Parser(
     type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
     tokens: TokenList
+
+    def parse(
+        self,
+        tokens: TokenList,
+        module_name: str = "main",
+    ) -> astx.Module:
+        """
+        title: Parse tokens and attach the active token location to failures.
+        parameters:
+          tokens:
+            type: TokenList
+          module_name:
+            type: str
+        returns:
+          type: astx.Module
+        """
+        try:
+            return super().parse(tokens, module_name)
+        except RecursionError:
+            raise ParserException(
+                "Source nesting exceeds the parser recursion limit",
+                self.tokens.cur_tok.location,
+                code="ARX-PARSE-DEPTH-001",
+            ) from None
+        except ParserException as err:
+            raise err.attach_location(self.tokens.cur_tok.location) from None
 
 
 __all__ = [

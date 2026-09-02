@@ -15,7 +15,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from public import private, public
 
+from arxpy.typecheck import typechecked
+
+
+@public
+@typechecked
 class DiagnosticSeverity(Enum):
     """
     title: Severity level of a diagnostic.
@@ -27,7 +33,9 @@ class DiagnosticSeverity(Enum):
     HINT = "hint"
 
 
-@dataclass(frozen=True)
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
 class Diagnostic:
     """
     title: One structured diagnostic exposed by the ArxPy API.
@@ -59,8 +67,42 @@ class Diagnostic:
     column: int | None
     code: str | None = None
 
+    def __init__(
+        self,
+        severity: DiagnosticSeverity,
+        message: str,
+        filename: str,
+        line: int | None,
+        column: int | None,
+        code: str | None = None,
+    ) -> None:
+        """
+        title: Initialize one structured diagnostic.
+        parameters:
+          severity:
+            type: DiagnosticSeverity
+          message:
+            type: str
+          filename:
+            type: str
+          line:
+            type: int | None
+          column:
+            type: int | None
+          code:
+            type: str | None
+        """
+        object.__setattr__(self, "severity", severity)
+        object.__setattr__(self, "message", message)
+        object.__setattr__(self, "filename", filename)
+        object.__setattr__(self, "line", line)
+        object.__setattr__(self, "column", column)
+        object.__setattr__(self, "code", code)
 
-def _coerce_severity(value: object) -> DiagnosticSeverity:
+
+@private
+@typechecked
+def coerce_severity(value: object) -> DiagnosticSeverity:
     """
     title: Coerce an upstream severity value into a DiagnosticSeverity.
     summary: >-
@@ -82,7 +124,9 @@ def _coerce_severity(value: object) -> DiagnosticSeverity:
         return DiagnosticSeverity.ERROR
 
 
-def _resolve_source(record: object) -> object | None:
+@private
+@typechecked
+def resolve_source(record: object) -> object | None:
     """
     title: Return the best-effort source location of an irx diagnostic.
     parameters:
@@ -99,7 +143,9 @@ def _resolve_source(record: object) -> object | None:
     return source
 
 
-def _resolve_module_key(record: object) -> str | None:
+@private
+@typechecked
+def resolve_module_key(record: object) -> str | None:
     """
     title: Return the best-effort module attribution of an irx diagnostic.
     parameters:
@@ -116,7 +162,9 @@ def _resolve_module_key(record: object) -> str | None:
     return None if module_key is None else str(module_key)
 
 
-def _from_irx(
+@private
+@typechecked
+def from_irx(
     record: object,
     *,
     filename: str | None = None,
@@ -137,11 +185,11 @@ def _from_irx(
     returns:
       type: Diagnostic
     """
-    source = _resolve_source(record)
+    source = resolve_source(record)
     code = getattr(record, "code", None)
-    attribution = filename or _resolve_module_key(record) or "<unknown>"
+    attribution = filename or resolve_module_key(record) or "<unknown>"
     return Diagnostic(
-        severity=_coerce_severity(getattr(record, "severity", "error")),
+        severity=coerce_severity(getattr(record, "severity", "error")),
         message=str(getattr(record, "message", record)),
         filename=attribution,
         line=getattr(source, "line", None),
@@ -150,16 +198,18 @@ def _from_irx(
     )
 
 
-def _from_parser_exception(
+@private
+@typechecked
+def from_arx_error(
     exc: object,
     *,
     filename: str = "<string>",
 ) -> Diagnostic:
     """
-    title: Translate an arx ParserException into an ArxPy Diagnostic.
+    title: Translate an expected Arx frontend error into a Diagnostic.
     summary: >-
-      ParserException.__init__ discards the offending token's location, so line
-      and column are None by design rather than fabricated.
+      Reads the stable code and optional source location exposed by ArxError
+      without importing the frontend at module import time.
     parameters:
       exc:
         type: object
@@ -168,13 +218,38 @@ def _from_parser_exception(
     returns:
       type: Diagnostic
     """
+    location = getattr(exc, "location", None)
+    code = getattr(exc, "code", None)
+    message = getattr(exc, "message", str(exc))
     return Diagnostic(
         severity=DiagnosticSeverity.ERROR,
-        message=str(exc),
+        message=str(message),
         filename=filename,
-        line=None,
-        column=None,
+        line=getattr(location, "line", None),
+        column=getattr(location, "col", None),
+        code=None if code is None else str(code),
     )
+
+
+@private
+@typechecked
+def from_parser_exception(
+    exc: object,
+    *,
+    filename: str = "<string>",
+) -> Diagnostic:
+    """
+    title: Translate an Arx parser failure into an ArxPy Diagnostic.
+    summary: Compatibility alias for the general expected-frontend adapter.
+    parameters:
+      exc:
+        type: object
+      filename:
+        type: str
+    returns:
+      type: Diagnostic
+    """
+    return from_arx_error(exc, filename=filename)
 
 
 __all__ = [

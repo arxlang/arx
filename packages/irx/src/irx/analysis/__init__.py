@@ -19,9 +19,17 @@ from irx.analysis.contract import (
 )
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.module_interfaces import (
+    ImportResolutionError,
     ImportResolver,
     ModuleKey,
     ParsedModule,
+)
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+    transfer_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
     ClassHeaderFieldKind,
@@ -38,6 +46,9 @@ from irx.analysis.resolved_nodes import (
     IterationKind,
     IterationOrder,
     MethodDispatchKind,
+    OwnershipEscapeKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedAssignment,
     ResolvedBaseClassFieldAccess,
     ResolvedClassConstruction,
@@ -49,6 +60,8 @@ from irx.analysis.resolved_nodes import (
     ResolvedMethodCall,
     ResolvedOperator,
     ResolvedStaticClassFieldAccess,
+    ResourceKind,
+    ResourceOwnership,
     SemanticBinding,
     SemanticClass,
     SemanticClassFieldInitializer,
@@ -88,11 +101,15 @@ __all__ = [
     "FFILinkStrategy",
     "FFITypeClass",
     "FFITypeInfo",
+    "ImportResolutionError",
     "ImportResolver",
     "IterationKind",
     "IterationOrder",
     "MethodDispatchKind",
     "ModuleKey",
+    "OwnershipEscapeKind",
+    "OwnershipKind",
+    "OwnershipTransferKind",
     "ParsedModule",
     "PhaseErrorBoundary",
     "ResolvedAssignment",
@@ -106,6 +123,8 @@ __all__ = [
     "ResolvedMethodCall",
     "ResolvedOperator",
     "ResolvedStaticClassFieldAccess",
+    "ResourceKind",
+    "ResourceOwnership",
     "SemanticAnalyzer",
     "SemanticBinding",
     "SemanticClass",
@@ -134,5 +153,10 @@ __all__ = [
     "analyze_module",
     "analyze_modules",
     "get_semantic_contract",
+    "list_resource_ownership",
     "resolve_iteration_capability",
+    "resource_ownership",
+    "string_resource_ownership",
+    "symbol_resource_ownership",
+    "transfer_resource_ownership",
 ]

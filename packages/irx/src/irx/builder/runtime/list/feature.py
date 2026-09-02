@@ -1,9 +1,9 @@
 """
 title: Dynamic-list runtime feature declarations.
 summary: >-
-  Declares the narrow append/index runtime surface for IRX lists. The current
-  ABI intentionally does not expose a destroy/release helper yet, so produced
-  list storage remains process-lifetime for now.
+  Declare append, checked status, index, and idempotent storage destruction for
+  IRX lists. Language-level cleanup insertion remains owned by semantic
+  ownership metadata and lowering.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ from irx.builder.runtime.features import (
 from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
+    LIST_DESTROY_SYMBOL,
+    LIST_REQUIRE_OK_SYMBOL,
 )
 from irx.typecheck import typechecked
 
@@ -48,6 +50,14 @@ def build_list_runtime_feature() -> RuntimeFeature:
                 LIST_AT_SYMBOL,
                 _declare_list_at,
             ),
+            LIST_DESTROY_SYMBOL: ExternalSymbolSpec(
+                LIST_DESTROY_SYMBOL,
+                _declare_list_destroy,
+            ),
+            LIST_REQUIRE_OK_SYMBOL: ExternalSymbolSpec(
+                LIST_REQUIRE_OK_SYMBOL,
+                _declare_list_require_ok,
+            ),
         },
         artifacts=(
             NativeArtifact(
@@ -59,10 +69,17 @@ def build_list_runtime_feature() -> RuntimeFeature:
         ),
         metadata={
             "canonical_name": "list",
-            "symbols": (LIST_APPEND_SYMBOL, LIST_AT_SYMBOL),
+            "symbols": (
+                LIST_APPEND_SYMBOL,
+                LIST_AT_SYMBOL,
+                LIST_DESTROY_SYMBOL,
+                LIST_REQUIRE_OK_SYMBOL,
+            ),
             "limitations": (
-                "append/index only",
-                "no destroy or release helper yet",
+                "scalar element storage only",
+                "borrowed and static list values cannot be moved into owned "
+                "locals",
+                "owned list locals in generators are not supported yet",
             ),
         },
     )
@@ -132,5 +149,47 @@ def _declare_list_at(visitor: VisitorProtocol) -> ir.Function:
     return declare_external_function(
         visitor._llvm.module,
         LIST_AT_SYMBOL,
+        fn_type,
+    )
+
+
+@typechecked
+def _declare_list_destroy(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare the idempotent dynamic-list storage destructor.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    fn_type = ir.FunctionType(
+        visitor._llvm.VOID_TYPE,
+        [_list_llvm_type(visitor).as_pointer()],
+    )
+    return declare_external_function(
+        visitor._llvm.module,
+        LIST_DESTROY_SYMBOL,
+        fn_type,
+    )
+
+
+@typechecked
+def _declare_list_require_ok(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare the fail-closed dynamic-list status checker.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    fn_type = ir.FunctionType(
+        visitor._llvm.VOID_TYPE,
+        [visitor._llvm.INT32_TYPE],
+    )
+    return declare_external_function(
+        visitor._llvm.module,
+        LIST_REQUIRE_OK_SYMBOL,
         fn_type,
     )

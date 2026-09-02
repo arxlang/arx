@@ -17,7 +17,22 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+    transfer_resource_ownership,
+)
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResolvedGeneratorFunction,
+    SemanticSymbol,
+)
+from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_assignment
+from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -26,6 +41,239 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Declaration visitors for modules, blocks, and local declarations
     """
+
+    def _resolve_local_resource_ownership(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        symbol: SemanticSymbol,
+    ) -> None:
+        """
+        title: Attach the ownership contract for one local declaration.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          symbol:
+            type: SemanticSymbol
+        """
+        if is_string_type(node.type_):
+            self._resolve_local_string_ownership(node, symbol)
+            return
+        if not isinstance(node.type_, astx.ListType):
+            return
+        if any(
+            isinstance(element_type, astx.ListType)
+            for element_type in node.type_.element_types
+        ):
+            self.context.diagnostics.add(
+                f"list '{node.name}' cannot own dynamic-list elements "
+                "because nested ownership and destruction are not supported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        function = self.context.current_function
+        if function is None:
+            self.context.diagnostics.add(
+                f"module-level owned list '{node.name}' requires module "
+                "lifecycle cleanup, which is not supported yet",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        generator = function.signature.metadata.get("generator")
+        is_generator = isinstance(generator, ResolvedGeneratorFunction)
+
+        value = node.value
+        if value is None or isinstance(value, astx.Undefined):
+            if is_generator:
+                self.context.diagnostics.add(
+                    "owned list locals in generators require generator "
+                    "lifecycle cleanup, which is not supported yet",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            self._set_resource_ownership(
+                node,
+                list_resource_ownership(
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=symbol.symbol_id,
+                ),
+            )
+            return
+
+        initializer_ownership = resource_ownership(value)
+        if initializer_ownership is None:
+            self.context.diagnostics.add(
+                f"list initializer for '{node.name}' is missing ownership "
+                "metadata",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if initializer_ownership.kind is OwnershipKind.BORROWED:
+            self.context.diagnostics.add(
+                f"list initializer for '{node.name}' would copy borrowed "
+                "storage; local list copies are not supported",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                notes=(
+                    "create a new list or return a freshly owned list from a "
+                    "function",
+                ),
+            )
+            return
+        if initializer_ownership.kind is OwnershipKind.STATIC:
+            self.context.diagnostics.add(
+                f"static list storage cannot initialize dynamic list local "
+                f"'{node.name}'",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                notes=(
+                    "use the literal directly for indexing or iteration, or "
+                    "initialize the local from a dynamic list producer",
+                ),
+            )
+            return
+        if is_generator:
+            self.context.diagnostics.add(
+                "owned list locals in generators require generator "
+                "lifecycle cleanup, which is not supported yet",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(
+            value,
+            transfer_resource_ownership(
+                initializer_ownership,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+            ),
+        )
+
+    def _resolve_local_string_ownership(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        symbol: SemanticSymbol,
+    ) -> None:
+        """
+        title: Attach the ownership contract for one local string declaration.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          symbol:
+            type: SemanticSymbol
+        """
+        value = node.value
+        if value is None or isinstance(value, astx.Undefined):
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(
+                    OwnershipKind.STATIC,
+                    owner_symbol_id=symbol.symbol_id,
+                ),
+            )
+            return
+
+        initializer_ownership = resource_ownership(value)
+        if initializer_ownership is None:
+            self.context.diagnostics.add(
+                f"string initializer for '{node.name}' is missing ownership "
+                "metadata",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if initializer_ownership.kind is OwnershipKind.BORROWED:
+            source_symbol = getattr(
+                getattr(value, "semantic", None),
+                "resolved_symbol",
+                None,
+            )
+            source_ownership = (
+                symbol_resource_ownership(source_symbol)
+                if isinstance(source_symbol, SemanticSymbol)
+                else None
+            )
+            if (
+                isinstance(source_symbol, SemanticSymbol)
+                and source_ownership is not None
+                and source_ownership.kind is OwnershipKind.STATIC
+            ):
+                self._set_resource_ownership(
+                    node,
+                    string_resource_ownership(
+                        OwnershipKind.STATIC,
+                        owner_symbol_id=symbol.symbol_id,
+                        source_symbol_id=source_symbol.symbol_id,
+                    ),
+                )
+                return
+            self.context.diagnostics.add(
+                f"string initializer for '{node.name}' would alias borrowed "
+                "storage; borrowed string copies are not supported",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                notes=(
+                    "initialize from a literal or a freshly allocated string",
+                ),
+            )
+            return
+        if initializer_ownership.kind is OwnershipKind.STATIC:
+            self._set_resource_ownership(
+                node,
+                string_resource_ownership(
+                    OwnershipKind.STATIC,
+                    owner_symbol_id=symbol.symbol_id,
+                    source_symbol_id=initializer_ownership.source_symbol_id,
+                ),
+            )
+            return
+
+        function = self.context.current_function
+        if function is None:
+            self.context.diagnostics.add(
+                f"module-level owned string '{node.name}' requires module "
+                "lifecycle cleanup, which is not supported yet",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        generator = function.signature.metadata.get("generator")
+        if isinstance(generator, ResolvedGeneratorFunction):
+            self.context.diagnostics.add(
+                "owned string locals in generators require generator "
+                "lifecycle cleanup, which is not supported yet",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(
+            value,
+            transfer_resource_ownership(
+                initializer_ownership,
+                owner_symbol_id=symbol.symbol_id,
+                transfer_kind=OwnershipTransferKind.MOVE,
+            ),
+        )
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(
+                OwnershipKind.OWNED,
+                owner_symbol_id=symbol.symbol_id,
+            ),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, module: astx.Module) -> None:
@@ -82,6 +330,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             declaration=node,
         )
         self._set_symbol(node, symbol)
+        self._resolve_local_resource_ownership(node, symbol)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
@@ -114,3 +363,4 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             declaration=node,
         )
         self._set_symbol(node, symbol)
+        self._resolve_local_resource_ownership(node, symbol)
