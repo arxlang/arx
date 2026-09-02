@@ -18,6 +18,22 @@ CleanupEmitter = Callable[[], None]
 
 @typechecked
 @dataclass(frozen=True)
+class CleanupAction:
+    """
+    title: One active cleanup emitter with optional semantic owner identity.
+    attributes:
+      emitter:
+        type: CleanupEmitter
+      owner_symbol_id:
+        type: str | None
+    """
+
+    emitter: CleanupEmitter
+    owner_symbol_id: str | None = None
+
+
+@typechecked
+@dataclass(frozen=True)
 class LoopTargets:
     """
     title: Canonical break/continue targets for one active loop.
@@ -36,6 +52,7 @@ class LoopTargets:
 
 
 __all__ = [
+    "CleanupAction",
     "CleanupEmitter",
     "LoopTargets",
     "NamedValueMap",

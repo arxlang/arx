@@ -233,6 +233,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, call_resolution.result_type)
+        self._resolve_call_resource_ownership(
+            node,
+            list(node.args),
+            call_resolution.result_type,
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BaseMethodCall) -> None:
@@ -323,6 +328,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, call_resolution.result_type)
+        self._resolve_call_resource_ownership(
+            node,
+            list(node.args),
+            call_resolution.result_type,
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.StaticMethodCall) -> None:
@@ -397,6 +407,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, call_resolution.result_type)
+        self._resolve_call_resource_ownership(
+            node,
+            list(node.args),
+            call_resolution.result_type,
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BaseFieldAccess) -> None:

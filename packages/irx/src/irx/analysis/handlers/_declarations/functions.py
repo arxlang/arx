@@ -20,11 +20,17 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.module_symbols import qualified_local_name
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    string_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedGeneratorFunction,
     SemanticFunction,
 )
-from irx.analysis.types import clone_type
+from irx.analysis.types import clone_type, is_string_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -293,6 +299,24 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     self.context.scopes.declare(arg_symbol)
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
+                    if isinstance(arg_symbol.type_, astx.ListType):
+                        self._set_resource_ownership(
+                            arg_node,
+                            list_resource_ownership(
+                                OwnershipKind.BORROWED,
+                                source_symbol_id=arg_symbol.symbol_id,
+                                transfer_kind=OwnershipTransferKind.BORROW,
+                            ),
+                        )
+                    elif is_string_type(arg_symbol.type_):
+                        self._set_resource_ownership(
+                            arg_node,
+                            string_resource_ownership(
+                                OwnershipKind.BORROWED,
+                                source_symbol_id=arg_symbol.symbol_id,
+                                transfer_kind=OwnershipTransferKind.BORROW,
+                            ),
+                        )
                 self.visit(node.body)
         if (
             not isinstance(function.return_type, astx.NoneType)

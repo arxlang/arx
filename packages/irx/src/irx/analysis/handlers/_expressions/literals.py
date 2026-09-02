@@ -26,8 +26,14 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.ownership import (
+    list_resource_ownership,
+    string_resource_ownership,
+    symbol_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
+    OwnershipKind,
     ResolvedCollectionMethod,
 )
 from irx.analysis.types import (
@@ -79,6 +85,20 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             f"{display_type_name(condition_type)}",
             node=condition,
             code=DiagnosticCodes.SEMANTIC_INVALID_CONDITION,
+        )
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.LiteralString) -> None:
+        """
+        title: Visit string literal nodes as immortal static storage.
+        parameters:
+          node:
+            type: astx.LiteralString
+        """
+        self._set_type(node, node.type_)
+        self._set_resource_ownership(
+            node,
+            string_resource_ownership(OwnershipKind.STATIC),
         )
 
     def _visit_comprehension_clause(
@@ -626,6 +646,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.LiteralList
         """
         self._visit_element_sequence_literal(node)
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(OwnershipKind.STATIC),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.LiteralTuple) -> None:
@@ -683,6 +707,18 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ListCreate
         """
         self._set_type(node, node.type_)
+        if isinstance(node.element_type, astx.ListType):
+            self.context.diagnostics.add(
+                "dynamic lists cannot own dynamic-list elements because "
+                "nested ownership and destruction are not supported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(OwnershipKind.OWNED),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ComprehensionClause) -> None:
@@ -711,6 +747,18 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self._set_type(node, None)
             return
         self._set_type(node, astx.ListType([element_type]))
+        if isinstance(element_type, astx.ListType):
+            self.context.diagnostics.add(
+                "list comprehensions cannot produce owning list elements "
+                "because nested ownership and destruction are not supported",
+                node=node.element,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        self._set_resource_ownership(
+            node,
+            list_resource_ownership(OwnershipKind.OWNED),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.GeneratorExpr) -> None:
@@ -867,6 +915,33 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self._set_assignment(node, assignment_symbol)
             self._set_type(node, astx.Int32())
             return
+
+        if isinstance(element_type, astx.ListType):
+            self.context.diagnostics.add(
+                "list append cannot transfer an owning list element because "
+                "nested ownership and destruction are not supported",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+
+        target_ownership = symbol_resource_ownership(assignment_symbol)
+        if target_ownership is None:
+            self.context.diagnostics.add(
+                "list append target is missing ownership metadata",
+                node=node.base,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+        elif target_ownership.kind is not OwnershipKind.OWNED:
+            self.context.diagnostics.add(
+                "list append requires locally owned dynamic storage; got "
+                f"{target_ownership.kind.value} storage",
+                node=node.base,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                notes=(
+                    "borrowed parameters and static list literals cannot be "
+                    "grown safely",
+                ),
+            )
 
         validate_assignment(
             self.context.diagnostics,

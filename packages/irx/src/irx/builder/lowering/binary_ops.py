@@ -33,7 +33,7 @@ from astx.binary_op import (
 )
 from llvmlite import ir
 
-from irx.analysis.types import common_numeric_type
+from irx.analysis.types import common_numeric_type, is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -567,6 +567,27 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
         )
 
         llvm_lhs = self._lvalue_address(var_lhs)
+        if isinstance(self._resolved_ast_type(node), astx.ListType):
+            if not isinstance(var_lhs, astx.Identifier):
+                raise_lowering_internal_error(
+                    "list field assignment reached lowering without an "
+                    "object-field ownership contract",
+                    node=node,
+                )
+            self._destroy_replaced_list(
+                node,
+                llvm_lhs,
+                target_name=lhs_name,
+            )
+        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
+            var_lhs,
+            astx.Identifier,
+        ):
+            self._destroy_replaced_string(
+                node,
+                llvm_lhs,
+                target_name=lhs_name,
+            )
         self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
         self.result_stack.append(llvm_rhs)
 
@@ -591,7 +612,12 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
             and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
             and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
         ):
-            result = self._handle_string_concatenation(llvm_lhs, llvm_rhs)
+            result = self._handle_string_concatenation(
+                node,
+                llvm_lhs,
+                llvm_rhs,
+            )
+            self._register_owned_string_temporary(node, result)
         else:
             result = emit_add(
                 self._llvm.ir_builder, llvm_lhs, llvm_rhs, "addtmp"

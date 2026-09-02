@@ -237,9 +237,23 @@ emitted AST:
 
 This is deliberately narrower than a full collection API. The goal is to let
 frontends author pure source routines that accumulate list results inside loops
-without moving collection policy into the frontend. The current runtime owns
-append/growth and indexed reads only; list teardown is intentionally deferred to
-a future ownership API.
+without moving collection policy into the frontend. The runtime owns
+append/growth, indexed reads, and idempotent destruction. Semantic ownership
+sidecars drive lexical cleanup and return moves for scalar dynamic lists.
+Copying borrowed storage, generator-owned lists, nested owning elements, and
+object-field ownership remain outside this initial contract.
+
+## String Ownership
+
+IRx classifies string expressions with the same typed `ResourceOwnership`
+sidecar used for lists. Literals and type-name results are static, parameters
+and identifiers are borrows, and concatenation, numeric formatting, and defined
+Arx string-returning calls produce owners. Lowering consumes copy/move/return
+metadata, checks every string allocation, frees owned locals and temporaries,
+and leaves immutable globals untouched. The raw C-string ABI remains
+deliberately narrow: owned object fields, owned generator slots, borrowed
+parameter escape, and external string returns without an ownership contract fail
+during semantic analysis.
 
 ## Common Collection Methods
 

@@ -77,7 +77,9 @@ def build_list_runtime_feature() -> RuntimeFeature:
             ),
             "limitations": (
                 "scalar element storage only",
-                "language-level ownership cleanup is not inserted yet",
+                "borrowed and static list values cannot be moved into owned "
+                "locals",
+                "owned list locals in generators are not supported yet",
             ),
         },
     )

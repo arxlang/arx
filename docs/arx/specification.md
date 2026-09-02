@@ -88,7 +88,8 @@ implemented consistently, and represented in conformance tests:
 5. left-to-right evaluation and Boolean short-circuit rules;
 6. module initialization order, cycles, and repeated imports;
 7. allocation failure, assertion failure, panic/status, and process exit rules;
-8. copy, move, borrow, escape, and destruction behavior for owning values;
+8. copy, move, borrow, escape, and destruction behavior for owning values other
+   than the scalar dynamic-list subset specified below;
 9. class identity, layout, construction, destruction, inheritance, and ABI;
 10. foreign calling conventions, supported FFI types, and ownership transfer;
 11. tensor shape compatibility and runtime validation;
@@ -134,6 +135,51 @@ quotient is not representable. Failure emits the machine-readable
 status 1. The same guards apply to signed and unsigned scalar widths supported
 by the compiler. Floating-point division and vector division remain outside this
 rule until their non-finite and per-lane behavior is specified.
+
+### Scalar dynamic-list ownership
+
+Dynamic lists with one scalar element type use a move-only ownership model. List
+creation, list comprehensions, and list-returning calls produce an owner. A
+local declaration consumes that owner. Function list parameters and ordinary
+identifier expressions borrow storage and do not acquire a release obligation.
+
+Assignment to an owned local consumes a fresh owner and releases the previous
+storage first. Returning a fresh list or an owned local moves the release
+obligation to the caller. Returning borrowed parameter storage or a static list
+literal, copying a borrowed list into a local, and appending through borrowed or
+static storage are `IRX-S013` semantic errors.
+
+Owned local and non-transferred temporary storage is destroyed on normal block
+fallthrough, scalar return, `break`, and `continue`. Storage moved through a
+return is excluded from callee cleanup and becomes the caller's obligation.
+Literal-list storage is static and is never dynamically destroyed. It may be
+indexed or iterated directly, but it cannot initialize a dynamic local, cross a
+function-call boundary, or serve as a list parameter default. Owning list
+elements, owned list locals in generators, object-field ownership, and a
+user-visible copy operation are outside this preview rule.
+
+### String storage and ownership
+
+String literals, default empty strings, and `type(...)` results point to
+immutable process-lifetime storage. Concatenation, numeric-to-string casts, and
+calls to defined Arx functions returning `str` produce owned heap storage.
+String parameters and ordinary identifier expressions borrow their source
+binding for the duration of an expression or call.
+
+An owned local consumes a fresh heap result and releases it on lexical
+fallthrough, `return`, `break`, and `continue`. Replacing an owned local
+releases the previous pointer before storing a fresh owner. Returning an owned
+local moves the release obligation to the caller; returning static storage
+copies it into checked heap storage so every string-returning Arx call has one
+caller-owned result. Concatenation and formatting allocations fail with a
+versioned `ARX_RUNTIME_FAIL` record instead of dereferencing a null pointer.
+
+Static bindings may alias or replace other static strings without cleanup.
+Changing a binding between static and owned storage, aliasing a borrowed
+parameter into an owned local, returning a borrowed parameter, identity-casting
+an owned string, storing owned strings in object fields or generator frames, and
+accepting string results from an external function without an explicit ownership
+ABI are `IRX-S013` errors in this preview.
 
 ### Module graph failures
 

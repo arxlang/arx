@@ -33,7 +33,14 @@ from irx.analysis.module_symbols import (
     qualified_class_name,
     qualified_struct_name,
 )
-from irx.analysis.resolved_nodes import FunctionSignature
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import (
+    FunctionSignature,
+    OwnershipEscapeKind,
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResourceKind,
+)
 from irx.analysis.types import (
     bit_width,
     common_numeric_type,
@@ -44,14 +51,19 @@ from irx.analysis.types import (
     is_unsigned_type,
 )
 from irx.builder.base import BuilderVisitor
+from irx.builder.diagnostics import raise_lowering_internal_error
 from irx.builder.protocols import VisitorProtocol
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.errors import (
+    RUNTIME_FAILURE_FEATURE_NAME,
+    RUNTIME_FAILURE_SYMBOL_NAME,
+)
 from irx.builder.runtime.registry import (
     RuntimeFeatureState,
     get_default_runtime_feature_registry,
 )
 from irx.builder.state import (
-    CleanupEmitter,
+    CleanupAction,
     LoopTargets,
     NamedValueMap,
     ResultStackValue,
@@ -64,6 +76,10 @@ from irx.builder.types import (
 from irx.builder.vector import (
     is_vector,
     splat_scalar,
+)
+from irx.builtins.collections.list import (
+    LIST_DESTROY_SYMBOL,
+    LIST_RUNTIME_FEATURE,
 )
 from irx.typecheck import typechecked
 
@@ -349,7 +365,7 @@ class VisitorCore(BuilderVisitor):
     runtime_features: RuntimeFeatureState
     const_vars: set[str]
     loop_stack: list[LoopTargets]
-    cleanup_stack: list[CleanupEmitter]
+    cleanup_stack: list[CleanupAction]
     _set_value_ids: dict[int, ir.Value]
     _buffer_view_global_counter: int
     struct_types: dict[str, ir.Type]
@@ -449,15 +465,209 @@ class VisitorCore(BuilderVisitor):
         """
         super().visit(node)
 
-    def _emit_active_cleanups(self, start_depth: int = 0) -> None:
+    def _emit_active_cleanups(
+        self,
+        start_depth: int = 0,
+        excluded_owner_symbol_ids: frozenset[str] = frozenset(),
+    ) -> None:
         """
         title: Emit all active cleanup actions in innermost-first order.
         parameters:
           start_depth:
             type: int
+          excluded_owner_symbol_ids:
+            type: frozenset[str]
         """
         for cleanup in reversed(self.cleanup_stack[start_depth:]):
-            cleanup()
+            if cleanup.owner_symbol_id in excluded_owner_symbol_ids:
+                continue
+            cleanup.emitter()
+
+    def _emit_temporary_cleanups(self, start_depth: int) -> None:
+        """
+        title: Emit and remove temporary cleanups created after one depth.
+        parameters:
+          start_depth:
+            type: int
+        """
+        new_actions = self.cleanup_stack[start_depth:]
+        for cleanup in reversed(new_actions):
+            if cleanup.owner_symbol_id is None:
+                cleanup.emitter()
+        self.cleanup_stack[start_depth:] = [
+            cleanup
+            for cleanup in new_actions
+            if cleanup.owner_symbol_id is not None
+        ]
+
+    def _register_owned_list_temporary(
+        self,
+        node: astx.AST,
+        list_ptr: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned list temporary.
+        parameters:
+          node:
+            type: astx.AST
+          list_ptr:
+            type: ir.Value
+        """
+        ownership = resource_ownership(node)
+        if (
+            ownership is None
+            or ownership.resource_kind is not ResourceKind.LIST
+            or ownership.kind is not OwnershipKind.OWNED
+        ):
+            return
+        if (
+            ownership.transfer_kind is OwnershipTransferKind.MOVE
+            or ownership.escape_kind is OwnershipEscapeKind.RETURN
+        ):
+            return
+        if self._current_generator_frame_ptr is not None:
+            raise_lowering_internal_error(
+                "owned list temporaries in generator frames require "
+                "generator lifecycle cleanup",
+                node=node,
+            )
+
+        destroy_fn = self.require_runtime_symbol(
+            LIST_RUNTIME_FEATURE,
+            LIST_DESTROY_SYMBOL,
+        )
+
+        def destroy_list() -> None:
+            """
+            title: Destroy the captured temporary list storage.
+            """
+            self._llvm.ir_builder.call(destroy_fn, [list_ptr])
+
+        self.cleanup_stack.append(CleanupAction(destroy_list))
+
+    def _register_owned_string_temporary(
+        self,
+        node: astx.AST,
+        pointer: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one non-transferred owned string pointer.
+        parameters:
+          node:
+            type: astx.AST
+          pointer:
+            type: ir.Value
+        """
+        ownership = resource_ownership(node)
+        if (
+            ownership is None
+            or ownership.resource_kind is not ResourceKind.STRING
+            or ownership.kind is not OwnershipKind.OWNED
+        ):
+            return
+        if (
+            ownership.transfer_kind is OwnershipTransferKind.MOVE
+            or ownership.escape_kind is OwnershipEscapeKind.RETURN
+        ):
+            return
+        if self._current_generator_frame_ptr is not None:
+            raise_lowering_internal_error(
+                "owned string temporaries in generator frames require "
+                "generator lifecycle cleanup",
+                node=node,
+            )
+
+        free_fn = self.require_runtime_symbol("libc", "free")
+
+        def destroy_string() -> None:
+            """
+            title: Destroy the captured temporary string storage.
+            """
+            self._llvm.ir_builder.call(free_fn, [pointer])
+
+        self.cleanup_stack.append(CleanupAction(destroy_string))
+
+    def _guard_runtime_condition(
+        self,
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+    ) -> None:
+        """
+        title: >-
+          Fail with one structured runtime record unless a condition holds.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+        """
+        function = self._llvm.ir_builder.function
+        fail_block = function.append_basic_block(f"{block_name}.fail")
+        pass_block = function.append_basic_block(f"{block_name}.pass")
+        self._llvm.ir_builder.cbranch(condition, pass_block, fail_block)
+
+        self._llvm.ir_builder.position_at_start(fail_block)
+        string_pointer = cast(Any, self)._constant_c_string_pointer
+        failure = self.require_runtime_symbol(
+            RUNTIME_FAILURE_FEATURE_NAME,
+            RUNTIME_FAILURE_SYMBOL_NAME,
+        )
+        self._llvm.ir_builder.call(
+            failure,
+            [
+                string_pointer(code, name_hint=f"{block_name}_code"),
+                string_pointer(
+                    cast(Any, self)._assert_source_name(node),
+                    name_hint=f"{block_name}_source",
+                ),
+                ir.Constant(self._llvm.INT32_TYPE, node.loc.line),
+                ir.Constant(self._llvm.INT32_TYPE, node.loc.col),
+                string_pointer(message, name_hint=f"{block_name}_message"),
+            ],
+        )
+        self._llvm.ir_builder.unreachable()
+        self._llvm.ir_builder.position_at_start(pass_block)
+
+    def _guard_heap_allocation(
+        self,
+        node: astx.AST,
+        pointer: ir.Value,
+        *,
+        message: str,
+    ) -> None:
+        """
+        title: Require one heap allocation to return a non-null pointer.
+        parameters:
+          node:
+            type: astx.AST
+          pointer:
+            type: ir.Value
+          message:
+            type: str
+        """
+        non_null = self._llvm.ir_builder.icmp_unsigned(
+            "!=",
+            pointer,
+            ir.Constant(pointer.type, None),
+            name="string_allocation_succeeded",
+        )
+        self._guard_runtime_condition(
+            node,
+            non_null,
+            code="ARX-RUNTIME-STRING-001",
+            message=message,
+            block_name="string.allocation",
+        )
 
     def translate(self, node: astx.AST) -> str:
         """
@@ -2308,7 +2518,7 @@ class VisitorCore(BuilderVisitor):
             return cast(ir.Function, self._llvm.module.get_global(func_name))
 
         func_type = ir.FunctionType(
-            self._llvm.INT32_TYPE,
+            self._llvm.SIZE_T_TYPE,
             [self._llvm.ASCII_STRING_TYPE],
         )
         func = ir.Function(self._llvm.module, func_type, func_name)
@@ -2364,11 +2574,16 @@ class VisitorCore(BuilderVisitor):
         return func
 
     def _handle_string_concatenation(
-        self, lhs: ir.Value, rhs: ir.Value
+        self,
+        node: astx.AST,
+        lhs: ir.Value,
+        rhs: ir.Value,
     ) -> ir.Value:
         """
         title: Handle string concatenation.
         parameters:
+          node:
+            type: astx.AST
           lhs:
             type: ir.Value
           rhs:
@@ -2377,9 +2592,36 @@ class VisitorCore(BuilderVisitor):
           type: ir.Value
         """
         strcat_func = self._create_strcat_inline()
-        return self._llvm.ir_builder.call(
+        result = self._llvm.ir_builder.call(
             strcat_func, [lhs, rhs], "str_concat"
         )
+        self._guard_heap_allocation(
+            node,
+            result,
+            message="string concatenation allocation failed or overflowed",
+        )
+        return result
+
+    def _copy_string_to_heap(
+        self,
+        node: astx.AST,
+        pointer: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Copy one static string into caller-owned heap storage.
+        parameters:
+          node:
+            type: astx.AST
+          pointer:
+            type: ir.Value
+        returns:
+          type: ir.Value
+        """
+        empty = cast(Any, self)._constant_c_string_pointer(
+            "",
+            name_hint="string_copy_empty",
+        )
+        return self._handle_string_concatenation(node, pointer, empty)
 
     def _create_strcat_inline(self) -> ir.Function:
         """
@@ -2406,16 +2648,40 @@ class VisitorCore(BuilderVisitor):
         len1 = builder.call(strlen_func, [func.args[0]], "len1")
         len2 = builder.call(strlen_func, [func.args[1]], "len2")
 
+        max_size = ir.Constant(self._llvm.SIZE_T_TYPE, -1)
+        remaining = builder.sub(max_size, len1, "remaining_after_lhs")
+        overflows = builder.icmp_unsigned(
+            ">=",
+            len2,
+            remaining,
+            "string_length_overflows",
+        )
+        allocate_block = func.append_basic_block("allocate")
+        failure_block = func.append_basic_block("allocation_failure")
+        builder.cbranch(overflows, failure_block, allocate_block)
+
+        builder.position_at_start(failure_block)
+        builder.ret(ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None))
+
+        builder.position_at_start(allocate_block)
         total_len = builder.add(len1, len2, "total_len")
         total_len = builder.add(
             total_len,
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
             "total_len_with_null",
         )
 
         malloc = self._create_malloc_decl()
-        total_len_szt = builder.zext(total_len, self._llvm.SIZE_T_TYPE)
-        result_ptr = builder.call(malloc, [total_len_szt], "result")
+        result_ptr = builder.call(malloc, [total_len], "result")
+        allocation_failed = builder.icmp_unsigned(
+            "==",
+            result_ptr,
+            ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None),
+        )
+        copy_block = func.append_basic_block("copy")
+        builder.cbranch(allocation_failed, failure_block, copy_block)
+
+        builder.position_at_start(copy_block)
 
         self._generate_strcpy(builder, result_ptr, func.args[0])
         result_end = builder.gep(result_ptr, [len1], inbounds=True)
@@ -2443,8 +2709,8 @@ class VisitorCore(BuilderVisitor):
         loop_bb = builder.function.append_basic_block("strcpy_loop")
         end_bb = builder.function.append_basic_block("strcpy_end")
 
-        index = builder.alloca(self._llvm.INT32_TYPE, name="strcpy_index")
-        builder.store(ir.Constant(self._llvm.INT32_TYPE, 0), index)
+        index = builder.alloca(self._llvm.SIZE_T_TYPE, name="strcpy_index")
+        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), index)
         builder.branch(loop_bb)
 
         builder.position_at_start(loop_bb)
@@ -2457,7 +2723,7 @@ class VisitorCore(BuilderVisitor):
         is_null = builder.icmp_signed(
             "==", char_val, ir.Constant(self._llvm.INT8_TYPE, 0)
         )
-        next_idx = builder.add(idx_val, ir.Constant(self._llvm.INT32_TYPE, 1))
+        next_idx = builder.add(idx_val, ir.Constant(self._llvm.SIZE_T_TYPE, 1))
         builder.store(next_idx, index)
         builder.cbranch(is_null, end_bb, loop_bb)
         builder.position_at_start(end_bb)
@@ -2487,8 +2753,8 @@ class VisitorCore(BuilderVisitor):
         equal = func.append_basic_block("equal")
         builder = ir.IRBuilder(entry)
 
-        index = builder.alloca(self._llvm.INT32_TYPE, name="index")
-        builder.store(ir.Constant(self._llvm.INT32_TYPE, 0), index)
+        index = builder.alloca(self._llvm.SIZE_T_TYPE, name="index")
+        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), index)
         builder.branch(loop)
 
         builder.position_at_start(loop)
@@ -2516,7 +2782,7 @@ class VisitorCore(BuilderVisitor):
         )
         continue_bb = builder.function.basic_blocks[-1]
         builder.position_at_start(continue_bb)
-        next_idx = builder.add(idx_val, ir.Constant(self._llvm.INT32_TYPE, 1))
+        next_idx = builder.add(idx_val, ir.Constant(self._llvm.SIZE_T_TYPE, 1))
         builder.store(next_idx, index)
         builder.branch(loop)
 
@@ -2537,7 +2803,7 @@ class VisitorCore(BuilderVisitor):
             return cast(ir.Function, self._llvm.module.get_global(func_name))
 
         func_type = ir.FunctionType(
-            self._llvm.INT32_TYPE,
+            self._llvm.SIZE_T_TYPE,
             [self._llvm.INT8_TYPE.as_pointer()],
         )
         func = ir.Function(self._llvm.module, func_type, func_name)
@@ -2547,8 +2813,8 @@ class VisitorCore(BuilderVisitor):
         end = func.append_basic_block("end")
         builder = ir.IRBuilder(entry)
 
-        counter = builder.alloca(self._llvm.INT32_TYPE, name="counter")
-        builder.store(ir.Constant(self._llvm.INT32_TYPE, 0), counter)
+        counter = builder.alloca(self._llvm.SIZE_T_TYPE, name="counter")
+        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), counter)
         builder.branch(loop)
 
         builder.position_at_start(loop)
@@ -2561,7 +2827,7 @@ class VisitorCore(BuilderVisitor):
 
         next_count = builder.add(
             count_val,
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
         )
         builder.store(next_count, counter)
         builder.cbranch(is_null, end, loop)
@@ -2649,12 +2915,15 @@ class VisitorCore(BuilderVisitor):
 
     def _snprintf_heap(
         self,
+        node: astx.AST,
         fmt_gv: ir.GlobalVariable,
         args: list[ir.Value],
     ) -> ir.Value:
         """
         title: Snprintf heap.
         parameters:
+          node:
+            type: astx.AST
           fmt_gv:
             type: ir.GlobalVariable
           args:
@@ -2681,20 +2950,51 @@ class VisitorCore(BuilderVisitor):
         )
 
         zero_i32 = ir.Constant(self._llvm.INT32_TYPE, 0)
-        min_needed = self._llvm.ir_builder.select(
-            self._llvm.ir_builder.icmp_signed("<", needed_i32, zero_i32),
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+        format_succeeded = self._llvm.ir_builder.icmp_signed(
+            ">=",
             needed_i32,
+            zero_i32,
+            name="string_format_size_succeeded",
         )
-        need_plus_1 = self._llvm.ir_builder.add(
-            min_needed,
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+        self._guard_runtime_condition(
+            node,
+            format_succeeded,
+            code="ARX-RUNTIME-STRING-002",
+            message="string formatting size query failed",
+            block_name="string.format.size",
         )
-        need_szt = self._llvm.ir_builder.zext(
-            need_plus_1, self._llvm.SIZE_T_TYPE
+        needed_size = self._llvm.ir_builder.zext(
+            needed_i32,
+            self._llvm.SIZE_T_TYPE,
+        )
+        need_szt = self._llvm.ir_builder.add(
+            needed_size,
+            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
+            name="string_format_allocation_size",
         )
         mem = self._llvm.ir_builder.call(malloc, [need_szt])
-        self._llvm.ir_builder.call(snprintf, [mem, need_szt, fmt_ptr, *args])
+        self._guard_heap_allocation(
+            node,
+            mem,
+            message="string formatting allocation failed",
+        )
+        written = self._llvm.ir_builder.call(
+            snprintf,
+            [mem, need_szt, fmt_ptr, *args],
+        )
+        write_succeeded = self._llvm.ir_builder.icmp_signed(
+            ">=",
+            written,
+            zero_i32,
+            name="string_format_write_succeeded",
+        )
+        self._guard_runtime_condition(
+            node,
+            write_succeeded,
+            code="ARX-RUNTIME-STRING-002",
+            message="string formatting write failed",
+            block_name="string.format.write",
+        )
         return mem
 
     def _create_snprintf_decl(self) -> ir.Function:

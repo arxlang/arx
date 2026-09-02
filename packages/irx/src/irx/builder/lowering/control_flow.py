@@ -44,7 +44,7 @@ from irx.builder.runtime.assertions import (
     ASSERT_FAILURE_SYMBOL_NAME,
     ASSERT_RUNTIME_FEATURE_NAME,
 )
-from irx.builder.state import CleanupEmitter, LoopTargets
+from irx.builder.state import CleanupAction, CleanupEmitter, LoopTargets
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add
 from irx.diagnostics import DiagnosticCodes
@@ -266,7 +266,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 or is_boolean_type(message_source_type),
             )
             int_fmt_gv = self._get_or_create_format_global(int_fmt)
-            return self._snprintf_heap(int_fmt_gv, [int_arg])
+            return self._snprintf_heap(node, int_fmt_gv, [int_arg])
 
         if isinstance(
             message_type, (ir.HalfType, ir.FloatType, ir.DoubleType)
@@ -280,7 +280,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             else:
                 float_arg = message_value
             float_fmt_gv = self._get_or_create_format_global("%.6f")
-            return self._snprintf_heap(float_fmt_gv, [float_arg])
+            return self._snprintf_heap(node, float_fmt_gv, [float_arg])
 
         raise_lowering_error(
             "unsupported AssertStmt message lowering for type "
@@ -313,7 +313,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: Iterator[None]
         """
-        self.cleanup_stack.append(cleanup)
+        self.cleanup_stack.append(CleanupAction(cleanup))
         try:
             yield
         finally:
@@ -919,26 +919,35 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           block:
             type: astx.Block
         """
-        for node in block.nodes:
-            if isinstance(node, (astx.StructDefStmt, astx.ClassDefStmt)):
+        cleanup_depth = len(self.cleanup_stack)
+        try:
+            for node in block.nodes:
+                if isinstance(node, (astx.StructDefStmt, astx.ClassDefStmt)):
+                    self.visit_child(node)
+
+            result = None
+            for node in block.nodes:
+                if self._llvm.ir_builder.block.terminator is not None:
+                    break
+
+                stack_size_before = len(self.result_stack)
+                statement_cleanup_depth = len(self.cleanup_stack)
                 self.visit_child(node)
+                if len(self.result_stack) > stack_size_before:
+                    result = self.result_stack.pop()
 
-        result = None
-        for node in block.nodes:
-            if self._llvm.ir_builder.block.terminator is not None:
-                break
+                if self._llvm.ir_builder.block.terminator is not None:
+                    result = None
+                    break
+                self._emit_temporary_cleanups(statement_cleanup_depth)
 
-            stack_size_before = len(self.result_stack)
-            self.visit_child(node)
-            if len(self.result_stack) > stack_size_before:
-                result = self.result_stack.pop()
+            if self._llvm.ir_builder.block.terminator is None:
+                self._emit_active_cleanups(cleanup_depth)
 
-            if self._llvm.ir_builder.block.terminator is not None:
-                result = None
-                break
-
-        if result is not None:
-            self.result_stack.append(result)
+            if result is not None:
+                self.result_stack.append(result)
+        finally:
+            del self.cleanup_stack[cleanup_depth:]
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.AssertStmt) -> None:
@@ -948,12 +957,14 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.AssertStmt
         """
+        condition_cleanup_depth = len(self.cleanup_stack)
         self.visit_child(node.condition)
         condition_value = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=node.condition,
             context="assert",
         )
+        self._emit_temporary_cleanups(condition_cleanup_depth)
 
         pass_bb, fail_bb = self._append_basic_blocks("assert", "pass", "fail")
         self._llvm.ir_builder.cbranch(condition_value, pass_bb, fail_bb)
@@ -986,12 +997,14 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.IfStmt
         """
+        condition_cleanup_depth = len(self.cleanup_stack)
         self.visit_child(node.condition)
         cond_v = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=node.condition,
             context="if",
         )
+        self._emit_temporary_cleanups(condition_cleanup_depth)
 
         then_bb = self._llvm.ir_builder.function.append_basic_block(
             "bb_if_then"
@@ -1080,12 +1093,14 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.branch(cond_bb)
 
         self._llvm.ir_builder.position_at_start(cond_bb)
+        condition_cleanup_depth = len(self.cleanup_stack)
         self.visit_child(expr.condition)
         cond_val = self._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=expr.condition,
             context="while",
         )
+        self._emit_temporary_cleanups(condition_cleanup_depth)
         self._llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
 
         with self._loop_scope(
@@ -1137,12 +1152,14 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
 
         try:
             self._llvm.ir_builder.position_at_start(cond_bb)
+            condition_cleanup_depth = len(self.cleanup_stack)
             self.visit_child(node.condition)
             cond_val = self._lower_boolean_condition(
                 safe_pop(self.result_stack),
                 node=node.condition,
                 context="for-count loop",
             )
+            self._emit_temporary_cleanups(condition_cleanup_depth)
             self._llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
 
             with self._loop_scope(
@@ -1155,6 +1172,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     self._llvm.ir_builder.branch(update_bb)
 
             self._llvm.ir_builder.position_at_start(update_bb)
+            update_cleanup_depth = len(self.cleanup_stack)
             update_val = self._lower_typed_value(
                 node.update,
                 context="for-count loop update",
@@ -1165,6 +1183,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 loop_symbol_key=initializer_key,
             ):
                 self._llvm.ir_builder.store(update_val, var_addr)
+            self._emit_temporary_cleanups(update_cleanup_depth)
             self._llvm.ir_builder.branch(cond_bb)
 
             self._llvm.ir_builder.position_at_start(exit_bb)
@@ -1198,25 +1217,31 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             llvm_loop_type,
         )
 
+        start_cleanup_depth = len(self.cleanup_stack)
         start_val = self._lower_typed_value(
             node.start,
             context="for-range start expression",
             target_type=loop_type,
         )
         self._llvm.ir_builder.store(start_val, var_addr)
+        self._emit_temporary_cleanups(start_cleanup_depth)
 
+        end_cleanup_depth = len(self.cleanup_stack)
         end_val = self._lower_typed_value(
             node.end,
             context="for-range end expression",
             target_type=loop_type,
         )
+        self._emit_temporary_cleanups(end_cleanup_depth)
 
         if not isinstance(node.step, astx.LiteralNone):
+            step_cleanup_depth = len(self.cleanup_stack)
             step_val = self._lower_typed_value(
                 node.step,
                 context="for-range step expression",
                 target_type=loop_type,
             )
+            self._emit_temporary_cleanups(step_cleanup_depth)
         else:
             step_val = ir.Constant(
                 llvm_loop_type,

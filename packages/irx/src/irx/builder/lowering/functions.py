@@ -10,13 +10,18 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     CallingConvention,
     CallResolution,
     ClassHeaderFieldKind,
     FunctionSignature,
     MethodDispatchKind,
+    OwnershipEscapeKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedMethodCall,
+    ResourceKind,
     ReturnResolution,
     SemanticFunction,
 )
@@ -40,6 +45,77 @@ from irx.typecheck import typechecked
 
 @typechecked
 class FunctionVisitorMixin(VisitorMixinBase):
+    def _register_call_result_cleanup(
+        self,
+        node: astx.AST,
+        result: ir.Value,
+    ) -> None:
+        """
+        title: Materialize and register cleanup for one owned list call result.
+        parameters:
+          node:
+            type: astx.AST
+          result:
+            type: ir.Value
+        """
+        ownership = resource_ownership(node)
+        if ownership is None or ownership.kind is not OwnershipKind.OWNED:
+            return
+        if (
+            ownership.transfer_kind is OwnershipTransferKind.MOVE
+            or ownership.escape_kind is OwnershipEscapeKind.RETURN
+        ):
+            return
+        if ownership.resource_kind is ResourceKind.STRING:
+            self._register_owned_string_temporary(node, result)
+            return
+        if ownership.resource_kind is not ResourceKind.LIST:
+            raise_lowering_internal_error(
+                "call result has an unsupported owned resource kind",
+                node=node,
+            )
+        current_block = self._llvm.ir_builder.block
+        result_ptr = self.create_entry_block_alloca(
+            "owned_list_call_result",
+            result.type,
+        )
+        initializer_builder = ir.IRBuilder(
+            self._llvm.ir_builder.function.entry_basic_block
+        )
+        initializer_builder.position_after(result_ptr)
+        initializer_builder.store(
+            cast(Any, self)._empty_list_value_for_type(
+                self._resolved_ast_type(node)
+            ),
+            result_ptr,
+        )
+        self._llvm.ir_builder.position_at_end(current_block)
+        self._llvm.ir_builder.store(result, result_ptr)
+        self._register_owned_list_temporary(node, result_ptr)
+
+    def _return_cleanup_exclusions(
+        self,
+        node: astx.FunctionReturn,
+    ) -> frozenset[str]:
+        """
+        title: Return owner ids moved out through one return statement.
+        parameters:
+          node:
+            type: astx.FunctionReturn
+        returns:
+          type: frozenset[str]
+        """
+        ownership = resource_ownership(node)
+        if ownership is None:
+            return frozenset()
+        if (
+            ownership.transfer_kind is not OwnershipTransferKind.MOVE
+            or ownership.escape_kind is not OwnershipEscapeKind.RETURN
+            or ownership.source_symbol_id is None
+        ):
+            return frozenset()
+        return frozenset({ownership.source_symbol_id})
+
     def _semantic_function(
         self,
         node: astx.AST,
@@ -603,6 +679,7 @@ class FunctionVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.call(callee_f, llvm_args)
             return
         result = self._llvm.ir_builder.call(callee_f, llvm_args, "calltmp")
+        self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
@@ -664,6 +741,7 @@ class FunctionVisitorMixin(VisitorMixinBase):
                 self._llvm.ir_builder.call(callee, llvm_args)
                 return
             result = self._llvm.ir_builder.call(callee, llvm_args, "calltmp")
+            self._register_call_result_cleanup(node, result)
             self.result_stack.append(result)
             return
 
@@ -715,6 +793,7 @@ class FunctionVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.call(callee, lowered_args)
             return
         result = self._llvm.ir_builder.call(callee, lowered_args, "calltmp")
+        self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
@@ -772,6 +851,7 @@ class FunctionVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.call(callee, lowered_args)
             return
         result = self._llvm.ir_builder.call(callee, lowered_args, "calltmp")
+        self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
@@ -807,6 +887,7 @@ class FunctionVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.call(callee, llvm_args)
             return
         result = self._llvm.ir_builder.call(callee, llvm_args, "calltmp")
+        self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
@@ -961,11 +1042,20 @@ class FunctionVisitorMixin(VisitorMixinBase):
             source_type=self._resolved_ast_type(node.value),
             target_type=return_resolution.expected_type,
         )
+        return_ownership = resource_ownership(node)
+        if (
+            return_ownership is not None
+            and return_ownership.resource_kind is ResourceKind.STRING
+            and return_ownership.transfer_kind is OwnershipTransferKind.COPY
+        ):
+            retval = self._copy_string_to_heap(node, retval)
         fn_return_type = (
             self._llvm.ir_builder.function.function_type.return_type
         )
         if is_int_type(fn_return_type) and fn_return_type.width == 1:
             if is_int_type(retval.type) and retval.type.width != 1:
                 retval = self._llvm.ir_builder.trunc(retval, ir.IntType(1))
-        self._emit_active_cleanups()
+        self._emit_active_cleanups(
+            excluded_owner_symbol_ids=self._return_cleanup_exclusions(node),
+        )
         self._llvm.ir_builder.ret(retval)

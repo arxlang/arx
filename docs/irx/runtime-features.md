@@ -22,18 +22,18 @@ available to the final link. Inactive features contribute nothing.
 
 Registered features:
 
-| Feature        | Responsibility                                        |
-| -------------- | ----------------------------------------------------- |
-| `libc`         | `puts`, allocation, formatting, and related C symbols |
-| `libm`         | math symbols and the platform math linker flag        |
-| `assertions`   | fatal assertion helper and machine-readable reports   |
-| `errors`       | fatal checked-runtime diagnostics and stable records  |
-| `buffer`       | buffer-owner and view lifetime helpers                |
-| `list`         | minimal dynamic list creation, growth, and indexing   |
-| `array`        | one-dimensional Apache Arrow array runtime            |
-| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime        |
-| `dataframe`    | Arrow Table and ChunkedArray runtime                  |
-| `record_batch` | Arrow RecordBatch and IPC streaming bridge            |
+| Feature        | Responsibility                                       |
+| -------------- | ---------------------------------------------------- |
+| `libc`         | `puts`, checked allocation, formatting, and `free`   |
+| `libm`         | math symbols and the platform math linker flag       |
+| `assertions`   | fatal assertion helper and machine-readable reports  |
+| `errors`       | fatal checked-runtime diagnostics and stable records |
+| `buffer`       | buffer-owner and view lifetime helpers               |
+| `list`         | minimal dynamic list creation, growth, and indexing  |
+| `array`        | one-dimensional Apache Arrow array runtime           |
+| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime       |
+| `dataframe`    | Arrow Table and ChunkedArray runtime                 |
+| `record_batch` | Arrow RecordBatch and IPC streaming bridge           |
 
 The runtime layer is independent of Arx imports. Importing a source module and
 activating a native feature are different compiler operations.
@@ -170,9 +170,28 @@ the Arx test runner.
 ## Dynamic list caveat
 
 The `list` runtime supports checked append/growth, indexed access, and an
-idempotent destroy helper. Semantic ownership and cleanup insertion do not yet
-call that destructor for compiled list values, so dynamically produced list
-storage remains process-lifetime in the current MVP.
+idempotent destroy helper. Semantic ownership sidecars classify scalar dynamic
+lists as owned, borrowed, or static and record borrow/move/return boundaries.
+Lowering destroys owned locals and non-transferred temporaries on lexical
+fallthrough, return, `break`, and `continue`, while excluding storage moved to a
+caller. Borrowed/static copies, append through borrowed storage, owned list
+locals in generators, owning list elements, and object-field ownership remain
+unsupported.
+
+## String lifetime caveat
+
+String literals and empty defaults are immutable static pointers. Heap strings
+from concatenation, numeric formatting, and defined Arx string-returning calls
+carry semantic owner/copy/move metadata. Lowering guards allocation and
+formatting failure with `ARX-RUNTIME-STRING-001` or `ARX-RUNTIME-STRING-002`,
+frees non-transferred temporaries and owned locals, releases the old generation
+on owned replacement, and moves return cleanup to the caller. Static-to-owned
+return uses a checked heap copy.
+
+The preview intentionally rejects borrowed parameter escape, static/owned
+storage-class changes, owned string fields and generator locals, redundant
+identity casts of owned strings, and external string results without an explicit
+ownership ABI.
 
 ## Deliberate limits
 

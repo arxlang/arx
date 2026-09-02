@@ -68,6 +68,14 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
             )
+            if isinstance(attr.type_, astx.ListType):
+                self.context.diagnostics.add(
+                    f"struct field '{struct.name}.{attr.name}' cannot own "
+                    "dynamic list storage because struct destruction is not "
+                    "supported",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             fields.append(
                 SemanticStructField(
                     name=attr.name,
