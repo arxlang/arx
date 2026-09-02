@@ -50,8 +50,8 @@ class ParseError(ArxError):
     """
     title: Raised when lexing or parsing Arx source fails.
     summary: >-
-      Parser-origin diagnostics have no line or column in v1 because
-      ParserException discards token location.
+      Lexer and parser diagnostics include a source location when the frontend
+      can attribute one without fabrication.
     attributes:
       diagnostics:
         type: list[Diagnostic]

@@ -12,12 +12,13 @@ from typing import Any, Literal, cast
 
 import astx
 
-from irx.analysis.module_interfaces import ParsedModule
+from irx.analysis.module_interfaces import ImportResolutionError, ParsedModule
 
 from arx import builtins as arx_builtins
 from arx import package_index
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
+from arx.exceptions import ArxError
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -141,7 +142,7 @@ def _has_top_level_binding_name(
     return False
 
 
-def _inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
+def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
     """
     title: Inject compiler-provided builtin bindings into one module AST.
     parameters:
@@ -607,7 +608,7 @@ class FileImportResolver:
         builtin_asset = arx_builtins.load_builtin_module(requested_specifier)
         ArxIO.string_to_buffer(builtin_asset.source)
         module_ast = Parser().parse(Lexer().lex(), requested_specifier)
-        module_ast = _inject_ambient_builtin_imports(module_ast)
+        module_ast = inject_ambient_builtin_imports(module_ast)
         return ParsedModule(
             key=requested_specifier,
             ast=module_ast,
@@ -706,6 +707,35 @@ class FileImportResolver:
         returns:
           type: ParsedModule
         """
+        try:
+            return self.resolve(
+                requesting_module_key,
+                import_node,
+                requested_specifier,
+            )
+        except ImportResolutionError:
+            raise
+        except (ArxError, ValueError) as error:
+            raise ImportResolutionError(str(error)) from error
+
+    def resolve(
+        self,
+        requesting_module_key: str,
+        import_node: astx.ImportStmt | astx.ImportFromStmt,
+        requested_specifier: str,
+    ) -> ParsedModule:
+        """
+        title: Resolve one import and let expected host failures be wrapped.
+        parameters:
+          requesting_module_key:
+            type: str
+          import_node:
+            type: astx.ImportStmt | astx.ImportFromStmt
+          requested_specifier:
+            type: str
+        returns:
+          type: ParsedModule
+        """
         _ = import_node
 
         resolved_specifier = self._normalize_module_specifier(
@@ -725,7 +755,7 @@ class FileImportResolver:
         module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
         module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
-        module_ast = _inject_ambient_builtin_imports(module_ast)
+        module_ast = inject_ambient_builtin_imports(module_ast)
         parsed_module = ParsedModule(
             key=resolved_specifier,
             ast=module_ast,
@@ -901,7 +931,7 @@ class ArxMain:
                 "is not supported yet."
             )
         if isinstance(tree_ast, astx.Module):
-            return _inject_ambient_builtin_imports(tree_ast)
+            return inject_ambient_builtin_imports(tree_ast)
         return tree_ast
 
     def _module_has_imports(self, module: astx.Module) -> bool:
@@ -998,9 +1028,6 @@ class ArxMain:
 
         if kwargs.get("show_llvm_ir"):
             return self.show_llvm_ir()
-
-        if kwargs.get("shell"):
-            return self.run_shell()
 
         emits_executable = self.compile()
         if kwargs.get("run"):
@@ -1173,12 +1200,6 @@ class ArxMain:
             return
 
         print(ir.translate(tree_ast))
-
-    def run_shell(self) -> None:
-        """
-        title: Open arx in shell mode.
-        """
-        raise Exception("Arx Shell is not implemented yet.")
 
     def run_binary(self) -> None:
         """

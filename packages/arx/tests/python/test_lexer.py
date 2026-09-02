@@ -2,6 +2,7 @@
 title: Tests for `arx`.`lexer`.
 """
 
+import arx.lexer.core as lexer_core
 import pytest
 
 from arx.io import ArxIO
@@ -420,6 +421,114 @@ def test_lexer_error_message_includes_location() -> None:
     err = LexerError("bad token", loc)
     assert "at line 3, col 12" in str(err)
     assert err.location.line == loc.line and err.location.col == loc.col
+    assert err.code == "ARX-LEX-001"
+
+
+def test_token_list_exhaustion_returns_stable_eof() -> None:
+    """
+    title: TokenList exhaustion remains a stable EOF instead of IndexError.
+    """
+    token_list = TokenList([])
+
+    first = token_list.get_next_token()
+    second = token_list.get_next_token()
+
+    assert first.kind == TokenKind.eof
+    assert second.kind == TokenKind.eof
+
+
+def test_lexer_rejects_tab_indentation() -> None:
+    """
+    title: Arx rejects tab indentation at the lexer boundary.
+    """
+    ArxIO.string_to_buffer("fn main() -> i32:\n\treturn 0\n")
+
+    with pytest.raises(LexerError) as exc_info:
+        Lexer().lex()
+
+    assert exc_info.value.code == "ARX-LEX-INDENT-001"
+    assert "Tab characters are not allowed" in str(exc_info.value)
+
+
+def test_lexer_locations_are_one_based_unicode_columns() -> None:
+    """
+    title: Token starts use one-based Unicode code-point columns.
+    """
+    ArxIO.string_to_buffer("fn café(\n")
+    tokens = Lexer().lex().tokens
+    assert [
+        (token.value, token.location.line, token.location.col)
+        for token in tokens[:3]
+    ] == [
+        ("fn", 1, 1),
+        ("café", 1, 4),
+        ("(", 1, 8),
+    ]
+
+
+def test_lexer_eof_location_does_not_drift() -> None:
+    """
+    title: Repeated EOF reads preserve the same source boundary.
+    """
+    ArxIO.string_to_buffer("x")
+    lexer = Lexer()
+    assert lexer.get_token().value == "x"
+    first_eof = lexer.get_token()
+    second_eof = lexer.get_token()
+    assert first_eof.kind == TokenKind.eof
+    assert second_eof.kind == TokenKind.eof
+    assert first_eof.location.line == second_eof.location.line == 1
+    assert first_eof.location.col == second_eof.location.col == 2
+
+
+def test_lexer_rejects_excessive_nesting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Lexical nesting has a stable resource-limit diagnostic.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.setattr(lexer_core, "MAX_NESTING_DEPTH", 3)
+    ArxIO.string_to_buffer("((((1))))")
+    with pytest.raises(LexerError) as captured:
+        Lexer().lex()
+    assert captured.value.code == "ARX-LEX-NESTING-001"
+    assert captured.value.location.line == 1
+    assert captured.value.location.col == 4
+
+
+def test_lexer_rejects_oversized_numeric_literal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Numeric token size is bounded before Python integer conversion.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.setattr(lexer_core, "MAX_NUMERIC_LITERAL_CHARS", 4)
+    ArxIO.string_to_buffer("12345")
+    with pytest.raises(LexerError) as captured:
+        Lexer().lex()
+    assert captured.value.code == "ARX-LEX-NUMBER-SIZE-001"
+
+
+def test_lexer_rejects_excessive_token_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Token creation is bounded by a stable resource-limit diagnostic.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.setattr(lexer_core, "MAX_TOKEN_COUNT", 3)
+    ArxIO.string_to_buffer("a b c d")
+    with pytest.raises(LexerError) as captured:
+        Lexer().lex()
+    assert captured.value.code == "ARX-LEX-TOKEN-LIMIT-001"
 
 
 def test_lexer_boolean_false_and_logical_operators() -> None:

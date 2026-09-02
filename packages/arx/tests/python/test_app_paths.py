@@ -5,6 +5,7 @@ title: Coverage-oriented tests for app/runtime modules.
 from __future__ import annotations
 
 import io
+import json
 import runpy
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from argparse import Namespace
 from pathlib import Path
 
 import arx.cli as cli_module
+import arx.io as io_module
 import arx.main as main_module
 import arx.testing as testing_module
 import astx
@@ -21,11 +23,12 @@ import pytest
 
 from arx import __version__, builtins
 from arx.docstrings import validate_docstring
-from arx.exceptions import CodeGenException, ParserException
+from arx.exceptions import CodeGenException, ParserException, SourceError
 from arx.io import ArxBuffer, ArxFile, ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
 from arx.testing import TestRunSummary as _TestRunSummary
+from irx.diagnostics import DiagnosticBag, SemanticError
 
 
 def test_builtins_helpers() -> None:
@@ -120,7 +123,7 @@ def test_arxio_file_and_stdin_loaders(
     sample = tmp_path / "sample.x"
     sample.write_text("fn main() -> i32:\n  return 1\n", encoding="utf-8")
     ArxIO.file_to_buffer(str(sample))
-    assert "fn main()" in ArxIO.buffer.buffer
+    assert ArxIO.buffer.buffer == "fn main() -> i32:\n  return 1\n"
 
     calls: dict[str, str] = {}
 
@@ -152,6 +155,35 @@ def test_arxio_file_and_stdin_loaders(
     ArxIO.buffer.write("keep")
     ArxIO.load_input_to_buffer()
     assert ArxIO.buffer.buffer.endswith("keep")
+
+
+def test_arxio_rejects_source_over_utf8_byte_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: In-memory source uses a stable UTF-8 byte limit diagnostic.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+    monkeypatch.setattr(io_module, "MAX_SOURCE_BYTES", 4)
+    with pytest.raises(SourceError) as captured:
+        ArxIO.string_to_buffer("ééé")
+    assert captured.value.code == "ARX-SOURCE-SIZE-001"
+
+
+def test_arxio_rejects_non_utf8_source_file(tmp_path: Path) -> None:
+    """
+    title: Invalid file encoding becomes an expected source diagnostic.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = tmp_path / "invalid.x"
+    source.write_bytes(b"\xff\xfe")
+    with pytest.raises(SourceError) as captured:
+        ArxIO.file_to_buffer(str(source))
+    assert captured.value.code == "ARX-SOURCE-ENCODING-001"
 
 
 def test_arxfile_create_and_delete_roundtrip() -> None:
@@ -189,7 +221,10 @@ def test_cli_get_args_parsing() -> None:
     assert args.is_lib is True
     assert args.show_tokens is True
     assert args.link_mode == "no-pie"
+    assert args.diagnostic_format == "human"
+    assert args.traceback is False
     assert args.run is False
+    assert not hasattr(args, "shell")
 
 
 def test_cli_get_test_args_parsing() -> None:
@@ -226,6 +261,8 @@ def test_cli_get_test_args_parsing() -> None:
     assert args.file_pattern == "check_*.x"
     assert args.function_pattern == "check_*"
     assert args.link_mode == "no-pie"
+    assert args.diagnostic_format == "human"
+    assert args.traceback is False
 
 
 def test_cli_show_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -263,7 +300,8 @@ def test_cli_app_version_branch(monkeypatch: pytest.MonkeyPatch) -> None:
                 show_ast=False,
                 show_tokens=False,
                 show_llvm_ir=False,
-                shell=False,
+                diagnostic_format="human",
+                traceback=False,
                 run=False,
             )
 
@@ -552,7 +590,8 @@ def test_cli_app_run_branch(
                 show_ast=False,
                 show_tokens=True,
                 show_llvm_ir=False,
-                shell=False,
+                diagnostic_format="human",
+                traceback=False,
                 run=False,
             )
 
@@ -617,7 +656,8 @@ def test_cli_app_run_alias(
                 show_ast=False,
                 show_tokens=False,
                 show_llvm_ir=False,
-                shell=False,
+                diagnostic_format="human",
+                traceback=False,
                 run=False,
             )
 
@@ -699,6 +739,321 @@ def test_cli_app_missing_input_file_exits_cleanly(
     err = capsys.readouterr().err
     assert "input file not found: 'missing.x'" in err
     assert "unknown command" not in err
+
+
+def test_cli_app_rejects_multiple_direct_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test multiple entry files fail before backend initialization.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    first = tmp_path / "first.x"
+    second = tmp_path / "second.x"
+    first.write_text("", encoding="utf-8")
+    second.write_text("", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(first), str(second)])
+
+    assert exc_info.value.code == 2
+    err = capsys.readouterr().err
+    assert "multiple direct input files is not supported" in err
+
+
+def test_cli_app_renders_parser_failure_without_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test expected parser failures use the CLI diagnostic boundary.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "bad.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise one expected parser error.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise ParserException(
+                "expected expression",
+                astx.SourceLocation(4, 7),
+            )
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source)])
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "[ARX-PARSE-001]" in err
+    assert "line 4, col 7" in err
+    assert "Traceback" not in err
+
+
+def test_cli_app_renders_parser_failure_as_versioned_json(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test the machine-readable compiler diagnostic schema.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "bad-json.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise one located frontend failure.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise ParserException(
+                "expected expression",
+                astx.SourceLocation(4, 7),
+            )
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source), "--diagnostic-format", "json"])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(capsys.readouterr().err)
+    assert payload == {
+        "diagnostics": [
+            {
+                "code": "ARX-PARSE-001",
+                "column": 7,
+                "end_column": None,
+                "end_line": None,
+                "hint": None,
+                "line": 4,
+                "message": "expected expression",
+                "module": None,
+                "notes": [],
+                "phase": "frontend",
+                "severity": "error",
+            }
+        ],
+        "schema_version": 1,
+    }
+
+
+def test_cli_app_renders_irx_semantic_failure_without_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test IRx semantic diagnostics cross the CLI failure boundary.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "bad-semantic.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise one structured semantic failure.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            diagnostics = DiagnosticBag()
+            diagnostics.add(
+                "unknown name 'missing'",
+                code="S001",
+            )
+            raise SemanticError(diagnostics)
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source)])
+
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "error[IRX-S001]: unknown name 'missing'" in err
+    assert "Traceback" not in err
+
+
+def test_cli_app_renders_all_semantic_diagnostics_as_json(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test JSON mode preserves every semantic diagnostic in order.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "bad-semantic-json.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise two structured semantic failures.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            diagnostics = DiagnosticBag()
+            diagnostics.add("first failure", code="S001")
+            diagnostics.add("second failure", code="S002")
+            raise SemanticError(diagnostics)
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source), "--diagnostic-format", "json"])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["schema_version"] == 1
+    assert [item["code"] for item in payload["diagnostics"]] == [
+        "IRX-S001",
+        "IRX-S002",
+    ]
+    assert [item["message"] for item in payload["diagnostics"]] == [
+        "first failure",
+        "second failure",
+    ]
+
+
+def test_cli_app_sanitizes_internal_failures_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test internal failures are sanitized unless traceback is requested.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "internal.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise an unexpected internal failure.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise RuntimeError("internal invariant failed")
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source)])
+    assert exc_info.value.code == cli_module.INTERNAL_ERROR_EXIT_CODE
+    err = capsys.readouterr().err
+    assert "ARX-INTERNAL-001" in err
+    assert "internal invariant failed" not in err
+    assert "Traceback" not in err
+
+    with pytest.raises(RuntimeError, match="internal invariant failed"):
+        cli_module.app([str(source), "--traceback"])
+
+
+def test_cli_app_renders_sanitized_internal_failure_as_json(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: Test internal failures preserve the JSON diagnostic envelope.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    source = tmp_path / "internal-json.x"
+    source.write_text("bad", encoding="utf-8")
+
+    class FailingMain:
+        def run(self, **kwargs: object) -> None:
+            """
+            title: Raise an unexpected internal failure.
+            parameters:
+              kwargs:
+                type: object
+                variadic: keyword
+            """
+            del kwargs
+            raise RuntimeError("private implementation detail")
+
+    monkeypatch.setattr(cli_module, "ArxMain", FailingMain)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.app([str(source), "--diagnostic-format", "json"])
+    assert exc_info.value.code == cli_module.INTERNAL_ERROR_EXIT_CODE
+    payload = json.loads(capsys.readouterr().err)
+    assert payload["schema_version"] == 1
+    assert payload["diagnostics"][0]["code"] == "ARX-INTERNAL-001"
+    assert payload["diagnostics"][0]["message"] == ("internal compiler error")
 
 
 def test_python_m_entrypoint_calls_cli_app(
@@ -1165,7 +1520,6 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
         "ast": False,
         "tokens": False,
         "llvm": False,
-        "shell": False,
         "run_binary": False,
     }
 
@@ -1187,12 +1541,6 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
         """
         called["llvm"] = True
 
-    def fake_run_shell() -> None:
-        """
-        title: Record run_shell dispatch.
-        """
-        called["shell"] = True
-
     def fake_run_binary() -> None:
         """
         title: Record run_binary dispatch.
@@ -1202,7 +1550,6 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(app, "show_ast", fake_show_ast)
     monkeypatch.setattr(app, "show_tokens", fake_show_tokens)
     monkeypatch.setattr(app, "show_llvm_ir", fake_show_llvm_ir)
-    monkeypatch.setattr(app, "run_shell", fake_run_shell)
     monkeypatch.setattr(app, "run_binary", fake_run_binary)
 
     compiled: dict[str, bool] = {"called": False}
@@ -1226,7 +1573,6 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     app.run(show_tokens=True)
     app.run(show_llvm_ir=True)
-    app.run(shell=True)
     app.run(run=True)
 
     app.run()
@@ -1234,7 +1580,6 @@ def test_arxmain_run_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     assert called["ast"] is True
     assert called["tokens"] is True
     assert called["llvm"] is True
-    assert called["shell"] is True
     assert called["run_binary"] is True
     assert app.is_lib is False
 
@@ -1797,15 +2142,6 @@ def test_arxmain_run_binary_nonzero_exits(
 
     with pytest.raises(SystemExit, match="112"):
         app.run_binary()
-
-
-def test_arxmain_run_shell_not_implemented() -> None:
-    """
-    title: Test run_shell exception path.
-    """
-    app = main_module.ArxMain()
-    with pytest.raises(Exception, match="not implemented"):
-        app.run_shell()
 
 
 def _write_resolver_project(

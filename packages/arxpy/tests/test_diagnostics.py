@@ -198,3 +198,21 @@ def test_from_parser_exception_custom_filename() -> None:
     """
     diagnostic = _from_parser_exception(Exception("bad"), filename="prog.x")
     assert diagnostic.filename == "prog.x"
+
+
+def test_from_parser_exception_maps_stable_frontend_fields() -> None:
+    """
+    title: Frontend code and trustworthy location are preserved.
+    """
+    error = Exception("rendered")
+    error.message = "raw parser failure"  # type: ignore[attr-defined]
+    error.code = "ARX-PARSE-001"  # type: ignore[attr-defined]
+    error.location = _FakeSource(4, 9)  # type: ignore[attr-defined]
+    assert _from_parser_exception(error, filename="prog.x") == Diagnostic(
+        severity=DiagnosticSeverity.ERROR,
+        message="raw parser failure",
+        filename="prog.x",
+        line=4,
+        column=9,
+        code="ARX-PARSE-001",
+    )

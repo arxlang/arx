@@ -14,6 +14,7 @@ import astx
 import pytest
 
 from irx.builder import Builder, Visitor
+from irx.builder.runtime.errors.feature import build_runtime_failure_feature
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
     NativeArtifact,
@@ -24,6 +25,7 @@ from irx.builder.runtime.linking import (
     compile_native_artifacts,
     link_executable,
 )
+from irx.builder.runtime.list.feature import build_list_runtime_feature
 from irx.builder.runtime.registry import (
     RuntimeFeatureRegistry,
     RuntimeFeatureState,
@@ -213,6 +215,36 @@ def test_simple_module_has_no_native_runtime_artifacts() -> None:
     builder.translate(_main_return_zero_module())
 
     assert builder.translator.runtime_features.native_artifacts() == ()
+
+
+def test_list_runtime_exposes_status_and_destroy_contract() -> None:
+    """
+    title: The list feature declares append checks and idempotent destruction.
+    """
+    feature = build_list_runtime_feature()
+
+    assert set(feature.symbols) == {
+        "irx_list_append",
+        "irx_list_at",
+        "irx_list_destroy",
+        "irx_list_require_ok",
+    }
+    assert "no destroy or release helper yet" not in feature.metadata.get(
+        "limitations",
+        (),
+    )
+
+
+def test_runtime_failure_feature_has_machine_protocol_and_native_source() -> (
+    None
+):
+    """
+    title: Fatal runtime errors use one registered machine-readable protocol.
+    """
+    feature = build_runtime_failure_feature()
+    assert set(feature.symbols) == {"__arx_runtime_fail"}
+    assert feature.metadata["exit_status"] == 1
+    assert feature.artifacts[0].path.name == "irx_error_runtime.c"
 
 
 def test_feature_backed_extern_collects_linker_flags() -> None:

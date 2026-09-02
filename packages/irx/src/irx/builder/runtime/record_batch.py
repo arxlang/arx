@@ -4,9 +4,15 @@ title: Record batch streaming API.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
+import shutil
 import subprocess
-import sys
+import time
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import Callable
@@ -26,6 +32,7 @@ from irx.builder.runtime.features import (
     declare_external_function,
 )
 from irx.builder.runtime.linking import compile_native_artifacts
+from irx.record_batch_abi import record_batch_library_path
 from irx.typecheck import typechecked
 
 # Native source location
@@ -65,6 +72,7 @@ def _native_source() -> Path:
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     # Error reporting
     "irx_record_batch_errmsg": ("p", ()),
+    "irx_record_batch_abi_version": ("i32", ()),
     # Type descriptors (nested types)
     "irx_type_primitive": ("p", ("i32",)),
     "irx_type_list": ("p", ("p",)),
@@ -264,28 +272,156 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
 
 
 @typechecked
-def _shared_library_name() -> str:
-    """
-    title: _shared_library_name.
-    returns:
-      type: str
-    """
-    if sys.platform == "darwin":
-        return "libirx_record_batch.dylib"
-    if sys.platform == "win32":
-        return "irx_record_batch.dll"
-    return "libirx_record_batch.so"
-
-
-@typechecked
 def shared_library_path() -> Path:
     """
     title: shared_library_path.
     returns:
       type: Path
     """
-    arrow_dir = (Path(__file__).resolve().parent / "arrow").resolve()
-    return arrow_dir / _shared_library_name()
+    return record_batch_library_path()
+
+
+@typechecked
+def shared_library_fingerprint_path(output_path: Path | None = None) -> Path:
+    """
+    title: Return the fingerprint sidecar path for a shared library.
+    parameters:
+      output_path:
+        type: Path | None
+    returns:
+      type: Path
+    """
+    output = output_path or shared_library_path()
+    return output.with_name(f"{output.name}.fingerprint")
+
+
+@typechecked
+def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
+    """
+    title: Hash native sources, build inputs, and compiler identity.
+    parameters:
+      cxx_binary:
+        type: str
+    returns:
+      type: str
+    """
+    compiler = shutil.which(cxx_binary) or cxx_binary
+    try:
+        version_result = subprocess.run(
+            [compiler, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        compiler_version = (
+            f"{version_result.returncode}\n"
+            f"{version_result.stdout}\n{version_result.stderr}"
+        )
+    except (OSError, subprocess.SubprocessError) as err:
+        compiler_version = f"unavailable: {type(err).__name__}: {err}"
+
+    feature = build_record_batch_runtime_feature()
+    build_metadata = {
+        "compiler": compiler,
+        "compiler_version": compiler_version,
+        "compile_flags": [
+            list(artifact.compile_flags) for artifact in feature.artifacts
+        ],
+        "include_dirs": [
+            [str(path) for path in artifact.include_dirs]
+            for artifact in feature.artifacts
+        ],
+        "linker_flags": list(feature.linker_flags),
+        "metadata": dict(feature.metadata),
+        "platform": os.name,
+    }
+
+    digest = hashlib.sha256(
+        json.dumps(
+            build_metadata,
+            sort_keys=True,
+            default=str,
+        ).encode("utf-8")
+    )
+    native_sources = sorted(
+        path
+        for path in _native_source_dir().iterdir()
+        if path.suffix in {".cc", ".cpp", ".h"}
+    )
+    for path in native_sources:
+        digest.update(path.name.encode("utf-8"))
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+@typechecked
+def record_batch_shared_library_is_current(
+    output_path: Path | None = None,
+    cxx_binary: str = "c++",
+) -> bool:
+    """
+    title: Return whether a shared library matches all current build inputs.
+    parameters:
+      output_path:
+        type: Path | None
+      cxx_binary:
+        type: str
+    returns:
+      type: bool
+    """
+    output = output_path or shared_library_path()
+    fingerprint_path = shared_library_fingerprint_path(output)
+    if not output.is_file() or not fingerprint_path.is_file():
+        return False
+    try:
+        actual = fingerprint_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    return actual == record_batch_build_fingerprint(cxx_binary)
+
+
+@contextmanager
+@typechecked
+def record_batch_build_lock(
+    output_path: Path,
+    timeout_seconds: float = 120.0,
+) -> Iterator[None]:
+    """
+    title: Serialize native library builds with an atomic lock file.
+    parameters:
+      output_path:
+        type: Path
+      timeout_seconds:
+        type: float
+    returns:
+      type: Iterator[None]
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = output_path.with_name(f"{output_path.name}.lock")
+    deadline = time.monotonic() + timeout_seconds
+    descriptor: int | None = None
+    while descriptor is None:
+        try:
+            descriptor = os.open(
+                lock_path,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                0o600,
+            )
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    "timed out waiting for the RecordBatch native build "
+                    f"lock '{lock_path}'"
+                ) from None
+            time.sleep(0.05)
+
+    try:
+        os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
+        yield
+    finally:
+        os.close(descriptor)
+        lock_path.unlink(missing_ok=True)
 
 
 @typechecked
@@ -311,8 +447,9 @@ def build_record_batch_shared_library(
       type: Path
     """
     output = output_path or shared_library_path()
-    work_dir = build_dir or (_native_source_dir() / "_build")
+    work_dir = build_dir or (output.parent / "build")
     work_dir.mkdir(parents=True, exist_ok=True)
+    fingerprint = record_batch_build_fingerprint(cxx_binary)
 
     feature = build_record_batch_runtime_feature()
     # Shared objects must be position-independent.
@@ -328,9 +465,55 @@ def build_record_batch_shared_library(
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    command = [cxx_binary, "-shared", "-o", str(output)]
+    temporary_output = output.with_name(
+        f".{output.name}.{fingerprint[:12]}.tmp"
+    )
+    temporary_output.unlink(missing_ok=True)
+    command = [cxx_binary, "-shared", "-o", str(temporary_output)]
     command.extend(str(obj) for obj in link_inputs.objects)
     command.extend(link_inputs.linker_flags)
     command.extend(feature.linker_flags)
-    subprocess.run(command, check=True)
+    try:
+        subprocess.run(command, check=True)
+        temporary_output.replace(output)
+    finally:
+        temporary_output.unlink(missing_ok=True)
+
+    fingerprint_path = shared_library_fingerprint_path(output)
+    temporary_fingerprint = fingerprint_path.with_name(
+        f".{fingerprint_path.name}.{fingerprint[:12]}.tmp"
+    )
+    temporary_fingerprint.write_text(f"{fingerprint}\n", encoding="utf-8")
+    temporary_fingerprint.replace(fingerprint_path)
     return output
+
+
+@typechecked
+def ensure_record_batch_shared_library(
+    output_path: Path | None = None,
+    build_dir: Path | None = None,
+    cxx_binary: str = "c++",
+) -> Path:
+    """
+    title: Return a current native library, rebuilding stale artifacts.
+    parameters:
+      output_path:
+        type: Path | None
+      build_dir:
+        type: Path | None
+      cxx_binary:
+        type: str
+    returns:
+      type: Path
+    """
+    output = output_path or shared_library_path()
+    if record_batch_shared_library_is_current(output, cxx_binary):
+        return output
+    with record_batch_build_lock(output):
+        if record_batch_shared_library_is_current(output, cxx_binary):
+            return output
+        return build_record_batch_shared_library(
+            output,
+            build_dir,
+            cxx_binary,
+        )

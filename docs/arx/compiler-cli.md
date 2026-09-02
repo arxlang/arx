@@ -7,8 +7,8 @@ compiled tests.
 ## Command forms
 
 ```text
-arx [input_files ...] [options]
-arx run [input_files ...] [options]
+arx [input_file] [options]
+arx run [input_file] [options]
 arx test [paths ...] [options]
 ```
 
@@ -41,14 +41,15 @@ arx run program.x
 The compiler emits an executable when the module defines `main`. Without a
 native entry point, or with `--lib`, it emits an object artifact instead.
 
-| Option               | Purpose                                            |
-| -------------------- | -------------------------------------------------- |
-| `--output-file PATH` | select the object or executable path               |
-| `--lib`              | emit a library/object artifact                     |
-| `--run`              | build and run an executable                        |
-| `--link-mode MODE`   | use `auto`, `pie`, or `no-pie` linking             |
-| `--version`          | print the installed version                        |
-| `--shell`            | reserved; the interactive shell is not implemented |
+| Option                       | Purpose                                         |
+| ---------------------------- | ----------------------------------------------- |
+| `--output-file PATH`         | select the object or executable path            |
+| `--lib`                      | emit a library/object artifact                  |
+| `--run`                      | build and run an executable                     |
+| `--link-mode MODE`           | use `auto`, `pie`, or `no-pie` linking          |
+| `--diagnostic-format FORMAT` | use `human` or versioned `json` errors          |
+| `--traceback`                | expose Python tracebacks for compiler debugging |
+| `--version`                  | print the installed version                     |
 
 Compiling multiple input files in one invocation is not currently supported. Use
 [project-aware imports](projects.md#imports) to compile a module graph from one
@@ -73,6 +74,50 @@ arx program.x --link-mode no-pie
 
 IRx emits PIC-compatible objects by default. Explicit link modes are primarily
 toolchain compatibility controls.
+
+## Diagnostics
+
+Expected lexer, parser, semantic, lowering, native compilation, and linking
+failures exit with status 1. Human-readable diagnostics go to standard error by
+default. Unexpected internal failures produce `ARX-INTERNAL-001` without
+exposing exception details and exit with status 70. Compiler developers can opt
+in to the original Python exception and traceback with `--traceback`.
+
+Use `--diagnostic-format json` for one versioned JSON document on standard
+error:
+
+```json
+{
+  "diagnostics": [
+    {
+      "code": "ARX-PARSE-001",
+      "column": 7,
+      "end_column": null,
+      "end_line": null,
+      "hint": null,
+      "line": 4,
+      "message": "expected expression",
+      "module": null,
+      "notes": [],
+      "phase": "frontend",
+      "severity": "error"
+    }
+  ],
+  "schema_version": 1
+}
+```
+
+JSON mode covers expected compiler-phase failures and sanitized internal
+failures. Argument usage errors remain argparse text with exit status 2.
+Consumers must reject unsupported `schema_version` values instead of guessing
+field semantics.
+
+| Exit status | Meaning                              |
+| ----------- | ------------------------------------ |
+| 0           | command succeeded                    |
+| 1           | expected compiler/source failure     |
+| 2           | CLI usage or input-path failure      |
+| 70          | unexpected internal compiler failure |
 
 ## Tests
 

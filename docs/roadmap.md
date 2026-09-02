@@ -41,7 +41,8 @@ The current monorepo already provides:
       IRx, and documentation behavior.
 - [ ] Expand string, temporal, and collection operations.
 - [ ] Define constructor arguments and richer class lifecycle behavior.
-- [ ] Implement the interactive `arx --shell` mode.
+- [x] Remove the unimplemented `arx --shell` option from the stable CLI. An
+      interactive shell can return later as a separately designed feature.
 - [ ] Grow the bundled pure-Arx standard library.
 
 ## IRx and ASTx
@@ -65,7 +66,10 @@ The current monorepo already provides:
 ### ArxJIT
 
 - [ ] Connect source extraction and validation to `@jit`.
-- [ ] Lower the accepted Python subset to ASTx.
+- [x] Add fail-closed ASTx lowering for the scalar function shell and
+      straight-line literal, parameter, arithmetic, unary, and comparison
+      expressions.
+- [ ] Extend ASTx lowering to assignments and validated control flow.
 - [ ] Compile and call native functions through IRx.
 - [ ] Implement signature inference, runtime marshalling, and caching.
 - [ ] Add Arrow-backed array and tensor signatures after scalar compilation is

@@ -111,9 +111,11 @@ and IRx. The current package implements:
 - scalar signature types (`i32`, `i64`, `f32`, `f64`, and `bool_`)
 - source extraction with structured diagnostics
 - validation of the proposed pure-Python subset
+- signature reconciliation and initial fail-closed ASTx lowering for scalar
+  function shells and straight-line expressions
 
-The decorator does not yet lower Python AST to ASTx or compile native callable
-code. Calling a decorated function executes the original Python function.
+The decorator does not yet invoke lowering or compile native callable code.
+Calling a decorated function executes the original Python function.
 
 ## AIX (toy project)
 

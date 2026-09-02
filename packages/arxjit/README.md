@@ -26,6 +26,9 @@ Implemented foundations:
 - scalar signatures: `i32`, `i64`, `f32`, `f64`, and `bool_`
 - robust function-source extraction with real-file locations
 - validation for the proposed scalar Python subset
+- signature reconciliation from explicit signatures or scalar annotations
+- initial fail-closed ASTx lowering for function shells and straight-line scalar
+  expressions
 - structured diagnostics and public error types
 
 The validator accepts typed scalar arguments, arithmetic/comparison/Boolean
@@ -35,7 +38,8 @@ diagnostic per violation.
 
 Not implemented:
 
-- Python AST to ASTx lowering
+- ASTx lowering for assignments, short-circuit Boolean expressions, chained
+  comparisons, and control flow
 - IRx compilation or native function calls
 - runtime argument/result marshalling
 - signature inference and artifact caching

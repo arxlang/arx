@@ -14,12 +14,13 @@ import astx
 from public import public
 
 from irx.analysis.module_interfaces import (
+    ImportResolutionError,
     ImportResolver,
     ModuleKey,
     ParsedModule,
 )
 from irx.analysis.resolved_nodes import SemanticBinding
-from irx.diagnostics import DiagnosticBag
+from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
 
 _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
@@ -205,11 +206,12 @@ class CompilationSession:
                 import_node,
                 requested_specifier,
             )
-        except Exception as exc:
+        except (ImportResolutionError, LookupError) as exc:
             self.diagnostics.add(
                 f"Unable to resolve module '{requested_specifier}': {exc}",
                 node=import_node,
                 module_key=requesting_module_key,
+                code=DiagnosticCodes.SEMANTIC_IMPORT_RESOLUTION,
             )
             self._resolution_cache[cache_key] = None
             return None
@@ -251,6 +253,15 @@ class CompilationSession:
                 import_node,
                 requested_specifier,
             )
+        except ImportResolutionError as exc:
+            self.diagnostics.add(
+                f"Unable to resolve module '{requested_specifier}': {exc}",
+                node=import_node,
+                module_key=requesting_module_key,
+                code=DiagnosticCodes.SEMANTIC_IMPORT_RESOLUTION,
+            )
+            self._probe_cache[cache_key] = None
+            return None
         except LookupError:
             self._probe_cache[cache_key] = None
             return None
@@ -339,6 +350,7 @@ class CompilationSession:
                     f"Cyclic import detected: {cycle_str}",
                     node=self.modules[module_key].ast,
                     module_key=module_key,
+                    code=DiagnosticCodes.SEMANTIC_IMPORT_CYCLE,
                 )
                 return importable_names.get(module_key, set())
 

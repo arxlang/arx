@@ -21,6 +21,7 @@ from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
     LIST_FIELD_INDICES,
+    LIST_REQUIRE_OK_SYMBOL,
     LIST_RUNTIME_FEATURE,
     list_element_type,
 )
@@ -637,13 +638,20 @@ class ListVisitorMixin(VisitorMixinBase):
             self._llvm.INT8_TYPE.as_pointer(),
             name="irx_list_comprehension_bytes",
         )
-        self._llvm.ir_builder.call(
+        append_status = self._llvm.ir_builder.call(
             self.require_runtime_symbol(
                 LIST_RUNTIME_FEATURE,
                 LIST_APPEND_SYMBOL,
             ),
             [output_ptr, raw_value_ptr],
             name="irx_list_comprehension_append_status",
+        )
+        self._llvm.ir_builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE,
+                LIST_REQUIRE_OK_SYMBOL,
+            ),
+            [append_status],
         )
 
     def _lower_list_comprehension_filters(
@@ -1054,5 +1062,12 @@ class ListVisitorMixin(VisitorMixinBase):
             append_fn,
             [list_ptr, raw_value_ptr],
             name="irx_list_append_status",
+        )
+        self._llvm.ir_builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE,
+                LIST_REQUIRE_OK_SYMBOL,
+            ),
+            [result],
         )
         self.result_stack.append(result)

@@ -4,20 +4,41 @@ title: Record batch streaming API.
 
 from __future__ import annotations
 
+import ctypes
 import math
+import shutil
+import subprocess
+import sys
 
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
+import irx.builder.runtime.record_batch as record_batch_runtime
+import irx.record_batch as record_batch_module
 import pyarrow as pa
 import pytest
 
+from irx.builder.runtime.record_batch import (
+    ensure_record_batch_shared_library,
+    record_batch_build_fingerprint,
+    record_batch_build_lock,
+    record_batch_shared_library_is_current,
+    shared_library_fingerprint_path,
+    shared_library_path,
+)
 from irx.record_batch import (
+    RECORD_BATCH_ABI_VERSION,
     IrxColumnType,
     RecordBatchBuilder,
     RecordBatchSchema,
     RecordBatchStreamReader,
     RecordBatchStreamWriter,
+)
+from irx.record_batch_abi import (
+    IRX_NATIVE_CACHE_DIR_ENV,
+    IRX_RECORD_BATCH_LIBRARY_ENV,
+    record_batch_library_name,
+    record_batch_library_path,
 )
 
 # Helpers
@@ -36,6 +57,288 @@ PYARROW_FIRST_INT32_VALUE = 10
 PYARROW_LAST_INT32_VALUE = 30
 PYARROW_CONTEXT_MANAGER_INT32_VALUE = 99
 RAW_DATE32_DAYS = 20651
+
+
+def test_record_batch_library_path_uses_abi_scoped_cache(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: Generated libraries live in a writable ABI-scoped cache.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    monkeypatch.setenv(IRX_NATIVE_CACHE_DIR_ENV, str(tmp_path))
+    monkeypatch.delenv(IRX_RECORD_BATCH_LIBRARY_ENV, raising=False)
+
+    path = record_batch_library_path()
+
+    assert path.parent == tmp_path / "record_batch" / "abi-1"
+    assert path.name == record_batch_library_name()
+
+
+def test_record_batch_library_path_honors_explicit_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: An explicit native library override takes precedence over caching.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    configured = tmp_path / "custom-record-batch.so"
+    monkeypatch.setenv(IRX_RECORD_BATCH_LIBRARY_ENV, str(configured))
+
+    assert shared_library_path() == configured
+
+
+def test_record_batch_loader_builds_or_refreshes_default_cache(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: First direct API use ensures a fingerprint-current cache library.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    monkeypatch.delenv(IRX_RECORD_BATCH_LIBRARY_ENV, raising=False)
+    library = tmp_path / record_batch_library_name()
+    ensured: list[bool] = []
+    loaded: list[str] = []
+
+    def fake_ensure() -> Path:
+        """
+        title: Return one simulated freshly built native library.
+        returns:
+          type: Path
+        """
+        ensured.append(True)
+        return library
+
+    def fake_cdll(path: str) -> object:
+        """
+        title: Record the path passed to ctypes.
+        parameters:
+          path:
+            type: str
+        returns:
+          type: object
+        """
+        loaded.append(path)
+        return object()
+
+    monkeypatch.setattr(
+        record_batch_runtime,
+        "ensure_record_batch_shared_library",
+        fake_ensure,
+    )
+    monkeypatch.setattr(record_batch_module.ctypes, "CDLL", fake_cdll)
+
+    result = record_batch_module._load_native_lib()
+
+    assert ensured == [True]
+    assert loaded == [str(library)]
+    assert result is not None
+
+
+def test_record_batch_loader_rejects_missing_exact_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: An explicit missing native library is never silently replaced.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    missing = tmp_path / record_batch_library_name()
+    monkeypatch.setenv(IRX_RECORD_BATCH_LIBRARY_ENV, str(missing))
+
+    with pytest.raises(RuntimeError, match=IRX_RECORD_BATCH_LIBRARY_ENV):
+        record_batch_module._load_native_lib()
+
+
+def test_record_batch_build_lock_times_out_without_removing_owner_lock(
+    tmp_path: Path,
+) -> None:
+    """
+    title: A competing native build times out without deleting another lock.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    output = tmp_path / "libirx_record_batch.so"
+    lock_path = output.with_name(f"{output.name}.lock")
+    lock_path.write_text("pid=another\n", encoding="utf-8")
+
+    with pytest.raises(TimeoutError, match="native build lock"):
+        with record_batch_build_lock(output, timeout_seconds=0.0):
+            pytest.fail("a held build lock must not be acquired")
+
+    assert lock_path.read_text(encoding="utf-8") == "pid=another\n"
+
+
+def test_record_batch_native_abi_version_matches_python_contract() -> None:
+    """
+    title: The loaded native library reports the ABI Python expects.
+    """
+    lib = record_batch_module._get_lib()
+
+    assert lib.irx_record_batch_abi_version() == RECORD_BATCH_ABI_VERSION
+
+
+def test_record_batch_native_abi_mismatch_fails_before_symbol_binding(
+    tmp_path: Path,
+) -> None:
+    """
+    title: An incompatible native ABI fails with an actionable load error.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    compiler = shutil.which("clang") or shutil.which("cc")
+    if compiler is None:
+        pytest.skip("a C compiler is required for the ABI mismatch test")
+    if sys.platform == "win32":
+        pytest.skip("the ABI mismatch fixture does not build on Windows yet")
+
+    source = tmp_path / "wrong_abi.c"
+    library = tmp_path / (
+        "libwrong_abi.dylib" if sys.platform == "darwin" else "libwrong_abi.so"
+    )
+    source.write_text(
+        "#include <stdint.h>\n"
+        "uint32_t irx_record_batch_abi_version(void) { return 999; }\n",
+        encoding="utf-8",
+    )
+    shared_flag = "-dynamiclib" if sys.platform == "darwin" else "-shared"
+    command = [compiler, shared_flag]
+    if sys.platform != "darwin":
+        command.append("-fPIC")
+    command.extend([str(source), "-o", str(library)])
+    result = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+    with pytest.raises(RuntimeError, match="expected 1, found 999"):
+        record_batch_module._configure_lib(ctypes.CDLL(str(library)))
+
+
+def test_record_batch_artifact_fingerprint_rejects_stale_sidecar(
+    tmp_path: Path,
+) -> None:
+    """
+    title: A native library is current only with the exact build fingerprint.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    output = tmp_path / "libirx_record_batch.so"
+    output.write_bytes(b"test artifact")
+    fingerprint_path = shared_library_fingerprint_path(output)
+
+    assert not record_batch_shared_library_is_current(output)
+
+    fingerprint = record_batch_build_fingerprint()
+    fingerprint_path.write_text(f"{fingerprint}\n", encoding="utf-8")
+    assert record_batch_shared_library_is_current(output)
+
+    fingerprint_path.write_text("stale\n", encoding="utf-8")
+    assert not record_batch_shared_library_is_current(output)
+
+
+def test_ensure_record_batch_library_rebuilds_stale_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """
+    title: Ensuring a stale native artifact invokes the atomic builder.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    """
+    output = tmp_path / "libirx_record_batch.so"
+    output.write_bytes(b"stale")
+    shared_library_fingerprint_path(output).write_text(
+        "stale\n",
+        encoding="utf-8",
+    )
+    rebuilt: list[Path] = []
+
+    def fake_build(
+        output_path: Path | None = None,
+        build_dir: Path | None = None,
+        cxx_binary: str = "c++",
+    ) -> Path:
+        """
+        title: Record one requested native rebuild.
+        parameters:
+          output_path:
+            type: Path | None
+          build_dir:
+            type: Path | None
+          cxx_binary:
+            type: str
+        returns:
+          type: Path
+        """
+        del build_dir
+        del cxx_binary
+        assert output_path is not None
+        rebuilt.append(output_path)
+        return output_path
+
+    monkeypatch.setattr(
+        record_batch_runtime,
+        "build_record_batch_shared_library",
+        fake_build,
+    )
+
+    assert ensure_record_batch_shared_library(output) == output
+    assert rebuilt == [output]
+
+
+def test_schema_finalizer_is_safe_after_native_load_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: Schema cleanup tolerates a constructor that failed before loading.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def fail_native_load() -> None:
+        """
+        title: Simulate a missing or incompatible native library.
+        """
+        raise RuntimeError("native load failed")
+
+    monkeypatch.setattr(record_batch_module, "_get_lib", fail_native_load)
+    schema = object.__new__(RecordBatchSchema)
+
+    with pytest.raises(RuntimeError, match="native load failed"):
+        schema.__init__()
+
+    schema.__del__()
+    assert schema._released is True
 
 
 def make_simple_schema() -> RecordBatchSchema:

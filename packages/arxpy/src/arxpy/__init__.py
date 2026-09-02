@@ -4,6 +4,14 @@ title: Top-level package for ArxPy.
 
 from importlib import metadata as importlib_metadata
 
+from arxpy.compiler import (
+    ArtifactKind,
+    CheckedProgram,
+    CompilationArtifact,
+    Compiler,
+    ExecutionResult,
+    ParsedProgram,
+)
 from arxpy.diagnostics import Diagnostic, DiagnosticSeverity
 from arxpy.errors import (
     ArxError,
@@ -32,12 +40,18 @@ __email__: str = "ivan.ogasawara@gmail.com"
 __version__: str = get_version()
 
 __all__ = [
+    "ArtifactKind",
     "ArxError",
+    "CheckedProgram",
+    "CompilationArtifact",
     "CompileError",
+    "Compiler",
     "Diagnostic",
     "DiagnosticSeverity",
     "ExecutionError",
+    "ExecutionResult",
     "ParseError",
+    "ParsedProgram",
     "__version__",
     "get_version",
 ]

@@ -33,6 +33,7 @@ packages = [
   {include = "irx", from="src"},
 ]
 include = [
+  "LICENSE",
   "src/irx/py.typed",
   "src/irx/builder/runtime/**/*.c",
   "src/irx/builder/runtime/**/*.h",

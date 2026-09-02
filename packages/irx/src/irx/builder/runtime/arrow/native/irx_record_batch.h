@@ -17,6 +17,7 @@ extern "C" {
 #define IRX_ERR_OOB     -3  /* column / row index out of bounds */
 #define IRX_ERR_TYPE    -4  /* type mismatch */
 #define IRX_ERR_IO      -5
+#define IRX_RECORD_BATCH_ABI_VERSION 1
 
 typedef enum IrxColumnType {
     IRX_COL_INT8    = 0,
@@ -54,6 +55,7 @@ typedef struct IrxRbStreamWriter_ IrxRbStreamWriter;
 typedef struct IrxRbStreamReader_ IrxRbStreamReader;
 
 const char *irx_record_batch_errmsg(void);
+uint32_t irx_record_batch_abi_version(void);
 
 /* Nested-type descriptors. A descriptor is a heap-owned handle wrapping an
  * Arrow DataType; build one, pass it to irx_rb_schema_add_field2, then release

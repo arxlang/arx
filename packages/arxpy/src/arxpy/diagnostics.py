@@ -150,16 +150,16 @@ def _from_irx(
     )
 
 
-def _from_parser_exception(
+def _from_arx_error(
     exc: object,
     *,
     filename: str = "<string>",
 ) -> Diagnostic:
     """
-    title: Translate an arx ParserException into an ArxPy Diagnostic.
+    title: Translate an expected Arx frontend error into a Diagnostic.
     summary: >-
-      ParserException.__init__ discards the offending token's location, so line
-      and column are None by design rather than fabricated.
+      Reads the stable code and optional source location exposed by ArxError
+      without importing the frontend at module import time.
     parameters:
       exc:
         type: object
@@ -168,13 +168,36 @@ def _from_parser_exception(
     returns:
       type: Diagnostic
     """
+    location = getattr(exc, "location", None)
+    code = getattr(exc, "code", None)
+    message = getattr(exc, "message", str(exc))
     return Diagnostic(
         severity=DiagnosticSeverity.ERROR,
-        message=str(exc),
+        message=str(message),
         filename=filename,
-        line=None,
-        column=None,
+        line=getattr(location, "line", None),
+        column=getattr(location, "col", None),
+        code=None if code is None else str(code),
     )
+
+
+def _from_parser_exception(
+    exc: object,
+    *,
+    filename: str = "<string>",
+) -> Diagnostic:
+    """
+    title: Translate an Arx parser failure into an ArxPy Diagnostic.
+    summary: Compatibility alias for the general expected-frontend adapter.
+    parameters:
+      exc:
+        type: object
+      filename:
+        type: str
+    returns:
+      type: Diagnostic
+    """
+    return _from_arx_error(exc, filename=filename)
 
 
 __all__ = [

@@ -20,6 +20,8 @@ LIST_FIELD_INDICES: dict[str, int] = {
 LIST_RUNTIME_FEATURE = "list"
 LIST_APPEND_SYMBOL = "irx_list_append"
 LIST_AT_SYMBOL = "irx_list_at"
+LIST_DESTROY_SYMBOL = "irx_list_destroy"
+LIST_REQUIRE_OK_SYMBOL = "irx_list_require_ok"
 
 
 @typechecked

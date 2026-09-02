@@ -19,6 +19,7 @@ from irx.analysis.contract import (
 )
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.module_interfaces import (
+    ImportResolutionError,
     ImportResolver,
     ModuleKey,
     ParsedModule,
@@ -88,6 +89,7 @@ __all__ = [
     "FFILinkStrategy",
     "FFITypeClass",
     "FFITypeInfo",
+    "ImportResolutionError",
     "ImportResolver",
     "IterationKind",
     "IterationOrder",

@@ -24,7 +24,7 @@ exclude = [
 packages = [
   {include = "arxpy", from="src"},
 ]
-include = ["src/arxpy/py.typed"]
+include = ["LICENSE", "src/arxpy/py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = [

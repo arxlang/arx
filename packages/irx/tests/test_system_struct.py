@@ -35,6 +35,7 @@ def test_cast_get_struct_shapes() -> None:
     """
     value = astx.LiteralInt32(7)
     node = Cast(value=value, target_type=astx.Float32())
+    assert isinstance(node.type_, astx.Float32)
     key = f"Cast[{node.target_type}]"
 
     full = node.get_struct()

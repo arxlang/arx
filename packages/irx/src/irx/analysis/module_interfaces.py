@@ -21,6 +21,18 @@ ModuleKey: TypeAlias = str
 
 @public
 @typechecked
+class ImportResolutionError(LookupError):
+    """
+    title: Expected host failure while resolving or parsing an import.
+    summary: >-
+      Hosts raise this type for user-actionable import failures. Unexpected
+      resolver exceptions cross the IRx boundary unchanged so compiler bugs are
+      not mislabeled as source diagnostics.
+    """
+
+
+@public
+@typechecked
 @dataclass(frozen=True)
 class ParsedModule:
     """
@@ -65,6 +77,8 @@ class ImportResolver(Protocol):
         title: Resolve one import request.
         summary: >-
           Return the parsed module selected by the host for one import edge.
+          Raise ImportResolutionError for expected user-actionable failures;
+          other exceptions are treated as internal resolver failures.
         parameters:
           requesting_module_key:
             type: ModuleKey
@@ -79,3 +93,11 @@ class ImportResolver(Protocol):
         _ = import_node
         _ = requested_specifier
         raise NotImplementedError
+
+
+__all__ = [
+    "ImportResolutionError",
+    "ImportResolver",
+    "ModuleKey",
+    "ParsedModule",
+]

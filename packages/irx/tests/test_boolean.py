@@ -366,7 +366,8 @@ def test_boolean_logical_binary_operations(
     ir_text = builder.translate(module)
 
     assert_ir_parses(ir_text)
-    assert ("and i1" if op == "&&" else "or i1") in ir_text
+    assert f"logical.{'andtmp' if op == '&&' else 'ortmp'}.rhs" in ir_text
+    assert "phi  i1" in ir_text
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])

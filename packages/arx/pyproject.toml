@@ -27,6 +27,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 include = [
+  "LICENSE",
   "src/arx",
   "src/arx/builtins/**/*.x",
   "src/arx/schema/*.json",

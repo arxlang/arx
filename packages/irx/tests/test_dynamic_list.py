@@ -6,9 +6,13 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import tempfile
 
+from pathlib import Path
+
 import astx
+import irx.builder.runtime.list.feature as list_runtime_feature
 import pytest
 
 from irx.analysis import SemanticError, analyze
@@ -420,8 +424,69 @@ def test_dynamic_list_appends_variable_values() -> None:
     ir_text = builder.translate(_singleton_module())
 
     assert 'call i32 @"irx_list_append"' in ir_text
+    assert 'call void @"irx_list_require_ok"' in ir_text
     assert 'call i8* @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
+
+
+@pytest.mark.skipif(
+    not HAS_CLANG,
+    reason="clang is required for runtime tests",
+)
+def test_dynamic_list_native_status_and_destroy_are_safe(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Native list append statuses and repeated destruction are defined.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    native_dir = Path(list_runtime_feature.__file__).parent / "native"
+    program = tmp_path / "list_runtime_test.c"
+    executable = tmp_path / "list_runtime_test"
+    program.write_text(
+        '#include "irx_list_runtime.h"\n'
+        "int main(void) {\n"
+        "  irx_list list = {0};\n"
+        "  int32_t value = 7;\n"
+        "  list.element_size = sizeof(value);\n"
+        "  if (irx_list_append(0, &value) != "
+        "IRX_LIST_INVALID_ARGUMENT) return 1;\n"
+        "  if (irx_list_append(&list, &value) != IRX_LIST_OK) return 2;\n"
+        "  if (list.length != 1 || list.data == 0) return 3;\n"
+        "  irx_list_destroy(&list);\n"
+        "  irx_list_destroy(&list);\n"
+        "  if (list.data != 0 || list.length != 0 || "
+        "list.capacity != 0) return 4;\n"
+        "  return 0;\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    compile_result = subprocess.run(
+        [
+            "clang",
+            "-std=c99",
+            "-I",
+            str(native_dir),
+            str(program),
+            str(native_dir / "irx_list_runtime.c"),
+            "-o",
+            str(executable),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert compile_result.returncode == 0, compile_result.stderr
+
+    run_result = subprocess.run(
+        [str(executable)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert run_result.returncode == 0, run_result.stderr
 
 
 def test_direct_list_length_from_temporary_list_create() -> None:

@@ -1652,7 +1652,10 @@ class SemanticAnalyzerCore(BaseVisitor):
         info = cast(SemanticInfo | None, getattr(node, "semantic", None))
         if info is not None and info.resolved_type is not None:
             return info.resolved_type
-        return getattr(node, "type_", None)
+        declared_type = getattr(node, "type_", None)
+        if isinstance(declared_type, astx.DataType):
+            return declared_type
+        return None
 
     def _argument_has_default(
         self,

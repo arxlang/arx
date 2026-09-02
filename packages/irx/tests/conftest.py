@@ -20,8 +20,7 @@ from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder, CommandResult
 from irx.builder.runtime.record_batch import (
-    build_record_batch_shared_library,
-    shared_library_path,
+    ensure_record_batch_shared_library,
 )
 from llvmlite import binding as llvm
 from llvmlite import ir
@@ -29,6 +28,10 @@ from llvmlite import ir
 TEST_DATA_PATH = Path(__file__).parent / "data"
 WORKSPACE_PATH = Path(__file__).resolve().parents[3]
 TEST_TEMP_PATH = WORKSPACE_PATH / ".tmp" / "tests"
+os.environ.setdefault(
+    "IRX_NATIVE_CACHE_DIR",
+    str(WORKSPACE_PATH / ".tmp" / "irx-native-cache"),
+)
 
 
 def workspace_test_temp_root() -> Path:
@@ -507,5 +510,4 @@ def pytest_configure(config: pytest.Config) -> None:
       config:
         type: pytest.Config
     """
-    if not shared_library_path().exists():
-        build_record_batch_shared_library()
+    ensure_record_batch_shared_library()

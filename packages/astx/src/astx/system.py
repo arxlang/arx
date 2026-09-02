@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import itertools
 
-from typing import Any
-
 import astx
 
 from astx.tools.typing import typechecked
@@ -136,24 +134,32 @@ class Cast(astx.DataType):
       value:
         type: astx.DataType
       target_type:
-        type: Any
+        type: astx.DataType
+      type_:
+        type: astx.DataType
     """
 
     value: astx.DataType = astx.LiteralNone()
-    target_type: Any = astx.LiteralNone()
+    target_type: astx.DataType = astx.LiteralNone()
+    type_: astx.DataType
 
-    def __init__(self, value: astx.DataType, target_type: Any) -> None:
+    def __init__(
+        self,
+        value: astx.DataType,
+        target_type: astx.DataType,
+    ) -> None:
         """
         title: Initialize Cast.
         parameters:
           value:
             type: astx.DataType
           target_type:
-            type: Any
+            type: astx.DataType
         """
         super().__init__()
         self.value = value
         self.target_type = target_type
+        self.type_ = target_type
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -170,7 +176,7 @@ class Cast(astx.DataType):
 
 
 @typechecked
-class IsInstanceExpr(astx.Expr):
+class IsInstanceExpr(astx.DataType):
     """
     title: IsInstanceExpr AST class.
     summary: Represent a type-membership check against one target type.
@@ -179,10 +185,13 @@ class IsInstanceExpr(astx.Expr):
         type: astx.Expr
       target_type:
         type: astx.DataType
+      type_:
+        type: astx.Boolean
     """
 
     value: astx.Expr
     target_type: astx.DataType
+    type_: astx.Boolean
 
     def __init__(
         self,
@@ -200,6 +209,7 @@ class IsInstanceExpr(astx.Expr):
         super().__init__()
         self.value = value
         self.target_type = target_type
+        self.type_ = astx.Boolean()
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -218,16 +228,19 @@ class IsInstanceExpr(astx.Expr):
 
 
 @typechecked
-class TypeOfExpr(astx.Expr):
+class TypeOfExpr(astx.DataType):
     """
     title: TypeOfExpr AST class.
     summary: Represent an expression that produces a value's type name.
     attributes:
       value:
         type: astx.Expr
+      type_:
+        type: astx.String
     """
 
     value: astx.Expr
+    type_: astx.String
 
     def __init__(self, value: astx.Expr) -> None:
         """
@@ -238,6 +251,7 @@ class TypeOfExpr(astx.Expr):
         """
         super().__init__()
         self.value = value
+        self.type_ = astx.String()
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """

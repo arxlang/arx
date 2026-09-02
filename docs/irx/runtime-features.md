@@ -27,6 +27,7 @@ Registered features:
 | `libc`         | `puts`, allocation, formatting, and related C symbols |
 | `libm`         | math symbols and the platform math linker flag        |
 | `assertions`   | fatal assertion helper and machine-readable reports   |
+| `errors`       | fatal checked-runtime diagnostics and stable records  |
 | `buffer`       | buffer-owner and view lifetime helpers                |
 | `list`         | minimal dynamic list creation, growth, and indexing   |
 | `array`        | one-dimensional Apache Arrow array runtime            |
@@ -51,8 +52,9 @@ only for handwritten externs.
 
 ## Native Apache Arrow backend
 
-IRx uses a C++ wrapper with a stable C ABI. Arrow C++ containers remain opaque
-to generated LLVM.
+IRx uses a C++ wrapper with an opaque C ABI. Arrow C++ containers remain opaque
+to generated LLVM. The RecordBatch bridge currently reports ABI version 1; other
+native surfaces remain pre-production contracts.
 
 ```text
 ASTx collection node
@@ -137,12 +139,18 @@ streaming/interoperability layer:
 - multiple batches per stream
 - interoperability in both directions with PyArrow
 
-The Python API uses a standalone ctypes-loaded shared library. Build it in a
-source checkout before direct use:
+The Python API uses a standalone ctypes-loaded shared library. Ensure a current
+source/toolchain-fingerprinted build before direct use:
 
 ```bash
-python -c "from irx.builder.runtime.record_batch import build_record_batch_shared_library; build_record_batch_shared_library()"
+python -c "from irx.builder.runtime.record_batch import ensure_record_batch_shared_library; ensure_record_batch_shared_library()"
 ```
+
+Generated libraries live in an ABI-scoped user cache rather than the installed
+package tree. Set `IRX_NATIVE_CACHE_DIR` to select the cache root or
+`IRX_RECORD_BATCH_LIBRARY` to load/build one exact path. Concurrent builders use
+an atomic lock, outputs are replaced atomically, and the loader rejects a
+missing or mismatched ABI query before binding other symbols.
 
 This is RecordBatch IPC support, not an implementation of the Arrow C Stream
 `ArrowArrayStream` interface.
@@ -161,9 +169,10 @@ the Arx test runner.
 
 ## Dynamic list caveat
 
-The `list` runtime supports append/growth and indexed access but does not yet
-expose a destroy helper. Dynamically produced list storage is therefore
-process-lifetime in the current MVP.
+The `list` runtime supports checked append/growth, indexed access, and an
+idempotent destroy helper. Semantic ownership and cleanup insertion do not yet
+call that destructor for compiled list values, so dynamically produced list
+storage remains process-lifetime in the current MVP.
 
 ## Deliberate limits
 

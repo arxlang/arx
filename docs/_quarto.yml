@@ -70,6 +70,8 @@ website:
           contents:
             - text: Roadmap
               href: roadmap.md
+            - text: Support Matrix
+              href: support-matrix.md
             - text: Contributing
               href: contributing.md
             - text: API Documentation
@@ -107,6 +109,10 @@ website:
               href: arx/testing.md
         - section: Language Reference
           contents:
+            - text: Specification Status
+              href: arx/specification.md
+            - text: Capability Matrix
+              href: arx/capability-matrix.md
             - text: Lexical Syntax
               href: arx/syntax.md
             - text: Modules
@@ -181,6 +187,8 @@ website:
               href: irx/semantic-contract.md
             - text: Runtime Features
               href: irx/runtime-features.md
+            - text: Runtime Ownership
+              href: irx/runtime-ownership.md
             - text: Buffer View Model
               href: irx/buffer-view-model.md
             - text: Class Model
