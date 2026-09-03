@@ -1156,7 +1156,13 @@ bool tensor_is_f_contiguous(const irx_arrow_tensor_handle* tensor) {
 
 }  // namespace
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC visibility push(hidden)
+#endif
+
 extern "C" {
+
+#include "irx_arrow_abi_internal_names_generated.h"
 
 uint32_t irx_arrow_abi_version(void) {
   return IRX_ARROW_ABI_VERSION;
@@ -1248,7 +1254,10 @@ irx_arrow_status irx_arrow_handle_ownership_of(
 irx_arrow_status irx_arrow_error_snapshot(
     irx_arrow_error_handle** out_error) {
   if (out_error == nullptr) {
-    return IRX_ARROW_STATUS_NULL_POINTER;
+    begin_operation(__func__);
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_error must not be NULL");
   }
   *out_error = nullptr;
   if (current_error.code == IRX_ARROW_STATUS_OK) {
@@ -1257,7 +1266,10 @@ irx_arrow_status irx_arrow_error_snapshot(
 
   auto* error = new (std::nothrow) irx_arrow_error_handle;
   if (error == nullptr) {
-    return IRX_ARROW_STATUS_OUT_OF_MEMORY;
+    begin_operation(__func__);
+    return set_error(
+        IRX_ARROW_STATUS_OUT_OF_MEMORY,
+        "error snapshot allocation failed");
   }
   error->detail = current_error;
   *out_error = error;
@@ -2522,5 +2534,7 @@ irx_arrow_status irx_arrow_chunked_array_release(
 const char* irx_arrow_last_error(void) {
   return current_error.message;
 }
+
+#include "irx_arrow_abi_wrappers_generated.inc"
 
 }  // extern "C"

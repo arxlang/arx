@@ -54,6 +54,13 @@ from irx.builder.runtime.array.feature import (
     IRX_ARROW_TYPE_UINT64,
     build_array_runtime_feature,
 )
+from irx.builder.runtime.arrow.abi_generated import (
+    FALLIBLE_SYMBOLS,
+    VALUE_RESULTS,
+)
+from irx.builder.runtime.arrow.bindings import (
+    configure_arrow_ctypes_library,
+)
 from irx.builder.runtime.linking import (
     compile_native_artifacts,
     link_executable,
@@ -369,9 +376,15 @@ def _shared_library_suffix() -> str:
 
 
 @contextmanager
-def _load_arrow_runtime_library() -> Iterator[ctypes.CDLL]:
+def _load_arrow_runtime_library(
+    *,
+    compatibility: bool = True,
+) -> Iterator[ctypes.CDLL]:
     """
     title: Load arrow runtime library.
+    parameters:
+      compatibility:
+        type: bool
     returns:
       type: Iterator[ctypes.CDLL]
     """
@@ -416,275 +429,126 @@ def _load_arrow_runtime_library() -> Iterator[ctypes.CDLL]:
         )
 
         library = ctypes.CDLL(str(output_path))
-        _configure_arrow_runtime_library(library)
-        yield library
+        if compatibility:
+            cleanup = _configure_arrow_runtime_library(library)
+        else:
+            configure_arrow_ctypes_library(library)
+
+            def cleanup() -> None:
+                """
+                title: Leave a raw runtime library unchanged.
+                """
+                pass
+
+        try:
+            yield library
+        finally:
+            cleanup()
 
 
-def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
+def _configure_arrow_runtime_library(
+    library: ctypes.CDLL,
+) -> Callable[[], None]:
     """
     title: Configure arrow runtime library.
     parameters:
       library:
         type: ctypes.CDLL
+    returns:
+      type: Callable[[], None]
     """
-    library.irx_arrow_abi_version.argtypes = []
-    library.irx_arrow_abi_version.restype = ctypes.c_uint32
-    library.irx_arrow_status_get_category.argtypes = [ctypes.c_int32]
-    library.irx_arrow_status_get_category.restype = ctypes.c_int32
-    library.irx_arrow_handle_kind_of.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_int32),
-    ]
-    library.irx_arrow_handle_kind_of.restype = ctypes.c_int
-    library.irx_arrow_handle_ownership_of.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_int32),
-    ]
-    library.irx_arrow_handle_ownership_of.restype = ctypes.c_int
-    library.irx_arrow_error_snapshot.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_error_snapshot.restype = ctypes.c_int
-    library.irx_arrow_error_code.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_error_code.restype = ctypes.c_int32
-    library.irx_arrow_error_operation.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_error_operation.restype = ctypes.c_char_p
-    library.irx_arrow_error_message.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_error_message.restype = ctypes.c_char_p
-    library.irx_arrow_error_upstream_detail.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_error_upstream_detail.restype = ctypes.c_char_p
-    library.irx_arrow_error_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_error_retain.restype = ctypes.c_int
-    library.irx_arrow_error_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_error_release.restype = ctypes.c_int
-    library.irx_arrow_schema_import_copy.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_schema_import_copy.restype = ctypes.c_int
-    library.irx_arrow_schema_export.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-    ]
-    library.irx_arrow_schema_export.restype = ctypes.c_int
-    library.irx_arrow_schema_type_id.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_schema_type_id.restype = ctypes.c_int32
-    library.irx_arrow_schema_is_nullable.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_schema_is_nullable.restype = ctypes.c_int32
-    library.irx_arrow_schema_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_schema_retain.restype = ctypes.c_int
-    library.irx_arrow_schema_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_schema_release.restype = ctypes.c_int
-    library.irx_arrow_array_builder_new.argtypes = [
-        ctypes.c_int32,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_builder_new.restype = ctypes.c_int
-    library.irx_arrow_array_builder_append_null.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_int64,
-    ]
-    library.irx_arrow_array_builder_append_null.restype = ctypes.c_int
-    library.irx_arrow_array_builder_append_int.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_int64,
-    ]
-    library.irx_arrow_array_builder_append_int.restype = ctypes.c_int
-    library.irx_arrow_array_builder_append_uint.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_uint64,
-    ]
-    library.irx_arrow_array_builder_append_uint.restype = ctypes.c_int
-    library.irx_arrow_array_builder_append_double.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_double,
-    ]
-    library.irx_arrow_array_builder_append_double.restype = ctypes.c_int
-    library.irx_arrow_array_builder_int32_new.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_array_builder_int32_new.restype = ctypes.c_int
-    library.irx_arrow_array_builder_append_int32.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_int32,
-    ]
-    library.irx_arrow_array_builder_append_int32.restype = ctypes.c_int
-    library.irx_arrow_array_builder_finish.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p),
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_builder_finish.restype = ctypes.c_int
-    library.irx_arrow_array_builder_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_array_builder_release.restype = ctypes.c_int
-    library.irx_arrow_array_length.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_length.restype = ctypes.c_int64
-    library.irx_arrow_array_offset.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_offset.restype = ctypes.c_int64
-    library.irx_arrow_array_null_count.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_null_count.restype = ctypes.c_int64
-    library.irx_arrow_array_type_id.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_type_id.restype = ctypes.c_int32
-    library.irx_arrow_array_is_nullable.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_is_nullable.restype = ctypes.c_int32
-    library.irx_arrow_array_has_validity_bitmap.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_has_validity_bitmap.restype = ctypes.c_int32
-    library.irx_arrow_array_can_borrow_buffer_view.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_can_borrow_buffer_view.restype = ctypes.c_int32
-    library.irx_arrow_array_schema_copy.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_schema_copy.restype = ctypes.c_int
-    library.irx_arrow_array_export.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-    ]
-    library.irx_arrow_array_export.restype = ctypes.c_int
-    library.irx_arrow_array_import.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_import.restype = ctypes.c_int
-    library.irx_arrow_array_import_copy.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_import_copy.restype = ctypes.c_int
-    library.irx_arrow_array_import_move.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_import_move.restype = ctypes.c_int
-    library.irx_arrow_array_validity_bitmap.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-        ctypes.POINTER(ctypes.c_int64),
-        ctypes.POINTER(ctypes.c_int64),
-    ]
-    library.irx_arrow_array_validity_bitmap.restype = ctypes.c_int
-    library.irx_arrow_array_borrow_buffer_view.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(BufferViewStruct),
-    ]
-    library.irx_arrow_array_borrow_buffer_view.restype = ctypes.c_int
-    library.irx_arrow_array_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_array_retain.restype = ctypes.c_int
-    library.irx_arrow_array_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_array_release.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_new.argtypes = [
-        ctypes.c_int32,
-        ctypes.c_int32,
-        ctypes.POINTER(ctypes.c_int64),
-        ctypes.POINTER(ctypes.c_int64),
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_tensor_builder_new.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_append_int.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_int64,
-    ]
-    library.irx_arrow_tensor_builder_append_int.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_append_uint.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_uint64,
-    ]
-    library.irx_arrow_tensor_builder_append_uint.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_append_double.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_double,
-    ]
-    library.irx_arrow_tensor_builder_append_double.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_finish.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p),
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_tensor_builder_finish.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_tensor_builder_release.restype = ctypes.c_int
-    library.irx_arrow_tensor_type_id.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_type_id.restype = ctypes.c_int32
-    library.irx_arrow_tensor_ndim.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_ndim.restype = ctypes.c_int32
-    library.irx_arrow_tensor_size.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_size.restype = ctypes.c_int64
-    library.irx_arrow_tensor_shape.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_shape.restype = ctypes.POINTER(ctypes.c_int64)
-    library.irx_arrow_tensor_strides.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_strides.restype = ctypes.POINTER(ctypes.c_int64)
-    library.irx_arrow_tensor_borrow_buffer_view.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(BufferViewStruct),
-    ]
-    library.irx_arrow_tensor_borrow_buffer_view.restype = ctypes.c_int
-    library.irx_arrow_tensor_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_tensor_retain.restype = ctypes.c_int
-    library.irx_arrow_tensor_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_tensor_release.restype = ctypes.c_int
-    library.irx_arrow_table_new_from_arrays.argtypes = [
-        ctypes.c_int64,
-        ctypes.POINTER(ctypes.c_char_p),
-        ctypes.POINTER(ctypes.c_void_p),
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_table_new_from_arrays.restype = ctypes.c_int
-    library.irx_arrow_table_num_rows.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_table_num_rows.restype = ctypes.c_int64
-    library.irx_arrow_table_num_columns.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_table_num_columns.restype = ctypes.c_int64
-    library.irx_arrow_table_column_by_index.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_int32,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_table_column_by_index.restype = ctypes.c_int
-    library.irx_arrow_table_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_table_retain.restype = ctypes.c_int
-    library.irx_arrow_table_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_table_release.restype = ctypes.c_int
-    library.irx_arrow_chunked_array_retain.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_void_p),
-    ]
-    library.irx_arrow_chunked_array_retain.restype = ctypes.c_int
-    library.irx_arrow_chunked_array_release.argtypes = [
-        ctypes.POINTER(ctypes.c_void_p)
-    ]
-    library.irx_arrow_chunked_array_release.restype = ctypes.c_int
-    library.irx_arrow_last_error.argtypes = []
-    library.irx_arrow_last_error.restype = ctypes.c_char_p
+    configure_arrow_ctypes_library(library)
+    native_functions = {
+        name: getattr(library, name) for name in FALLIBLE_SYMBOLS
+    }
+    pending_errors: list[ctypes.c_void_p] = []
+
+    def make_compatibility_call(
+        name: str,
+        result_type: str | None,
+    ) -> Callable[..., object]:
+        """
+        title: Adapt one explicit-error call for existing behavior tests.
+        parameters:
+          name:
+            type: str
+          result_type:
+            type: str | None
+        returns:
+          type: Callable[Ellipsis, object]
+        """
+        native_function = native_functions[name]
+
+        def call(*arguments: object) -> object:
+            """
+            title: Invoke one adapted native function.
+            parameters:
+              arguments:
+                type: object
+                variadic: positional
+            returns:
+              type: object
+            """
+            failure = ctypes.c_void_p()
+            if result_type is None:
+                status = native_function(
+                    *arguments,
+                    ctypes.byref(failure),
+                )
+                if failure.value is not None:
+                    pending_errors.append(failure)
+                return status
+
+            if result_type in {"int32", "status"}:
+                result: object = ctypes.c_int32()
+            elif result_type == "int64":
+                result = ctypes.c_int64()
+            elif result_type == "c_string":
+                result = ctypes.c_char_p()
+            elif result_type == "const_int64_pointer":
+                result = ctypes.POINTER(ctypes.c_int64)()
+            else:
+                raise AssertionError(f"unsupported ABI result '{result_type}'")
+            status = native_function(
+                *arguments,
+                ctypes.byref(result),
+                ctypes.byref(failure),
+            )
+            if failure.value is not None:
+                pending_errors.append(failure)
+            if status != ARROW_STATUS_OK and result_type in {
+                "int32",
+                "int64",
+                "status",
+            }:
+                return -1
+            if result_type == "const_int64_pointer":
+                return result
+            return result.value
+
+        return call
+
+    for name in FALLIBLE_SYMBOLS:
+        setattr(
+            library,
+            name,
+            make_compatibility_call(name, VALUE_RESULTS.get(name)),
+        )
+
+    raw_error_release = native_functions["irx_arrow_error_release"]
+
+    def cleanup() -> None:
+        """
+        title: Release errors captured by compatibility calls.
+        """
+        for failure in pending_errors:
+            release_failure = ctypes.c_void_p()
+            raw_error_release(
+                ctypes.byref(failure),
+                ctypes.byref(release_failure),
+            )
+
+    return cleanup
 
 
 def _assert_arrow_ok(library: ctypes.CDLL, code: int) -> None:
@@ -1133,24 +997,37 @@ def test_arrow_runtime_harness_lifecycle() -> None:
         int main(void) {
           irx_arrow_array_builder_handle* builder = NULL;
           irx_arrow_array_handle* array = NULL;
+          irx_arrow_error_handle* failure = NULL;
+          int64_t length = 0;
+          int64_t null_count = 0;
+          int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
 
-          if (irx_arrow_array_builder_int32_new(&builder) != 0) return 11;
-          if (irx_arrow_array_builder_append_int32(builder, 1) != 0) return 12;
-          if (irx_arrow_array_builder_append_int32(builder, 2) != 0) return 13;
-          if (irx_arrow_array_builder_append_int32(builder, 3) != 0) return 14;
-          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
-            irx_arrow_array_builder_release(&builder);
+          if (irx_arrow_array_builder_int32_new(&builder, &failure) != 0) {
+            return 11;
+          }
+          if (irx_arrow_array_builder_append_int32(
+                  builder, 1, &failure) != 0) return 12;
+          if (irx_arrow_array_builder_append_int32(
+                  builder, 2, &failure) != 0) return 13;
+          if (irx_arrow_array_builder_append_int32(
+                  builder, 3, &failure) != 0) return 14;
+          if (irx_arrow_array_builder_finish(
+                  &builder, &array, &failure) != 0) {
             return 15;
           }
           if (builder != NULL) return 19;
 
-          if (irx_arrow_array_length(array) != 3) return 16;
-          if (irx_arrow_array_null_count(array) != 0) return 17;
-          if (irx_arrow_array_type_id(array) != IRX_ARROW_TYPE_INT32) {
+          if (irx_arrow_array_length(array, &length, &failure) != 0 ||
+              length != 3) return 16;
+          if (irx_arrow_array_null_count(
+                  array, &null_count, &failure) != 0 ||
+              null_count != 0) return 17;
+          if (irx_arrow_array_type_id(array, &type_id, &failure) != 0 ||
+              type_id != IRX_ARROW_TYPE_INT32) {
             return 18;
           }
 
-          if (irx_arrow_array_release(&array) != 0) return 20;
+          if (irx_arrow_array_release(&array, &failure) != 0) return 20;
           if (array != NULL) return 21;
           return 0;
         }
@@ -1203,6 +1080,8 @@ def test_arrow_runtime_reports_stable_status_codes() -> None:
           int64_t shape[2];
           irx_arrow_tensor_builder_handle* tensor_builder = NULL;
           irx_arrow_array_builder_handle* array_builder = NULL;
+          irx_arrow_error_handle* failure = NULL;
+          irx_arrow_error_handle* release_failure = NULL;
 
           shape[0] = INT64_MAX;
           shape[1] = 2;
@@ -1240,27 +1119,43 @@ def test_arrow_runtime_reports_stable_status_codes() -> None:
           if (irx_arrow_status_get_category(9999) !=
               IRX_ARROW_STATUS_CATEGORY_UNKNOWN) return 35;
 
-          if (irx_arrow_array_builder_new(IRX_ARROW_TYPE_INT32, NULL) !=
+          if (irx_arrow_array_builder_new(
+                  IRX_ARROW_TYPE_INT32, NULL, &failure) !=
               IRX_ARROW_STATUS_NULL_POINTER) return 36;
-          if (irx_arrow_array_builder_new(9999, &array_builder) !=
+          if (failure == NULL) return 43;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 44;
+          if (irx_arrow_array_builder_new(
+                  9999, &array_builder, &failure) !=
               IRX_ARROW_STATUS_NOT_SUPPORTED) return 37;
           if (array_builder != NULL) return 38;
+          if (failure == NULL) return 45;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 46;
           if (irx_arrow_tensor_builder_new(
                   IRX_ARROW_TYPE_INT32,
                   -1,
                   NULL,
                   NULL,
-                  &tensor_builder) != IRX_ARROW_STATUS_INVALID_ARGUMENT) {
+                  &tensor_builder,
+                  &failure) != IRX_ARROW_STATUS_INVALID_ARGUMENT) {
             return 39;
           }
           if (tensor_builder != NULL) return 40;
+          if (failure == NULL) return 47;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 48;
           if (irx_arrow_tensor_builder_new(
                   IRX_ARROW_TYPE_INT32,
                   2,
                   shape,
                   NULL,
-                  &tensor_builder) != IRX_ARROW_STATUS_OVERFLOW) return 41;
+                  &tensor_builder,
+                  &failure) != IRX_ARROW_STATUS_OVERFLOW) return 41;
           if (tensor_builder != NULL) return 42;
+          if (failure == NULL) return 49;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 50;
           return 0;
         }
         """
@@ -1315,6 +1210,87 @@ def test_arrow_runtime_reports_stable_status_codes() -> None:
             )
             == ARROW_STATUS_NOT_SUPPORTED
         )
+
+
+def test_arrow_runtime_returns_explicit_owned_error_details() -> None:
+    """
+    title: Fallible ABI calls should return owned immutable error details.
+    """
+    with _load_arrow_runtime_library(compatibility=False) as library:
+        builder = ctypes.c_void_p()
+        failure = ctypes.c_void_p()
+        code = library.irx_arrow_array_builder_new(
+            9001,
+            ctypes.byref(builder),
+            ctypes.byref(failure),
+        )
+
+        assert code == ARROW_STATUS_NOT_SUPPORTED
+        assert builder.value is None
+        assert failure.value is not None
+
+        captured_code = ctypes.c_int32()
+        operation = ctypes.c_char_p()
+        message = ctypes.c_char_p()
+        accessor_failure = ctypes.c_void_p()
+        assert (
+            library.irx_arrow_error_code(
+                failure,
+                ctypes.byref(captured_code),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert (
+            library.irx_arrow_error_operation(
+                failure,
+                ctypes.byref(operation),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert (
+            library.irx_arrow_error_message(
+                failure,
+                ctypes.byref(message),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert captured_code.value == ARROW_STATUS_NOT_SUPPORTED
+        assert operation.value == b"irx_arrow_array_builder_new"
+        assert message.value is not None and b"9001" in message.value
+        assert accessor_failure.value is None
+
+        assert (
+            library.irx_arrow_error_release(
+                ctypes.byref(failure),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert failure.value is None
+        assert accessor_failure.value is None
+
+        assert (
+            library.irx_arrow_array_builder_new(
+                IRX_ARROW_TYPE_INT32,
+                ctypes.byref(builder),
+                ctypes.byref(failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert builder.value is not None
+        assert failure.value is None
+        assert (
+            library.irx_arrow_array_builder_release(
+                ctypes.byref(builder),
+                ctypes.byref(failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert builder.value is None
+        assert failure.value is None
 
 
 def test_arrow_runtime_handle_lifecycle_contracts() -> None:
@@ -1620,64 +1596,85 @@ def test_arrow_runtime_error_snapshots_are_owned() -> None:
           irx_arrow_error_handle* error = NULL;
           irx_arrow_error_handle* retained_error = NULL;
           irx_arrow_error_handle* empty = (irx_arrow_error_handle*)1;
+          irx_arrow_error_handle* call_failure = NULL;
+          irx_arrow_error_handle* failure = NULL;
+          irx_arrow_error_handle* release_failure = NULL;
+          irx_arrow_status code = IRX_ARROW_STATUS_OK;
+          const char* operation = NULL;
+          const char* message = NULL;
+          const char* upstream = NULL;
           irx_arrow_handle_kind kind = IRX_ARROW_HANDLE_KIND_UNKNOWN;
           irx_arrow_handle_ownership ownership =
               IRX_ARROW_HANDLE_OWNERSHIP_UNKNOWN;
 
-          if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
-            return 11;
-          }
+          if (irx_arrow_error_snapshot(&empty, &failure) !=
+              IRX_ARROW_STATUS_OK) return 11;
           if (empty != NULL) return 12;
-          if (irx_arrow_array_builder_new(9999, &builder) !=
+          if (irx_arrow_array_builder_new(
+                  9999, &builder, &call_failure) !=
               IRX_ARROW_STATUS_NOT_SUPPORTED) return 13;
-          if (builder != NULL) return 14;
-          if (irx_arrow_error_snapshot(&error) != IRX_ARROW_STATUS_OK) {
-            return 15;
-          }
+          if (builder != NULL || call_failure == NULL) return 14;
+          if (irx_arrow_error_snapshot(&error, &failure) !=
+              IRX_ARROW_STATUS_OK) return 15;
           if (error == NULL) return 16;
-          if (irx_arrow_error_code(error) !=
-              IRX_ARROW_STATUS_NOT_SUPPORTED) return 17;
-          if (irx_arrow_error_operation(error)[0] == '\\0') return 18;
-          if (irx_arrow_error_message(error)[0] == '\\0') return 19;
-          if (irx_arrow_error_upstream_detail(error)[0] != '\\0') return 20;
-          if (irx_arrow_handle_kind_of(error, &kind) !=
+          if (irx_arrow_error_code(error, &code, &failure) !=
+                  IRX_ARROW_STATUS_OK ||
+              code != IRX_ARROW_STATUS_NOT_SUPPORTED) return 17;
+          if (irx_arrow_error_operation(error, &operation, &failure) !=
+                  IRX_ARROW_STATUS_OK || operation[0] == '\\0') return 18;
+          if (irx_arrow_error_message(error, &message, &failure) !=
+                  IRX_ARROW_STATUS_OK || message[0] == '\\0') return 19;
+          if (irx_arrow_error_upstream_detail(
+                  error, &upstream, &failure) != IRX_ARROW_STATUS_OK ||
+              upstream[0] != '\\0') return 20;
+          if (irx_arrow_handle_kind_of(error, &kind, &failure) !=
               IRX_ARROW_STATUS_OK) return 32;
           if (kind != IRX_ARROW_HANDLE_KIND_ERROR) return 33;
-          if (irx_arrow_handle_ownership_of(error, &ownership) !=
+          if (irx_arrow_handle_ownership_of(
+                  error, &ownership, &failure) !=
               IRX_ARROW_STATUS_OK) return 34;
           if (ownership != IRX_ARROW_HANDLE_OWNERSHIP_SHARED) return 35;
-          if (irx_arrow_error_retain(error, &retained_error) !=
+          if (irx_arrow_error_retain(
+                  error, &retained_error, &failure) !=
               IRX_ARROW_STATUS_OK) return 36;
           if (retained_error != error) return 37;
+          if (irx_arrow_error_release(
+                  &call_failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 40;
 
           if (irx_arrow_array_builder_new(
                   IRX_ARROW_TYPE_INT32,
-                  &builder) != IRX_ARROW_STATUS_OK) return 21;
+                  &builder,
+                  &failure) != IRX_ARROW_STATUS_OK) return 21;
           if (builder == NULL) return 22;
-          if (irx_arrow_array_builder_release(&builder) !=
+          if (irx_arrow_array_builder_release(&builder, &failure) !=
               IRX_ARROW_STATUS_OK) return 27;
-          if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
-            return 23;
-          }
+          if (irx_arrow_error_snapshot(&empty, &failure) !=
+              IRX_ARROW_STATUS_OK) return 23;
           if (empty != NULL) return 24;
-          if (irx_arrow_error_message(error)[0] == '\\0') return 25;
-          if (irx_arrow_error_snapshot(NULL) !=
+          if (irx_arrow_error_message(error, &message, &failure) !=
+                  IRX_ARROW_STATUS_OK || message[0] == '\\0') return 25;
+          if (irx_arrow_error_snapshot(NULL, &failure) !=
               IRX_ARROW_STATUS_NULL_POINTER) return 26;
+          if (failure == NULL) return 41;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 42;
 
-          if (irx_arrow_error_release(&error) != IRX_ARROW_STATUS_OK) {
-            return 28;
-          }
+          if (irx_arrow_error_release(&error, &failure) !=
+              IRX_ARROW_STATUS_OK) return 28;
           if (error != NULL) return 29;
-          if (irx_arrow_error_message(retained_error)[0] == '\\0') {
-            return 38;
-          }
-          if (irx_arrow_error_release(&retained_error) !=
+          if (irx_arrow_error_message(
+                  retained_error, &message, &failure) !=
+                  IRX_ARROW_STATUS_OK || message[0] == '\\0') return 38;
+          if (irx_arrow_error_release(&retained_error, &failure) !=
               IRX_ARROW_STATUS_OK) return 39;
-          if (irx_arrow_error_release(&error) != IRX_ARROW_STATUS_OK) {
-            return 30;
-          }
-          if (irx_arrow_error_release(NULL) !=
+          if (irx_arrow_error_release(&error, &failure) !=
+              IRX_ARROW_STATUS_OK) return 30;
+          if (irx_arrow_error_release(NULL, &failure) !=
               IRX_ARROW_STATUS_NULL_POINTER) return 31;
+          if (failure == NULL) return 43;
+          if (irx_arrow_error_release(&failure, &release_failure) !=
+              IRX_ARROW_STATUS_OK) return 44;
           return 0;
         }
         """
@@ -1800,34 +1797,41 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
           irx_arrow_array_builder_handle* builder = NULL;
           irx_arrow_array_handle* array = NULL;
           irx_arrow_array_handle* imported = NULL;
+          irx_arrow_error_handle* failure = NULL;
+          int64_t length = 0;
+          int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
           struct ArrowArray exported_array;
           struct ArrowSchema exported_schema;
 
-          if (irx_arrow_array_builder_int32_new(&builder) != 0) return 21;
-          if (irx_arrow_array_builder_append_int32(builder, 4) != 0) return 22;
-          if (irx_arrow_array_builder_append_int32(builder, 5) != 0) return 23;
-          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
-            irx_arrow_array_builder_release(&builder);
+          if (irx_arrow_array_builder_int32_new(
+                  &builder, &failure) != 0) return 21;
+          if (irx_arrow_array_builder_append_int32(
+                  builder, 4, &failure) != 0) return 22;
+          if (irx_arrow_array_builder_append_int32(
+                  builder, 5, &failure) != 0) return 23;
+          if (irx_arrow_array_builder_finish(
+                  &builder, &array, &failure) != 0) {
             return 24;
           }
 
           if (
               irx_arrow_array_export(
-                  array, &exported_array, &exported_schema) != 0) {
-            irx_arrow_array_release(&array);
+                  array, &exported_array, &exported_schema, &failure) != 0) {
             return 25;
           }
 
           if (
               irx_arrow_array_import(
-                  &exported_array, &exported_schema, &imported) != 0) {
+                  &exported_array,
+                  &exported_schema,
+                  &imported,
+                  &failure) != 0) {
             if (exported_array.release != NULL) {
               exported_array.release(&exported_array);
             }
             if (exported_schema.release != NULL) {
               exported_schema.release(&exported_schema);
             }
-            irx_arrow_array_release(&array);
             return 26;
           }
 
@@ -1838,13 +1842,16 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
             exported_schema.release(&exported_schema);
           }
 
-          if (irx_arrow_array_length(imported) != 2) return 27;
-          if (irx_arrow_array_type_id(imported) != IRX_ARROW_TYPE_INT32) {
+          if (irx_arrow_array_length(
+                  imported, &length, &failure) != 0 || length != 2) return 27;
+          if (irx_arrow_array_type_id(
+                  imported, &type_id, &failure) != 0 ||
+              type_id != IRX_ARROW_TYPE_INT32) {
             return 28;
           }
 
-          irx_arrow_array_release(&imported);
-          irx_arrow_array_release(&array);
+          irx_arrow_array_release(&imported, &failure);
+          irx_arrow_array_release(&array, &failure);
           return 0;
         }
         """
@@ -1866,31 +1873,40 @@ def test_arrow_runtime_harness_buffer_view_bridge() -> None:
         int main(void) {
           irx_arrow_array_builder_handle* builder = NULL;
           irx_arrow_array_handle* array = NULL;
+          irx_arrow_error_handle* failure = NULL;
+          int32_t has_validity = 0;
           irx_buffer_view view = {0};
 
           if (
               irx_arrow_array_builder_new(
                   IRX_ARROW_TYPE_INT16,
-                  &builder) != 0) {
+                  &builder,
+                  &failure) != 0) {
             return 31;
           }
-          if (irx_arrow_array_builder_append_int(builder, 10) != 0) return 32;
-          if (irx_arrow_array_builder_append_null(builder, 1) != 0) return 33;
-          if (irx_arrow_array_builder_append_int(builder, 30) != 0) return 34;
-          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
-            irx_arrow_array_builder_release(&builder);
+          if (irx_arrow_array_builder_append_int(
+                  builder, 10, &failure) != 0) return 32;
+          if (irx_arrow_array_builder_append_null(
+                  builder, 1, &failure) != 0) return 33;
+          if (irx_arrow_array_builder_append_int(
+                  builder, 30, &failure) != 0) return 34;
+          if (irx_arrow_array_builder_finish(
+                  &builder, &array, &failure) != 0) {
             return 35;
           }
 
-          if (irx_arrow_array_has_validity_bitmap(array) != 1) return 36;
-          if (irx_arrow_array_borrow_buffer_view(array, &view) != 0) return 37;
+          if (irx_arrow_array_has_validity_bitmap(
+                  array, &has_validity, &failure) != 0 ||
+              has_validity != 1) return 36;
+          if (irx_arrow_array_borrow_buffer_view(
+                  array, &view, &failure) != 0) return 37;
           if (view.dtype != (void*)IRX_BUFFER_DTYPE_INT16) return 38;
           if (view.ndim != 1) return 39;
           if (view.shape == NULL || view.shape[0] != 3) return 40;
           if (view.strides == NULL || view.strides[0] != 2) return 41;
           if ((view.flags & IRX_BUFFER_FLAG_VALIDITY_BITMAP) == 0) return 42;
 
-          irx_arrow_array_release(&array);
+          irx_arrow_array_release(&array, &failure);
           return 0;
         }
         """

@@ -61,39 +61,41 @@ re-scoped; do not defer status updates until the end of a milestone.
 
 ### Progress log
 
-| Date       | Item   | Transition                 | Evidence                                                      |
-| ---------- | ------ | -------------------------- | ------------------------------------------------------------- |
-| 2026-09-03 | M0-001 | NOT STARTED -> DONE        | Plan is no longer ignored and now carries tracked states.     |
-| 2026-09-03 | M0-002 | NOT STARTED -> IN PROGRESS | Capability manifest and generated matrix started.             |
-| 2026-09-03 | M0-002 | IN PROGRESS -> DONE        | `makim irx.check-arrow-capabilities`; two tests pass.         |
-| 2026-09-03 | M0-003 | NOT STARTED -> IN PROGRESS | Validated foundation readiness rows started.                  |
-| 2026-09-03 | M0-003 | IN PROGRESS -> DONE        | 18 owners, states, test targets, and blockers validate.       |
-| 2026-09-03 | M0-004 | NOT STARTED -> DONE        | Builtin-first, unqualified naming is fixed in Section 2.1.    |
-| 2026-09-03 | M0-005 | NOT STARTED -> IN PROGRESS | Public operation placement catalog started.                   |
-| 2026-09-03 | M0-005 | IN PROGRESS -> DONE        | 52 families cover every capability and approved layer.        |
-| 2026-09-03 | M0-006 | NOT STARTED -> IN PROGRESS | Existing `T \| none` syntax selected for the null contract.   |
-| 2026-09-03 | M0-006 | IN PROGRESS -> DONE        | Type, flow, operator, container, and ABI rules recorded.      |
-| 2026-09-03 | M0-007 | NOT STARTED -> IN PROGRESS | Static and runtime schema contract started.                   |
-| 2026-09-03 | M0-007 | IN PROGRESS -> DONE        | Static identity and checked dynamic access rules recorded.    |
-| 2026-09-03 | M0-008 | NOT STARTED -> IN PROGRESS | Native handle ownership and value semantics started.          |
-| 2026-09-03 | M0-008 | IN PROGRESS -> DONE        | Share, move, borrow, view, and cleanup rules recorded.        |
-| 2026-09-03 | M0-009 | NOT STARTED -> IN PROGRESS | Unified status and language error policy started.             |
-| 2026-09-03 | M0-009 | IN PROGRESS -> DONE        | ABI status and recoverable/fatal policies recorded.           |
-| 2026-09-03 | M0-010 | NOT STARTED -> IN PROGRESS | Native runtime wheel strategy started.                        |
-| 2026-09-03 | M0-010 | IN PROGRESS -> DONE        | Dedicated core and optional runtime artifacts fixed.          |
-| 2026-09-03 | M0-011 | NOT STARTED -> IN PROGRESS | Unified C ABI v1 compatibility policy started.                |
-| 2026-09-03 | M0-011 | IN PROGRESS -> DONE        | ABI 1.0.0 layout and compatibility rules recorded.            |
-| 2026-09-03 | M0-012 | NOT STARTED -> IN PROGRESS | Local Arrow 24 module tree classification started.            |
-| 2026-09-03 | M0-012 | IN PROGRESS -> DONE        | 29 groups cover all seven declared product scopes.            |
-| 2026-09-03 | M0     | IN PROGRESS -> DONE        | All 12 contract items and 11 focused checks complete.         |
-| 2026-09-03 | M1-001 | NOT STARTED -> IN PROGRESS | Packed Arrow ABI version query implementation started.        |
-| 2026-09-03 | M1-001 | IN PROGRESS -> DONE        | C harness and ctypes verify the native ABI 1.0.0 query.       |
-| 2026-09-03 | M1-002 | NOT STARTED -> IN PROGRESS | Stable status categories and error codes started.             |
-| 2026-09-03 | M1-002 | IN PROGRESS -> DONE        | Native ABI and 44 runtime tests use stable Arx statuses.      |
-| 2026-09-03 | M1-003 | NOT STARTED -> IN PROGRESS | Owned, thread-safe error detail implementation started.       |
-| 2026-09-03 | M1-003 | IN PROGRESS -> DONE        | Owned snapshots pass isolation, lifetime, and 64 regressions. |
-| 2026-09-03 | M1-004 | NOT STARTED -> IN PROGRESS | Unified opaque-handle ownership implementation started.       |
-| 2026-09-03 | M1-004 | IN PROGRESS -> DONE        | ABI manifest and 50 Arrow ABI/runtime tests pass.             |
+| Date       | Item   | Transition                 | Evidence                                                       |
+| ---------- | ------ | -------------------------- | -------------------------------------------------------------- |
+| 2026-09-03 | M0-001 | NOT STARTED -> DONE        | Plan is no longer ignored and now carries tracked states.      |
+| 2026-09-03 | M0-002 | NOT STARTED -> IN PROGRESS | Capability manifest and generated matrix started.              |
+| 2026-09-03 | M0-002 | IN PROGRESS -> DONE        | `makim irx.check-arrow-capabilities`; two tests pass.          |
+| 2026-09-03 | M0-003 | NOT STARTED -> IN PROGRESS | Validated foundation readiness rows started.                   |
+| 2026-09-03 | M0-003 | IN PROGRESS -> DONE        | 18 owners, states, test targets, and blockers validate.        |
+| 2026-09-03 | M0-004 | NOT STARTED -> DONE        | Builtin-first, unqualified naming is fixed in Section 2.1.     |
+| 2026-09-03 | M0-005 | NOT STARTED -> IN PROGRESS | Public operation placement catalog started.                    |
+| 2026-09-03 | M0-005 | IN PROGRESS -> DONE        | 52 families cover every capability and approved layer.         |
+| 2026-09-03 | M0-006 | NOT STARTED -> IN PROGRESS | Existing `T \| none` syntax selected for the null contract.    |
+| 2026-09-03 | M0-006 | IN PROGRESS -> DONE        | Type, flow, operator, container, and ABI rules recorded.       |
+| 2026-09-03 | M0-007 | NOT STARTED -> IN PROGRESS | Static and runtime schema contract started.                    |
+| 2026-09-03 | M0-007 | IN PROGRESS -> DONE        | Static identity and checked dynamic access rules recorded.     |
+| 2026-09-03 | M0-008 | NOT STARTED -> IN PROGRESS | Native handle ownership and value semantics started.           |
+| 2026-09-03 | M0-008 | IN PROGRESS -> DONE        | Share, move, borrow, view, and cleanup rules recorded.         |
+| 2026-09-03 | M0-009 | NOT STARTED -> IN PROGRESS | Unified status and language error policy started.              |
+| 2026-09-03 | M0-009 | IN PROGRESS -> DONE        | ABI status and recoverable/fatal policies recorded.            |
+| 2026-09-03 | M0-010 | NOT STARTED -> IN PROGRESS | Native runtime wheel strategy started.                         |
+| 2026-09-03 | M0-010 | IN PROGRESS -> DONE        | Dedicated core and optional runtime artifacts fixed.           |
+| 2026-09-03 | M0-011 | NOT STARTED -> IN PROGRESS | Unified C ABI v1 compatibility policy started.                 |
+| 2026-09-03 | M0-011 | IN PROGRESS -> DONE        | ABI 1.0.0 layout and compatibility rules recorded.             |
+| 2026-09-03 | M0-012 | NOT STARTED -> IN PROGRESS | Local Arrow 24 module tree classification started.             |
+| 2026-09-03 | M0-012 | IN PROGRESS -> DONE        | 29 groups cover all seven declared product scopes.             |
+| 2026-09-03 | M0     | IN PROGRESS -> DONE        | All 12 contract items and 11 focused checks complete.          |
+| 2026-09-03 | M1-001 | NOT STARTED -> IN PROGRESS | Packed Arrow ABI version query implementation started.         |
+| 2026-09-03 | M1-001 | IN PROGRESS -> DONE        | C harness and ctypes verify the native ABI 1.0.0 query.        |
+| 2026-09-03 | M1-002 | NOT STARTED -> IN PROGRESS | Stable status categories and error codes started.              |
+| 2026-09-03 | M1-002 | IN PROGRESS -> DONE        | Native ABI and 44 runtime tests use stable Arx statuses.       |
+| 2026-09-03 | M1-003 | NOT STARTED -> IN PROGRESS | Owned, thread-safe error detail implementation started.        |
+| 2026-09-03 | M1-003 | IN PROGRESS -> DONE        | Owned snapshots pass isolation, lifetime, and 64 regressions.  |
+| 2026-09-03 | M1-004 | NOT STARTED -> IN PROGRESS | Unified opaque-handle ownership implementation started.        |
+| 2026-09-03 | M1-004 | IN PROGRESS -> DONE        | ABI manifest and 50 Arrow ABI/runtime tests pass.              |
+| 2026-09-03 | M1-005 | NOT STARTED -> IN PROGRESS | Cross-language ABI declaration generation started.             |
+| 2026-09-03 | M1-005 | IN PROGRESS -> DONE        | 67 generated symbols have C/Python/LLVM parity; 55 tests pass. |
 
 ## 1. Objective
 
@@ -954,7 +956,7 @@ but new functionality must use one contract.
 | M1-002 | Define stable status categories and error codes               | **DONE**        | Native header/runtime; 44 tests pass      |
 | M1-003 | Unify thread-safe error-detail retrieval                      | **DONE**        | Snapshot, lifetime, and thread tests pass |
 | M1-004 | Define every opaque handle and its ownership operations       | **DONE**        | ABI manifest; 50 Arrow tests pass         |
-| M1-005 | Generate C, Python, LLVM, and symbol declarations             | **NOT STARTED** | One checked-in ABI manifest               |
+| M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE**        | 67-symbol generated ABI; 55 tests pass    |
 | M1-006 | Add the versioned runtime-feature query                       | **NOT STARTED** | Feature compatibility tests               |
 | M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **NOT STARTED** | Cross-path handle and deprecation tests   |
 | M1-008 | Enforce executable transitive runtime-feature dependencies    | **NOT STARTED** | Registry and translate tests              |
@@ -979,10 +981,10 @@ allocation failure returns a stable fallback status without destroying the
 original captured failure.
 
 `irx_arrow_last_error()` remains only as a borrowed, thread-local compatibility
-view. New lowering must use owned error details. Adding explicit error output
-slots to generated fallible declarations and migrating the legacy RecordBatch
-ABI remain part of M1-005 and M1-007 respectively; the snapshot API does not
-misrepresent those later items as complete.
+view. M1-005 adds explicit owned error output slots to generated fallible
+declarations and removes new lowering's dependency on that compatibility view.
+Migrating the legacy RecordBatch ABI remains part of M1-007; the snapshot API
+does not misrepresent that later item as complete.
 
 ### Implemented opaque-handle ownership contract (M1-004)
 
@@ -991,9 +993,9 @@ for the initial opaque-handle vocabulary. Stable kind IDs cover errors, types,
 schemas, scalars, array builders, arrays, chunked arrays, record batches,
 tables, tensor builders, tensors, streams, datasets, and execution plans. Each
 entry fixes its C type, shared or unique ownership class, thread-safety class,
-availability milestone, and lifecycle symbol names. M1-005 will generate the
-language bindings and declaration tables from this manifest; M1-004 does not
-claim that generation work is complete.
+availability milestone, and lifecycle symbol names. M1-005 generates the
+language bindings and declaration tables from this manifest; M1-004 alone did
+not claim that generation work was complete.
 
 Every currently constructible unified handle begins with an internal validated
 header containing its kind, ownership class, live marker, and reference count.
@@ -1022,6 +1024,40 @@ consumption, retained lifetime, and concurrent shared retain/release. The
 earlier in-tree pointer-only lifecycle signatures were provisional and are
 replaced here before ABI 1.0 conformance and distribution; released ABI 1.x
 signatures remain subject to the compatibility policy below.
+
+### Generated cross-language ABI declarations (M1-005)
+
+`packages/irx/src/irx/builder/runtime/arrow/abi.json` is now authoritative for
+the stable status values, status categories, ownership kinds, primitive type
+IDs, opaque handles, function signatures, runtime-feature symbol membership,
+fallibility, and ordinary result slots. `scripts/gen_arrow_abi.py` validates
+that manifest and deterministically emits the installed C declaration header,
+private native implementation aliases, public native wrappers, Python ctypes
+signature metadata, LLVM signature metadata, and the 67-symbol inventory.
+
+Every ordinary fallible declaration returns `irx_arrow_status`, publishes
+ordinary results through explicit output slots, and ends with an owned
+`irx_arrow_error_handle` output. Generated wrappers keep outputs empty until
+success, preserve the stable status when error allocation fails, rewrite error
+operation names to the public ABI symbol, and snapshot immutable detail without
+exposing C++ state. ABI version/category queries remain direct and the one-shot
+Tensor release callback retains its required `void(void*)` callback shape.
+`irx_arrow_last_error()` remains an unregistered compatibility symbol only.
+
+The array, Tensor, and DataFrame runtime features no longer maintain handwritten
+LLVM declaration maps. They instantiate generated `ExternalSymbolSpec` records,
+and lowering appends an initialized owned-error slot to every fallible call.
+DataFrame fatal-error lowering reads the generated owned error record rather
+than the borrowed last-error view. Python tests configure ctypes directly from
+the same generated signature table. Private legacy-shaped C++ implementations
+are hidden inside the runtime artifact; only the generated public inventory is
+exported.
+
+`makim irx.check-arrow-abi` fails on invalid manifests or stale generated
+outputs and runs in `irx.ci`. Focused tests enforce manifest validity, exact C,
+Python, LLVM, feature-symbol, native-definition, and inventory parity, explicit
+owned error behavior, runtime lifecycle and interoperability, and parseable LLVM
+lowering.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 
