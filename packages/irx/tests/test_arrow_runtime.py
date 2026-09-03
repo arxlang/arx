@@ -70,6 +70,13 @@ PrimitiveValue = int | float | bool | None
 BuilderValue = int | float | None
 ArrowSchemaFactory = Callable[[], object]
 EXPECTED_ARROW_ABI_VERSION = 0x00010000
+ARROW_STATUS_OK = 0
+ARROW_STATUS_INVALID_ARGUMENT = 100
+ARROW_STATUS_NULL_POINTER = 101
+ARROW_STATUS_OVERFLOW = 106
+ARROW_STATUS_NOT_SUPPORTED = 107
+ARROW_STATUS_CATEGORY_INVALID = 2
+ARROW_STATUS_CATEGORY_UNKNOWN = 6
 
 
 class ArrowSchemaStruct(ctypes.Structure):
@@ -409,6 +416,8 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     """
     library.irx_arrow_abi_version.argtypes = []
     library.irx_arrow_abi_version.restype = ctypes.c_uint32
+    library.irx_arrow_status_get_category.argtypes = [ctypes.c_int32]
+    library.irx_arrow_status_get_category.restype = ctypes.c_int32
     library.irx_arrow_schema_import_copy.argtypes = [
         ctypes.c_void_p,
         ctypes.POINTER(ctypes.c_void_p),
@@ -1036,6 +1045,133 @@ def test_arrow_runtime_reports_stable_abi_version() -> None:
         assert library.irx_arrow_abi_version() == EXPECTED_ARROW_ABI_VERSION
 
 
+def test_arrow_runtime_reports_stable_status_codes() -> None:
+    """
+    title: Arrow runtime should return stable Arx status codes and categories.
+    """
+    result = _compile_arrow_harness(
+        """
+        #include <stdint.h>
+        #include "irx_arrow_runtime.h"
+
+        int main(void) {
+          int64_t shape[2];
+          irx_arrow_tensor_builder_handle* tensor_builder = NULL;
+          irx_arrow_array_builder_handle* array_builder = NULL;
+
+          shape[0] = INT64_MAX;
+          shape[1] = 2;
+
+          if (sizeof(irx_arrow_status) != sizeof(int32_t)) return 11;
+          if (IRX_ARROW_STATUS_OK != 0) return 12;
+          if (IRX_ARROW_STATUS_END_OF_STREAM != 1) return 13;
+          if (IRX_ARROW_STATUS_INVALID_ARGUMENT != 100) return 14;
+          if (IRX_ARROW_STATUS_NULL_POINTER != 101) return 15;
+          if (IRX_ARROW_STATUS_INVALID_STATE != 102) return 16;
+          if (IRX_ARROW_STATUS_TYPE_MISMATCH != 103) return 17;
+          if (IRX_ARROW_STATUS_SCHEMA_MISMATCH != 104) return 18;
+          if (IRX_ARROW_STATUS_INDEX_OUT_OF_BOUNDS != 105) return 19;
+          if (IRX_ARROW_STATUS_OVERFLOW != 106) return 20;
+          if (IRX_ARROW_STATUS_NOT_SUPPORTED != 107) return 21;
+          if (IRX_ARROW_STATUS_ABI_MISMATCH != 108) return 22;
+          if (IRX_ARROW_STATUS_OUT_OF_MEMORY != 200) return 23;
+          if (IRX_ARROW_STATUS_RESOURCE_EXHAUSTED != 201) return 24;
+          if (IRX_ARROW_STATUS_IO_ERROR != 300) return 25;
+          if (IRX_ARROW_STATUS_CANCELLED != 301) return 26;
+          if (IRX_ARROW_STATUS_ARROW_ERROR != 400) return 27;
+          if (IRX_ARROW_STATUS_INTERNAL != 401) return 28;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_OK) !=
+              IRX_ARROW_STATUS_CATEGORY_SUCCESS) return 29;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_CANCELLED) !=
+              IRX_ARROW_STATUS_CATEGORY_CONTROL) return 30;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_OVERFLOW) !=
+              IRX_ARROW_STATUS_CATEGORY_INVALID) return 31;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_OUT_OF_MEMORY) !=
+              IRX_ARROW_STATUS_CATEGORY_RESOURCE) return 32;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_IO_ERROR) !=
+              IRX_ARROW_STATUS_CATEGORY_IO) return 33;
+          if (irx_arrow_status_get_category(IRX_ARROW_STATUS_INTERNAL) !=
+              IRX_ARROW_STATUS_CATEGORY_INTERNAL) return 34;
+          if (irx_arrow_status_get_category(9999) !=
+              IRX_ARROW_STATUS_CATEGORY_UNKNOWN) return 35;
+
+          if (irx_arrow_array_builder_new(IRX_ARROW_TYPE_INT32, NULL) !=
+              IRX_ARROW_STATUS_NULL_POINTER) return 36;
+          if (irx_arrow_array_builder_new(9999, &array_builder) !=
+              IRX_ARROW_STATUS_NOT_SUPPORTED) return 37;
+          if (array_builder != NULL) return 38;
+          if (irx_arrow_tensor_builder_new(
+                  IRX_ARROW_TYPE_INT32,
+                  -1,
+                  NULL,
+                  NULL,
+                  &tensor_builder) != IRX_ARROW_STATUS_INVALID_ARGUMENT) {
+            return 39;
+          }
+          if (tensor_builder != NULL) return 40;
+          if (irx_arrow_tensor_builder_new(
+                  IRX_ARROW_TYPE_INT32,
+                  2,
+                  shape,
+                  NULL,
+                  &tensor_builder) != IRX_ARROW_STATUS_OVERFLOW) return 41;
+          if (tensor_builder != NULL) return 42;
+          return 0;
+        }
+        """
+    )
+
+    assert result.returncode == ARROW_STATUS_OK
+    assert result.stderr == ""
+
+    with _load_arrow_runtime_library() as library:
+        assert (
+            library.irx_arrow_status_get_category(
+                ARROW_STATUS_INVALID_ARGUMENT
+            )
+            == ARROW_STATUS_CATEGORY_INVALID
+        )
+        assert (
+            library.irx_arrow_status_get_category(9999)
+            == ARROW_STATUS_CATEGORY_UNKNOWN
+        )
+        assert (
+            library.irx_arrow_array_builder_new(
+                IRX_ARROW_TYPE_INT32,
+                None,
+            )
+            == ARROW_STATUS_NULL_POINTER
+        )
+        assert (
+            library.irx_arrow_array_builder_new(
+                9999,
+                ctypes.byref(ctypes.c_void_p()),
+            )
+            == ARROW_STATUS_NOT_SUPPORTED
+        )
+        shape = (ctypes.c_int64 * 2)(2**63 - 1, 2)
+        assert (
+            library.irx_arrow_tensor_builder_new(
+                IRX_ARROW_TYPE_INT32,
+                2,
+                shape,
+                None,
+                ctypes.byref(ctypes.c_void_p()),
+            )
+            == ARROW_STATUS_OVERFLOW
+        )
+        assert (
+            library.irx_arrow_tensor_builder_new(
+                0,
+                0,
+                None,
+                None,
+                ctypes.byref(ctypes.c_void_p()),
+            )
+            == ARROW_STATUS_NOT_SUPPORTED
+        )
+
+
 def test_arrow_runtime_harness_c_data_roundtrip() -> None:
     """
     title: Arrow runtime should roundtrip int32 arrays through Arrow C Data.
@@ -1303,7 +1439,7 @@ def test_arrow_runtime_import_copy_rejects_short_buffer_layout() -> None:
                 ctypes.byref(array_handle),
             )
 
-            assert code != 0
+            assert code == ARROW_STATUS_INVALID_ARGUMENT
             assert array_handle.value is None
             assert "n_buffers" in library.irx_arrow_last_error().decode()
         finally:
@@ -1335,7 +1471,7 @@ def test_arrow_runtime_import_copy_rejects_missing_validity() -> None:
                 ctypes.byref(array_handle),
             )
 
-            assert code != 0
+            assert code == ARROW_STATUS_NULL_POINTER
             assert array_handle.value is None
             assert "validity bitmap" in (
                 library.irx_arrow_last_error().decode()
@@ -1603,7 +1739,7 @@ def test_arrow_runtime_bool_arrays_reject_plain_buffer_view_bridge() -> None:
                 array_handle,
                 ctypes.byref(view),
             )
-            assert code != 0
+            assert code == ARROW_STATUS_NOT_SUPPORTED
             assert (
                 "bit-packed values" in library.irx_arrow_last_error().decode()
             )
@@ -1795,7 +1931,7 @@ def test_arrow_runtime_rejects_unsupported_string_arrays() -> None:
         )
         _ = (schema_capsule, array_capsule)
 
-        assert code != 0
+        assert code == ARROW_STATUS_NOT_SUPPORTED
         assert array_handle.value is None
         assert "Unsupported Arrow storage type" in (
             library.irx_arrow_last_error().decode()

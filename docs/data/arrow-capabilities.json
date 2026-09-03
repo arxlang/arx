@@ -181,11 +181,12 @@
       "status": "partial",
       "test_targets": [
         "packages/irx/tests/test_runtime_errors.py",
-        "packages/irx/tests/test_record_batch.py"
+        "packages/irx/tests/test_record_batch.py",
+        "packages/irx/tests/test_arrow_runtime.py"
       ],
       "blocks": ["M1", "M5", "M6"],
-      "baseline": "Structured compile, link, and runtime diagnostics coexist with multiple integer native status models.",
-      "completion": "Define recoverable and fatal operation contracts, error propagation, failure cleanup, and stable user-visible categories."
+      "baseline": "The unified irx_arrow runtime uses fixed-width, Arx-owned status codes and stable categories; the legacy RecordBatch ABI still has a separate status model.",
+      "completion": "Add owned error details, migrate the RecordBatch compatibility layer, and implement recoverable/fatal propagation and failure cleanup."
     },
     {
       "id": "FND-013",

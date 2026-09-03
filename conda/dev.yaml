@@ -15,6 +15,7 @@ dependencies:
   - pip
   - pip:
       - makim==1.27.0
+      - click
       # fix issues with distlib
       - paginate
       - pyrepl
