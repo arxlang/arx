@@ -14,6 +14,7 @@ dependencies:
   - shellcheck
   - pip
   - pip:
+      - makim==1.27.0
       # fix issues with distlib
       - paginate
       - pyrepl
