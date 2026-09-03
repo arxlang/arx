@@ -69,6 +69,7 @@ class SupportedPrimitiveMetadata(TypedDict):
 PrimitiveValue = int | float | bool | None
 BuilderValue = int | float | None
 ArrowSchemaFactory = Callable[[], object]
+EXPECTED_ARROW_ABI_VERSION = 0x00010000
 
 
 class ArrowSchemaStruct(ctypes.Structure):
@@ -406,6 +407,8 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
       library:
         type: ctypes.CDLL
     """
+    library.irx_arrow_abi_version.argtypes = []
+    library.irx_arrow_abi_version.restype = ctypes.c_uint32
     library.irx_arrow_schema_import_copy.argtypes = [
         ctypes.c_void_p,
         ctypes.POINTER(ctypes.c_void_p),
@@ -1002,6 +1005,35 @@ def test_arrow_runtime_harness_lifecycle() -> None:
 
     assert result.returncode == 0
     assert result.stderr == ""
+
+
+def test_arrow_runtime_reports_stable_abi_version() -> None:
+    """
+    title: Arrow runtime should report the packed stable ABI 1.0.0 version.
+    """
+    result = _compile_arrow_harness(
+        """
+        #include "irx_arrow_runtime.h"
+
+        #if IRX_ARROW_ABI_VERSION != UINT32_C(0x00010000)
+        #error "unexpected packed Arrow ABI version"
+        #endif
+
+        int main(void) {
+          if (IRX_ARROW_ABI_VERSION_MAJOR != 1) return 11;
+          if (IRX_ARROW_ABI_VERSION_MINOR != 0) return 12;
+          if (IRX_ARROW_ABI_VERSION_PATCH != 0) return 13;
+          if (irx_arrow_abi_version() != IRX_ARROW_ABI_VERSION) return 14;
+          return 0;
+        }
+        """
+    )
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+
+    with _load_arrow_runtime_library() as library:
+        assert library.irx_arrow_abi_version() == EXPECTED_ARROW_ABI_VERSION
 
 
 def test_arrow_runtime_harness_c_data_roundtrip() -> None:

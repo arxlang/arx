@@ -404,6 +404,10 @@ groups:
             default: "-vv"
         run: pytest ${{ args.path }} ${{ args.params }}
 
+      check-arrow-capabilities:
+        help: validate the Arrow capability manifest and generated matrix
+        run: python scripts/gen_arrow_capability_matrix.py --check
+
       format:
         help: format IRx Python files
         run: pre-commit run ruff-format-irx --all-files
@@ -433,6 +437,7 @@ groups:
         help: run IRx package CI checks
         hooks:
           pre-run:
+            - task: irx.check-arrow-capabilities
             - task: irx.unittests
             - task: irx.test-analysis
             - task: irx.typecheck

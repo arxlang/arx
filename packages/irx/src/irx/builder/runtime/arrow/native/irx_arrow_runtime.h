@@ -13,6 +13,13 @@
 extern "C" {
 #endif
 
+#define IRX_ARROW_ABI_VERSION_MAJOR UINT32_C(1)
+#define IRX_ARROW_ABI_VERSION_MINOR UINT32_C(0)
+#define IRX_ARROW_ABI_VERSION_PATCH UINT32_C(0)
+#define IRX_ARROW_ABI_VERSION                                                  \
+  ((IRX_ARROW_ABI_VERSION_MAJOR << 16) | (IRX_ARROW_ABI_VERSION_MINOR << 8) |  \
+   IRX_ARROW_ABI_VERSION_PATCH)
+
 typedef struct irx_arrow_schema_handle irx_arrow_schema_handle;
 typedef struct irx_arrow_array_builder_handle irx_arrow_array_builder_handle;
 typedef struct irx_arrow_array_handle irx_arrow_array_handle;
@@ -35,6 +42,8 @@ enum irx_arrow_type_id {
   IRX_ARROW_TYPE_FLOAT64 = 10,
   IRX_ARROW_TYPE_BOOL = 11,
 };
+
+uint32_t irx_arrow_abi_version(void);
 
 int irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,

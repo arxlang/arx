@@ -796,6 +796,10 @@ bool tensor_is_f_contiguous(const irx_arrow_tensor_handle* tensor) {
 
 extern "C" {
 
+uint32_t irx_arrow_abi_version(void) {
+  return IRX_ARROW_ABI_VERSION;
+}
+
 int irx_arrow_schema_import_copy(
     const ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema) {

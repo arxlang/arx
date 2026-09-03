@@ -2,6 +2,7 @@ project:
   type: website
   output-dir: _site
   pre-render:
+    - python ../scripts/gen_arrow_capability_matrix.py
     - python ../scripts/gen_api_docs.py
 
 website:
@@ -66,6 +67,8 @@ website:
               href: ecosystem.md
             - text: Native Apache Arrow
               href: apache-arrow.md
+            - text: Arrow Capability Matrix
+              href: arrow-capability-matrix.md
         - section: Project
           contents:
             - text: Roadmap
