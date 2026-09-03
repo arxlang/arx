@@ -6,6 +6,24 @@ summary: Do not edit; regenerate from abi.json.
 from __future__ import annotations
 
 ABI_VERSION = (1, 0, 0)
+RUNTIME_FEATURE_IDS = {
+    "core": 1,
+    "array": 2,
+    "tensor": 3,
+    "dataframe": 4,
+}
+RUNTIME_FEATURE_VERSIONS = {
+    "core": (1, 0, 0),
+    "array": (1, 0, 0),
+    "tensor": (1, 0, 0),
+    "dataframe": (1, 0, 0),
+}
+RUNTIME_FEATURE_PACKED_VERSIONS = {
+    "core": 65536,
+    "array": 65536,
+    "tensor": 65536,
+    "dataframe": 65536,
+}
 HANDLE_TYPES = (
     "error",
     "type",
@@ -26,6 +44,16 @@ CTYPES_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_arrow_abi_version": (
         "uint32",
         (),
+    ),
+    "irx_arrow_runtime_has_feature": (
+        "status",
+        (
+            "runtime_feature_id",
+            "uint32",
+            "int32_pointer",
+            "uint32_pointer",
+            "error_pointer",
+        ),
     ),
     "irx_arrow_status_get_category": (
         "status_category",
@@ -548,6 +576,7 @@ CTYPES_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
 }
 FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
+    "core": (),
     "array": (
         "irx_arrow_error_code",
         "irx_arrow_error_operation",
@@ -629,6 +658,7 @@ FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
     ),
 }
 FALLIBLE_SYMBOLS = (
+    "irx_arrow_runtime_has_feature",
     "irx_arrow_handle_kind_of",
     "irx_arrow_handle_ownership_of",
     "irx_arrow_error_snapshot",
@@ -724,5 +754,8 @@ __all__ = [
     "FALLIBLE_SYMBOLS",
     "FEATURE_SYMBOLS",
     "HANDLE_TYPES",
+    "RUNTIME_FEATURE_IDS",
+    "RUNTIME_FEATURE_PACKED_VERSIONS",
+    "RUNTIME_FEATURE_VERSIONS",
     "VALUE_RESULTS",
 ]

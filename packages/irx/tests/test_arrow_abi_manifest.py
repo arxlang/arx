@@ -17,8 +17,15 @@ from irx.builder.runtime.arrow.abi_generated import (
     ABI_SYMBOLS,
     CTYPES_SIGNATURES,
     FEATURE_SYMBOLS,
+    RUNTIME_FEATURE_IDS,
+    RUNTIME_FEATURE_PACKED_VERSIONS,
+    RUNTIME_FEATURE_VERSIONS,
 )
-from irx.builder.runtime.arrow.llvm_abi_generated import LLVM_SIGNATURES
+from irx.builder.runtime.arrow.llvm_abi_generated import (
+    LLVM_RUNTIME_FEATURE_IDS,
+    LLVM_RUNTIME_FEATURE_VERSIONS,
+    LLVM_SIGNATURES,
+)
 from irx.builder.runtime.dataframe.feature import (
     build_dataframe_runtime_feature,
 )
@@ -49,6 +56,12 @@ EXPECTED_HANDLE_NAMES = (
     "dataset",
     "execution_plan",
 )
+EXPECTED_RUNTIME_FEATURES = {
+    "core": 1,
+    "array": 2,
+    "tensor": 3,
+    "dataframe": 4,
+}
 
 
 def _load_handles() -> list[dict[str, object]]:
@@ -63,6 +76,22 @@ def _load_handles() -> list[dict[str, object]]:
     )
     assert manifest["abi_version"] == "1.0.0"
     return cast(list[dict[str, object]], manifest["handles"])
+
+
+def _load_runtime_features() -> list[dict[str, object]]:
+    """
+    title: Load runtime-feature records from the Arrow ABI manifest.
+    returns:
+      type: list[dict[str, object]]
+    """
+    manifest = cast(
+        dict[str, object],
+        json.loads(ABI_MANIFEST_PATH.read_text(encoding="utf-8")),
+    )
+    return cast(
+        list[dict[str, object]],
+        manifest["runtime_features"],
+    )
 
 
 def test_arrow_abi_manifest_defines_stable_opaque_handle_kinds() -> None:
@@ -120,6 +149,37 @@ def test_arrow_abi_manifest_defines_ownership_contracts() -> None:
                 assert retain in header
         else:
             assert availability.startswith("planned_m")
+
+
+def test_arrow_abi_manifest_defines_versioned_runtime_features() -> None:
+    """
+    title: Runtime-feature IDs and contract versions should have exact parity.
+    """
+    features = _load_runtime_features()
+    header = ABI_HEADER_PATH.read_text(encoding="utf-8")
+
+    assert {
+        cast(str, feature["name"]): cast(int, feature["id"])
+        for feature in features
+    } == EXPECTED_RUNTIME_FEATURES
+    assert all(feature["contract_version"] == "1.0.0" for feature in features)
+    assert all(
+        feature["availability"] == "implemented" for feature in features
+    )
+    assert RUNTIME_FEATURE_IDS == EXPECTED_RUNTIME_FEATURES
+    assert RUNTIME_FEATURE_VERSIONS == {
+        name: (1, 0, 0) for name in EXPECTED_RUNTIME_FEATURES
+    }
+    assert RUNTIME_FEATURE_PACKED_VERSIONS == {
+        name: 0x00010000 for name in EXPECTED_RUNTIME_FEATURES
+    }
+    assert LLVM_RUNTIME_FEATURE_IDS == RUNTIME_FEATURE_IDS
+    assert LLVM_RUNTIME_FEATURE_VERSIONS == (RUNTIME_FEATURE_PACKED_VERSIONS)
+
+    for name, feature_id in EXPECTED_RUNTIME_FEATURES.items():
+        prefix = f"IRX_ARROW_RUNTIME_FEATURE_{name.upper()}"
+        assert f"{prefix} = {feature_id}" in header
+        assert f"{prefix}_CONTRACT_VERSION" in header
 
 
 def test_arrow_abi_generated_outputs_are_current() -> None:

@@ -5,6 +5,18 @@ summary: Do not edit; regenerate from abi.json.
 
 from __future__ import annotations
 
+LLVM_RUNTIME_FEATURE_IDS = {
+    "core": 1,
+    "array": 2,
+    "tensor": 3,
+    "dataframe": 4,
+}
+LLVM_RUNTIME_FEATURE_VERSIONS = {
+    "core": 65536,
+    "array": 65536,
+    "tensor": 65536,
+    "dataframe": 65536,
+}
 LLVM_HANDLE_TYPES = (
     "error",
     "type",
@@ -25,6 +37,16 @@ LLVM_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_arrow_abi_version": (
         "uint32",
         (),
+    ),
+    "irx_arrow_runtime_has_feature": (
+        "status",
+        (
+            "runtime_feature_id",
+            "uint32",
+            "int32_pointer",
+            "uint32_pointer",
+            "error_pointer",
+        ),
     ),
     "irx_arrow_status_get_category": (
         "status_category",
@@ -547,6 +569,7 @@ LLVM_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
 }
 LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
+    "core": (),
     "array": (
         "irx_arrow_error_code",
         "irx_arrow_error_operation",
@@ -631,5 +654,7 @@ LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
 __all__ = [
     "LLVM_FEATURE_SYMBOLS",
     "LLVM_HANDLE_TYPES",
+    "LLVM_RUNTIME_FEATURE_IDS",
+    "LLVM_RUNTIME_FEATURE_VERSIONS",
     "LLVM_SIGNATURES",
 ]

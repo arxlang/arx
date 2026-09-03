@@ -26,22 +26,28 @@ GENERATED_INTERNAL_NAMES = (
 GENERATED_WRAPPERS = (
     RUNTIME_ROOT / "native" / "irx_arrow_abi_wrappers_generated.inc"
 )
+GENERATED_FEATURE_QUERY = (
+    RUNTIME_ROOT / "native" / "irx_arrow_feature_query_generated.inc"
+)
 GENERATED_PYTHON = RUNTIME_ROOT / "abi_generated.py"
 GENERATED_LLVM = RUNTIME_ROOT / "llvm_abi_generated.py"
 GENERATED_SYMBOLS = RUNTIME_ROOT / "symbols.generated.txt"
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 VERSION_PATTERN = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
-RUNTIME_FEATURES = ("array", "tensor", "dataframe")
 PAIR_LENGTH = 2
 LINE_LENGTH = 79
+PACKED_VERSION_MAJOR_MAX = (1 << 16) - 1
+PACKED_VERSION_COMPONENT_MAX = (1 << 8) - 1
 
 FIXED_C_TYPES = {
     "void": "void",
     "status": "irx_arrow_status",
     "status_category": "irx_arrow_status_category",
+    "runtime_feature_id": "irx_arrow_runtime_feature_id",
     "handle_kind_pointer": "irx_arrow_handle_kind*",
     "ownership_pointer": "irx_arrow_handle_ownership*",
     "uint32": "uint32_t",
+    "uint32_pointer": "uint32_t*",
     "int32": "int32_t",
     "int32_pointer": "int32_t*",
     "int64": "int64_t",
@@ -95,6 +101,27 @@ class Handle:
 
 
 @dataclass(frozen=True)
+class RuntimeFeature:
+    """
+    title: Describe one versioned Arrow runtime capability.
+    attributes:
+      id:
+        type: int
+      name:
+        type: str
+      contract_version:
+        type: tuple[int, int, int]
+      availability:
+        type: str
+    """
+
+    id: int
+    name: str
+    contract_version: tuple[int, int, int]
+    availability: str
+
+
+@dataclass(frozen=True)
 class Function:
     """
     title: Describe one function declared by the Arrow ABI.
@@ -136,6 +163,8 @@ class Manifest:
         type: tuple[tuple[str, int], Ellipsis]
       type_ids:
         type: tuple[tuple[str, int], Ellipsis]
+      runtime_features:
+        type: tuple[RuntimeFeature, Ellipsis]
       handles:
         type: tuple[Handle, Ellipsis]
       functions:
@@ -147,6 +176,7 @@ class Manifest:
     status_categories: tuple[tuple[str, int], ...]
     ownership_kinds: tuple[tuple[str, int], ...]
     type_ids: tuple[tuple[str, int], ...]
+    runtime_features: tuple[RuntimeFeature, ...]
     handles: tuple[Handle, ...]
     functions: tuple[Function, ...]
 
@@ -184,6 +214,78 @@ def load_enum_records(
     if len({value for _, value in result}) != len(result):
         raise ValueError(f"'{field}' contains duplicate values")
     return tuple(result)
+
+
+def load_runtime_features(
+    raw: dict[str, object],
+) -> tuple[RuntimeFeature, ...]:
+    """
+    title: Load and validate versioned runtime-feature declarations.
+    parameters:
+      raw:
+        type: dict[str, object]
+    returns:
+      type: tuple[RuntimeFeature, Ellipsis]
+    """
+    records = cast(list[dict[str, object]], raw.get("runtime_features"))
+    if not isinstance(records, list) or not records:
+        raise ValueError("'runtime_features' must be a non-empty list")
+
+    features: list[RuntimeFeature] = []
+    for record in records:
+        feature_id = record.get("id")
+        name = record.get("name")
+        version_text = record.get("contract_version")
+        availability = record.get("availability")
+        if not isinstance(feature_id, int):
+            raise ValueError("runtime feature id must be an integer")
+        if not isinstance(name, str) or not IDENTIFIER_PATTERN.fullmatch(name):
+            raise ValueError("runtime feature name must be an identifier")
+        if name != name.lower():
+            raise ValueError("runtime feature names must be lowercase")
+        if not isinstance(version_text, str):
+            raise ValueError(
+                f"runtime feature '{name}' must have a semantic version"
+            )
+        match = VERSION_PATTERN.fullmatch(version_text)
+        if match is None:
+            raise ValueError(
+                f"runtime feature '{name}' must have a semantic version"
+            )
+        version = tuple(int(part) for part in match.groups())
+        major, minor, patch = version
+        if major > PACKED_VERSION_MAJOR_MAX or any(
+            component > PACKED_VERSION_COMPONENT_MAX
+            for component in (minor, patch)
+        ):
+            raise ValueError(
+                f"runtime feature '{name}' version cannot be packed"
+            )
+        if not isinstance(availability, str) or not (
+            availability == "implemented"
+            or availability.startswith("planned_m")
+        ):
+            raise ValueError(
+                f"runtime feature '{name}' has invalid availability"
+            )
+        features.append(
+            RuntimeFeature(
+                feature_id,
+                name,
+                cast(tuple[int, int, int], version),
+                availability,
+            )
+        )
+
+    if [feature.id for feature in features] != list(
+        range(1, len(features) + 1)
+    ):
+        raise ValueError(
+            "runtime feature ids must be contiguous and start at one"
+        )
+    if len({feature.name for feature in features}) != len(features):
+        raise ValueError("runtime feature names must be unique")
+    return tuple(features)
 
 
 def load_handles(raw: dict[str, object]) -> tuple[Handle, ...]:
@@ -325,7 +427,9 @@ def load_result(
 
 
 def load_functions(
-    raw: dict[str, object], handles: tuple[Handle, ...]
+    raw: dict[str, object],
+    handles: tuple[Handle, ...],
+    runtime_features: tuple[RuntimeFeature, ...],
 ) -> tuple[Function, ...]:
     """
     title: Load and validate function declarations.
@@ -334,6 +438,8 @@ def load_functions(
         type: dict[str, object]
       handles:
         type: tuple[Handle, Ellipsis]
+      runtime_features:
+        type: tuple[RuntimeFeature, Ellipsis]
     returns:
       type: tuple[Function, Ellipsis]
     """
@@ -341,6 +447,7 @@ def load_functions(
     if not isinstance(records, list) or not records:
         raise ValueError("'functions' must be a non-empty list")
 
+    runtime_feature_names = {feature.name for feature in runtime_features}
     functions: list[Function] = []
     for record in records:
         name = record.get("name")
@@ -358,7 +465,7 @@ def load_functions(
             raise ValueError(f"function '{name}' has invalid features")
         features = cast(list[str], feature_records)
         if len(set(features)) != len(features) or any(
-            feature not in RUNTIME_FEATURES for feature in features
+            feature not in runtime_feature_names for feature in features
         ):
             raise ValueError(f"function '{name}' has unknown features")
         if not isinstance(return_type, str):
@@ -449,6 +556,7 @@ def load_manifest(path: Path) -> Manifest:
         raise ValueError("'abi_version' must be a semantic version")
 
     handles = load_handles(raw)
+    runtime_features = load_runtime_features(raw)
     return Manifest(
         version=(
             int(match.group(1)),
@@ -459,8 +567,9 @@ def load_manifest(path: Path) -> Manifest:
         status_categories=load_enum_records(raw, "status_categories"),
         ownership_kinds=load_enum_records(raw, "ownership_kinds"),
         type_ids=load_enum_records(raw, "type_ids"),
+        runtime_features=runtime_features,
         handles=handles,
-        functions=load_functions(raw, handles),
+        functions=load_functions(raw, handles, runtime_features),
     )
 
 
@@ -495,6 +604,55 @@ def render_enum(
         f"  {constant_prefix}{name} = {value}," for name, value in records
     )
     lines.extend(["};", ""])
+    return lines
+
+
+def packed_version(version: tuple[int, int, int]) -> int:
+    """
+    title: Pack one feature-contract version as 0xMMMMmmpp.
+    parameters:
+      version:
+        type: tuple[int, int, int]
+    returns:
+      type: int
+    """
+    major, minor, patch = version
+    return (major << 16) | (minor << 8) | patch
+
+
+def render_runtime_features(
+    features: tuple[RuntimeFeature, ...],
+) -> list[str]:
+    """
+    title: Render stable runtime-feature IDs and contract versions.
+    parameters:
+      features:
+        type: tuple[RuntimeFeature, Ellipsis]
+    returns:
+      type: list[str]
+    """
+    records = tuple((feature.name.upper(), feature.id) for feature in features)
+    lines = render_enum(
+        "irx_arrow_runtime_feature_id",
+        "irx_arrow_runtime_feature_id_code",
+        "IRX_ARROW_RUNTIME_FEATURE_",
+        (("UNKNOWN", 0), *records),
+    )
+    for feature in features:
+        prefix = f"IRX_ARROW_RUNTIME_FEATURE_{feature.name.upper()}_CONTRACT"
+        major, minor, patch = feature.contract_version
+        lines.extend(
+            [
+                f"#define {prefix}_VERSION_MAJOR UINT32_C({major})",
+                f"#define {prefix}_VERSION_MINOR UINT32_C({minor})",
+                f"#define {prefix}_VERSION_PATCH UINT32_C({patch})",
+                f"#define {prefix}_VERSION \\",
+                f"  (({prefix}_VERSION_MAJOR << 16) | \\",
+                f"   ({prefix}_VERSION_MINOR << 8) | \\",
+                f"   {prefix}_VERSION_PATCH)",
+                "",
+            ]
+        )
     return lines
 
 
@@ -570,6 +728,7 @@ def render_header(manifest: Manifest) -> str:
             manifest.status_categories,
         )
     )
+    lines.extend(render_runtime_features(manifest.runtime_features))
     for handle in manifest.handles:
         lines.append(f"typedef struct {handle.c_type} {handle.c_type};")
     lines.append("")
@@ -603,6 +762,18 @@ def render_header(manifest: Manifest) -> str:
         )
     )
     for function in manifest.functions:
+        if function.name == "irx_arrow_runtime_has_feature":
+            lines.extend(
+                [
+                    "/*",
+                    " * Query one runtime feature contract.",
+                    " * A zero required version discovers any implemented",
+                    " * contract. Unknown IDs return OK with unavailable and",
+                    " * version zero. Known incompatible IDs report their",
+                    " * supported version.",
+                    " */",
+                ]
+            )
         return_token, parameters = public_signature(function)
         return_type = c_type_for(return_token, manifest.handles)
         if not parameters:
@@ -661,23 +832,28 @@ def render_signature_rows(functions: tuple[Function, ...]) -> list[str]:
     return rows
 
 
-def render_feature_rows(functions: tuple[Function, ...]) -> list[str]:
+def render_feature_rows(
+    features: tuple[RuntimeFeature, ...],
+    functions: tuple[Function, ...],
+) -> list[str]:
     """
     title: Render generated runtime-feature symbol rows.
     parameters:
+      features:
+        type: tuple[RuntimeFeature, Ellipsis]
       functions:
         type: tuple[Function, Ellipsis]
     returns:
       type: list[str]
     """
     rows: list[str] = []
-    for feature in RUNTIME_FEATURES:
+    for feature in features:
         names = tuple(
             function.name
             for function in functions
-            if feature in function.features
+            if feature.name in function.features
         )
-        rows.append(f'    "{feature}": (')
+        rows.append(f'    "{feature.name}": (')
         rows.extend(f'        "{name}",' for name in names)
         rows.append("    ),")
     return rows
@@ -701,6 +877,25 @@ def render_python(manifest: Manifest) -> str:
         "from __future__ import annotations",
         "",
         f"ABI_VERSION = {manifest.version!r}",
+        "RUNTIME_FEATURE_IDS = {",
+        *(
+            f'    "{feature.name}": {feature.id},'
+            for feature in manifest.runtime_features
+        ),
+        "}",
+        "RUNTIME_FEATURE_VERSIONS = {",
+        *(
+            f'    "{feature.name}": {feature.contract_version!r},'
+            for feature in manifest.runtime_features
+        ),
+        "}",
+        "RUNTIME_FEATURE_PACKED_VERSIONS = {",
+        *(
+            f'    "{feature.name}": '
+            f"{packed_version(feature.contract_version)},"
+            for feature in manifest.runtime_features
+        ),
+        "}",
         "HANDLE_TYPES = (",
         *(f'    "{handle.name}",' for handle in manifest.handles),
         ")",
@@ -708,7 +903,7 @@ def render_python(manifest: Manifest) -> str:
         *render_signature_rows(manifest.functions),
         "}",
         "FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {",
-        *render_feature_rows(manifest.functions),
+        *render_feature_rows(manifest.runtime_features, manifest.functions),
         "}",
         "FALLIBLE_SYMBOLS = (",
         *(
@@ -733,6 +928,9 @@ def render_python(manifest: Manifest) -> str:
         '    "FALLIBLE_SYMBOLS",',
         '    "FEATURE_SYMBOLS",',
         '    "HANDLE_TYPES",',
+        '    "RUNTIME_FEATURE_IDS",',
+        '    "RUNTIME_FEATURE_PACKED_VERSIONS",',
+        '    "RUNTIME_FEATURE_VERSIONS",',
         '    "VALUE_RESULTS",',
         "]",
         "",
@@ -757,6 +955,19 @@ def render_llvm(manifest: Manifest) -> str:
         "",
         "from __future__ import annotations",
         "",
+        "LLVM_RUNTIME_FEATURE_IDS = {",
+        *(
+            f'    "{feature.name}": {feature.id},'
+            for feature in manifest.runtime_features
+        ),
+        "}",
+        "LLVM_RUNTIME_FEATURE_VERSIONS = {",
+        *(
+            f'    "{feature.name}": '
+            f"{packed_version(feature.contract_version)},"
+            for feature in manifest.runtime_features
+        ),
+        "}",
         "LLVM_HANDLE_TYPES = (",
         *(f'    "{handle.name}",' for handle in manifest.handles),
         ")",
@@ -764,12 +975,14 @@ def render_llvm(manifest: Manifest) -> str:
         *render_signature_rows(manifest.functions),
         "}",
         "LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {",
-        *render_feature_rows(manifest.functions),
+        *render_feature_rows(manifest.runtime_features, manifest.functions),
         "}",
         "",
         "__all__ = [",
         '    "LLVM_FEATURE_SYMBOLS",',
         '    "LLVM_HANDLE_TYPES",',
+        '    "LLVM_RUNTIME_FEATURE_IDS",',
+        '    "LLVM_RUNTIME_FEATURE_VERSIONS",',
         '    "LLVM_SIGNATURES",',
         "]",
         "",
@@ -1034,6 +1247,30 @@ def render_wrappers(manifest: Manifest) -> str:
     return "\n".join(lines)
 
 
+def render_feature_query(manifest: Manifest) -> str:
+    """
+    title: Render implemented feature-contract lookup cases.
+    parameters:
+      manifest:
+        type: Manifest
+    returns:
+      type: str
+    """
+    lines = ["// Generated by scripts/gen_arrow_abi.py. Do not edit.", ""]
+    for feature in manifest.runtime_features:
+        if feature.availability != "implemented":
+            continue
+        prefix = f"IRX_ARROW_RUNTIME_FEATURE_{feature.name.upper()}"
+        lines.extend(
+            [
+                f"case {prefix}:",
+                f"  supported_contract_version = {prefix}_CONTRACT_VERSION;",
+                "  break;",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
 def expected_outputs(manifest: Manifest) -> dict[Path, str]:
     """
     title: Build every generated Arrow ABI output.
@@ -1047,6 +1284,7 @@ def expected_outputs(manifest: Manifest) -> dict[Path, str]:
         GENERATED_HEADER: render_header(manifest),
         GENERATED_INTERNAL_NAMES: render_internal_names(manifest),
         GENERATED_WRAPPERS: render_wrappers(manifest),
+        GENERATED_FEATURE_QUERY: render_feature_query(manifest),
         GENERATED_PYTHON: render_python(manifest),
         GENERATED_LLVM: render_llvm(manifest),
         GENERATED_SYMBOLS: "\n".join(

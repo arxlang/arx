@@ -5,6 +5,8 @@
 
 #define irx_arrow_abi_version \
   irx_arrow_internal_abi_version
+#define irx_arrow_runtime_has_feature \
+  irx_arrow_internal_runtime_has_feature
 #define irx_arrow_status_get_category \
   irx_arrow_internal_status_get_category
 #define irx_arrow_handle_kind_of \
@@ -139,6 +141,12 @@
   irx_arrow_internal_last_error
 
 uint32_t irx_arrow_abi_version(void);
+
+irx_arrow_status irx_arrow_runtime_has_feature(
+    irx_arrow_runtime_feature_id feature_id,
+    uint32_t required_contract_version,
+    int32_t* out_available,
+    uint32_t* out_supported_contract_version);
 
 irx_arrow_status_category irx_arrow_status_get_category(
     irx_arrow_status status);

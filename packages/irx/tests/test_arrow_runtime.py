@@ -56,6 +56,8 @@ from irx.builder.runtime.array.feature import (
 )
 from irx.builder.runtime.arrow.abi_generated import (
     FALLIBLE_SYMBOLS,
+    RUNTIME_FEATURE_IDS,
+    RUNTIME_FEATURE_PACKED_VERSIONS,
     VALUE_RESULTS,
 )
 from irx.builder.runtime.arrow.bindings import (
@@ -1038,9 +1040,9 @@ def test_arrow_runtime_harness_lifecycle() -> None:
     assert result.stderr == ""
 
 
-def test_arrow_runtime_reports_stable_abi_version() -> None:
+def test_arrow_runtime_reports_stable_abi_and_feature_versions() -> None:
     """
-    title: Arrow runtime should report the packed stable ABI 1.0.0 version.
+    title: Runtime queries should enforce ABI and feature compatibility.
     """
     result = _compile_arrow_harness(
         """
@@ -1050,11 +1052,52 @@ def test_arrow_runtime_reports_stable_abi_version() -> None:
         #error "unexpected packed Arrow ABI version"
         #endif
 
+        #if IRX_ARROW_RUNTIME_FEATURE_ARRAY_CONTRACT_VERSION != \
+            UINT32_C(0x00010000)
+        #error "unexpected array feature contract version"
+        #endif
+
         int main(void) {
+          irx_arrow_error_handle* failure = NULL;
+          int32_t available = -1;
+          uint32_t supported = UINT32_MAX;
+
           if (IRX_ARROW_ABI_VERSION_MAJOR != 1) return 11;
           if (IRX_ARROW_ABI_VERSION_MINOR != 0) return 12;
           if (IRX_ARROW_ABI_VERSION_PATCH != 0) return 13;
           if (irx_arrow_abi_version() != IRX_ARROW_ABI_VERSION) return 14;
+          if (IRX_ARROW_RUNTIME_FEATURE_CORE != 1) return 22;
+          if (IRX_ARROW_RUNTIME_FEATURE_ARRAY != 2) return 23;
+          if (IRX_ARROW_RUNTIME_FEATURE_TENSOR != 3) return 24;
+          if (IRX_ARROW_RUNTIME_FEATURE_DATAFRAME != 4) return 25;
+          if (irx_arrow_runtime_has_feature(
+                  IRX_ARROW_RUNTIME_FEATURE_ARRAY,
+                  IRX_ARROW_RUNTIME_FEATURE_ARRAY_CONTRACT_VERSION,
+                  &available,
+                  &supported,
+                  &failure) != IRX_ARROW_STATUS_OK) return 15;
+          if (available != 1 || supported != UINT32_C(0x00010000)) {
+            return 16;
+          }
+          if (failure != NULL) return 17;
+
+          if (irx_arrow_runtime_has_feature(
+                  IRX_ARROW_RUNTIME_FEATURE_ARRAY,
+                  UINT32_C(0x00010100),
+                  &available,
+                  &supported,
+                  &failure) != IRX_ARROW_STATUS_OK) return 18;
+          if (available != 0 || supported != UINT32_C(0x00010000)) {
+            return 19;
+          }
+
+          if (irx_arrow_runtime_has_feature(
+                  9001,
+                  0,
+                  &available,
+                  &supported,
+                  &failure) != IRX_ARROW_STATUS_OK) return 20;
+          if (available != 0 || supported != 0) return 21;
           return 0;
         }
         """
@@ -1065,6 +1108,39 @@ def test_arrow_runtime_reports_stable_abi_version() -> None:
 
     with _load_arrow_runtime_library() as library:
         assert library.irx_arrow_abi_version() == EXPECTED_ARROW_ABI_VERSION
+
+        def query(feature_id: int, required_version: int) -> tuple[int, int]:
+            """
+            title: Query one runtime feature through the generated binding.
+            parameters:
+              feature_id:
+                type: int
+              required_version:
+                type: int
+            returns:
+              type: tuple[int, int]
+            """
+            available = ctypes.c_int32(-1)
+            supported = ctypes.c_uint32(0xFFFFFFFF)
+            assert (
+                library.irx_arrow_runtime_has_feature(
+                    feature_id,
+                    required_version,
+                    ctypes.byref(available),
+                    ctypes.byref(supported),
+                )
+                == ARROW_STATUS_OK
+            )
+            return available.value, supported.value
+
+        for name, feature_id in RUNTIME_FEATURE_IDS.items():
+            version = RUNTIME_FEATURE_PACKED_VERSIONS[name]
+            assert query(feature_id, 0) == (1, version)
+            assert query(feature_id, version) == (1, version)
+            assert query(feature_id, 0x00010100) == (0, version)
+            assert query(feature_id, 0x00020000) == (0, version)
+
+        assert query(9001, 0) == (0, 0)
 
 
 def test_arrow_runtime_reports_stable_status_codes() -> None:
@@ -1271,6 +1347,37 @@ def test_arrow_runtime_returns_explicit_owned_error_details() -> None:
         )
         assert failure.value is None
         assert accessor_failure.value is None
+
+        available = ctypes.c_int32(7)
+        assert (
+            library.irx_arrow_runtime_has_feature(
+                RUNTIME_FEATURE_IDS["array"],
+                RUNTIME_FEATURE_PACKED_VERSIONS["array"],
+                ctypes.byref(available),
+                None,
+                ctypes.byref(failure),
+            )
+            == ARROW_STATUS_NULL_POINTER
+        )
+        assert available.value == 0
+        assert failure.value is not None
+        assert (
+            library.irx_arrow_error_operation(
+                failure,
+                ctypes.byref(operation),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert operation.value == b"irx_arrow_runtime_has_feature"
+        assert (
+            library.irx_arrow_error_release(
+                ctypes.byref(failure),
+                ctypes.byref(accessor_failure),
+            )
+            == ARROW_STATUS_OK
+        )
+        assert failure.value is None
 
         assert (
             library.irx_arrow_array_builder_new(

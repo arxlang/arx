@@ -27,6 +27,7 @@ def arrow_ctypes_type(type_token: str) -> object | None:
         "void": None,
         "status": ctypes.c_int32,
         "status_category": ctypes.c_int32,
+        "runtime_feature_id": ctypes.c_int32,
         "uint32": ctypes.c_uint32,
         "int32": ctypes.c_int32,
         "int64": ctypes.c_int64,
@@ -37,6 +38,8 @@ def arrow_ctypes_type(type_token: str) -> object | None:
     if type_token in scalar_types:
         return scalar_types[type_token]
 
+    if type_token == "uint32_pointer":
+        return ctypes.POINTER(ctypes.c_uint32)
     if type_token in {
         "const_void",
         "void_pointer",

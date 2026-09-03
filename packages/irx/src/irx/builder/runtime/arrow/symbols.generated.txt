@@ -1,4 +1,5 @@
 irx_arrow_abi_version
+irx_arrow_runtime_has_feature
 irx_arrow_status_get_category
 irx_arrow_handle_kind_of
 irx_arrow_handle_ownership_of

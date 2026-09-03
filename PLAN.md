@@ -957,7 +957,7 @@ but new functionality must use one contract.
 | M1-003 | Unify thread-safe error-detail retrieval                      | **DONE**        | Snapshot, lifetime, and thread tests pass |
 | M1-004 | Define every opaque handle and its ownership operations       | **DONE**        | ABI manifest; 50 Arrow tests pass         |
 | M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE**        | 67-symbol generated ABI; 55 tests pass    |
-| M1-006 | Add the versioned runtime-feature query                       | **NOT STARTED** | Feature compatibility tests               |
+| M1-006 | Add the versioned runtime-feature query                       | **DONE**        | 68-symbol ABI; 56 Arrow tests pass        |
 | M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **NOT STARTED** | Cross-path handle and deprecation tests   |
 | M1-008 | Enforce executable transitive runtime-feature dependencies    | **NOT STARTED** | Registry and translate tests              |
 | M1-009 | Split runtime artifacts and linking by activated capability   | **NOT STARTED** | Link-input and clean-build tests          |
@@ -1033,7 +1033,8 @@ IDs, opaque handles, function signatures, runtime-feature symbol membership,
 fallibility, and ordinary result slots. `scripts/gen_arrow_abi.py` validates
 that manifest and deterministically emits the installed C declaration header,
 private native implementation aliases, public native wrappers, Python ctypes
-signature metadata, LLVM signature metadata, and the 67-symbol inventory.
+signature metadata, LLVM signature metadata, and the initial 67-symbol
+inventory. M1-006 appends the feature query as the 68th stable symbol.
 
 Every ordinary fallible declaration returns `irx_arrow_status`, publishes
 ordinary results through explicit output slots, and ends with an owned
@@ -1059,6 +1060,38 @@ Python, LLVM, feature-symbol, native-definition, and inventory parity, explicit
 owned error behavior, runtime lifecycle and interoperability, and parseable LLVM
 lowering.
 
+### Versioned runtime-feature query (M1-006)
+
+The canonical ABI manifest assigns append-only 32-bit feature IDs to `core` (1),
+`array` (2), `tensor` (3), and `dataframe` (4). Each feature has an independent
+contract version packed as `0xMMMMmmpp`; all four initial contracts are 1.0.0.
+The generator emits the IDs and versions into the installed C header, Python
+ctypes metadata, LLVM metadata, and the native lookup table so those surfaces
+cannot silently disagree.
+
+`irx_arrow_runtime_has_feature()` accepts a stable feature ID and a required
+contract version, then returns both an availability flag and the runtime's
+supported version through explicit output slots. A zero required version is a
+discovery query. A nonzero requirement is compatible only when the major is an
+exact match and the supported packed version is greater than or equal to the
+required version. A known but incompatible feature returns success with
+`available = 0` and reports its supported version. An unknown future feature ID
+returns success with `available = 0` and version zero, which lets a newer
+consumer probe an older runtime without turning normal capability absence into a
+runtime failure.
+
+The query follows the generated fallible ABI: null output slots return the
+stable null-pointer status, any writable output is reset before failure, and an
+immutable owned error handle identifies the public query operation. Consumers
+still check `irx_arrow_abi_version()` first; ABI compatibility and per-feature
+compatibility are separate gates.
+
+Focused manifest, C harness, and ctypes tests enforce exact cross-language ID,
+version, signature, and symbol parity; discovery, exact matches, newer-minor and
+new-major rejection; forward-compatible unknown IDs; explicit owned error
+details; and output initialization. Package build verification confirms that the
+generated lookup table ships in the wheel.
+
 ### Accepted ABI v1 compatibility policy (M0-011)
 
 The unified ABI is named `irx_arrow` and starts at **1.0.0**. All stable symbols
@@ -1070,8 +1103,8 @@ only at the next ABI major after a documented deprecation window.
 fixed `uint32_t` packed as `0xMMMMmmpp` for 16-bit major, 8-bit minor, and 8-bit
 patch components. Consumers query it before binding or calling any other stable
 symbol. `irx_arrow_runtime_has_feature()` reports a stable feature ID and
-feature-contract version; the capability manifest determines which feature IDs a
-compiler output requires.
+feature-contract version; the canonical ABI manifest determines which feature
+IDs and versions a compiler output requires.
 
 Compatibility follows these rules:
 

@@ -56,6 +56,32 @@
     ["FLOAT64", 10],
     ["BOOL", 11]
   ],
+  "runtime_features": [
+    {
+      "id": 1,
+      "name": "core",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 2,
+      "name": "array",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 3,
+      "name": "tensor",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 4,
+      "name": "dataframe",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    }
+  ],
   "handles": [
     {
       "id": 1,
@@ -205,6 +231,18 @@
       "return": "uint32",
       "parameters": [],
       "fallible": false
+    },
+    {
+      "name": "irx_arrow_runtime_has_feature",
+      "features": [],
+      "return": "status",
+      "parameters": [
+        ["runtime_feature_id", "feature_id"],
+        ["uint32", "required_contract_version"],
+        ["int32_pointer", "out_available"],
+        ["uint32_pointer", "out_supported_contract_version"]
+      ],
+      "fallible": true
     },
     {
       "name": "irx_arrow_status_get_category",

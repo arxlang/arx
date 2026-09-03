@@ -1154,6 +1154,18 @@ bool tensor_is_f_contiguous(const irx_arrow_tensor_handle* tensor) {
   return true;
 }
 
+bool feature_contract_is_compatible(
+    uint32_t supported_version,
+    uint32_t required_version) {
+  if (required_version == 0) {
+    return true;
+  }
+  const uint32_t supported_major = supported_version >> 16;
+  const uint32_t required_major = required_version >> 16;
+  return supported_major == required_major &&
+         supported_version >= required_version;
+}
+
 }  // namespace
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -1166,6 +1178,44 @@ extern "C" {
 
 uint32_t irx_arrow_abi_version(void) {
   return IRX_ARROW_ABI_VERSION;
+}
+
+irx_arrow_status irx_arrow_runtime_has_feature(
+    irx_arrow_runtime_feature_id feature_id,
+    uint32_t required_contract_version,
+    int32_t* out_available,
+    uint32_t* out_supported_contract_version) {
+  begin_operation(__func__);
+  if (out_available != nullptr) {
+    *out_available = 0;
+  }
+  if (out_supported_contract_version != nullptr) {
+    *out_supported_contract_version = 0;
+  }
+  if (out_available == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_available must not be NULL");
+  }
+  if (out_supported_contract_version == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_supported_contract_version must not be NULL");
+  }
+
+  uint32_t supported_contract_version = 0;
+  switch (feature_id) {
+#include "irx_arrow_feature_query_generated.inc"
+    default:
+      return kArrowOk;
+  }
+  *out_supported_contract_version = supported_contract_version;
+  *out_available = feature_contract_is_compatible(
+                       supported_contract_version,
+                       required_contract_version)
+                       ? 1
+                       : 0;
+  return kArrowOk;
 }
 
 irx_arrow_status_category irx_arrow_status_get_category(

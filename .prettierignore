@@ -1,2 +1,3 @@
 docs/changelog.md
 docs/arrow-capability-matrix.md
+packages/irx/src/irx/builder/runtime/arrow/native/*_generated.inc
