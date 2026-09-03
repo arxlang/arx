@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "abi_version": "1.0.0",
+  "handle_contract": {
+    "retain_output": "A successful retain writes one new owner token to an output slot.",
+    "release_input": "Release consumes one owner token through a pointer-to-slot and clears that slot.",
+    "null_release": "A non-null slot containing null is an idempotent success.",
+    "invalid_release": "A null slot pointer or a live handle of the wrong kind fails without consuming the token.",
+    "borrow": "A borrowed pointer creates no token and cannot be released.",
+    "copy": "Copying an opaque pointer without retaining it does not create an owner token."
+  },
+  "handles": [
+    {
+      "id": 1,
+      "name": "error",
+      "c_type": "irx_arrow_error_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_error_retain",
+      "release": "irx_arrow_error_release"
+    },
+    {
+      "id": 2,
+      "name": "type",
+      "c_type": "irx_arrow_type_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m3",
+      "retain": "irx_arrow_type_retain",
+      "release": "irx_arrow_type_release"
+    },
+    {
+      "id": 3,
+      "name": "schema",
+      "c_type": "irx_arrow_schema_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_schema_retain",
+      "release": "irx_arrow_schema_release"
+    },
+    {
+      "id": 4,
+      "name": "scalar",
+      "c_type": "irx_arrow_scalar_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m3",
+      "retain": "irx_arrow_scalar_retain",
+      "release": "irx_arrow_scalar_release"
+    },
+    {
+      "id": 5,
+      "name": "array_builder",
+      "c_type": "irx_arrow_array_builder_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "implemented",
+      "retain": null,
+      "release": "irx_arrow_array_builder_release"
+    },
+    {
+      "id": 6,
+      "name": "array",
+      "c_type": "irx_arrow_array_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_array_retain",
+      "release": "irx_arrow_array_release"
+    },
+    {
+      "id": 7,
+      "name": "chunked_array",
+      "c_type": "irx_arrow_chunked_array_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_chunked_array_retain",
+      "release": "irx_arrow_chunked_array_release"
+    },
+    {
+      "id": 8,
+      "name": "record_batch",
+      "c_type": "irx_arrow_record_batch_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m1_007",
+      "retain": "irx_arrow_record_batch_retain",
+      "release": "irx_arrow_record_batch_release"
+    },
+    {
+      "id": 9,
+      "name": "table",
+      "c_type": "irx_arrow_table_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_table_retain",
+      "release": "irx_arrow_table_release"
+    },
+    {
+      "id": 10,
+      "name": "tensor_builder",
+      "c_type": "irx_arrow_tensor_builder_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "implemented",
+      "retain": null,
+      "release": "irx_arrow_tensor_builder_release"
+    },
+    {
+      "id": 11,
+      "name": "tensor",
+      "c_type": "irx_arrow_tensor_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_tensor_retain",
+      "release": "irx_arrow_tensor_release"
+    },
+    {
+      "id": 12,
+      "name": "stream",
+      "c_type": "irx_arrow_stream_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "planned_m7",
+      "retain": null,
+      "release": "irx_arrow_stream_release"
+    },
+    {
+      "id": 13,
+      "name": "dataset",
+      "c_type": "irx_arrow_dataset_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m8",
+      "retain": "irx_arrow_dataset_retain",
+      "release": "irx_arrow_dataset_release"
+    },
+    {
+      "id": 14,
+      "name": "execution_plan",
+      "c_type": "irx_arrow_execution_plan_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "planned_m8",
+      "retain": null,
+      "release": "irx_arrow_execution_plan_release"
+    }
+  ]
+}

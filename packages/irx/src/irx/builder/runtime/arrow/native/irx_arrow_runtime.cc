@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -24,6 +25,7 @@ namespace {
 
 constexpr irx_arrow_status kArrowOk = IRX_ARROW_STATUS_OK;
 constexpr int64_t kInitialRefcount = 1;
+constexpr uint64_t kHandleMagic = UINT64_C(0x4952584152524f57);
 constexpr int64_t kPrimitiveArrayBufferCount = 2;
 constexpr size_t kErrorOperationCapacity = 128;
 constexpr size_t kErrorMessageCapacity = 512;
@@ -34,6 +36,21 @@ struct ErrorDetail {
   char operation[kErrorOperationCapacity] = {0};
   char message[kErrorMessageCapacity] = {0};
   char upstream_detail[kErrorUpstreamDetailCapacity] = {0};
+};
+
+struct HandleHeader {
+  HandleHeader(
+      irx_arrow_handle_kind handle_kind,
+      irx_arrow_handle_ownership handle_ownership)
+      : magic(kHandleMagic),
+        kind(handle_kind),
+        ownership(handle_ownership),
+        refcount(kInitialRefcount) {}
+
+  uint64_t magic;
+  irx_arrow_handle_kind kind;
+  irx_arrow_handle_ownership ownership;
+  mutable std::atomic<int64_t> refcount;
 };
 
 thread_local ErrorDetail current_error;
@@ -201,23 +218,33 @@ struct ResolvedSchema {
 }  // namespace
 
 struct irx_arrow_error_handle {
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   ErrorDetail detail;
 };
 
 struct irx_arrow_schema_handle {
-  int64_t refcount = 0;
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_SCHEMA,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   std::shared_ptr<arrow::Field> field;
   int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
   int32_t nullable = 0;
 };
 
 struct irx_arrow_array_builder_handle {
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      IRX_ARROW_HANDLE_OWNERSHIP_UNIQUE};
   std::unique_ptr<arrow::ArrayBuilder> builder;
   int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
 };
 
 struct irx_arrow_array_handle {
-  int64_t refcount = 0;
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_ARRAY,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   std::shared_ptr<arrow::Array> array;
   int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
   int32_t nullable = 0;
@@ -229,6 +256,9 @@ struct irx_arrow_array_handle {
 };
 
 struct irx_arrow_tensor_builder_handle {
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER,
+      IRX_ARROW_HANDLE_OWNERSHIP_UNIQUE};
   int32_t type_id = IRX_ARROW_TYPE_UNKNOWN;
   int32_t ndim = 0;
   int64_t element_count = 0;
@@ -242,7 +272,9 @@ struct irx_arrow_tensor_builder_handle {
 };
 
 struct irx_arrow_tensor_handle {
-  int64_t refcount = 0;
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_TENSOR,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   std::shared_ptr<arrow::Tensor> tensor;
   std::vector<int64_t> shape_cache;
   std::vector<int64_t> strides_cache;
@@ -252,12 +284,16 @@ struct irx_arrow_tensor_handle {
 };
 
 struct irx_arrow_table_handle {
-  int64_t refcount = 0;
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_TABLE,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   std::shared_ptr<arrow::Table> table;
 };
 
 struct irx_arrow_chunked_array_handle {
-  int64_t refcount = 0;
+  HandleHeader header{
+      IRX_ARROW_HANDLE_KIND_CHUNKED_ARRAY,
+      IRX_ARROW_HANDLE_OWNERSHIP_SHARED};
   std::shared_ptr<arrow::ChunkedArray> column;
 };
 
@@ -426,6 +462,170 @@ irx_arrow_status set_exception_error(
       IRX_ARROW_STATUS_INTERNAL,
       "%s: C++ exception contained at the Arrow ABI boundary",
       context);
+}
+
+template <typename Handle>
+irx_arrow_status validate_handle(
+    const Handle* handle,
+    irx_arrow_handle_kind expected_kind,
+    const char* label) {
+  if (handle == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "%s handle must not be NULL",
+        label);
+  }
+  if (handle->header.magic != kHandleMagic) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "%s handle has an invalid runtime marker",
+        label);
+  }
+  if (handle->header.kind != expected_kind) {
+    return set_error(
+        IRX_ARROW_STATUS_TYPE_MISMATCH,
+        "%s handle has kind %d, expected %d",
+        label,
+        handle->header.kind,
+        expected_kind);
+  }
+  if (handle->header.refcount.load(std::memory_order_acquire) <= 0) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "%s handle is released",
+        label);
+  }
+  return kArrowOk;
+}
+
+template <typename Handle>
+irx_arrow_status retain_shared_handle(
+    const Handle* handle,
+    Handle** out_handle,
+    irx_arrow_handle_kind expected_kind,
+    const char* label) {
+  if (out_handle == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_%s must not be NULL",
+        label);
+  }
+  *out_handle = nullptr;
+
+  const irx_arrow_status validation =
+      validate_handle(handle, expected_kind, label);
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (handle->header.ownership != IRX_ARROW_HANDLE_OWNERSHIP_SHARED) {
+    return set_error(
+        IRX_ARROW_STATUS_NOT_SUPPORTED,
+        "%s handle is unique and cannot be retained",
+        label);
+  }
+
+  auto& refcount = handle->header.refcount;
+  int64_t current = refcount.load(std::memory_order_relaxed);
+  while (current > 0) {
+    if (current == std::numeric_limits<int64_t>::max()) {
+      return set_error(
+          IRX_ARROW_STATUS_RESOURCE_EXHAUSTED,
+          "%s handle reference count overflow",
+          label);
+    }
+    if (refcount.compare_exchange_weak(
+            current,
+            current + 1,
+            std::memory_order_acq_rel,
+            std::memory_order_relaxed)) {
+      *out_handle = const_cast<Handle*>(handle);
+      return kArrowOk;
+    }
+  }
+  return set_error(
+      IRX_ARROW_STATUS_INVALID_STATE,
+      "%s handle is released",
+      label);
+}
+
+template <typename Handle>
+irx_arrow_status release_shared_handle(
+    Handle** handle_slot,
+    irx_arrow_handle_kind expected_kind,
+    const char* label) {
+  if (handle_slot == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "%s handle slot must not be NULL",
+        label);
+  }
+  Handle* handle = *handle_slot;
+  if (handle == nullptr) {
+    return kArrowOk;
+  }
+
+  const irx_arrow_status validation =
+      validate_handle(handle, expected_kind, label);
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (handle->header.ownership != IRX_ARROW_HANDLE_OWNERSHIP_SHARED) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "%s handle does not use shared ownership",
+        label);
+  }
+
+  *handle_slot = nullptr;
+  const int64_t previous =
+      handle->header.refcount.fetch_sub(1, std::memory_order_acq_rel);
+  if (previous == 1) {
+    handle->header.magic = 0;
+    delete handle;
+    return kArrowOk;
+  }
+  if (previous <= 0) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "%s handle reference count is invalid",
+        label);
+  }
+  return kArrowOk;
+}
+
+template <typename Handle>
+irx_arrow_status release_unique_handle(
+    Handle** handle_slot,
+    irx_arrow_handle_kind expected_kind,
+    const char* label) {
+  if (handle_slot == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "%s handle slot must not be NULL",
+        label);
+  }
+  Handle* handle = *handle_slot;
+  if (handle == nullptr) {
+    return kArrowOk;
+  }
+
+  const irx_arrow_status validation =
+      validate_handle(handle, expected_kind, label);
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (handle->header.ownership != IRX_ARROW_HANDLE_OWNERSHIP_UNIQUE) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "%s handle does not use unique ownership",
+        label);
+  }
+
+  *handle_slot = nullptr;
+  handle->header.refcount.store(0, std::memory_order_release);
+  handle->header.magic = 0;
+  delete handle;
+  return kArrowOk;
 }
 
 const TypeSpec* type_spec_from_type_id(int32_t type_id) {
@@ -903,8 +1103,12 @@ int tensor_data_nbytes(
 int tensor_builder_require_slot(
     irx_arrow_tensor_builder_handle* builder,
     uint8_t** out_slot) {
-  if (builder == nullptr) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor builder must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER,
+      "tensor builder");
+  if (validation != kArrowOk) {
+    return validation;
   }
   if (builder->values_appended >= builder->element_count) {
     return set_error(IRX_ARROW_STATUS_INVALID_STATE, "too many values appended to tensor builder");
@@ -989,6 +1193,58 @@ irx_arrow_status_category irx_arrow_status_get_category(
   }
 }
 
+irx_arrow_status irx_arrow_handle_kind_of(
+    const void* handle,
+    irx_arrow_handle_kind* out_kind) {
+  begin_operation(__func__);
+  if (out_kind == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_kind must not be NULL");
+  }
+  *out_kind = IRX_ARROW_HANDLE_KIND_UNKNOWN;
+  if (handle == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "handle must not be NULL");
+  }
+  const auto* header = static_cast<const HandleHeader*>(handle);
+  if (header->magic != kHandleMagic ||
+      header->refcount.load(std::memory_order_acquire) <= 0) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "handle has an invalid runtime marker or is released");
+  }
+  *out_kind = header->kind;
+  return kArrowOk;
+}
+
+irx_arrow_status irx_arrow_handle_ownership_of(
+    const void* handle,
+    irx_arrow_handle_ownership* out_ownership) {
+  begin_operation(__func__);
+  if (out_ownership == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_ownership must not be NULL");
+  }
+  *out_ownership = IRX_ARROW_HANDLE_OWNERSHIP_UNKNOWN;
+  if (handle == nullptr) {
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "handle must not be NULL");
+  }
+  const auto* header = static_cast<const HandleHeader*>(handle);
+  if (header->magic != kHandleMagic ||
+      header->refcount.load(std::memory_order_acquire) <= 0) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "handle has an invalid runtime marker or is released");
+  }
+  *out_ownership = header->ownership;
+  return kArrowOk;
+}
+
 irx_arrow_status irx_arrow_error_snapshot(
     irx_arrow_error_handle** out_error) {
   if (out_error == nullptr) {
@@ -1010,28 +1266,64 @@ irx_arrow_status irx_arrow_error_snapshot(
 
 irx_arrow_status irx_arrow_error_code(
     const irx_arrow_error_handle* error) {
-  if (error == nullptr) {
-    return IRX_ARROW_STATUS_NULL_POINTER;
+  begin_operation(__func__);
+  const irx_arrow_status validation = validate_handle(
+      error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
+  if (validation != kArrowOk) {
+    return validation;
   }
   return error->detail.code;
 }
 
 const char* irx_arrow_error_operation(
     const irx_arrow_error_handle* error) {
-  return error == nullptr ? "" : error->detail.operation;
+  begin_operation(__func__);
+  const irx_arrow_status validation = validate_handle(
+      error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
+  return validation == kArrowOk ? error->detail.operation : "";
 }
 
 const char* irx_arrow_error_message(const irx_arrow_error_handle* error) {
-  return error == nullptr ? "" : error->detail.message;
+  begin_operation(__func__);
+  const irx_arrow_status validation = validate_handle(
+      error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
+  return validation == kArrowOk ? error->detail.message : "";
 }
 
 const char* irx_arrow_error_upstream_detail(
     const irx_arrow_error_handle* error) {
-  return error == nullptr ? "" : error->detail.upstream_detail;
+  begin_operation(__func__);
+  const irx_arrow_status validation = validate_handle(
+      error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
+  return validation == kArrowOk ? error->detail.upstream_detail : "";
 }
 
-void irx_arrow_error_release(irx_arrow_error_handle* error) {
-  delete error;
+irx_arrow_status irx_arrow_error_retain(
+    const irx_arrow_error_handle* error,
+    irx_arrow_error_handle** out_error) {
+  begin_operation(__func__);
+  return retain_shared_handle(
+      error,
+      out_error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
+}
+
+irx_arrow_status irx_arrow_error_release(
+    irx_arrow_error_handle** error) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      error,
+      IRX_ARROW_HANDLE_KIND_ERROR,
+      "error");
 }
 
 irx_arrow_status irx_arrow_schema_import_copy(
@@ -1051,7 +1343,6 @@ irx_arrow_status irx_arrow_schema_import_copy(
     }
 
     auto handle = std::make_unique<irx_arrow_schema_handle>();
-    handle->refcount = kInitialRefcount;
     handle->field = arrow::field("", resolved.spec->make_type(), resolved.nullable);
     handle->type_id = resolved.spec->type_id;
     handle->nullable = resolved.nullable ? 1 : 0;
@@ -1070,8 +1361,12 @@ irx_arrow_status irx_arrow_schema_export(
     ArrowSchema* out_schema) {
   begin_operation(__func__);
   try {
-    if (schema == nullptr) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
+    const irx_arrow_status validation = validate_handle(
+        schema,
+        IRX_ARROW_HANDLE_KIND_SCHEMA,
+        "schema");
+    if (validation != kArrowOk) {
+      return validation;
     }
     if (out_schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_schema must not be NULL");
@@ -1090,8 +1385,10 @@ irx_arrow_status irx_arrow_schema_export(
 
 int32_t irx_arrow_schema_type_id(const irx_arrow_schema_handle* schema) {
   begin_operation(__func__);
-  if (schema == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
+  if (validate_handle(
+          schema,
+          IRX_ARROW_HANDLE_KIND_SCHEMA,
+          "schema") != kArrowOk) {
     return IRX_ARROW_TYPE_UNKNOWN;
   }
   return schema->type_id;
@@ -1099,33 +1396,33 @@ int32_t irx_arrow_schema_type_id(const irx_arrow_schema_handle* schema) {
 
 int32_t irx_arrow_schema_is_nullable(const irx_arrow_schema_handle* schema) {
   begin_operation(__func__);
-  if (schema == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
+  if (validate_handle(
+          schema,
+          IRX_ARROW_HANDLE_KIND_SCHEMA,
+          "schema") != kArrowOk) {
     return 0;
   }
   return schema->nullable;
 }
 
-irx_arrow_status irx_arrow_schema_retain(irx_arrow_schema_handle* schema) {
+irx_arrow_status irx_arrow_schema_retain(
+    const irx_arrow_schema_handle* schema,
+    irx_arrow_schema_handle** out_schema) {
   begin_operation(__func__);
-  if (schema == nullptr) {
-    return kArrowOk;
-  }
-  if (schema->refcount <= 0) {
-    return set_error(IRX_ARROW_STATUS_INVALID_STATE, "schema handle is released");
-  }
-  schema->refcount += 1;
-  return kArrowOk;
+  return retain_shared_handle(
+      schema,
+      out_schema,
+      IRX_ARROW_HANDLE_KIND_SCHEMA,
+      "schema");
 }
 
-void irx_arrow_schema_release(irx_arrow_schema_handle* schema) {
-  if (schema == nullptr || schema->refcount <= 0) {
-    return;
-  }
-  schema->refcount -= 1;
-  if (schema->refcount == 0) {
-    delete schema;
-  }
+irx_arrow_status irx_arrow_schema_release(
+    irx_arrow_schema_handle** schema) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      schema,
+      IRX_ARROW_HANDLE_KIND_SCHEMA,
+      "schema");
 }
 
 irx_arrow_status irx_arrow_array_builder_new(
@@ -1165,8 +1462,12 @@ irx_arrow_status irx_arrow_array_builder_append_null(
     irx_arrow_array_builder_handle* builder,
     int64_t count) {
   begin_operation(__func__);
-  if (builder == nullptr) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      "array builder");
+  if (validation != kArrowOk) {
+    return validation;
   }
   if (count < 0) {
     return set_error(IRX_ARROW_STATUS_INVALID_ARGUMENT, "null append count must be non-negative");
@@ -1182,8 +1483,12 @@ irx_arrow_status irx_arrow_array_builder_append_int(
     irx_arrow_array_builder_handle* builder,
     int64_t value) {
   begin_operation(__func__);
-  if (builder == nullptr) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      "array builder");
+  if (validation != kArrowOk) {
+    return validation;
   }
   return append_int_value(builder->builder.get(), builder->type_id, value);
 }
@@ -1192,8 +1497,12 @@ irx_arrow_status irx_arrow_array_builder_append_uint(
     irx_arrow_array_builder_handle* builder,
     uint64_t value) {
   begin_operation(__func__);
-  if (builder == nullptr) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      "array builder");
+  if (validation != kArrowOk) {
+    return validation;
   }
   return append_uint_value(builder->builder.get(), builder->type_id, value);
 }
@@ -1202,8 +1511,12 @@ irx_arrow_status irx_arrow_array_builder_append_double(
     irx_arrow_array_builder_handle* builder,
     double value) {
   begin_operation(__func__);
-  if (builder == nullptr) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      "array builder");
+  if (validation != kArrowOk) {
+    return validation;
   }
   return append_double_value(builder->builder.get(), builder->type_id, value);
 }
@@ -1220,17 +1533,27 @@ irx_arrow_status irx_arrow_array_builder_append_int32(
 }
 
 irx_arrow_status irx_arrow_array_builder_finish(
-    irx_arrow_array_builder_handle* builder,
+    irx_arrow_array_builder_handle** builder_slot,
     irx_arrow_array_handle** out_array) {
   begin_operation(__func__);
   try {
-    if (builder == nullptr) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
-    }
     if (out_array == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_array must not be NULL");
     }
     *out_array = nullptr;
+    if (builder_slot == nullptr) {
+      return set_error(
+          IRX_ARROW_STATUS_NULL_POINTER,
+          "array builder handle slot must not be NULL");
+    }
+    irx_arrow_array_builder_handle* builder = *builder_slot;
+    const irx_arrow_status validation = validate_handle(
+        builder,
+        IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+        "array builder");
+    if (validation != kArrowOk) {
+      return validation;
+    }
 
     std::shared_ptr<arrow::Array> array;
     const arrow::Status status = builder->builder->Finish(&array);
@@ -1244,7 +1567,6 @@ irx_arrow_status irx_arrow_array_builder_finish(
     }
 
     auto handle = std::make_unique<irx_arrow_array_handle>();
-    handle->refcount = kInitialRefcount;
     handle->array = std::move(array);
     ResolvedSchema resolved{spec, true};
     int code = populate_array_metadata(handle.get(), resolved);
@@ -1252,7 +1574,13 @@ irx_arrow_status irx_arrow_array_builder_finish(
       return code;
     }
 
-    delete builder;
+    const irx_arrow_status release_status = release_unique_handle(
+        builder_slot,
+        IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+        "array builder");
+    if (release_status != kArrowOk) {
+      return release_status;
+    }
     *out_array = handle.release();
     return kArrowOk;
   } catch (const std::bad_alloc&) {
@@ -1262,14 +1590,22 @@ irx_arrow_status irx_arrow_array_builder_finish(
   }
 }
 
-void irx_arrow_array_builder_release(irx_arrow_array_builder_handle* builder) {
-  delete builder;
+irx_arrow_status irx_arrow_array_builder_release(
+    irx_arrow_array_builder_handle** builder) {
+  begin_operation(__func__);
+  return release_unique_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER,
+      "array builder");
 }
 
 int64_t irx_arrow_array_length(const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr || !array->array) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk ||
+      !array->array) {
     return -1;
   }
   return array->array->length();
@@ -1277,8 +1613,11 @@ int64_t irx_arrow_array_length(const irx_arrow_array_handle* array) {
 
 int64_t irx_arrow_array_offset(const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr || !array->array) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk ||
+      !array->array) {
     return -1;
   }
   return array->array->offset();
@@ -1286,8 +1625,11 @@ int64_t irx_arrow_array_offset(const irx_arrow_array_handle* array) {
 
 int64_t irx_arrow_array_null_count(const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr || !array->array) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk ||
+      !array->array) {
     return -1;
   }
   return array->array->null_count();
@@ -1295,8 +1637,10 @@ int64_t irx_arrow_array_null_count(const irx_arrow_array_handle* array) {
 
 int32_t irx_arrow_array_type_id(const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk) {
     return IRX_ARROW_TYPE_UNKNOWN;
   }
   return array->type_id;
@@ -1304,8 +1648,10 @@ int32_t irx_arrow_array_type_id(const irx_arrow_array_handle* array) {
 
 int32_t irx_arrow_array_is_nullable(const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk) {
     return 0;
   }
   return array->nullable;
@@ -1314,8 +1660,10 @@ int32_t irx_arrow_array_is_nullable(const irx_arrow_array_handle* array) {
 int32_t irx_arrow_array_has_validity_bitmap(
     const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk) {
     return 0;
   }
   return array_has_validity_buffer(array) ? 1 : 0;
@@ -1324,8 +1672,10 @@ int32_t irx_arrow_array_has_validity_bitmap(
 int32_t irx_arrow_array_can_borrow_buffer_view(
     const irx_arrow_array_handle* array) {
   begin_operation(__func__);
-  if (array == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  if (validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array") != kArrowOk) {
     return 0;
   }
   return array->buffer_view_compatible;
@@ -1336,8 +1686,17 @@ irx_arrow_status irx_arrow_array_schema_copy(
     irx_arrow_schema_handle** out_schema) {
   begin_operation(__func__);
   try {
-    if (array == nullptr || !array->array) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+    const irx_arrow_status validation = validate_handle(
+        array,
+        IRX_ARROW_HANDLE_KIND_ARRAY,
+        "array");
+    if (validation != kArrowOk) {
+      return validation;
+    }
+    if (!array->array) {
+      return set_error(
+          IRX_ARROW_STATUS_INVALID_STATE,
+          "array handle has no Arrow array");
     }
     if (out_schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_schema must not be NULL");
@@ -1350,7 +1709,6 @@ irx_arrow_status irx_arrow_array_schema_copy(
     }
 
     auto handle = std::make_unique<irx_arrow_schema_handle>();
-    handle->refcount = kInitialRefcount;
     handle->field = arrow::field("", array->array->type(), resolved.nullable);
     handle->type_id = resolved.spec->type_id;
     handle->nullable = resolved.nullable ? 1 : 0;
@@ -1369,8 +1727,17 @@ irx_arrow_status irx_arrow_array_export(
     ArrowSchema* out_schema) {
   begin_operation(__func__);
   try {
-    if (array == nullptr || !array->array) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+    const irx_arrow_status validation = validate_handle(
+        array,
+        IRX_ARROW_HANDLE_KIND_ARRAY,
+        "array");
+    if (validation != kArrowOk) {
+      return validation;
+    }
+    if (!array->array) {
+      return set_error(
+          IRX_ARROW_STATUS_INVALID_STATE,
+          "array handle has no Arrow array");
     }
     if (out_array == nullptr || out_schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_array and out_schema must not be NULL");
@@ -1422,7 +1789,6 @@ irx_arrow_status irx_arrow_array_import_copy(
     }
 
     auto handle = std::make_unique<irx_arrow_array_handle>();
-    handle->refcount = kInitialRefcount;
     handle->array = std::move(copied_array);
     code = populate_array_metadata(handle.get(), resolved);
     if (code != kArrowOk) {
@@ -1471,7 +1837,6 @@ irx_arrow_status irx_arrow_array_import_move(
     }
 
     auto handle = std::make_unique<irx_arrow_array_handle>();
-    handle->refcount = kInitialRefcount;
     handle->array = std::move(imported);
     code = populate_array_metadata(handle.get(), imported_resolved);
     if (code != kArrowOk) {
@@ -1493,8 +1858,17 @@ irx_arrow_status irx_arrow_array_validity_bitmap(
     int64_t* out_offset_bits,
     int64_t* out_length_bits) {
   begin_operation(__func__);
-  if (array == nullptr || !array->array) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      array,
+      IRX_ARROW_HANDLE_KIND_ARRAY,
+      "array");
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (!array->array) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "array handle has no Arrow array");
   }
   if (out_data == nullptr || out_offset_bits == nullptr || out_length_bits == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_data, out_offset_bits, and out_length_bits must not be NULL");
@@ -1515,8 +1889,17 @@ irx_arrow_status irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view) {
   begin_operation(__func__);
-  if (array == nullptr || !array->array) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      array,
+      IRX_ARROW_HANDLE_KIND_ARRAY,
+      "array");
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (!array->array) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "array handle has no Arrow array");
   }
   if (out_view == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_view must not be NULL");
@@ -1559,26 +1942,24 @@ irx_arrow_status irx_arrow_array_borrow_buffer_view(
   return kArrowOk;
 }
 
-irx_arrow_status irx_arrow_array_retain(irx_arrow_array_handle* array) {
+irx_arrow_status irx_arrow_array_retain(
+    const irx_arrow_array_handle* array,
+    irx_arrow_array_handle** out_array) {
   begin_operation(__func__);
-  if (array == nullptr) {
-    return kArrowOk;
-  }
-  if (array->refcount <= 0) {
-    return set_error(IRX_ARROW_STATUS_INVALID_STATE, "array handle is released");
-  }
-  array->refcount += 1;
-  return kArrowOk;
+  return retain_shared_handle(
+      array,
+      out_array,
+      IRX_ARROW_HANDLE_KIND_ARRAY,
+      "array");
 }
 
-void irx_arrow_array_release(irx_arrow_array_handle* array) {
-  if (array == nullptr || array->refcount <= 0) {
-    return;
-  }
-  array->refcount -= 1;
-  if (array->refcount == 0) {
-    delete array;
-  }
+irx_arrow_status irx_arrow_array_release(
+    irx_arrow_array_handle** array) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      array,
+      IRX_ARROW_HANDLE_KIND_ARRAY,
+      "array");
 }
 
 irx_arrow_status irx_arrow_tensor_builder_new(
@@ -1727,17 +2108,27 @@ irx_arrow_status irx_arrow_tensor_builder_append_double(
 }
 
 irx_arrow_status irx_arrow_tensor_builder_finish(
-    irx_arrow_tensor_builder_handle* builder,
+    irx_arrow_tensor_builder_handle** builder_slot,
     irx_arrow_tensor_handle** out_tensor) {
   begin_operation(__func__);
   try {
-    if (builder == nullptr) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor builder must not be NULL");
-    }
     if (out_tensor == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_tensor must not be NULL");
     }
     *out_tensor = nullptr;
+    if (builder_slot == nullptr) {
+      return set_error(
+          IRX_ARROW_STATUS_NULL_POINTER,
+          "tensor builder handle slot must not be NULL");
+    }
+    irx_arrow_tensor_builder_handle* builder = *builder_slot;
+    const irx_arrow_status validation = validate_handle(
+        builder,
+        IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER,
+        "tensor builder");
+    if (validation != kArrowOk) {
+      return validation;
+    }
 
     if (builder->values_appended != builder->element_count) {
       return set_error(
@@ -1756,7 +2147,6 @@ irx_arrow_status irx_arrow_tensor_builder_finish(
     }
 
     auto tensor = std::make_unique<irx_arrow_tensor_handle>();
-    tensor->refcount = kInitialRefcount;
     tensor->tensor = std::move(tensor_result).ValueUnsafe();
     tensor->shape_cache = tensor->tensor->shape();
     tensor->strides_cache = tensor->tensor->strides();
@@ -1764,7 +2154,13 @@ irx_arrow_status irx_arrow_tensor_builder_finish(
     tensor->dtype_token = builder->dtype_token;
     tensor->element_size_bytes = builder->element_size_bytes;
 
-    delete builder;
+    const irx_arrow_status release_status = release_unique_handle(
+        builder_slot,
+        IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER,
+        "tensor builder");
+    if (release_status != kArrowOk) {
+      return release_status;
+    }
     *out_tensor = tensor.release();
     return kArrowOk;
   } catch (const std::bad_alloc&) {
@@ -1774,15 +2170,21 @@ irx_arrow_status irx_arrow_tensor_builder_finish(
   }
 }
 
-void irx_arrow_tensor_builder_release(
-    irx_arrow_tensor_builder_handle* builder) {
-  delete builder;
+irx_arrow_status irx_arrow_tensor_builder_release(
+    irx_arrow_tensor_builder_handle** builder) {
+  begin_operation(__func__);
+  return release_unique_handle(
+      builder,
+      IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER,
+      "tensor builder");
 }
 
 int32_t irx_arrow_tensor_type_id(const irx_arrow_tensor_handle* tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  if (validate_handle(
+          tensor,
+          IRX_ARROW_HANDLE_KIND_TENSOR,
+          "tensor") != kArrowOk) {
     return IRX_ARROW_TYPE_UNKNOWN;
   }
   return tensor->type_id;
@@ -1790,8 +2192,11 @@ int32_t irx_arrow_tensor_type_id(const irx_arrow_tensor_handle* tensor) {
 
 int32_t irx_arrow_tensor_ndim(const irx_arrow_tensor_handle* tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr || !tensor->tensor) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  if (validate_handle(
+          tensor,
+          IRX_ARROW_HANDLE_KIND_TENSOR,
+          "tensor") != kArrowOk ||
+      !tensor->tensor) {
     return -1;
   }
   return tensor->tensor->ndim();
@@ -1799,8 +2204,11 @@ int32_t irx_arrow_tensor_ndim(const irx_arrow_tensor_handle* tensor) {
 
 int64_t irx_arrow_tensor_size(const irx_arrow_tensor_handle* tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr || !tensor->tensor) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  if (validate_handle(
+          tensor,
+          IRX_ARROW_HANDLE_KIND_TENSOR,
+          "tensor") != kArrowOk ||
+      !tensor->tensor) {
     return -1;
   }
   return tensor->tensor->size();
@@ -1808,8 +2216,10 @@ int64_t irx_arrow_tensor_size(const irx_arrow_tensor_handle* tensor) {
 
 const int64_t* irx_arrow_tensor_shape(const irx_arrow_tensor_handle* tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  if (validate_handle(
+          tensor,
+          IRX_ARROW_HANDLE_KIND_TENSOR,
+          "tensor") != kArrowOk) {
     return nullptr;
   }
   return tensor->shape_cache.empty() ? nullptr : tensor->shape_cache.data();
@@ -1817,8 +2227,10 @@ const int64_t* irx_arrow_tensor_shape(const irx_arrow_tensor_handle* tensor) {
 
 const int64_t* irx_arrow_tensor_strides(const irx_arrow_tensor_handle* tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  if (validate_handle(
+          tensor,
+          IRX_ARROW_HANDLE_KIND_TENSOR,
+          "tensor") != kArrowOk) {
     return nullptr;
   }
   return tensor->strides_cache.empty() ? nullptr : tensor->strides_cache.data();
@@ -1828,8 +2240,17 @@ irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view) {
   begin_operation(__func__);
-  if (tensor == nullptr || !tensor->tensor) {
-    return set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
+  const irx_arrow_status validation = validate_handle(
+      tensor,
+      IRX_ARROW_HANDLE_KIND_TENSOR,
+      "tensor");
+  if (validation != kArrowOk) {
+    return validation;
+  }
+  if (!tensor->tensor) {
+    return set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "tensor handle has no Arrow tensor");
   }
   if (out_view == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_view must not be NULL");
@@ -1854,26 +2275,29 @@ irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
   return kArrowOk;
 }
 
-irx_arrow_status irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor) {
+irx_arrow_status irx_arrow_tensor_retain(
+    const irx_arrow_tensor_handle* tensor,
+    irx_arrow_tensor_handle** out_tensor) {
   begin_operation(__func__);
-  if (tensor == nullptr) {
-    return kArrowOk;
-  }
-  if (tensor->refcount <= 0) {
-    return set_error(IRX_ARROW_STATUS_INVALID_STATE, "tensor handle is released");
-  }
-  tensor->refcount += 1;
-  return kArrowOk;
+  return retain_shared_handle(
+      tensor,
+      out_tensor,
+      IRX_ARROW_HANDLE_KIND_TENSOR,
+      "tensor");
 }
 
-void irx_arrow_tensor_release(irx_arrow_tensor_handle* tensor) {
-  if (tensor == nullptr || tensor->refcount <= 0) {
-    return;
-  }
-  tensor->refcount -= 1;
-  if (tensor->refcount == 0) {
-    delete tensor;
-  }
+irx_arrow_status irx_arrow_tensor_release(
+    irx_arrow_tensor_handle** tensor) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      tensor,
+      IRX_ARROW_HANDLE_KIND_TENSOR,
+      "tensor");
+}
+
+void irx_arrow_tensor_release_callback(void* tensor) {
+  auto* tensor_handle = static_cast<irx_arrow_tensor_handle*>(tensor);
+  (void)irx_arrow_tensor_release(&tensor_handle);
 }
 
 irx_arrow_status irx_arrow_table_new_from_arrays(
@@ -1908,8 +2332,17 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
         return set_error(IRX_ARROW_STATUS_NULL_POINTER, "column name must not be NULL");
       }
       irx_arrow_array_handle* array = arrays[index];
-      if (array == nullptr || !array->array) {
-        return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array handle must not be NULL");
+      const irx_arrow_status validation = validate_handle(
+          array,
+          IRX_ARROW_HANDLE_KIND_ARRAY,
+          "array");
+      if (validation != kArrowOk) {
+        return validation;
+      }
+      if (!array->array) {
+        return set_error(
+            IRX_ARROW_STATUS_INVALID_STATE,
+            "array handle has no Arrow array");
       }
       const int64_t length = array->array->length();
       if (row_count < 0) {
@@ -1932,7 +2365,6 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
         row_count < 0 ? 0 : row_count);
 
     auto handle = std::make_unique<irx_arrow_table_handle>();
-    handle->refcount = kInitialRefcount;
     handle->table = std::move(table);
     *out_table = handle.release();
     return kArrowOk;
@@ -1945,8 +2377,11 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
 
 int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
   begin_operation(__func__);
-  if (table == nullptr || !table->table) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
+  if (validate_handle(
+          table,
+          IRX_ARROW_HANDLE_KIND_TABLE,
+          "table") != kArrowOk ||
+      !table->table) {
     return -1;
   }
   return table->table->num_rows();
@@ -1954,8 +2389,11 @@ int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
 
 int64_t irx_arrow_table_num_columns(const irx_arrow_table_handle* table) {
   begin_operation(__func__);
-  if (table == nullptr || !table->table) {
-    set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
+  if (validate_handle(
+          table,
+          IRX_ARROW_HANDLE_KIND_TABLE,
+          "table") != kArrowOk ||
+      !table->table) {
     return -1;
   }
   return table->table->num_columns();
@@ -1967,8 +2405,17 @@ irx_arrow_status irx_arrow_table_column_by_name(
     irx_arrow_chunked_array_handle** out_column) {
   begin_operation(__func__);
   try {
-    if (table == nullptr || !table->table) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
+    const irx_arrow_status validation = validate_handle(
+        table,
+        IRX_ARROW_HANDLE_KIND_TABLE,
+        "table");
+    if (validation != kArrowOk) {
+      return validation;
+    }
+    if (!table->table) {
+      return set_error(
+          IRX_ARROW_STATUS_INVALID_STATE,
+          "table handle has no Arrow table");
     }
     if (name == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "column name must not be NULL");
@@ -1985,7 +2432,6 @@ irx_arrow_status irx_arrow_table_column_by_name(
     }
 
     auto handle = std::make_unique<irx_arrow_chunked_array_handle>();
-    handle->refcount = kInitialRefcount;
     handle->column = std::move(column);
     *out_column = handle.release();
     return kArrowOk;
@@ -2002,8 +2448,17 @@ irx_arrow_status irx_arrow_table_column_by_index(
     irx_arrow_chunked_array_handle** out_column) {
   begin_operation(__func__);
   try {
-    if (table == nullptr || !table->table) {
-      return set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
+    const irx_arrow_status validation = validate_handle(
+        table,
+        IRX_ARROW_HANDLE_KIND_TABLE,
+        "table");
+    if (validation != kArrowOk) {
+      return validation;
+    }
+    if (!table->table) {
+      return set_error(
+          IRX_ARROW_STATUS_INVALID_STATE,
+          "table handle has no Arrow table");
     }
     if (out_column == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_column must not be NULL");
@@ -2014,7 +2469,6 @@ irx_arrow_status irx_arrow_table_column_by_index(
     }
 
     auto handle = std::make_unique<irx_arrow_chunked_array_handle>();
-    handle->refcount = kInitialRefcount;
     handle->column = table->table->column(index);
     *out_column = handle.release();
     return kArrowOk;
@@ -2025,48 +2479,44 @@ irx_arrow_status irx_arrow_table_column_by_index(
   }
 }
 
-irx_arrow_status irx_arrow_table_retain(irx_arrow_table_handle* table) {
+irx_arrow_status irx_arrow_table_retain(
+    const irx_arrow_table_handle* table,
+    irx_arrow_table_handle** out_table) {
   begin_operation(__func__);
-  if (table == nullptr) {
-    return kArrowOk;
-  }
-  if (table->refcount <= 0) {
-    return set_error(IRX_ARROW_STATUS_INVALID_STATE, "table handle is released");
-  }
-  table->refcount += 1;
-  return kArrowOk;
+  return retain_shared_handle(
+      table,
+      out_table,
+      IRX_ARROW_HANDLE_KIND_TABLE,
+      "table");
 }
 
-void irx_arrow_table_release(irx_arrow_table_handle* table) {
-  if (table == nullptr || table->refcount <= 0) {
-    return;
-  }
-  table->refcount -= 1;
-  if (table->refcount == 0) {
-    delete table;
-  }
-}
-
-irx_arrow_status irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
+irx_arrow_status irx_arrow_table_release(
+    irx_arrow_table_handle** table) {
   begin_operation(__func__);
-  if (column == nullptr) {
-    return kArrowOk;
-  }
-  if (column->refcount <= 0) {
-    return set_error(IRX_ARROW_STATUS_INVALID_STATE, "chunked array handle is released");
-  }
-  column->refcount += 1;
-  return kArrowOk;
+  return release_shared_handle(
+      table,
+      IRX_ARROW_HANDLE_KIND_TABLE,
+      "table");
 }
 
-void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column) {
-  if (column == nullptr || column->refcount <= 0) {
-    return;
-  }
-  column->refcount -= 1;
-  if (column->refcount == 0) {
-    delete column;
-  }
+irx_arrow_status irx_arrow_chunked_array_retain(
+    const irx_arrow_chunked_array_handle* column,
+    irx_arrow_chunked_array_handle** out_column) {
+  begin_operation(__func__);
+  return retain_shared_handle(
+      column,
+      out_column,
+      IRX_ARROW_HANDLE_KIND_CHUNKED_ARRAY,
+      "chunked array");
+}
+
+irx_arrow_status irx_arrow_chunked_array_release(
+    irx_arrow_chunked_array_handle** column) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      column,
+      IRX_ARROW_HANDLE_KIND_CHUNKED_ARRAY,
+      "chunked array");
 }
 
 const char* irx_arrow_last_error(void) {

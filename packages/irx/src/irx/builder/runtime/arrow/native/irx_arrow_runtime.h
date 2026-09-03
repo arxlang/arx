@@ -56,13 +56,47 @@ enum irx_arrow_status_category_code {
 };
 
 typedef struct irx_arrow_error_handle irx_arrow_error_handle;
+typedef struct irx_arrow_type_handle irx_arrow_type_handle;
 typedef struct irx_arrow_schema_handle irx_arrow_schema_handle;
+typedef struct irx_arrow_scalar_handle irx_arrow_scalar_handle;
 typedef struct irx_arrow_array_builder_handle irx_arrow_array_builder_handle;
 typedef struct irx_arrow_array_handle irx_arrow_array_handle;
+typedef struct irx_arrow_chunked_array_handle irx_arrow_chunked_array_handle;
+typedef struct irx_arrow_record_batch_handle irx_arrow_record_batch_handle;
+typedef struct irx_arrow_table_handle irx_arrow_table_handle;
 typedef struct irx_arrow_tensor_builder_handle irx_arrow_tensor_builder_handle;
 typedef struct irx_arrow_tensor_handle irx_arrow_tensor_handle;
-typedef struct irx_arrow_table_handle irx_arrow_table_handle;
-typedef struct irx_arrow_chunked_array_handle irx_arrow_chunked_array_handle;
+typedef struct irx_arrow_stream_handle irx_arrow_stream_handle;
+typedef struct irx_arrow_dataset_handle irx_arrow_dataset_handle;
+typedef struct irx_arrow_execution_plan_handle irx_arrow_execution_plan_handle;
+
+/* Stable handle-kind values describe the complete opaque-handle vocabulary.
+ * A declared kind may remain unavailable until its runtime feature lands. */
+typedef int32_t irx_arrow_handle_kind;
+enum irx_arrow_handle_kind_code {
+  IRX_ARROW_HANDLE_KIND_UNKNOWN = 0,
+  IRX_ARROW_HANDLE_KIND_ERROR = 1,
+  IRX_ARROW_HANDLE_KIND_TYPE = 2,
+  IRX_ARROW_HANDLE_KIND_SCHEMA = 3,
+  IRX_ARROW_HANDLE_KIND_SCALAR = 4,
+  IRX_ARROW_HANDLE_KIND_ARRAY_BUILDER = 5,
+  IRX_ARROW_HANDLE_KIND_ARRAY = 6,
+  IRX_ARROW_HANDLE_KIND_CHUNKED_ARRAY = 7,
+  IRX_ARROW_HANDLE_KIND_RECORD_BATCH = 8,
+  IRX_ARROW_HANDLE_KIND_TABLE = 9,
+  IRX_ARROW_HANDLE_KIND_TENSOR_BUILDER = 10,
+  IRX_ARROW_HANDLE_KIND_TENSOR = 11,
+  IRX_ARROW_HANDLE_KIND_STREAM = 12,
+  IRX_ARROW_HANDLE_KIND_DATASET = 13,
+  IRX_ARROW_HANDLE_KIND_EXECUTION_PLAN = 14,
+};
+
+typedef int32_t irx_arrow_handle_ownership;
+enum irx_arrow_handle_ownership_code {
+  IRX_ARROW_HANDLE_OWNERSHIP_UNKNOWN = 0,
+  IRX_ARROW_HANDLE_OWNERSHIP_SHARED = 1,
+  IRX_ARROW_HANDLE_OWNERSHIP_UNIQUE = 2,
+};
 
 enum irx_arrow_type_id {
   IRX_ARROW_TYPE_UNKNOWN = 0,
@@ -82,10 +116,18 @@ enum irx_arrow_type_id {
 uint32_t irx_arrow_abi_version(void);
 irx_arrow_status_category irx_arrow_status_get_category(
     irx_arrow_status status);
+irx_arrow_status irx_arrow_handle_kind_of(
+    const void* handle,
+    irx_arrow_handle_kind* out_kind);
+irx_arrow_status irx_arrow_handle_ownership_of(
+    const void* handle,
+    irx_arrow_handle_ownership* out_ownership);
 
 /* Snapshot the calling thread's latest error. A successful call with no
  * current error writes NULL. A non-NULL result is immutable, remains valid
- * across later calls and threads, and must be released exactly once. */
+ * across later calls and threads, and owns one releasable token. Retain writes
+ * a second token to an empty output slot. Release consumes and clears its slot;
+ * releasing a NULL slot value is an idempotent no-op. */
 irx_arrow_status irx_arrow_error_snapshot(
     irx_arrow_error_handle** out_error);
 irx_arrow_status irx_arrow_error_code(const irx_arrow_error_handle* error);
@@ -93,7 +135,10 @@ const char* irx_arrow_error_operation(const irx_arrow_error_handle* error);
 const char* irx_arrow_error_message(const irx_arrow_error_handle* error);
 const char* irx_arrow_error_upstream_detail(
     const irx_arrow_error_handle* error);
-void irx_arrow_error_release(irx_arrow_error_handle* error);
+irx_arrow_status irx_arrow_error_retain(
+    const irx_arrow_error_handle* error,
+    irx_arrow_error_handle** out_error);
+irx_arrow_status irx_arrow_error_release(irx_arrow_error_handle** error);
 
 irx_arrow_status irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,
@@ -103,8 +148,11 @@ irx_arrow_status irx_arrow_schema_export(
     struct ArrowSchema* out_schema);
 int32_t irx_arrow_schema_type_id(const irx_arrow_schema_handle* schema);
 int32_t irx_arrow_schema_is_nullable(const irx_arrow_schema_handle* schema);
-irx_arrow_status irx_arrow_schema_retain(irx_arrow_schema_handle* schema);
-void irx_arrow_schema_release(irx_arrow_schema_handle* schema);
+irx_arrow_status irx_arrow_schema_retain(
+    const irx_arrow_schema_handle* schema,
+    irx_arrow_schema_handle** out_schema);
+irx_arrow_status irx_arrow_schema_release(
+    irx_arrow_schema_handle** schema);
 
 irx_arrow_status irx_arrow_array_builder_new(
     int32_t type_id,
@@ -127,9 +175,10 @@ irx_arrow_status irx_arrow_array_builder_int32_new(
 irx_arrow_status irx_arrow_array_builder_append_int32(
     irx_arrow_array_builder_handle* builder, int32_t value);
 irx_arrow_status irx_arrow_array_builder_finish(
-    irx_arrow_array_builder_handle* builder,
+    irx_arrow_array_builder_handle** builder,
     irx_arrow_array_handle** out_array);
-void irx_arrow_array_builder_release(irx_arrow_array_builder_handle* builder);
+irx_arrow_status irx_arrow_array_builder_release(
+    irx_arrow_array_builder_handle** builder);
 
 int64_t irx_arrow_array_length(const irx_arrow_array_handle* array);
 int64_t irx_arrow_array_offset(const irx_arrow_array_handle* array);
@@ -171,8 +220,10 @@ irx_arrow_status irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view);
 
-irx_arrow_status irx_arrow_array_retain(irx_arrow_array_handle* array);
-void irx_arrow_array_release(irx_arrow_array_handle* array);
+irx_arrow_status irx_arrow_array_retain(
+    const irx_arrow_array_handle* array,
+    irx_arrow_array_handle** out_array);
+irx_arrow_status irx_arrow_array_release(irx_arrow_array_handle** array);
 
 irx_arrow_status irx_arrow_tensor_builder_new(
     int32_t type_id,
@@ -190,10 +241,10 @@ irx_arrow_status irx_arrow_tensor_builder_append_double(
     irx_arrow_tensor_builder_handle* builder,
     double value);
 irx_arrow_status irx_arrow_tensor_builder_finish(
-    irx_arrow_tensor_builder_handle* builder,
+    irx_arrow_tensor_builder_handle** builder,
     irx_arrow_tensor_handle** out_tensor);
-void irx_arrow_tensor_builder_release(
-    irx_arrow_tensor_builder_handle* builder);
+irx_arrow_status irx_arrow_tensor_builder_release(
+    irx_arrow_tensor_builder_handle** builder);
 
 int32_t irx_arrow_tensor_type_id(const irx_arrow_tensor_handle* tensor);
 int32_t irx_arrow_tensor_ndim(const irx_arrow_tensor_handle* tensor);
@@ -203,8 +254,10 @@ const int64_t* irx_arrow_tensor_strides(const irx_arrow_tensor_handle* tensor);
 irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view);
-irx_arrow_status irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor);
-void irx_arrow_tensor_release(irx_arrow_tensor_handle* tensor);
+irx_arrow_status irx_arrow_tensor_retain(
+    const irx_arrow_tensor_handle* tensor,
+    irx_arrow_tensor_handle** out_tensor);
+irx_arrow_status irx_arrow_tensor_release(irx_arrow_tensor_handle** tensor);
 
 irx_arrow_status irx_arrow_table_new_from_arrays(
     int64_t column_count,
@@ -221,10 +274,19 @@ irx_arrow_status irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
     irx_arrow_chunked_array_handle** out_column);
-irx_arrow_status irx_arrow_table_retain(irx_arrow_table_handle* table);
-void irx_arrow_table_release(irx_arrow_table_handle* table);
-irx_arrow_status irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column);
-void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column);
+irx_arrow_status irx_arrow_table_retain(
+    const irx_arrow_table_handle* table,
+    irx_arrow_table_handle** out_table);
+irx_arrow_status irx_arrow_table_release(irx_arrow_table_handle** table);
+irx_arrow_status irx_arrow_chunked_array_retain(
+    const irx_arrow_chunked_array_handle* column,
+    irx_arrow_chunked_array_handle** out_column);
+irx_arrow_status irx_arrow_chunked_array_release(
+    irx_arrow_chunked_array_handle** column);
+
+/* Adapter for the existing buffer-owner callback ABI. The buffer owner invokes
+ * this exactly once for the token transferred as its context. */
+void irx_arrow_tensor_release_callback(void* tensor);
 const char* irx_arrow_last_error(void);
 
 #ifdef __cplusplus

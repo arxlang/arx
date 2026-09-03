@@ -129,10 +129,11 @@
       "status": "partial",
       "test_targets": [
         "packages/irx/tests/test_runtime_features.py",
-        "packages/irx/tests/test_generators.py"
+        "packages/irx/tests/test_generators.py",
+        "packages/irx/tests/test_arrow_runtime.py"
       ],
       "blocks": ["M1", "M3", "M6"],
-      "baseline": "Strings and dynamic lists have semantic ownership, while Arrow handles expose separate retain and release operations.",
+      "baseline": "Strings and dynamic lists have semantic ownership. Native Arrow handles now use checked shared or unique owner tokens, while IRx semantic ownership remains incomplete.",
       "completion": "Generalize ownership to handles, views, fields, calls, returns, temporaries, failures, classes, and generators."
     },
     {
@@ -221,10 +222,11 @@
       "status": "partial",
       "test_targets": [
         "packages/irx/tests/analysis/test_ffi_semantics.py",
-        "packages/irx/tests/test_arrow_runtime.py"
+        "packages/irx/tests/test_arrow_runtime.py",
+        "packages/irx/tests/test_arrow_abi_manifest.py"
       ],
       "blocks": ["M1", "M3", "M6"],
-      "baseline": "C externs, the packed irx_arrow ABI 1.0.0 version query, and opaque Arrow handles exist.",
+      "baseline": "C externs, the packed irx_arrow ABI 1.0.0 query, stable opaque handle kinds, and checked owner-slot lifecycle operations exist.",
       "completion": "Add ownership and nullability annotations, complete C Data and C Stream contracts, and ABI conformance checks."
     },
     {

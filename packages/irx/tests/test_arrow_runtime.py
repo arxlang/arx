@@ -75,10 +75,21 @@ EXPECTED_ARROW_ABI_VERSION = 0x00010000
 ARROW_STATUS_OK = 0
 ARROW_STATUS_INVALID_ARGUMENT = 100
 ARROW_STATUS_NULL_POINTER = 101
+ARROW_STATUS_TYPE_MISMATCH = 103
 ARROW_STATUS_OVERFLOW = 106
 ARROW_STATUS_NOT_SUPPORTED = 107
 ARROW_STATUS_CATEGORY_INVALID = 2
 ARROW_STATUS_CATEGORY_UNKNOWN = 6
+ARROW_HANDLE_KIND_ERROR = 1
+ARROW_HANDLE_KIND_SCHEMA = 3
+ARROW_HANDLE_KIND_ARRAY_BUILDER = 5
+ARROW_HANDLE_KIND_ARRAY = 6
+ARROW_HANDLE_KIND_CHUNKED_ARRAY = 7
+ARROW_HANDLE_KIND_TABLE = 9
+ARROW_HANDLE_KIND_TENSOR_BUILDER = 10
+ARROW_HANDLE_KIND_TENSOR = 11
+ARROW_HANDLE_OWNERSHIP_SHARED = 1
+ARROW_HANDLE_OWNERSHIP_UNIQUE = 2
 
 
 class ArrowSchemaStruct(ctypes.Structure):
@@ -420,6 +431,16 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     library.irx_arrow_abi_version.restype = ctypes.c_uint32
     library.irx_arrow_status_get_category.argtypes = [ctypes.c_int32]
     library.irx_arrow_status_get_category.restype = ctypes.c_int32
+    library.irx_arrow_handle_kind_of.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int32),
+    ]
+    library.irx_arrow_handle_kind_of.restype = ctypes.c_int
+    library.irx_arrow_handle_ownership_of.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int32),
+    ]
+    library.irx_arrow_handle_ownership_of.restype = ctypes.c_int
     library.irx_arrow_error_snapshot.argtypes = [
         ctypes.POINTER(ctypes.c_void_p)
     ]
@@ -432,8 +453,15 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     library.irx_arrow_error_message.restype = ctypes.c_char_p
     library.irx_arrow_error_upstream_detail.argtypes = [ctypes.c_void_p]
     library.irx_arrow_error_upstream_detail.restype = ctypes.c_char_p
-    library.irx_arrow_error_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_error_release.restype = None
+    library.irx_arrow_error_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    library.irx_arrow_error_retain.restype = ctypes.c_int
+    library.irx_arrow_error_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_error_release.restype = ctypes.c_int
     library.irx_arrow_schema_import_copy.argtypes = [
         ctypes.c_void_p,
         ctypes.POINTER(ctypes.c_void_p),
@@ -448,10 +476,15 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     library.irx_arrow_schema_type_id.restype = ctypes.c_int32
     library.irx_arrow_schema_is_nullable.argtypes = [ctypes.c_void_p]
     library.irx_arrow_schema_is_nullable.restype = ctypes.c_int32
-    library.irx_arrow_schema_retain.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_schema_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
     library.irx_arrow_schema_retain.restype = ctypes.c_int
-    library.irx_arrow_schema_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_schema_release.restype = None
+    library.irx_arrow_schema_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_schema_release.restype = ctypes.c_int
     library.irx_arrow_array_builder_new.argtypes = [
         ctypes.c_int32,
         ctypes.POINTER(ctypes.c_void_p),
@@ -487,12 +520,14 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     ]
     library.irx_arrow_array_builder_append_int32.restype = ctypes.c_int
     library.irx_arrow_array_builder_finish.argtypes = [
-        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
         ctypes.POINTER(ctypes.c_void_p),
     ]
     library.irx_arrow_array_builder_finish.restype = ctypes.c_int
-    library.irx_arrow_array_builder_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_builder_release.restype = None
+    library.irx_arrow_array_builder_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_array_builder_release.restype = ctypes.c_int
     library.irx_arrow_array_length.argtypes = [ctypes.c_void_p]
     library.irx_arrow_array_length.restype = ctypes.c_int64
     library.irx_arrow_array_offset.argtypes = [ctypes.c_void_p]
@@ -548,10 +583,15 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
         ctypes.POINTER(BufferViewStruct),
     ]
     library.irx_arrow_array_borrow_buffer_view.restype = ctypes.c_int
-    library.irx_arrow_array_retain.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_array_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
     library.irx_arrow_array_retain.restype = ctypes.c_int
-    library.irx_arrow_array_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_array_release.restype = None
+    library.irx_arrow_array_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_array_release.restype = ctypes.c_int
     library.irx_arrow_tensor_builder_new.argtypes = [
         ctypes.c_int32,
         ctypes.c_int32,
@@ -576,12 +616,14 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     ]
     library.irx_arrow_tensor_builder_append_double.restype = ctypes.c_int
     library.irx_arrow_tensor_builder_finish.argtypes = [
-        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
         ctypes.POINTER(ctypes.c_void_p),
     ]
     library.irx_arrow_tensor_builder_finish.restype = ctypes.c_int
-    library.irx_arrow_tensor_builder_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_builder_release.restype = None
+    library.irx_arrow_tensor_builder_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_tensor_builder_release.restype = ctypes.c_int
     library.irx_arrow_tensor_type_id.argtypes = [ctypes.c_void_p]
     library.irx_arrow_tensor_type_id.restype = ctypes.c_int32
     library.irx_arrow_tensor_ndim.argtypes = [ctypes.c_void_p]
@@ -597,10 +639,50 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
         ctypes.POINTER(BufferViewStruct),
     ]
     library.irx_arrow_tensor_borrow_buffer_view.restype = ctypes.c_int
-    library.irx_arrow_tensor_retain.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_tensor_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
     library.irx_arrow_tensor_retain.restype = ctypes.c_int
-    library.irx_arrow_tensor_release.argtypes = [ctypes.c_void_p]
-    library.irx_arrow_tensor_release.restype = None
+    library.irx_arrow_tensor_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_tensor_release.restype = ctypes.c_int
+    library.irx_arrow_table_new_from_arrays.argtypes = [
+        ctypes.c_int64,
+        ctypes.POINTER(ctypes.c_char_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    library.irx_arrow_table_new_from_arrays.restype = ctypes.c_int
+    library.irx_arrow_table_num_rows.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_table_num_rows.restype = ctypes.c_int64
+    library.irx_arrow_table_num_columns.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_table_num_columns.restype = ctypes.c_int64
+    library.irx_arrow_table_column_by_index.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_int32,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    library.irx_arrow_table_column_by_index.restype = ctypes.c_int
+    library.irx_arrow_table_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    library.irx_arrow_table_retain.restype = ctypes.c_int
+    library.irx_arrow_table_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_table_release.restype = ctypes.c_int
+    library.irx_arrow_chunked_array_retain.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    library.irx_arrow_chunked_array_retain.restype = ctypes.c_int
+    library.irx_arrow_chunked_array_release.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_chunked_array_release.restype = ctypes.c_int
     library.irx_arrow_last_error.argtypes = []
     library.irx_arrow_last_error.restype = ctypes.c_char_p
 
@@ -615,6 +697,41 @@ def _assert_arrow_ok(library: ctypes.CDLL, code: int) -> None:
         type: int
     """
     assert code == 0, library.irx_arrow_last_error().decode()
+
+
+def _assert_handle_metadata(
+    library: ctypes.CDLL,
+    handle: ctypes.c_void_p,
+    expected_kind: int,
+    expected_ownership: int,
+) -> None:
+    """
+    title: Assert one opaque handle kind and ownership class.
+    parameters:
+      library:
+        type: ctypes.CDLL
+      handle:
+        type: ctypes.c_void_p
+      expected_kind:
+        type: int
+      expected_ownership:
+        type: int
+    """
+    kind = ctypes.c_int32()
+    ownership = ctypes.c_int32()
+    _assert_arrow_ok(
+        library,
+        library.irx_arrow_handle_kind_of(handle, ctypes.byref(kind)),
+    )
+    _assert_arrow_ok(
+        library,
+        library.irx_arrow_handle_ownership_of(
+            handle,
+            ctypes.byref(ownership),
+        ),
+    )
+    assert kind.value == expected_kind
+    assert ownership.value == expected_ownership
 
 
 def _build_runtime_array(
@@ -689,14 +806,18 @@ def _build_runtime_array(
         _assert_arrow_ok(
             library,
             library.irx_arrow_array_builder_finish(
-                builder,
+                ctypes.byref(builder),
                 ctypes.byref(array_handle),
             ),
         )
+        assert builder.value is None
         return array_handle
     finally:
-        if builder.value is not None and array_handle.value is None:
-            library.irx_arrow_array_builder_release(builder)
+        if builder.value is not None:
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_array_builder_release(ctypes.byref(builder)),
+            )
 
 
 def _build_runtime_tensor(
@@ -745,14 +866,20 @@ def _build_runtime_tensor(
         _assert_arrow_ok(
             library,
             library.irx_arrow_tensor_builder_finish(
-                builder,
+                ctypes.byref(builder),
                 ctypes.byref(tensor_handle),
             ),
         )
+        assert builder.value is None
         return tensor_handle
     finally:
-        if builder.value is not None and tensor_handle.value is None:
-            library.irx_arrow_tensor_builder_release(builder)
+        if builder.value is not None:
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_tensor_builder_release(
+                    ctypes.byref(builder)
+                ),
+            )
 
 
 def _arrow_array_struct(addr: int) -> ArrowArrayStruct:
@@ -1011,10 +1138,11 @@ def test_arrow_runtime_harness_lifecycle() -> None:
           if (irx_arrow_array_builder_append_int32(builder, 1) != 0) return 12;
           if (irx_arrow_array_builder_append_int32(builder, 2) != 0) return 13;
           if (irx_arrow_array_builder_append_int32(builder, 3) != 0) return 14;
-          if (irx_arrow_array_builder_finish(builder, &array) != 0) {
-            irx_arrow_array_builder_release(builder);
+          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
+            irx_arrow_array_builder_release(&builder);
             return 15;
           }
+          if (builder != NULL) return 19;
 
           if (irx_arrow_array_length(array) != 3) return 16;
           if (irx_arrow_array_null_count(array) != 0) return 17;
@@ -1022,7 +1150,8 @@ def test_arrow_runtime_harness_lifecycle() -> None:
             return 18;
           }
 
-          irx_arrow_array_release(array);
+          if (irx_arrow_array_release(&array) != 0) return 20;
+          if (array != NULL) return 21;
           return 0;
         }
         """
@@ -1188,6 +1317,296 @@ def test_arrow_runtime_reports_stable_status_codes() -> None:
         )
 
 
+def test_arrow_runtime_handle_lifecycle_contracts() -> None:
+    """
+    title: Every implemented opaque handle should obey its ownership class.
+    """
+    with _load_arrow_runtime_library() as library:
+        empty_array = ctypes.c_void_p()
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_array_release(ctypes.byref(empty_array)),
+        )
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_array_release(ctypes.byref(empty_array)),
+        )
+        assert (
+            library.irx_arrow_array_release(None) == ARROW_STATUS_NULL_POINTER
+        )
+
+        missing_retain = ctypes.c_void_p(1)
+        assert (
+            library.irx_arrow_array_retain(
+                None,
+                ctypes.byref(missing_retain),
+            )
+            == ARROW_STATUS_NULL_POINTER
+        )
+        assert missing_retain.value is None
+
+        array_builder = ctypes.c_void_p()
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_array_builder_new(
+                IRX_ARROW_TYPE_INT32,
+                ctypes.byref(array_builder),
+            ),
+        )
+        _assert_handle_metadata(
+            library,
+            array_builder,
+            ARROW_HANDLE_KIND_ARRAY_BUILDER,
+            ARROW_HANDLE_OWNERSHIP_UNIQUE,
+        )
+        wrong_array_slot = ctypes.c_void_p(array_builder.value)
+        assert (
+            library.irx_arrow_array_release(ctypes.byref(wrong_array_slot))
+            == ARROW_STATUS_TYPE_MISMATCH
+        )
+        assert wrong_array_slot.value == array_builder.value
+        wrong_array_slot.value = None
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_array_builder_release(
+                ctypes.byref(array_builder)
+            ),
+        )
+        assert array_builder.value is None
+        assert (
+            library.irx_arrow_array_builder_append_int(array_builder, 1)
+            == ARROW_STATUS_NULL_POINTER
+        )
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_array_builder_release(
+                ctypes.byref(array_builder)
+            ),
+        )
+
+        shape = (ctypes.c_int64 * 1)(1)
+        strides = (ctypes.c_int64 * 1)(4)
+        tensor_builder = ctypes.c_void_p()
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_tensor_builder_new(
+                IRX_ARROW_TYPE_INT32,
+                1,
+                shape,
+                strides,
+                ctypes.byref(tensor_builder),
+            ),
+        )
+        _assert_handle_metadata(
+            library,
+            tensor_builder,
+            ARROW_HANDLE_KIND_TENSOR_BUILDER,
+            ARROW_HANDLE_OWNERSHIP_UNIQUE,
+        )
+        _assert_arrow_ok(
+            library,
+            library.irx_arrow_tensor_builder_release(
+                ctypes.byref(tensor_builder)
+            ),
+        )
+        assert tensor_builder.value is None
+        assert (
+            library.irx_arrow_tensor_builder_append_int(tensor_builder, 1)
+            == ARROW_STATUS_NULL_POINTER
+        )
+
+        array_handle = _build_runtime_array(
+            library,
+            IRX_ARROW_TYPE_INT32,
+            "int",
+            [1, 2, 3],
+        )
+        tensor_handle = _build_runtime_tensor(
+            library,
+            [1, 2, 3, 4],
+            [2, 2],
+            [8, 4],
+        )
+        schema_handle = ctypes.c_void_p()
+        table_handle = ctypes.c_void_p()
+        column_handle = ctypes.c_void_p()
+        retained_handles: list[
+            tuple[ctypes.c_void_p, Callable[[object], int]]
+        ] = []
+
+        try:
+            shared_cases = [
+                (
+                    array_handle,
+                    ARROW_HANDLE_KIND_ARRAY,
+                    library.irx_arrow_array_retain,
+                    library.irx_arrow_array_release,
+                ),
+                (
+                    tensor_handle,
+                    ARROW_HANDLE_KIND_TENSOR,
+                    library.irx_arrow_tensor_retain,
+                    library.irx_arrow_tensor_release,
+                ),
+            ]
+            for handle, kind, retain, release in shared_cases:
+                _assert_handle_metadata(
+                    library,
+                    handle,
+                    kind,
+                    ARROW_HANDLE_OWNERSHIP_SHARED,
+                )
+                retained = ctypes.c_void_p()
+                _assert_arrow_ok(
+                    library,
+                    retain(handle, ctypes.byref(retained)),
+                )
+                assert retained.value == handle.value
+                retained_handles.append((retained, release))
+
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_array_schema_copy(
+                    array_handle,
+                    ctypes.byref(schema_handle),
+                ),
+            )
+            names = (ctypes.c_char_p * 1)(b"values")
+            arrays = (ctypes.c_void_p * 1)(array_handle.value)
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_table_new_from_arrays(
+                    1,
+                    names,
+                    arrays,
+                    ctypes.byref(table_handle),
+                ),
+            )
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_table_column_by_index(
+                    table_handle,
+                    0,
+                    ctypes.byref(column_handle),
+                ),
+            )
+
+            more_shared_cases = [
+                (
+                    schema_handle,
+                    ARROW_HANDLE_KIND_SCHEMA,
+                    library.irx_arrow_schema_retain,
+                    library.irx_arrow_schema_release,
+                ),
+                (
+                    table_handle,
+                    ARROW_HANDLE_KIND_TABLE,
+                    library.irx_arrow_table_retain,
+                    library.irx_arrow_table_release,
+                ),
+                (
+                    column_handle,
+                    ARROW_HANDLE_KIND_CHUNKED_ARRAY,
+                    library.irx_arrow_chunked_array_retain,
+                    library.irx_arrow_chunked_array_release,
+                ),
+            ]
+            for handle, kind, retain, release in more_shared_cases:
+                _assert_handle_metadata(
+                    library,
+                    handle,
+                    kind,
+                    ARROW_HANDLE_OWNERSHIP_SHARED,
+                )
+                retained = ctypes.c_void_p()
+                _assert_arrow_ok(
+                    library,
+                    retain(handle, ctypes.byref(retained)),
+                )
+                retained_handles.append((retained, release))
+        finally:
+            for retained, cleanup_release in retained_handles:
+                _assert_arrow_ok(
+                    library,
+                    cleanup_release(ctypes.byref(retained)),
+                )
+            library.irx_arrow_chunked_array_release(
+                ctypes.byref(column_handle)
+            )
+            library.irx_arrow_table_release(ctypes.byref(table_handle))
+            library.irx_arrow_schema_release(ctypes.byref(schema_handle))
+            library.irx_arrow_tensor_release(ctypes.byref(tensor_handle))
+            library.irx_arrow_array_release(ctypes.byref(array_handle))
+
+        released_slots = [
+            (column_handle, library.irx_arrow_chunked_array_release),
+            (table_handle, library.irx_arrow_table_release),
+            (schema_handle, library.irx_arrow_schema_release),
+            (tensor_handle, library.irx_arrow_tensor_release),
+            (array_handle, library.irx_arrow_array_release),
+        ]
+        for released, final_release in released_slots:
+            assert released.value is None
+            _assert_arrow_ok(
+                library,
+                final_release(ctypes.byref(released)),
+            )
+        assert library.irx_arrow_array_length(array_handle) == -1
+
+
+def test_arrow_runtime_shared_handle_refcounts_are_thread_safe() -> None:
+    """
+    title: Shared Arrow handle tokens should retain and release concurrently.
+    """
+    with _load_arrow_runtime_library() as library:
+        array_handle = _build_runtime_array(
+            library,
+            IRX_ARROW_TYPE_INT32,
+            "int",
+            [1, 2, 3],
+        )
+        address = array_handle.value
+        assert address is not None
+
+        def retain_and_release() -> list[tuple[int, int]]:
+            """
+            title: Retain and release shared tokens on one worker thread.
+            returns:
+              type: list[tuple[int, int]]
+            """
+            outcomes: list[tuple[int, int]] = []
+            for _ in range(250):
+                retained = ctypes.c_void_p()
+                retain_status = library.irx_arrow_array_retain(
+                    ctypes.c_void_p(address),
+                    ctypes.byref(retained),
+                )
+                release_status = library.irx_arrow_array_release(
+                    ctypes.byref(retained)
+                )
+                outcomes.append((retain_status, release_status))
+            return outcomes
+
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                results = list(
+                    executor.map(lambda _: retain_and_release(), range(8))
+                )
+            assert all(
+                outcome == (ARROW_STATUS_OK, ARROW_STATUS_OK)
+                for worker_results in results
+                for outcome in worker_results
+            )
+            assert (
+                library.irx_arrow_array_length(array_handle) == 3  # noqa: PLR2004
+            )
+        finally:
+            _assert_arrow_ok(
+                library,
+                library.irx_arrow_array_release(ctypes.byref(array_handle)),
+            )
+
+
 def test_arrow_runtime_error_snapshots_are_owned() -> None:
     """
     title: Arrow error snapshots should outlive later calls until released.
@@ -1199,7 +1618,11 @@ def test_arrow_runtime_error_snapshots_are_owned() -> None:
         int main(void) {
           irx_arrow_array_builder_handle* builder = NULL;
           irx_arrow_error_handle* error = NULL;
+          irx_arrow_error_handle* retained_error = NULL;
           irx_arrow_error_handle* empty = (irx_arrow_error_handle*)1;
+          irx_arrow_handle_kind kind = IRX_ARROW_HANDLE_KIND_UNKNOWN;
+          irx_arrow_handle_ownership ownership =
+              IRX_ARROW_HANDLE_OWNERSHIP_UNKNOWN;
 
           if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
             return 11;
@@ -1217,12 +1640,22 @@ def test_arrow_runtime_error_snapshots_are_owned() -> None:
           if (irx_arrow_error_operation(error)[0] == '\\0') return 18;
           if (irx_arrow_error_message(error)[0] == '\\0') return 19;
           if (irx_arrow_error_upstream_detail(error)[0] != '\\0') return 20;
+          if (irx_arrow_handle_kind_of(error, &kind) !=
+              IRX_ARROW_STATUS_OK) return 32;
+          if (kind != IRX_ARROW_HANDLE_KIND_ERROR) return 33;
+          if (irx_arrow_handle_ownership_of(error, &ownership) !=
+              IRX_ARROW_STATUS_OK) return 34;
+          if (ownership != IRX_ARROW_HANDLE_OWNERSHIP_SHARED) return 35;
+          if (irx_arrow_error_retain(error, &retained_error) !=
+              IRX_ARROW_STATUS_OK) return 36;
+          if (retained_error != error) return 37;
 
           if (irx_arrow_array_builder_new(
                   IRX_ARROW_TYPE_INT32,
                   &builder) != IRX_ARROW_STATUS_OK) return 21;
           if (builder == NULL) return 22;
-          irx_arrow_array_builder_release(builder);
+          if (irx_arrow_array_builder_release(&builder) !=
+              IRX_ARROW_STATUS_OK) return 27;
           if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
             return 23;
           }
@@ -1231,8 +1664,20 @@ def test_arrow_runtime_error_snapshots_are_owned() -> None:
           if (irx_arrow_error_snapshot(NULL) !=
               IRX_ARROW_STATUS_NULL_POINTER) return 26;
 
-          irx_arrow_error_release(error);
-          irx_arrow_error_release(NULL);
+          if (irx_arrow_error_release(&error) != IRX_ARROW_STATUS_OK) {
+            return 28;
+          }
+          if (error != NULL) return 29;
+          if (irx_arrow_error_message(retained_error)[0] == '\\0') {
+            return 38;
+          }
+          if (irx_arrow_error_release(&retained_error) !=
+              IRX_ARROW_STATUS_OK) return 39;
+          if (irx_arrow_error_release(&error) != IRX_ARROW_STATUS_OK) {
+            return 30;
+          }
+          if (irx_arrow_error_release(NULL) !=
+              IRX_ARROW_STATUS_NULL_POINTER) return 31;
           return 0;
         }
         """
@@ -1339,8 +1784,8 @@ def test_arrow_runtime_error_snapshots_are_thread_isolated() -> None:
             )
             assert main_thread_error.value is None
         finally:
-            library.irx_arrow_error_release(array_error)
-            library.irx_arrow_error_release(tensor_error)
+            library.irx_arrow_error_release(ctypes.byref(array_error))
+            library.irx_arrow_error_release(ctypes.byref(tensor_error))
 
 
 def test_arrow_runtime_harness_c_data_roundtrip() -> None:
@@ -1361,15 +1806,15 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
           if (irx_arrow_array_builder_int32_new(&builder) != 0) return 21;
           if (irx_arrow_array_builder_append_int32(builder, 4) != 0) return 22;
           if (irx_arrow_array_builder_append_int32(builder, 5) != 0) return 23;
-          if (irx_arrow_array_builder_finish(builder, &array) != 0) {
-            irx_arrow_array_builder_release(builder);
+          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
+            irx_arrow_array_builder_release(&builder);
             return 24;
           }
 
           if (
               irx_arrow_array_export(
                   array, &exported_array, &exported_schema) != 0) {
-            irx_arrow_array_release(array);
+            irx_arrow_array_release(&array);
             return 25;
           }
 
@@ -1382,7 +1827,7 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
             if (exported_schema.release != NULL) {
               exported_schema.release(&exported_schema);
             }
-            irx_arrow_array_release(array);
+            irx_arrow_array_release(&array);
             return 26;
           }
 
@@ -1398,8 +1843,8 @@ def test_arrow_runtime_harness_c_data_roundtrip() -> None:
             return 28;
           }
 
-          irx_arrow_array_release(imported);
-          irx_arrow_array_release(array);
+          irx_arrow_array_release(&imported);
+          irx_arrow_array_release(&array);
           return 0;
         }
         """
@@ -1432,8 +1877,8 @@ def test_arrow_runtime_harness_buffer_view_bridge() -> None:
           if (irx_arrow_array_builder_append_int(builder, 10) != 0) return 32;
           if (irx_arrow_array_builder_append_null(builder, 1) != 0) return 33;
           if (irx_arrow_array_builder_append_int(builder, 30) != 0) return 34;
-          if (irx_arrow_array_builder_finish(builder, &array) != 0) {
-            irx_arrow_array_builder_release(builder);
+          if (irx_arrow_array_builder_finish(&builder, &array) != 0) {
+            irx_arrow_array_builder_release(&builder);
             return 35;
           }
 
@@ -1445,7 +1890,7 @@ def test_arrow_runtime_harness_buffer_view_bridge() -> None:
           if (view.strides == NULL || view.strides[0] != 2) return 41;
           if ((view.flags & IRX_BUFFER_FLAG_VALIDITY_BITMAP) == 0) return 42;
 
-          irx_arrow_array_release(array);
+          irx_arrow_array_release(&array);
           return 0;
         }
         """
@@ -1484,7 +1929,7 @@ def test_arrow_runtime_imports_python_pyarrow_array() -> None:
         finally:
             _ = (schema_capsule, array_capsule)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_runtime_exports_to_python_pyarrow_array() -> None:
@@ -1518,7 +1963,7 @@ def test_arrow_runtime_exports_to_python_pyarrow_array() -> None:
             assert len(exported) == 3  # noqa: PLR2004
             assert exported.to_pylist() == [4, 5, 6]
         finally:
-            library.irx_arrow_array_release(array_handle)
+            library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 @pytest.mark.parametrize(
@@ -1588,7 +2033,7 @@ def test_arrow_runtime_import_export_roundtrips_supported_primitives(
         finally:
             _ = (schema_capsule, array_capsule)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_runtime_import_copy_rejects_short_buffer_layout() -> None:
@@ -1712,7 +2157,7 @@ def test_arrow_runtime_builder_supports_supported_primitives(
             )
             assert exported.to_pylist() == expected
         finally:
-            library.irx_arrow_array_release(array_handle)
+            library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_cpp_tensor_runtime_borrows_buffer_views() -> None:
@@ -1764,12 +2209,17 @@ def test_arrow_cpp_tensor_runtime_borrows_buffer_views() -> None:
                 | BUFFER_FLAG_C_CONTIGUOUS
             )
 
+            retained_tensor = ctypes.c_void_p()
             _assert_arrow_ok(
-                library, library.irx_arrow_tensor_retain(tensor_handle)
+                library,
+                library.irx_arrow_tensor_retain(
+                    tensor_handle,
+                    ctypes.byref(retained_tensor),
+                ),
             )
-            library.irx_arrow_tensor_release(tensor_handle)
+            library.irx_arrow_tensor_release(ctypes.byref(retained_tensor))
         finally:
-            library.irx_arrow_tensor_release(tensor_handle)
+            library.irx_arrow_tensor_release(ctypes.byref(tensor_handle))
 
 
 def test_arrow_cpp_tensor_runtime_reports_f_contiguous_views() -> None:
@@ -1800,7 +2250,7 @@ def test_arrow_cpp_tensor_runtime_reports_f_contiguous_views() -> None:
                 | BUFFER_FLAG_F_CONTIGUOUS
             )
         finally:
-            library.irx_arrow_tensor_release(tensor_handle)
+            library.irx_arrow_tensor_release(ctypes.byref(tensor_handle))
 
 
 def test_arrow_runtime_nullable_numeric_bridge_is_explicit() -> None:
@@ -1873,7 +2323,7 @@ def test_arrow_runtime_nullable_numeric_bridge_is_explicit() -> None:
         finally:
             _ = (schema_capsule, array_capsule)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_runtime_bool_arrays_reject_plain_buffer_view_bridge() -> None:
@@ -1917,7 +2367,7 @@ def test_arrow_runtime_bool_arrays_reject_plain_buffer_view_bridge() -> None:
         finally:
             _ = (schema_capsule, array_capsule)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_runtime_import_move_adopts_offset_arrays() -> None:
@@ -1989,7 +2439,7 @@ def test_arrow_runtime_import_move_adopts_offset_arrays() -> None:
         finally:
             _ = (schema_capsule, array_capsule)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
 
 
 def test_arrow_runtime_export_copy_survives_source_release() -> None:
@@ -2014,7 +2464,7 @@ def test_arrow_runtime_export_copy_survives_source_release() -> None:
                 ctypes.byref(exported_schema),
             ),
         )
-        library.irx_arrow_array_release(array_handle)
+        library.irx_arrow_array_release(ctypes.byref(array_handle))
 
         exported = _import_exported_array(exported_array, exported_schema)
         assert exported.to_pylist() == [4, 5, 6]
@@ -2046,11 +2496,15 @@ def test_arrow_runtime_schema_handles_roundtrip_supported_schemas() -> None:
             )
             assert library.irx_arrow_schema_is_nullable(schema_handle) == 1
 
+            retained_schema = ctypes.c_void_p()
             _assert_arrow_ok(
                 library,
-                library.irx_arrow_schema_retain(schema_handle),
+                library.irx_arrow_schema_retain(
+                    schema_handle,
+                    ctypes.byref(retained_schema),
+                ),
             )
-            library.irx_arrow_schema_release(schema_handle)
+            library.irx_arrow_schema_release(ctypes.byref(retained_schema))
             assert (
                 library.irx_arrow_schema_type_id(schema_handle)
                 == IRX_ARROW_TYPE_INT16
@@ -2080,9 +2534,9 @@ def test_arrow_runtime_schema_handles_roundtrip_supported_schemas() -> None:
             _ = (schema_capsule, array_capsule)
             _release_c_schema(exported_schema)
             if array_handle.value is not None:
-                library.irx_arrow_array_release(array_handle)
+                library.irx_arrow_array_release(ctypes.byref(array_handle))
             if schema_handle.value is not None:
-                library.irx_arrow_schema_release(schema_handle)
+                library.irx_arrow_schema_release(ctypes.byref(schema_handle))
 
 
 def test_arrow_runtime_rejects_unsupported_string_arrays() -> None:

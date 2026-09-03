@@ -92,6 +92,8 @@ re-scoped; do not defer status updates until the end of a milestone.
 | 2026-09-03 | M1-002 | IN PROGRESS -> DONE        | Native ABI and 44 runtime tests use stable Arx statuses.      |
 | 2026-09-03 | M1-003 | NOT STARTED -> IN PROGRESS | Owned, thread-safe error detail implementation started.       |
 | 2026-09-03 | M1-003 | IN PROGRESS -> DONE        | Owned snapshots pass isolation, lifetime, and 64 regressions. |
+| 2026-09-03 | M1-004 | NOT STARTED -> IN PROGRESS | Unified opaque-handle ownership implementation started.       |
+| 2026-09-03 | M1-004 | IN PROGRESS -> DONE        | ABI manifest and 50 Arrow ABI/runtime tests pass.             |
 
 ## 1. Objective
 
@@ -749,9 +751,10 @@ Cleanup rules cover all control flow:
 
 Native handle rules are:
 
-- Every handle kind has one retain and one release contract in the unified
-  `irx_arrow_*` ABI. Retain returns a new handle through a checked output slot;
-  release consumes one token. C++ exceptions never cross the C boundary.
+- Every handle kind has one retainability and one release contract in the
+  unified `irx_arrow_*` ABI. Shared retain returns a new handle through a
+  checked output slot; unique handles are explicitly non-retainable. Release
+  consumes one token. C++ exceptions never cross the C boundary.
 - A handle has a documented thread-safety class. Immutable Arrow objects may be
   shared according to Arrow's guarantees; mutable builders and execution state
   cannot be aliased across threads without an explicit synchronized wrapper.
@@ -950,7 +953,7 @@ but new functionality must use one contract.
 | M1-001 | Add the packed ABI 1.0.0 constants and version query          | **DONE**        | C harness and ctypes tests pass           |
 | M1-002 | Define stable status categories and error codes               | **DONE**        | Native header/runtime; 44 tests pass      |
 | M1-003 | Unify thread-safe error-detail retrieval                      | **DONE**        | Snapshot, lifetime, and thread tests pass |
-| M1-004 | Define every opaque handle and its ownership operations       | **NOT STARTED** | ABI manifest and lifecycle tests          |
+| M1-004 | Define every opaque handle and its ownership operations       | **DONE**        | ABI manifest; 50 Arrow tests pass         |
 | M1-005 | Generate C, Python, LLVM, and symbol declarations             | **NOT STARTED** | One checked-in ABI manifest               |
 | M1-006 | Add the versioned runtime-feature query                       | **NOT STARTED** | Feature compatibility tests               |
 | M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **NOT STARTED** | Cross-path handle and deprecation tests   |
@@ -980,6 +983,45 @@ view. New lowering must use owned error details. Adding explicit error output
 slots to generated fallible declarations and migrating the legacy RecordBatch
 ABI remain part of M1-005 and M1-007 respectively; the snapshot API does not
 misrepresent those later items as complete.
+
+### Implemented opaque-handle ownership contract (M1-004)
+
+`packages/irx/src/irx/builder/runtime/arrow/abi.json` is the checked-in source
+for the initial opaque-handle vocabulary. Stable kind IDs cover errors, types,
+schemas, scalars, array builders, arrays, chunked arrays, record batches,
+tables, tensor builders, tensors, streams, datasets, and execution plans. Each
+entry fixes its C type, shared or unique ownership class, thread-safety class,
+availability milestone, and lifecycle symbol names. M1-005 will generate the
+language bindings and declaration tables from this manifest; M1-004 does not
+claim that generation work is complete.
+
+Every currently constructible unified handle begins with an internal validated
+header containing its kind, ownership class, live marker, and reference count.
+Immutable shared handles use atomic reference counts. Retain takes a live
+borrowed source plus an output slot and publishes a second owner token only on
+success. Release takes a pointer to an owner slot, consumes one token, and
+clears the slot. A non-null slot containing null is an idempotent success; a
+null slot pointer, wrong handle kind, or invalid state returns a stable status
+without consuming a live token. Copying a raw pointer without retain never
+creates an owner token.
+
+Array and Tensor builders are unique, thread-confined handles and deliberately
+have no retain operation. Their finish operations consume and clear the builder
+slot only after publishing a complete result; a failed finish leaves the builder
+owned by the caller. Their releases use the same consuming slot rule. The
+Tensor-to-buffer bridge transfers its Tensor token through a dedicated one-shot
+callback adapter so the general buffer-owner callback ABI does not weaken the
+public Arrow release contract.
+
+Opaque types for later milestones are reserved but cannot be constructed until
+their declared feature lands. The implemented families are error, schema, array
+builder, array, chunked array, table, tensor builder, and tensor. Tests cover
+kind and ownership introspection, all implemented lifecycle functions, null and
+wrong-kind inputs, double release, use after cleared release slots, builder
+consumption, retained lifetime, and concurrent shared retain/release. The
+earlier in-tree pointer-only lifecycle signatures were provisional and are
+replaced here before ABI 1.0 conformance and distribution; released ABI 1.x
+signatures remain subject to the compatibility policy below.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 

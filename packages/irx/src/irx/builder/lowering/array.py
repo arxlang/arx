@@ -81,14 +81,12 @@ class ArrayVisitorMixin(VisitorMixinBase):
             self._llvm.ARRAY_HANDLE_TYPE,
             name="array_slot",
         )
-        self._llvm.ir_builder.call(
-            finish_builder, [builder_handle, array_slot]
-        )
+        self._llvm.ir_builder.call(finish_builder, [builder_slot, array_slot])
         array_handle = self._llvm.ir_builder.load(array_slot, "array_handle")
         length_i64 = self._llvm.ir_builder.call(
             array_length, [array_handle], "array_length"
         )
-        self._llvm.ir_builder.call(release_array, [array_handle])
+        self._llvm.ir_builder.call(release_array, [array_slot])
 
         length_i32 = self._llvm.ir_builder.trunc(
             length_i64, self._llvm.INT32_TYPE, "array_length_i32"

@@ -256,7 +256,10 @@ def _declare_table_retain(visitor: VisitorProtocol) -> ir.Function:
         visitor,
         "irx_arrow_table_retain",
         visitor._llvm.INT32_TYPE,
-        [visitor._llvm.TABLE_HANDLE_TYPE],
+        [
+            visitor._llvm.TABLE_HANDLE_TYPE,
+            visitor._llvm.TABLE_HANDLE_TYPE.as_pointer(),
+        ],
     )
 
 
@@ -273,8 +276,8 @@ def _declare_table_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_table_release",
-        visitor._llvm.VOID_TYPE,
-        [visitor._llvm.TABLE_HANDLE_TYPE],
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.TABLE_HANDLE_TYPE.as_pointer()],
     )
 
 
@@ -294,7 +297,10 @@ def _declare_chunked_array_retain(
         visitor,
         "irx_arrow_chunked_array_retain",
         visitor._llvm.INT32_TYPE,
-        [visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE],
+        [
+            visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+            visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE.as_pointer(),
+        ],
     )
 
 
@@ -313,8 +319,8 @@ def _declare_chunked_array_release(
     return _declare_function(
         visitor,
         "irx_arrow_chunked_array_release",
-        visitor._llvm.VOID_TYPE,
-        [visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE],
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE.as_pointer()],
     )
 
 

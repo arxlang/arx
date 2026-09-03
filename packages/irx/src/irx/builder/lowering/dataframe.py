@@ -223,7 +223,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
         )
         status = self._llvm.ir_builder.call(
             finish_builder,
-            [builder_handle, array_slot],
+            [builder_slot, array_slot],
         )
         self._check_arrow_status(status, "dataframe_array_builder_finish")
         return self._llvm.ir_builder.load(
@@ -404,8 +404,22 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe_table",
         )
 
-        for array_handle in array_handles:
-            self._llvm.ir_builder.call(release_array, [array_handle])
+        for index in range(column_count):
+            array_slot = self._llvm.ir_builder.gep(
+                arrays_array,
+                [
+                    ir.Constant(self._llvm.INT32_TYPE, 0),
+                    ir.Constant(self._llvm.INT32_TYPE, index),
+                ],
+            )
+            release_status = self._llvm.ir_builder.call(
+                release_array,
+                [array_slot],
+            )
+            self._check_arrow_status(
+                release_status,
+                "dataframe_array_release",
+            )
 
         self.result_stack.append(table_handle)
 
@@ -483,7 +497,14 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [table_handle])
+        retained_slot = self._llvm.ir_builder.alloca(
+            self._llvm.TABLE_HANDLE_TYPE,
+            name="retained_dataframe_slot",
+        )
+        status = self._llvm.ir_builder.call(
+            retain,
+            [table_handle, retained_slot],
+        )
         self._check_arrow_status(status, "dataframe_table_retain")
         self.result_stack.append(status)
 
@@ -501,8 +522,14 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_release",
         )
-        self._llvm.ir_builder.call(release, [table_handle])
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+        table_slot = self._llvm.ir_builder.alloca(
+            self._llvm.TABLE_HANDLE_TYPE,
+            name="released_dataframe_slot",
+        )
+        self._llvm.ir_builder.store(table_handle, table_slot)
+        status = self._llvm.ir_builder.call(release, [table_slot])
+        self._check_arrow_status(status, "dataframe_table_release")
+        self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.SeriesRetain) -> None:
@@ -518,7 +545,14 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_chunked_array_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [column_handle])
+        retained_slot = self._llvm.ir_builder.alloca(
+            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+            name="retained_series_slot",
+        )
+        status = self._llvm.ir_builder.call(
+            retain,
+            [column_handle, retained_slot],
+        )
         self._check_arrow_status(status, "dataframe_series_retain")
         self.result_stack.append(status)
 
@@ -536,8 +570,14 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_chunked_array_release",
         )
-        self._llvm.ir_builder.call(release, [column_handle])
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+        column_slot = self._llvm.ir_builder.alloca(
+            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+            name="released_series_slot",
+        )
+        self._llvm.ir_builder.store(column_handle, column_slot)
+        status = self._llvm.ir_builder.call(release, [column_slot])
+        self._check_arrow_status(status, "dataframe_series_release")
+        self.result_stack.append(status)
 
 
 __all__ = ["DataFrameVisitorMixin"]

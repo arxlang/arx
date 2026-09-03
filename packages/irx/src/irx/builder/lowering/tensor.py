@@ -401,7 +401,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         )
         self._llvm.ir_builder.call(
             finish_builder,
-            [builder_handle, tensor_slot],
+            [builder_slot, tensor_slot],
         )
         return self._llvm.ir_builder.load(
             tensor_slot,
@@ -437,7 +437,7 @@ class TensorVisitorMixin(VisitorMixinBase):
         )
         release_tensor = self.require_runtime_symbol(
             "tensor",
-            "irx_arrow_tensor_release",
+            "irx_arrow_tensor_release_callback",
         )
 
         borrowed_slot = self._llvm.ir_builder.alloca(

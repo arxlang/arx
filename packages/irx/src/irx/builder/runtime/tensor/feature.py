@@ -114,6 +114,10 @@ def build_tensor_runtime_feature() -> RuntimeFeature:
                 "irx_arrow_tensor_release",
                 _declare_tensor_release,
             ),
+            "irx_arrow_tensor_release_callback": ExternalSymbolSpec(
+                "irx_arrow_tensor_release_callback",
+                _declare_tensor_release_callback,
+            ),
             "irx_arrow_last_error": ExternalSymbolSpec(
                 "irx_arrow_last_error",
                 _declare_last_error,
@@ -274,7 +278,7 @@ def _declare_tensor_builder_finish(visitor: VisitorProtocol) -> ir.Function:
         "irx_arrow_tensor_builder_finish",
         visitor._llvm.INT32_TYPE,
         [
-            visitor._llvm.TENSOR_BUILDER_HANDLE_TYPE,
+            visitor._llvm.TENSOR_BUILDER_HANDLE_TYPE.as_pointer(),
             visitor._llvm.TENSOR_HANDLE_TYPE.as_pointer(),
         ],
     )
@@ -293,8 +297,8 @@ def _declare_tensor_builder_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_tensor_builder_release",
-        visitor._llvm.VOID_TYPE,
-        [visitor._llvm.TENSOR_BUILDER_HANDLE_TYPE],
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.TENSOR_BUILDER_HANDLE_TYPE.as_pointer()],
     )
 
 
@@ -425,7 +429,10 @@ def _declare_tensor_retain(visitor: VisitorProtocol) -> ir.Function:
         visitor,
         "irx_arrow_tensor_retain",
         visitor._llvm.INT32_TYPE,
-        [visitor._llvm.TENSOR_HANDLE_TYPE],
+        [
+            visitor._llvm.TENSOR_HANDLE_TYPE,
+            visitor._llvm.TENSOR_HANDLE_TYPE.as_pointer(),
+        ],
     )
 
 
@@ -442,8 +449,28 @@ def _declare_tensor_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_tensor_release",
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.TENSOR_HANDLE_TYPE.as_pointer()],
+    )
+
+
+@typechecked
+def _declare_tensor_release_callback(
+    visitor: VisitorProtocol,
+) -> ir.Function:
+    """
+    title: Declare Arrow tensor buffer-owner release callback.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    return _declare_function(
+        visitor,
+        "irx_arrow_tensor_release_callback",
         visitor._llvm.VOID_TYPE,
-        [visitor._llvm.TENSOR_HANDLE_TYPE],
+        [visitor._llvm.OPAQUE_POINTER_TYPE],
     )
 
 

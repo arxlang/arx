@@ -376,7 +376,10 @@ def _declare_schema_retain(visitor: VisitorProtocol) -> ir.Function:
         visitor,
         "irx_arrow_schema_retain",
         visitor._llvm.INT32_TYPE,
-        [_opaque_handle_type(visitor)],
+        [
+            _opaque_handle_type(visitor),
+            _opaque_handle_type(visitor).as_pointer(),
+        ],
     )
 
 
@@ -393,8 +396,8 @@ def _declare_schema_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_schema_release",
-        visitor._llvm.VOID_TYPE,
-        [_opaque_handle_type(visitor)],
+        visitor._llvm.INT32_TYPE,
+        [_opaque_handle_type(visitor).as_pointer()],
     )
 
 
@@ -557,7 +560,7 @@ def _declare_builder_finish(visitor: VisitorProtocol) -> ir.Function:
         "irx_arrow_array_builder_finish",
         visitor._llvm.INT32_TYPE,
         [
-            visitor._llvm.ARRAY_BUILDER_HANDLE_TYPE,
+            visitor._llvm.ARRAY_BUILDER_HANDLE_TYPE.as_pointer(),
             visitor._llvm.ARRAY_HANDLE_TYPE.as_pointer(),
         ],
     )
@@ -576,8 +579,8 @@ def _declare_builder_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_array_builder_release",
-        visitor._llvm.VOID_TYPE,
-        [visitor._llvm.ARRAY_BUILDER_HANDLE_TYPE],
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.ARRAY_BUILDER_HANDLE_TYPE.as_pointer()],
     )
 
 
@@ -858,7 +861,10 @@ def _declare_array_retain(visitor: VisitorProtocol) -> ir.Function:
         visitor,
         "irx_arrow_array_retain",
         visitor._llvm.INT32_TYPE,
-        [visitor._llvm.ARRAY_HANDLE_TYPE],
+        [
+            visitor._llvm.ARRAY_HANDLE_TYPE,
+            visitor._llvm.ARRAY_HANDLE_TYPE.as_pointer(),
+        ],
     )
 
 
@@ -875,8 +881,8 @@ def _declare_array_release(visitor: VisitorProtocol) -> ir.Function:
     return _declare_function(
         visitor,
         "irx_arrow_array_release",
-        visitor._llvm.VOID_TYPE,
-        [visitor._llvm.ARRAY_HANDLE_TYPE],
+        visitor._llvm.INT32_TYPE,
+        [visitor._llvm.ARRAY_HANDLE_TYPE.as_pointer()],
     )
 
 
