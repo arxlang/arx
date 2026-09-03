@@ -12,8 +12,10 @@ import tempfile
 import textwrap
 
 from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
+from threading import Barrier
 from typing import TypedDict, cast
 
 import astx
@@ -418,6 +420,20 @@ def _configure_arrow_runtime_library(library: ctypes.CDLL) -> None:
     library.irx_arrow_abi_version.restype = ctypes.c_uint32
     library.irx_arrow_status_get_category.argtypes = [ctypes.c_int32]
     library.irx_arrow_status_get_category.restype = ctypes.c_int32
+    library.irx_arrow_error_snapshot.argtypes = [
+        ctypes.POINTER(ctypes.c_void_p)
+    ]
+    library.irx_arrow_error_snapshot.restype = ctypes.c_int
+    library.irx_arrow_error_code.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_error_code.restype = ctypes.c_int32
+    library.irx_arrow_error_operation.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_error_operation.restype = ctypes.c_char_p
+    library.irx_arrow_error_message.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_error_message.restype = ctypes.c_char_p
+    library.irx_arrow_error_upstream_detail.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_error_upstream_detail.restype = ctypes.c_char_p
+    library.irx_arrow_error_release.argtypes = [ctypes.c_void_p]
+    library.irx_arrow_error_release.restype = None
     library.irx_arrow_schema_import_copy.argtypes = [
         ctypes.c_void_p,
         ctypes.POINTER(ctypes.c_void_p),
@@ -1170,6 +1186,161 @@ def test_arrow_runtime_reports_stable_status_codes() -> None:
             )
             == ARROW_STATUS_NOT_SUPPORTED
         )
+
+
+def test_arrow_runtime_error_snapshots_are_owned() -> None:
+    """
+    title: Arrow error snapshots should outlive later calls until released.
+    """
+    result = _compile_arrow_harness(
+        """
+        #include "irx_arrow_runtime.h"
+
+        int main(void) {
+          irx_arrow_array_builder_handle* builder = NULL;
+          irx_arrow_error_handle* error = NULL;
+          irx_arrow_error_handle* empty = (irx_arrow_error_handle*)1;
+
+          if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
+            return 11;
+          }
+          if (empty != NULL) return 12;
+          if (irx_arrow_array_builder_new(9999, &builder) !=
+              IRX_ARROW_STATUS_NOT_SUPPORTED) return 13;
+          if (builder != NULL) return 14;
+          if (irx_arrow_error_snapshot(&error) != IRX_ARROW_STATUS_OK) {
+            return 15;
+          }
+          if (error == NULL) return 16;
+          if (irx_arrow_error_code(error) !=
+              IRX_ARROW_STATUS_NOT_SUPPORTED) return 17;
+          if (irx_arrow_error_operation(error)[0] == '\\0') return 18;
+          if (irx_arrow_error_message(error)[0] == '\\0') return 19;
+          if (irx_arrow_error_upstream_detail(error)[0] != '\\0') return 20;
+
+          if (irx_arrow_array_builder_new(
+                  IRX_ARROW_TYPE_INT32,
+                  &builder) != IRX_ARROW_STATUS_OK) return 21;
+          if (builder == NULL) return 22;
+          irx_arrow_array_builder_release(builder);
+          if (irx_arrow_error_snapshot(&empty) != IRX_ARROW_STATUS_OK) {
+            return 23;
+          }
+          if (empty != NULL) return 24;
+          if (irx_arrow_error_message(error)[0] == '\\0') return 25;
+          if (irx_arrow_error_snapshot(NULL) !=
+              IRX_ARROW_STATUS_NULL_POINTER) return 26;
+
+          irx_arrow_error_release(error);
+          irx_arrow_error_release(NULL);
+          return 0;
+        }
+        """
+    )
+
+    assert result.returncode == ARROW_STATUS_OK
+    assert result.stderr == ""
+
+
+def test_arrow_runtime_error_snapshots_are_thread_isolated() -> None:
+    """
+    title: >-
+      Arrow error snapshots should be isolated and portable across threads.
+    """
+    with _load_arrow_runtime_library() as library:
+        barrier = Barrier(2)
+
+        def capture_array_error() -> ctypes.c_void_p:
+            """
+            title: Capture one array error after synchronizing worker threads.
+            returns:
+              type: ctypes.c_void_p
+            """
+            builder = ctypes.c_void_p()
+            assert (
+                library.irx_arrow_array_builder_new(
+                    9001,
+                    ctypes.byref(builder),
+                )
+                == ARROW_STATUS_NOT_SUPPORTED
+            )
+            _ = barrier.wait()
+            error = ctypes.c_void_p()
+            assert (
+                library.irx_arrow_error_snapshot(ctypes.byref(error))
+                == ARROW_STATUS_OK
+            )
+            assert error.value is not None
+            return error
+
+        def capture_tensor_error() -> ctypes.c_void_p:
+            """
+            title: Capture one tensor error after synchronizing worker threads.
+            returns:
+              type: ctypes.c_void_p
+            """
+            builder = ctypes.c_void_p()
+            assert (
+                library.irx_arrow_tensor_builder_new(
+                    IRX_ARROW_TYPE_INT32,
+                    -7,
+                    None,
+                    None,
+                    ctypes.byref(builder),
+                )
+                == ARROW_STATUS_INVALID_ARGUMENT
+            )
+            _ = barrier.wait()
+            error = ctypes.c_void_p()
+            assert (
+                library.irx_arrow_error_snapshot(ctypes.byref(error))
+                == ARROW_STATUS_OK
+            )
+            assert error.value is not None
+            return error
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            array_future = executor.submit(capture_array_error)
+            tensor_future = executor.submit(capture_tensor_error)
+            array_error = array_future.result()
+            tensor_error = tensor_future.result()
+
+        try:
+            assert (
+                library.irx_arrow_error_code(array_error)
+                == ARROW_STATUS_NOT_SUPPORTED
+            )
+            assert (
+                library.irx_arrow_error_operation(array_error).decode()
+                == "irx_arrow_array_builder_new"
+            )
+            assert (
+                "9001" in library.irx_arrow_error_message(array_error).decode()
+            )
+            assert (
+                library.irx_arrow_error_code(tensor_error)
+                == ARROW_STATUS_INVALID_ARGUMENT
+            )
+            assert (
+                library.irx_arrow_error_operation(tensor_error).decode()
+                == "irx_arrow_tensor_builder_new"
+            )
+            assert (
+                "ndim"
+                in library.irx_arrow_error_message(tensor_error).decode()
+            )
+
+            main_thread_error = ctypes.c_void_p()
+            assert (
+                library.irx_arrow_error_snapshot(
+                    ctypes.byref(main_thread_error)
+                )
+                == ARROW_STATUS_OK
+            )
+            assert main_thread_error.value is None
+        finally:
+            library.irx_arrow_error_release(array_error)
+            library.irx_arrow_error_release(tensor_error)
 
 
 def test_arrow_runtime_harness_c_data_roundtrip() -> None:

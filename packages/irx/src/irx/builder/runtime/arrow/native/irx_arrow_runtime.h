@@ -55,6 +55,7 @@ enum irx_arrow_status_category_code {
   IRX_ARROW_STATUS_CATEGORY_UNKNOWN = 6,
 };
 
+typedef struct irx_arrow_error_handle irx_arrow_error_handle;
 typedef struct irx_arrow_schema_handle irx_arrow_schema_handle;
 typedef struct irx_arrow_array_builder_handle irx_arrow_array_builder_handle;
 typedef struct irx_arrow_array_handle irx_arrow_array_handle;
@@ -81,6 +82,18 @@ enum irx_arrow_type_id {
 uint32_t irx_arrow_abi_version(void);
 irx_arrow_status_category irx_arrow_status_get_category(
     irx_arrow_status status);
+
+/* Snapshot the calling thread's latest error. A successful call with no
+ * current error writes NULL. A non-NULL result is immutable, remains valid
+ * across later calls and threads, and must be released exactly once. */
+irx_arrow_status irx_arrow_error_snapshot(
+    irx_arrow_error_handle** out_error);
+irx_arrow_status irx_arrow_error_code(const irx_arrow_error_handle* error);
+const char* irx_arrow_error_operation(const irx_arrow_error_handle* error);
+const char* irx_arrow_error_message(const irx_arrow_error_handle* error);
+const char* irx_arrow_error_upstream_detail(
+    const irx_arrow_error_handle* error);
+void irx_arrow_error_release(irx_arrow_error_handle* error);
 
 irx_arrow_status irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,

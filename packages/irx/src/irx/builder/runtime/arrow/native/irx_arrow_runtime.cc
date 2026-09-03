@@ -25,8 +25,18 @@ namespace {
 constexpr irx_arrow_status kArrowOk = IRX_ARROW_STATUS_OK;
 constexpr int64_t kInitialRefcount = 1;
 constexpr int64_t kPrimitiveArrayBufferCount = 2;
+constexpr size_t kErrorOperationCapacity = 128;
+constexpr size_t kErrorMessageCapacity = 512;
+constexpr size_t kErrorUpstreamDetailCapacity = 512;
 
-thread_local char last_error[512] = {0};
+struct ErrorDetail {
+  irx_arrow_status code = IRX_ARROW_STATUS_OK;
+  char operation[kErrorOperationCapacity] = {0};
+  char message[kErrorMessageCapacity] = {0};
+  char upstream_detail[kErrorUpstreamDetailCapacity] = {0};
+};
+
+thread_local ErrorDetail current_error;
 
 enum class AppendKind {
   kSigned,
@@ -190,6 +200,10 @@ struct ResolvedSchema {
 
 }  // namespace
 
+struct irx_arrow_error_handle {
+  ErrorDetail detail;
+};
+
 struct irx_arrow_schema_handle {
   int64_t refcount = 0;
   std::shared_ptr<arrow::Field> field;
@@ -249,13 +263,103 @@ struct irx_arrow_chunked_array_handle {
 
 namespace {
 
-void clear_error() { last_error[0] = '\0'; }
+bool is_utf8_continuation(unsigned char byte) {
+  return (byte & 0xc0U) == 0x80U;
+}
+
+size_t valid_utf8_sequence_length(
+    const unsigned char* data,
+    size_t remaining) {
+  const unsigned char lead = data[0];
+  if (lead <= 0x7fU) {
+    return 1;
+  }
+  if (lead >= 0xc2U && lead <= 0xdfU && remaining >= 2 &&
+      is_utf8_continuation(data[1])) {
+    return 2;
+  }
+  if (remaining >= 3 && lead >= 0xe0U && lead <= 0xefU &&
+      is_utf8_continuation(data[2])) {
+    const unsigned char second = data[1];
+    const bool valid_second =
+        (lead == 0xe0U && second >= 0xa0U && second <= 0xbfU) ||
+        (lead == 0xedU && second >= 0x80U && second <= 0x9fU) ||
+        ((lead >= 0xe1U && lead <= 0xecU) ||
+         (lead >= 0xeeU && lead <= 0xefU)) &&
+            is_utf8_continuation(second);
+    if (valid_second) {
+      return 3;
+    }
+  }
+  if (remaining >= 4 && lead >= 0xf0U && lead <= 0xf4U &&
+      is_utf8_continuation(data[2]) && is_utf8_continuation(data[3])) {
+    const unsigned char second = data[1];
+    const bool valid_second =
+        (lead == 0xf0U && second >= 0x90U && second <= 0xbfU) ||
+        (lead == 0xf4U && second >= 0x80U && second <= 0x8fU) ||
+        (lead >= 0xf1U && lead <= 0xf3U &&
+         is_utf8_continuation(second));
+    if (valid_second) {
+      return 4;
+    }
+  }
+  return 0;
+}
+
+void sanitize_utf8(char* text) {
+  const size_t input_length = std::strlen(text);
+  size_t read_offset = 0;
+  size_t write_offset = 0;
+  while (read_offset < input_length) {
+    const auto* current = reinterpret_cast<const unsigned char*>(
+        text + read_offset);
+    const size_t sequence_length = valid_utf8_sequence_length(
+        current,
+        input_length - read_offset);
+    if (sequence_length == 0) {
+      text[write_offset] = '?';
+      ++read_offset;
+      ++write_offset;
+      continue;
+    }
+    std::memmove(
+        text + write_offset,
+        text + read_offset,
+        sequence_length);
+    read_offset += sequence_length;
+    write_offset += sequence_length;
+  }
+  text[write_offset] = '\0';
+}
+
+void copy_error_text(char* destination, size_t capacity, const char* source) {
+  if (capacity == 0) {
+    return;
+  }
+  std::snprintf(destination, capacity, "%s", source == nullptr ? "" : source);
+  sanitize_utf8(destination);
+}
+
+void begin_operation(const char* operation) {
+  current_error = ErrorDetail{};
+  copy_error_text(
+      current_error.operation,
+      sizeof(current_error.operation),
+      operation);
+}
 
 irx_arrow_status set_error(irx_arrow_status code, const char* format, ...) {
+  current_error.code = code;
+  current_error.upstream_detail[0] = '\0';
   va_list args;
   va_start(args, format);
-  std::vsnprintf(last_error, sizeof(last_error), format, args);
+  std::vsnprintf(
+      current_error.message,
+      sizeof(current_error.message),
+      format,
+      args);
   va_end(args);
+  sanitize_utf8(current_error.message);
   return code;
 }
 
@@ -290,17 +394,38 @@ irx_arrow_status status_from_arrow(const arrow::Status& status) {
 irx_arrow_status set_arrow_error(
     const char* context,
     const arrow::Status& status) {
-  return set_error(
-      status_from_arrow(status),
-      "%s: %s",
-      context,
-      status.ToString().c_str());
+  try {
+    const std::string upstream_detail = status.ToString();
+    const irx_arrow_status code = set_error(
+        status_from_arrow(status),
+        "%s: %s",
+        context,
+        upstream_detail.c_str());
+    copy_error_text(
+        current_error.upstream_detail,
+        sizeof(current_error.upstream_detail),
+        upstream_detail.c_str());
+    return code;
+  } catch (const std::bad_alloc&) {
+    return set_error(
+        IRX_ARROW_STATUS_OUT_OF_MEMORY,
+        "%s: error detail allocation failed",
+        context);
+  } catch (...) {
+    return set_error(
+        IRX_ARROW_STATUS_INTERNAL,
+        "%s: Arrow error detail conversion failed",
+        context);
+  }
 }
 
 irx_arrow_status set_exception_error(
     const char* context,
-    const std::exception& exc) {
-  return set_error(IRX_ARROW_STATUS_INTERNAL, "%s: %s", context, exc.what());
+    const std::exception&) {
+  return set_error(
+      IRX_ARROW_STATUS_INTERNAL,
+      "%s: C++ exception contained at the Arrow ABI boundary",
+      context);
 }
 
 const TypeSpec* type_spec_from_type_id(int32_t type_id) {
@@ -864,10 +989,55 @@ irx_arrow_status_category irx_arrow_status_get_category(
   }
 }
 
+irx_arrow_status irx_arrow_error_snapshot(
+    irx_arrow_error_handle** out_error) {
+  if (out_error == nullptr) {
+    return IRX_ARROW_STATUS_NULL_POINTER;
+  }
+  *out_error = nullptr;
+  if (current_error.code == IRX_ARROW_STATUS_OK) {
+    return IRX_ARROW_STATUS_OK;
+  }
+
+  auto* error = new (std::nothrow) irx_arrow_error_handle;
+  if (error == nullptr) {
+    return IRX_ARROW_STATUS_OUT_OF_MEMORY;
+  }
+  error->detail = current_error;
+  *out_error = error;
+  return IRX_ARROW_STATUS_OK;
+}
+
+irx_arrow_status irx_arrow_error_code(
+    const irx_arrow_error_handle* error) {
+  if (error == nullptr) {
+    return IRX_ARROW_STATUS_NULL_POINTER;
+  }
+  return error->detail.code;
+}
+
+const char* irx_arrow_error_operation(
+    const irx_arrow_error_handle* error) {
+  return error == nullptr ? "" : error->detail.operation;
+}
+
+const char* irx_arrow_error_message(const irx_arrow_error_handle* error) {
+  return error == nullptr ? "" : error->detail.message;
+}
+
+const char* irx_arrow_error_upstream_detail(
+    const irx_arrow_error_handle* error) {
+  return error == nullptr ? "" : error->detail.upstream_detail;
+}
+
+void irx_arrow_error_release(irx_arrow_error_handle* error) {
+  delete error;
+}
+
 irx_arrow_status irx_arrow_schema_import_copy(
     const ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (out_schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_schema must not be NULL");
@@ -898,7 +1068,7 @@ irx_arrow_status irx_arrow_schema_import_copy(
 irx_arrow_status irx_arrow_schema_export(
     const irx_arrow_schema_handle* schema,
     ArrowSchema* out_schema) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
@@ -919,7 +1089,7 @@ irx_arrow_status irx_arrow_schema_export(
 }
 
 int32_t irx_arrow_schema_type_id(const irx_arrow_schema_handle* schema) {
-  clear_error();
+  begin_operation(__func__);
   if (schema == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
     return IRX_ARROW_TYPE_UNKNOWN;
@@ -928,7 +1098,7 @@ int32_t irx_arrow_schema_type_id(const irx_arrow_schema_handle* schema) {
 }
 
 int32_t irx_arrow_schema_is_nullable(const irx_arrow_schema_handle* schema) {
-  clear_error();
+  begin_operation(__func__);
   if (schema == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "schema must not be NULL");
     return 0;
@@ -937,7 +1107,7 @@ int32_t irx_arrow_schema_is_nullable(const irx_arrow_schema_handle* schema) {
 }
 
 irx_arrow_status irx_arrow_schema_retain(irx_arrow_schema_handle* schema) {
-  clear_error();
+  begin_operation(__func__);
   if (schema == nullptr) {
     return kArrowOk;
   }
@@ -961,7 +1131,7 @@ void irx_arrow_schema_release(irx_arrow_schema_handle* schema) {
 irx_arrow_status irx_arrow_array_builder_new(
     int32_t type_id,
     irx_arrow_array_builder_handle** out_builder) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (out_builder == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_builder must not be NULL");
@@ -994,7 +1164,7 @@ irx_arrow_status irx_arrow_array_builder_new(
 irx_arrow_status irx_arrow_array_builder_append_null(
     irx_arrow_array_builder_handle* builder,
     int64_t count) {
-  clear_error();
+  begin_operation(__func__);
   if (builder == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
   }
@@ -1011,7 +1181,7 @@ irx_arrow_status irx_arrow_array_builder_append_null(
 irx_arrow_status irx_arrow_array_builder_append_int(
     irx_arrow_array_builder_handle* builder,
     int64_t value) {
-  clear_error();
+  begin_operation(__func__);
   if (builder == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
   }
@@ -1021,7 +1191,7 @@ irx_arrow_status irx_arrow_array_builder_append_int(
 irx_arrow_status irx_arrow_array_builder_append_uint(
     irx_arrow_array_builder_handle* builder,
     uint64_t value) {
-  clear_error();
+  begin_operation(__func__);
   if (builder == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
   }
@@ -1031,7 +1201,7 @@ irx_arrow_status irx_arrow_array_builder_append_uint(
 irx_arrow_status irx_arrow_array_builder_append_double(
     irx_arrow_array_builder_handle* builder,
     double value) {
-  clear_error();
+  begin_operation(__func__);
   if (builder == nullptr) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
   }
@@ -1052,7 +1222,7 @@ irx_arrow_status irx_arrow_array_builder_append_int32(
 irx_arrow_status irx_arrow_array_builder_finish(
     irx_arrow_array_builder_handle* builder,
     irx_arrow_array_handle** out_array) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (builder == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "builder must not be NULL");
@@ -1097,7 +1267,7 @@ void irx_arrow_array_builder_release(irx_arrow_array_builder_handle* builder) {
 }
 
 int64_t irx_arrow_array_length(const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr || !array->array) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return -1;
@@ -1106,7 +1276,7 @@ int64_t irx_arrow_array_length(const irx_arrow_array_handle* array) {
 }
 
 int64_t irx_arrow_array_offset(const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr || !array->array) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return -1;
@@ -1115,7 +1285,7 @@ int64_t irx_arrow_array_offset(const irx_arrow_array_handle* array) {
 }
 
 int64_t irx_arrow_array_null_count(const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr || !array->array) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return -1;
@@ -1124,7 +1294,7 @@ int64_t irx_arrow_array_null_count(const irx_arrow_array_handle* array) {
 }
 
 int32_t irx_arrow_array_type_id(const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return IRX_ARROW_TYPE_UNKNOWN;
@@ -1133,7 +1303,7 @@ int32_t irx_arrow_array_type_id(const irx_arrow_array_handle* array) {
 }
 
 int32_t irx_arrow_array_is_nullable(const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return 0;
@@ -1143,7 +1313,7 @@ int32_t irx_arrow_array_is_nullable(const irx_arrow_array_handle* array) {
 
 int32_t irx_arrow_array_has_validity_bitmap(
     const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return 0;
@@ -1153,7 +1323,7 @@ int32_t irx_arrow_array_has_validity_bitmap(
 
 int32_t irx_arrow_array_can_borrow_buffer_view(
     const irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
     return 0;
@@ -1164,7 +1334,7 @@ int32_t irx_arrow_array_can_borrow_buffer_view(
 irx_arrow_status irx_arrow_array_schema_copy(
     const irx_arrow_array_handle* array,
     irx_arrow_schema_handle** out_schema) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (array == nullptr || !array->array) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
@@ -1197,7 +1367,7 @@ irx_arrow_status irx_arrow_array_export(
     const irx_arrow_array_handle* array,
     ArrowArray* out_array,
     ArrowSchema* out_schema) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (array == nullptr || !array->array) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
@@ -1229,7 +1399,7 @@ irx_arrow_status irx_arrow_array_import_copy(
     const ArrowArray* array,
     const ArrowSchema* schema,
     irx_arrow_array_handle** out_array) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (array == nullptr || schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array and schema must not be NULL");
@@ -1272,7 +1442,7 @@ irx_arrow_status irx_arrow_array_import_move(
     ArrowArray* array,
     ArrowSchema* schema,
     irx_arrow_array_handle** out_array) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (array == nullptr || schema == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array and schema must not be NULL");
@@ -1322,7 +1492,7 @@ irx_arrow_status irx_arrow_array_validity_bitmap(
     const void** out_data,
     int64_t* out_offset_bits,
     int64_t* out_length_bits) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr || !array->array) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
   }
@@ -1344,7 +1514,7 @@ irx_arrow_status irx_arrow_array_validity_bitmap(
 irx_arrow_status irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr || !array->array) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "array must not be NULL");
   }
@@ -1390,7 +1560,7 @@ irx_arrow_status irx_arrow_array_borrow_buffer_view(
 }
 
 irx_arrow_status irx_arrow_array_retain(irx_arrow_array_handle* array) {
-  clear_error();
+  begin_operation(__func__);
   if (array == nullptr) {
     return kArrowOk;
   }
@@ -1417,7 +1587,7 @@ irx_arrow_status irx_arrow_tensor_builder_new(
     const int64_t* shape,
     const int64_t* strides,
     irx_arrow_tensor_builder_handle** out_builder) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (out_builder == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_builder must not be NULL");
@@ -1478,7 +1648,7 @@ irx_arrow_status irx_arrow_tensor_builder_new(
 irx_arrow_status irx_arrow_tensor_builder_append_int(
     irx_arrow_tensor_builder_handle* builder,
     int64_t value) {
-  clear_error();
+  begin_operation(__func__);
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
   if (code != kArrowOk) {
@@ -1507,7 +1677,7 @@ irx_arrow_status irx_arrow_tensor_builder_append_int(
 irx_arrow_status irx_arrow_tensor_builder_append_uint(
     irx_arrow_tensor_builder_handle* builder,
     uint64_t value) {
-  clear_error();
+  begin_operation(__func__);
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
   if (code != kArrowOk) {
@@ -1536,7 +1706,7 @@ irx_arrow_status irx_arrow_tensor_builder_append_uint(
 irx_arrow_status irx_arrow_tensor_builder_append_double(
     irx_arrow_tensor_builder_handle* builder,
     double value) {
-  clear_error();
+  begin_operation(__func__);
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
   if (code != kArrowOk) {
@@ -1559,7 +1729,7 @@ irx_arrow_status irx_arrow_tensor_builder_append_double(
 irx_arrow_status irx_arrow_tensor_builder_finish(
     irx_arrow_tensor_builder_handle* builder,
     irx_arrow_tensor_handle** out_tensor) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (builder == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor builder must not be NULL");
@@ -1610,7 +1780,7 @@ void irx_arrow_tensor_builder_release(
 }
 
 int32_t irx_arrow_tensor_type_id(const irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
     return IRX_ARROW_TYPE_UNKNOWN;
@@ -1619,7 +1789,7 @@ int32_t irx_arrow_tensor_type_id(const irx_arrow_tensor_handle* tensor) {
 }
 
 int32_t irx_arrow_tensor_ndim(const irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr || !tensor->tensor) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
     return -1;
@@ -1628,7 +1798,7 @@ int32_t irx_arrow_tensor_ndim(const irx_arrow_tensor_handle* tensor) {
 }
 
 int64_t irx_arrow_tensor_size(const irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr || !tensor->tensor) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
     return -1;
@@ -1637,7 +1807,7 @@ int64_t irx_arrow_tensor_size(const irx_arrow_tensor_handle* tensor) {
 }
 
 const int64_t* irx_arrow_tensor_shape(const irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
     return nullptr;
@@ -1646,7 +1816,7 @@ const int64_t* irx_arrow_tensor_shape(const irx_arrow_tensor_handle* tensor) {
 }
 
 const int64_t* irx_arrow_tensor_strides(const irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
     return nullptr;
@@ -1657,7 +1827,7 @@ const int64_t* irx_arrow_tensor_strides(const irx_arrow_tensor_handle* tensor) {
 irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr || !tensor->tensor) {
     return set_error(IRX_ARROW_STATUS_NULL_POINTER, "tensor must not be NULL");
   }
@@ -1685,7 +1855,7 @@ irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
 }
 
 irx_arrow_status irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor) {
-  clear_error();
+  begin_operation(__func__);
   if (tensor == nullptr) {
     return kArrowOk;
   }
@@ -1711,7 +1881,7 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
     const char** names,
     irx_arrow_array_handle** arrays,
     irx_arrow_table_handle** out_table) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (out_table == nullptr) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "out_table must not be NULL");
@@ -1774,7 +1944,7 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
 }
 
 int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
-  clear_error();
+  begin_operation(__func__);
   if (table == nullptr || !table->table) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
     return -1;
@@ -1783,7 +1953,7 @@ int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
 }
 
 int64_t irx_arrow_table_num_columns(const irx_arrow_table_handle* table) {
-  clear_error();
+  begin_operation(__func__);
   if (table == nullptr || !table->table) {
     set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
     return -1;
@@ -1795,7 +1965,7 @@ irx_arrow_status irx_arrow_table_column_by_name(
     const irx_arrow_table_handle* table,
     const char* name,
     irx_arrow_chunked_array_handle** out_column) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (table == nullptr || !table->table) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
@@ -1830,7 +2000,7 @@ irx_arrow_status irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
     irx_arrow_chunked_array_handle** out_column) {
-  clear_error();
+  begin_operation(__func__);
   try {
     if (table == nullptr || !table->table) {
       return set_error(IRX_ARROW_STATUS_NULL_POINTER, "table must not be NULL");
@@ -1856,7 +2026,7 @@ irx_arrow_status irx_arrow_table_column_by_index(
 }
 
 irx_arrow_status irx_arrow_table_retain(irx_arrow_table_handle* table) {
-  clear_error();
+  begin_operation(__func__);
   if (table == nullptr) {
     return kArrowOk;
   }
@@ -1878,7 +2048,7 @@ void irx_arrow_table_release(irx_arrow_table_handle* table) {
 }
 
 irx_arrow_status irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
-  clear_error();
+  begin_operation(__func__);
   if (column == nullptr) {
     return kArrowOk;
   }
@@ -1900,7 +2070,7 @@ void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column) {
 }
 
 const char* irx_arrow_last_error(void) {
-  return last_error;
+  return current_error.message;
 }
 
 }  // extern "C"
