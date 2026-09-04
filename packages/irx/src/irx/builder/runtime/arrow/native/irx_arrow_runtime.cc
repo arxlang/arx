@@ -1,6 +1,7 @@
 // Copyright IRx contributors.
 
 #include "irx_arrow_runtime.h"
+#include "irx_arrow_runtime_internal.h"
 
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
@@ -23,9 +24,10 @@
 
 namespace {
 
+using irx_arrow_internal::HandleHeader;
+using irx_arrow_internal::kHandleMagic;
+
 constexpr irx_arrow_status kArrowOk = IRX_ARROW_STATUS_OK;
-constexpr int64_t kInitialRefcount = 1;
-constexpr uint64_t kHandleMagic = UINT64_C(0x4952584152524f57);
 constexpr int64_t kPrimitiveArrayBufferCount = 2;
 constexpr size_t kErrorOperationCapacity = 128;
 constexpr size_t kErrorMessageCapacity = 512;
@@ -36,21 +38,6 @@ struct ErrorDetail {
   char operation[kErrorOperationCapacity] = {0};
   char message[kErrorMessageCapacity] = {0};
   char upstream_detail[kErrorUpstreamDetailCapacity] = {0};
-};
-
-struct HandleHeader {
-  HandleHeader(
-      irx_arrow_handle_kind handle_kind,
-      irx_arrow_handle_ownership handle_ownership)
-      : magic(kHandleMagic),
-        kind(handle_kind),
-        ownership(handle_ownership),
-        refcount(kInitialRefcount) {}
-
-  uint64_t magic;
-  irx_arrow_handle_kind kind;
-  irx_arrow_handle_ownership ownership;
-  mutable std::atomic<int64_t> refcount;
 };
 
 thread_local ErrorDetail current_error;
@@ -2022,6 +2009,151 @@ irx_arrow_status irx_arrow_array_release(
       array,
       IRX_ARROW_HANDLE_KIND_ARRAY,
       "array");
+}
+
+irx_arrow_status irx_arrow_record_batch_import_move(
+    ArrowArray* array,
+    ArrowSchema* schema,
+    irx_arrow_record_batch_handle** out_batch) {
+  begin_operation(__func__);
+  try {
+    if (out_batch == nullptr) {
+      return set_error(
+          IRX_ARROW_STATUS_NULL_POINTER,
+          "out_batch must not be NULL");
+    }
+    *out_batch = nullptr;
+    if (array == nullptr || schema == nullptr) {
+      return set_error(
+          IRX_ARROW_STATUS_NULL_POINTER,
+          "array and schema must not be NULL");
+    }
+
+    arrow::Result<std::shared_ptr<arrow::RecordBatch>> import_result =
+        arrow::ImportRecordBatch(array, schema);
+    if (!import_result.ok()) {
+      return set_arrow_error(
+          "Arrow RecordBatch import failed",
+          import_result.status());
+    }
+    std::shared_ptr<arrow::RecordBatch> imported =
+        std::move(import_result).ValueUnsafe();
+    const arrow::Status validation = imported->ValidateFull();
+    if (!validation.ok()) {
+      return set_arrow_error(
+          "Imported Arrow RecordBatch validation failed",
+          validation);
+    }
+
+    auto handle = std::make_unique<irx_arrow_record_batch_handle>();
+    handle->batch = std::move(imported);
+    *out_batch = handle.release();
+    return kArrowOk;
+  } catch (const std::bad_alloc&) {
+    return set_error(
+        IRX_ARROW_STATUS_OUT_OF_MEMORY,
+        "failed to allocate Arrow RecordBatch");
+  } catch (const std::exception& exc) {
+    return set_exception_error(
+        "irx_arrow_record_batch_import_move",
+        exc);
+  }
+}
+
+irx_arrow_status irx_arrow_record_batch_export(
+    const irx_arrow_record_batch_handle* batch,
+    ArrowArray* out_array,
+    ArrowSchema* out_schema) {
+  begin_operation(__func__);
+  try {
+    if (out_array != nullptr) {
+      std::memset(out_array, 0, sizeof(*out_array));
+    }
+    if (out_schema != nullptr) {
+      std::memset(out_schema, 0, sizeof(*out_schema));
+    }
+    if (out_array == nullptr || out_schema == nullptr) {
+      return set_error(
+          IRX_ARROW_STATUS_NULL_POINTER,
+          "out_array and out_schema must not be NULL");
+    }
+    const irx_arrow_status validation = validate_handle(
+        batch,
+        IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
+        "record_batch");
+    if (validation != kArrowOk) {
+      return validation;
+    }
+    if (!batch->batch) {
+      return set_error(
+          IRX_ARROW_STATUS_INVALID_STATE,
+          "record_batch handle has no Arrow RecordBatch");
+    }
+    const arrow::Status status =
+        arrow::ExportRecordBatch(*batch->batch, out_array, out_schema);
+    if (!status.ok()) {
+      return set_arrow_error("Arrow RecordBatch export failed", status);
+    }
+    return kArrowOk;
+  } catch (const std::exception& exc) {
+    return set_exception_error("irx_arrow_record_batch_export", exc);
+  }
+}
+
+int64_t irx_arrow_record_batch_num_rows(
+    const irx_arrow_record_batch_handle* batch) {
+  begin_operation(__func__);
+  if (validate_handle(
+          batch,
+          IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
+          "record_batch") != kArrowOk) {
+    return -1;
+  }
+  if (!batch->batch) {
+    set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "record_batch handle has no Arrow RecordBatch");
+    return -1;
+  }
+  return batch->batch->num_rows();
+}
+
+int64_t irx_arrow_record_batch_num_columns(
+    const irx_arrow_record_batch_handle* batch) {
+  begin_operation(__func__);
+  if (validate_handle(
+          batch,
+          IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
+          "record_batch") != kArrowOk) {
+    return -1;
+  }
+  if (!batch->batch) {
+    set_error(
+        IRX_ARROW_STATUS_INVALID_STATE,
+        "record_batch handle has no Arrow RecordBatch");
+    return -1;
+  }
+  return batch->batch->num_columns();
+}
+
+irx_arrow_status irx_arrow_record_batch_retain(
+    const irx_arrow_record_batch_handle* batch,
+    irx_arrow_record_batch_handle** out_batch) {
+  begin_operation(__func__);
+  return retain_shared_handle(
+      batch,
+      out_batch,
+      IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
+      "record_batch");
+}
+
+irx_arrow_status irx_arrow_record_batch_release(
+    irx_arrow_record_batch_handle** batch) {
+  begin_operation(__func__);
+  return release_shared_handle(
+      batch,
+      IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
+      "record_batch");
 }
 
 irx_arrow_status irx_arrow_tensor_builder_new(

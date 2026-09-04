@@ -89,6 +89,18 @@
   irx_arrow_internal_array_retain
 #define irx_arrow_array_release \
   irx_arrow_internal_array_release
+#define irx_arrow_record_batch_import_move \
+  irx_arrow_internal_record_batch_import_move
+#define irx_arrow_record_batch_export \
+  irx_arrow_internal_record_batch_export
+#define irx_arrow_record_batch_num_rows \
+  irx_arrow_internal_record_batch_num_rows
+#define irx_arrow_record_batch_num_columns \
+  irx_arrow_internal_record_batch_num_columns
+#define irx_arrow_record_batch_retain \
+  irx_arrow_internal_record_batch_retain
+#define irx_arrow_record_batch_release \
+  irx_arrow_internal_record_batch_release
 #define irx_arrow_tensor_builder_new \
   irx_arrow_internal_tensor_builder_new
 #define irx_arrow_tensor_builder_append_int \
@@ -297,6 +309,29 @@ irx_arrow_status irx_arrow_array_retain(
 
 irx_arrow_status irx_arrow_array_release(
     irx_arrow_array_handle** array);
+
+irx_arrow_status irx_arrow_record_batch_import_move(
+    struct ArrowArray* array,
+    struct ArrowSchema* schema,
+    irx_arrow_record_batch_handle** out_batch);
+
+irx_arrow_status irx_arrow_record_batch_export(
+    const irx_arrow_record_batch_handle* batch,
+    struct ArrowArray* out_array,
+    struct ArrowSchema* out_schema);
+
+int64_t irx_arrow_record_batch_num_rows(
+    const irx_arrow_record_batch_handle* batch);
+
+int64_t irx_arrow_record_batch_num_columns(
+    const irx_arrow_record_batch_handle* batch);
+
+irx_arrow_status irx_arrow_record_batch_retain(
+    const irx_arrow_record_batch_handle* batch,
+    irx_arrow_record_batch_handle** out_batch);
+
+irx_arrow_status irx_arrow_record_batch_release(
+    irx_arrow_record_batch_handle** batch);
 
 irx_arrow_status irx_arrow_tensor_builder_new(
     int32_t type_id,

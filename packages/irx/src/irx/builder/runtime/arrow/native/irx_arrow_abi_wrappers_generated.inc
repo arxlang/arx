@@ -43,6 +43,12 @@
 #undef irx_arrow_array_borrow_buffer_view
 #undef irx_arrow_array_retain
 #undef irx_arrow_array_release
+#undef irx_arrow_record_batch_import_move
+#undef irx_arrow_record_batch_export
+#undef irx_arrow_record_batch_num_rows
+#undef irx_arrow_record_batch_num_columns
+#undef irx_arrow_record_batch_retain
+#undef irx_arrow_record_batch_release
 #undef irx_arrow_tensor_builder_new
 #undef irx_arrow_tensor_builder_append_int
 #undef irx_arrow_tensor_builder_append_uint
@@ -1083,6 +1089,151 @@ irx_arrow_status irx_arrow_array_release(
   return finish_generated_call(
       status,
       "irx_arrow_array_release",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_import_move(
+    struct ArrowArray* array,
+    struct ArrowSchema* schema,
+    irx_arrow_record_batch_handle** out_batch,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_import_move");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  const irx_arrow_status status =
+      irx_arrow_internal_record_batch_import_move(array, schema, out_batch);
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_import_move",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_export(
+    const irx_arrow_record_batch_handle* batch,
+    struct ArrowArray* out_array,
+    struct ArrowSchema* out_schema,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_export");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  const irx_arrow_status status =
+      irx_arrow_internal_record_batch_export(batch, out_array, out_schema);
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_export",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_num_rows(
+    const irx_arrow_record_batch_handle* batch,
+    int64_t* out_num_rows,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_num_rows");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  if (out_num_rows == nullptr) {
+    begin_operation("irx_arrow_record_batch_num_rows");
+    const irx_arrow_status status = set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_num_rows must not be NULL");
+    return finish_generated_call(
+        status,
+        "irx_arrow_record_batch_num_rows",
+        out_failure);
+  }
+  *out_num_rows = 0;
+  int64_t value =
+      irx_arrow_internal_record_batch_num_rows(batch);
+  const irx_arrow_status status = current_error.code;
+  if (status == IRX_ARROW_STATUS_OK) {
+    *out_num_rows = value;
+  }
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_num_rows",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_num_columns(
+    const irx_arrow_record_batch_handle* batch,
+    int64_t* out_num_columns,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_num_columns");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  if (out_num_columns == nullptr) {
+    begin_operation("irx_arrow_record_batch_num_columns");
+    const irx_arrow_status status = set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_num_columns must not be NULL");
+    return finish_generated_call(
+        status,
+        "irx_arrow_record_batch_num_columns",
+        out_failure);
+  }
+  *out_num_columns = 0;
+  int64_t value =
+      irx_arrow_internal_record_batch_num_columns(batch);
+  const irx_arrow_status status = current_error.code;
+  if (status == IRX_ARROW_STATUS_OK) {
+    *out_num_columns = value;
+  }
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_num_columns",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_retain(
+    const irx_arrow_record_batch_handle* batch,
+    irx_arrow_record_batch_handle** out_batch,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_retain");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  const irx_arrow_status status =
+      irx_arrow_internal_record_batch_retain(batch, out_batch);
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_retain",
+      out_failure);
+}
+
+irx_arrow_status irx_arrow_record_batch_release(
+    irx_arrow_record_batch_handle** batch,
+    irx_arrow_error_handle** out_failure) {
+  if (out_failure == nullptr) {
+    begin_operation("irx_arrow_record_batch_release");
+    return set_error(
+        IRX_ARROW_STATUS_NULL_POINTER,
+        "out_failure must not be NULL");
+  }
+  *out_failure = nullptr;
+  const irx_arrow_status status =
+      irx_arrow_internal_record_batch_release(batch);
+  return finish_generated_call(
+      status,
+      "irx_arrow_record_batch_release",
       out_failure);
 }
 

@@ -63,6 +63,7 @@ enum irx_arrow_runtime_feature_id_code {
   IRX_ARROW_RUNTIME_FEATURE_ARRAY = 2,
   IRX_ARROW_RUNTIME_FEATURE_TENSOR = 3,
   IRX_ARROW_RUNTIME_FEATURE_DATAFRAME = 4,
+  IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH = 5,
 };
 
 #define IRX_ARROW_RUNTIME_FEATURE_CORE_CONTRACT_VERSION_MAJOR UINT32_C(1)
@@ -96,6 +97,14 @@ enum irx_arrow_runtime_feature_id_code {
   ((IRX_ARROW_RUNTIME_FEATURE_DATAFRAME_CONTRACT_VERSION_MAJOR << 16) | \
    (IRX_ARROW_RUNTIME_FEATURE_DATAFRAME_CONTRACT_VERSION_MINOR << 8) | \
    IRX_ARROW_RUNTIME_FEATURE_DATAFRAME_CONTRACT_VERSION_PATCH)
+
+#define IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_MAJOR UINT32_C(1)
+#define IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_MINOR UINT32_C(0)
+#define IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_PATCH UINT32_C(0)
+#define IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION \
+  ((IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_MAJOR << 16) | \
+   (IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_MINOR << 8) | \
+   IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION_PATCH)
 
 typedef struct irx_arrow_error_handle irx_arrow_error_handle;
 typedef struct irx_arrow_type_handle irx_arrow_type_handle;
@@ -372,6 +381,37 @@ irx_arrow_status irx_arrow_array_retain(
 
 irx_arrow_status irx_arrow_array_release(
     irx_arrow_array_handle** array,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_import_move(
+    struct ArrowArray* array,
+    struct ArrowSchema* schema,
+    irx_arrow_record_batch_handle** out_batch,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_export(
+    const irx_arrow_record_batch_handle* batch,
+    struct ArrowArray* out_array,
+    struct ArrowSchema* out_schema,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_num_rows(
+    const irx_arrow_record_batch_handle* batch,
+    int64_t* out_num_rows,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_num_columns(
+    const irx_arrow_record_batch_handle* batch,
+    int64_t* out_num_columns,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_retain(
+    const irx_arrow_record_batch_handle* batch,
+    irx_arrow_record_batch_handle** out_batch,
+    irx_arrow_error_handle** out_failure);
+
+irx_arrow_status irx_arrow_record_batch_release(
+    irx_arrow_record_batch_handle** batch,
     irx_arrow_error_handle** out_failure);
 
 irx_arrow_status irx_arrow_tensor_builder_new(

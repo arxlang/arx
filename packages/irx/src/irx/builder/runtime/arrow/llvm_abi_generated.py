@@ -10,12 +10,14 @@ LLVM_RUNTIME_FEATURE_IDS = {
     "array": 2,
     "tensor": 3,
     "dataframe": 4,
+    "record_batch": 5,
 }
 LLVM_RUNTIME_FEATURE_VERSIONS = {
     "core": 65536,
     "array": 65536,
     "tensor": 65536,
     "dataframe": 65536,
+    "record_batch": 65536,
 }
 LLVM_HANDLE_TYPES = (
     "error",
@@ -372,6 +374,55 @@ LLVM_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
             "error_pointer",
         ),
     ),
+    "irx_arrow_record_batch_import_move": (
+        "status",
+        (
+            "arrow_array",
+            "arrow_schema",
+            "record_batch_pointer",
+            "error_pointer",
+        ),
+    ),
+    "irx_arrow_record_batch_export": (
+        "status",
+        (
+            "const_record_batch",
+            "arrow_array",
+            "arrow_schema",
+            "error_pointer",
+        ),
+    ),
+    "irx_arrow_record_batch_num_rows": (
+        "status",
+        (
+            "const_record_batch",
+            "int64_pointer",
+            "error_pointer",
+        ),
+    ),
+    "irx_arrow_record_batch_num_columns": (
+        "status",
+        (
+            "const_record_batch",
+            "int64_pointer",
+            "error_pointer",
+        ),
+    ),
+    "irx_arrow_record_batch_retain": (
+        "status",
+        (
+            "const_record_batch",
+            "record_batch_pointer",
+            "error_pointer",
+        ),
+    ),
+    "irx_arrow_record_batch_release": (
+        "status",
+        (
+            "record_batch_pointer",
+            "error_pointer",
+        ),
+    ),
     "irx_arrow_tensor_builder_new": (
         "status",
         (
@@ -648,6 +699,14 @@ LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
         "irx_arrow_table_release",
         "irx_arrow_chunked_array_retain",
         "irx_arrow_chunked_array_release",
+    ),
+    "record_batch": (
+        "irx_arrow_record_batch_import_move",
+        "irx_arrow_record_batch_export",
+        "irx_arrow_record_batch_num_rows",
+        "irx_arrow_record_batch_num_columns",
+        "irx_arrow_record_batch_retain",
+        "irx_arrow_record_batch_release",
     ),
 }
 

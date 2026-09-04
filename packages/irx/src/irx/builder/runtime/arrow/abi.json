@@ -80,6 +80,12 @@
       "name": "dataframe",
       "contract_version": "1.0.0",
       "availability": "implemented"
+    },
+    {
+      "id": 5,
+      "name": "record_batch",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
     }
   ],
   "handles": [
@@ -159,7 +165,7 @@
       "c_type": "irx_arrow_record_batch_handle",
       "ownership": "shared",
       "thread_safety": "immutable_shared",
-      "availability": "planned_m1_007",
+      "availability": "implemented",
       "retain": "irx_arrow_record_batch_retain",
       "release": "irx_arrow_record_batch_release"
     },
@@ -575,7 +581,55 @@
       "return": "status",
       "parameters": [["array_pointer", "array"]]
     },
-
+    {
+      "name": "irx_arrow_record_batch_import_move",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["arrow_array", "array"],
+        ["arrow_schema", "schema"],
+        ["record_batch_pointer", "out_batch"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_export",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["const_record_batch", "batch"],
+        ["arrow_array", "out_array"],
+        ["arrow_schema", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_num_rows",
+      "features": ["record_batch"],
+      "return": "int64",
+      "parameters": [["const_record_batch", "batch"]],
+      "result": ["int64_pointer", "out_num_rows"]
+    },
+    {
+      "name": "irx_arrow_record_batch_num_columns",
+      "features": ["record_batch"],
+      "return": "int64",
+      "parameters": [["const_record_batch", "batch"]],
+      "result": ["int64_pointer", "out_num_columns"]
+    },
+    {
+      "name": "irx_arrow_record_batch_retain",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["const_record_batch", "batch"],
+        ["record_batch_pointer", "out_batch"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_release",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [["record_batch_pointer", "batch"]]
+    },
     {
       "name": "irx_arrow_tensor_builder_new",
       "features": ["tensor"],

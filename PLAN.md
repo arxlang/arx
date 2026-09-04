@@ -958,7 +958,7 @@ but new functionality must use one contract.
 | M1-004 | Define every opaque handle and its ownership operations       | **DONE**        | ABI manifest; 50 Arrow tests pass         |
 | M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE**        | 67-symbol generated ABI; 55 tests pass    |
 | M1-006 | Add the versioned runtime-feature query                       | **DONE**        | 68-symbol ABI; 56 Arrow tests pass        |
-| M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **NOT STARTED** | Cross-path handle and deprecation tests   |
+| M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **DONE**        | 74-symbol ABI; 81 batch tests pass        |
 | M1-008 | Enforce executable transitive runtime-feature dependencies    | **NOT STARTED** | Registry and translate tests              |
 | M1-009 | Split runtime artifacts and linking by activated capability   | **NOT STARTED** | Link-input and clean-build tests          |
 | M1-010 | Add installed-header, layout, symbol, and version conformance | **NOT STARTED** | C11/C++20 and cross-version CI            |
@@ -983,8 +983,9 @@ original captured failure.
 `irx_arrow_last_error()` remains only as a borrowed, thread-local compatibility
 view. M1-005 adds explicit owned error output slots to generated fallible
 declarations and removes new lowering's dependency on that compatibility view.
-Migrating the legacy RecordBatch ABI remains part of M1-007; the snapshot API
-does not misrepresent that later item as complete.
+M1-007 translates failures from delegated legacy RecordBatch operations back to
+the historical thread-local message contract without exposing it to new unified
+ABI consumers.
 
 ### Implemented opaque-handle ownership contract (M1-004)
 
@@ -1017,13 +1018,13 @@ public Arrow release contract.
 
 Opaque types for later milestones are reserved but cannot be constructed until
 their declared feature lands. The implemented families are error, schema, array
-builder, array, chunked array, table, tensor builder, and tensor. Tests cover
-kind and ownership introspection, all implemented lifecycle functions, null and
-wrong-kind inputs, double release, use after cleared release slots, builder
-consumption, retained lifetime, and concurrent shared retain/release. The
-earlier in-tree pointer-only lifecycle signatures were provisional and are
-replaced here before ABI 1.0 conformance and distribution; released ABI 1.x
-signatures remain subject to the compatibility policy below.
+builder, array, chunked array, record batch, table, tensor builder, and tensor.
+Tests cover kind and ownership introspection, all implemented lifecycle
+functions, null and wrong-kind inputs, double release, use after cleared release
+slots, builder consumption, retained lifetime, and concurrent shared
+retain/release. The earlier in-tree pointer-only lifecycle signatures were
+provisional and are replaced here before ABI 1.0 conformance and distribution;
+released ABI 1.x signatures remain subject to the compatibility policy below.
 
 ### Generated cross-language ABI declarations (M1-005)
 
@@ -1034,7 +1035,8 @@ fallibility, and ordinary result slots. `scripts/gen_arrow_abi.py` validates
 that manifest and deterministically emits the installed C declaration header,
 private native implementation aliases, public native wrappers, Python ctypes
 signature metadata, LLVM signature metadata, and the initial 67-symbol
-inventory. M1-006 appends the feature query as the 68th stable symbol.
+inventory. M1-006 appends the feature query as the 68th stable symbol. M1-007
+appends six stable RecordBatch operations, producing 74 symbols.
 
 Every ordinary fallible declaration returns `irx_arrow_status`, publishes
 ordinary results through explicit output slots, and ends with an owned
@@ -1063,11 +1065,11 @@ lowering.
 ### Versioned runtime-feature query (M1-006)
 
 The canonical ABI manifest assigns append-only 32-bit feature IDs to `core` (1),
-`array` (2), `tensor` (3), and `dataframe` (4). Each feature has an independent
-contract version packed as `0xMMMMmmpp`; all four initial contracts are 1.0.0.
-The generator emits the IDs and versions into the installed C header, Python
-ctypes metadata, LLVM metadata, and the native lookup table so those surfaces
-cannot silently disagree.
+`array` (2), `tensor` (3), `dataframe` (4), and `record_batch` (5). Each feature
+has an independent contract version packed as `0xMMMMmmpp`; all five current
+contracts are 1.0.0. The generator emits the IDs and versions into the installed
+C header, Python ctypes metadata, LLVM metadata, and the native lookup table so
+those surfaces cannot silently disagree.
 
 `irx_arrow_runtime_has_feature()` accepts a stable feature ID and a required
 contract version, then returns both an availability flag and the runtime's
@@ -1091,6 +1093,48 @@ version, signature, and symbol parity; discovery, exact matches, newer-minor and
 new-major rejection; forward-compatible unknown IDs; explicit owned error
 details; and output initialization. Package build verification confirms that the
 generated lookup table ships in the wheel.
+
+### Legacy RecordBatch compatibility layer (M1-007)
+
+`IrxRbBatch` is now a source-compatible alias for the canonical
+`irx_arrow_record_batch_handle`, not a second pointer layout. Batches produced
+by the deprecated builder and IPC reader therefore carry the same validated kind
+marker, shared owner token, atomic retain count, and underlying
+`arrow::RecordBatch` as the stable ABI. Legacy row-count, column-count, and
+release entry points delegate to the generated stable operations and translate
+owned error details back to the historical integer status/message contract. The
+remaining legacy value readers inspect that same canonical Arrow object; they do
+not wrap, copy, or reinterpret it as a separate batch handle.
+
+The generated ABI adds stable RecordBatch move-import, export, row and column
+counts, retain, and release operations under runtime feature `record_batch`
+(feature ID 5, contract 1.0.0). Arrow C Data provides the neutral boundary for
+new consumers. A batch can be built through `irx_rb_*`, retained and exported
+through `irx_arrow_*`, re-imported through the stable ABI, and read again by a
+legacy consumer while preserving one owner-token discipline. The RecordBatch
+runtime feature builds the unified runtime and compatibility translation unit as
+one artifact set, and its cache fingerprint includes their private headers and
+generated includes.
+
+Every `irx_rb_*` declaration carries a compiler deprecation attribute stating
+that consumers must migrate to `irx_arrow_*` before ABI major 2. Existing
+consumers can temporarily define
+`IRX_RECORD_BATCH_DISABLE_DEPRECATION_WARNINGS`; the implementation uses a
+separate build-only suppression. No new capability may be added under the legacy
+prefix. Legacy schema, builder, and IPC reader/writer objects remain
+compatibility-only because the stable recursive schema, batch builder, and
+stream APIs land in later milestones; only their produced or consumed batch
+value overlaps a currently implemented stable handle kind.
+
+Focused tests prove cross-ABI handle-kind and ownership inspection, retain and
+release, Arrow C Data export and move-import, stable-to-legacy value access,
+error translation, and compiler deprecation/suppression behavior. The combined
+RecordBatch and compatibility suites pass 81 tests, the stable ABI/runtime and
+compatibility selection passes 59 tests, and the complete IRx suite passes 973
+tests. ABI and capability generation checks, strict IRx type checking and lint,
+and the IRx package build also pass; the built wheel contains both native
+translation units, the shared internal handle definition, and generated
+includes.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 

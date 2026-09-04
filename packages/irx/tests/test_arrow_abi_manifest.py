@@ -29,6 +29,10 @@ from irx.builder.runtime.arrow.llvm_abi_generated import (
 from irx.builder.runtime.dataframe.feature import (
     build_dataframe_runtime_feature,
 )
+from irx.builder.runtime.record_batch import (
+    RECORD_BATCH_SYMBOLS,
+    build_record_batch_runtime_feature,
+)
 from irx.builder.runtime.tensor.feature import build_tensor_runtime_feature
 
 REPOSITORY_ROOT = Path(__file__).parents[3]
@@ -61,6 +65,7 @@ EXPECTED_RUNTIME_FEATURES = {
     "array": 2,
     "tensor": 3,
     "dataframe": 4,
+    "record_batch": 5,
 }
 
 
@@ -246,6 +251,12 @@ def test_arrow_runtime_features_use_generated_symbol_tables() -> None:
 
     for name, feature in features.items():
         assert tuple(feature.symbols) == FEATURE_SYMBOLS[name]
+
+    record_batch = build_record_batch_runtime_feature()
+    assert set(FEATURE_SYMBOLS["record_batch"]).issubset(record_batch.symbols)
+    assert RECORD_BATCH_SYMBOLS.issubset(record_batch.symbols)
+    assert record_batch.metadata["compatibility_prefix"] == "irx_rb_"
+    assert record_batch.metadata["removal_abi_major"] == 2  # noqa: PLR2004
 
 
 def test_fallible_generated_declarations_use_explicit_error_outputs() -> None:

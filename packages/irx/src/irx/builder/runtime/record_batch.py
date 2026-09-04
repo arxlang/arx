@@ -20,6 +20,9 @@ from filelock import FileLock
 from filelock import Timeout as FileLockTimeout
 from llvmlite import ir
 
+from irx.builder.runtime.arrow.declarations import (
+    arrow_external_symbol_specs,
+)
 from irx.builder.runtime.arrowcpp import (
     arrowcpp_compile_flags,
     arrowcpp_include_dirs,
@@ -57,6 +60,16 @@ def _native_source() -> Path:
       type: Path
     """
     return _native_source_dir() / "irx_record_batch.cpp"
+
+
+@typechecked
+def _unified_native_source() -> Path:
+    """
+    title: Return the canonical Arrow runtime source path.
+    returns:
+      type: Path
+    """
+    return _native_source_dir() / "irx_arrow_runtime.cc"
 
 
 # LLVM symbol signature table
@@ -232,10 +245,23 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
       type: RuntimeFeature
     """
     native_dir = _native_source_dir()
+    buffer_native_dir = (
+        native_dir.parent.parent / "buffer" / "native"
+    ).resolve()
     compile_flags = arrowcpp_compile_flags()
-    include_dirs = (native_dir, *arrowcpp_include_dirs())
+    include_dirs = (
+        native_dir,
+        buffer_native_dir,
+        *arrowcpp_include_dirs(),
+    )
 
     artifacts = (
+        NativeArtifact(
+            kind="cxx_source",
+            path=_unified_native_source(),
+            include_dirs=include_dirs,
+            compile_flags=compile_flags,
+        ),
         NativeArtifact(
             kind="cxx_source",
             path=_native_source(),
@@ -244,9 +270,13 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         ),
     )
 
-    symbols = {
+    compatibility_symbols = {
         name: ExternalSymbolSpec(name, _make_declarer(name, ret, args))
         for name, (ret, args) in _SIGNATURES.items()
+    }
+    symbols = {
+        **arrow_external_symbol_specs("record_batch"),
+        **compatibility_symbols,
     }
 
     return RuntimeFeature(
@@ -260,10 +290,13 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
             "opaque_handles": {
                 "schema": "IrxRbSchema",
                 "builder": "IrxRbBuilder",
-                "batch": "IrxRbBatch",
+                "batch": "irx_arrow_record_batch_handle",
                 "stream_writer": "IrxRbStreamWriter",
                 "stream_reader": "IrxRbStreamReader",
             },
+            "compatibility_prefix": "irx_rb_",
+            "deprecated_since_abi": "1.0.0",
+            "removal_abi_major": 2,
             **arrowcpp_runtime_metadata(),
         },
     )
@@ -348,7 +381,7 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     native_sources = sorted(
         path
         for path in _native_source_dir().iterdir()
-        if path.suffix in {".cc", ".cpp", ".h"}
+        if path.suffix in {".cc", ".cpp", ".h", ".hpp", ".inc"}
     )
     for path in native_sources:
         digest.update(path.name.encode("utf-8"))
@@ -422,7 +455,7 @@ def build_record_batch_shared_library(
     cxx_binary: str = "c++",
 ) -> Path:
     """
-    title: Compile irx_record_batch.cpp into a standalone shared library.
+    title: Compile the unified and compatibility RecordBatch shared library.
     summary: >-
       Used by the ctypes-based Python API (``irx.record_batch``) and its test
       suite, which load the library directly rather than going through LLVM

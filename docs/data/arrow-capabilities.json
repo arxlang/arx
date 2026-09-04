@@ -130,10 +130,11 @@
       "test_targets": [
         "packages/irx/tests/test_runtime_features.py",
         "packages/irx/tests/test_generators.py",
-        "packages/irx/tests/test_arrow_runtime.py"
+        "packages/irx/tests/test_arrow_runtime.py",
+        "packages/irx/tests/test_record_batch_compatibility.py"
       ],
       "blocks": ["M1", "M3", "M6"],
-      "baseline": "Strings and dynamic lists have semantic ownership. Native Arrow handles now use checked shared or unique owner tokens, while IRx semantic ownership remains incomplete.",
+      "baseline": "Strings and dynamic lists have semantic ownership. Native Arrow handles, including batches produced through irx_rb compatibility, now use checked shared or unique owner tokens, while IRx semantic ownership remains incomplete.",
       "completion": "Generalize ownership to handles, views, fields, calls, returns, temporaries, failures, classes, and generators."
     },
     {
@@ -186,8 +187,8 @@
         "packages/irx/tests/test_arrow_runtime.py"
       ],
       "blocks": ["M1", "M5", "M6"],
-      "baseline": "The unified irx_arrow runtime uses fixed-width, Arx-owned status codes plus thread-local capture and immutable owned error snapshots; the legacy RecordBatch ABI still has a separate status model.",
-      "completion": "Add explicit error outputs to generated declarations, migrate the RecordBatch compatibility layer, and implement recoverable/fatal propagation and failure cleanup."
+      "baseline": "The unified irx_arrow runtime uses fixed-width, Arx-owned status codes plus thread-local capture and immutable owned error snapshots. Deprecated irx_rb entry points preserve their integer results and translate failures from delegated unified operations.",
+      "completion": "Implement recoverable/fatal propagation and failure cleanup across semantics, lowering, kernels, streams, and I/O."
     },
     {
       "id": "FND-013",
@@ -223,10 +224,11 @@
       "test_targets": [
         "packages/irx/tests/analysis/test_ffi_semantics.py",
         "packages/irx/tests/test_arrow_runtime.py",
-        "packages/irx/tests/test_arrow_abi_manifest.py"
+        "packages/irx/tests/test_arrow_abi_manifest.py",
+        "packages/irx/tests/test_record_batch_compatibility.py"
       ],
       "blocks": ["M1", "M3", "M6"],
-      "baseline": "C externs, the packed irx_arrow ABI 1.0.0 query, stable opaque handle kinds, and checked owner-slot lifecycle operations exist.",
+      "baseline": "C externs, version and feature queries, stable opaque handle kinds, checked owner-slot lifecycle operations, and cross-ABI RecordBatch C Data interchange exist.",
       "completion": "Add ownership and nullability annotations, complete C Data and C Stream contracts, and ABI conformance checks."
     },
     {
@@ -699,7 +701,7 @@
         "interop": "partial"
       },
       "overall": "partial",
-      "notes": "A separate Python/native RecordBatch API supports selected types and IPC, but it is not unified with the Arx compiler ABI or exposed as a language value.",
+      "notes": "The deprecated Python/native irx_rb API supports selected types and IPC over the canonical shared RecordBatch handle. Stable irx_arrow retain, release, shape, and C Data interchange exist, but semantic analysis, lowering, and an Arx language value do not.",
       "evidence": [
         {
           "path": "packages/irx/tests/test_record_batch.py",
@@ -709,7 +711,12 @@
         {
           "path": "packages/irx/tests/test_record_batch.py",
           "symbol": "test_record_batch_native_abi_version_matches_python_contract",
-          "purpose": "Checks the existing separate RecordBatch ABI version."
+          "purpose": "Keeps the transitional RecordBatch ABI version available during migration."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch_compatibility.py",
+          "symbol": "test_legacy_batches_are_unified_handles_across_both_abis",
+          "purpose": "Proves legacy construction and access share the canonical handle, owner token, and C Data path."
         }
       ]
     },
