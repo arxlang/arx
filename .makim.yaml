@@ -412,6 +412,12 @@ groups:
         help: validate the Arrow ABI manifest and generated declarations
         run: python scripts/gen_arrow_abi.py --check
 
+      check-arrow-abi-conformance:
+        help: validate Arrow ABI compatibility, headers, layouts, and symbols
+        run: |
+          python scripts/check_arrow_abi_compatibility.py
+          pytest -q packages/irx/tests/test_arrow_abi_conformance.py
+
       format:
         help: format IRx Python files
         run: pre-commit run ruff-format-irx --all-files
@@ -443,6 +449,7 @@ groups:
           pre-run:
             - task: irx.check-arrow-capabilities
             - task: irx.check-arrow-abi
+            - task: irx.check-arrow-abi-conformance
             - task: irx.unittests
             - task: irx.test-analysis
             - task: irx.typecheck

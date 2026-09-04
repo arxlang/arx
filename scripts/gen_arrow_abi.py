@@ -29,6 +29,7 @@ GENERATED_WRAPPERS = (
 GENERATED_FEATURE_QUERY = (
     RUNTIME_ROOT / "native" / "irx_arrow_feature_query_generated.inc"
 )
+GENERATED_EXPORT_MAP = RUNTIME_ROOT / "native" / "irx_arrow_exports.map"
 GENERATED_PYTHON = RUNTIME_ROOT / "abi_generated.py"
 GENERATED_LLVM = RUNTIME_ROOT / "llvm_abi_generated.py"
 GENERATED_SYMBOLS = RUNTIME_ROOT / "symbols.generated.txt"
@@ -705,6 +706,163 @@ def public_signature(
     return "status", tuple(parameters)
 
 
+def render_export_macros() -> list[str]:
+    """
+    title: Render portable stable-ABI visibility and calling-convention macros.
+    returns:
+      type: list[str]
+    """
+    return [
+        "#if defined(_WIN32) && !defined(IRX_ARROW_STATIC)",
+        "#if defined(IRX_ARROW_BUILDING_RUNTIME)",
+        "#define IRX_ARROW_EXPORT __declspec(dllexport)",
+        "#else",
+        "#define IRX_ARROW_EXPORT __declspec(dllimport)",
+        "#endif",
+        "#define IRX_ARROW_CALL __cdecl",
+        "#elif defined(__GNUC__) || defined(__clang__)",
+        '#define IRX_ARROW_EXPORT __attribute__((visibility("default")))',
+        "#define IRX_ARROW_CALL",
+        "#else",
+        "#define IRX_ARROW_EXPORT",
+        "#define IRX_ARROW_CALL",
+        "#endif",
+        "",
+    ]
+
+
+def render_static_assertion(expression: str, message: str) -> list[str]:
+    """
+    title: Render one portable generated ABI static assertion.
+    parameters:
+      expression:
+        type: str
+      message:
+        type: str
+    returns:
+      type: list[str]
+    """
+    return [
+        "IRX_ARROW_ABI_STATIC_ASSERT(",
+        f"    {expression},",
+        f'    "{message}");',
+    ]
+
+
+def render_layout_assertions() -> list[str]:
+    """
+    title: Render compile-time fixed-width and public-structure ABI checks.
+    returns:
+      type: list[str]
+    """
+    fixed_width_checks = (
+        ("sizeof(irx_arrow_status) == 4", "irx_arrow_status must be 32-bit"),
+        (
+            "sizeof(irx_arrow_status_category) == 4",
+            "status category must be 32-bit",
+        ),
+        (
+            "sizeof(irx_arrow_runtime_feature_id) == 4",
+            "runtime feature ID must be 32-bit",
+        ),
+        ("sizeof(irx_arrow_handle_kind) == 4", "handle kind must be 32-bit"),
+        (
+            "sizeof(irx_arrow_handle_ownership) == 4",
+            "handle ownership must be 32-bit",
+        ),
+        (
+            "sizeof(enum irx_arrow_type_id) == 4",
+            "type ID constants must be 32-bit",
+        ),
+    )
+    layout_checks = (
+        (
+            "sizeof(irx_buffer_view) == 64",
+            "unexpected 64-bit buffer-view size",
+        ),
+        (
+            "IRX_ARROW_ABI_ALIGNOF(irx_buffer_view) == 8",
+            "unexpected 64-bit buffer-view alignment",
+        ),
+        ("offsetof(irx_buffer_view, data) == 0", "unexpected data offset"),
+        ("offsetof(irx_buffer_view, owner) == 8", "unexpected owner offset"),
+        ("offsetof(irx_buffer_view, dtype) == 16", "unexpected dtype offset"),
+        ("offsetof(irx_buffer_view, ndim) == 24", "unexpected ndim offset"),
+        ("offsetof(irx_buffer_view, shape) == 32", "unexpected shape offset"),
+        (
+            "offsetof(irx_buffer_view, strides) == 40",
+            "unexpected strides offset",
+        ),
+        (
+            "offsetof(irx_buffer_view, offset_bytes) == 48",
+            "unexpected byte offset",
+        ),
+        ("offsetof(irx_buffer_view, flags) == 56", "unexpected flags offset"),
+        ("sizeof(struct ArrowSchema) == 72", "unexpected ArrowSchema size"),
+        (
+            "IRX_ARROW_ABI_ALIGNOF(struct ArrowSchema) == 8",
+            "unexpected ArrowSchema alignment",
+        ),
+        (
+            "offsetof(struct ArrowSchema, flags) == 24",
+            "unexpected ArrowSchema flags offset",
+        ),
+        (
+            "offsetof(struct ArrowSchema, release) == 56",
+            "unexpected ArrowSchema release offset",
+        ),
+        ("sizeof(struct ArrowArray) == 80", "unexpected ArrowArray size"),
+        (
+            "IRX_ARROW_ABI_ALIGNOF(struct ArrowArray) == 8",
+            "unexpected ArrowArray alignment",
+        ),
+        (
+            "offsetof(struct ArrowArray, buffers) == 40",
+            "unexpected ArrowArray buffers offset",
+        ),
+        (
+            "offsetof(struct ArrowArray, release) == 64",
+            "unexpected ArrowArray release offset",
+        ),
+        (
+            "sizeof(struct ArrowArrayStream) == 40",
+            "unexpected ArrowArrayStream size",
+        ),
+        (
+            "IRX_ARROW_ABI_ALIGNOF(struct ArrowArrayStream) == 8",
+            "unexpected ArrowArrayStream alignment",
+        ),
+        (
+            "offsetof(struct ArrowArrayStream, private_data) == 32",
+            "unexpected ArrowArrayStream private-data offset",
+        ),
+    )
+    lines = [
+        "#if defined(__cplusplus)",
+        "#define IRX_ARROW_ABI_STATIC_ASSERT static_assert",
+        "#define IRX_ARROW_ABI_ALIGNOF alignof",
+        "#else",
+        "#define IRX_ARROW_ABI_STATIC_ASSERT _Static_assert",
+        "#define IRX_ARROW_ABI_ALIGNOF _Alignof",
+        "#endif",
+    ]
+    for expression, message in fixed_width_checks:
+        lines.extend(render_static_assertion(expression, message))
+    lines.extend(["", "#if UINTPTR_MAX == UINT64_MAX"])
+    for expression, message in layout_checks:
+        lines.extend(render_static_assertion(expression, message))
+    lines.extend(
+        [
+            "#endif",
+            "",
+            "#undef IRX_ARROW_ABI_ALIGNOF",
+            "#undef IRX_ARROW_ABI_STATIC_ASSERT",
+            "",
+        ]
+    )
+    return lines
+
+
 def render_header(manifest: Manifest) -> str:
     """
     title: Render the generated public C ABI header.
@@ -727,6 +885,7 @@ def render_header(manifest: Manifest) -> str:
         '#include "irx_arrow_c_abi.h"',
         '#include "irx_buffer_runtime.h"',
         "",
+        *render_export_macros(),
         "#ifdef __cplusplus",
         'extern "C" {',
         "#endif",
@@ -738,6 +897,15 @@ def render_header(manifest: Manifest) -> str:
         "  ((IRX_ARROW_ABI_VERSION_MAJOR << 16) | \\",
         "   (IRX_ARROW_ABI_VERSION_MINOR << 8) | \\",
         "   IRX_ARROW_ABI_VERSION_PATCH)",
+        "#define IRX_ARROW_ABI_VERSION_MAJOR_OF(version) \\",
+        "  ((uint32_t)(version) >> 16)",
+        "#define IRX_ARROW_ABI_VERSION_MINOR_OF(version) \\",
+        "  (((uint32_t)(version) >> 8) & UINT32_C(0xff))",
+        "#define IRX_ARROW_ABI_VERSION_IS_COMPATIBLE(runtime, required) \\",
+        "  (IRX_ARROW_ABI_VERSION_MAJOR_OF(runtime) == \\",
+        "       IRX_ARROW_ABI_VERSION_MAJOR_OF(required) && \\",
+        "   IRX_ARROW_ABI_VERSION_MINOR_OF(runtime) >= \\",
+        "       IRX_ARROW_ABI_VERSION_MINOR_OF(required))",
         "",
     ]
     lines.extend(
@@ -804,10 +972,11 @@ def render_header(manifest: Manifest) -> str:
             )
         return_token, parameters = public_signature(function)
         return_type = c_type_for(return_token, manifest.handles)
+        declaration = f"IRX_ARROW_EXPORT {return_type} IRX_ARROW_CALL"
         if not parameters:
-            lines.extend([f"{return_type} {function.name}(void);", ""])
+            lines.extend([f"{declaration} {function.name}(void);", ""])
             continue
-        lines.append(f"{return_type} {function.name}(")
+        lines.append(f"{declaration} {function.name}(")
         for index, (type_token, name) in enumerate(parameters):
             suffix = ");" if index == len(parameters) - 1 else ","
             c_type = c_type_for(type_token, manifest.handles)
@@ -819,6 +988,7 @@ def render_header(manifest: Manifest) -> str:
             "}",
             "#endif",
             "",
+            *render_layout_assertions(),
             "#endif",
             "",
         ]
@@ -1307,6 +1477,35 @@ def render_feature_query(manifest: Manifest) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_export_map(manifest: Manifest) -> str:
+    """
+    title: Render the ELF export allowlist for stable and compatibility ABIs.
+    parameters:
+      manifest:
+        type: Manifest
+    returns:
+      type: str
+    """
+    major, minor, _ = manifest.version
+    lines = [
+        f"IRX_ARROW_{major}.{minor} {{",
+        "  global:",
+    ]
+    lines.extend(f"    {function.name};" for function in manifest.functions)
+    lines.extend(
+        [
+            "    irx_record_batch_*;",
+            "    irx_rb_*;",
+            "    irx_type_*;",
+            "  local:",
+            "    *;",
+            "};",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def expected_outputs(manifest: Manifest) -> dict[Path, str]:
     """
     title: Build every generated Arrow ABI output.
@@ -1321,6 +1520,7 @@ def expected_outputs(manifest: Manifest) -> dict[Path, str]:
         GENERATED_INTERNAL_NAMES: render_internal_names(manifest),
         GENERATED_WRAPPERS: render_wrappers(manifest),
         GENERATED_FEATURE_QUERY: render_feature_query(manifest),
+        GENERATED_EXPORT_MAP: render_export_map(manifest),
         GENERATED_PYTHON: render_python(manifest),
         GENERATED_LLVM: render_llvm(manifest),
         GENERATED_SYMBOLS: "\n".join(

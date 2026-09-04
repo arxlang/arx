@@ -31,7 +31,7 @@ re-scoped; do not defer status updates until the end of a milestone.
 | Milestone                               | Status          | Gate or dependency |
 | --------------------------------------- | --------------- | ------------------ |
 | M0 — contracts and design decisions     | **DONE**        | None               |
-| M1 — one native Arrow runtime and ABI   | **IN PROGRESS** | M0, Gate A         |
+| M1 — one native Arrow runtime and ABI   | **DONE**        | M0, Gate A         |
 | M2 — semantic ownership and cleanup     | **NOT STARTED** | M1, Gates A-B      |
 | M3 — complete logical types and schemas | **NOT STARTED** | M1-M2, Gate B      |
 | M4 — first-class containers             | **NOT STARTED** | M1-M3, Gate B      |
@@ -98,6 +98,9 @@ re-scoped; do not defer status updates until the end of a milestone.
 | 2026-09-03 | M1-005 | IN PROGRESS -> DONE        | 67 generated symbols have C/Python/LLVM parity; 55 tests pass. |
 | 2026-09-04 | M1-009 | NOT STARTED -> IN PROGRESS | Capability-specific native artifact split started.             |
 | 2026-09-04 | M1-009 | IN PROGRESS -> DONE        | 21 feature tests and all 983 IRx tests pass.                   |
+| 2026-09-04 | M1-010 | NOT STARTED -> IN PROGRESS | Installed ABI conformance gates started.                       |
+| 2026-09-04 | M1-010 | IN PROGRESS -> DONE        | GCC/Clang, wheel, symbol, and all 995 IRx tests pass.          |
+| 2026-09-04 | M1     | IN PROGRESS -> DONE        | All ten native runtime and ABI work items are complete.        |
 
 ## 1. Objective
 
@@ -952,18 +955,18 @@ but new functionality must use one contract.
 
 ### Milestone 1 work items
 
-| ID     | Item                                                          | Status          | Evidence or blocker                       |
-| ------ | ------------------------------------------------------------- | --------------- | ----------------------------------------- |
-| M1-001 | Add the packed ABI 1.0.0 constants and version query          | **DONE**        | C harness and ctypes tests pass           |
-| M1-002 | Define stable status categories and error codes               | **DONE**        | Native header/runtime; 44 tests pass      |
-| M1-003 | Unify thread-safe error-detail retrieval                      | **DONE**        | Snapshot, lifetime, and thread tests pass |
-| M1-004 | Define every opaque handle and its ownership operations       | **DONE**        | ABI manifest; 50 Arrow tests pass         |
-| M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE**        | 67-symbol generated ABI; 55 tests pass    |
-| M1-006 | Add the versioned runtime-feature query                       | **DONE**        | 68-symbol ABI; 56 Arrow tests pass        |
-| M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **DONE**        | 74-symbol ABI; 81 batch tests pass        |
-| M1-008 | Enforce executable transitive runtime-feature dependencies    | **DONE**        | 17 registry tests; 978 IRx tests pass     |
-| M1-009 | Split runtime artifacts and linking by activated capability   | **DONE**        | 21 feature tests; 983 IRx tests pass      |
-| M1-010 | Add installed-header, layout, symbol, and version conformance | **NOT STARTED** | C11/C++20 and cross-version CI            |
+| ID     | Item                                                          | Status   | Evidence or blocker                       |
+| ------ | ------------------------------------------------------------- | -------- | ----------------------------------------- |
+| M1-001 | Add the packed ABI 1.0.0 constants and version query          | **DONE** | C harness and ctypes tests pass           |
+| M1-002 | Define stable status categories and error codes               | **DONE** | Native header/runtime; 44 tests pass      |
+| M1-003 | Unify thread-safe error-detail retrieval                      | **DONE** | Snapshot, lifetime, and thread tests pass |
+| M1-004 | Define every opaque handle and its ownership operations       | **DONE** | ABI manifest; 50 Arrow tests pass         |
+| M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE** | 67-symbol generated ABI; 55 tests pass    |
+| M1-006 | Add the versioned runtime-feature query                       | **DONE** | 68-symbol ABI; 56 Arrow tests pass        |
+| M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **DONE** | 74-symbol ABI; 81 batch tests pass        |
+| M1-008 | Enforce executable transitive runtime-feature dependencies    | **DONE** | 17 registry tests; 978 IRx tests pass     |
+| M1-009 | Split runtime artifacts and linking by activated capability   | **DONE** | 21 feature tests; 983 IRx tests pass      |
+| M1-010 | Add installed-header, layout, symbol, and version conformance | **DONE** | 12 conformance tests; wheel smoke passes  |
 
 ### Implemented error-detail snapshot contract (M1-003)
 
@@ -1199,6 +1202,37 @@ The runtime-feature suite passes 21 tests and the complete IRx suite passes 983
 tests. ABI and capability generation checks, strict IRx type checking, lint,
 formatting, and the IRx package build pass. The built wheel contains all five
 capability translation units and the shared Arrow feature builder.
+
+### Installed ABI conformance gates (M1-010)
+
+ABI 1.0.0 now has an immutable checked-in consumer baseline. The compatibility
+checker requires every same-major runtime to preserve the baseline prefixes for
+statuses, categories, ownership and type IDs, opaque-handle contracts, runtime
+feature identities, and function declarations. It permits append-only minor
+growth and planned-to-implemented availability changes, but rejects an older
+minor runtime, changed stable declarations, version regression, or removal of an
+implemented feature or handle.
+
+The generated public header defines portable export and calling-convention
+macros, packed-version compatibility helpers, and C11/C++20 compile-time checks
+for every fixed-width ABI type. On 64-bit targets it also checks size,
+alignment, and representative offsets for `irx_buffer_view` and the Arrow C Data
+and C Stream structures. Strict header probes compile both the source-tree and
+installed-wheel header families with warnings promoted to errors.
+
+Native Arrow artifacts compile with hidden implementation visibility. On Linux,
+a generated ELF version script exposes only stable `irx_arrow_*` declarations
+and the explicitly retained transitional RecordBatch symbols. Conformance tests
+link each capability closure independently, enumerate its dynamic symbols, and
+require the exact manifest-owned export set. The version script and the ABI
+baseline ship in the IRx wheel and participate in the standalone RecordBatch
+build fingerprint.
+
+`makim irx.check-arrow-abi-conformance` runs the baseline, header, layout, and
+symbol checks as part of `irx.ci`. A dedicated Ubuntu CI matrix exercises GCC
+and Clang. The focused suite passes 12 tests with both toolchains, the installed
+wheel smoke compiles both header modes and executes the native interop probes,
+and the complete IRx suite passes 995 tests.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 

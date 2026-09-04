@@ -424,7 +424,7 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     native_sources = sorted(
         path
         for path in _native_source_dir().iterdir()
-        if path.suffix in {".cc", ".cpp", ".h", ".hpp", ".inc"}
+        if path.suffix in {".cc", ".cpp", ".h", ".hpp", ".inc", ".map"}
     )
     for path in native_sources:
         digest.update(path.name.encode("utf-8"))

@@ -1,5 +1,6 @@
 // Copyright IRx contributors.
 
+#define IRX_ARROW_BUILDING_RUNTIME
 #include "irx_arrow_runtime.h"
 #include "irx_arrow_runtime_internal.h"
 

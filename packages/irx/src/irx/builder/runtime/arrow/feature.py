@@ -4,6 +4,8 @@ title: Arrow native runtime feature construction.
 
 from __future__ import annotations
 
+import sys
+
 from pathlib import Path
 
 from irx.builder.runtime.arrow.declarations import (
@@ -48,6 +50,11 @@ def build_arrow_native_artifact(capability: str) -> NativeArtifact:
 
     native_root = arrow_native_source_dir()
     buffer_native_root = native_root.parent.parent / "buffer" / "native"
+    compile_flags = list(arrowcpp_compile_flags())
+    if sys.platform != "win32":
+        compile_flags.extend(
+            ("-fvisibility=hidden", "-fvisibility-inlines-hidden")
+        )
     return NativeArtifact(
         kind="cxx_source",
         path=native_root / f"irx_arrow_{capability}_runtime.cc",
@@ -56,7 +63,7 @@ def build_arrow_native_artifact(capability: str) -> NativeArtifact:
             buffer_native_root.resolve(),
             *arrowcpp_include_dirs(),
         ),
-        compile_flags=arrowcpp_compile_flags(),
+        compile_flags=tuple(compile_flags),
     )
 
 

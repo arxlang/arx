@@ -56,6 +56,14 @@ def arrowcpp_linker_flags() -> tuple[str, ...]:
 
     if sys.platform != "win32":
         flags.append(f"-Wl,-rpath,{library_dir}")
+    if sys.platform.startswith("linux"):
+        export_map = (
+            Path(__file__).resolve().parent
+            / "arrow"
+            / "native"
+            / "irx_arrow_exports.map"
+        )
+        flags.append(f"-Wl,--version-script={export_map}")
 
     return tuple(flags)
 

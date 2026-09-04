@@ -9,6 +9,21 @@
 #include "irx_arrow_c_abi.h"
 #include "irx_buffer_runtime.h"
 
+#if defined(_WIN32) && !defined(IRX_ARROW_STATIC)
+#if defined(IRX_ARROW_BUILDING_RUNTIME)
+#define IRX_ARROW_EXPORT __declspec(dllexport)
+#else
+#define IRX_ARROW_EXPORT __declspec(dllimport)
+#endif
+#define IRX_ARROW_CALL __cdecl
+#elif defined(__GNUC__) || defined(__clang__)
+#define IRX_ARROW_EXPORT __attribute__((visibility("default")))
+#define IRX_ARROW_CALL
+#else
+#define IRX_ARROW_EXPORT
+#define IRX_ARROW_CALL
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,6 +35,15 @@ extern "C" {
   ((IRX_ARROW_ABI_VERSION_MAJOR << 16) | \
    (IRX_ARROW_ABI_VERSION_MINOR << 8) | \
    IRX_ARROW_ABI_VERSION_PATCH)
+#define IRX_ARROW_ABI_VERSION_MAJOR_OF(version) \
+  ((uint32_t)(version) >> 16)
+#define IRX_ARROW_ABI_VERSION_MINOR_OF(version) \
+  (((uint32_t)(version) >> 8) & UINT32_C(0xff))
+#define IRX_ARROW_ABI_VERSION_IS_COMPATIBLE(runtime, required) \
+  (IRX_ARROW_ABI_VERSION_MAJOR_OF(runtime) == \
+       IRX_ARROW_ABI_VERSION_MAJOR_OF(required) && \
+   IRX_ARROW_ABI_VERSION_MINOR_OF(runtime) >= \
+       IRX_ARROW_ABI_VERSION_MINOR_OF(required))
 
 typedef int32_t irx_arrow_status;
 
@@ -164,7 +188,7 @@ enum irx_arrow_type_id {
   IRX_ARROW_TYPE_BOOL = 11,
 };
 
-uint32_t irx_arrow_abi_version(void);
+IRX_ARROW_EXPORT uint32_t IRX_ARROW_CALL irx_arrow_abi_version(void);
 
 /*
  * Query one runtime feature contract.
@@ -173,248 +197,248 @@ uint32_t irx_arrow_abi_version(void);
  * version zero. Known incompatible IDs report their
  * supported version.
  */
-irx_arrow_status irx_arrow_runtime_has_feature(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_runtime_has_feature(
     irx_arrow_runtime_feature_id feature_id,
     uint32_t required_contract_version,
     int32_t* out_available,
     uint32_t* out_supported_contract_version,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status_category irx_arrow_status_get_category(
+IRX_ARROW_EXPORT irx_arrow_status_category IRX_ARROW_CALL irx_arrow_status_get_category(
     irx_arrow_status status);
 
-irx_arrow_status irx_arrow_handle_kind_of(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_handle_kind_of(
     const void* handle,
     irx_arrow_handle_kind* out_kind,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_handle_ownership_of(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_handle_ownership_of(
     const void* handle,
     irx_arrow_handle_ownership* out_ownership,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_snapshot(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_snapshot(
     irx_arrow_error_handle** out_error,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_code(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_code(
     const irx_arrow_error_handle* error,
     irx_arrow_status* out_code,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_operation(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_operation(
     const irx_arrow_error_handle* error,
     const char** out_operation,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_message(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_message(
     const irx_arrow_error_handle* error,
     const char** out_message,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_upstream_detail(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_upstream_detail(
     const irx_arrow_error_handle* error,
     const char** out_upstream_detail,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_retain(
     const irx_arrow_error_handle* error,
     irx_arrow_error_handle** out_error,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_error_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_error_release(
     irx_arrow_error_handle** error,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_import_copy(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_export(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_export(
     const irx_arrow_schema_handle* schema,
     struct ArrowSchema* out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_type_id(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_type_id(
     const irx_arrow_schema_handle* schema,
     int32_t* out_type_id,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_is_nullable(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_is_nullable(
     const irx_arrow_schema_handle* schema,
     int32_t* out_is_nullable,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_retain(
     const irx_arrow_schema_handle* schema,
     irx_arrow_schema_handle** out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_schema_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_schema_release(
     irx_arrow_schema_handle** schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_new(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_new(
     int32_t type_id,
     irx_arrow_array_builder_handle** out_builder,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_append_null(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_append_null(
     irx_arrow_array_builder_handle* builder,
     int64_t count,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_append_int(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_append_int(
     irx_arrow_array_builder_handle* builder,
     int64_t value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_append_uint(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_append_uint(
     irx_arrow_array_builder_handle* builder,
     uint64_t value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_append_double(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_append_double(
     irx_arrow_array_builder_handle* builder,
     double value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_int32_new(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_int32_new(
     irx_arrow_array_builder_handle** out_builder,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_append_int32(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_append_int32(
     irx_arrow_array_builder_handle* builder,
     int32_t value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_finish(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_finish(
     irx_arrow_array_builder_handle** builder,
     irx_arrow_array_handle** out_array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_builder_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_builder_release(
     irx_arrow_array_builder_handle** builder,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_length(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_length(
     const irx_arrow_array_handle* array,
     int64_t* out_length,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_offset(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_offset(
     const irx_arrow_array_handle* array,
     int64_t* out_offset,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_null_count(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_null_count(
     const irx_arrow_array_handle* array,
     int64_t* out_null_count,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_type_id(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_type_id(
     const irx_arrow_array_handle* array,
     int32_t* out_type_id,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_is_nullable(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_is_nullable(
     const irx_arrow_array_handle* array,
     int32_t* out_is_nullable,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_has_validity_bitmap(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_has_validity_bitmap(
     const irx_arrow_array_handle* array,
     int32_t* out_has_validity_bitmap,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_can_borrow_buffer_view(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_can_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     int32_t* out_can_borrow,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_schema_copy(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_schema_copy(
     const irx_arrow_array_handle* array,
     irx_arrow_schema_handle** out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_export(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_export(
     const irx_arrow_array_handle* array,
     struct ArrowArray* out_array,
     struct ArrowSchema* out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_import(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_import(
     const struct ArrowArray* array,
     const struct ArrowSchema* schema,
     irx_arrow_array_handle** out_array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_import_copy(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_import_copy(
     const struct ArrowArray* array,
     const struct ArrowSchema* schema,
     irx_arrow_array_handle** out_array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_import_move(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_import_move(
     struct ArrowArray* array,
     struct ArrowSchema* schema,
     irx_arrow_array_handle** out_array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_validity_bitmap(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_validity_bitmap(
     const irx_arrow_array_handle* array,
     const void** out_data,
     int64_t* out_offset_bits,
     int64_t* out_length_bits,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_borrow_buffer_view(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_retain(
     const irx_arrow_array_handle* array,
     irx_arrow_array_handle** out_array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_array_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_array_release(
     irx_arrow_array_handle** array,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_import_move(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_import_move(
     struct ArrowArray* array,
     struct ArrowSchema* schema,
     irx_arrow_record_batch_handle** out_batch,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_export(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_export(
     const irx_arrow_record_batch_handle* batch,
     struct ArrowArray* out_array,
     struct ArrowSchema* out_schema,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_num_rows(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_num_rows(
     const irx_arrow_record_batch_handle* batch,
     int64_t* out_num_rows,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_num_columns(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_num_columns(
     const irx_arrow_record_batch_handle* batch,
     int64_t* out_num_columns,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_retain(
     const irx_arrow_record_batch_handle* batch,
     irx_arrow_record_batch_handle** out_batch,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_record_batch_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_record_batch_release(
     irx_arrow_record_batch_handle** batch,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_new(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_new(
     int32_t type_id,
     int32_t ndim,
     const int64_t* shape,
@@ -422,123 +446,218 @@ irx_arrow_status irx_arrow_tensor_builder_new(
     irx_arrow_tensor_builder_handle** out_builder,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_append_int(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_append_int(
     irx_arrow_tensor_builder_handle* builder,
     int64_t value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_append_uint(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_append_uint(
     irx_arrow_tensor_builder_handle* builder,
     uint64_t value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_append_double(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_append_double(
     irx_arrow_tensor_builder_handle* builder,
     double value,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_finish(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_finish(
     irx_arrow_tensor_builder_handle** builder,
     irx_arrow_tensor_handle** out_tensor,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_builder_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_builder_release(
     irx_arrow_tensor_builder_handle** builder,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_type_id(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_type_id(
     const irx_arrow_tensor_handle* tensor,
     int32_t* out_type_id,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_ndim(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_ndim(
     const irx_arrow_tensor_handle* tensor,
     int32_t* out_ndim,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_size(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_size(
     const irx_arrow_tensor_handle* tensor,
     int64_t* out_size,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_shape(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_shape(
     const irx_arrow_tensor_handle* tensor,
     const int64_t** out_shape,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_strides(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_strides(
     const irx_arrow_tensor_handle* tensor,
     const int64_t** out_strides,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_retain(
     const irx_arrow_tensor_handle* tensor,
     irx_arrow_tensor_handle** out_tensor,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_tensor_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_tensor_release(
     irx_arrow_tensor_handle** tensor,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_new_from_arrays(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_new_from_arrays(
     int64_t column_count,
     const char** names,
     irx_arrow_array_handle** arrays,
     irx_arrow_table_handle** out_table,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_num_rows(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_num_rows(
     const irx_arrow_table_handle* table,
     int64_t* out_num_rows,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_num_columns(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_num_columns(
     const irx_arrow_table_handle* table,
     int64_t* out_num_columns,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_column_by_name(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_column_by_name(
     const irx_arrow_table_handle* table,
     const char* name,
     irx_arrow_chunked_array_handle** out_column,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_column_by_index(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
     irx_arrow_chunked_array_handle** out_column,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_retain(
     const irx_arrow_table_handle* table,
     irx_arrow_table_handle** out_table,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_table_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_table_release(
     irx_arrow_table_handle** table,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_chunked_array_retain(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_chunked_array_retain(
     const irx_arrow_chunked_array_handle* column,
     irx_arrow_chunked_array_handle** out_column,
     irx_arrow_error_handle** out_failure);
 
-irx_arrow_status irx_arrow_chunked_array_release(
+IRX_ARROW_EXPORT irx_arrow_status IRX_ARROW_CALL irx_arrow_chunked_array_release(
     irx_arrow_chunked_array_handle** column,
     irx_arrow_error_handle** out_failure);
 
-void irx_arrow_tensor_release_callback(
+IRX_ARROW_EXPORT void IRX_ARROW_CALL irx_arrow_tensor_release_callback(
     void* tensor);
 
-const char* irx_arrow_last_error(void);
+IRX_ARROW_EXPORT const char* IRX_ARROW_CALL irx_arrow_last_error(void);
 
 #ifdef __cplusplus
 }
 #endif
+
+#if defined(__cplusplus)
+#define IRX_ARROW_ABI_STATIC_ASSERT static_assert
+#define IRX_ARROW_ABI_ALIGNOF alignof
+#else
+#define IRX_ARROW_ABI_STATIC_ASSERT _Static_assert
+#define IRX_ARROW_ABI_ALIGNOF _Alignof
+#endif
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_arrow_status) == 4,
+    "irx_arrow_status must be 32-bit");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_arrow_status_category) == 4,
+    "status category must be 32-bit");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_arrow_runtime_feature_id) == 4,
+    "runtime feature ID must be 32-bit");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_arrow_handle_kind) == 4,
+    "handle kind must be 32-bit");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_arrow_handle_ownership) == 4,
+    "handle ownership must be 32-bit");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(enum irx_arrow_type_id) == 4,
+    "type ID constants must be 32-bit");
+
+#if UINTPTR_MAX == UINT64_MAX
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(irx_buffer_view) == 64,
+    "unexpected 64-bit buffer-view size");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    IRX_ARROW_ABI_ALIGNOF(irx_buffer_view) == 8,
+    "unexpected 64-bit buffer-view alignment");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, data) == 0,
+    "unexpected data offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, owner) == 8,
+    "unexpected owner offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, dtype) == 16,
+    "unexpected dtype offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, ndim) == 24,
+    "unexpected ndim offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, shape) == 32,
+    "unexpected shape offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, strides) == 40,
+    "unexpected strides offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, offset_bytes) == 48,
+    "unexpected byte offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(irx_buffer_view, flags) == 56,
+    "unexpected flags offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(struct ArrowSchema) == 72,
+    "unexpected ArrowSchema size");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    IRX_ARROW_ABI_ALIGNOF(struct ArrowSchema) == 8,
+    "unexpected ArrowSchema alignment");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(struct ArrowSchema, flags) == 24,
+    "unexpected ArrowSchema flags offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(struct ArrowSchema, release) == 56,
+    "unexpected ArrowSchema release offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(struct ArrowArray) == 80,
+    "unexpected ArrowArray size");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    IRX_ARROW_ABI_ALIGNOF(struct ArrowArray) == 8,
+    "unexpected ArrowArray alignment");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(struct ArrowArray, buffers) == 40,
+    "unexpected ArrowArray buffers offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(struct ArrowArray, release) == 64,
+    "unexpected ArrowArray release offset");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    sizeof(struct ArrowArrayStream) == 40,
+    "unexpected ArrowArrayStream size");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    IRX_ARROW_ABI_ALIGNOF(struct ArrowArrayStream) == 8,
+    "unexpected ArrowArrayStream alignment");
+IRX_ARROW_ABI_STATIC_ASSERT(
+    offsetof(struct ArrowArrayStream, private_data) == 32,
+    "unexpected ArrowArrayStream private-data offset");
+#endif
+
+#undef IRX_ARROW_ABI_ALIGNOF
+#undef IRX_ARROW_ABI_STATIC_ASSERT
 
 #endif
