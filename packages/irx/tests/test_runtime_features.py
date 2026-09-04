@@ -32,6 +32,7 @@ from irx.builder.runtime.record_batch import (
 from irx.builder.runtime.registry import (
     RuntimeFeatureRegistry,
     RuntimeFeatureState,
+    get_default_runtime_feature_registry,
 )
 from irx.diagnostics import (
     LinkingError,
@@ -317,11 +318,76 @@ def test_translate_activates_record_batch_dependency_closure() -> None:
 
     assert runtime_features.active_feature_names() == (
         "array",
+        "core",
         "record_batch",
     )
-    assert artifact_names.count("irx_arrow_runtime.cc") == 1
+    assert "irx_arrow_core_runtime.cc" in artifact_names
+    assert "irx_arrow_array_runtime.cc" in artifact_names
+    assert "irx_arrow_record_batch_runtime.cc" in artifact_names
+    assert "irx_arrow_runtime.cc" not in artifact_names
     assert "irx_record_batch.cpp" in artifact_names
     assert '@"irx_record_batch_abi_version"' in ir_text
+
+
+@pytest.mark.parametrize(
+    ("feature_name", "expected_artifacts"),
+    (
+        (
+            "array",
+            {
+                "irx_arrow_core_runtime.cc",
+                "irx_arrow_array_runtime.cc",
+            },
+        ),
+        (
+            "tensor",
+            {
+                "irx_arrow_core_runtime.cc",
+                "irx_arrow_tensor_runtime.cc",
+            },
+        ),
+        (
+            "dataframe",
+            {
+                "irx_arrow_core_runtime.cc",
+                "irx_arrow_dataframe_runtime.cc",
+            },
+        ),
+        (
+            "record_batch",
+            {
+                "irx_arrow_core_runtime.cc",
+                "irx_arrow_array_runtime.cc",
+                "irx_arrow_record_batch_runtime.cc",
+                "irx_record_batch.cpp",
+            },
+        ),
+    ),
+)
+def test_arrow_runtime_link_inputs_follow_active_capability(
+    feature_name: str,
+    expected_artifacts: set[str],
+) -> None:
+    """
+    title: Arrow link inputs should contain only the activated capability set.
+    parameters:
+      feature_name:
+        type: str
+      expected_artifacts:
+        type: set[str]
+    """
+    state = RuntimeFeatureState(
+        Visitor(),
+        get_default_runtime_feature_registry(),
+    )
+
+    state.activate(feature_name)
+
+    artifact_names = {
+        artifact.path.name for artifact in state.native_artifacts()
+    }
+    assert artifact_names == expected_artifacts
+    assert "irx_arrow_runtime.cc" not in artifact_names
 
 
 def test_print_expr_uses_libc_feature_without_array_runtime() -> None:

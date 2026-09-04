@@ -92,7 +92,10 @@ def test_legacy_batches_are_unified_handles_across_both_abis() -> None:
     title: Legacy construction and access should share the unified owner token.
     """
     library = record_batch_module._get_lib()
-    configure_arrow_ctypes_library(library)
+    configure_arrow_ctypes_library(
+        library,
+        features=("core", "array", "record_batch"),
+    )
     schema = ctypes.c_void_p()
     builder = ctypes.c_void_p()
     legacy_batch = ctypes.c_void_p()

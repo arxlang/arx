@@ -233,14 +233,14 @@
   "functions": [
     {
       "name": "irx_arrow_abi_version",
-      "features": [],
+      "features": ["core"],
       "return": "uint32",
       "parameters": [],
       "fallible": false
     },
     {
       "name": "irx_arrow_runtime_has_feature",
-      "features": [],
+      "features": ["core"],
       "return": "status",
       "parameters": [
         ["runtime_feature_id", "feature_id"],
@@ -252,14 +252,14 @@
     },
     {
       "name": "irx_arrow_status_get_category",
-      "features": [],
+      "features": ["core"],
       "return": "status_category",
       "parameters": [["status", "status"]],
       "fallible": false
     },
     {
       "name": "irx_arrow_handle_kind_of",
-      "features": [],
+      "features": ["core"],
       "return": "status",
       "parameters": [
         ["const_void", "handle"],
@@ -268,7 +268,7 @@
     },
     {
       "name": "irx_arrow_handle_ownership_of",
-      "features": [],
+      "features": ["core"],
       "return": "status",
       "parameters": [
         ["const_void", "handle"],
@@ -277,41 +277,41 @@
     },
     {
       "name": "irx_arrow_error_snapshot",
-      "features": [],
+      "features": ["core"],
       "return": "status",
       "parameters": [["error_pointer", "out_error"]]
     },
     {
       "name": "irx_arrow_error_code",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "status",
       "parameters": [["const_error", "error"]],
       "result": ["status_pointer", "out_code"]
     },
     {
       "name": "irx_arrow_error_operation",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "c_string",
       "parameters": [["const_error", "error"]],
       "result": ["c_string_pointer", "out_operation"]
     },
     {
       "name": "irx_arrow_error_message",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "c_string",
       "parameters": [["const_error", "error"]],
       "result": ["c_string_pointer", "out_message"]
     },
     {
       "name": "irx_arrow_error_upstream_detail",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "c_string",
       "parameters": [["const_error", "error"]],
       "result": ["c_string_pointer", "out_upstream_detail"]
     },
     {
       "name": "irx_arrow_error_retain",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "status",
       "parameters": [
         ["const_error", "error"],
@@ -320,7 +320,7 @@
     },
     {
       "name": "irx_arrow_error_release",
-      "features": ["array", "tensor", "dataframe"],
+      "features": ["core"],
       "return": "status",
       "parameters": [["error_pointer", "error"]]
     },
@@ -829,7 +829,7 @@
     },
     {
       "name": "irx_arrow_last_error",
-      "features": [],
+      "features": ["core"],
       "return": "c_string",
       "parameters": [],
       "fallible": false

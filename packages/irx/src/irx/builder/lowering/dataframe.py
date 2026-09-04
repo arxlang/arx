@@ -70,7 +70,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
 
         self._llvm.ir_builder.position_at_start(fail_block)
         error_message = self.require_runtime_symbol(
-            "dataframe",
+            "core",
             "irx_arrow_error_message",
         )
         error_handle = self._llvm.ir_builder.load(

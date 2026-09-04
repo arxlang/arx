@@ -63,10 +63,19 @@ from irx.builder.runtime.arrow.abi_generated import (
 from irx.builder.runtime.arrow.bindings import (
     configure_arrow_ctypes_library,
 )
+from irx.builder.runtime.arrow.feature import (
+    build_arrow_core_runtime_feature,
+    build_arrow_native_artifact,
+)
+from irx.builder.runtime.dataframe.feature import (
+    build_dataframe_runtime_feature,
+)
+from irx.builder.runtime.features import NativeArtifact, RuntimeFeature
 from irx.builder.runtime.linking import (
     compile_native_artifacts,
     link_executable,
 )
+from irx.builder.runtime.tensor.feature import build_tensor_runtime_feature
 from llvmlite import binding as llvm
 
 
@@ -99,6 +108,13 @@ ARROW_HANDLE_KIND_TENSOR_BUILDER = 10
 ARROW_HANDLE_KIND_TENSOR = 11
 ARROW_HANDLE_OWNERSHIP_SHARED = 1
 ARROW_HANDLE_OWNERSHIP_UNIQUE = 2
+FULL_ARROW_RUNTIME_CAPABILITIES = (
+    "core",
+    "array",
+    "tensor",
+    "dataframe",
+    "record_batch",
+)
 
 
 class ArrowSchemaStruct(ctypes.Structure):
@@ -302,16 +318,90 @@ def _plain_main_module() -> astx.Module:
     return module
 
 
-def _compile_arrow_harness(source: str) -> subprocess.CompletedProcess[str]:
+def _arrow_runtime_feature(
+    capabilities: tuple[str, ...] = FULL_ARROW_RUNTIME_CAPABILITIES,
+) -> RuntimeFeature:
+    """
+    title: Build a selected linked Arrow runtime feature set for tests.
+    parameters:
+      capabilities:
+        type: tuple[str, Ellipsis]
+    returns:
+      type: RuntimeFeature
+    """
+    core = build_arrow_core_runtime_feature()
+    if capabilities == FULL_ARROW_RUNTIME_CAPABILITIES:
+        core_artifact = core.artifacts[0]
+        combined_artifact = NativeArtifact(
+            kind="cxx_source",
+            path=core_artifact.path.with_name("irx_arrow_runtime.cc"),
+            include_dirs=core_artifact.include_dirs,
+            compile_flags=(
+                *core_artifact.compile_flags,
+                "-DIRX_ARROW_RUNTIME_BUILD_CORE",
+                "-DIRX_ARROW_RUNTIME_BUILD_ARRAY",
+                "-DIRX_ARROW_RUNTIME_BUILD_TENSOR",
+                "-DIRX_ARROW_RUNTIME_BUILD_DATAFRAME",
+                "-DIRX_ARROW_RUNTIME_BUILD_RECORD_BATCH",
+            ),
+        )
+        return RuntimeFeature(
+            name="arrow_test_runtime",
+            artifacts=(combined_artifact,),
+            linker_flags=core.linker_flags,
+        )
+
+    available_features = {
+        "core": core,
+        "array": build_array_runtime_feature(),
+        "tensor": build_tensor_runtime_feature(),
+        "dataframe": build_dataframe_runtime_feature(),
+        "record_batch": RuntimeFeature(
+            name="record_batch",
+            artifacts=(build_arrow_native_artifact("record_batch"),),
+        ),
+    }
+    features = tuple(available_features[name] for name in capabilities)
+    artifacts: list[NativeArtifact] = []
+    linker_flags: list[str] = []
+    seen_artifacts: set[tuple[str, str]] = set()
+    seen_flags: set[str] = set()
+
+    for feature in features:
+        for artifact in feature.artifacts:
+            key = (artifact.kind, str(artifact.path))
+            if key in seen_artifacts:
+                continue
+            seen_artifacts.add(key)
+            artifacts.append(artifact)
+        for flag in feature.linker_flags:
+            if flag in seen_flags:
+                continue
+            seen_flags.add(flag)
+            linker_flags.append(flag)
+
+    return RuntimeFeature(
+        name="arrow_test_runtime",
+        artifacts=tuple(artifacts),
+        linker_flags=tuple(linker_flags),
+    )
+
+
+def _compile_arrow_harness(
+    source: str,
+    capabilities: tuple[str, ...] = FULL_ARROW_RUNTIME_CAPABILITIES,
+) -> subprocess.CompletedProcess[str]:
     """
     title: Compile arrow harness.
     parameters:
       source:
         type: str
+      capabilities:
+        type: tuple[str, Ellipsis]
     returns:
       type: subprocess.CompletedProcess[str]
     """
-    feature = build_array_runtime_feature()
+    feature = _arrow_runtime_feature(capabilities)
     include_dirs: list[Path] = []
     seen_include_dirs: set[Path] = set()
     for artifact in feature.artifacts:
@@ -393,7 +483,7 @@ def _load_arrow_runtime_library(
     if sys.platform == "win32":
         pytest.skip("Arrow C++ shared-library tests require Unix")
 
-    feature = build_array_runtime_feature()
+    feature = _arrow_runtime_feature()
     c_compiler = _find_c_compiler()
     if c_compiler is None:
         pytest.skip("a C compiler is required for Arrow runtime interop tests")
@@ -922,7 +1012,10 @@ def test_arrow_feature_uses_arrowcpp_runtime() -> None:
         if artifact.kind == "cxx_source"
     }
 
-    assert any(path.name == "irx_arrow_runtime.cc" for path in native_sources)
+    assert {path.name for path in native_sources} == {
+        "irx_arrow_array_runtime.cc"
+    }
+    assert feature.dependencies == ("core",)
     assert feature.metadata["implementation"] == "arrow-cpp"
     assert feature.metadata["arrowcpp_version"] == bundled_arrowcpp_version()
 
@@ -976,6 +1069,27 @@ def test_arrow_length_build_returns_length() -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         output_path = Path(tmp_dir) / "arrow_len"
         builder.build(module, str(output_path))
+        runtime_artifacts = (
+            builder.translator.runtime_features.native_artifacts()
+        )
+        artifact_names = {artifact.path.name for artifact in runtime_artifacts}
+        assert artifact_names == {
+            "irx_arrow_core_runtime.cc",
+            "irx_arrow_array_runtime.cc",
+        }
+
+        nm_binary = shutil.which("nm")
+        if nm_binary is not None:
+            symbols = subprocess.run(
+                [nm_binary, "-g", str(output_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            assert "irx_arrow_array_length" in symbols
+            assert "irx_arrow_tensor_builder_new" not in symbols
+            assert "irx_arrow_table_new_from_arrays" not in symbols
+
         result = subprocess.run(
             [str(output_path)],
             check=False,
@@ -1141,6 +1255,44 @@ def test_arrow_runtime_reports_stable_abi_and_feature_versions() -> None:
             assert query(feature_id, 0x00020000) == (0, version)
 
         assert query(9001, 0) == (0, 0)
+
+
+def test_arrow_runtime_reports_only_linked_capabilities() -> None:
+    """
+    title: Runtime feature queries should reject capabilities not in the link.
+    """
+    result = _compile_arrow_harness(
+        """
+        #include "irx_arrow_runtime.h"
+
+        int main(void) {
+          irx_arrow_error_handle* failure = NULL;
+          int32_t available = -1;
+          uint32_t supported = UINT32_MAX;
+
+          if (irx_arrow_runtime_has_feature(
+                  IRX_ARROW_RUNTIME_FEATURE_ARRAY,
+                  0,
+                  &available,
+                  &supported,
+                  &failure) != IRX_ARROW_STATUS_OK) return 11;
+          if (available != 1 || supported == 0 || failure != NULL) return 12;
+
+          if (irx_arrow_runtime_has_feature(
+                  IRX_ARROW_RUNTIME_FEATURE_TENSOR,
+                  0,
+                  &available,
+                  &supported,
+                  &failure) != IRX_ARROW_STATUS_OK) return 13;
+          if (available != 0 || supported != 0 || failure != NULL) return 14;
+          return 0;
+        }
+        """,
+        capabilities=("core", "array"),
+    )
+
+    assert result.returncode == 0
+    assert result.stderr == ""
 
 
 def test_arrow_runtime_reports_stable_status_codes() -> None:

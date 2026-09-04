@@ -426,6 +426,39 @@ def load_result(
     return result_type, result_name
 
 
+def load_function_features(
+    record: dict[str, object],
+    function_name: str,
+    runtime_feature_names: set[str],
+) -> tuple[str, ...]:
+    """
+    title: Load and validate one function's runtime capability owner.
+    parameters:
+      record:
+        type: dict[str, object]
+      function_name:
+        type: str
+      runtime_feature_names:
+        type: set[str]
+    returns:
+      type: tuple[str, Ellipsis]
+    """
+    feature_records = record.get("features")
+    if not isinstance(feature_records, list) or not all(
+        isinstance(feature, str) for feature in feature_records
+    ):
+        raise ValueError(f"function '{function_name}' has invalid features")
+
+    features = cast(list[str], feature_records)
+    if len(features) != 1:
+        raise ValueError(
+            f"function '{function_name}' must belong to one runtime feature"
+        )
+    if features[0] not in runtime_feature_names:
+        raise ValueError(f"function '{function_name}' has unknown features")
+    return tuple(features)
+
+
 def load_functions(
     raw: dict[str, object],
     handles: tuple[Handle, ...],
@@ -451,7 +484,6 @@ def load_functions(
     functions: list[Function] = []
     for record in records:
         name = record.get("name")
-        feature_records = record.get("features")
         return_type = record.get("return")
         parameter_records = record.get("parameters")
         fallible = record.get("fallible", True)
@@ -459,15 +491,11 @@ def load_functions(
             raise ValueError("function names must use the 'irx_arrow_' prefix")
         if not IDENTIFIER_PATTERN.fullmatch(name):
             raise ValueError(f"function '{name}' is not a C identifier")
-        if not isinstance(feature_records, list) or not all(
-            isinstance(feature, str) for feature in feature_records
-        ):
-            raise ValueError(f"function '{name}' has invalid features")
-        features = cast(list[str], feature_records)
-        if len(set(features)) != len(features) or any(
-            feature not in runtime_feature_names for feature in features
-        ):
-            raise ValueError(f"function '{name}' has unknown features")
+        features = load_function_features(
+            record,
+            name,
+            runtime_feature_names,
+        )
         if not isinstance(return_type, str):
             raise ValueError(f"function '{name}' has an invalid return type")
         c_type_for(return_type, handles)
@@ -510,7 +538,7 @@ def load_functions(
         functions.append(
             Function(
                 name,
-                tuple(features),
+                features,
                 return_type,
                 tuple(parameters),
                 fallible,
@@ -1246,7 +1274,12 @@ def render_wrappers(manifest: Manifest) -> str:
         ]
     )
     for function in manifest.functions:
+        feature_macro = (
+            "IRX_ARROW_RUNTIME_BUILD_" + function.features[0].upper()
+        )
+        lines.extend([f"#if defined({feature_macro})"])
         lines.extend(render_wrapper(function, manifest.handles))
+        lines.extend(["#endif", ""])
     return "\n".join(lines)
 
 

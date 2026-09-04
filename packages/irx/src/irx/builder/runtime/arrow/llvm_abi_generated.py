@@ -620,14 +620,22 @@ LLVM_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
 }
 LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
-    "core": (),
-    "array": (
+    "core": (
+        "irx_arrow_abi_version",
+        "irx_arrow_runtime_has_feature",
+        "irx_arrow_status_get_category",
+        "irx_arrow_handle_kind_of",
+        "irx_arrow_handle_ownership_of",
+        "irx_arrow_error_snapshot",
         "irx_arrow_error_code",
         "irx_arrow_error_operation",
         "irx_arrow_error_message",
         "irx_arrow_error_upstream_detail",
         "irx_arrow_error_retain",
         "irx_arrow_error_release",
+        "irx_arrow_last_error",
+    ),
+    "array": (
         "irx_arrow_schema_import_copy",
         "irx_arrow_schema_export",
         "irx_arrow_schema_type_id",
@@ -661,12 +669,6 @@ LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
         "irx_arrow_array_release",
     ),
     "tensor": (
-        "irx_arrow_error_code",
-        "irx_arrow_error_operation",
-        "irx_arrow_error_message",
-        "irx_arrow_error_upstream_detail",
-        "irx_arrow_error_retain",
-        "irx_arrow_error_release",
         "irx_arrow_tensor_builder_new",
         "irx_arrow_tensor_builder_append_int",
         "irx_arrow_tensor_builder_append_uint",
@@ -684,12 +686,6 @@ LLVM_FEATURE_SYMBOLS: dict[str, tuple[str, ...]] = {
         "irx_arrow_tensor_release_callback",
     ),
     "dataframe": (
-        "irx_arrow_error_code",
-        "irx_arrow_error_operation",
-        "irx_arrow_error_message",
-        "irx_arrow_error_upstream_detail",
-        "irx_arrow_error_retain",
-        "irx_arrow_error_release",
         "irx_arrow_table_new_from_arrays",
         "irx_arrow_table_num_rows",
         "irx_arrow_table_num_columns",

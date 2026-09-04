@@ -21,6 +21,9 @@ from irx.builder.runtime.arrow.abi_generated import (
     RUNTIME_FEATURE_PACKED_VERSIONS,
     RUNTIME_FEATURE_VERSIONS,
 )
+from irx.builder.runtime.arrow.feature import (
+    build_arrow_core_runtime_feature,
+)
 from irx.builder.runtime.arrow.llvm_abi_generated import (
     LLVM_RUNTIME_FEATURE_IDS,
     LLVM_RUNTIME_FEATURE_VERSIONS,
@@ -244,6 +247,7 @@ def test_arrow_runtime_features_use_generated_symbol_tables() -> None:
     title: Runtime features should use only their generated ABI symbols.
     """
     features = {
+        "core": build_arrow_core_runtime_feature(),
         "array": build_array_runtime_feature(),
         "tensor": build_tensor_runtime_feature(),
         "dataframe": build_dataframe_runtime_feature(),

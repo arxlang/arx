@@ -22,25 +22,31 @@
 #include <utility>
 #include <vector>
 
+#if !defined(IRX_ARROW_RUNTIME_BUILD_CORE) && \
+    !defined(IRX_ARROW_RUNTIME_BUILD_ARRAY) && \
+    !defined(IRX_ARROW_RUNTIME_BUILD_TENSOR) && \
+    !defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME) && \
+    !defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
+#error "select at least one Arrow runtime capability"
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
+thread_local irx_arrow_internal::ErrorDetail
+    irx_arrow_internal::current_error;
+#endif
+
 namespace {
 
+using irx_arrow_internal::current_error;
+using irx_arrow_internal::ErrorDetail;
 using irx_arrow_internal::HandleHeader;
+using irx_arrow_internal::kErrorMessageCapacity;
+using irx_arrow_internal::kErrorOperationCapacity;
+using irx_arrow_internal::kErrorUpstreamDetailCapacity;
 using irx_arrow_internal::kHandleMagic;
 
 constexpr irx_arrow_status kArrowOk = IRX_ARROW_STATUS_OK;
 constexpr int64_t kPrimitiveArrayBufferCount = 2;
-constexpr size_t kErrorOperationCapacity = 128;
-constexpr size_t kErrorMessageCapacity = 512;
-constexpr size_t kErrorUpstreamDetailCapacity = 512;
-
-struct ErrorDetail {
-  irx_arrow_status code = IRX_ARROW_STATUS_OK;
-  char operation[kErrorOperationCapacity] = {0};
-  char message[kErrorMessageCapacity] = {0};
-  char upstream_detail[kErrorUpstreamDetailCapacity] = {0};
-};
-
-thread_local ErrorDetail current_error;
 
 enum class AppendKind {
   kSigned,
@@ -1153,6 +1159,11 @@ bool feature_contract_is_compatible(
          supported_version >= required_version;
 }
 
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
+std::atomic<uint32_t> linked_feature_contract_versions[
+    IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH + 1] = {};
+#endif
+
 }  // namespace
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -1162,6 +1173,20 @@ bool feature_contract_is_compatible(
 extern "C" {
 
 #include "irx_arrow_abi_internal_names_generated.h"
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
+
+void irx_internal_arrow_register_linked_feature(
+    irx_arrow_runtime_feature_id feature_id,
+    uint32_t contract_version) {
+  if (feature_id <= IRX_ARROW_RUNTIME_FEATURE_CORE ||
+      feature_id > IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH) {
+    return;
+  }
+  linked_feature_contract_versions[feature_id].store(
+      contract_version,
+      std::memory_order_release);
+}
 
 uint32_t irx_arrow_abi_version(void) {
   return IRX_ARROW_ABI_VERSION;
@@ -1196,12 +1221,19 @@ irx_arrow_status irx_arrow_runtime_has_feature(
     default:
       return kArrowOk;
   }
+  if (feature_id != IRX_ARROW_RUNTIME_FEATURE_CORE) {
+    supported_contract_version =
+        linked_feature_contract_versions[feature_id].load(
+            std::memory_order_acquire);
+  }
   *out_supported_contract_version = supported_contract_version;
-  *out_available = feature_contract_is_compatible(
-                       supported_contract_version,
-                       required_contract_version)
-                       ? 1
-                       : 0;
+  *out_available =
+      supported_contract_version != 0 &&
+              feature_contract_is_compatible(
+                  supported_contract_version,
+                  required_contract_version)
+          ? 1
+          : 0;
   return kArrowOk;
 }
 
@@ -1374,6 +1406,10 @@ irx_arrow_status irx_arrow_error_release(
       IRX_ARROW_HANDLE_KIND_ERROR,
       "error");
 }
+
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 
 irx_arrow_status irx_arrow_schema_import_copy(
     const ArrowSchema* schema,
@@ -2011,6 +2047,10 @@ irx_arrow_status irx_arrow_array_release(
       "array");
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
+
 irx_arrow_status irx_arrow_record_batch_import_move(
     ArrowArray* array,
     ArrowSchema* schema,
@@ -2155,6 +2195,10 @@ irx_arrow_status irx_arrow_record_batch_release(
       IRX_ARROW_HANDLE_KIND_RECORD_BATCH,
       "record_batch");
 }
+
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 
 irx_arrow_status irx_arrow_tensor_builder_new(
     int32_t type_id,
@@ -2494,6 +2538,10 @@ void irx_arrow_tensor_release_callback(void* tensor) {
   (void)irx_arrow_tensor_release(&tensor_handle);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
+
 irx_arrow_status irx_arrow_table_new_from_arrays(
     int64_t column_count,
     const char** names,
@@ -2713,10 +2761,54 @@ irx_arrow_status irx_arrow_chunked_array_release(
       "chunked array");
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
+
 const char* irx_arrow_last_error(void) {
   return current_error.message;
 }
 
+#endif
+
 #include "irx_arrow_abi_wrappers_generated.inc"
 
 }  // extern "C"
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY) || \
+    defined(IRX_ARROW_RUNTIME_BUILD_TENSOR) || \
+    defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME) || \
+    defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
+namespace {
+
+struct LinkedFeatureRegistration {
+  LinkedFeatureRegistration(
+      irx_arrow_runtime_feature_id feature_id,
+      uint32_t contract_version) {
+    irx_internal_arrow_register_linked_feature(feature_id, contract_version);
+  }
+};
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
+const LinkedFeatureRegistration linked_array_feature_registration{
+    IRX_ARROW_RUNTIME_FEATURE_ARRAY,
+    IRX_ARROW_RUNTIME_FEATURE_ARRAY_CONTRACT_VERSION};
+#endif
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
+const LinkedFeatureRegistration linked_tensor_feature_registration{
+    IRX_ARROW_RUNTIME_FEATURE_TENSOR,
+    IRX_ARROW_RUNTIME_FEATURE_TENSOR_CONTRACT_VERSION};
+#endif
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
+const LinkedFeatureRegistration linked_dataframe_feature_registration{
+    IRX_ARROW_RUNTIME_FEATURE_DATAFRAME,
+    IRX_ARROW_RUNTIME_FEATURE_DATAFRAME_CONTRACT_VERSION};
+#endif
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
+const LinkedFeatureRegistration linked_record_batch_feature_registration{
+    IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH,
+    IRX_ARROW_RUNTIME_FEATURE_RECORD_BATCH_CONTRACT_VERSION};
+#endif
+
+}  // namespace
+#endif

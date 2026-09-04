@@ -99,10 +99,14 @@ static irx_arrow_status finish_generated_call(
   return status;
 }
 
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 uint32_t irx_arrow_abi_version(void) {
   return irx_arrow_internal_abi_version();
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_runtime_has_feature(
     irx_arrow_runtime_feature_id feature_id,
     uint32_t required_contract_version,
@@ -128,11 +132,17 @@ irx_arrow_status irx_arrow_runtime_has_feature(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status_category irx_arrow_status_get_category(
     irx_arrow_status status) {
   return irx_arrow_internal_status_get_category(status);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_handle_kind_of(
     const void* handle,
     irx_arrow_handle_kind* out_kind,
@@ -152,6 +162,9 @@ irx_arrow_status irx_arrow_handle_kind_of(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_handle_ownership_of(
     const void* handle,
     irx_arrow_handle_ownership* out_ownership,
@@ -171,6 +184,9 @@ irx_arrow_status irx_arrow_handle_ownership_of(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_snapshot(
     irx_arrow_error_handle** out_error,
     irx_arrow_error_handle** out_failure) {
@@ -189,6 +205,9 @@ irx_arrow_status irx_arrow_error_snapshot(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_code(
     const irx_arrow_error_handle* error,
     irx_arrow_status* out_code,
@@ -223,6 +242,9 @@ irx_arrow_status irx_arrow_error_code(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_operation(
     const irx_arrow_error_handle* error,
     const char** out_operation,
@@ -257,6 +279,9 @@ irx_arrow_status irx_arrow_error_operation(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_message(
     const irx_arrow_error_handle* error,
     const char** out_message,
@@ -291,6 +316,9 @@ irx_arrow_status irx_arrow_error_message(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_upstream_detail(
     const irx_arrow_error_handle* error,
     const char** out_upstream_detail,
@@ -325,6 +353,9 @@ irx_arrow_status irx_arrow_error_upstream_detail(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_retain(
     const irx_arrow_error_handle* error,
     irx_arrow_error_handle** out_error,
@@ -344,6 +375,9 @@ irx_arrow_status irx_arrow_error_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 irx_arrow_status irx_arrow_error_release(
     irx_arrow_error_handle** error,
     irx_arrow_error_handle** out_failure) {
@@ -362,6 +396,9 @@ irx_arrow_status irx_arrow_error_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema,
@@ -381,6 +418,9 @@ irx_arrow_status irx_arrow_schema_import_copy(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_export(
     const irx_arrow_schema_handle* schema,
     struct ArrowSchema* out_schema,
@@ -400,6 +440,9 @@ irx_arrow_status irx_arrow_schema_export(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_type_id(
     const irx_arrow_schema_handle* schema,
     int32_t* out_type_id,
@@ -434,6 +477,9 @@ irx_arrow_status irx_arrow_schema_type_id(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_is_nullable(
     const irx_arrow_schema_handle* schema,
     int32_t* out_is_nullable,
@@ -468,6 +514,9 @@ irx_arrow_status irx_arrow_schema_is_nullable(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_retain(
     const irx_arrow_schema_handle* schema,
     irx_arrow_schema_handle** out_schema,
@@ -487,6 +536,9 @@ irx_arrow_status irx_arrow_schema_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_schema_release(
     irx_arrow_schema_handle** schema,
     irx_arrow_error_handle** out_failure) {
@@ -505,6 +557,9 @@ irx_arrow_status irx_arrow_schema_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_new(
     int32_t type_id,
     irx_arrow_array_builder_handle** out_builder,
@@ -524,6 +579,9 @@ irx_arrow_status irx_arrow_array_builder_new(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_append_null(
     irx_arrow_array_builder_handle* builder,
     int64_t count,
@@ -543,6 +601,9 @@ irx_arrow_status irx_arrow_array_builder_append_null(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_append_int(
     irx_arrow_array_builder_handle* builder,
     int64_t value,
@@ -562,6 +623,9 @@ irx_arrow_status irx_arrow_array_builder_append_int(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_append_uint(
     irx_arrow_array_builder_handle* builder,
     uint64_t value,
@@ -581,6 +645,9 @@ irx_arrow_status irx_arrow_array_builder_append_uint(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_append_double(
     irx_arrow_array_builder_handle* builder,
     double value,
@@ -600,6 +667,9 @@ irx_arrow_status irx_arrow_array_builder_append_double(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_int32_new(
     irx_arrow_array_builder_handle** out_builder,
     irx_arrow_error_handle** out_failure) {
@@ -618,6 +688,9 @@ irx_arrow_status irx_arrow_array_builder_int32_new(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_append_int32(
     irx_arrow_array_builder_handle* builder,
     int32_t value,
@@ -637,6 +710,9 @@ irx_arrow_status irx_arrow_array_builder_append_int32(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_finish(
     irx_arrow_array_builder_handle** builder,
     irx_arrow_array_handle** out_array,
@@ -656,6 +732,9 @@ irx_arrow_status irx_arrow_array_builder_finish(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_builder_release(
     irx_arrow_array_builder_handle** builder,
     irx_arrow_error_handle** out_failure) {
@@ -674,6 +753,9 @@ irx_arrow_status irx_arrow_array_builder_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_length(
     const irx_arrow_array_handle* array,
     int64_t* out_length,
@@ -708,6 +790,9 @@ irx_arrow_status irx_arrow_array_length(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_offset(
     const irx_arrow_array_handle* array,
     int64_t* out_offset,
@@ -742,6 +827,9 @@ irx_arrow_status irx_arrow_array_offset(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_null_count(
     const irx_arrow_array_handle* array,
     int64_t* out_null_count,
@@ -776,6 +864,9 @@ irx_arrow_status irx_arrow_array_null_count(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_type_id(
     const irx_arrow_array_handle* array,
     int32_t* out_type_id,
@@ -810,6 +901,9 @@ irx_arrow_status irx_arrow_array_type_id(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_is_nullable(
     const irx_arrow_array_handle* array,
     int32_t* out_is_nullable,
@@ -844,6 +938,9 @@ irx_arrow_status irx_arrow_array_is_nullable(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_has_validity_bitmap(
     const irx_arrow_array_handle* array,
     int32_t* out_has_validity_bitmap,
@@ -878,6 +975,9 @@ irx_arrow_status irx_arrow_array_has_validity_bitmap(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_can_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     int32_t* out_can_borrow,
@@ -912,6 +1012,9 @@ irx_arrow_status irx_arrow_array_can_borrow_buffer_view(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_schema_copy(
     const irx_arrow_array_handle* array,
     irx_arrow_schema_handle** out_schema,
@@ -931,6 +1034,9 @@ irx_arrow_status irx_arrow_array_schema_copy(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_export(
     const irx_arrow_array_handle* array,
     struct ArrowArray* out_array,
@@ -951,6 +1057,9 @@ irx_arrow_status irx_arrow_array_export(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_import(
     const struct ArrowArray* array,
     const struct ArrowSchema* schema,
@@ -971,6 +1080,9 @@ irx_arrow_status irx_arrow_array_import(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_import_copy(
     const struct ArrowArray* array,
     const struct ArrowSchema* schema,
@@ -991,6 +1103,9 @@ irx_arrow_status irx_arrow_array_import_copy(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_import_move(
     struct ArrowArray* array,
     struct ArrowSchema* schema,
@@ -1011,6 +1126,9 @@ irx_arrow_status irx_arrow_array_import_move(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_validity_bitmap(
     const irx_arrow_array_handle* array,
     const void** out_data,
@@ -1036,6 +1154,9 @@ irx_arrow_status irx_arrow_array_validity_bitmap(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view,
@@ -1055,6 +1176,9 @@ irx_arrow_status irx_arrow_array_borrow_buffer_view(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_retain(
     const irx_arrow_array_handle* array,
     irx_arrow_array_handle** out_array,
@@ -1074,6 +1198,9 @@ irx_arrow_status irx_arrow_array_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_ARRAY)
 irx_arrow_status irx_arrow_array_release(
     irx_arrow_array_handle** array,
     irx_arrow_error_handle** out_failure) {
@@ -1092,6 +1219,9 @@ irx_arrow_status irx_arrow_array_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_import_move(
     struct ArrowArray* array,
     struct ArrowSchema* schema,
@@ -1112,6 +1242,9 @@ irx_arrow_status irx_arrow_record_batch_import_move(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_export(
     const irx_arrow_record_batch_handle* batch,
     struct ArrowArray* out_array,
@@ -1132,6 +1265,9 @@ irx_arrow_status irx_arrow_record_batch_export(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_num_rows(
     const irx_arrow_record_batch_handle* batch,
     int64_t* out_num_rows,
@@ -1166,6 +1302,9 @@ irx_arrow_status irx_arrow_record_batch_num_rows(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_num_columns(
     const irx_arrow_record_batch_handle* batch,
     int64_t* out_num_columns,
@@ -1200,6 +1339,9 @@ irx_arrow_status irx_arrow_record_batch_num_columns(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_retain(
     const irx_arrow_record_batch_handle* batch,
     irx_arrow_record_batch_handle** out_batch,
@@ -1219,6 +1361,9 @@ irx_arrow_status irx_arrow_record_batch_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_RECORD_BATCH)
 irx_arrow_status irx_arrow_record_batch_release(
     irx_arrow_record_batch_handle** batch,
     irx_arrow_error_handle** out_failure) {
@@ -1237,6 +1382,9 @@ irx_arrow_status irx_arrow_record_batch_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_new(
     int32_t type_id,
     int32_t ndim,
@@ -1264,6 +1412,9 @@ irx_arrow_status irx_arrow_tensor_builder_new(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_append_int(
     irx_arrow_tensor_builder_handle* builder,
     int64_t value,
@@ -1283,6 +1434,9 @@ irx_arrow_status irx_arrow_tensor_builder_append_int(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_append_uint(
     irx_arrow_tensor_builder_handle* builder,
     uint64_t value,
@@ -1302,6 +1456,9 @@ irx_arrow_status irx_arrow_tensor_builder_append_uint(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_append_double(
     irx_arrow_tensor_builder_handle* builder,
     double value,
@@ -1321,6 +1478,9 @@ irx_arrow_status irx_arrow_tensor_builder_append_double(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_finish(
     irx_arrow_tensor_builder_handle** builder,
     irx_arrow_tensor_handle** out_tensor,
@@ -1340,6 +1500,9 @@ irx_arrow_status irx_arrow_tensor_builder_finish(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_builder_release(
     irx_arrow_tensor_builder_handle** builder,
     irx_arrow_error_handle** out_failure) {
@@ -1358,6 +1521,9 @@ irx_arrow_status irx_arrow_tensor_builder_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_type_id(
     const irx_arrow_tensor_handle* tensor,
     int32_t* out_type_id,
@@ -1392,6 +1558,9 @@ irx_arrow_status irx_arrow_tensor_type_id(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_ndim(
     const irx_arrow_tensor_handle* tensor,
     int32_t* out_ndim,
@@ -1426,6 +1595,9 @@ irx_arrow_status irx_arrow_tensor_ndim(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_size(
     const irx_arrow_tensor_handle* tensor,
     int64_t* out_size,
@@ -1460,6 +1632,9 @@ irx_arrow_status irx_arrow_tensor_size(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_shape(
     const irx_arrow_tensor_handle* tensor,
     const int64_t** out_shape,
@@ -1494,6 +1669,9 @@ irx_arrow_status irx_arrow_tensor_shape(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_strides(
     const irx_arrow_tensor_handle* tensor,
     const int64_t** out_strides,
@@ -1528,6 +1706,9 @@ irx_arrow_status irx_arrow_tensor_strides(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view,
@@ -1547,6 +1728,9 @@ irx_arrow_status irx_arrow_tensor_borrow_buffer_view(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_retain(
     const irx_arrow_tensor_handle* tensor,
     irx_arrow_tensor_handle** out_tensor,
@@ -1566,6 +1750,9 @@ irx_arrow_status irx_arrow_tensor_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 irx_arrow_status irx_arrow_tensor_release(
     irx_arrow_tensor_handle** tensor,
     irx_arrow_error_handle** out_failure) {
@@ -1584,6 +1771,9 @@ irx_arrow_status irx_arrow_tensor_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_new_from_arrays(
     int64_t column_count,
     const char** names,
@@ -1609,6 +1799,9 @@ irx_arrow_status irx_arrow_table_new_from_arrays(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_num_rows(
     const irx_arrow_table_handle* table,
     int64_t* out_num_rows,
@@ -1643,6 +1836,9 @@ irx_arrow_status irx_arrow_table_num_rows(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_num_columns(
     const irx_arrow_table_handle* table,
     int64_t* out_num_columns,
@@ -1677,6 +1873,9 @@ irx_arrow_status irx_arrow_table_num_columns(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_column_by_name(
     const irx_arrow_table_handle* table,
     const char* name,
@@ -1697,6 +1896,9 @@ irx_arrow_status irx_arrow_table_column_by_name(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
@@ -1717,6 +1919,9 @@ irx_arrow_status irx_arrow_table_column_by_index(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_retain(
     const irx_arrow_table_handle* table,
     irx_arrow_table_handle** out_table,
@@ -1736,6 +1941,9 @@ irx_arrow_status irx_arrow_table_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_table_release(
     irx_arrow_table_handle** table,
     irx_arrow_error_handle** out_failure) {
@@ -1754,6 +1962,9 @@ irx_arrow_status irx_arrow_table_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_chunked_array_retain(
     const irx_arrow_chunked_array_handle* column,
     irx_arrow_chunked_array_handle** out_column,
@@ -1773,6 +1984,9 @@ irx_arrow_status irx_arrow_chunked_array_retain(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_DATAFRAME)
 irx_arrow_status irx_arrow_chunked_array_release(
     irx_arrow_chunked_array_handle** column,
     irx_arrow_error_handle** out_failure) {
@@ -1791,11 +2005,19 @@ irx_arrow_status irx_arrow_chunked_array_release(
       out_failure);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_TENSOR)
 void irx_arrow_tensor_release_callback(
     void* tensor) {
   irx_arrow_internal_tensor_release_callback(tensor);
 }
 
+#endif
+
+#if defined(IRX_ARROW_RUNTIME_BUILD_CORE)
 const char* irx_arrow_last_error(void) {
   return irx_arrow_internal_last_error();
 }
+
+#endif

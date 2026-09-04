@@ -96,6 +96,8 @@ re-scoped; do not defer status updates until the end of a milestone.
 | 2026-09-03 | M1-004 | IN PROGRESS -> DONE        | ABI manifest and 50 Arrow ABI/runtime tests pass.              |
 | 2026-09-03 | M1-005 | NOT STARTED -> IN PROGRESS | Cross-language ABI declaration generation started.             |
 | 2026-09-03 | M1-005 | IN PROGRESS -> DONE        | 67 generated symbols have C/Python/LLVM parity; 55 tests pass. |
+| 2026-09-04 | M1-009 | NOT STARTED -> IN PROGRESS | Capability-specific native artifact split started.             |
+| 2026-09-04 | M1-009 | IN PROGRESS -> DONE        | 21 feature tests and all 983 IRx tests pass.                   |
 
 ## 1. Objective
 
@@ -960,7 +962,7 @@ but new functionality must use one contract.
 | M1-006 | Add the versioned runtime-feature query                       | **DONE**        | 68-symbol ABI; 56 Arrow tests pass        |
 | M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **DONE**        | 74-symbol ABI; 81 batch tests pass        |
 | M1-008 | Enforce executable transitive runtime-feature dependencies    | **DONE**        | 17 registry tests; 978 IRx tests pass     |
-| M1-009 | Split runtime artifacts and linking by activated capability   | **NOT STARTED** | Link-input and clean-build tests          |
+| M1-009 | Split runtime artifacts and linking by activated capability   | **DONE**        | 21 feature tests; 983 IRx tests pass      |
 | M1-010 | Add installed-header, layout, symbol, and version conformance | **NOT STARTED** | C11/C++20 and cross-version CI            |
 
 ### Implemented error-detail snapshot contract (M1-003)
@@ -1157,13 +1159,46 @@ that dependency graph as a build input.
 
 Registry tests cover transitive resolution, per-item runtime type validation,
 unknown dependencies, cycles, atomic failure, artifacts, and linker flags. A
-translate-path test proves that a RecordBatch-backed extern activates `array`,
-includes both native translation units, deduplicates the shared unified Arrow
-runtime source, and emits the requested symbol. The runtime-feature suite passes
-17 tests and the complete IRx suite passes 978 tests. ABI/capability generation,
-strict type checking, lint, and the IRx package build also pass. ABI generation
-now renders empty feature-symbol tuples canonically so its freshness check stays
-idempotent with the repository formatter.
+translate-path test proves that a RecordBatch-backed extern activates its
+dependency closure, includes the required native inputs, and emits the requested
+symbol. The runtime-feature suite passes 17 tests and the complete IRx suite
+passes 978 tests. ABI/capability generation, strict type checking, lint, and the
+IRx package build also pass. ABI generation renders feature-symbol tuples
+canonically so its freshness check stays idempotent with the repository
+formatter.
+
+### Capability-specific runtime artifacts (M1-009)
+
+The Arrow ABI is now partitioned into `core`, `array`, `tensor`, `dataframe`,
+and `record_batch` native translation units. `core` owns ABI/version queries,
+status and handle introspection, owned error details, and the shared
+thread-local error state. Every data capability depends on `core`;
+`record_batch` additionally depends on `array` while its deprecated `irx_rb_*`
+adapter remains a separate compatibility input. The default runtime registry
+resolves these dependencies before collecting artifacts, so an array-only
+program links only the core and array objects rather than every implemented
+Arrow entry point.
+
+Each stable ABI function has exactly one capability owner in `abi.json`.
+Generated public wrappers are compiled only for that owner, while linked
+capability objects register their contract versions with the core during native
+initialization. `irx_arrow_runtime_has_feature()` therefore reports the
+capabilities present in the final link, not every capability implemented by the
+source distribution. The Python ctypes configurator can likewise bind a named
+capability subset without resolving intentionally absent symbols.
+
+The standalone RecordBatch builder fingerprints and compiles its complete
+`core -> array -> record_batch` closure plus the compatibility adapter. Focused
+registry tests assert exact link-input sets for every current Arrow capability.
+A clean array executable test inspects the resulting native symbol table and
+proves that array entry points are present while tensor and dataframe entry
+points are absent. A C harness also proves that the runtime query rejects an
+implemented but unlinked capability.
+
+The runtime-feature suite passes 21 tests and the complete IRx suite passes 983
+tests. ABI and capability generation checks, strict IRx type checking, lint,
+formatting, and the IRx package build pass. The built wheel contains all five
+capability translation units and the shared Arrow feature builder.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 

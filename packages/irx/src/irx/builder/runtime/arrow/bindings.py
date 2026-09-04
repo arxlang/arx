@@ -6,8 +6,11 @@ from __future__ import annotations
 
 import ctypes
 
+from collections.abc import Sequence
+
 from irx.builder.runtime.arrow.abi_generated import (
     CTYPES_SIGNATURES,
+    FEATURE_SYMBOLS,
     HANDLE_TYPES,
 )
 from irx.typecheck import typechecked
@@ -75,14 +78,35 @@ def arrow_ctypes_type(type_token: str) -> object | None:
 
 
 @typechecked
-def configure_arrow_ctypes_library(library: ctypes.CDLL) -> None:
+def configure_arrow_ctypes_library(
+    library: ctypes.CDLL,
+    features: Sequence[str] | None = None,
+) -> None:
     """
-    title: Apply every generated Arrow ABI declaration to a ctypes library.
+    title: Apply selected generated Arrow ABI declarations to a ctypes library.
+    summary: >-
+      Configure the complete ABI by default. Capability-specific libraries can
+      provide their exact linked feature names so absent symbols are not
+      resolved eagerly.
     parameters:
       library:
         type: ctypes.CDLL
+      features:
+        type: Sequence[str] | None
     """
+    selected_symbols: frozenset[str] | None = None
+    if features is not None:
+        unknown_features = set(features).difference(FEATURE_SYMBOLS)
+        if unknown_features:
+            names = ", ".join(sorted(unknown_features))
+            raise ValueError(f"Unknown Arrow runtime features: {names}")
+        selected_symbols = frozenset(
+            name for feature in features for name in FEATURE_SYMBOLS[feature]
+        )
+
     for name, (return_type, parameter_types) in CTYPES_SIGNATURES.items():
+        if selected_symbols is not None and name not in selected_symbols:
+            continue
         function = getattr(library, name)
         function.argtypes = [
             arrow_ctypes_type(type_token) for type_token in parameter_types
