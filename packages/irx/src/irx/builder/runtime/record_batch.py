@@ -284,9 +284,9 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         symbols=symbols,
         artifacts=artifacts,
         linker_flags=arrowcpp_linker_flags(),
+        dependencies=("array",),
         metadata={
             "canonical_name": "record_batch",
-            "depends_on": ("array",),
             "opaque_handles": {
                 "schema": "IrxRbSchema",
                 "builder": "IrxRbBuilder",
@@ -367,6 +367,7 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
             for artifact in feature.artifacts
         ],
         "linker_flags": list(feature.linker_flags),
+        "dependencies": list(feature.dependencies),
         "metadata": dict(feature.metadata),
         "platform": os.name,
     }

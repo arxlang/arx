@@ -853,6 +853,9 @@ def render_feature_rows(
             for function in functions
             if feature.name in function.features
         )
+        if not names:
+            rows.append(f'    "{feature.name}": (),')
+            continue
         rows.append(f'    "{feature.name}": (')
         rows.extend(f'        "{name}",' for name in names)
         rows.append("    ),")

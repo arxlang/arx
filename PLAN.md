@@ -959,7 +959,7 @@ but new functionality must use one contract.
 | M1-005 | Generate C, Python, LLVM, and symbol declarations             | **DONE**        | 67-symbol generated ABI; 55 tests pass    |
 | M1-006 | Add the versioned runtime-feature query                       | **DONE**        | 68-symbol ABI; 56 Arrow tests pass        |
 | M1-007 | Delegate legacy `irx_rb_*` symbols through compatibility      | **DONE**        | 74-symbol ABI; 81 batch tests pass        |
-| M1-008 | Enforce executable transitive runtime-feature dependencies    | **NOT STARTED** | Registry and translate tests              |
+| M1-008 | Enforce executable transitive runtime-feature dependencies    | **DONE**        | 17 registry tests; 978 IRx tests pass     |
 | M1-009 | Split runtime artifacts and linking by activated capability   | **NOT STARTED** | Link-input and clean-build tests          |
 | M1-010 | Add installed-header, layout, symbol, and version conformance | **NOT STARTED** | C11/C++20 and cross-version CI            |
 
@@ -1135,6 +1135,35 @@ tests. ABI and capability generation checks, strict IRx type checking and lint,
 and the IRx package build also pass; the built wheel contains both native
 translation units, the shared internal handle definition, and generated
 includes.
+
+### Executable runtime-feature dependencies (M1-008)
+
+`RuntimeFeature.dependencies` is now a typed tuple rather than an informal
+metadata entry. Construction validates the tuple and every dependency name
+through IRx's runtime type-checking policy. The registry resolves the complete
+transitive closure with dependencies before their dependents, deduplicates
+shared subgraphs, and reports an unknown dependency with its full path. Cycles
+fail with structured diagnostic `IRX-R004` and the exact closed cycle.
+Resolution finishes before activation mutates module state, so either the whole
+closure is activated or no new feature is.
+
+All activation paths use this resolver, including explicit builder activation,
+generated runtime-symbol requirements, feature-backed externs, and builder
+initialization. Native artifact and linker-flag collection therefore sees every
+activated transitive dependency while retaining the existing cross-feature
+deduplication. RecordBatch's dependency on `array` has moved from `metadata` to
+the executable field, and the standalone RecordBatch build fingerprint records
+that dependency graph as a build input.
+
+Registry tests cover transitive resolution, per-item runtime type validation,
+unknown dependencies, cycles, atomic failure, artifacts, and linker flags. A
+translate-path test proves that a RecordBatch-backed extern activates `array`,
+includes both native translation units, deduplicates the shared unified Arrow
+runtime source, and emits the requested symbol. The runtime-feature suite passes
+17 tests and the complete IRx suite passes 978 tests. ABI/capability generation,
+strict type checking, lint, and the IRx package build also pass. ABI generation
+now renders empty feature-symbol tuples canonically so its freshness check stays
+idempotent with the repository formatter.
 
 ### Accepted ABI v1 compatibility policy (M0-011)
 

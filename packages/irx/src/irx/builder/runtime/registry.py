@@ -100,6 +100,82 @@ class RuntimeFeatureRegistry:
         """
         return tuple(sorted(self._features))
 
+    def resolve_dependencies(self, name: str) -> tuple[str, ...]:
+        """
+        title: Resolve one feature and its transitive dependency closure.
+        summary: >-
+          Return each dependency before its dependents. Unknown dependencies
+          and cycles fail without returning a partial resolution.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: tuple[str, Ellipsis]
+        """
+        self.get(name)
+        resolved: list[str] = []
+        complete: set[str] = set()
+        visiting: list[str] = []
+
+        def visit(feature_name: str) -> None:
+            """
+            title: Resolve one dependency node with depth-first traversal.
+            parameters:
+              feature_name:
+                type: str
+            """
+            if feature_name in complete:
+                return
+            if feature_name in visiting:
+                cycle_start = visiting.index(feature_name)
+                cycle = (*visiting[cycle_start:], feature_name)
+                raise RuntimeFeatureError(
+                    Diagnostic(
+                        message="runtime feature dependency cycle detected",
+                        code=(
+                            DiagnosticCodes.RUNTIME_FEATURE_DEPENDENCY_CYCLE
+                        ),
+                        phase="runtime",
+                        notes=(f"dependency cycle: {' -> '.join(cycle)}",),
+                        cause=ValueError(" -> ".join(cycle)),
+                    )
+                )
+
+            feature = self._features.get(feature_name)
+            if feature is None:
+                required_by = visiting[-1]
+                available = self.names()
+                notes = [
+                    "dependency chain: "
+                    f"{' -> '.join((*visiting, feature_name))}"
+                ]
+                if available:
+                    notes.append(
+                        f"available runtime features: {', '.join(available)}"
+                    )
+                raise RuntimeFeatureError(
+                    Diagnostic(
+                        message=(
+                            f"runtime feature dependency '{feature_name}' "
+                            f"required by '{required_by}' is not registered"
+                        ),
+                        code=DiagnosticCodes.RUNTIME_FEATURE_UNKNOWN,
+                        phase="runtime",
+                        notes=tuple(notes),
+                        cause=KeyError(feature_name),
+                    )
+                )
+
+            visiting.append(feature_name)
+            for dependency in feature.dependencies:
+                visit(dependency)
+            visiting.pop()
+            complete.add(feature_name)
+            resolved.append(feature_name)
+
+        visit(name)
+        return tuple(resolved)
+
 
 @typechecked
 class RuntimeFeatureState:
@@ -150,13 +226,13 @@ class RuntimeFeatureState:
 
     def activate(self, feature_name: str) -> None:
         """
-        title: Activate a runtime feature for the current module.
+        title: Activate a runtime feature and all transitive dependencies.
         parameters:
           feature_name:
             type: str
         """
-        self._registry.get(feature_name)
-        self._active_features.add(feature_name)
+        resolved = self._registry.resolve_dependencies(feature_name)
+        self._active_features.update(resolved)
 
     def is_active(self, feature_name: str) -> bool:
         """

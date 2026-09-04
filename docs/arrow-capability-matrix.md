@@ -127,7 +127,7 @@ associated foundation row is done.
   - Baseline: Ambient builtins, bundled builtin modules, and a small standard library exist.
   - Required: Define stable intrinsic registration and public stdlib.compute, stdlib.io, and stdlib.dataset facades without an Arrow namespace.
 - **FND-017 — Execution context**
-  - Baseline: Runtime features can add native artifacts and linker flags, but there is no Arrow execution-context value.
+  - Baseline: Runtime features declare typed transitive dependencies and automatically collect their native artifacts and linker flags during activation, but there is no Arrow execution-context value.
   - Required: Add memory pool, allocator, thread count, cancellation, resource limits, and optional device selection.
 - **FND-018 — Native packaging**
   - Baseline: Runtime sources build on demand from Arrow and PyArrow package metadata.

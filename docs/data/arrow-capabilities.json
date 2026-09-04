@@ -254,7 +254,7 @@
         "packages/irx/tests/test_arrow_runtime.py"
       ],
       "blocks": ["M5", "M6", "M7"],
-      "baseline": "Runtime features can add native artifacts and linker flags, but there is no Arrow execution-context value.",
+      "baseline": "Runtime features declare typed transitive dependencies and automatically collect their native artifacts and linker flags during activation, but there is no Arrow execution-context value.",
       "completion": "Add memory pool, allocator, thread count, cancellation, resource limits, and optional device selection."
     },
     {

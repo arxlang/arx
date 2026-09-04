@@ -26,6 +26,9 @@ from irx.builder.runtime.linking import (
     link_executable,
 )
 from irx.builder.runtime.list.feature import build_list_runtime_feature
+from irx.builder.runtime.record_batch import (
+    build_record_batch_runtime_feature,
+)
 from irx.builder.runtime.registry import (
     RuntimeFeatureRegistry,
     RuntimeFeatureState,
@@ -37,6 +40,7 @@ from irx.diagnostics import (
 )
 from irx.system import PrintExpr
 from llvmlite import ir
+from typeguard import TypeCheckError
 
 if TYPE_CHECKING:
     from irx.builder.protocols import VisitorProtocol
@@ -177,6 +181,147 @@ def test_runtime_feature_state_collects_only_active_artifacts() -> None:
     assert [artifact.path for artifact in artifacts] == [
         Path(".tmp/tests/b.c")
     ]
+
+
+def test_runtime_feature_state_activates_transitive_dependencies() -> None:
+    """
+    title: Activation should include the complete typed dependency closure.
+    """
+    registry = RuntimeFeatureRegistry()
+    registry.register(
+        RuntimeFeature(
+            name="leaf",
+            artifacts=(NativeArtifact("object", Path(".tmp/tests/leaf.o")),),
+            linker_flags=("-lleaf",),
+        )
+    )
+    registry.register(
+        RuntimeFeature(
+            name="middle",
+            artifacts=(NativeArtifact("object", Path(".tmp/tests/middle.o")),),
+            linker_flags=("-lmiddle",),
+            dependencies=("leaf",),
+        )
+    )
+    registry.register(
+        RuntimeFeature(
+            name="root",
+            artifacts=(NativeArtifact("object", Path(".tmp/tests/root.o")),),
+            linker_flags=("-lroot",),
+            dependencies=("middle",),
+        )
+    )
+    state = RuntimeFeatureState(Visitor(), registry)
+
+    state.activate("root")
+
+    assert registry.resolve_dependencies("root") == (
+        "leaf",
+        "middle",
+        "root",
+    )
+    assert state.active_feature_names() == ("leaf", "middle", "root")
+    assert [artifact.path.name for artifact in state.native_artifacts()] == [
+        "leaf.o",
+        "middle.o",
+        "root.o",
+    ]
+    assert state.linker_flags() == ("-lleaf", "-lmiddle", "-lroot")
+
+
+def test_runtime_feature_dependencies_check_every_tuple_item() -> None:
+    """
+    title: Dependency declarations should reject non-string tuple items.
+    """
+    invalid_dependencies = cast(tuple[str, ...], ("leaf", 1))
+
+    with pytest.raises(TypeCheckError):
+        RuntimeFeature(name="root", dependencies=invalid_dependencies)
+
+
+def test_runtime_feature_dependency_failure_is_atomic() -> None:
+    """
+    title: An unknown dependency should not partially activate its dependents.
+    """
+    registry = RuntimeFeatureRegistry()
+    registry.register(RuntimeFeature(name="middle", dependencies=("missing",)))
+    registry.register(RuntimeFeature(name="root", dependencies=("middle",)))
+    state = RuntimeFeatureState(Visitor(), registry)
+
+    with pytest.raises(RuntimeFeatureError) as exc_info:
+        state.activate("root")
+
+    formatted = str(exc_info.value)
+    assert "IRX-R001" in formatted
+    assert (
+        "runtime feature dependency 'missing' required by 'middle' "
+        "is not registered"
+    ) in formatted
+    assert "dependency chain: root -> middle -> missing" in formatted
+    assert state.active_feature_names() == ()
+
+
+def test_runtime_feature_dependency_cycle_is_structured_and_atomic() -> None:
+    """
+    title: A dependency cycle should fail with its exact closed path.
+    """
+    registry = RuntimeFeatureRegistry()
+    registry.register(RuntimeFeature(name="first", dependencies=("second",)))
+    registry.register(RuntimeFeature(name="second", dependencies=("third",)))
+    registry.register(RuntimeFeature(name="third", dependencies=("first",)))
+    state = RuntimeFeatureState(Visitor(), registry)
+
+    with pytest.raises(RuntimeFeatureError) as exc_info:
+        state.activate("first")
+
+    formatted = str(exc_info.value)
+    assert "IRX-R004" in formatted
+    assert "runtime feature dependency cycle detected" in formatted
+    assert "dependency cycle: first -> second -> third -> first" in formatted
+    assert state.active_feature_names() == ()
+
+
+def test_translate_activates_record_batch_dependency_closure() -> None:
+    """
+    title: Translate should activate dependency artifacts for feature externs.
+    """
+    feature = build_record_batch_runtime_feature()
+    assert feature.dependencies == ("array",)
+    assert "depends_on" not in feature.metadata
+
+    builder = Builder()
+    module = astx.Module()
+    module.block.append(
+        _extern_prototype(
+            "irx_record_batch_abi_version",
+            return_type=astx.Int32(),
+            runtime_feature="record_batch",
+        )
+    )
+    main_proto = astx.FunctionPrototype(
+        "main", args=astx.Arguments(), return_type=astx.Int32()
+    )
+    body = astx.Block()
+    body.append(
+        astx.FunctionReturn(
+            astx.FunctionCall("irx_record_batch_abi_version", [])
+        )
+    )
+    module.block.append(astx.FunctionDef(prototype=main_proto, body=body))
+
+    ir_text = builder.translate(module)
+    runtime_features = builder.translator.runtime_features
+    artifact_names = [
+        artifact.path.name for artifact in runtime_features.native_artifacts()
+    ]
+
+    assert runtime_features.active_feature_names() == (
+        "array",
+        "record_batch",
+    )
+    assert artifact_names.count("irx_arrow_runtime.cc") == 1
+    assert "irx_record_batch.cpp" in artifact_names
+    assert '@"irx_record_batch_abi_version"' in ir_text
 
 
 def test_print_expr_uses_libc_feature_without_array_runtime() -> None:
