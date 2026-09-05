@@ -32,7 +32,7 @@ re-scoped; do not defer status updates until the end of a milestone.
 | --------------------------------------- | --------------- | ------------------ |
 | M0 — contracts and design decisions     | **DONE**        | None               |
 | M1 — one native Arrow runtime and ABI   | **DONE**        | M0, Gate A         |
-| M2 — semantic ownership and cleanup     | **NOT STARTED** | M1, Gates A-B      |
+| M2 — semantic ownership and cleanup     | **IN PROGRESS** | M1, Gates A-B      |
 | M3 — complete logical types and schemas | **NOT STARTED** | M1-M2, Gate B      |
 | M4 — first-class containers             | **NOT STARTED** | M1-M3, Gate B      |
 | M5 — tensors and multidimensional data  | **NOT STARTED** | M1-M4              |
@@ -101,6 +101,8 @@ re-scoped; do not defer status updates until the end of a milestone.
 | 2026-09-04 | M1-010 | NOT STARTED -> IN PROGRESS | Installed ABI conformance gates started.                       |
 | 2026-09-04 | M1-010 | IN PROGRESS -> DONE        | GCC/Clang, wheel, symbol, and all 995 IRx tests pass.          |
 | 2026-09-04 | M1     | IN PROGRESS -> DONE        | All ten native runtime and ABI work items are complete.        |
+| 2026-09-04 | M2-001 | NOT STARTED -> IN PROGRESS | Arrow semantic resource descriptors started.                   |
+| 2026-09-04 | M2-001 | IN PROGRESS -> DONE        | Nine ownership tests and all 1,004 IRx tests pass.             |
 
 ## 1. Objective
 
@@ -1338,6 +1340,48 @@ runtimes, verify ctypes and LLVM declarations, and run from clean wheels.
 
 Arrow values cannot become first-class Arx values until their lifecycle is part
 of semantic analysis.
+
+### Milestone 2 work items
+
+| ID     | Item                                                               | Status          | Evidence or blocker                    |
+| ------ | ------------------------------------------------------------------ | --------------- | -------------------------------------- |
+| M2-001 | Extend semantic resource descriptors for every Arrow handle        | **DONE**        | 14 handle contracts; nine tests pass   |
+| M2-002 | Attach ownership metadata at every expression and binding site     | **NOT STARTED** | Depends on M2-001                      |
+| M2-003 | Define table-column ownership and parent/child release ordering    | **NOT STARTED** | Depends on M2-001 and M2-002           |
+| M2-004 | Emit cleanup across every non-terminating control-flow exit        | **NOT STARTED** | Depends on M2-002                      |
+| M2-005 | Prevent post-terminator cleanup and double release after moves     | **NOT STARTED** | Depends on M2-002 and M2-004           |
+| M2-006 | Add class-field and generator-frame ownership cleanup              | **NOT STARTED** | Depends on M2-004 and aggregate models |
+| M2-007 | Model retained and borrowed view owners explicitly                 | **NOT STARTED** | Depends on M2-002 and M2-003           |
+| M2-008 | Harden Python wrappers for deterministic close and use-after-close | **NOT STARTED** | Native handle lifecycle                |
+| M2-009 | Run ownership programs under ASan, LSan, and UBSan                 | **NOT STARTED** | Depends on M2-004 through M2-008       |
+| M2-010 | Add allocator-fault injection across native Arrow operations       | **NOT STARTED** | Depends on operation implementation    |
+| M2-011 | Add bounded-memory loops and release-order property tests          | **NOT STARTED** | Depends on M2-003 through M2-010       |
+
+### Semantic resource descriptor foundation (M2-001)
+
+`ResourceKind` now covers all 14 opaque handle families in the canonical Arrow
+ABI: error, type, schema, scalar, array builder, array, chunked array,
+RecordBatch, table, tensor builder, tensor, stream, dataset, and execution plan.
+Manifest-parity tests fail if a handle is added, removed, or renamed without a
+matching semantic resource contract.
+
+Every `ResourceOwnership` sidecar now carries the resource's sharing class,
+mutability, cleanup intrinsic, optional retain intrinsic, immediate owner, root
+owner, source owner, transfer action, and escape action. `MOVED` is an explicit
+fail-closed ownership state. Shared Arrow values are immutable and retainable;
+builders, streams, and execution plans are mutable unique resources with no
+retain operation. Existing list and string ownership helpers also construct the
+complete descriptor, so lowering can migrate to one resource contract rather
+than maintaining per-type lifecycle tables.
+
+The exported `arrow_resource_ownership()` factory is the single semantic entry
+point for Arrow handle metadata. It rejects non-Arrow resource kinds, derives a
+root owner when possible, and preserves that root and the static lifecycle
+contract across validated transfers. Nine focused tests cover manifest parity,
+shared and affine descriptors, owner roots, transfers, legacy resource helpers,
+runtime type validation, invalid resource families, and the moved state. The
+semantic-analysis suite passes 202 tests and the complete IRx suite passes 1,004
+tests.
 
 ### IRx work
 
