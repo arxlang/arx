@@ -203,6 +203,11 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_batch_struct_field_buffer", i32, vp, i32, i32, pvp, pi64)
     fn("irx_rb_batch_release", None, vp)
 
+    fn("irx_compute_aggregate", i32, vp, i32, i32, pi32, pi64, pf64)
+    fn("irx_compute_binary", i32, vp, i32, i32, i32, pvp)
+    fn("irx_compute_filter", i32, vp, i32, pvp)
+    fn("irx_compute_sort_indices", i32, vp, i32, i32, pi64, i64)
+
     fn("irx_rb_stream_writer_open_file", i32, vp, cstr, pvp)
     fn("irx_rb_stream_writer_open_buffer", i32, vp, pvp)
     fn("irx_rb_stream_writer_write_batch", i32, vp, vp)
@@ -355,6 +360,39 @@ class IrxColumnType(IntEnum):
     TIME64_NS = 22
     LIST = 23
     STRUCT = 24
+
+
+@typechecked
+class ComputeAgg(IntEnum):
+    """
+    title: Column aggregation kinds for RecordBatch reductions.
+    """
+
+    SUM = 0
+    MIN = 1
+    MAX = 2
+    MEAN = 3
+    COUNT = 4
+
+
+@typechecked
+class ComputeBinOp(IntEnum):
+    """
+    title: Element-wise binary operators for RecordBatch columns.
+    """
+
+    ADD = 0
+    SUB = 1
+    MUL = 2
+    DIV = 3
+
+
+# Aggregation result column types the native layer reports through its
+# floating-point out-param; every other reported type reads back from the
+# integer out-param.
+_COMPUTE_FLOAT_TYPES: frozenset[IrxColumnType] = frozenset(
+    {IrxColumnType.FLOAT32, IrxColumnType.FLOAT64}
+)
 
 
 # Fixed-width element types supported inside a list column, mapped to the
@@ -1585,6 +1623,210 @@ class RecordBatch:
             self._lib,
         )
         return bool(out.value)
+
+    # Compute layer (arrow::compute wrappers)
+
+    def aggregate(self, col: int, op: ComputeAgg) -> int | float:
+        """
+        title: Reduce a column to a scalar with the given aggregation.
+        summary: >-
+          MEAN returns a float; COUNT returns an int; SUM/MIN/MAX return an int
+          for integer columns and a float for floating-point columns.
+        parameters:
+          col:
+            type: int
+          op:
+            type: ComputeAgg
+        returns:
+          type: int | float
+        """
+        out_type = ctypes.c_int32()
+        i_out = ctypes.c_int64()
+        f_out = ctypes.c_double()
+        _check(
+            self._lib.irx_compute_aggregate(
+                self._handle,
+                col,
+                int(op),
+                ctypes.byref(out_type),
+                ctypes.byref(i_out),
+                ctypes.byref(f_out),
+            ),
+            self._lib,
+        )
+        if IrxColumnType(out_type.value) in _COMPUTE_FLOAT_TYPES:
+            return float(f_out.value)
+        return int(i_out.value)
+
+    def sum(self, col: int) -> int | float:
+        """
+        title: Return the sum of a numeric column.
+        parameters:
+          col:
+            type: int
+        returns:
+          type: int | float
+        """
+        return self.aggregate(col, ComputeAgg.SUM)
+
+    def mean(self, col: int) -> float:
+        """
+        title: Return the mean of a numeric column.
+        parameters:
+          col:
+            type: int
+        returns:
+          type: float
+        """
+        return float(self.aggregate(col, ComputeAgg.MEAN))
+
+    def min(self, col: int) -> int | float:
+        """
+        title: Return the minimum value of a numeric column.
+        parameters:
+          col:
+            type: int
+        returns:
+          type: int | float
+        """
+        return self.aggregate(col, ComputeAgg.MIN)
+
+    def max(self, col: int) -> int | float:
+        """
+        title: Return the maximum value of a numeric column.
+        parameters:
+          col:
+            type: int
+        returns:
+          type: int | float
+        """
+        return self.aggregate(col, ComputeAgg.MAX)
+
+    def count(self, col: int) -> int:
+        """
+        title: Return the number of non-null values in a column.
+        parameters:
+          col:
+            type: int
+        returns:
+          type: int
+        """
+        return int(self.aggregate(col, ComputeAgg.COUNT))
+
+    def _binary(
+        self, col_a: int, col_b: int, op: ComputeBinOp
+    ) -> "RecordBatch":
+        """
+        title: Apply an element-wise binary op to two columns.
+        parameters:
+          col_a:
+            type: int
+          col_b:
+            type: int
+          op:
+            type: ComputeBinOp
+        returns:
+          type: RecordBatch
+        """
+        out = ctypes.c_void_p()
+        _check(
+            self._lib.irx_compute_binary(
+                self._handle, col_a, col_b, int(op), ctypes.byref(out)
+            ),
+            self._lib,
+        )
+        return RecordBatch(out, self._lib)
+
+    def add(self, col_a: int, col_b: int) -> "RecordBatch":
+        """
+        title: Add two columns element-wise into a new single-column batch.
+        parameters:
+          col_a:
+            type: int
+          col_b:
+            type: int
+        returns:
+          type: RecordBatch
+        """
+        return self._binary(col_a, col_b, ComputeBinOp.ADD)
+
+    def subtract(self, col_a: int, col_b: int) -> "RecordBatch":
+        """
+        title: Subtract column b from column a element-wise.
+        parameters:
+          col_a:
+            type: int
+          col_b:
+            type: int
+        returns:
+          type: RecordBatch
+        """
+        return self._binary(col_a, col_b, ComputeBinOp.SUB)
+
+    def multiply(self, col_a: int, col_b: int) -> "RecordBatch":
+        """
+        title: Multiply two columns element-wise.
+        parameters:
+          col_a:
+            type: int
+          col_b:
+            type: int
+        returns:
+          type: RecordBatch
+        """
+        return self._binary(col_a, col_b, ComputeBinOp.MUL)
+
+    def divide(self, col_a: int, col_b: int) -> "RecordBatch":
+        """
+        title: Divide column a by column b element-wise.
+        parameters:
+          col_a:
+            type: int
+          col_b:
+            type: int
+        returns:
+          type: RecordBatch
+        """
+        return self._binary(col_a, col_b, ComputeBinOp.DIV)
+
+    def filter(self, mask_col: int) -> "RecordBatch":
+        """
+        title: Select the rows where the boolean mask column is true.
+        parameters:
+          mask_col:
+            type: int
+        returns:
+          type: RecordBatch
+        """
+        out = ctypes.c_void_p()
+        _check(
+            self._lib.irx_compute_filter(
+                self._handle, mask_col, ctypes.byref(out)
+            ),
+            self._lib,
+        )
+        return RecordBatch(out, self._lib)
+
+    def sort_indices(self, col: int, ascending: bool = True) -> list[int]:
+        """
+        title: Return the row indices that sort a column.
+        parameters:
+          col:
+            type: int
+          ascending:
+            type: bool
+        returns:
+          type: list[int]
+        """
+        n = self.num_rows
+        out = (ctypes.c_int64 * n)()
+        _check(
+            self._lib.irx_compute_sort_indices(
+                self._handle, col, 1 if ascending else 0, out, n
+            ),
+            self._lib,
+        )
+        return [int(out[i]) for i in range(n)]
 
     def release(self) -> None:
         """
