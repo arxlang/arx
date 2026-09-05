@@ -1,6 +1,10 @@
 // Copyright IRx contributors.
 
+#define IRX_RECORD_BATCH_BUILDING_COMPATIBILITY
 #include "irx_record_batch.h"
+#undef IRX_RECORD_BATCH_BUILDING_COMPATIBILITY
+
+#include "irx_arrow_runtime_internal.h"
 
 #include <arrow/api.h>
 #include <arrow/io/api.h>
@@ -11,6 +15,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -26,6 +31,55 @@ static int set_err(const std::string &msg, int code) {
 static int set_err(const arrow::Status &st, int code = IRX_ERR_ARROW) {
     tl_errmsg = st.ToString();
     return code;
+}
+
+static int legacy_status_code(irx_arrow_status status) {
+    switch (status) {
+    case IRX_ARROW_STATUS_OK:
+        return IRX_OK;
+    case IRX_ARROW_STATUS_END_OF_STREAM:
+        return IRX_EOF;
+    case IRX_ARROW_STATUS_NULL_POINTER:
+        return IRX_ERR_NULLPTR;
+    case IRX_ARROW_STATUS_INDEX_OUT_OF_BOUNDS:
+        return IRX_ERR_OOB;
+    case IRX_ARROW_STATUS_TYPE_MISMATCH:
+    case IRX_ARROW_STATUS_SCHEMA_MISMATCH:
+        return IRX_ERR_TYPE;
+    case IRX_ARROW_STATUS_IO_ERROR:
+        return IRX_ERR_IO;
+    default:
+        return IRX_ERR_ARROW;
+    }
+}
+
+static int delegate_status(
+        irx_arrow_status status,
+        irx_arrow_error_handle *failure) {
+    if (status == IRX_ARROW_STATUS_OK && failure == nullptr)
+        return IRX_OK;
+
+    std::string message{"unified Arrow runtime operation failed"};
+    if (failure != nullptr) {
+        const char *detail = nullptr;
+        irx_arrow_error_handle *accessor_failure = nullptr;
+        if (irx_arrow_error_message(
+                failure, &detail, &accessor_failure) == IRX_ARROW_STATUS_OK &&
+            detail != nullptr) {
+            message = detail;
+        }
+        if (accessor_failure != nullptr) {
+            irx_arrow_error_handle *nested_failure = nullptr;
+            irx_arrow_error_release(&accessor_failure, &nested_failure);
+        }
+        irx_arrow_error_handle *release_failure = nullptr;
+        irx_arrow_error_release(&failure, &release_failure);
+        if (release_failure != nullptr) {
+            irx_arrow_error_handle *nested_failure = nullptr;
+            irx_arrow_error_release(&release_failure, &nested_failure);
+        }
+    }
+    return set_err(message, legacy_status_code(status));
 }
 
 const char *irx_record_batch_errmsg(void) {
@@ -217,14 +271,6 @@ struct IrxRbSchema_ {
 struct IrxRbBuilder_ {
     const IrxRbSchema_                        *schema_ref;
     std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
-};
-
-struct IrxRbBatch_ {
-    std::shared_ptr<arrow::RecordBatch>        batch;
-    /* Cached col_types mirrored from the schema for fast type checks. */
-    std::vector<IrxColumnType>                 col_types;
-    /* Full type descriptor per column, parallel to col_types. */
-    std::vector<ColDesc>                       col_descs;
 };
 
 struct IrxRbStreamWriter_ {
@@ -814,10 +860,8 @@ int irx_rb_builder_finish(IrxRbBuilder *b, IrxRbBatch **out) {
     auto rb = arrow::RecordBatch::Make(b->schema_ref->schema,
                                         arrays.empty() ? 0 : arrays[0]->length(),
                                         arrays);
-    auto *batch = new IrxRbBatch_();
-    batch->batch          = std::move(rb);
-    batch->col_types      = b->schema_ref->col_types;
-    batch->col_descs      = b->schema_ref->col_descs;
+    auto *batch = new irx_arrow_record_batch_handle();
+    batch->batch = std::move(rb);
     *out = batch;
     return IRX_OK;
 }
@@ -827,13 +871,25 @@ void irx_rb_builder_release(IrxRbBuilder *b) {
 }
 
 int64_t irx_rb_batch_num_rows(const IrxRbBatch *batch) {
-    if (!batch) return IRX_ERR_NULLPTR;
-    return batch->batch->num_rows();
+    int64_t rows = 0;
+    irx_arrow_error_handle *failure = nullptr;
+    const irx_arrow_status status = irx_arrow_record_batch_num_rows(
+        batch, &rows, &failure);
+    if (status != IRX_ARROW_STATUS_OK)
+        return delegate_status(status, failure);
+    return rows;
 }
 
 int irx_rb_batch_num_columns(const IrxRbBatch *batch) {
-    if (!batch) return IRX_ERR_NULLPTR;
-    return batch->batch->num_columns();
+    int64_t columns = 0;
+    irx_arrow_error_handle *failure = nullptr;
+    const irx_arrow_status status = irx_arrow_record_batch_num_columns(
+        batch, &columns, &failure);
+    if (status != IRX_ARROW_STATUS_OK)
+        return delegate_status(status, failure);
+    if (columns > std::numeric_limits<int>::max())
+        return set_err("column count exceeds legacy int range", IRX_ERR_ARROW);
+    return static_cast<int>(columns);
 }
 
 /* Bounds-check helper — returns true and sets error on failure. */
@@ -849,11 +905,15 @@ static bool check_bounds(const IrxRbBatch *b, int col, int64_t row) {
     return false;
 }
 
+static IrxColumnType batch_col_type(const IrxRbBatch *b, int col) {
+    return col_type_from_arrow(*b->batch->column(col)->type());
+}
+
 #define GET_IMPL(fname, ctype, arrowarray, irxtype)                         \
 int fname(const IrxRbBatch *b, int col, int64_t row, ctype *out) {        \
     GUARD(b); GUARD(out);                                                   \
     if (check_bounds(b, col, row)) return IRX_ERR_OOB;                     \
-    if (b->col_types[col] != irxtype)                                       \
+    if (batch_col_type(b, col) != irxtype)                                  \
         return set_err("type mismatch on get", IRX_ERR_TYPE);               \
     auto *arr = static_cast<const arrow::arrowarray *>(                     \
         b->batch->column(col).get());                                       \
@@ -875,7 +935,7 @@ GET_IMPL(irx_rb_batch_get_float64, double,   DoubleArray,  IRX_COL_FLOAT64)
 int irx_rb_batch_get_bool(const IrxRbBatch *b, int col, int64_t row, int *out) {
     GUARD(b); GUARD(out);
     if (check_bounds(b, col, row)) return IRX_ERR_OOB;
-    if (b->col_types[col] != IRX_COL_BOOL)
+    if (batch_col_type(b, col) != IRX_COL_BOOL)
         return set_err("type mismatch on get", IRX_ERR_TYPE);
     auto *arr = static_cast<const arrow::BooleanArray *>(b->batch->column(col).get());
     *out = arr->Value(row) ? 1 : 0;
@@ -891,7 +951,7 @@ int irx_rb_batch_get_utf8(const IrxRbBatch *b, int col, int64_t row,
     if (check_bounds(b, col, row))
         return IRX_ERR_OOB;
     std::string_view view;
-    switch (b->col_types[col])
+    switch (batch_col_type(b, col))
     {
     case IRX_COL_UTF8:
         view = static_cast<const arrow::StringArray *>(
@@ -914,7 +974,7 @@ int irx_rb_batch_get_utf8(const IrxRbBatch *b, int col, int64_t row,
 int irx_rb_batch_get_date(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
     GUARD(b); GUARD(out);
     if (check_bounds(b, col, row)) return IRX_ERR_OOB;
-    switch (b->col_types[col]) {
+    switch (batch_col_type(b, col)) {
     case IRX_COL_DATE32:
         *out = static_cast<const arrow::Date32Array *>(
                    b->batch->column(col).get())->Value(row);
@@ -931,7 +991,7 @@ int irx_rb_batch_get_date(const IrxRbBatch *b, int col, int64_t row, int64_t *ou
 int irx_rb_batch_get_timestamp(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
     GUARD(b); GUARD(out);
     if (check_bounds(b, col, row)) return IRX_ERR_OOB;
-    switch (b->col_types[col]) {
+    switch (batch_col_type(b, col)) {
     case IRX_COL_TIMESTAMP_S:
     case IRX_COL_TIMESTAMP_MS:
     case IRX_COL_TIMESTAMP_US:
@@ -947,7 +1007,7 @@ int irx_rb_batch_get_timestamp(const IrxRbBatch *b, int col, int64_t row, int64_
 int irx_rb_batch_get_time(const IrxRbBatch *b, int col, int64_t row, int64_t *out) {
     GUARD(b); GUARD(out);
     if (check_bounds(b, col, row)) return IRX_ERR_OOB;
-    switch (b->col_types[col]) {
+    switch (batch_col_type(b, col)) {
     case IRX_COL_TIME32_S:
     case IRX_COL_TIME32_MS:
         *out = static_cast<const arrow::Time32Array *>(
@@ -999,9 +1059,13 @@ int irx_rb_batch_list_elem_type(const IrxRbBatch *b, int col,
     GUARD(b); GUARD(out);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_LIST)
+    if (b->batch->column(col)->type_id() != arrow::Type::LIST)
         return set_err("column is not a list column", IRX_ERR_TYPE);
-    *out = b->col_descs[col].children[0].type;
+    const auto &list_type = static_cast<const arrow::ListType &>(
+        *b->batch->column(col)->type());
+    *out = col_type_from_arrow(*list_type.value_type());
+    if (static_cast<int>(*out) < 0)
+        return set_err("unsupported list element type", IRX_ERR_TYPE);
     return IRX_OK;
 }
 
@@ -1010,7 +1074,7 @@ int irx_rb_batch_list_offsets(const IrxRbBatch *b, int col,
     GUARD(b); GUARD(offs); GUARD(n);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_LIST)
+    if (b->batch->column(col)->type_id() != arrow::Type::LIST)
         return set_err("column is not a list column", IRX_ERR_TYPE);
     auto *arr = static_cast<const arrow::ListArray *>(b->batch->column(col).get());
     *offs = arr->raw_value_offsets();
@@ -1023,7 +1087,7 @@ int irx_rb_batch_list_child_buffer(const IrxRbBatch *b, int col,
     GUARD(b); GUARD(buf); GUARD(len);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_LIST)
+    if (b->batch->column(col)->type_id() != arrow::Type::LIST)
         return set_err("column is not a list column", IRX_ERR_TYPE);
     auto *arr = static_cast<const arrow::ListArray *>(b->batch->column(col).get());
     auto values = arr->values();
@@ -1044,9 +1108,11 @@ int irx_rb_batch_struct_num_fields(const IrxRbBatch *b, int col, int *out) {
     GUARD(b); GUARD(out);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_STRUCT)
+    if (b->batch->column(col)->type_id() != arrow::Type::STRUCT)
         return set_err("column is not a struct column", IRX_ERR_TYPE);
-    *out = static_cast<int>(b->col_descs[col].children.size());
+    const auto &struct_type = static_cast<const arrow::StructType &>(
+        *b->batch->column(col)->type());
+    *out = struct_type.num_fields();
     return IRX_OK;
 }
 
@@ -1055,12 +1121,13 @@ int irx_rb_batch_struct_field_name(const IrxRbBatch *b, int col, int field,
     GUARD(b); GUARD(out);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_STRUCT)
+    if (b->batch->column(col)->type_id() != arrow::Type::STRUCT)
         return set_err("column is not a struct column", IRX_ERR_TYPE);
-    const auto &children = b->col_descs[col].children;
-    if (field < 0 || field >= (int)children.size())
+    const auto &struct_type = static_cast<const arrow::StructType &>(
+        *b->batch->column(col)->type());
+    if (field < 0 || field >= struct_type.num_fields())
         return set_err("struct field index out of bounds", IRX_ERR_OOB);
-    *out = children[field].name.c_str();
+    *out = struct_type.field(field)->name().c_str();
     return IRX_OK;
 }
 
@@ -1069,12 +1136,15 @@ int irx_rb_batch_struct_field_type(const IrxRbBatch *b, int col, int field,
     GUARD(b); GUARD(out);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_STRUCT)
+    if (b->batch->column(col)->type_id() != arrow::Type::STRUCT)
         return set_err("column is not a struct column", IRX_ERR_TYPE);
-    const auto &children = b->col_descs[col].children;
-    if (field < 0 || field >= (int)children.size())
+    const auto &struct_type = static_cast<const arrow::StructType &>(
+        *b->batch->column(col)->type());
+    if (field < 0 || field >= struct_type.num_fields())
         return set_err("struct field index out of bounds", IRX_ERR_OOB);
-    *out = children[field].type;
+    *out = col_type_from_arrow(*struct_type.field(field)->type());
+    if (static_cast<int>(*out) < 0)
+        return set_err("unsupported struct field type", IRX_ERR_TYPE);
     return IRX_OK;
 }
 
@@ -1083,7 +1153,7 @@ int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
     GUARD(b); GUARD(buf); GUARD(len);
     if (col < 0 || col >= b->batch->num_columns())
         return set_err("column index out of bounds", IRX_ERR_OOB);
-    if (b->col_types[col] != IRX_COL_STRUCT)
+    if (b->batch->column(col)->type_id() != arrow::Type::STRUCT)
         return set_err("column is not a struct column", IRX_ERR_TYPE);
     auto *arr = static_cast<const arrow::StructArray *>(b->batch->column(col).get());
     if (field < 0 || field >= arr->num_fields())
@@ -1103,7 +1173,14 @@ int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
 }
 
 void irx_rb_batch_release(IrxRbBatch *batch) {
-    delete batch;
+    if (batch == nullptr)
+        return;
+    irx_arrow_error_handle *failure = nullptr;
+    irx_arrow_record_batch_handle *owner = batch;
+    const irx_arrow_status status = irx_arrow_record_batch_release(
+        &owner, &failure);
+    if (status != IRX_ARROW_STATUS_OK)
+        delegate_status(status, failure);
 }
 
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
@@ -1256,10 +1333,8 @@ int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
         *batch = nullptr;
         return IRX_EOF;
     }
-    auto *b = new IrxRbBatch_();
-    b->batch          = std::move(rb);
-    b->col_types      = r->schema_handle.col_types;
-    b->col_descs      = r->schema_handle.col_descs;
+    auto *b = new irx_arrow_record_batch_handle();
+    b->batch = std::move(rb);
     *batch = b;
     return IRX_OK;
 }

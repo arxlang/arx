@@ -16,6 +16,7 @@ from irx.analysis.types import is_float_type, is_unsigned_type
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.arrow.lowering import call_arrow_runtime
 from irx.builder.runtime.assertions.feature import (
     ASSERT_FAILURE_SYMBOL_NAME,
     ASSERT_RUNTIME_FEATURE_NAME,
@@ -34,11 +35,18 @@ class DataFrameVisitorMixin(VisitorMixinBase):
     title: DataFrame visitor mixin.
     """
 
-    def _check_arrow_status(self, status: ir.Value, operation: str) -> None:
+    def _check_arrow_status(
+        self,
+        status: ir.Value,
+        error_slot: ir.Value,
+        operation: str,
+    ) -> None:
         """
         title: Branch to the assertion runtime when an Arrow call fails.
         parameters:
           status:
+            type: ir.Value
+          error_slot:
             type: ir.Value
           operation:
             type: str
@@ -61,14 +69,38 @@ class DataFrameVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.cbranch(is_ok, pass_block, fail_block)
 
         self._llvm.ir_builder.position_at_start(fail_block)
-        last_error = self.require_runtime_symbol(
-            "dataframe",
-            "irx_arrow_last_error",
+        error_message = self.require_runtime_symbol(
+            "core",
+            "irx_arrow_error_message",
         )
-        message_ptr = self._llvm.ir_builder.call(
-            last_error,
-            [],
-            f"{operation}_message",
+        error_handle = self._llvm.ir_builder.load(
+            error_slot,
+            f"{operation}_error",
+        )
+        message_slot = self._llvm.ir_builder.alloca(
+            self._llvm.ASCII_STRING_TYPE,
+            name=f"{operation}_message_slot",
+        )
+        fallback_message = cast(Any, self)._constant_c_string_pointer(
+            "Arrow runtime operation failed",
+            name_hint="arrow_runtime_fallback_message",
+        )
+        self._llvm.ir_builder.store(fallback_message, message_slot)
+        accessor_error_slot = self._llvm.ir_builder.alloca(
+            self._llvm.OPAQUE_POINTER_TYPE,
+            name=f"{operation}_accessor_error_slot",
+        )
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None),
+            accessor_error_slot,
+        )
+        self._llvm.ir_builder.call(
+            error_message,
+            [error_handle, message_slot, accessor_error_slot],
+        )
+        message_ptr = self._llvm.ir_builder.load(
+            message_slot,
+            name=f"{operation}_message",
         )
         source_ptr = cast(Any, self)._constant_c_string_pointer(
             "irx-arrow-dataframe",
@@ -128,11 +160,17 @@ class DataFrameVisitorMixin(VisitorMixinBase):
                     self._llvm.DOUBLE_TYPE,
                     "dataframe_fpext",
                 )
-            status = self._llvm.ir_builder.call(
+            status, error_slot = call_arrow_runtime(
+                self,
                 append,
                 [builder_handle, value],
+                "dataframe_append_double",
             )
-            self._check_arrow_status(status, "dataframe_append_double")
+            self._check_arrow_status(
+                status,
+                error_slot,
+                "dataframe_append_double",
+            )
             return
 
         append = self.require_runtime_symbol(
@@ -163,8 +201,17 @@ class DataFrameVisitorMixin(VisitorMixinBase):
                 self._llvm.INT64_TYPE,
                 "dataframe_trunc",
             )
-        status = self._llvm.ir_builder.call(append, [builder_handle, value])
-        self._check_arrow_status(status, "dataframe_append_int")
+        status, error_slot = call_arrow_runtime(
+            self,
+            append,
+            [builder_handle, value],
+            "dataframe_append_int",
+        )
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_append_int",
+        )
 
     def _build_arrow_array_from_column(
         self,
@@ -201,14 +248,20 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             self._llvm.ARRAY_BUILDER_HANDLE_TYPE,
             name=f"{column_name}_array_builder_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status, error_slot = call_arrow_runtime(
+            self,
             builder_new,
             [
                 ir.Constant(self._llvm.INT32_TYPE, type_id),
                 builder_slot,
             ],
+            "dataframe_array_builder_new",
         )
-        self._check_arrow_status(status, "dataframe_array_builder_new")
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_array_builder_new",
+        )
         builder_handle = self._llvm.ir_builder.load(
             builder_slot,
             f"{column_name}_array_builder",
@@ -221,11 +274,17 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             self._llvm.ARRAY_HANDLE_TYPE,
             name=f"{column_name}_array_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status, error_slot = call_arrow_runtime(
+            self,
             finish_builder,
-            [builder_handle, array_slot],
+            [builder_slot, array_slot],
+            "dataframe_array_builder_finish",
         )
-        self._check_arrow_status(status, "dataframe_array_builder_finish")
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_array_builder_finish",
+        )
         return self._llvm.ir_builder.load(
             array_slot,
             f"{column_name}_array",
@@ -270,15 +329,21 @@ class DataFrameVisitorMixin(VisitorMixinBase):
                 "dataframe",
                 "irx_arrow_table_column_by_index",
             )
-            status = self._llvm.ir_builder.call(
+            status, error_slot = call_arrow_runtime(
+                self,
                 column_by_index,
                 [
                     table_handle,
                     ir.Constant(self._llvm.INT32_TYPE, index),
                     column_slot,
                 ],
+                "dataframe_column_by_index",
             )
-            self._check_arrow_status(status, "dataframe_column_by_index")
+            self._check_arrow_status(
+                status,
+                error_slot,
+                "dataframe_column_by_index",
+            )
         else:
             column_by_name = self.require_runtime_symbol(
                 "dataframe",
@@ -288,11 +353,17 @@ class DataFrameVisitorMixin(VisitorMixinBase):
                 node.column_name,
                 name_hint=f"dataframe_column_{node.column_name}",
             )
-            status = self._llvm.ir_builder.call(
+            status, error_slot = call_arrow_runtime(
+                self,
                 column_by_name,
                 [table_handle, name_pointer, column_slot],
+                "dataframe_column_by_name",
             )
-            self._check_arrow_status(status, "dataframe_column_by_name")
+            self._check_arrow_status(
+                status,
+                error_slot,
+                "dataframe_column_by_name",
+            )
 
         column_handle = self._llvm.ir_builder.load(
             column_slot,
@@ -389,7 +460,8 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             self._llvm.TABLE_HANDLE_TYPE,
             name="dataframe_table_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status, error_slot = call_arrow_runtime(
+            self,
             table_new,
             [
                 ir.Constant(self._llvm.INT64_TYPE, column_count),
@@ -397,15 +469,37 @@ class DataFrameVisitorMixin(VisitorMixinBase):
                 arrays_ptr,
                 table_slot,
             ],
+            "dataframe_table_new",
         )
-        self._check_arrow_status(status, "dataframe_table_new")
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_table_new",
+        )
         table_handle = self._llvm.ir_builder.load(
             table_slot,
             "dataframe_table",
         )
 
-        for array_handle in array_handles:
-            self._llvm.ir_builder.call(release_array, [array_handle])
+        for index in range(column_count):
+            array_slot = self._llvm.ir_builder.gep(
+                arrays_array,
+                [
+                    ir.Constant(self._llvm.INT32_TYPE, 0),
+                    ir.Constant(self._llvm.INT32_TYPE, index),
+                ],
+            )
+            release_status, release_error_slot = call_arrow_runtime(
+                self,
+                release_array,
+                [array_slot],
+                "dataframe_array_release",
+            )
+            self._check_arrow_status(
+                release_status,
+                release_error_slot,
+                "dataframe_array_release",
+            )
 
         self.result_stack.append(table_handle)
 
@@ -445,8 +539,19 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_num_rows",
         )
+        result_slot = self._llvm.ir_builder.alloca(
+            self._llvm.INT64_TYPE,
+            name="dataframe_nrows_slot",
+        )
+        status, error_slot = call_arrow_runtime(
+            self,
+            nrows,
+            [table_handle, result_slot],
+            "dataframe_nrows",
+        )
+        self._check_arrow_status(status, error_slot, "dataframe_nrows")
         self.result_stack.append(
-            self._llvm.ir_builder.call(nrows, [table_handle], "nrows")
+            self._llvm.ir_builder.load(result_slot, "nrows")
         )
 
     @VisitorCore.visit.dispatch
@@ -465,8 +570,19 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_num_columns",
         )
+        result_slot = self._llvm.ir_builder.alloca(
+            self._llvm.INT64_TYPE,
+            name="dataframe_ncols_slot",
+        )
+        status, error_slot = call_arrow_runtime(
+            self,
+            ncols,
+            [table_handle, result_slot],
+            "dataframe_ncols",
+        )
+        self._check_arrow_status(status, error_slot, "dataframe_ncols")
         self.result_stack.append(
-            self._llvm.ir_builder.call(ncols, [table_handle], "ncols")
+            self._llvm.ir_builder.load(result_slot, "ncols")
         )
 
     @VisitorCore.visit.dispatch
@@ -483,8 +599,21 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [table_handle])
-        self._check_arrow_status(status, "dataframe_table_retain")
+        retained_slot = self._llvm.ir_builder.alloca(
+            self._llvm.TABLE_HANDLE_TYPE,
+            name="retained_dataframe_slot",
+        )
+        status, error_slot = call_arrow_runtime(
+            self,
+            retain,
+            [table_handle, retained_slot],
+            "dataframe_table_retain",
+        )
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_table_retain",
+        )
         self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
@@ -501,8 +630,23 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_table_release",
         )
-        self._llvm.ir_builder.call(release, [table_handle])
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+        table_slot = self._llvm.ir_builder.alloca(
+            self._llvm.TABLE_HANDLE_TYPE,
+            name="released_dataframe_slot",
+        )
+        self._llvm.ir_builder.store(table_handle, table_slot)
+        status, error_slot = call_arrow_runtime(
+            self,
+            release,
+            [table_slot],
+            "dataframe_table_release",
+        )
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_table_release",
+        )
+        self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.SeriesRetain) -> None:
@@ -518,8 +662,21 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_chunked_array_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [column_handle])
-        self._check_arrow_status(status, "dataframe_series_retain")
+        retained_slot = self._llvm.ir_builder.alloca(
+            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+            name="retained_series_slot",
+        )
+        status, error_slot = call_arrow_runtime(
+            self,
+            retain,
+            [column_handle, retained_slot],
+            "dataframe_series_retain",
+        )
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_series_retain",
+        )
         self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
@@ -536,8 +693,23 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "dataframe",
             "irx_arrow_chunked_array_release",
         )
-        self._llvm.ir_builder.call(release, [column_handle])
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+        column_slot = self._llvm.ir_builder.alloca(
+            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+            name="released_series_slot",
+        )
+        self._llvm.ir_builder.store(column_handle, column_slot)
+        status, error_slot = call_arrow_runtime(
+            self,
+            release,
+            [column_slot],
+            "dataframe_series_release",
+        )
+        self._check_arrow_status(
+            status,
+            error_slot,
+            "dataframe_series_release",
+        )
+        self.result_stack.append(status)
 
 
 __all__ = ["DataFrameVisitorMixin"]

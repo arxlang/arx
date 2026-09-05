@@ -55,10 +55,25 @@ PACKAGES = (
 )
 
 REQUIRED_IRX_NATIVE_ASSETS = (
+    "irx/builder/runtime/arrow/abi_baselines/1.0.0.json",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_generated.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_internal_names_generated.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_wrappers_generated.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_array_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_core_runtime.cc",
     "irx/builder/runtime/arrow/native/irx_arrow_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_runtime.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_runtime_internal.h",
     "irx/builder/runtime/arrow/native/irx_arrow_c_abi.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_dataframe_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_exports.map",
+    "irx/builder/runtime/arrow/native/irx_arrow_feature_query_generated.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_record_batch_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_tensor_runtime.cc",
     "irx/builder/runtime/arrow/native/irx_record_batch.cpp",
     "irx/builder/runtime/arrow/native/irx_record_batch.h",
+    "irx/builder/runtime/buffer/native/irx_buffer_runtime.c",
+    "irx/builder/runtime/buffer/native/irx_buffer_runtime.h",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
@@ -133,6 +148,10 @@ fn main() -> i32:
 """
 
 SMOKE_DRIVER = r"""
+import os
+import shutil
+import subprocess
+
 from pathlib import Path
 
 import aix
@@ -143,6 +162,7 @@ import irx
 import pyarrow as pa
 
 from arxpy import Compiler
+from irx.builder.runtime.arrow.feature import arrow_native_source_dir
 from irx.record_batch import (
     IrxColumnType,
     RecordBatchBuilder,
@@ -151,6 +171,50 @@ from irx.record_batch import (
 )
 
 root = Path.cwd()
+
+header_probe = '''
+#include "irx_arrow_runtime.h"
+int installed_header_probe(void) {
+  return IRX_ARROW_ABI_VERSION_IS_COMPATIBLE(
+      IRX_ARROW_ABI_VERSION,
+      UINT32_C(0x00010000)) ? 0 : 1;
+}
+'''
+arrow_include = arrow_native_source_dir()
+buffer_include = arrow_include.parent.parent / "buffer" / "native"
+for suffix, variable, fallback, standard in (
+    ("c", "CC", "cc", "c11"),
+    ("cc", "CXX", "c++", "c++20"),
+):
+    compiler_name = os.environ.get(variable, fallback)
+    compiler = shutil.which(compiler_name)
+    if compiler is None:
+        raise RuntimeError(
+            f"installed-header compiler not found: {compiler_name}"
+        )
+    source = root / f"installed_arrow_header.{suffix}"
+    output = root / f"installed_arrow_header_{suffix}.o"
+    source.write_text(header_probe, encoding="utf-8")
+    subprocess.run(
+        [
+            compiler,
+            f"-std={standard}",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic-errors",
+            "-I",
+            str(arrow_include),
+            "-I",
+            str(buffer_include),
+            "-c",
+            str(source),
+            "-o",
+            str(output),
+        ],
+        check=True,
+    )
+
 compiler = Compiler()
 for source_name in (
     "main.x",

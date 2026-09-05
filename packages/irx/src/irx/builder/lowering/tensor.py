@@ -17,6 +17,7 @@ from irx.buffer import BUFFER_VIEW_FIELD_INDICES
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.arrow.lowering import call_arrow_runtime
 from irx.builder.types import is_int_type
 from irx.builtins.collections.array_primitives import (
     ARRAY_PRIMITIVE_TYPE_SPECS,
@@ -289,7 +290,12 @@ class TensorVisitorMixin(VisitorMixinBase):
                     self._llvm.DOUBLE_TYPE,
                     name="irx_tensor_double_promote",
                 )
-            self._llvm.ir_builder.call(append, [builder_handle, value])
+            call_arrow_runtime(
+                self,
+                append,
+                [builder_handle, value],
+                "tensor_builder_append_double",
+            )
             return
 
         if not is_int_type(value.type):
@@ -312,7 +318,12 @@ class TensorVisitorMixin(VisitorMixinBase):
                     self._llvm.INT64_TYPE,
                     name="irx_tensor_uint_trunc",
                 )
-            self._llvm.ir_builder.call(append, [builder_handle, value])
+            call_arrow_runtime(
+                self,
+                append,
+                [builder_handle, value],
+                "tensor_builder_append_uint",
+            )
             return
 
         append = self.require_runtime_symbol(
@@ -331,7 +342,12 @@ class TensorVisitorMixin(VisitorMixinBase):
                 self._llvm.INT64_TYPE,
                 name="irx_tensor_int_trunc",
             )
-        self._llvm.ir_builder.call(append, [builder_handle, value])
+        call_arrow_runtime(
+            self,
+            append,
+            [builder_handle, value],
+            "tensor_builder_append_int",
+        )
 
     def _build_arrow_tensor_from_values(
         self,
@@ -365,7 +381,8 @@ class TensorVisitorMixin(VisitorMixinBase):
             self._llvm.TENSOR_BUILDER_HANDLE_TYPE,
             name="irx_tensor_builder_slot",
         )
-        self._llvm.ir_builder.call(
+        call_arrow_runtime(
+            self,
             builder_new,
             [
                 ir.Constant(self._llvm.INT32_TYPE, spec.type_id),
@@ -382,6 +399,7 @@ class TensorVisitorMixin(VisitorMixinBase):
                 ),
                 builder_slot,
             ],
+            "tensor_builder_new",
         )
         builder_handle = self._llvm.ir_builder.load(
             builder_slot,
@@ -399,9 +417,11 @@ class TensorVisitorMixin(VisitorMixinBase):
             self._llvm.TENSOR_HANDLE_TYPE,
             name="irx_tensor_handle_slot",
         )
-        self._llvm.ir_builder.call(
+        call_arrow_runtime(
+            self,
             finish_builder,
-            [builder_handle, tensor_slot],
+            [builder_slot, tensor_slot],
+            "tensor_builder_finish",
         )
         return self._llvm.ir_builder.load(
             tensor_slot,
@@ -437,16 +457,18 @@ class TensorVisitorMixin(VisitorMixinBase):
         )
         release_tensor = self.require_runtime_symbol(
             "tensor",
-            "irx_arrow_tensor_release",
+            "irx_arrow_tensor_release_callback",
         )
 
         borrowed_slot = self._llvm.ir_builder.alloca(
             self._llvm.BUFFER_VIEW_TYPE,
             name="irx_tensor_borrowed_view",
         )
-        self._llvm.ir_builder.call(
+        call_arrow_runtime(
+            self,
             borrow_view,
             [tensor_handle, borrowed_slot],
+            "tensor_borrow_buffer_view",
         )
         borrowed_view = self._llvm.ir_builder.load(
             borrowed_slot,

@@ -139,6 +139,51 @@ jobs:
       - name: Run AIX syntax manifest checks
         run: makim aix.check-syntax
 
+  arrow-abi-conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: gcc
+            cc: /usr/bin/gcc
+            cxx: /usr/bin/g++
+          - toolchain: clang
+            cc: /usr/bin/clang
+            cxx: /usr/bin/clang++
+    concurrency:
+      group: ci-arrow-abi-${{ matrix.toolchain }}-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: "latest"
+          environment-file: conda/dev.yaml
+          channels: conda-forge,nodefaults
+          activate-environment: arx
+          auto-update-conda: true
+          conda-solver: libmamba
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          poetry check
+          poetry install
+
+      - name: Run Arrow ABI conformance
+        run: makim irx.check-arrow-abi-conformance
+
   wheel-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -69,6 +69,20 @@ class ResourceKind(str, Enum):
 
     LIST = "list"
     STRING = "string"
+    ERROR = "error"
+    TYPE = "type"
+    SCHEMA = "schema"
+    SCALAR = "scalar"
+    ARRAY_BUILDER = "array_builder"
+    ARRAY = "array"
+    CHUNKED_ARRAY = "chunked_array"
+    RECORD_BATCH = "record_batch"
+    TABLE = "table"
+    TENSOR_BUILDER = "tensor_builder"
+    TENSOR = "tensor"
+    STREAM = "stream"
+    DATASET = "dataset"
+    EXECUTION_PLAN = "execution_plan"
 
 
 @public
@@ -84,6 +98,58 @@ class OwnershipKind(str, Enum):
     OWNED = "owned"
     BORROWED = "borrowed"
     STATIC = "static"
+    MOVED = "moved"
+
+
+@public
+@typechecked
+class ResourceSharingKind(str, Enum):
+    """
+    title: Runtime resource sharing capabilities.
+    summary: >-
+      Distinguish retainable shared handles from unique affine resources that
+      can only be moved.
+    """
+
+    SHARED = "shared"
+    UNIQUE = "unique"
+
+
+@public
+@typechecked
+class ResourceMutability(str, Enum):
+    """
+    title: Runtime resource mutability classes.
+    """
+
+    IMMUTABLE = "immutable"
+    MUTABLE = "mutable"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResourceContract:
+    """
+    title: Static lifecycle contract for one runtime resource family.
+    attributes:
+      resource_kind:
+        type: ResourceKind
+      sharing_kind:
+        type: ResourceSharingKind
+      mutability:
+        type: ResourceMutability
+      cleanup_intrinsic:
+        type: str
+      retain_intrinsic:
+        type: str | None
+    """
+
+    resource_kind: ResourceKind
+    sharing_kind: ResourceSharingKind
+    mutability: ResourceMutability
+    cleanup_intrinsic: str
+    retain_intrinsic: str | None
 
 
 @public
@@ -122,7 +188,17 @@ class ResourceOwnership:
         type: ResourceKind
       kind:
         type: OwnershipKind
+      sharing_kind:
+        type: ResourceSharingKind
+      mutability:
+        type: ResourceMutability
+      cleanup_intrinsic:
+        type: str
+      retain_intrinsic:
+        type: str | None
       owner_symbol_id:
+        type: str | None
+      owner_root_symbol_id:
         type: str | None
       source_symbol_id:
         type: str | None
@@ -134,7 +210,12 @@ class ResourceOwnership:
 
     resource_kind: ResourceKind
     kind: OwnershipKind
+    sharing_kind: ResourceSharingKind
+    mutability: ResourceMutability
+    cleanup_intrinsic: str
+    retain_intrinsic: str | None
     owner_symbol_id: str | None = None
+    owner_root_symbol_id: str | None = None
     source_symbol_id: str | None = None
     transfer_kind: OwnershipTransferKind = OwnershipTransferKind.NONE
     escape_kind: OwnershipEscapeKind = OwnershipEscapeKind.NONE

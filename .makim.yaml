@@ -404,6 +404,20 @@ groups:
             default: "-vv"
         run: pytest ${{ args.path }} ${{ args.params }}
 
+      check-arrow-capabilities:
+        help: validate the Arrow capability manifest and generated matrix
+        run: python scripts/gen_arrow_capability_matrix.py --check
+
+      check-arrow-abi:
+        help: validate the Arrow ABI manifest and generated declarations
+        run: python scripts/gen_arrow_abi.py --check
+
+      check-arrow-abi-conformance:
+        help: validate Arrow ABI compatibility, headers, layouts, and symbols
+        run: |
+          python scripts/check_arrow_abi_compatibility.py
+          pytest -q packages/irx/tests/test_arrow_abi_conformance.py
+
       format:
         help: format IRx Python files
         run: pre-commit run ruff-format-irx --all-files
@@ -433,6 +447,9 @@ groups:
         help: run IRx package CI checks
         hooks:
           pre-run:
+            - task: irx.check-arrow-capabilities
+            - task: irx.check-arrow-abi
+            - task: irx.check-arrow-abi-conformance
             - task: irx.unittests
             - task: irx.test-analysis
             - task: irx.typecheck

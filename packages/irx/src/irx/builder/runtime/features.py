@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Literal, Mapping, TypeAlias, cast
 
 from llvmlite import ir
+from public import private
 
 from irx.typecheck import typechecked
 
@@ -22,6 +23,19 @@ if TYPE_CHECKING:
     RuntimeSymbolFactory: TypeAlias = Callable[[VisitorProtocol], ir.Function]
 else:
     RuntimeSymbolFactory: TypeAlias = Callable[[object], ir.Function]
+
+
+@private
+@typechecked
+def validate_runtime_feature_dependencies(
+    dependencies: tuple[str, ...],
+) -> None:
+    """
+    title: Validate every declared runtime-feature dependency name.
+    parameters:
+      dependencies:
+        type: tuple[str, Ellipsis]
+    """
 
 
 @typechecked
@@ -81,6 +95,8 @@ class RuntimeFeature:
         type: tuple[str, Ellipsis]
       metadata:
         type: Mapping[str, object]
+      dependencies:
+        type: tuple[str, Ellipsis]
     """
 
     name: str
@@ -88,6 +104,13 @@ class RuntimeFeature:
     artifacts: tuple[NativeArtifact, ...] = ()
     linker_flags: tuple[str, ...] = ()
     metadata: Mapping[str, object] = field(default_factory=dict)
+    dependencies: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """
+        title: Validate typed runtime-feature dependency declarations.
+        """
+        validate_runtime_feature_dependencies(self.dependencies)
 
 
 @typechecked

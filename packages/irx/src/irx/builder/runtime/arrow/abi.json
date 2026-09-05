@@ -1,0 +1,838 @@
+{
+  "schema_version": 1,
+  "abi_version": "1.0.0",
+  "handle_contract": {
+    "retain_output": "A successful retain writes one new owner token to an output slot.",
+    "release_input": "Release consumes one owner token through a pointer-to-slot and clears that slot.",
+    "null_release": "A non-null slot containing null is an idempotent success.",
+    "invalid_release": "A null slot pointer or a live handle of the wrong kind fails without consuming the token.",
+    "borrow": "A borrowed pointer creates no token and cannot be released.",
+    "copy": "Copying an opaque pointer without retaining it does not create an owner token."
+  },
+  "status_codes": [
+    ["OK", 0],
+    ["END_OF_STREAM", 1],
+    ["INVALID_ARGUMENT", 100],
+    ["NULL_POINTER", 101],
+    ["INVALID_STATE", 102],
+    ["TYPE_MISMATCH", 103],
+    ["SCHEMA_MISMATCH", 104],
+    ["INDEX_OUT_OF_BOUNDS", 105],
+    ["OVERFLOW", 106],
+    ["NOT_SUPPORTED", 107],
+    ["ABI_MISMATCH", 108],
+    ["OUT_OF_MEMORY", 200],
+    ["RESOURCE_EXHAUSTED", 201],
+    ["IO_ERROR", 300],
+    ["CANCELLED", 301],
+    ["ARROW_ERROR", 400],
+    ["INTERNAL", 401]
+  ],
+  "status_categories": [
+    ["SUCCESS", 0],
+    ["CONTROL", 1],
+    ["INVALID", 2],
+    ["RESOURCE", 3],
+    ["IO", 4],
+    ["INTERNAL", 5],
+    ["UNKNOWN", 6]
+  ],
+  "ownership_kinds": [
+    ["UNKNOWN", 0],
+    ["SHARED", 1],
+    ["UNIQUE", 2]
+  ],
+  "type_ids": [
+    ["UNKNOWN", 0],
+    ["INT32", 1],
+    ["INT8", 2],
+    ["INT16", 3],
+    ["INT64", 4],
+    ["UINT8", 5],
+    ["UINT16", 6],
+    ["UINT32", 7],
+    ["UINT64", 8],
+    ["FLOAT32", 9],
+    ["FLOAT64", 10],
+    ["BOOL", 11]
+  ],
+  "runtime_features": [
+    {
+      "id": 1,
+      "name": "core",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 2,
+      "name": "array",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 3,
+      "name": "tensor",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 4,
+      "name": "dataframe",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    },
+    {
+      "id": 5,
+      "name": "record_batch",
+      "contract_version": "1.0.0",
+      "availability": "implemented"
+    }
+  ],
+  "handles": [
+    {
+      "id": 1,
+      "name": "error",
+      "c_type": "irx_arrow_error_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_error_retain",
+      "release": "irx_arrow_error_release"
+    },
+    {
+      "id": 2,
+      "name": "type",
+      "c_type": "irx_arrow_type_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m3",
+      "retain": "irx_arrow_type_retain",
+      "release": "irx_arrow_type_release"
+    },
+    {
+      "id": 3,
+      "name": "schema",
+      "c_type": "irx_arrow_schema_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_schema_retain",
+      "release": "irx_arrow_schema_release"
+    },
+    {
+      "id": 4,
+      "name": "scalar",
+      "c_type": "irx_arrow_scalar_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m3",
+      "retain": "irx_arrow_scalar_retain",
+      "release": "irx_arrow_scalar_release"
+    },
+    {
+      "id": 5,
+      "name": "array_builder",
+      "c_type": "irx_arrow_array_builder_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "implemented",
+      "retain": null,
+      "release": "irx_arrow_array_builder_release"
+    },
+    {
+      "id": 6,
+      "name": "array",
+      "c_type": "irx_arrow_array_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_array_retain",
+      "release": "irx_arrow_array_release"
+    },
+    {
+      "id": 7,
+      "name": "chunked_array",
+      "c_type": "irx_arrow_chunked_array_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_chunked_array_retain",
+      "release": "irx_arrow_chunked_array_release"
+    },
+    {
+      "id": 8,
+      "name": "record_batch",
+      "c_type": "irx_arrow_record_batch_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_record_batch_retain",
+      "release": "irx_arrow_record_batch_release"
+    },
+    {
+      "id": 9,
+      "name": "table",
+      "c_type": "irx_arrow_table_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_table_retain",
+      "release": "irx_arrow_table_release"
+    },
+    {
+      "id": 10,
+      "name": "tensor_builder",
+      "c_type": "irx_arrow_tensor_builder_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "implemented",
+      "retain": null,
+      "release": "irx_arrow_tensor_builder_release"
+    },
+    {
+      "id": 11,
+      "name": "tensor",
+      "c_type": "irx_arrow_tensor_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "implemented",
+      "retain": "irx_arrow_tensor_retain",
+      "release": "irx_arrow_tensor_release"
+    },
+    {
+      "id": 12,
+      "name": "stream",
+      "c_type": "irx_arrow_stream_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "planned_m7",
+      "retain": null,
+      "release": "irx_arrow_stream_release"
+    },
+    {
+      "id": 13,
+      "name": "dataset",
+      "c_type": "irx_arrow_dataset_handle",
+      "ownership": "shared",
+      "thread_safety": "immutable_shared",
+      "availability": "planned_m8",
+      "retain": "irx_arrow_dataset_retain",
+      "release": "irx_arrow_dataset_release"
+    },
+    {
+      "id": 14,
+      "name": "execution_plan",
+      "c_type": "irx_arrow_execution_plan_handle",
+      "ownership": "unique",
+      "thread_safety": "thread_confined",
+      "availability": "planned_m8",
+      "retain": null,
+      "release": "irx_arrow_execution_plan_release"
+    }
+  ],
+  "functions": [
+    {
+      "name": "irx_arrow_abi_version",
+      "features": ["core"],
+      "return": "uint32",
+      "parameters": [],
+      "fallible": false
+    },
+    {
+      "name": "irx_arrow_runtime_has_feature",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [
+        ["runtime_feature_id", "feature_id"],
+        ["uint32", "required_contract_version"],
+        ["int32_pointer", "out_available"],
+        ["uint32_pointer", "out_supported_contract_version"]
+      ],
+      "fallible": true
+    },
+    {
+      "name": "irx_arrow_status_get_category",
+      "features": ["core"],
+      "return": "status_category",
+      "parameters": [["status", "status"]],
+      "fallible": false
+    },
+    {
+      "name": "irx_arrow_handle_kind_of",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [
+        ["const_void", "handle"],
+        ["handle_kind_pointer", "out_kind"]
+      ]
+    },
+    {
+      "name": "irx_arrow_handle_ownership_of",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [
+        ["const_void", "handle"],
+        ["ownership_pointer", "out_ownership"]
+      ]
+    },
+    {
+      "name": "irx_arrow_error_snapshot",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [["error_pointer", "out_error"]]
+    },
+    {
+      "name": "irx_arrow_error_code",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [["const_error", "error"]],
+      "result": ["status_pointer", "out_code"]
+    },
+    {
+      "name": "irx_arrow_error_operation",
+      "features": ["core"],
+      "return": "c_string",
+      "parameters": [["const_error", "error"]],
+      "result": ["c_string_pointer", "out_operation"]
+    },
+    {
+      "name": "irx_arrow_error_message",
+      "features": ["core"],
+      "return": "c_string",
+      "parameters": [["const_error", "error"]],
+      "result": ["c_string_pointer", "out_message"]
+    },
+    {
+      "name": "irx_arrow_error_upstream_detail",
+      "features": ["core"],
+      "return": "c_string",
+      "parameters": [["const_error", "error"]],
+      "result": ["c_string_pointer", "out_upstream_detail"]
+    },
+    {
+      "name": "irx_arrow_error_retain",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [
+        ["const_error", "error"],
+        ["error_pointer", "out_error"]
+      ]
+    },
+    {
+      "name": "irx_arrow_error_release",
+      "features": ["core"],
+      "return": "status",
+      "parameters": [["error_pointer", "error"]]
+    },
+
+    {
+      "name": "irx_arrow_schema_import_copy",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_arrow_schema", "schema"],
+        ["schema_pointer", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_schema_export",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_schema", "schema"],
+        ["arrow_schema", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_schema_type_id",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_schema", "schema"]],
+      "result": ["int32_pointer", "out_type_id"]
+    },
+    {
+      "name": "irx_arrow_schema_is_nullable",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_schema", "schema"]],
+      "result": ["int32_pointer", "out_is_nullable"]
+    },
+    {
+      "name": "irx_arrow_schema_retain",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_schema", "schema"],
+        ["schema_pointer", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_schema_release",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [["schema_pointer", "schema"]]
+    },
+
+    {
+      "name": "irx_arrow_array_builder_new",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["int32", "type_id"],
+        ["array_builder_pointer", "out_builder"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_append_null",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder", "builder"],
+        ["int64", "count"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_append_int",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder", "builder"],
+        ["int64", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_append_uint",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder", "builder"],
+        ["uint64", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_append_double",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder", "builder"],
+        ["double", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_int32_new",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [["array_builder_pointer", "out_builder"]]
+    },
+    {
+      "name": "irx_arrow_array_builder_append_int32",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder", "builder"],
+        ["int32", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_finish",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["array_builder_pointer", "builder"],
+        ["array_pointer", "out_array"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_builder_release",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [["array_builder_pointer", "builder"]]
+    },
+    {
+      "name": "irx_arrow_array_length",
+      "features": ["array"],
+      "return": "int64",
+      "parameters": [["const_array", "array"]],
+      "result": ["int64_pointer", "out_length"]
+    },
+    {
+      "name": "irx_arrow_array_offset",
+      "features": ["array"],
+      "return": "int64",
+      "parameters": [["const_array", "array"]],
+      "result": ["int64_pointer", "out_offset"]
+    },
+    {
+      "name": "irx_arrow_array_null_count",
+      "features": ["array"],
+      "return": "int64",
+      "parameters": [["const_array", "array"]],
+      "result": ["int64_pointer", "out_null_count"]
+    },
+    {
+      "name": "irx_arrow_array_type_id",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_array", "array"]],
+      "result": ["int32_pointer", "out_type_id"]
+    },
+    {
+      "name": "irx_arrow_array_is_nullable",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_array", "array"]],
+      "result": ["int32_pointer", "out_is_nullable"]
+    },
+    {
+      "name": "irx_arrow_array_has_validity_bitmap",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_array", "array"]],
+      "result": ["int32_pointer", "out_has_validity_bitmap"]
+    },
+    {
+      "name": "irx_arrow_array_can_borrow_buffer_view",
+      "features": ["array"],
+      "return": "int32",
+      "parameters": [["const_array", "array"]],
+      "result": ["int32_pointer", "out_can_borrow"]
+    },
+    {
+      "name": "irx_arrow_array_schema_copy",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_array", "array"],
+        ["schema_pointer", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_export",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_array", "array"],
+        ["arrow_array", "out_array"],
+        ["arrow_schema", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_import",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_arrow_array", "array"],
+        ["const_arrow_schema", "schema"],
+        ["array_pointer", "out_array"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_import_copy",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_arrow_array", "array"],
+        ["const_arrow_schema", "schema"],
+        ["array_pointer", "out_array"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_import_move",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["arrow_array", "array"],
+        ["arrow_schema", "schema"],
+        ["array_pointer", "out_array"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_validity_bitmap",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_array", "array"],
+        ["const_void_pointer", "out_data"],
+        ["int64_pointer", "out_offset_bits"],
+        ["int64_pointer", "out_length_bits"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_borrow_buffer_view",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_array", "array"],
+        ["buffer_view", "out_view"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_retain",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [
+        ["const_array", "array"],
+        ["array_pointer", "out_array"]
+      ]
+    },
+    {
+      "name": "irx_arrow_array_release",
+      "features": ["array"],
+      "return": "status",
+      "parameters": [["array_pointer", "array"]]
+    },
+    {
+      "name": "irx_arrow_record_batch_import_move",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["arrow_array", "array"],
+        ["arrow_schema", "schema"],
+        ["record_batch_pointer", "out_batch"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_export",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["const_record_batch", "batch"],
+        ["arrow_array", "out_array"],
+        ["arrow_schema", "out_schema"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_num_rows",
+      "features": ["record_batch"],
+      "return": "int64",
+      "parameters": [["const_record_batch", "batch"]],
+      "result": ["int64_pointer", "out_num_rows"]
+    },
+    {
+      "name": "irx_arrow_record_batch_num_columns",
+      "features": ["record_batch"],
+      "return": "int64",
+      "parameters": [["const_record_batch", "batch"]],
+      "result": ["int64_pointer", "out_num_columns"]
+    },
+    {
+      "name": "irx_arrow_record_batch_retain",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [
+        ["const_record_batch", "batch"],
+        ["record_batch_pointer", "out_batch"]
+      ]
+    },
+    {
+      "name": "irx_arrow_record_batch_release",
+      "features": ["record_batch"],
+      "return": "status",
+      "parameters": [["record_batch_pointer", "batch"]]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_new",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["int32", "type_id"],
+        ["int32", "ndim"],
+        ["const_int64_pointer", "shape"],
+        ["const_int64_pointer", "strides"],
+        ["tensor_builder_pointer", "out_builder"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_append_int",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["tensor_builder", "builder"],
+        ["int64", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_append_uint",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["tensor_builder", "builder"],
+        ["uint64", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_append_double",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["tensor_builder", "builder"],
+        ["double", "value"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_finish",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["tensor_builder_pointer", "builder"],
+        ["tensor_pointer", "out_tensor"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_builder_release",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [["tensor_builder_pointer", "builder"]]
+    },
+    {
+      "name": "irx_arrow_tensor_type_id",
+      "features": ["tensor"],
+      "return": "int32",
+      "parameters": [["const_tensor", "tensor"]],
+      "result": ["int32_pointer", "out_type_id"]
+    },
+    {
+      "name": "irx_arrow_tensor_ndim",
+      "features": ["tensor"],
+      "return": "int32",
+      "parameters": [["const_tensor", "tensor"]],
+      "result": ["int32_pointer", "out_ndim"]
+    },
+    {
+      "name": "irx_arrow_tensor_size",
+      "features": ["tensor"],
+      "return": "int64",
+      "parameters": [["const_tensor", "tensor"]],
+      "result": ["int64_pointer", "out_size"]
+    },
+    {
+      "name": "irx_arrow_tensor_shape",
+      "features": ["tensor"],
+      "return": "const_int64_pointer",
+      "parameters": [["const_tensor", "tensor"]],
+      "result": ["const_int64_output", "out_shape"]
+    },
+    {
+      "name": "irx_arrow_tensor_strides",
+      "features": ["tensor"],
+      "return": "const_int64_pointer",
+      "parameters": [["const_tensor", "tensor"]],
+      "result": ["const_int64_output", "out_strides"]
+    },
+    {
+      "name": "irx_arrow_tensor_borrow_buffer_view",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["const_tensor", "tensor"],
+        ["buffer_view", "out_view"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_retain",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [
+        ["const_tensor", "tensor"],
+        ["tensor_pointer", "out_tensor"]
+      ]
+    },
+    {
+      "name": "irx_arrow_tensor_release",
+      "features": ["tensor"],
+      "return": "status",
+      "parameters": [["tensor_pointer", "tensor"]]
+    },
+
+    {
+      "name": "irx_arrow_table_new_from_arrays",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [
+        ["int64", "column_count"],
+        ["c_string_pointer", "names"],
+        ["array_pointer", "arrays"],
+        ["table_pointer", "out_table"]
+      ]
+    },
+    {
+      "name": "irx_arrow_table_num_rows",
+      "features": ["dataframe"],
+      "return": "int64",
+      "parameters": [["const_table", "table"]],
+      "result": ["int64_pointer", "out_num_rows"]
+    },
+    {
+      "name": "irx_arrow_table_num_columns",
+      "features": ["dataframe"],
+      "return": "int64",
+      "parameters": [["const_table", "table"]],
+      "result": ["int64_pointer", "out_num_columns"]
+    },
+    {
+      "name": "irx_arrow_table_column_by_name",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [
+        ["const_table", "table"],
+        ["c_string", "name"],
+        ["chunked_array_pointer", "out_column"]
+      ]
+    },
+    {
+      "name": "irx_arrow_table_column_by_index",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [
+        ["const_table", "table"],
+        ["int32", "index"],
+        ["chunked_array_pointer", "out_column"]
+      ]
+    },
+    {
+      "name": "irx_arrow_table_retain",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [
+        ["const_table", "table"],
+        ["table_pointer", "out_table"]
+      ]
+    },
+    {
+      "name": "irx_arrow_table_release",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [["table_pointer", "table"]]
+    },
+    {
+      "name": "irx_arrow_chunked_array_retain",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [
+        ["const_chunked_array", "column"],
+        ["chunked_array_pointer", "out_column"]
+      ]
+    },
+    {
+      "name": "irx_arrow_chunked_array_release",
+      "features": ["dataframe"],
+      "return": "status",
+      "parameters": [["chunked_array_pointer", "column"]]
+    },
+
+    {
+      "name": "irx_arrow_tensor_release_callback",
+      "features": ["tensor"],
+      "return": "void",
+      "parameters": [["void_pointer", "tensor"]],
+      "fallible": false
+    },
+    {
+      "name": "irx_arrow_last_error",
+      "features": ["core"],
+      "return": "c_string",
+      "parameters": [],
+      "fallible": false
+    }
+  ]
+}
