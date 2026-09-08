@@ -61,6 +61,22 @@ def arrowcpp_linker_flags() -> tuple[str, ...]:
 
 
 @typechecked
+def arrowcpp_compute_linker_flags() -> tuple[str, ...]:
+    """
+    title: Return linker flags for the Arrow C++ compute kernel library.
+    summary: >-
+      arrow::compute's kernel registry ("sum", "add", "filter", ...) lives in a
+      separate libarrow_compute whose static initializers must run at load, so
+      features that call compute kernels link it alongside libarrow. It ships
+      in the same PyArrow directory as libarrow, whose rpath (added by
+      arrowcpp_linker_flags) already covers it, so no rpath is repeated here.
+    returns:
+      type: tuple[str, Ellipsis]
+    """
+    return (str(_find_pyarrow_library("arrow_compute")),)
+
+
+@typechecked
 def arrowcpp_runtime_metadata() -> dict[str, object]:
     """
     title: Return Arrow C++ runtime implementation metadata.
@@ -154,6 +170,7 @@ def _versioned_library_glob() -> str:
 
 __all__ = [
     "arrowcpp_compile_flags",
+    "arrowcpp_compute_linker_flags",
     "arrowcpp_include_dirs",
     "arrowcpp_linker_flags",
     "arrowcpp_runtime_metadata",
