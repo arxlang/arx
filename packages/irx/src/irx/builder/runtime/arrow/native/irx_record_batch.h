@@ -163,6 +163,53 @@ int irx_rb_batch_struct_field_buffer(const IrxRbBatch *b, int col, int field,
                                       const void **buf, int64_t *len);
 void irx_rb_batch_release(IrxRbBatch *batch);
 
+/* Compute layer over arrow::compute. Each call maps to a single Arrow kernel so
+ * IRx reuses Arrow's registry instead of reimplementing kernels. */
+
+/* Column aggregation kinds for irx_compute_aggregate. */
+typedef enum IrxComputeAgg {
+    IRX_AGG_SUM   = 0,
+    IRX_AGG_MIN   = 1,
+    IRX_AGG_MAX   = 2,
+    IRX_AGG_MEAN  = 3,
+    IRX_AGG_COUNT = 4,
+} IrxComputeAgg;
+
+/* Element-wise binary operators for irx_compute_binary. */
+typedef enum IrxComputeBinOp {
+    IRX_BINOP_ADD = 0,
+    IRX_BINOP_SUB = 1,
+    IRX_BINOP_MUL = 2,
+    IRX_BINOP_DIV = 3,
+} IrxComputeBinOp;
+
+/* Reduce column `col` to a scalar with aggregation `op` (an IrxComputeAgg). The
+ * result type depends on the input and the op, and `*out_type` reports which
+ * out-param holds the value: integer SUM/MIN/MAX and COUNT write `*i_out`;
+ * MEAN and floating SUM/MIN/MAX write `*f_out`. COUNT of an empty or all-null
+ * column is 0; any other aggregation with no valid value is IRX_ERR_ARROW. */
+int irx_compute_aggregate(const IrxRbBatch *b, int col, int op,
+                          IrxColumnType *out_type,
+                          int64_t *i_out, double *f_out);
+
+/* Element-wise `op` (an IrxComputeBinOp) over numeric columns `col_a` and
+ * `col_b`, producing a new single-column batch (field name "result") in `*out`.
+ * Arrow decides the result type by its usual promotion rules. Release `*out`
+ * with irx_rb_batch_release. */
+int irx_compute_binary(const IrxRbBatch *b, int col_a, int col_b, int op,
+                       IrxRbBatch **out);
+
+/* Select the rows of `b` where boolean column `mask_col` is true, producing a
+ * new batch with the same schema in `*out`. A null mask slot drops its row.
+ * Release `*out` with irx_rb_batch_release. */
+int irx_compute_filter(const IrxRbBatch *b, int mask_col, IrxRbBatch **out);
+
+/* Fill `out` with the row indices that sort column `col` (ascending when
+ * `ascending` is non-zero, else descending). Exactly num_rows indices are
+ * written and `out_len` must be at least num_rows. Nulls sort to the end. */
+int irx_compute_sort_indices(const IrxRbBatch *b, int col, int ascending,
+                             int64_t *out, int64_t out_len);
+
 int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
                                     const char          *path,
                                     IrxRbStreamWriter  **out);
