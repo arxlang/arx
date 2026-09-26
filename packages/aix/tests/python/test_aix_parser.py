@@ -88,3 +88,11 @@ def test_unsupported_reserved_operator_error() -> None:
         match="unsupported reserved operator '⍴'",
     ):
         parse("∴ main ⟦⟧ → ∅ ⟣ ⍴ 1 ∎")
+
+
+def test_power_operator_error() -> None:
+    with pytest.raises(
+        ParserException,
+        match="the power operator '\\^' is not supported yet",
+    ):
+        parse("∴ square ⟦ x:ℤ ⟧ → ℤ ⊢ x ^ 2 ∎")

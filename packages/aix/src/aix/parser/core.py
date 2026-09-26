@@ -54,7 +54,6 @@ _BINARY_OPERATORS: Final[dict[TokenKind, tuple[int, str, bool]]] = {
     TokenKind.multiply: (50, "*", False),
     TokenKind.slash: (50, "/", False),
     TokenKind.percent: (50, "%", False),
-    TokenKind.power: (60, "^", True),
 }
 
 _EXPRESSION_TERMINATORS: Final[frozenset[TokenKind]] = frozenset(
@@ -387,6 +386,13 @@ class Parser:
         lhs = self._parse_unary()
 
         while True:
+            if self.tokens.cur_tok.kind == TokenKind.power:
+                # astx maps "^" to bitwise xor and IRx has no exponentiation,
+                # so emitting a BinaryOp here would not mean power.
+                self._raise_here(
+                    "the power operator '^' is not supported yet; IRx has "
+                    "no exponentiation lowering"
+                )
             op_info = _BINARY_OPERATORS.get(self.tokens.cur_tok.kind)
             if op_info is None:
                 return lhs

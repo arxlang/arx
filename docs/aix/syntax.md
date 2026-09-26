@@ -65,7 +65,9 @@ Supported operators, from lower to higher precedence:
 3. `=`, `==`, `≠`, `!=`, `<`, `>`, `≤`, `>=`, `≥`, `<=`, `≡`, `≅`
 4. `+`, `-`
 5. `*`, `×`, `/`, `%`
-6. `^` (right associative)
+
+`^` is lexed as the power operator but rejected by the parser, because IRx has
+no exponentiation lowering yet.
 
 Unary `-` and `¬` are supported. `≡` and `≅` currently lower to equality.
 
