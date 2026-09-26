@@ -17,6 +17,10 @@ from irx.analysis.types import (
 )
 from irx.typecheck import typechecked
 
+# Prefix operators that IRx can lower. Frontends may parse other operator
+# tokens in prefix position, so analysis rejects anything outside this set.
+UNARY_OPERATORS = frozenset({"!", "++", "--", "-", "+"})
+
 
 @typechecked
 def binary_result_type(
@@ -81,4 +85,6 @@ def unary_result_type(
         return None
     if op_code in {"++", "--"} and is_numeric_type(operand_type):
         return operand_type
+    if op_code in {"-", "+"}:
+        return operand_type if is_numeric_type(operand_type) else None
     return operand_type

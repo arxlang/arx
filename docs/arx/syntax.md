@@ -142,8 +142,9 @@ Current groups:
 - type union: `|`
 - punctuation: `@`, `:`, `,`, `;`, `.`
 
-`++` and `--` are lexed as unary operators. Availability in a particular
-semantic context depends on the parser and IRx type rules.
+`-` and `+` also work as prefix operators on numbers, as in `-value` or
+`3 - -2`. `++` and `--` are lexed as unary operators. Availability in a
+particular semantic context depends on the parser and IRx type rules.
 
 ## Structural forms
 

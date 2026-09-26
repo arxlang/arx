@@ -39,7 +39,11 @@ from irx.analysis.types import (
     is_string_type,
     is_type_member,
 )
-from irx.analysis.typing import binary_result_type, unary_result_type
+from irx.analysis.typing import (
+    UNARY_OPERATORS,
+    binary_result_type,
+    unary_result_type,
+)
 from irx.analysis.validation import validate_assignment, validate_cast
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -74,6 +78,20 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         ):
             self.context.diagnostics.add(
                 "unary operator '!' requires Boolean operand",
+                node=node,
+            )
+        if node.op_code not in UNARY_OPERATORS:
+            self.context.diagnostics.add(
+                f"unary operator '{node.op_code}' is not supported",
+                node=node,
+            )
+        elif (
+            node.op_code in {"-", "+"}
+            and operand_type is not None
+            and not is_numeric_type(operand_type)
+        ):
+            self.context.diagnostics.add(
+                f"unary operator '{node.op_code}' requires a numeric operand",
                 node=node,
             )
         result_type = unary_result_type(node.op_code, operand_type)

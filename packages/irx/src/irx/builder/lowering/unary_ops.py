@@ -105,4 +105,29 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
             self.result_stack.append(result)
             return
 
+        if node.op_code in {"-", "+"}:
+            self.visit_child(node.operand)
+            val = safe_pop(self.result_stack)
+            if val is None:
+                raise Exception("codegen: Invalid unary operand.")
+            if not (is_int_type(val.type) or is_fp_type(val.type)):
+                raise Exception(
+                    f"codegen: unary operator '{node.op_code}' must lower a "
+                    "numeric operand."
+                )
+            if node.op_code == "+":
+                self.result_stack.append(val)
+                return
+
+            if is_fp_type(val.type):
+                result = self._llvm.ir_builder.fneg(val, "negtmp")
+                self._apply_fast_math(result)
+            else:
+                # Integer negation wraps modulo 2^N like binary subtraction,
+                # so it must not carry an nsw flag.
+                result = self._llvm.ir_builder.neg(val, "negtmp")
+
+            self.result_stack.append(result)
+            return
+
         raise Exception(f"Unary operator {node.op_code} not implemented yet.")

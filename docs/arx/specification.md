@@ -118,12 +118,12 @@ lowering uses conditional blocks and a merge value rather than eager LLVM
 
 ### Fixed-width integer overflow
 
-Fixed-width integer addition, subtraction, and multiplication use modulo `2^N`
-arithmetic for an `N`-bit result. Narrowing to an integer discards high bits and
-therefore uses the same modulo rule. These operations do not trap on overflow
-and optimization must not assume that signed overflow is impossible. The
-compiled datatype conformance module covers signed boundary wrap, subtraction
-wrap, multiplication wrap, and narrowing.
+Fixed-width integer addition, subtraction, multiplication, and prefix negation
+use modulo `2^N` arithmetic for an `N`-bit result. Narrowing to an integer
+discards high bits and therefore uses the same modulo rule. These operations do
+not trap on overflow and optimization must not assume that signed overflow is
+impossible. The compiled datatype conformance module covers signed boundary
+wrap, subtraction wrap, multiplication wrap, negation wrap, and narrowing.
 
 ### Integer division and remainder failures
 

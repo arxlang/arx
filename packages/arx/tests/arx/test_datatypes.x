@@ -88,6 +88,22 @@ fn test_fixed_width_integer_wrapping() -> none:
   assert minimum - 1 == maximum
   assert 65536 * 65536 == 0
 
+fn test_unary_minus_and_plus() -> none:
+  ```
+  title: test_unary_minus_and_plus
+  summary: Confirms prefix minus negates numbers and prefix plus keeps them.
+  ```
+  var value: i32 = -7
+  var minimum: i32 = cast(2147483648, i32)
+  var ratio: f64 = -2.5
+  assert value == 0 - 7
+  assert -value == 7
+  assert -(-value) == value
+  assert +value == value
+  assert -minimum == minimum
+  assert -ratio == 2.5
+  assert 3 - -2 == 5
+
 fn test_none_helpers() -> none:
   ```
   title: test_none_helpers
