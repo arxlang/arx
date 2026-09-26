@@ -98,3 +98,11 @@ def test_parse_logical_not_uses_irx_operator() -> None:
     assert isinstance(returned, astx.FunctionReturn)
     assert isinstance(returned.value, astx.UnaryOp)
     assert returned.value.op_code == "!"
+
+
+def test_power_operator_error() -> None:
+    with pytest.raises(
+        ParserException,
+        match="the power operator '\\^' is not supported yet",
+    ):
+        parse("∴ square ⟦ x:ℤ ⟧ → ℤ ⊢ x ^ 2 ∎")
