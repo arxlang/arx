@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001
 """
 title: AIX CLI tests.
 """
@@ -62,3 +63,17 @@ def test_cli_test_list_honors_name_filter(
     output = capsys.readouterr().out
     assert "test_beta.aix" in output
     assert "test_alpha.aix" not in output
+
+
+def test_cli_show_llvm_ir_lowers_logical_not(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = tmp_path / "logical_not.aix"
+    source.write_text(
+        "∴ main ⟦⟧ → ∅\n  ⌁ flag:𝔹 ≔ ⊤\n  ⟣ ¬flag\n∎\n",
+        encoding="utf-8",
+    )
+    app(["--show-llvm-ir", str(source)])
+    output = capsys.readouterr().out
+    assert "xor i1" in output

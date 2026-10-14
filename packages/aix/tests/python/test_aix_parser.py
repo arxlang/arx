@@ -88,3 +88,13 @@ def test_unsupported_reserved_operator_error() -> None:
         match="unsupported reserved operator '⍴'",
     ):
         parse("∴ main ⟦⟧ → ∅ ⟣ ⍴ 1 ∎")
+
+
+def test_parse_logical_not_uses_irx_operator() -> None:
+    module = parse("∴ flip ⟦ flag:𝔹 ⟧ → 𝔹\n  ⊢ ¬flag\n∎")
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    returned = function.body.nodes[0]
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.UnaryOp)
+    assert returned.value.op_code == "!"

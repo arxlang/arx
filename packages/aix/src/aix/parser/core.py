@@ -418,8 +418,9 @@ class Parser:
             )
         if token.kind == TokenKind.not_:
             self.tokens.get_next_token()
+            # IRx spells logical negation "!", matching the Arx frontend.
             return astx.UnaryOp(
-                "not",
+                "!",
                 cast(astx.DataType, self._parse_unary()),
                 loc=token.location,
             )
