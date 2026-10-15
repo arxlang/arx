@@ -16,6 +16,16 @@ from irx.analysis.handlers._expressions.tensor_buffer_support import (
     ExpressionTensorBufferSupportVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.ownership import (
+    resource_ownership,
+    transfer_resource_ownership,
+    typed_resource_ownership,
+)
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResourceViewKind,
+)
 from irx.analysis.validation import validate_assignment
 from irx.buffer import (
     BUFFER_FLAG_VALIDITY_BITMAP,
@@ -146,6 +156,10 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         )
         node.type_ = astx.TensorType(node.element_type, shape=shape)
         self._set_type(node, node.type_)
+        self._set_resource_ownership(
+            node,
+            typed_resource_ownership(node.type_, OwnershipKind.OWNED),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TensorView) -> None:
@@ -304,6 +318,30 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         self._semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
         self._semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
         self._set_type(node, node.type_)
+        base_ownership = resource_ownership(node.base)
+        self._set_resource_ownership(
+            node,
+            typed_resource_ownership(
+                node.type_,
+                OwnershipKind.OWNED,
+                owner_root_symbol_id=(
+                    base_ownership.owner_root_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+                source_symbol_id=(
+                    base_ownership.source_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+                view_kind=ResourceViewKind.RETAINED,
+                view_parent_symbol_id=(
+                    base_ownership.source_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+            ),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TensorIndex) -> None:
@@ -515,4 +553,13 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
             view=node.base,
             operation="release",
         )
+        ownership = resource_ownership(node.base)
+        if ownership is not None:
+            self._set_resource_ownership(
+                node.base,
+                transfer_resource_ownership(
+                    ownership,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
         self._set_type(node, astx.Int32())

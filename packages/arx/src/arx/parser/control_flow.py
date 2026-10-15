@@ -27,7 +27,7 @@ from arx.docstrings import validate_docstring
 from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
-from arx.parser.state import TypeUseContext
+from arx.parser.state import TypeUseContext, list_annotation
 from arx.tensor import (
     TensorBinding,
     binding_from_type,
@@ -182,7 +182,13 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         then_block = self.parse_block()
 
-        if self.tokens.cur_tok.kind == TokenKind.indent:
+        # Only consume a dedent when it introduces this if's else branch.
+        # Otherwise the enclosing block still needs its next line marker.
+        if (
+            self.tokens.cur_tok.kind == TokenKind.indent
+            and self.tokens.cur_tok.value == self.indent_level
+            and self._peek_token().kind == TokenKind.kw_else
+        ):
             self.tokens.get_next_token()
 
         else_block = astx.Block()
@@ -295,7 +301,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         self._consume_operator(";")
 
         declared_lists: tuple[str, ...] = ()
-        if isinstance(initializer.type_, astx.ListType):
+        if list_annotation(initializer.type_):
             declared_lists = (initializer.name,)
 
         declared_tensors: dict[str, TensorBinding | None] = {}
@@ -409,7 +415,9 @@ class ControlFlowParserMixin(ParserMixinBase):
             )
 
         self._consume_operator(":")
-        var_type = self.parse_type(type_context=TypeUseContext.VARIABLE)
+        var_type = self.parse_type(
+            allow_union=True, type_context=TypeUseContext.VARIABLE
+        )
 
         value: astx.Expr | None = None
         if self._is_operator("="):
@@ -457,7 +465,7 @@ class ControlFlowParserMixin(ParserMixinBase):
                 name,
                 dataframe_binding_from_type(var_type),
             )
-        if isinstance(var_type, astx.ListType):
+        if list_annotation(var_type):
             self._declare_list_name(name)
         return declaration
 
@@ -514,7 +522,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             self.tokens.cur_tok.kind in bare_return_terminators
             or self._is_operator(";")
         ):
-            return astx.FunctionReturn(astx.LiteralNone(), loc=return_loc)
+            return astx.FunctionReturn(None, loc=return_loc)
 
         value = self.parse_expression()
         return_type = self._current_return_type()

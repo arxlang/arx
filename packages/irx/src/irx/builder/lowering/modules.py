@@ -4,10 +4,18 @@
 title: Module-level visitor mixins for llvmliteir.
 """
 
+from typing import Any, cast
+
 import astx
 
 from llvmlite import ir
 
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import (
+    ClassHeaderFieldKind,
+    OwnershipKind,
+    ResourceOwnership,
+)
 from irx.builder.core import (
     VisitorCore,
     semantic_class_key,
@@ -22,6 +30,113 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ModuleVisitorMixin(VisitorMixinBase):
+    def _class_header_llvm_type(
+        self,
+        kind: ClassHeaderFieldKind,
+    ) -> ir.Type:
+        """
+        title: Return the storage type for one common class header field.
+        parameters:
+          kind:
+            type: ClassHeaderFieldKind
+        returns:
+          type: ir.Type
+        """
+        if kind is ClassHeaderFieldKind.REFERENCE_COUNT:
+            return self._llvm.INT64_TYPE
+        return self._llvm.OPAQUE_POINTER_TYPE
+
+    def _emit_aggregate_field_cleanup(
+        self,
+        field_name: str,
+        slot: ir.Value,
+        ownership: ResourceOwnership,
+    ) -> None:
+        """
+        title: Emit fail-closed destructor cleanup for one aggregate field.
+        parameters:
+          field_name:
+            type: str
+          slot:
+            type: ir.Value
+          ownership:
+            type: ResourceOwnership
+        """
+        if ownership.kind is not OwnershipKind.OWNED:
+            return
+        cast(Any, self).release_resource_slot(ownership, slot)
+
+    def _emit_class_destructor(self, node: astx.ClassDefStmt) -> ir.Function:
+        """
+        title: Emit reverse-order cleanup and storage release for one class.
+        parameters:
+          node:
+            type: astx.ClassDefStmt
+        returns:
+          type: ir.Function
+        """
+        semantic = getattr(node, "semantic", None)
+        resolved_class = getattr(semantic, "resolved_class", None)
+        layout = getattr(resolved_class, "layout", None)
+        if layout is None:
+            raise TypeError("class destructor requires resolved layout")
+        existing = self._llvm.module.globals.get(layout.destructor_name)
+        if existing is not None:
+            if not isinstance(existing, ir.Function):
+                raise TypeError("class destructor name is not a function")
+            return existing
+
+        destructor = ir.Function(
+            self._llvm.module,
+            ir.FunctionType(
+                self._llvm.VOID_TYPE,
+                [self._llvm.OPAQUE_POINTER_TYPE],
+            ),
+            layout.destructor_name,
+        )
+        destructor.linkage = "internal"
+        destructor.args[0].name = "object"
+        entry = destructor.append_basic_block("entry")
+        previous_builder = self._llvm.ir_builder
+        self._llvm.ir_builder = ir.IRBuilder(entry)
+        try:
+            class_key = semantic_class_key(node, node.name)
+            class_type = self.struct_types.get(class_key)
+            if not isinstance(class_type, ir.IdentifiedStructType):
+                raise TypeError("class destructor requires an LLVM class type")
+            object_ptr = self._llvm.ir_builder.bitcast(
+                destructor.args[0],
+                class_type.as_pointer(),
+                name="typed_object",
+            )
+            for field in reversed(layout.instance_fields):
+                ownership = resource_ownership(field.member.declaration)
+                if ownership is None:
+                    continue
+                field_addr = self._llvm.ir_builder.gep(
+                    object_ptr,
+                    [
+                        ir.Constant(self._llvm.INT32_TYPE, 0),
+                        ir.Constant(
+                            self._llvm.INT32_TYPE,
+                            field.storage_index,
+                        ),
+                    ],
+                    inbounds=True,
+                    name=f"{field.member.name}_destroy_addr",
+                )
+                self._emit_aggregate_field_cleanup(
+                    field.member.name,
+                    field_addr,
+                    ownership,
+                )
+            free = self.require_runtime_symbol("libc", "free")
+            self._llvm.ir_builder.call(free, [destructor.args[0]])
+            self._llvm.ir_builder.ret_void()
+        finally:
+            self._llvm.ir_builder = previous_builder
+        return destructor
+
     def _default_global_initializer(self, llvm_type: ir.Type) -> ir.Constant:
         """
         title: Return one zero or null global initializer.
@@ -208,7 +323,8 @@ class ModuleVisitorMixin(VisitorMixinBase):
             raise Exception("codegen: unresolved class initialization.")
 
         field_types: list[ir.Type] = [
-            self._llvm.OPAQUE_POINTER_TYPE for _ in layout.header_fields
+            self._class_header_llvm_type(field.kind)
+            for field in layout.header_fields
         ]
         for field in layout.instance_fields:
             llvm_type = self._llvm_type_for_ast_type(field.member.type_)
@@ -224,6 +340,7 @@ class ModuleVisitorMixin(VisitorMixinBase):
             semantic_class_name(node, node.name),
             field_types,
         )
+        self._emit_class_destructor(node)
 
         for static_initializer in initialization.static_initializers:
             storage = static_initializer.storage

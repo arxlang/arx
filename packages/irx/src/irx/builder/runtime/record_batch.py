@@ -20,6 +20,15 @@ from filelock import FileLock
 from filelock import Timeout as FileLockTimeout
 from llvmlite import ir
 
+from irx.builder.runtime.array.feature import build_array_runtime_feature
+from irx.builder.runtime.arrow.declarations import (
+    arrow_external_symbol_specs,
+)
+from irx.builder.runtime.arrow.feature import (
+    arrow_native_source_dir,
+    build_arrow_core_runtime_feature,
+    build_arrow_native_artifact,
+)
 from irx.builder.runtime.arrowcpp import (
     arrowcpp_compile_flags,
     arrowcpp_include_dirs,
@@ -46,7 +55,7 @@ def _native_source_dir() -> Path:
     returns:
       type: Path
     """
-    return (Path(__file__).resolve().parent / "arrow" / "native").resolve()
+    return arrow_native_source_dir()
 
 
 @typechecked
@@ -232,10 +241,18 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
       type: RuntimeFeature
     """
     native_dir = _native_source_dir()
+    buffer_native_dir = (
+        native_dir.parent.parent / "buffer" / "native"
+    ).resolve()
     compile_flags = arrowcpp_compile_flags()
-    include_dirs = (native_dir, *arrowcpp_include_dirs())
+    include_dirs = (
+        native_dir,
+        buffer_native_dir,
+        *arrowcpp_include_dirs(),
+    )
 
     artifacts = (
+        build_arrow_native_artifact("record_batch"),
         NativeArtifact(
             kind="cxx_source",
             path=_native_source(),
@@ -244,9 +261,13 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         ),
     )
 
-    symbols = {
+    compatibility_symbols = {
         name: ExternalSymbolSpec(name, _make_declarer(name, ret, args))
         for name, (ret, args) in _SIGNATURES.items()
+    }
+    symbols = {
+        **arrow_external_symbol_specs("record_batch"),
+        **compatibility_symbols,
     }
 
     return RuntimeFeature(
@@ -254,19 +275,66 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         symbols=symbols,
         artifacts=artifacts,
         linker_flags=arrowcpp_linker_flags(),
+        dependencies=("array",),
         metadata={
             "canonical_name": "record_batch",
-            "depends_on": ("array",),
             "opaque_handles": {
                 "schema": "IrxRbSchema",
                 "builder": "IrxRbBuilder",
-                "batch": "IrxRbBatch",
+                "batch": "irx_arrow_record_batch_handle",
                 "stream_writer": "IrxRbStreamWriter",
                 "stream_reader": "IrxRbStreamReader",
             },
+            "compatibility_prefix": "irx_rb_",
+            "deprecated_since_abi": "1.0.0",
+            "removal_abi_major": 2,
             **arrowcpp_runtime_metadata(),
         },
     )
+
+
+@typechecked
+def _record_batch_build_features() -> tuple[RuntimeFeature, ...]:
+    """
+    title: Return the dependency-ordered standalone RecordBatch features.
+    returns:
+      type: tuple[RuntimeFeature, Ellipsis]
+    """
+    return (
+        build_arrow_core_runtime_feature(),
+        build_array_runtime_feature(),
+        build_record_batch_runtime_feature(),
+    )
+
+
+@typechecked
+def _record_batch_build_inputs() -> tuple[
+    tuple[NativeArtifact, ...], tuple[str, ...]
+]:
+    """
+    title: Collect deduplicated standalone RecordBatch native build inputs.
+    returns:
+      type: tuple[tuple[NativeArtifact, Ellipsis], tuple[str, Ellipsis]]
+    """
+    artifacts: list[NativeArtifact] = []
+    linker_flags: list[str] = []
+    seen_artifacts: set[tuple[str, str]] = set()
+    seen_flags: set[str] = set()
+
+    for feature in _record_batch_build_features():
+        for artifact in feature.artifacts:
+            key = (artifact.kind, str(artifact.path))
+            if key in seen_artifacts:
+                continue
+            seen_artifacts.add(key)
+            artifacts.append(artifact)
+        for flag in feature.linker_flags:
+            if flag in seen_flags:
+                continue
+            seen_flags.add(flag)
+            linker_flags.append(flag)
+
+    return tuple(artifacts), tuple(linker_flags)
 
 
 # Standalone shared-library build (for the ctypes API in irx.record_batch)
@@ -322,19 +390,27 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     except (OSError, subprocess.SubprocessError) as err:
         compiler_version = f"unavailable: {type(err).__name__}: {err}"
 
-    feature = build_record_batch_runtime_feature()
+    features = _record_batch_build_features()
+    artifacts, linker_flags = _record_batch_build_inputs()
     build_metadata = {
         "compiler": compiler,
         "compiler_version": compiler_version,
         "compile_flags": [
-            list(artifact.compile_flags) for artifact in feature.artifacts
+            list(artifact.compile_flags) for artifact in artifacts
         ],
         "include_dirs": [
             [str(path) for path in artifact.include_dirs]
-            for artifact in feature.artifacts
+            for artifact in artifacts
         ],
-        "linker_flags": list(feature.linker_flags),
-        "metadata": dict(feature.metadata),
+        "linker_flags": list(linker_flags),
+        "features": [
+            {
+                "name": feature.name,
+                "dependencies": list(feature.dependencies),
+                "metadata": dict(feature.metadata),
+            }
+            for feature in features
+        ],
         "platform": os.name,
     }
 
@@ -348,7 +424,7 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     native_sources = sorted(
         path
         for path in _native_source_dir().iterdir()
-        if path.suffix in {".cc", ".cpp", ".h"}
+        if path.suffix in {".cc", ".cpp", ".h", ".hpp", ".inc", ".map"}
     )
     for path in native_sources:
         digest.update(path.name.encode("utf-8"))
@@ -422,7 +498,7 @@ def build_record_batch_shared_library(
     cxx_binary: str = "c++",
 ) -> Path:
     """
-    title: Compile irx_record_batch.cpp into a standalone shared library.
+    title: Compile the capability-specific RecordBatch shared library.
     summary: >-
       Used by the ctypes-based Python API (``irx.record_batch``) and its test
       suite, which load the library directly rather than going through LLVM
@@ -442,11 +518,11 @@ def build_record_batch_shared_library(
     work_dir.mkdir(parents=True, exist_ok=True)
     fingerprint = record_batch_build_fingerprint(cxx_binary)
 
-    feature = build_record_batch_runtime_feature()
+    artifacts, linker_flags = _record_batch_build_inputs()
     # Shared objects must be position-independent.
     pic_artifacts = tuple(
         replace(a, compile_flags=(*a.compile_flags, "-fPIC"))
-        for a in feature.artifacts
+        for a in artifacts
     )
 
     link_inputs = compile_native_artifacts(
@@ -463,7 +539,7 @@ def build_record_batch_shared_library(
     command = [cxx_binary, "-shared", "-o", str(temporary_output)]
     command.extend(str(obj) for obj in link_inputs.objects)
     command.extend(link_inputs.linker_flags)
-    command.extend(feature.linker_flags)
+    command.extend(linker_flags)
     try:
         subprocess.run(command, check=True)
         temporary_output.replace(output)

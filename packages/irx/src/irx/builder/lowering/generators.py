@@ -16,10 +16,14 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.nullability import aggregate_nullable, managed_nullable
+from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
+    OwnershipKind,
     ResolvedGeneratorFunction,
     ResolvedIteration,
     ResolvedYield,
+    ResourceOwnership,
     SemanticFunction,
     SemanticSymbol,
 )
@@ -32,10 +36,10 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.state import CleanupAction
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
-GENERATOR_FRAME_ALLOCATION_BYTES = 4096
 GENERATOR_STATE_FIELD_INDEX = 0
 GENERATOR_EXHAUSTED_FIELD_INDEX = 1
 
@@ -101,6 +105,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             [
                 self._llvm.OPAQUE_POINTER_TYPE,
                 self._llvm.OPAQUE_POINTER_TYPE,
+                self._llvm.OPAQUE_POINTER_TYPE,
             ]
         )
 
@@ -131,20 +136,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Function
         """
-        existing = self._llvm.module.globals.get("malloc")
-        if existing is not None:
-            if not isinstance(existing, ir.Function):
-                raise_lowering_internal_error(
-                    "global 'malloc' exists but is not a function",
-                    node=None,
-                )
-            return existing
-        size_type = self._llvm.SIZE_T_TYPE or self._llvm.INT64_TYPE
-        malloc_type = ir.FunctionType(
-            self._llvm.OPAQUE_POINTER_TYPE,
-            [size_type],
-        )
-        return ir.Function(self._llvm.module, malloc_type, "malloc")
+        return self.require_runtime_symbol("libc", "malloc")
 
     def _generator_function_name(self, function: SemanticFunction) -> str:
         """
@@ -170,6 +162,17 @@ class GeneratorVisitorMixin(VisitorMixinBase):
           type: str
         """
         return f"{self._generator_function_name(function)}.__resume"
+
+    def _generator_destroy_name(self, function: SemanticFunction) -> str:
+        """
+        title: Return the internal frame-destructor function name.
+        parameters:
+          function:
+            type: SemanticFunction
+        returns:
+          type: str
+        """
+        return f"{self._generator_function_name(function)}.__destroy"
 
     def _collect_generator_local_symbols(
         self,
@@ -204,6 +207,75 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             if isinstance(child, astx.Block):
                 symbols.extend(self._collect_generator_local_symbols(child))
         return tuple(symbols)
+
+    def _generator_owned_frame_slots(
+        self,
+        generator: ResolvedGeneratorFunction,
+    ) -> tuple[tuple[SemanticSymbol, ResourceOwnership], ...]:
+        """
+        title: Return the owned resource slots stored in one frame.
+        parameters:
+          generator:
+            type: ResolvedGeneratorFunction
+        returns:
+          type: tuple[tuple[SemanticSymbol, ResourceOwnership], Ellipsis]
+        """
+        owned: list[tuple[SemanticSymbol, ResourceOwnership]] = [
+            (capture.symbol, capture.ownership)
+            for capture in generator.resource_captures
+        ]
+        if generator.function.definition is not None:
+            for symbol in self._collect_generator_local_symbols(
+                generator.function.definition.body
+            ):
+                ownership = resource_ownership(symbol.declaration)
+                if (
+                    ownership is not None
+                    and ownership.kind is OwnershipKind.OWNED
+                ):
+                    owned.append((symbol, ownership))
+
+        deduplicated: dict[str, tuple[SemanticSymbol, ResourceOwnership]] = {}
+        for symbol, ownership in owned:
+            deduplicated[symbol.symbol_id] = (symbol, ownership)
+        return tuple(deduplicated.values())
+
+    def _emit_generator_frame_cleanups(
+        self,
+        generator: ResolvedGeneratorFunction,
+        frame_ptr: ir.Value,
+        slots: dict[str, int],
+    ) -> None:
+        """
+        title: >-
+          Release every initialized generator-frame owner in reverse order.
+        parameters:
+          generator:
+            type: ResolvedGeneratorFunction
+          frame_ptr:
+            type: ir.Value
+          slots:
+            type: dict[str, int]
+        """
+        for symbol, ownership in reversed(
+            self._generator_owned_frame_slots(generator)
+        ):
+            field_index = slots.get(symbol.symbol_id)
+            if field_index is None:
+                raise_lowering_internal_error(
+                    f"generator owner '{symbol.name}' has no frame slot",
+                    node=symbol.declaration,
+                )
+            field_addr = self._generator_field_address(
+                frame_ptr,
+                field_index,
+                name=f"{symbol.name}_frame_cleanup_addr",
+            )
+            cast(Any, self)._emit_aggregate_field_cleanup(
+                symbol.name,
+                field_addr,
+                ownership,
+            )
 
     def _generator_frame_layout(
         self,
@@ -317,6 +389,91 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         self._generator_resume_functions[function.symbol_id] = resume
         return resume
 
+    def _declare_generator_destroy(
+        self,
+        generator: ResolvedGeneratorFunction,
+    ) -> ir.Function:
+        """
+        title: Declare or return the internal generator-frame destructor.
+        parameters:
+          generator:
+            type: ResolvedGeneratorFunction
+        returns:
+          type: ir.Function
+        """
+        name = self._generator_destroy_name(generator.function)
+        existing = self._llvm.module.globals.get(name)
+        if existing is not None:
+            if not isinstance(existing, ir.Function):
+                raise_lowering_internal_error(
+                    "generator destructor name is not a function",
+                    node=generator.function.prototype,
+                )
+            return existing
+        destroy = ir.Function(
+            self._llvm.module,
+            ir.FunctionType(
+                self._llvm.VOID_TYPE,
+                [self._llvm.OPAQUE_POINTER_TYPE],
+            ),
+            name,
+        )
+        destroy.linkage = "internal"
+        destroy.args[0].name = "frame"
+        return destroy
+
+    def _emit_generator_destroy_body(
+        self,
+        generator: ResolvedGeneratorFunction,
+    ) -> None:
+        """
+        title: >-
+          Emit owned-slot cleanup and heap release for one generator frame.
+        parameters:
+          generator:
+            type: ResolvedGeneratorFunction
+        """
+        destroy = self._declare_generator_destroy(generator)
+        if len(destroy.blocks) > 0:
+            return
+        frame_type, slots = self._generator_frame_layout(generator)
+        entry = destroy.append_basic_block("entry")
+        null_block = destroy.append_basic_block("null")
+        cleanup_block = destroy.append_basic_block("cleanup")
+        previous_builder = self._llvm.ir_builder
+        self._llvm.ir_builder = ir.IRBuilder(entry)
+        try:
+            is_null = self._llvm.ir_builder.icmp_unsigned(
+                "==",
+                destroy.args[0],
+                ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None),
+                name="frame_is_null",
+            )
+            self._llvm.ir_builder.cbranch(
+                is_null,
+                null_block,
+                cleanup_block,
+            )
+            self._llvm.ir_builder.position_at_start(null_block)
+            self._llvm.ir_builder.ret_void()
+
+            self._llvm.ir_builder.position_at_start(cleanup_block)
+            frame_ptr = self._llvm.ir_builder.bitcast(
+                destroy.args[0],
+                frame_type.as_pointer(),
+                name="typed_frame",
+            )
+            self._emit_generator_frame_cleanups(
+                generator,
+                frame_ptr,
+                slots,
+            )
+            free = self.require_runtime_symbol("libc", "free")
+            self._llvm.ir_builder.call(free, [destroy.args[0]])
+            self._llvm.ir_builder.ret_void()
+        finally:
+            self._llvm.ir_builder = previous_builder
+
     def _bind_generator_frame_symbols(
         self,
         frame_ptr: ir.Value,
@@ -345,11 +502,17 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             type: astx.AST | None
         """
         frame_ptr = self._current_generator_frame_ptr
-        if frame_ptr is None:
+        generator = self._current_generator_metadata
+        if frame_ptr is None or generator is None:
             raise_lowering_internal_error(
                 "generator stop emitted outside resume function",
                 node=node,
             )
+        self._emit_generator_frame_cleanups(
+            generator,
+            frame_ptr,
+            self._current_generator_frame_slots,
+        )
         exhausted_addr = self._generator_field_address(
             frame_ptr,
             GENERATOR_EXHAUSTED_FIELD_INDEX,
@@ -385,6 +548,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             )
 
         if value is not None:
+            cleanup_depth = len(self.cleanup_stack)
             self.visit_child(value)
             yielded = require_lowered_value(
                 safe_pop(self.result_stack),
@@ -396,7 +560,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
                 source_type=self._resolved_ast_type(value),
                 target_type=resolution.expected_type,
             )
+            yielded = cast(Any, self)._retain_copied_resource_value(
+                value,
+                yielded,
+                target_type=resolution.expected_type,
+            )
             self._llvm.ir_builder.store(yielded, out_ptr)
+            self._emit_temporary_cleanups(cleanup_depth)
 
         state_addr = self._generator_field_address(
             frame_ptr,
@@ -434,10 +604,12 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             if yielded_seen < state_index:
                 continue
             stack_size_before = len(self.result_stack)
+            cleanup_depth = len(self.cleanup_stack)
             self.visit_child(node)
             del self.result_stack[stack_size_before:]
             if self._llvm.ir_builder.block.is_terminated:
                 return
+            self._emit_temporary_cleanups(cleanup_depth)
         if not self._llvm.ir_builder.block.is_terminated:
             self._emit_generator_stop(body)
 
@@ -511,11 +683,27 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         saved_slots = self._current_generator_frame_slots
         saved_out_ptr = self._current_generator_out_ptr
         saved_next_state = self._current_generator_next_state
+        saved_generator = self._current_generator_metadata
+        cleanup_depth = len(self.cleanup_stack)
         self._current_generator_frame_ptr = frame_ptr
         self._current_generator_frame_slots = slots
         self._current_generator_out_ptr = resume.args[1]
+        self._current_generator_metadata = generator
+
+        def destroy_failed_frame() -> None:
+            """
+            title: Release the frame if a resumed operation fails fatally.
+            """
+            self._llvm.ir_builder.call(
+                self._declare_generator_destroy(generator), [raw_frame]
+            )
+
         try:
             for index, block in enumerate(state_blocks):
+                # Resume states have independent predecessors. Never reuse a
+                # cleanup closure capturing an address from another state.
+                del self.cleanup_stack[cleanup_depth:]
+                self.cleanup_stack.append(CleanupAction(destroy_failed_frame))
                 self._llvm.ir_builder.position_at_start(block)
                 self._bind_generator_frame_symbols(frame_ptr, slots)
                 self._current_generator_next_state = index + 1
@@ -532,30 +720,49 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             self._current_generator_frame_slots = saved_slots
             self._current_generator_out_ptr = saved_out_ptr
             self._current_generator_next_state = saved_next_state
+            self._current_generator_metadata = saved_generator
+            del self.cleanup_stack[cleanup_depth:]
 
     def _allocate_generator_frame(
         self,
         frame_type: ir.IdentifiedStructType,
+        node: astx.AST,
     ) -> ir.Value:
         """
         title: Allocate one generator frame on the heap.
         parameters:
           frame_type:
             type: ir.IdentifiedStructType
+          node:
+            type: astx.AST
         returns:
           type: ir.Value
         """
         malloc = self._malloc_function()
         size_type = self._llvm.SIZE_T_TYPE or self._llvm.INT64_TYPE
+        size_ptr = self._llvm.ir_builder.gep(
+            ir.Constant(frame_type.as_pointer(), None),
+            [ir.Constant(self._llvm.INT32_TYPE, 1)],
+            name="generator_frame_size_ptr",
+        )
+        size = self._llvm.ir_builder.ptrtoint(
+            size_ptr,
+            size_type,
+            name="generator_frame_size",
+        )
         raw = self._llvm.ir_builder.call(
             malloc,
-            [
-                ir.Constant(
-                    size_type,
-                    GENERATOR_FRAME_ALLOCATION_BYTES,
-                )
-            ],
+            [size],
             name="generator_alloc",
+        )
+        self._guard_runtime_condition(
+            node,
+            self._llvm.ir_builder.icmp_unsigned(
+                "!=", raw, ir.Constant(raw.type, None)
+            ),
+            code="ARX-RUNTIME-ALLOCATION-001",
+            message="generator frame allocation failed",
+            block_name="generator.allocation",
         )
         return self._llvm.ir_builder.bitcast(
             raw,
@@ -582,9 +789,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
 
         frame_type, slots = self._generator_frame_layout(generator)
         resume = self._declare_generator_resume(generator)
+        destroy = self._declare_generator_destroy(generator)
         entry = factory.append_basic_block("entry")
         self._llvm.ir_builder = ir.IRBuilder(entry)
-        frame_ptr = self._allocate_generator_frame(frame_type)
+        frame_ptr = self._allocate_generator_frame(
+            frame_type,
+            function.prototype,
+        )
 
         state_addr = self._generator_field_address(
             frame_ptr,
@@ -605,26 +816,76 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             exhausted_addr,
         )
 
-        for llvm_arg, symbol in zip(factory.args, function.args):
-            field_index = slots.get(symbol.symbol_id)
-            if field_index is None:
-                continue
+        for symbol_id, field_index in slots.items():
             field_addr = self._generator_field_address(
                 frame_ptr,
                 field_index,
-                name=f"{symbol.name}_capture_addr",
+                name=f"{symbol_id.replace(':', '_')}_zero_addr",
             )
-            self._llvm.ir_builder.store(llvm_arg, field_addr)
+            self._llvm.ir_builder.store(
+                ir.Constant(field_addr.type.pointee, None),
+                field_addr,
+            )
 
         raw_frame = self._llvm.ir_builder.bitcast(
             frame_ptr,
             self._llvm.OPAQUE_POINTER_TYPE,
             name="generator_frame_raw",
         )
+        cleanup_depth = len(self.cleanup_stack)
+
+        def destroy_partial_frame() -> None:
+            """
+            title: Destroy a partially initialized generator frame.
+            """
+            if not self._llvm.ir_builder.block.is_terminated:
+                self._llvm.ir_builder.call(destroy, [raw_frame])
+
+        self.cleanup_stack.append(CleanupAction(destroy_partial_frame))
+        captures = {
+            capture.symbol.symbol_id: capture
+            for capture in generator.resource_captures
+        }
+
+        for llvm_arg, symbol in zip(factory.args, function.args):
+            capture_field_index = slots.get(symbol.symbol_id)
+            if capture_field_index is None:
+                continue
+            field_addr = self._generator_field_address(
+                frame_ptr,
+                capture_field_index,
+                name=f"{symbol.name}_capture_addr",
+            )
+            capture = captures.get(symbol.symbol_id)
+            captured_value = llvm_arg
+            if capture is not None:
+                declaration = symbol.declaration
+                if declaration is None:
+                    raise_lowering_internal_error(
+                        f"generator capture '{symbol.name}' has no source",
+                        node=function.prototype,
+                    )
+                retain = (
+                    cast(Any, self).retain_nullable_aggregate
+                    if aggregate_nullable(symbol.type_)
+                    else cast(Any, self).retain_nullable_resource
+                    if managed_nullable(symbol.type_)
+                    else cast(Any, self)._retain_resource_value
+                )
+                captured_value = retain(
+                    declaration, llvm_arg, capture.ownership
+                )
+            self._llvm.ir_builder.store(captured_value, field_addr)
+
         raw_resume = self._llvm.ir_builder.bitcast(
             resume,
             self._llvm.OPAQUE_POINTER_TYPE,
             name="generator_resume_raw",
+        )
+        raw_destroy = self._llvm.ir_builder.bitcast(
+            destroy,
+            self._llvm.OPAQUE_POINTER_TYPE,
+            name="generator_destroy_raw",
         )
         generator_value = ir.Constant(self._generator_value_type(), None)
         generator_value = self._llvm.ir_builder.insert_value(
@@ -639,6 +900,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             1,
             name="generator_with_resume",
         )
+        generator_value = self._llvm.ir_builder.insert_value(
+            generator_value,
+            raw_destroy,
+            2,
+            name="generator_with_destroy",
+        )
+        del self.cleanup_stack[cleanup_depth:]
         self._llvm.ir_builder.ret(generator_value)
         self._emitted_function_bodies.add(function.symbol_id)
         return factory
@@ -661,6 +929,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         _ = node
         factory = self._lower_generator_factory(generator)
         self._emit_generator_resume_body(generator)
+        self._emit_generator_destroy_body(generator)
         self.result_stack.append(factory)
         return factory
 
@@ -737,6 +1006,21 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             target_name,
             llvm_target_type,
         )
+        target_cleanup_depth = len(self.cleanup_stack)
+        target_ownership = resource_ownership(node.target)
+        if (
+            target_ownership is not None
+            and target_ownership.kind is OwnershipKind.OWNED
+        ):
+            self._llvm.ir_builder.store(
+                ir.Constant(llvm_target_type, None),
+                target_addr,
+            )
+            cast(Any, self)._register_resource_slot_cleanup(
+                target_ownership,
+                target_addr,
+                owner_symbol_id=target_ownership.owner_symbol_id,
+            )
         yielded_addr = self.create_entry_block_alloca(
             f"{target_name}_yielded",
             llvm_element_type,
@@ -786,6 +1070,12 @@ class GeneratorVisitorMixin(VisitorMixinBase):
                 source_type=iteration.element_type,
                 target_type=target_type,
             )
+            if target_ownership is not None:
+                cast(Any, self)._destroy_replaced_native_resource(
+                    node.target,
+                    target_addr,
+                    target_name=target_name,
+                )
             self._llvm.ir_builder.store(yielded_value, target_addr)
             with cast(Any, self)._temporary_named_value(
                 target_key,
@@ -799,6 +1089,8 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.position_at_start(advance_bb)
         self._llvm.ir_builder.branch(cond_bb)
         self._llvm.ir_builder.position_at_start(exit_bb)
+        self._emit_active_cleanups(target_cleanup_depth)
+        del self.cleanup_stack[target_cleanup_depth:]
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.YieldStmt) -> None:

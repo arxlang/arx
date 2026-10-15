@@ -262,6 +262,12 @@ def _classify_ffi_type(
             _display_type_name(type_),
             metadata={"abi": "pointer"},
         )
+    if isinstance(type_, astx.CDataType):
+        return FFITypeInfo(
+            FFITypeClass.OPAQUE_HANDLE,
+            _display_type_name(type_),
+            metadata={"handle_name": "irx_arrow_c_data_handle"},
+        )
     if isinstance(type_, astx.BufferOwnerType | astx.OpaqueHandleType):
         return FFITypeInfo(
             FFITypeClass.OPAQUE_HANDLE,

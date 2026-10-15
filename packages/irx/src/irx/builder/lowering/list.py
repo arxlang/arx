@@ -12,7 +12,12 @@ import astx
 
 from llvmlite import ir
 
-from irx.analysis.resolved_nodes import IterationKind, ResolvedIteration
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import (
+    IterationKind,
+    ResolvedIteration,
+    SemanticInfo,
+)
 from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import raise_lowering_error
 from irx.builder.protocols import VisitorMixinBase
@@ -21,7 +26,6 @@ from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
     LIST_FIELD_INDICES,
-    LIST_REQUIRE_OK_SYMBOL,
     LIST_RUNTIME_FEATURE,
     list_element_type,
 )
@@ -34,6 +38,42 @@ class ListVisitorMixin(VisitorMixinBase):
     """
     title: Dynamic-list visitor mixin.
     """
+
+    def guard_list_status(self, node: astx.AST, status: ir.Value) -> None:
+        """
+        title: >-
+          Clean up active owners before reporting a list operation failure.
+        parameters:
+          node:
+            type: astx.AST
+          status:
+            type: ir.Value
+        """
+        # Stable statuses from the native list ABI; retain their distinct
+        # diagnostics while moving fatal handling into cleanup-aware lowering.
+        for code, message in (
+            (1, "dynamic list operation received an invalid argument"),
+            (2, "dynamic list capacity overflow"),
+            (3, "dynamic list allocation failed"),
+        ):
+            self._guard_runtime_condition(
+                node,
+                self._llvm.ir_builder.icmp_signed(
+                    "!=", status, ir.Constant(self._llvm.INT32_TYPE, code)
+                ),
+                code=f"ARX-RUNTIME-LIST-{code:03d}",
+                message=message,
+                block_name=f"list.status.{code}",
+            )
+        self._guard_runtime_condition(
+            node,
+            self._llvm.ir_builder.icmp_signed(
+                "==", status, ir.Constant(self._llvm.INT32_TYPE, 0)
+            ),
+            code="ARX-RUNTIME-LIST-004",
+            message="dynamic list operation returned an unknown status",
+            block_name="list.status.unknown",
+        )
 
     def _llvm_list_type(self) -> ir.Type:
         """
@@ -191,7 +231,16 @@ class ListVisitorMixin(VisitorMixinBase):
                 astx.StaticFieldAccess,
             ),
         ):
-            return self._lvalue_address(node)
+            slot = self._lvalue_address(node)
+            semantic = getattr(node, "semantic", None)
+            if (
+                isinstance(semantic, SemanticInfo)
+                and semantic.nullable_refined
+            ):
+                zero = ir.Constant(self._llvm.INT32_TYPE, 0)
+                one = ir.Constant(self._llvm.INT32_TYPE, 1)
+                return self._llvm.ir_builder.gep(slot, [zero, one])
+            return slot
 
         self.visit_child(node)
         value = safe_pop(self.result_stack)
@@ -281,6 +330,33 @@ class ListVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
+        payload = self._llvm.ir_builder.load(list_ptr)
+        length = self._llvm.ir_builder.extract_value(
+            payload, LIST_FIELD_INDICES["length"]
+        )
+        nonnegative = self._llvm.ir_builder.icmp_signed(
+            ">=", index, ir.Constant(self._llvm.INT64_TYPE, 0)
+        )
+        below_length = self._llvm.ir_builder.icmp_signed("<", index, length)
+        self._guard_runtime_condition(
+            base,
+            self._llvm.ir_builder.and_(nonnegative, below_length),
+            code="ARX-RUNTIME-LIST-005",
+            message="dynamic list index out of range",
+            block_name="list.bounds",
+        )
+        data = self._llvm.ir_builder.extract_value(
+            payload, LIST_FIELD_INDICES["data"]
+        )
+        self._guard_runtime_condition(
+            base,
+            self._llvm.ir_builder.icmp_unsigned(
+                "!=", data, ir.Constant(data.type, None)
+            ),
+            code="ARX-RUNTIME-LIST-006",
+            message="dynamic list storage is null",
+            block_name="list.storage",
+        )
         raw_ptr = self._llvm.ir_builder.call(
             self.require_runtime_symbol(
                 LIST_RUNTIME_FEATURE,
@@ -646,13 +722,7 @@ class ListVisitorMixin(VisitorMixinBase):
             [output_ptr, raw_value_ptr],
             name="irx_list_comprehension_append_status",
         )
-        self._llvm.ir_builder.call(
-            self.require_runtime_symbol(
-                LIST_RUNTIME_FEATURE,
-                LIST_REQUIRE_OK_SYMBOL,
-            ),
-            [append_status],
-        )
+        self.guard_list_status(node, append_status)
 
     def _lower_list_comprehension_filters(
         self,
@@ -907,6 +977,17 @@ class ListVisitorMixin(VisitorMixinBase):
             self._empty_list_value_for_type(result_type),
             output_ptr,
         )
+        ownership = resource_ownership(node)
+        if ownership is None:
+            raise_lowering_error(
+                "list comprehension is missing ownership metadata",
+                node=node,
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+            )
+        # Even a result transferred on success owns its partially grown list
+        # while construction can still fail.
+        self._register_resource_slot_cleanup(ownership, output_ptr)
+        construction_cleanup = self.cleanup_stack[-1]
         clauses = list(node.generators.nodes)
         if clauses:
             self._lower_list_comprehension_clause(
@@ -923,6 +1004,7 @@ class ListVisitorMixin(VisitorMixinBase):
                 element_type=element_type,
             )
 
+        self.cleanup_stack.remove(construction_cleanup)
         self._register_owned_list_temporary(node, output_ptr)
         self.result_stack.append(
             self._llvm.ir_builder.load(
@@ -1039,7 +1121,9 @@ class ListVisitorMixin(VisitorMixinBase):
             LIST_RUNTIME_FEATURE,
             LIST_APPEND_SYMBOL,
         )
-        list_ptr = self._lvalue_address(node.base)
+        list_ptr = self._list_pointer_for_call(
+            node.base, name="append.payload"
+        )
 
         self.visit_child(node.value)
         value = safe_pop(self.result_stack)
@@ -1074,11 +1158,5 @@ class ListVisitorMixin(VisitorMixinBase):
             [list_ptr, raw_value_ptr],
             name="irx_list_append_status",
         )
-        self._llvm.ir_builder.call(
-            self.require_runtime_symbol(
-                LIST_RUNTIME_FEATURE,
-                LIST_REQUIRE_OK_SYMBOL,
-            ),
-            [result],
-        )
+        self.guard_list_status(node, result)
         self.result_stack.append(result)

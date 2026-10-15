@@ -21,12 +21,14 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.nullable_flow import nullable_branch_symbols
 from irx.analysis.ownership import (
     list_resource_ownership,
+    resource_contract_for_type,
     resource_ownership,
-    string_resource_ownership,
     symbol_resource_ownership,
     transfer_resource_ownership,
+    typed_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
@@ -38,6 +40,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedGeneratorFunction,
     ResolvedMethodCall,
     ResolvedYield,
+    ResourceSharingKind,
     SemanticClass,
     SemanticSymbol,
 )
@@ -72,10 +75,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if node.value is None:
             return
         return_type = self.context.current_function.signature.return_type
-        if is_string_type(return_type):
-            self._resolve_string_return_resource_ownership(node)
-            return
         if not isinstance(return_type, astx.ListType):
+            if resource_contract_for_type(return_type) is not None:
+                self._resolve_arrow_return_resource_ownership(
+                    node,
+                    return_type,
+                )
             return
 
         value_ownership = resource_ownership(node.value)
@@ -148,22 +153,39 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             ),
         )
 
-    def _resolve_string_return_resource_ownership(
+    def _resolve_arrow_return_resource_ownership(
         self,
         node: astx.FunctionReturn,
+        return_type: astx.DataType,
     ) -> None:
         """
-        title: Resolve ownership transfer for one string-valued return.
+        title: Resolve one Arrow-backed return transfer.
         parameters:
           node:
             type: astx.FunctionReturn
+          return_type:
+            type: astx.DataType
         """
         if node.value is None:
             return
         value_ownership = resource_ownership(node.value)
-        if value_ownership is None:
+        contract = resource_contract_for_type(return_type)
+        if isinstance(return_type, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            value_ownership = typed_resource_ownership(
+                return_type, OwnershipKind.OWNED
+            )
+        if value_ownership is None or contract is None:
             self.context.diagnostics.add(
-                "string return expression is missing ownership metadata",
+                "resource return expression is missing ownership metadata",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if value_ownership.kind is OwnershipKind.MOVED:
+            self.context.diagnostics.add(
+                "cannot return a resource that was already moved",
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
@@ -174,70 +196,53 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             "resolved_symbol",
             None,
         )
+        source_symbol_id = (
+            source_symbol.symbol_id
+            if isinstance(source_symbol, SemanticSymbol)
+            else value_ownership.source_symbol_id
+        )
+        transfer_kind = OwnershipTransferKind.MOVE
         source_ownership = (
             symbol_resource_ownership(source_symbol)
             if isinstance(source_symbol, SemanticSymbol)
             else None
         )
-        source_symbol_id: str | None = None
-        if value_ownership.kind is OwnershipKind.BORROWED:
-            if (
-                isinstance(source_symbol, SemanticSymbol)
-                and source_ownership is not None
-                and source_ownership.kind is OwnershipKind.STATIC
-            ):
-                moved = string_resource_ownership(
-                    OwnershipKind.OWNED,
-                    source_symbol_id=source_symbol.symbol_id,
-                    transfer_kind=OwnershipTransferKind.COPY,
-                    escape_kind=OwnershipEscapeKind.RETURN,
-                )
-            elif (
-                isinstance(source_symbol, SemanticSymbol)
-                and source_ownership is not None
-                and source_ownership.kind is OwnershipKind.OWNED
-            ):
-                source_symbol_id = source_symbol.symbol_id
-                moved = string_resource_ownership(
-                    OwnershipKind.OWNED,
-                    owner_symbol_id=source_symbol_id,
-                    source_symbol_id=source_symbol_id,
-                    transfer_kind=OwnershipTransferKind.MOVE,
-                    escape_kind=OwnershipEscapeKind.RETURN,
-                )
-            else:
+        borrowed_owned_local = (
+            value_ownership.kind is OwnershipKind.BORROWED
+            and source_ownership is not None
+            and source_ownership.kind is OwnershipKind.OWNED
+        )
+        if (
+            value_ownership.kind
+            in (OwnershipKind.BORROWED, OwnershipKind.STATIC)
+            and not borrowed_owned_local
+        ):
+            if contract.sharing_kind is ResourceSharingKind.UNIQUE:
                 self.context.diagnostics.add(
-                    "cannot return a borrowed string as an owned result",
+                    "cannot return a borrowed unique resource",
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-                    notes=(
-                        "return a literal, a locally owned string, or a "
-                        "freshly allocated string expression",
-                    ),
                 )
                 return
-        elif value_ownership.kind is OwnershipKind.STATIC:
-            moved = string_resource_ownership(
-                OwnershipKind.OWNED,
-                transfer_kind=OwnershipTransferKind.COPY,
-                escape_kind=OwnershipEscapeKind.RETURN,
-            )
-        else:
-            source_symbol_id = value_ownership.source_symbol_id
-            moved = transfer_resource_ownership(
-                value_ownership,
-                transfer_kind=OwnershipTransferKind.MOVE,
-                escape_kind=OwnershipEscapeKind.RETURN,
-            )
+            transfer_kind = OwnershipTransferKind.COPY
 
+        moved = transfer_resource_ownership(
+            value_ownership,
+            transfer_kind=transfer_kind,
+            escape_kind=OwnershipEscapeKind.RETURN,
+        )
         self._set_resource_ownership(node.value, moved)
         self._set_resource_ownership(
             node,
-            string_resource_ownership(
+            typed_resource_ownership(
+                return_type,
                 OwnershipKind.OWNED,
+                owner_root_symbol_id=value_ownership.owner_root_symbol_id,
                 source_symbol_id=source_symbol_id,
-                transfer_kind=moved.transfer_kind,
+                transfer_kind=transfer_kind,
                 escape_kind=OwnershipEscapeKind.RETURN,
+                view_kind=value_ownership.view_kind,
+                view_parent_symbol_id=(value_ownership.view_parent_symbol_id),
             ),
         )
 
@@ -338,6 +343,55 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             implicit_conversion=conversion,
         )
         self._set_yield(node, resolved)
+        if value is not None:
+            contract = resource_contract_for_type(generator.yield_type)
+            value_ownership = resource_ownership(value)
+            if contract is not None and value_ownership is None:
+                self.context.diagnostics.add(
+                    "yielded resource is missing ownership metadata",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            elif (
+                contract is not None
+                and contract.sharing_kind is ResourceSharingKind.UNIQUE
+            ):
+                self.context.diagnostics.add(
+                    "generators cannot yield unique resources without an "
+                    "explicit consuming iteration contract",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            elif contract is not None and value_ownership is not None:
+                transfer_kind = OwnershipTransferKind.MOVE
+                if value_ownership.kind in (
+                    OwnershipKind.BORROWED,
+                    OwnershipKind.STATIC,
+                ):
+                    transfer_kind = OwnershipTransferKind.COPY
+                yielded = transfer_resource_ownership(
+                    value_ownership,
+                    transfer_kind=transfer_kind,
+                    escape_kind=OwnershipEscapeKind.YIELD,
+                )
+                self._set_resource_ownership(value, yielded)
+                self._set_resource_ownership(
+                    node,
+                    typed_resource_ownership(
+                        generator.yield_type,
+                        OwnershipKind.OWNED,
+                        owner_root_symbol_id=(
+                            value_ownership.owner_root_symbol_id
+                        ),
+                        source_symbol_id=value_ownership.source_symbol_id,
+                        transfer_kind=transfer_kind,
+                        escape_kind=OwnershipEscapeKind.YIELD,
+                        view_kind=value_ownership.view_kind,
+                        view_parent_symbol_id=(
+                            value_ownership.view_parent_symbol_id
+                        ),
+                    ),
+                )
         return resolved
 
     def _resolve_context_method(
@@ -652,9 +706,17 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="if")
+        incoming = self.context.valid_nullable_symbols.copy()
+        valid_then = nullable_branch_symbols(node.condition, True)
+        self.context.valid_nullable_symbols.update(valid_then)
         self.visit(node.then)
+        then_valid = self.context.valid_nullable_symbols.copy()
+        self.context.valid_nullable_symbols = incoming.copy()
         if node.else_ is not None:
+            valid_else = nullable_branch_symbols(node.condition, False)
+            self.context.valid_nullable_symbols.update(valid_else)
             self.visit(node.else_)
+        self.context.valid_nullable_symbols.intersection_update(then_valid)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -665,9 +727,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.WhileStmt
         """
+        self.context.valid_nullable_symbols.clear()
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="while")
         with self.context.in_loop():
+            valid_body = nullable_branch_symbols(node.condition, True)
+            self.context.valid_nullable_symbols.update(valid_body)
             self.visit(node.body)
         self._set_type(node, None)
 
@@ -680,6 +745,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ForCountLoopStmt
         """
         with self.context.scope("for-count"):
+            self.context.valid_nullable_symbols.clear()
             if node.initializer.value is not None:
                 self.visit(node.initializer.value)
             symbol = self.registry.declare_local(
@@ -710,6 +776,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ForRangeLoopStmt
         """
         with self.context.scope("for-range"):
+            self.context.valid_nullable_symbols.clear()
             self.visit(node.start)
             self.visit(node.end)
             if not isinstance(node.step, astx.LiteralNone):

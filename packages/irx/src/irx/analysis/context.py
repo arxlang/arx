@@ -52,6 +52,8 @@ class SemanticContext:
         type: ModuleKey | None
       loop_depth:
         type: int
+      valid_nullable_symbols:
+        type: set[str]
       _symbol_counter:
         type: int
       _method_slot_counter:
@@ -73,6 +75,7 @@ class SemanticContext:
     current_class: SemanticClass | None = None
     current_module_key: ModuleKey | None = None
     loop_depth: int = 0
+    valid_nullable_symbols: set[str] = field(default_factory=set)
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
 
@@ -233,11 +236,14 @@ class SemanticContext:
           type: Iterator[None]
         """
         previous = self.current_function
+        previous_valid = self.valid_nullable_symbols
+        self.valid_nullable_symbols = set()
         self.current_function = function
         try:
             yield
         finally:
             self.current_function = previous
+            self.valid_nullable_symbols = previous_valid
 
     @contextmanager
     def in_class(self, class_: SemanticClass) -> Iterator[None]:
@@ -293,7 +299,10 @@ class SemanticContext:
           type: Iterator[None]
         """
         self.loop_depth += 1
+        # Loop backedges invalidate facts established before entering a loop.
+        self.valid_nullable_symbols.clear()
         try:
             yield
         finally:
             self.loop_depth -= 1
+            self.valid_nullable_symbols.clear()

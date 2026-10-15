@@ -155,8 +155,17 @@ return is excluded from callee cleanup and becomes the caller's obligation.
 Literal-list storage is static and is never dynamically destroyed. It may be
 indexed or iterated directly, but it cannot initialize a dynamic local, cross a
 function-call boundary, or serve as a list parameter default. Owning list
-elements, owned list locals in generators, object-field ownership, and a
-user-visible copy operation are outside this preview rule.
+elements, owned list locals in generators, and a user-visible copy operation
+remain outside this preview rule. Managed class list fields are supported;
+managed by-value struct fields are not.
+
+Optional list owners (`list[T] | none`) have independent validity rather than
+using an empty data pointer as absence. Unique ownership is unchanged; a
+proven-present mutable local can be appended without invalidating its proof.
+Failed growth and checked indexing emit `ARX-RUNTIME-LIST-*` errors after
+releasing owners in the active generated frame. IRx list comprehensions also
+release partially constructed outputs on allocation failure. This does not
+provide Arx source comprehension syntax or cross-frame fatal unwinding.
 
 ### String storage and ownership
 

@@ -16,8 +16,15 @@ from irx.analysis.handlers._expressions.class_support import (
     ExpressionClassSupportVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.ownership import (
+    resource_contract_for_type,
+    resource_ownership,
+    typed_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
     MethodDispatchKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedBaseClassFieldAccess,
     ResolvedClassConstruction,
     ResolvedClassFieldAccess,
@@ -37,6 +44,47 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
     """
     title: Expression class-access visitors.
     """
+
+    def _set_class_field_resource_borrow(
+        self,
+        node: astx.AST,
+        member: SemanticClassMember,
+        receiver: astx.AST | None,
+    ) -> None:
+        """
+        title: Attach a non-owning read contract for one managed class field.
+        parameters:
+          node:
+            type: astx.AST
+          member:
+            type: SemanticClassMember
+          receiver:
+            type: astx.AST | None
+        """
+        if member.type_ is None:
+            return
+        if resource_contract_for_type(member.type_) is None:
+            return
+        receiver_ownership = resource_ownership(receiver)
+        self._set_resource_ownership(
+            node,
+            typed_resource_ownership(
+                member.type_,
+                OwnershipKind.BORROWED,
+                owner_symbol_id=(
+                    receiver_ownership.owner_symbol_id
+                    if receiver_ownership is not None
+                    else None
+                ),
+                owner_root_symbol_id=(
+                    receiver_ownership.owner_root_symbol_id
+                    if receiver_ownership is not None
+                    else None
+                ),
+                source_symbol_id=member.symbol_id,
+                transfer_kind=OwnershipTransferKind.BORROW,
+            ),
+        )
 
     def _abstract_method_call_is_invalid(
         self,
@@ -130,6 +178,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, resolved_type)
+        self._set_resource_ownership(
+            node,
+            typed_resource_ownership(resolved_type, OwnershipKind.OWNED),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.MethodCall) -> None:
@@ -485,6 +537,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, member.type_)
+        self._set_class_field_resource_borrow(node, member, node.receiver)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.StaticFieldAccess) -> None:
@@ -540,6 +593,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ResolvedStaticClassFieldAccess(class_, member, storage),
         )
         self._set_type(node, member.type_)
+        self._set_class_field_resource_borrow(node, member, None)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.FieldAccess) -> None:
@@ -655,3 +709,4 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ResolvedClassFieldAccess(class_, member, field),
         )
         self._set_type(node, member.type_)
+        self._set_class_field_resource_borrow(node, member, node.value)

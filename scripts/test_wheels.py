@@ -55,10 +55,33 @@ PACKAGES = (
 )
 
 REQUIRED_IRX_NATIVE_ASSETS = (
+    "irx/builder/runtime/arrow/abi_baselines/1.0.0.json",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_generated.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_internal_names_generated.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_abi_wrappers_generated.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_array_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_builder_support.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_core_runtime.cc",
     "irx/builder/runtime/arrow/native/irx_arrow_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_runtime.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_runtime_internal.h",
     "irx/builder/runtime/arrow/native/irx_arrow_c_abi.h",
+    "irx/builder/runtime/arrow/native/irx_arrow_dataframe_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_exports.map",
+    "irx/builder/runtime/arrow/native/irx_arrow_descriptors.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_array_values.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_chunks.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_tabular.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_scalar_values.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_interchange.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_extensions.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_feature_query_generated.inc",
+    "irx/builder/runtime/arrow/native/irx_arrow_record_batch_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_tensor_runtime.cc",
     "irx/builder/runtime/arrow/native/irx_record_batch.cpp",
     "irx/builder/runtime/arrow/native/irx_record_batch.h",
+    "irx/builder/runtime/buffer/native/irx_buffer_runtime.c",
+    "irx/builder/runtime/buffer/native/irx_buffer_runtime.h",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
@@ -132,7 +155,65 @@ fn main() -> i32:
   return values[1] - 5
 """
 
+DESCRIPTOR_MODULE = """```
+title: Installed wheel descriptor and array smoke
+```
+fn make_layout() -> schema:
+  return schema[id: i64 | none]
+
+fn main() -> i32:
+  var rows: schema = make_layout()
+  var column: field = schema_field(rows, 0)
+  assert schema_nfields(rows) == 1
+  assert field_name(column) == "id"
+  assert field_nullable(column)
+  assert descriptor_equal(field_type(column), datatype[i64])
+  var values: array[i32 | none] = array[i32 | none](1, none, 3)
+  assert is_null(array_at(values, 1))
+  assert expect_valid(array_at(values, 0) + 2) == 3
+  var view: array[i32 | none] = array_slice(values, 1, 2)
+  assert array_equal(view, array_copy(view))
+  var b: array_builder[f16] = array_builder[f16]()
+  builder_append(b, cast(1.5, f16))
+  var a: array[f16] = builder_finish(b)
+  assert builder_length(b) == 0
+  var chunks: chunked_array[f16] = chunked_array[f16](a, a)
+  var optional: chunked_array[f16] | none = chunks
+  var alias: chunked_array[f16] | none = optional
+  optional = none
+  assert array_length(expect_valid(alias)) == 2
+  assert expect_valid(array_at(chunks, 1)) == cast(1.5, f16)
+  var rb: record_batch[a: i32 | none] = record_batch[a: i32 | none](3, values)
+  var table_value: table[a: i32 | none] = to_table(rb)
+  assert num_rows(table_value) == 3
+  var dynamic: table = runtime_schema(table_value)
+  assert array_length(column_as(dynamic, 0, field[a: i32 | none])) == 3
+  var recovered: schema = container_schema(to_record_batch(table_value))
+  assert descriptor_equal(recovered, schema[a: i32 | none])
+  return 0
+"""
+
+LOGICAL_MODULE = """```
+title: Installed logical values
+```
+type Batch = record_batch[t:string | none]
+fn main() -> i32:
+  var values: array[string | none] = array[string | none]("wheel", none)
+  var batch: Batch = record_batch[t:string | none](2, values)
+  var selected: Batch = take_rows(batch, array[i64](1, 0))
+  assert is_null(array_at(column(selected, "t"), 0))
+  var child: scalar[string] | none = array_at(column(selected, "t"), 1)
+  assert scalar_text(expect_valid(child)) == "wheel"
+  var source: tensor[i32, 2] = [1, 2]
+  assert expect_valid(array_at(array_from_buffer(source), 1)) == 2
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
+import os
+import shutil
+import subprocess
+
 from pathlib import Path
 
 import aix
@@ -143,6 +224,7 @@ import irx
 import pyarrow as pa
 
 from arxpy import Compiler
+from irx.builder.runtime.arrow.feature import arrow_native_source_dir
 from irx.record_batch import (
     IrxColumnType,
     RecordBatchBuilder,
@@ -151,12 +233,63 @@ from irx.record_batch import (
 )
 
 root = Path.cwd()
+
+header_probe = '''
+#include "irx_arrow_runtime.h"
+int installed_header_probe(void) {
+  return IRX_ARROW_ABI_VERSION_IS_COMPATIBLE(
+      IRX_ARROW_ABI_VERSION,
+      UINT32_C(0x00010000)) ? 0 : 1;
+}
+'''
+arrow_include = arrow_native_source_dir()
+buffer_include = arrow_include.parent.parent / "buffer" / "native"
+for suffix, variable, fallback, standard in (
+    ("c", "CC", "cc", "c11"),
+    ("cc", "CXX", "c++", "c++20"),
+):
+    compiler_name = os.environ.get(variable, fallback)
+    compiler = shutil.which(compiler_name)
+    if compiler is None:
+        raise RuntimeError(
+            f"installed-header compiler not found: {compiler_name}"
+        )
+    source = root / f"installed_arrow_header.{suffix}"
+    output = root / f"installed_arrow_header_{suffix}.o"
+    source.write_text(header_probe, encoding="utf-8")
+    subprocess.run(
+        [
+            compiler,
+            f"-std={standard}",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pedantic-errors",
+            "-I",
+            str(arrow_include),
+            "-I",
+            str(buffer_include),
+            "-c",
+            str(source),
+            "-o",
+            str(output),
+        ],
+        check=True,
+    )
+
 compiler = Compiler()
 for source_name in (
     "main.x",
     "class_smoke.x",
     "list_smoke.x",
     "tensor_smoke.x",
+    "descriptor_smoke.x",
+    "logical_smoke.x",
+    "dataframe_adapters.x",
+    "columnar_interchange.x",
+    "extension_values.x",
+    "nullable_strings.x",
+    "nullable_collections.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -389,7 +522,19 @@ def run_smoke(
             "class_smoke.x": CLASS_MODULE,
             "list_smoke.x": LIST_MODULE,
             "tensor_smoke.x": TENSOR_MODULE,
+            "descriptor_smoke.x": DESCRIPTOR_MODULE,
+            "logical_smoke.x": LOGICAL_MODULE,
         }
+        for name in (
+            "dataframe_adapters",
+            "columnar_interchange",
+            "extension_values",
+            "nullable_strings",
+            "nullable_collections",
+        ):
+            sources[f"{name}.x"] = (
+                workspace / "examples" / f"{name}.x"
+            ).read_text(encoding="utf-8")
         for name, content in sources.items():
             (work_dir / name).write_text(content, encoding="utf-8")
         driver = work_dir / "smoke.py"

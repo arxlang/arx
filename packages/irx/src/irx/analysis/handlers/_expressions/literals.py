@@ -28,6 +28,7 @@ from irx.analysis.handlers.base import (
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.ownership import (
     list_resource_ownership,
+    resource_ownership,
     string_resource_ownership,
     symbol_resource_ownership,
 )
@@ -223,6 +224,25 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_temporal_literal(node)
 
+    def validate_unmanaged_string_element(self, value: astx.AST) -> None:
+        """
+        title: Reject dynamic strings in items without element destruction.
+        parameters:
+          value:
+            type: astx.AST
+        """
+        if not isinstance(self._expr_type(value), astx.String):
+            return
+        ownership = resource_ownership(value)
+        if ownership is not None and ownership.kind is OwnershipKind.STATIC:
+            return
+        self.context.diagnostics.add(
+            "dynamic string elements require element destruction; "
+            "use array[string] or a managed class field",
+            node=value,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
+
     def _visit_element_sequence_literal(self, node: astx.AST) -> None:
         """
         title: Visit one element-sequence literal.
@@ -232,6 +252,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         for element in cast(list[astx.AST], getattr(node, "elements")):
             self.visit(element)
+            self.validate_unmanaged_string_element(element)
         self._set_type(node, getattr(node, "type_", None))
 
     def _has_compatible_collection_probe(
@@ -742,6 +763,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         with self.context.scope("list-comprehension"):
             self._visit_comprehension_clauses(list(node.generators.nodes))
             self.visit(node.element)
+            self.validate_unmanaged_string_element(node.element)
             element_type = self._expr_type(node.element)
         if element_type is None:
             self._set_type(node, None)
@@ -883,12 +905,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.base)
         self.visit(node.value)
+        self.validate_unmanaged_string_element(node.value)
 
         resolved_target = self._resolve_mutation_target(
             node.base,
             node=node,
             action="append to",
             invalid_message="list append target must be a variable or field",
+            payload_only=True,
         )
         if resolved_target is None:
             self._set_type(node, astx.Int32())
@@ -901,7 +925,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_assignment(node, assignment_symbol)
+            self._set_assignment(node, assignment_symbol, replaces_owner=False)
             self._set_type(node, astx.Int32())
             return
 
@@ -912,7 +936,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_assignment(node, assignment_symbol)
+            self._set_assignment(node, assignment_symbol, replaces_owner=False)
             self._set_type(node, astx.Int32())
             return
 
@@ -950,7 +974,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             value_type=self._expr_type(node.value),
             node=node,
         )
-        self._set_assignment(node, assignment_symbol)
+        self._set_assignment(node, assignment_symbol, replaces_owner=False)
         self._set_type(node, astx.Int32())
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -965,6 +989,21 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         if not isinstance(node.index, astx.LiteralNone):
             self.visit(node.index)
         value_type = self._expr_type(node.value)
+        if isinstance(value_type, astx.TensorType):
+            specialized = astx.TensorIndex(node.value, [node.index])
+            specialized.loc = node.loc
+            self.visit(specialized)
+            self._semantic(node).resolved_subscript = specialized
+            self._set_type(node, self._expr_type(specialized))
+            return
+        if isinstance(value_type, astx.NullableType):
+            self.context.diagnostics.add(
+                "nullable indexing requires proven validity or expect_valid",
+                node=node.value,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            self._set_type(node, None)
+            return
         if isinstance(value_type, astx.ListType):
             if isinstance(node.index, astx.LiteralNone):
                 self.context.diagnostics.add(

@@ -430,7 +430,7 @@ class RecordBatchSchema:
     """
     title: RecordBatchSchema.
     attributes:
-      _handle:
+      _native_handle:
         type: ctypes.c_void_p
       _lib:
         type: ctypes.CDLL
@@ -444,7 +444,7 @@ class RecordBatchSchema:
         type: list[Optional[list[tuple[str, IrxColumnType]]]]
     """
 
-    _handle: ctypes.c_void_p
+    _native_handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
     _col_types: list[IrxColumnType]
@@ -455,7 +455,7 @@ class RecordBatchSchema:
         """
         title: Create a new Arrow schema handle.
         """
-        self._handle = ctypes.c_void_p()
+        self._native_handle = ctypes.c_void_p()
         self._released = True
         self._col_types = []
         self._elem_types = []
@@ -464,10 +464,21 @@ class RecordBatchSchema:
         lib = _get_lib()
         self._lib = lib
         _check(
-            lib.irx_rb_schema_create(ctypes.byref(self._handle)),
+            lib.irx_rb_schema_create(ctypes.byref(self._native_handle)),
             lib,
         )
         self._released = False
+
+    @property
+    def _handle(self) -> ctypes.c_void_p:
+        """
+        title: Return the live schema handle.
+        returns:
+          type: ctypes.c_void_p
+        """
+        if self._released:
+            raise RuntimeError("RecordBatchSchema is released")
+        return self._native_handle
 
     def add_field(
         self, name: str, col_type: IrxColumnType, nullable: bool = True
@@ -636,7 +647,8 @@ class RecordBatchSchema:
         title: Release the underlying schema handle.
         """
         if not self._released:
-            self._lib.irx_rb_schema_release(self._handle)
+            self._lib.irx_rb_schema_release(self._native_handle)
+            self._native_handle = ctypes.c_void_p()
             self._released = True
 
     def __del__(self) -> None:
@@ -653,6 +665,25 @@ class RecordBatchSchema:
         """
         return self._handle
 
+    def __enter__(self) -> "RecordBatchSchema":
+        """
+        title: Enter a deterministic schema lifetime scope.
+        returns:
+          type: RecordBatchSchema
+        """
+        _ = self._handle
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        """
+        title: Release the schema when leaving a lifetime scope.
+        parameters:
+          _exc:
+            type: object
+            variadic: positional
+        """
+        self.release()
+
 
 # RecordBatchBuilder
 
@@ -662,7 +693,7 @@ class RecordBatchBuilder:
     """
     title: RecordBatchBuilder.
     attributes:
-      _handle:
+      _native_handle:
         type: ctypes.c_void_p
       _lib:
         type: ctypes.CDLL
@@ -676,7 +707,7 @@ class RecordBatchBuilder:
         type: list[Optional[list[tuple[str, IrxColumnType]]]]
     """
 
-    _handle: ctypes.c_void_p
+    _native_handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
     _col_types: list[IrxColumnType]
@@ -690,7 +721,7 @@ class RecordBatchBuilder:
           schema:
             type: RecordBatchSchema
         """
-        self._handle = ctypes.c_void_p()
+        self._native_handle = ctypes.c_void_p()
         self._released = True
         self._col_types = list(schema._col_types)
         self._elem_types = list(schema._elem_types)
@@ -701,11 +732,22 @@ class RecordBatchBuilder:
         _check(
             lib.irx_rb_builder_create(
                 schema._raw(),
-                ctypes.byref(self._handle),
+                ctypes.byref(self._native_handle),
             ),
             lib,
         )
         self._released = False
+
+    @property
+    def _handle(self) -> ctypes.c_void_p:
+        """
+        title: Return the live builder handle.
+        returns:
+          type: ctypes.c_void_p
+        """
+        if self._released:
+            raise RuntimeError("RecordBatchBuilder is released or finished")
+        return self._native_handle
 
     # --- typed appends ---
 
@@ -1072,19 +1114,41 @@ class RecordBatchBuilder:
             ),
             self._lib,
         )
-        return RecordBatch(batch_handle, self._lib)
+        batch = RecordBatch(batch_handle, self._lib)
+        self.release()
+        return batch
 
     def release(self) -> None:
         """
         title: Release the underlying builder handle.
         """
         if not self._released:
-            self._lib.irx_rb_builder_release(self._handle)
+            self._lib.irx_rb_builder_release(self._native_handle)
+            self._native_handle = ctypes.c_void_p()
             self._released = True
 
     def __del__(self) -> None:
         """
         title: Release the builder when the object is garbage collected.
+        """
+        self.release()
+
+    def __enter__(self) -> "RecordBatchBuilder":
+        """
+        title: Enter a deterministic builder lifetime scope.
+        returns:
+          type: RecordBatchBuilder
+        """
+        _ = self._handle
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        """
+        title: Release the builder when leaving a lifetime scope.
+        parameters:
+          _exc:
+            type: object
+            variadic: positional
         """
         self.release()
 
@@ -1101,7 +1165,7 @@ class RecordBatch:
       that need to distinguish a real zero/empty value from a null must
       check ``is_null(col, row)`` first.
     attributes:
-      _handle:
+      _native_handle:
         type: ctypes.c_void_p
       _lib:
         type: ctypes.CDLL
@@ -1109,7 +1173,7 @@ class RecordBatch:
         type: bool
     """
 
-    _handle: ctypes.c_void_p
+    _native_handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _released: bool
 
@@ -1122,9 +1186,20 @@ class RecordBatch:
           lib:
             type: ctypes.CDLL
         """
-        self._handle = handle
+        self._native_handle = handle
         self._lib = lib
         self._released = False
+
+    @property
+    def _handle(self) -> ctypes.c_void_p:
+        """
+        title: Return the live RecordBatch handle.
+        returns:
+          type: ctypes.c_void_p
+        """
+        if self._released:
+            raise RuntimeError("RecordBatch is released")
+        return self._native_handle
 
     @property
     def num_rows(self) -> int:
@@ -1591,12 +1666,32 @@ class RecordBatch:
         title: Release the underlying batch handle.
         """
         if not self._released:
-            self._lib.irx_rb_batch_release(self._handle)
+            self._lib.irx_rb_batch_release(self._native_handle)
+            self._native_handle = ctypes.c_void_p()
             self._released = True
 
     def __del__(self) -> None:
         """
         title: Release the batch when the object is garbage collected.
+        """
+        self.release()
+
+    def __enter__(self) -> "RecordBatch":
+        """
+        title: Enter a deterministic RecordBatch lifetime scope.
+        returns:
+          type: RecordBatch
+        """
+        _ = self._handle
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        """
+        title: Release the batch when leaving a lifetime scope.
+        parameters:
+          _exc:
+            type: object
+            variadic: positional
         """
         self.release()
 
@@ -1606,7 +1701,7 @@ class RecordBatchStreamWriter:
     """
     title: RecordBatchStreamWriter.
     attributes:
-      _handle:
+      _native_handle:
         type: ctypes.c_void_p
       _lib:
         type: ctypes.CDLL
@@ -1618,7 +1713,7 @@ class RecordBatchStreamWriter:
         type: bool
     """
 
-    _handle: ctypes.c_void_p
+    _native_handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _is_buffer: bool
     _closed: bool
@@ -1640,11 +1735,30 @@ class RecordBatchStreamWriter:
           is_buffer:
             type: bool
         """
-        self._handle = handle
+        self._native_handle = handle
         self._lib = lib
         self._is_buffer = is_buffer
         self._closed = False
         self._released = False
+
+    @property
+    def _handle(self) -> ctypes.c_void_p:
+        """
+        title: Return the live stream-writer handle.
+        returns:
+          type: ctypes.c_void_p
+        """
+        if self._released:
+            raise RuntimeError("RecordBatchStreamWriter is released")
+        return self._native_handle
+
+    def _ensure_writable(self) -> None:
+        """
+        title: Reject operations after close or release.
+        """
+        _ = self._handle
+        if self._closed:
+            raise RuntimeError("RecordBatchStreamWriter is closed")
 
     @classmethod
     def open_file(
@@ -1699,6 +1813,7 @@ class RecordBatchStreamWriter:
           batch:
             type: RecordBatch
         """
+        self._ensure_writable()
         _check(
             self._lib.irx_rb_stream_writer_write_batch(
                 self._handle, batch._handle
@@ -1743,7 +1858,9 @@ class RecordBatchStreamWriter:
         title: Release the underlying stream writer handle.
         """
         if not self._released:
-            self._lib.irx_rb_stream_writer_release(self._handle)
+            self._lib.irx_rb_stream_writer_release(self._native_handle)
+            self._native_handle = ctypes.c_void_p()
+            self._closed = True
             self._released = True
 
     def __del__(self) -> None:
@@ -1758,6 +1875,7 @@ class RecordBatchStreamWriter:
         returns:
           type: RecordBatchStreamWriter
         """
+        self._ensure_writable()
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -1768,8 +1886,10 @@ class RecordBatchStreamWriter:
             type: object
             variadic: positional
         """
-        self.close()
-        self.release()
+        try:
+            self.close()
+        finally:
+            self.release()
 
 
 @typechecked
@@ -1777,7 +1897,7 @@ class RecordBatchStreamReader:
     """
     title: RecordBatchStreamReader.
     attributes:
-      _handle:
+      _native_handle:
         type: ctypes.c_void_p
       _lib:
         type: ctypes.CDLL
@@ -1785,7 +1905,7 @@ class RecordBatchStreamReader:
         type: bool
     """
 
-    _handle: ctypes.c_void_p
+    _native_handle: ctypes.c_void_p
     _lib: ctypes.CDLL
     _closed: bool
 
@@ -1798,9 +1918,20 @@ class RecordBatchStreamReader:
           lib:
             type: ctypes.CDLL
         """
-        self._handle = handle
+        self._native_handle = handle
         self._lib = lib
         self._closed = False
+
+    @property
+    def _handle(self) -> ctypes.c_void_p:
+        """
+        title: Return the live stream-reader handle.
+        returns:
+          type: ctypes.c_void_p
+        """
+        if self._closed:
+            raise RuntimeError("RecordBatchStreamReader is closed")
+        return self._native_handle
 
     @classmethod
     def open_file(
@@ -1877,7 +2008,8 @@ class RecordBatchStreamReader:
         title: Close the underlying stream reader.
         """
         if not self._closed:
-            self._lib.irx_rb_stream_reader_close(self._handle)
+            self._lib.irx_rb_stream_reader_close(self._native_handle)
+            self._native_handle = ctypes.c_void_p()
             self._closed = True
 
     def __del__(self) -> None:
@@ -1892,6 +2024,7 @@ class RecordBatchStreamReader:
         returns:
           type: RecordBatchStreamReader
         """
+        _ = self._handle
         return self
 
     def __exit__(self, *_exc: object) -> None:

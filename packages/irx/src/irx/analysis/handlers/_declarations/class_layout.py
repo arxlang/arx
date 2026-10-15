@@ -18,6 +18,7 @@ import astx
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     mangle_class_descriptor_name,
+    mangle_class_destructor_name,
     mangle_class_dispatch_name,
     mangle_class_name,
     mangle_class_static_name,
@@ -43,6 +44,8 @@ from irx.typecheck import typechecked
 _CLASS_HEADER_LAYOUT: tuple[tuple[str, ClassHeaderFieldKind], ...] = (
     ("descriptor", ClassHeaderFieldKind.TYPE_DESCRIPTOR),
     ("dispatch", ClassHeaderFieldKind.DISPATCH_TABLE),
+    ("destructor", ClassHeaderFieldKind.DESTRUCTOR),
+    ("reference_count", ClassHeaderFieldKind.REFERENCE_COUNT),
 )
 
 
@@ -202,6 +205,10 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 class_.name,
             ),
             dispatch_global_name=mangle_class_dispatch_name(
+                class_.module_key,
+                class_.name,
+            ),
+            destructor_name=mangle_class_destructor_name(
                 class_.module_key,
                 class_.name,
             ),

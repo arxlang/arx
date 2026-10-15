@@ -394,13 +394,23 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             )
 
         layout = self._static_tensor_layout(base)
-        if layout is None:
+        # Index validity needs rank/extents, not fabricated static strides.
+        # Refined nullable values retain their declared shape while the real
+        # strides and offset remain in the runtime buffer-view payload.
+        shape = (
+            layout.shape
+            if layout is not None
+            else base_type.shape
+            if isinstance(base_type, astx.TensorType)
+            else None
+        )
+        if shape is None:
             self.context.diagnostics.add(
                 "tensor indexing requires static layout metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        elif len(indices) != layout.ndim:
+        elif len(indices) != len(shape):
             self.context.diagnostics.add(
                 "tensor indexing index count must match tensor ndim",
                 node=node,
@@ -408,7 +418,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             )
         else:
             for axis, index in enumerate(indices):
-                extent = layout.shape[axis]
+                extent = shape[axis]
                 static_index = self._static_integer_literal_value(index)
                 if static_index is None:
                     continue

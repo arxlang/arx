@@ -126,3 +126,9 @@ current implementation does not provide:
 
 These limits keep ownership, semantics, and compiler lowering explicit while the
 public APIs mature.
+
+## Logical type and schema foundation
+
+See [Logical types and schemas](arrow-type-schemas.md) for the implemented
+descriptor model, native schema interchange, and explicit remaining M3 work.
+Descriptor support does not imply end-to-end Arx container value support.

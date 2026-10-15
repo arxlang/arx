@@ -18,11 +18,17 @@ from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
-from irx.analysis.ownership import resource_ownership
+from irx.analysis.nullability import normalize_nullable
+from irx.analysis.ownership import (
+    resource_contract_for_type,
+    resource_ownership,
+    typed_resource_ownership,
+)
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import (
     CallResolution,
     OwnershipKind,
+    OwnershipTransferKind,
     ResolvedAssignment,
     ResolvedBaseClassFieldAccess,
     ResolvedClassConstruction,
@@ -48,6 +54,7 @@ from irx.analysis.resolved_nodes import (
     SemanticStruct,
     SemanticSymbol,
 )
+from irx.analysis.schema_types import columnar_type_diagnostic
 from irx.analysis.session import CompilationSession
 from irx.analysis.types import clone_type, display_type_name, is_assignable
 from irx.base.visitors.base import BaseVisitor
@@ -513,6 +520,8 @@ class SemanticVisitorMixinTypingBase:
         self,
         node: astx.AST,
         symbol: SemanticSymbol | None,
+        *,
+        replaces_owner: bool = True,
     ) -> None:
         """
         title: Attach one resolved assignment target to a node.
@@ -521,6 +530,8 @@ class SemanticVisitorMixinTypingBase:
             type: astx.AST
           symbol:
             type: SemanticSymbol | None
+          replaces_owner:
+            type: bool
         """
         raise NotImplementedError
 
@@ -765,6 +776,7 @@ class SemanticVisitorMixinTypingBase:
         node: astx.AST | None,
         *,
         context: str,
+        allow_none: bool = False,
     ) -> bool:
         """
         title: Require one expression context to receive a non-void value.
@@ -773,6 +785,8 @@ class SemanticVisitorMixinTypingBase:
             type: astx.AST | None
           context:
             type: str
+          allow_none:
+            type: bool
         returns:
           type: bool
         """
@@ -974,7 +988,18 @@ class SemanticAnalyzerCore(BaseVisitor):
           type: astx.DataType | None
         """
         info = self._semantic(node)
+        type_ = normalize_nullable(type_)
         info.resolved_type = type_
+        # Inferred expression types need the same fail-closed check as declared
+        # types, including otherwise unannotated descriptor container literals.
+        if type_ is not None:
+            error = columnar_type_diagnostic(type_)
+            if error is not None:
+                self.context.diagnostics.add(
+                    error,
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
         if type_ is not None and hasattr(node, "type_"):
             try:
                 setattr(node, "type_", clone_type(type_))
@@ -1083,6 +1108,17 @@ class SemanticAnalyzerCore(BaseVisitor):
                 kind=kind,
             )
             self._set_symbol(target, symbol)
+            self._set_type(target, symbol.type_)
+            if resource_contract_for_type(symbol.type_) is not None:
+                self._set_resource_ownership(
+                    target,
+                    typed_resource_ownership(
+                        symbol.type_,
+                        OwnershipKind.OWNED,
+                        owner_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.MOVE,
+                    ),
+                )
             return symbol
 
         if not isinstance(target, astx.InlineVariableDeclaration):
@@ -1114,6 +1150,17 @@ class SemanticAnalyzerCore(BaseVisitor):
             kind=kind,
         )
         self._set_symbol(target, symbol)
+        self._set_type(target, symbol.type_)
+        if resource_contract_for_type(symbol.type_) is not None:
+            self._set_resource_ownership(
+                target,
+                typed_resource_ownership(
+                    symbol.type_,
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=symbol.symbol_id,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
         return symbol
 
     def _set_function(
@@ -1317,7 +1364,11 @@ class SemanticAnalyzerCore(BaseVisitor):
         self._semantic(node).resolved_operator = operator
 
     def _set_assignment(
-        self, node: astx.AST, symbol: SemanticSymbol | None
+        self,
+        node: astx.AST,
+        symbol: SemanticSymbol | None,
+        *,
+        replaces_owner: bool = True,
     ) -> None:
         """
         title: Attach one resolved assignment target to a node.
@@ -1326,12 +1377,16 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: astx.AST
           symbol:
             type: SemanticSymbol | None
+          replaces_owner:
+            type: bool
         """
         info = self._semantic(node)
         if symbol is None:
             info.resolved_assignment = None
             return
         info.resolved_assignment = ResolvedAssignment(symbol)
+        if replaces_owner:
+            self.context.valid_nullable_symbols.discard(symbol.symbol_id)
 
     def _set_field_access(
         self,
@@ -1580,6 +1635,14 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.DataType
         """
+        columnar_error = columnar_type_diagnostic(type_)
+        if columnar_error is not None:
+            self.context.diagnostics.add(
+                columnar_error,
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return type_
         if isinstance(type_, astx.UnionType):
             for member in type_.members:
                 self._resolve_declared_type(
@@ -1745,6 +1808,14 @@ class SemanticAnalyzerCore(BaseVisitor):
             for index, argument in enumerate(visible_arguments):
                 if self._argument_has_default(argument):
                     self.visit(argument.default)
+                    self._require_value_expression(
+                        argument.default,
+                        context="parameter default",
+                        allow_none=isinstance(
+                            normalize_nullable(argument.type_),
+                            astx.NullableType,
+                        ),
+                    )
                     default_type = self._expr_type(argument.default)
                     if not is_assignable(argument.type_, default_type):
                         self.context.diagnostics.add(
@@ -1781,6 +1852,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         node: astx.AST | None,
         *,
         context: str,
+        allow_none: bool = False,
     ) -> bool:
         """
         title: Require one expression context to receive a non-void value.
@@ -1789,10 +1861,14 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: astx.AST | None
           context:
             type: str
+          allow_none:
+            type: bool
         returns:
           type: bool
         """
         if node is None:
+            return True
+        if allow_none and isinstance(node, astx.LiteralNone):
             return True
         resolved_type = self._expr_type(node)
         if not isinstance(resolved_type, astx.NoneType):

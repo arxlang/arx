@@ -71,7 +71,8 @@ def test_assert_stmt_translation_activates_runtime_feature() -> None:
 
     assert ASSERT_RUNTIME_FEATURE_NAME in active_features
     assert ASSERT_FAILURE_SYMBOL_NAME in ir_text
-    assert 'call void @"__arx_assert_fail"' in ir_text
+    assert 'call void @"__arx_assert_report"' in ir_text
+    assert 'call void @"exit"(i32 1)' in ir_text
     assert any(
         artifact.path.name == "irx_assert_runtime.c"
         for artifact in native_artifacts

@@ -351,15 +351,17 @@ def test_parse_list_types_reject_shape_dimensions() -> None:
         parser.parse_type()
 
 
-def test_parse_array_type_is_rejected() -> None:
+def test_parse_array_type_models_native_columnar_storage() -> None:
     """
-    title: Legacy array type syntax is no longer accepted.
+    title: Array syntax now denotes the typed native Arrow value, not a list.
     """
     ArxIO.string_to_buffer("array[i32]")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="Unknown type 'array'"):
-        parser.parse_type()
+    type_ = parser.parse_type()
+    assert isinstance(type_, astx.ArrayType)
+    assert type_.element_type.kind is astx.LogicalKind.INT32
+    assert not type_.nullable
 
 
 def test_parse_tensor_type_literal_and_indexing() -> None:
@@ -851,9 +853,9 @@ def test_parse_prototype_requires_explicit_return_type() -> None:
         _parse("fn do_nothing():\n  return\n")
 
 
-def test_parse_bare_return_produces_none_literal() -> None:
+def test_parse_bare_return_has_no_value() -> None:
     """
-    title: A bare `return` inside a none function emits LiteralNone.
+    title: A bare return has no value, distinct from an explicit null literal.
     """
     tree = _parse("fn do_nothing() -> none:\n  return\n")
 
@@ -861,7 +863,7 @@ def test_parse_bare_return_produces_none_literal() -> None:
     assert isinstance(fn, astx.FunctionDef)
     ret = fn.body.nodes[0]
     assert isinstance(ret, astx.FunctionReturn)
-    assert isinstance(ret.value, astx.LiteralNone)
+    assert ret.value is None
 
 
 def test_parse_function_without_return_statement() -> None:
@@ -901,3 +903,37 @@ def test_parse_none_type_is_recognized() -> None:
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.prototype.return_type, astx.NoneType)
+
+
+def test_if_without_else_preserves_following_return() -> None:
+    """
+    title: Preserve the enclosing block's line marker after an if without else.
+    """
+    tree = _parse(
+        "fn choose(flag: bool) -> i32:\n  if flag:\n    return 1\n  return 2\n"
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert len(tree.nodes) == 1
+    assert len(function.body.nodes) == 2
+    assert isinstance(function.body.nodes[1], astx.FunctionReturn)
+
+
+def test_nested_if_does_not_consume_outer_else() -> None:
+    """
+    title: Associate else with the matching indentation, not the nearest if.
+    """
+    tree = _parse(
+        "fn choose(flag: bool) -> i32:\n"
+        "  if flag:\n"
+        "    if flag:\n"
+        "      return 1\n"
+        "  else:\n"
+        "    return 2\n"
+        "  return 3\n"
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    outer = function.body.nodes[0]
+    assert isinstance(outer, astx.IfStmt)
+    assert len(outer.else_.nodes) == 1

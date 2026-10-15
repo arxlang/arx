@@ -3,6 +3,11 @@
 This roadmap lists remaining work. For implemented behavior, see the
 [ecosystem status](ecosystem.md) and language reference.
 
+The root `ROADMAP.md` is the current native Arrow milestone tracker. Its
+immediate target is M1-M4 PR readiness; detailed design decisions and dated
+evidence live in the [Arrow roadmap archive](arrow-roadmap-archive.md).
+Historical status transitions in that archive are not active tasks.
+
 ## Completed foundations
 
 The current monorepo already provides:
@@ -24,12 +29,15 @@ The current monorepo already provides:
       statically sized target.
 - [ ] Support partial Tensor constraints such as `tensor[f64, 2, ...]`.
 - [ ] Add symbolic shape parameters for generic algorithms.
-- [ ] Expand the Arx DataFrame surface to UTF-8, nullable, and temporal columns
+- [x] Expand the Arx DataFrame surface to UTF-8, nullable, and temporal columns
       already represented by lower-level Arrow facilities.
-- [ ] Define an Arx-facing RecordBatch and streaming surface.
+- [x] Add first-class typed RecordBatch and Table construction and operations.
+- [ ] Complete the unified Arx-facing streaming surface (M7).
 - [ ] Add selected Arrow Compute operations without turning IRx into a general
       query engine.
-- [ ] Complete dynamic-list storage reclamation and collection ownership.
+- [x] Reclaim current dynamic-list local and temporary storage.
+- [ ] Complete recursive collection/aggregate ownership and cross-frame fatal
+      cleanup (remaining M2/M4 work in the root roadmap).
 
 ## Arx language
 

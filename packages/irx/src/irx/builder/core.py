@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ctypes
 
+from dataclasses import replace
 from typing import Any, cast
 
 import astx
@@ -33,13 +34,16 @@ from irx.analysis.module_symbols import (
     qualified_class_name,
     qualified_struct_name,
 )
+from irx.analysis.nullability import aggregate_nullable, managed_nullable
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     FunctionSignature,
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ResolvedGeneratorFunction,
     ResourceKind,
+    ResourceOwnership,
 )
 from irx.analysis.types import (
     bit_width,
@@ -387,6 +391,7 @@ class VisitorCore(BuilderVisitor):
     _current_generator_frame_slots: dict[str, int]
     _current_generator_out_ptr: ir.Value | None
     _current_generator_next_state: int | None
+    _current_generator_metadata: ResolvedGeneratorFunction | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
 
@@ -429,6 +434,7 @@ class VisitorCore(BuilderVisitor):
         self._current_generator_frame_slots = {}
         self._current_generator_out_ptr = None
         self._current_generator_next_state = None
+        self._current_generator_metadata = None
 
         self.initialize()
         self.target = llvm.Target.from_default_triple()
@@ -525,13 +531,6 @@ class VisitorCore(BuilderVisitor):
             or ownership.escape_kind is OwnershipEscapeKind.RETURN
         ):
             return
-        if self._current_generator_frame_ptr is not None:
-            raise_lowering_internal_error(
-                "owned list temporaries in generator frames require "
-                "generator lifecycle cleanup",
-                node=node,
-            )
-
         destroy_fn = self.require_runtime_symbol(
             LIST_RUNTIME_FEATURE,
             LIST_DESTROY_SYMBOL,
@@ -570,13 +569,6 @@ class VisitorCore(BuilderVisitor):
             or ownership.escape_kind is OwnershipEscapeKind.RETURN
         ):
             return
-        if self._current_generator_frame_ptr is not None:
-            raise_lowering_internal_error(
-                "owned string temporaries in generator frames require "
-                "generator lifecycle cleanup",
-                node=node,
-            )
-
         free_fn = self.require_runtime_symbol("libc", "free")
 
         def destroy_string() -> None:
@@ -586,6 +578,375 @@ class VisitorCore(BuilderVisitor):
             self._llvm.ir_builder.call(free_fn, [pointer])
 
         self.cleanup_stack.append(CleanupAction(destroy_string))
+
+    def _register_resource_slot_cleanup(
+        self,
+        ownership: ResourceOwnership,
+        slot: ir.Value,
+        *,
+        owner_symbol_id: str | None = None,
+    ) -> None:
+        """
+        title: Register cleanup for one native resource slot.
+        parameters:
+          ownership:
+            type: ResourceOwnership
+          slot:
+            type: ir.Value
+          owner_symbol_id:
+            type: str | None
+        """
+
+        def release_resource() -> None:
+            """
+            title: Release the captured native resource slot.
+            """
+            self.release_resource_slot(ownership, slot)
+
+        self.cleanup_stack.append(
+            CleanupAction(
+                release_resource,
+                owner_symbol_id=owner_symbol_id,
+            )
+        )
+
+    def release_resource_slot(
+        self, ownership: ResourceOwnership, slot: ir.Value
+    ) -> None:
+        """
+        title: Release one owner using its resolved payload cleanup shape.
+        parameters:
+          ownership:
+            type: ResourceOwnership
+          slot:
+            type: ir.Value
+        """
+        builder = self._llvm.ir_builder
+        if builder.block.is_terminated:
+            return
+        if ownership.nullable_aggregate:
+            valid = builder.extract_value(builder.load(slot), 0)
+            with builder.if_then(valid):
+                payload = builder.gep(
+                    slot,
+                    [
+                        ir.Constant(ir.IntType(32), 0),
+                        ir.Constant(ir.IntType(32), 1),
+                    ],
+                )
+                self.release_resource_slot(
+                    replace(ownership, nullable_aggregate=False), payload
+                )
+            builder.store(ir.Constant(slot.type.pointee, None), slot)
+            return
+        release_fn = self.require_runtime_symbol_by_name(
+            ownership.cleanup_intrinsic
+        )
+        if ownership.resource_kind is ResourceKind.STRING:
+            value = builder.load(slot)
+            builder.call(release_fn, [value])
+            builder.store(ir.Constant(value.type, None), slot)
+            return
+        if ownership.resource_kind in (
+            ResourceKind.BUFFER_VIEW,
+            ResourceKind.LIST,
+        ):
+            builder.call(release_fn, [slot])
+            return
+        error_slot = builder.alloca(self._llvm.OPAQUE_POINTER_TYPE)
+        builder.store(
+            ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None), error_slot
+        )
+        release_slot = slot
+        if ownership.resource_kind is ResourceKind.CLASS_INSTANCE:
+            release_slot = builder.bitcast(
+                slot, self._llvm.OPAQUE_POINTER_TYPE.as_pointer()
+            )
+        builder.call(release_fn, [release_slot, error_slot])
+
+    def _register_owned_resource_temporary(
+        self,
+        node: astx.AST,
+        value: ir.Value,
+    ) -> None:
+        """
+        title: Register cleanup for one untransferred owned resource value.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+        """
+        ownership = resource_ownership(node)
+        if ownership is None or ownership.kind is not OwnershipKind.OWNED:
+            return
+        if (
+            ownership.transfer_kind is OwnershipTransferKind.MOVE
+            or ownership.escape_kind is OwnershipEscapeKind.RETURN
+        ):
+            return
+        if (
+            ownership.resource_kind is ResourceKind.LIST
+            and not ownership.nullable_aggregate
+        ):
+            self._register_owned_list_temporary(node, value)
+            return
+        if ownership.resource_kind is ResourceKind.STRING:
+            self._register_owned_string_temporary(node, value)
+            return
+        current_block = self._llvm.ir_builder.block
+        slot = self.create_entry_block_alloca(
+            f"owned_{ownership.resource_kind.value}_temporary",
+            value.type,
+        )
+        entry_builder = ir.IRBuilder(
+            self._llvm.ir_builder.function.entry_basic_block
+        )
+        entry_builder.position_after(slot)
+        entry_builder.store(ir.Constant(value.type, None), slot)
+        self._llvm.ir_builder.position_at_end(current_block)
+        self._llvm.ir_builder.store(value, slot)
+        self._register_resource_slot_cleanup(ownership, slot)
+
+    def _retain_copied_resource_value(
+        self,
+        node: astx.AST,
+        value: ir.Value,
+        *,
+        target_type: astx.DataType | None = None,
+    ) -> ir.Value:
+        """
+        title: Materialize the retained token required by a semantic copy.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          target_type:
+            type: astx.DataType | None
+        returns:
+          type: ir.Value
+        """
+        ownership = resource_ownership(node)
+        if (
+            ownership is None
+            or ownership.transfer_kind is not OwnershipTransferKind.COPY
+        ):
+            return value
+        target_type = target_type or self._resolved_ast_type(node)
+        if aggregate_nullable(target_type):
+            return self.retain_nullable_aggregate(node, value, ownership)
+        if managed_nullable(target_type):
+            return self.retain_nullable_resource(node, value, ownership)
+        return self._retain_resource_value(node, value, ownership)
+
+    def retain_nullable_aggregate(
+        self, node: astx.AST, value: ir.Value, ownership: ResourceOwnership
+    ) -> ir.Value:
+        """
+        title: Retain a present by-value payload without reading absent data.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          ownership:
+            type: ResourceOwnership
+        returns:
+          type: ir.Value
+        """
+        builder = self._llvm.ir_builder
+        valid = builder.extract_value(value, 0)
+        origin = builder.block
+        retain = builder.function.append_basic_block(
+            "nullable.aggregate.retain"
+        )
+        merge = builder.function.append_basic_block("nullable.aggregate.end")
+        builder.cbranch(valid, retain, merge)
+        builder.position_at_end(retain)
+        payload = builder.extract_value(value, 1)
+        copied = self._retain_resource_value(node, payload, ownership)
+        result = builder.insert_value(value, copied, 1)
+        incoming = builder.block
+        builder.branch(merge)
+        builder.position_at_end(merge)
+        phi = builder.phi(value.type)
+        phi.add_incoming(ir.Constant(value.type, None), origin)
+        phi.add_incoming(result, incoming)
+        return phi
+
+    def retain_nullable_resource(
+        self, node: astx.AST, value: ir.Value, ownership: ResourceOwnership
+    ) -> ir.Value:
+        """
+        title: Retain a present nullable owner without passing null to the ABI.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          ownership:
+            type: ResourceOwnership
+        returns:
+          type: ir.Value
+        """
+        builder = self._llvm.ir_builder
+        empty = ir.Constant(value.type, None)
+        present = builder.icmp_unsigned("!=", value, empty)
+        origin = builder.block
+        retain = builder.function.append_basic_block("nullable.retain.present")
+        merge = builder.function.append_basic_block("nullable.retain.end")
+        builder.cbranch(present, retain, merge)
+        builder.position_at_end(retain)
+        retained = self._retain_resource_value(node, value, ownership)
+        incoming = builder.block
+        builder.branch(merge)
+        builder.position_at_end(merge)
+        result = builder.phi(value.type, "nullable.retained")
+        result.add_incoming(empty, origin)
+        result.add_incoming(retained, incoming)
+        return result
+
+    def _retain_resource_value(
+        self,
+        node: astx.AST,
+        value: ir.Value,
+        ownership: ResourceOwnership,
+    ) -> ir.Value:
+        """
+        title: Materialize a retained token from explicit semantic metadata.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          ownership:
+            type: ResourceOwnership
+        returns:
+          type: ir.Value
+        """
+        if ownership.resource_kind is ResourceKind.STRING:
+            return self._copy_string_to_heap(node, value)
+        if ownership.resource_kind is ResourceKind.LIST:
+            return value
+        if ownership.retain_intrinsic is None:
+            raise_lowering_internal_error(
+                "semantic copy requires a retainable resource contract",
+                node=node,
+            )
+        retain_fn = self.require_runtime_symbol_by_name(
+            ownership.retain_intrinsic
+        )
+        if ownership.resource_kind is ResourceKind.BUFFER_VIEW:
+            value_slot = self._llvm.ir_builder.alloca(
+                value.type,
+                name="copied_buffer_view",
+            )
+            self._llvm.ir_builder.store(value, value_slot)
+            status = self._llvm.ir_builder.call(retain_fn, [value_slot])
+            ok = self._llvm.ir_builder.icmp_signed(
+                "==",
+                status,
+                ir.Constant(self._llvm.INT32_TYPE, 0),
+                name="buffer_view_retain_ok",
+            )
+            self._guard_runtime_condition(
+                node,
+                ok,
+                code="ARX-RUNTIME-RESOURCE-001",
+                message="failed to retain a copied buffer view",
+                block_name="resource.buffer_view.retain",
+            )
+            return value
+
+        if ownership.resource_kind is ResourceKind.CLASS_INSTANCE:
+            output_slot = self._llvm.ir_builder.alloca(
+                self._llvm.OPAQUE_POINTER_TYPE,
+                name="copied_class_instance_slot",
+            )
+            self._llvm.ir_builder.store(
+                ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None),
+                output_slot,
+            )
+            error_slot = self._llvm.ir_builder.alloca(
+                self._llvm.OPAQUE_POINTER_TYPE,
+                name="class_retain_error_slot",
+            )
+            self._llvm.ir_builder.store(
+                ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None),
+                error_slot,
+            )
+            raw_value = self._llvm.ir_builder.bitcast(
+                value,
+                self._llvm.OPAQUE_POINTER_TYPE,
+                name="class_retain_input",
+            )
+            status = self._llvm.ir_builder.call(
+                retain_fn,
+                [raw_value, output_slot, error_slot],
+                name="class_instance_retain_status",
+            )
+            ok = self._llvm.ir_builder.icmp_signed(
+                "==",
+                status,
+                ir.Constant(self._llvm.INT32_TYPE, 0),
+                name="class_instance_retain_ok",
+            )
+            self._guard_runtime_condition(
+                node,
+                ok,
+                code="ARX-RUNTIME-RESOURCE-002",
+                message="failed to retain copied class instance",
+                block_name="resource.class_instance.retain",
+            )
+            retained = self._llvm.ir_builder.load(
+                output_slot,
+                name="copied_class_instance",
+            )
+            return self._llvm.ir_builder.bitcast(
+                retained,
+                value.type,
+                name="copied_class_instance_typed",
+            )
+
+        output_slot = self._llvm.ir_builder.alloca(
+            value.type,
+            name=f"copied_{ownership.resource_kind.value}_slot",
+        )
+        self._llvm.ir_builder.store(ir.Constant(value.type, None), output_slot)
+        error_slot = self._llvm.ir_builder.alloca(
+            self._llvm.OPAQUE_POINTER_TYPE,
+            name="resource_retain_error_slot",
+        )
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None),
+            error_slot,
+        )
+        status = self._llvm.ir_builder.call(
+            retain_fn,
+            [value, output_slot, error_slot],
+            name=f"{ownership.resource_kind.value}_retain_status",
+        )
+        ok = self._llvm.ir_builder.icmp_signed(
+            "==",
+            status,
+            ir.Constant(self._llvm.INT32_TYPE, 0),
+            name=f"{ownership.resource_kind.value}_retain_ok",
+        )
+        self._guard_runtime_condition(
+            node,
+            ok,
+            code="ARX-RUNTIME-RESOURCE-002",
+            message=(
+                "failed to retain copied "
+                f"{ownership.resource_kind.value} resource"
+            ),
+            block_name=f"resource.{ownership.resource_kind.value}.retain",
+        )
+        return self._llvm.ir_builder.load(
+            output_slot,
+            name=f"copied_{ownership.resource_kind.value}",
+        )
 
     def _guard_runtime_condition(
         self,
@@ -617,6 +978,7 @@ class VisitorCore(BuilderVisitor):
         self._llvm.ir_builder.cbranch(condition, pass_block, fail_block)
 
         self._llvm.ir_builder.position_at_start(fail_block)
+        self._emit_active_cleanups()
         string_pointer = cast(Any, self)._constant_c_string_pointer
         failure = self.require_runtime_symbol(
             RUNTIME_FAILURE_FEATURE_NAME,
@@ -938,6 +1300,20 @@ class VisitorCore(BuilderVisitor):
           type: ir.Function
         """
         return self.runtime_features.require_symbol(feature_name, symbol_name)
+
+    def require_runtime_symbol_by_name(
+        self,
+        symbol_name: str,
+    ) -> ir.Function:
+        """
+        title: Require a runtime symbol selected by its semantic ABI name.
+        parameters:
+          symbol_name:
+            type: str
+        returns:
+          type: ir.Function
+        """
+        return self.runtime_features.require_symbol_by_name(symbol_name)
 
     def _init_native_size_types(self) -> None:
         """
@@ -1295,6 +1671,16 @@ class VisitorCore(BuilderVisitor):
         """
         if type_ is None:
             return None
+        if managed_nullable(type_):
+            assert isinstance(type_, astx.NullableType)
+            return self._llvm_type_for_ast_type(type_.payload_type)
+        if isinstance(type_, astx.NullableType):
+            payload_type = self._llvm_type_for_ast_type(type_.payload_type)
+            if payload_type is None or isinstance(payload_type, ir.VoidType):
+                raise_lowering_internal_error(
+                    "nullable payload has no resolved LLVM storage"
+                )
+            return ir.LiteralStructType([ir.IntType(1), payload_type])
         if isinstance(type_, astx.UnionType):
             storage_type = self._union_storage_ast_type(type_)
             if storage_type is None:
@@ -1307,10 +1693,27 @@ class VisitorCore(BuilderVisitor):
                 [
                     self._llvm.OPAQUE_POINTER_TYPE,
                     self._llvm.OPAQUE_POINTER_TYPE,
+                    self._llvm.OPAQUE_POINTER_TYPE,
                 ]
             )
         if isinstance(type_, astx.BufferOwnerType):
             return self._llvm.BUFFER_OWNER_HANDLE_TYPE
+        if isinstance(
+            type_,
+            (
+                astx.SchemaType,
+                astx.CDataType,
+                astx.FieldType,
+                astx.TypeDescriptorType,
+                astx.TableType,
+                astx.RecordBatchType,
+                astx.ScalarType,
+                astx.ArrayType,
+                astx.ArrayBuilderType,
+                astx.ChunkedArrayType,
+            ),
+        ):
+            return self._llvm.OPAQUE_POINTER_TYPE
         if isinstance(type_, astx.OpaqueHandleType):
             return self._llvm.OPAQUE_POINTER_TYPE
         if isinstance(type_, astx.PointerType):
@@ -1681,9 +2084,119 @@ class VisitorCore(BuilderVisitor):
             )
         return self._llvm.ir_builder.icmp_signed(op_code, lhs, rhs, name)
 
-    def _cast_ast_value(
+    def inject_nullable_value(
+        self,
+        value: ir.Value | None,
+        source_type: astx.DataType | None,
+        target_type: astx.NullableType,
+    ) -> ir.Value:
+        """
+        title: Inject or convert a semantically validated nullable scalar.
+        parameters:
+          value:
+            type: ir.Value | None
+          source_type:
+            type: astx.DataType | None
+          target_type:
+            type: astx.NullableType
+        returns:
+          type: ir.Value
+        """
+        llvm_type = self._llvm_type_for_ast_type(target_type)
+        if managed_nullable(target_type):
+            assert llvm_type is not None
+            if isinstance(source_type, astx.NoneType) and value is None:
+                return ir.Constant(llvm_type, None)
+            if value is None:
+                raise_lowering_internal_error(
+                    "invalid nullable owner injection"
+                )
+            payload = (
+                source_type.payload_type
+                if isinstance(source_type, astx.NullableType)
+                else source_type
+            )
+            return self._cast_ast_value(
+                value,
+                source_type=payload,
+                target_type=target_type.payload_type,
+            )
+        if not isinstance(llvm_type, ir.LiteralStructType):
+            raise_lowering_internal_error("missing nullable aggregate type")
+        empty = ir.Constant(llvm_type, None)
+        if isinstance(source_type, astx.NoneType) and value is None:
+            return empty
+        if value is None or source_type is None:
+            raise_lowering_internal_error("nullable injection has no payload")
+        if isinstance(source_type, astx.NullableType):
+            if value.type == llvm_type:
+                return value
+            return self.widen_nullable_value(
+                value,
+                source_type.payload_type,
+                target_type.payload_type,
+                empty,
+            )
+        payload = self._cast_ast_value(
+            value,
+            source_type=source_type,
+            target_type=target_type.payload_type,
+        )
+        builder = self._llvm.ir_builder
+        aggregate = builder.insert_value(empty, payload, 1)
+        return builder.insert_value(
+            aggregate, ir.Constant(ir.IntType(1), 1), 0
+        )
+
+    def widen_nullable_value(
         self,
         value: ir.Value,
+        source_payload: astx.DataType,
+        target_payload: astx.DataType,
+        empty: ir.Constant,
+    ) -> ir.Value:
+        """
+        title: >-
+          Convert only valid payloads and merge with initialized null storage.
+        parameters:
+          value:
+            type: ir.Value
+          source_payload:
+            type: astx.DataType
+          target_payload:
+            type: astx.DataType
+          empty:
+            type: ir.Constant
+        returns:
+          type: ir.Value
+        """
+        builder = self._llvm.ir_builder
+        origin = builder.block
+        function = builder.function
+        valid_block = function.append_basic_block("nullable.convert.valid")
+        merge = function.append_basic_block("nullable.convert.merge")
+        valid = builder.extract_value(value, 0, "nullable.valid")
+        builder.cbranch(valid, valid_block, merge)
+        builder.position_at_end(valid_block)
+        payload = builder.extract_value(value, 1, "nullable.payload")
+        converted = self._cast_ast_value(
+            payload, source_type=source_payload, target_type=target_payload
+        )
+        aggregate = builder.insert_value(empty, converted, 1)
+        aggregate = builder.insert_value(
+            aggregate, ir.Constant(ir.IntType(1), 1), 0
+        )
+        incoming = builder.block
+        builder.branch(merge)
+        builder.position_at_end(merge)
+        result = builder.phi(empty.type, "nullable.converted")
+        result.add_incoming(empty, origin)
+        result.add_incoming(aggregate, incoming)
+        return result
+
+    def _cast_ast_value(
+        self,
+        value: ir.Value | None,
         *,
         source_type: astx.DataType | None,
         target_type: astx.DataType | None,
@@ -1692,7 +2205,7 @@ class VisitorCore(BuilderVisitor):
         title: Cast one lowered value using semantic scalar types.
         parameters:
           value:
-            type: ir.Value
+            type: ir.Value | None
           source_type:
             type: astx.DataType | None
           target_type:
@@ -1700,6 +2213,14 @@ class VisitorCore(BuilderVisitor):
         returns:
           type: ir.Value
         """
+        if isinstance(target_type, astx.NullableType):
+            return self.inject_nullable_value(value, source_type, target_type)
+        if value is None:
+            raise_lowering_internal_error("value conversion has no value")
+        if isinstance(source_type, astx.NullableType):
+            raise_lowering_internal_error(
+                "implicit nullable unwrap reached lowering"
+            )
         if source_type is None or target_type is None:
             return value
 
@@ -2608,7 +3129,7 @@ class VisitorCore(BuilderVisitor):
         pointer: ir.Value,
     ) -> ir.Value:
         """
-        title: Copy one static string into caller-owned heap storage.
+        title: Clone one present string into independently owned heap storage.
         parameters:
           node:
             type: astx.AST

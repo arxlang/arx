@@ -28,6 +28,11 @@ The public RecordBatch Python API supports schemas, builders, nullable values,
 numeric and Boolean columns, UTF-8/large UTF-8, date/time/timestamp values, IPC
 file and memory streams, and PyArrow interoperability.
 
+Logical descriptors now cover recursive fields, binary metadata, decimals and
+temporal parameters, with native schema copy/export and host C Data/IPC schema
+round trips. New columnar value lowering remains pending; see
+[Logical types and schemas](../arrow-type-schemas.md).
+
 See [Runtime Features](runtime-features.md) and
 [Native Apache Arrow Support](../apache-arrow.md).
 

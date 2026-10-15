@@ -16,6 +16,16 @@ from irx.analysis.handlers._expressions.tensor_buffer_support import (
     ExpressionTensorBufferSupportVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.ownership import (
+    resource_ownership,
+    transfer_resource_ownership,
+    typed_resource_ownership,
+)
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResourceViewKind,
+)
 from irx.analysis.types import bit_width, is_integer_type
 from irx.analysis.validation import validate_assignment
 from irx.buffer import (
@@ -54,6 +64,14 @@ class ExpressionBufferViewVisitorMixin(
                 node.type_.element_type
             )
         self._set_type(node, node.type_)
+        self._set_resource_ownership(
+            node,
+            typed_resource_ownership(
+                node.type_,
+                OwnershipKind.BORROWED,
+                view_kind=ResourceViewKind.BORROWED,
+            ),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BufferViewIndex) -> None:
@@ -193,4 +211,13 @@ class ExpressionBufferViewVisitorMixin(
             view=node.view,
             operation="release",
         )
+        ownership = resource_ownership(node.view)
+        if ownership is not None:
+            self._set_resource_ownership(
+                node.view,
+                transfer_resource_ownership(
+                    ownership,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
         self._set_type(node, astx.Int32())

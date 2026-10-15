@@ -33,7 +33,9 @@ from astx.binary_op import (
 )
 from llvmlite import ir
 
-from irx.analysis.types import common_numeric_type, is_string_type
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import ResourceKind
+from irx.analysis.types import common_numeric_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -42,12 +44,9 @@ from irx.builder.core import (
     uses_unsigned_semantics,
 )
 from irx.builder.diagnostics import raise_lowering_internal_error
+from irx.builder.lowering.nullable_operators import lower_nullable_operator
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
-from irx.builder.runtime.errors import (
-    RUNTIME_FAILURE_FEATURE_NAME,
-    RUNTIME_FAILURE_SYMBOL_NAME,
-)
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add, emit_int_div, is_vector
 from irx.typecheck import typechecked
@@ -332,42 +331,16 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
                 name="integer_division_is_invalid",
             )
 
-        function = self._llvm.ir_builder.function
-        fail_block = function.append_basic_block("integer.division.fail")
-        pass_block = function.append_basic_block("integer.division.pass")
-        self._llvm.ir_builder.cbranch(invalid, fail_block, pass_block)
-
-        self._llvm.ir_builder.position_at_start(fail_block)
-        string_pointer = cast(Any, self)._constant_c_string_pointer
-        code_ptr = string_pointer(
-            "ARX-RUNTIME-ARITHMETIC-001",
-            name_hint="arithmetic_failure_code",
+        self._guard_runtime_condition(
+            node,
+            self._llvm.ir_builder.not_(invalid),
+            code="ARX-RUNTIME-ARITHMETIC-001",
+            message=(
+                "integer division or remainder has a zero divisor or an "
+                "unrepresentable signed result"
+            ),
+            block_name="integer.division",
         )
-        source_ptr = string_pointer(
-            cast(Any, self)._assert_source_name(node),
-            name_hint="arithmetic_failure_source",
-        )
-        message_ptr = string_pointer(
-            "integer division or remainder has a zero divisor or an "
-            "unrepresentable signed result",
-            name_hint="arithmetic_failure_message",
-        )
-        failure = self.require_runtime_symbol(
-            RUNTIME_FAILURE_FEATURE_NAME,
-            RUNTIME_FAILURE_SYMBOL_NAME,
-        )
-        self._llvm.ir_builder.call(
-            failure,
-            [
-                code_ptr,
-                source_ptr,
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.line),
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.col),
-                message_ptr,
-            ],
-        )
-        self._llvm.ir_builder.unreachable()
-        self._llvm.ir_builder.position_at_start(pass_block)
 
     def _emit_vector_sub(
         self,
@@ -520,6 +493,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: astx.BinaryOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         specialized = self._resolved_binary_variant(node)
         if specialized is node:
             raise Exception(f"Binary op {node.op_code} not implemented yet.")
@@ -558,37 +533,60 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
 
         self.visit_child(node.rhs)
         llvm_rhs = safe_pop(self.result_stack)
-        if llvm_rhs is None:
-            raise Exception("codegen: Invalid rhs expression.")
         llvm_rhs = self._cast_ast_value(
             llvm_rhs,
             source_type=self._resolved_ast_type(node.rhs),
             target_type=self._resolved_ast_type(node),
         )
+        llvm_rhs = cast(Any, self)._retain_copied_resource_value(
+            node.rhs,
+            llvm_rhs,
+            target_type=self._resolved_ast_type(node),
+        )
 
         llvm_lhs = self._lvalue_address(var_lhs)
+        ownership = resource_ownership(node)
         if isinstance(self._resolved_ast_type(node), astx.ListType):
-            if not isinstance(var_lhs, astx.Identifier):
-                raise_lowering_internal_error(
-                    "list field assignment reached lowering without an "
-                    "object-field ownership contract",
-                    node=node,
-                )
             self._destroy_replaced_list(
                 node,
                 llvm_lhs,
                 target_name=lhs_name,
             )
-        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
-            var_lhs,
-            astx.Identifier,
+        elif (
+            ownership is not None
+            and ownership.resource_kind is ResourceKind.STRING
         ):
             self._destroy_replaced_string(
                 node,
                 llvm_lhs,
                 target_name=lhs_name,
             )
+        incoming_slot: ir.Value | None = None
+        if ownership is not None and (
+            ownership.nullable_aggregate
+            or ownership.resource_kind
+            not in (ResourceKind.LIST, ResourceKind.STRING)
+        ):
+            incoming_slot = self._llvm.ir_builder.alloca(
+                llvm_rhs.type,
+                name=f"{lhs_name}_field_replacement_incoming",
+            )
+            self._llvm.ir_builder.store(llvm_rhs, incoming_slot)
+            cast(Any, self)._register_resource_slot_cleanup(
+                ownership,
+                incoming_slot,
+            )
+            self._destroy_replaced_native_resource(
+                node,
+                llvm_lhs,
+                target_name=lhs_name,
+            )
         self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
+        if incoming_slot is not None:
+            self._llvm.ir_builder.store(
+                ir.Constant(llvm_rhs.type, None),
+                incoming_slot,
+            )
         self.result_stack.append(llvm_rhs)
 
     @VisitorCore.visit.dispatch
@@ -599,6 +597,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: AddBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_add(node, llvm_lhs, llvm_rhs)
@@ -632,6 +632,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: SubBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
@@ -657,6 +659,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: MulBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_mul(node, llvm_lhs, llvm_rhs)
@@ -679,6 +683,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: DivBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_div(
@@ -720,6 +726,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: ModBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
@@ -753,6 +761,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LogicalAndBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         self._lower_short_circuit_boolean(
             node,
             short_circuit_value=False,
@@ -767,6 +777,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LogicalOrBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         self._lower_short_circuit_boolean(
             node,
             short_circuit_value=True,
@@ -781,6 +793,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LtBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -801,6 +815,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: GtBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -821,6 +837,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: LeBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -841,6 +859,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: GeBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -861,6 +881,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: EqBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
@@ -891,6 +913,8 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: NeBinOp
         """
+        if lower_nullable_operator(cast(VisitorCore, self), node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):

@@ -4,6 +4,7 @@ title: General configuration module for pytest.
 
 import ctypes
 import os
+import subprocess
 import tempfile
 
 from collections.abc import Iterator
@@ -19,6 +20,7 @@ from irx.analysis import ModuleKey, ParsedModule
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder, CommandResult
+from irx.builder.runtime.linking import compile_native_artifacts
 from irx.builder.runtime.record_batch import (
     ensure_record_batch_shared_library,
 )
@@ -220,6 +222,29 @@ def jit_int_main(builder: Builder, module: astx.Module) -> int:
     ir_text = translate_ir(builder, module)
     llvm_module = llvm.parse_assembly(ir_text)
     llvm_module.verify()
+
+    # MCJIT does not use the executable linker. Load the same registered
+    # artifacts instead of leaving guarded failure symbols unresolved.
+    if isinstance(builder, LLVMBuilder):
+        artifacts = builder.translator.runtime_features.native_artifacts()
+        if artifacts:
+            with tempfile.TemporaryDirectory() as directory:
+                build_dir = Path(directory)
+                inputs = compile_native_artifacts(artifacts, build_dir)
+                library = build_dir / "jit_runtime.so"
+                subprocess.run(
+                    [
+                        "c++",
+                        "-shared",
+                        *(str(p) for p in inputs.objects),
+                        *inputs.linker_flags,
+                        "-o",
+                        str(library),
+                    ],
+                    check=True,
+                    capture_output=True,
+                )
+                llvm.load_library_permanently(str(library))
 
     target = llvm.Target.from_default_triple()
     target_machine = target.create_target_machine()

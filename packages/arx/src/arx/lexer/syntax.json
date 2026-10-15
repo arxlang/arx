@@ -1,10 +1,9 @@
 {
-  "syntax_pack_version": "0.2.0",
+  "syntax_pack_version": "0.9.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
   "file_extensions": [".x", ".arx"],
-
   "keywords": {
     "reserved": [
       "assert",
@@ -24,7 +23,6 @@
     ],
     "contextual": ["as", "from", "type", "binary", "unary", "operator"]
   },
-
   "literals": {
     "keywords": ["true", "false", "none"],
     "booleans": {
@@ -35,7 +33,6 @@
       "token_value": null
     }
   },
-
   "comments": {
     "line": {
       "enabled": true,
@@ -48,7 +45,6 @@
       "nesting": false
     }
   },
-
   "strings": {
     "supported": true,
     "quote_types": ["single", "double"],
@@ -61,31 +57,32 @@
       "end": ""
     }
   },
-
   "docstrings": {
     "supported": true,
     "delimiter": "```",
     "token_kind": "docstring"
   },
-
   "numbers": {
     "formats": ["decimal_integer", "decimal_float"],
     "bases": [10],
-    "underscores": { "allowed": false },
+    "underscores": {
+      "allowed": false
+    },
     "suffixes": [],
-    "exponent": { "allowed": false, "forms": [] },
+    "exponent": {
+      "allowed": false,
+      "forms": []
+    },
     "leading_dot_float": true,
     "trailing_dot_float": true,
     "multiple_dots": "invalid"
   },
-
   "identifiers": {
     "start": "Unicode letter or underscore",
     "continue": "Unicode alphanumeric or underscore",
     "pattern": "(?:[_\\p{L}])(?:[_\\p{L}\\p{N}])*",
     "unicode_policy": "Current runtime behavior"
   },
-
   "whitespace": {
     "indentation_significant": true,
     "indent_unit": 2,
@@ -94,7 +91,6 @@
     "newlines_significant": true,
     "blank_lines": "ignored_for_indentation_transitions"
   },
-
   "operators": {
     "single_char": [
       "=",
@@ -104,6 +100,7 @@
       "-",
       "*",
       "/",
+      "%",
       ".",
       ":",
       ",",
@@ -122,12 +119,11 @@
     "word_operators": ["and", "or"],
     "assignment": ["="],
     "comparison": ["<", ">", "<=", ">=", "==", "!="],
-    "arithmetic": ["+", "-", "*", "/"],
+    "arithmetic": ["+", "-", "*", "/", "%"],
     "logical": ["&&", "||", "and", "or", "!"],
     "type_union": ["|"],
     "punctuation": ["@", ":", ",", ";", "."]
   },
-
   "structural_forms": {
     "annotations": {
       "start": "@[",
@@ -177,13 +173,11 @@
       "column_access": ["value.name", "value[\"name\"]"]
     }
   },
-
   "brackets": [
     ["(", ")"],
     ["[", "]"],
     ["{", "}"]
   ],
-
   "builtins": {
     "types": [
       "i8",
@@ -213,8 +207,153 @@
       "dataframe",
       "list",
       "series",
-      "tensor"
+      "tensor",
+      "datatype",
+      "field",
+      "schema",
+      "array",
+      "u8",
+      "u16",
+      "u32",
+      "u64",
+      "uint8",
+      "uint16",
+      "uint32",
+      "uint64",
+      "array_builder",
+      "chunked_array",
+      "table",
+      "record_batch",
+      "scalar",
+      "c_data"
     ],
-    "functions": ["cast", "dataframe", "isinstance", "print", "range", "type"]
+    "functions": [
+      "cast",
+      "dataframe",
+      "isinstance",
+      "print",
+      "range",
+      "type",
+      "schema_nfields",
+      "schema_field",
+      "field_type",
+      "field_nullable",
+      "descriptor_equal",
+      "type_bit_width",
+      "type_nfields",
+      "type_field",
+      "field_name",
+      "conversion_kind",
+      "is_null",
+      "is_valid",
+      "expect_valid",
+      "array",
+      "array_length",
+      "array_null_count",
+      "array_offset",
+      "array_at",
+      "array_slice",
+      "array_concat",
+      "array_copy",
+      "array_equal",
+      "array_builder",
+      "chunked_array",
+      "builder_append",
+      "builder_reserve",
+      "builder_length",
+      "builder_finish",
+      "chunk_count",
+      "chunk_at",
+      "combine_chunks",
+      "table",
+      "record_batch",
+      "num_rows",
+      "num_columns",
+      "container_schema",
+      "column",
+      "column_as",
+      "slice_rows",
+      "select_columns",
+      "rename_columns",
+      "add_column",
+      "replace_column",
+      "remove_column",
+      "to_table",
+      "to_record_batch",
+      "table_combine_chunks",
+      "runtime_schema",
+      "scalar",
+      "scalar_equal",
+      "scalar_text",
+      "scalar_values",
+      "scalar_field",
+      "scalar_bytes",
+      "take_rows",
+      "array_from_buffer",
+      "to_dataframe",
+      "to_series",
+      "to_chunked",
+      "export_c_data",
+      "array_from_c_data",
+      "array_with_validity",
+      "array_from_buffers",
+      "scalar_storage"
+    ]
+  },
+  "descriptor_syntax": {
+    "status": "descriptor values only; not general columnar value support",
+    "literals": [
+      "datatype[logical_type]",
+      "field[name: logical_type | none]",
+      "schema[name: logical_type | none, ...]"
+    ],
+    "parameters": "kind(name=literal, ...)[child: logical_type, ...]",
+    "metadata": "optional {key: value, ...} UTF-8 strings or identifiers",
+    "conversion_kind": "compile-time classification of two datatype or schema literals"
+  },
+  "nullable_syntax": {
+    "type": "T | none",
+    "payloads": "Primitive numeric/Boolean values; shared scalar, array, chunked_array, datatype, field, schema, table, record_batch, dataframe, series and class owners; unique builders; independently copied str and shared c_data carriers",
+    "queries": ["is_null(value)", "is_valid(value)", "expect_valid(value)"],
+    "operators": "primitive arithmetic and comparisons propagate null; Boolean and/or use short-circuit Kleene logic",
+    "casts": "cast(value, T | none) preserves validity for primitive payloads; expect_valid is required to unwrap",
+    "fields": "nullable instance fields and primitive IRx struct fields; no managed by-value struct destruction or static nullable fields",
+    "aggregate_owners": "list[T] | none and fixed-shape tensor[T, ...] | none use explicit aggregate validity; lists remain unique and tensors retain shared buffer owners",
+    "legacy_owners": "dataframe[...] and typed series[T] support locals, calls, returns and instance fields, including nullable owners; runtime schema columns require checked to_table projection"
+  },
+  "array_syntax": {
+    "type": "array[T] or array[T | none]",
+    "literal": "array[T](values...)",
+    "types": "Primitive, binary/string, temporal, decimal, interval and recursive logical values, including registered and opaque extension storage.",
+    "iteration": "explicit indexed scalar access with array_at; no implicit iteration",
+    "builders": "array_builder[T]() owns a reusable unique builder; builder_finish resets it.",
+    "chunks": "chunked_array[T](array[T], ...) has explicit chunk_at and combine_chunks.",
+    "interchange": "export_c_data and array_from_c_data use owned carriers; array_with_validity and array_from_buffers copy checked packed buffers."
+  },
+  "tabular_syntax": {
+    "types": [
+      "record_batch[fields]{metadata}",
+      "table[fields]{metadata}",
+      "record_batch",
+      "table"
+    ],
+    "constructors": "A static schema, an explicit signed row count, then ordered array columns for batches or chunked_array columns for tables.",
+    "projection": "column(value, literal_name) requires a static schema; column_as(value, index, field[...]) checks a runtime field exactly.",
+    "runtime_schema": "Explicitly erase static schema facts while retaining an independent owner.",
+    "iteration": "Explicit indexed column, row-slice, chunk and scalar operations; no implicit iteration axis.",
+    "value_coverage": "Primitive and logical columns including nullable, half-float, nested and extension values.",
+    "legacy_adapters": "to_dataframe/to_table erase static schema facts, not runtime metadata; to_series/to_chunked preserve element types."
+  },
+  "scalar_syntax": {
+    "constructor": "scalar[logical_type](values...)",
+    "nullable": "scalar[logical_type] | none",
+    "queries": [
+      "scalar_equal",
+      "scalar_text",
+      "scalar_values",
+      "scalar_field",
+      "scalar_bytes",
+      "scalar_storage"
+    ]
   }
 }

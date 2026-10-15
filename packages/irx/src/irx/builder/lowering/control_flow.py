@@ -41,7 +41,7 @@ from irx.builder.diagnostics import (
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.assertions import (
-    ASSERT_FAILURE_SYMBOL_NAME,
+    ASSERT_REPORT_SYMBOL_NAME,
     ASSERT_RUNTIME_FEATURE_NAME,
 )
 from irx.builder.state import CleanupAction, CleanupEmitter, LoopTargets
@@ -979,11 +979,17 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         message_ptr = self._lower_assert_message_pointer(node)
         fail_function = self.require_runtime_symbol(
             ASSERT_RUNTIME_FEATURE_NAME,
-            ASSERT_FAILURE_SYMBOL_NAME,
+            ASSERT_REPORT_SYMBOL_NAME,
         )
         self._llvm.ir_builder.call(
             fail_function,
             [source_ptr, line_value, col_value, message_ptr],
+        )
+        # Report before releasing owners: the message may borrow their bytes.
+        self._emit_active_cleanups()
+        exit_function = self.require_runtime_symbol("libc", "exit")
+        self._llvm.ir_builder.call(
+            exit_function, [ir.Constant(self._llvm.INT32_TYPE, 1)]
         )
         self._llvm.ir_builder.unreachable()
 

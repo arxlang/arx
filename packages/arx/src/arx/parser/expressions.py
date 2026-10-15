@@ -22,8 +22,15 @@ from arx.dataframe import (
 )
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
+from arx.parser.arrays import ArrayParser
 from arx.parser.base import ParserMixinBase
+from arx.parser.descriptors import (
+    DESCRIPTOR_LITERALS,
+    DESCRIPTOR_QUERIES,
+    DescriptorParser,
+)
 from arx.parser.state import TypeUseContext
+from arx.parser.tabular import TabularParser
 from arx.tensor import attach_binding, infer_literal
 
 
@@ -323,6 +330,19 @@ class ExpressionParserMixin(ParserMixinBase):
 
         self.tokens.get_next_token()  # eat identifier
 
+        if id_name in {"table", "record_batch"} and self._is_operator("["):
+            return TabularParser(self).literal(id_loc, id_name)
+        if id_name in {
+            "scalar",
+            "array",
+            "array_builder",
+            "chunked_array",
+        } and self._is_operator("["):
+            return ArrayParser(self).literal(id_loc, id_name)
+
+        if id_name in DESCRIPTOR_LITERALS and self._is_operator("["):
+            return DescriptorParser(self).literal(id_name, id_loc)
+
         template_args = self._parse_template_args_for_call()
 
         if not self._is_operator("("):
@@ -354,9 +374,17 @@ class ExpressionParserMixin(ParserMixinBase):
             target_type = self.parse_type(
                 allow_union=True, type_context=TypeUseContext.EXPRESSION
             )
-            if isinstance(target_type, astx.UnionType):
+            if isinstance(target_type, astx.UnionType) and not (
+                len(target_type.members) == 2
+                and sum(
+                    isinstance(member, astx.NoneType)
+                    for member in target_type.members
+                )
+                == 1
+            ):
                 raise ParserException(
-                    "Builtin 'cast' does not support union target types yet."
+                    "Builtin 'cast' rejects general union target types; "
+                    "only nullable unions are supported."
                 )
             self._consume_operator(")")
             return builtins.build_cast(
@@ -437,6 +465,80 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             return astx.ClassConstruct(id_name)
 
+        tabular_queries = {item.value: item for item in astx.TabularOperation}
+        if id_name in tabular_queries:
+            if template_args is not None:
+                raise ParserException(
+                    "Tabular queries reject template arguments."
+                )
+            return astx.TabularQuery(
+                tabular_queries[id_name], tuple(args), loc=id_loc
+            )
+
+        scalar_queries = {item.value: item for item in astx.ScalarOperation}
+        if id_name in scalar_queries:
+            if template_args is not None:
+                raise ParserException(
+                    "Scalar queries reject template arguments."
+                )
+            return astx.ScalarQuery(
+                scalar_queries[id_name], tuple(args), loc=id_loc
+            )
+
+        array_queries = {item.value: item for item in astx.ArrayOperation}
+        if id_name in array_queries:
+            if template_args is not None:
+                raise ParserException(
+                    "Array queries reject template arguments."
+                )
+            return astx.ArrayQuery(
+                array_queries[id_name], tuple(args), loc=id_loc
+            )
+
+        nullable_queries = {
+            item.value: item for item in astx.NullableOperation
+        }
+        if id_name in nullable_queries:
+            if template_args is not None or len(args) != 1:
+                raise ParserException(
+                    f"{id_name} expects one value and no template arguments."
+                )
+            return astx.NullableQuery(
+                nullable_queries[id_name], args[0], loc=id_loc
+            )
+        if id_name == "conversion_kind":
+            if (
+                template_args is not None
+                or len(args) != 2
+                or not all(
+                    isinstance(
+                        arg, (astx.TypeDescriptorLiteral, astx.SchemaLiteral)
+                    )
+                    for arg in args
+                )
+            ):
+                raise ParserException(
+                    "conversion_kind expects two datatype or schema literals."
+                )
+            left = cast(
+                astx.TypeDescriptorLiteral | astx.SchemaLiteral, args[0]
+            )
+            right = cast(
+                astx.TypeDescriptorLiteral | astx.SchemaLiteral, args[1]
+            )
+            return astx.DescriptorCompatibility(
+                left.value, right.value, loc=id_loc
+            )
+        if id_name in DESCRIPTOR_QUERIES:
+            if template_args is not None:
+                raise ParserException(
+                    "Descriptor queries do not accept template arguments."
+                )
+            return astx.DescriptorQuery(
+                DESCRIPTOR_QUERIES[id_name],
+                tuple(args),
+                loc=id_loc,
+            )
         call = astx.FunctionCall(id_name, args, loc=id_loc)
         if template_args is not None:
             astx.set_template_args(call, template_args)
@@ -528,16 +630,24 @@ class ExpressionParserMixin(ParserMixinBase):
             self.tokens.get_next_token()
 
             self._consume_operator(":")
-            value = self.parse_expression()
-            if not isinstance(value, astx.LiteralList):
+            if not self._is_operator("["):
                 raise ParserException(
                     "DataFrame constructor column values must be list "
                     "literals."
                 )
+            self._consume_operator("[")
+            values: list[astx.AST] = []
+            if not self._is_operator("]"):
+                while True:
+                    values.append(self.parse_expression())
+                    if not self._is_operator(","):
+                        break
+                    self._consume_operator(",")
+            self._consume_operator("]")
             columns.append(
                 astx.DataFrameLiteralColumn(
                     column_name,
-                    tuple(value.elements),
+                    tuple(values),
                 )
             )
             self._skip_inline_indents()

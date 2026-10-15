@@ -21,8 +21,10 @@ from arx.dataframe import (
 )
 from arx.exceptions import ParserException
 from arx.lexer import TokenKind
+from arx.parser.arrays import ArrayParser
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import TypeUseContext
+from arx.parser.tabular import TabularParser
 from arx.tensor import (
     binding_from_type,
     default_value,
@@ -32,10 +34,22 @@ from arx.tensor import (
 )
 
 _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
+    "c_data": astx.CDataType(),
+    "datatype": astx.TypeDescriptorType(),
+    "field": astx.FieldType(),
+    "schema": astx.SchemaType(),
     "i8": astx.Int8(),
     "i16": astx.Int16(),
     "i32": astx.Int32(),
     "i64": astx.Int64(),
+    "u8": astx.UInt8(),
+    "u16": astx.UInt16(),
+    "u32": astx.UInt32(),
+    "u64": astx.UInt64(),
+    "uint8": astx.UInt8(),
+    "uint16": astx.UInt16(),
+    "uint32": astx.UInt32(),
+    "uint64": astx.UInt64(),
     "int8": astx.Int8(),
     "int16": astx.Int16(),
     "int32": astx.Int32(),
@@ -59,7 +73,18 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
 }
 
 _BUILTIN_TYPE_NAMES = frozenset(_BUILTIN_TYPE_MAP) | frozenset(
-    {"dataframe", "list", "series", "tensor"}
+    {
+        "scalar",
+        "array",
+        "array_builder",
+        "table",
+        "record_batch",
+        "chunked_array",
+        "dataframe",
+        "list",
+        "series",
+        "tensor",
+    }
 )
 
 
@@ -189,6 +214,10 @@ class TypeParserMixin(ParserMixinBase):
             data_type, (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
         ):
             return astx.LiteralInt32(0)
+        if isinstance(
+            data_type, (astx.UInt8, astx.UInt16, astx.UInt32, astx.UInt64)
+        ):
+            return astx.Cast(astx.LiteralInt32(0), data_type)
         if isinstance(data_type, astx.Boolean):
             return astx.LiteralBoolean(False)
         if isinstance(data_type, astx.String):
@@ -268,7 +297,18 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name == "list":
+            if type_name in {"table", "record_batch"}:
+                self.tokens.get_next_token()
+                type_ = TabularParser(self).type(type_name)
+            elif type_name in {
+                "array",
+                "array_builder",
+                "chunked_array",
+                "scalar",
+            }:
+                self.tokens.get_next_token()
+                type_ = ArrayParser(self).type(type_name)
+            elif type_name == "list":
                 self.tokens.get_next_token()  # eat list
                 self._consume_operator("[")
                 elem_type = self.parse_type(
@@ -368,10 +408,6 @@ class TypeParserMixin(ParserMixinBase):
                 if self._is_operator("."):
                     self._consume_runtime_shape_marker()
                     self._consume_operator("]")
-                    self._ensure_runtime_layout_allowed(
-                        "dataframe",
-                        type_context,
-                    )
                     type_ = runtime_dataframe_type()
                 else:
                     columns: list[astx.DataFrameColumn] = []

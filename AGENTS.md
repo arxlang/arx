@@ -28,6 +28,34 @@ release changes unless a more specific instruction file overrides it.
 - Do not mutate GitHub, publish artifacts, or perform other remote side effects
   unless the user explicitly requests them.
 
+## Milestone Scope And Progress
+
+- Working in smaller pieces is acceptable, but never silently narrow a request
+  to finish a milestone. Before making implementation edits, announce the
+  milestone and task IDs selected for this pass, what is included, what remains
+  outside this pass, and the acceptance checks. Say explicitly whether this is
+  the whole milestone or one bounded part of it.
+- If inspection reveals a scope change or new prerequisite, explain it while
+  working and update the roadmap. Do not wait until the final response to reveal
+  that only part of the requested milestone was implemented. Do not waive exit
+  criteria or move required work to a later milestone just to report completion.
+- Use the root `ROADMAP.md` as the authoritative current Arrow milestone
+  tracker. Keep its active work, next proposed item, remaining work, and
+  observed verification evidence distinct. Historical transitions and detailed
+  decisions belong in the linked archive, not in the current status dashboard.
+- Mark only an announced, actively worked item `IN PROGRESS`. A queued item is
+  not active; a partially completed parent milestone remains `PARTIAL` until its
+  acceptance criteria are met. Before handing back control, reconcile the
+  selected item's status so an inactive task is not left `IN PROGRESS`.
+- Update each completed item with actual evidence. Separate unfinished code,
+  unrun checks, and concrete environment blockers; a blocked verification check
+  must not make unrelated implementation work appear blocked. Preserve design
+  assumptions and the requested alternatives when archiving progress.
+- End with results against the scope announced at the start: completed task IDs,
+  executed checks, remaining work, and the parent milestone's status. For
+  PR-focused work, prioritize the requested milestones rather than silently
+  expanding into later milestones.
+
 ## Repository And Architecture
 
 The root project is the development metaproject for six Python packages:
@@ -338,6 +366,8 @@ risks or checks rather than inventing confidence.
 
 Before finalizing a change, verify as applicable:
 
+- [ ] implementation scope was announced up front and scope changes explained
+- [ ] roadmap current statuses match the work completed and left outstanding
 - [ ] behavior changes have focused tests
 - [ ] frontend, ASTx, semantics, lowering, runtime, and exports remain aligned
 - [ ] syntax changes update manifest, lexer, parser, tests, docs, and examples

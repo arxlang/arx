@@ -619,7 +619,7 @@ class Undefined(Expr):
         return self._prepare_struct(key, value, simplified)
 
 
-PrimitivesStruct: TypeAlias = int | str | float | bool | Undefined
+PrimitivesStruct: TypeAlias = int | str | float | bool | Undefined | None
 DataTypesStruct: TypeAlias = PrimitivesStruct | dict[str, Any] | list[Any]
 DictDataTypesStruct: TypeAlias = dict[str, DataTypesStruct]
 ReprStruct: TypeAlias = list[DataTypesStruct] | DictDataTypesStruct | Undefined

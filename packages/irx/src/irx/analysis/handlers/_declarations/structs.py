@@ -19,6 +19,11 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.nullability import (
+    aggregate_nullable,
+    managed_nullable,
+    normalize_nullable,
+)
 from irx.analysis.resolved_nodes import SemanticStruct, SemanticStructField
 from irx.analysis.types import clone_type
 from irx.diagnostics import DiagnosticCodes
@@ -68,11 +73,46 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
             )
+            if aggregate_nullable(normalize_nullable(attr.type_)):
+                self.context.diagnostics.add(
+                    "nullable managed struct fields require destruction; "
+                    "use a managed class field instead",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            if managed_nullable(normalize_nullable(attr.type_)) or isinstance(
+                attr.type_,
+                (
+                    astx.ScalarType,
+                    astx.CDataType,
+                    astx.ArrayType,
+                    astx.ArrayBuilderType,
+                    astx.ChunkedArrayType,
+                    astx.TableType,
+                    astx.RecordBatchType,
+                ),
+            ):
+                self.context.diagnostics.add(
+                    "managed struct fields require destruction; "
+                    "use a managed class field instead",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if isinstance(attr.type_, astx.ListType):
                 self.context.diagnostics.add(
                     f"struct field '{struct.name}.{attr.name}' cannot own "
                     "dynamic list storage because struct destruction is not "
                     "supported",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            if isinstance(
+                attr.type_,
+                (astx.SchemaType, astx.FieldType, astx.TypeDescriptorType),
+            ):
+                self.context.diagnostics.add(
+                    "struct descriptor fields require field destruction; "
+                    "use a managed class field instead",
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )

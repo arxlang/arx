@@ -29,7 +29,7 @@ static void irx_write_escaped_assert_field(FILE* stream, const char* text) {
   }
 }
 
-void __arx_assert_fail(
+void __arx_assert_report(
     const char* source,
     int line,
     int col,
@@ -45,5 +45,11 @@ void __arx_assert_fail(
     irx_write_escaped_assert_field(stderr, safe_message);
     fputc('\n', stderr);
     fflush(stderr);
+}
+
+void __arx_assert_fail(
+    const char* source, int line, int col, const char* message
+) {
+    __arx_assert_report(source, line, col, message);
     exit(EXIT_FAILURE);
 }

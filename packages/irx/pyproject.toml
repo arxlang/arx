@@ -38,7 +38,11 @@ include = [
   "src/irx/py.typed",
   "src/irx/builder/runtime/**/*.c",
   "src/irx/builder/runtime/**/*.h",
+  "src/irx/builder/runtime/**/*.inc",
+  "src/irx/builder/runtime/**/*.json",
+  "src/irx/builder/runtime/**/*.map",
   "src/irx/builder/runtime/**/*.md",
+  "src/irx/builder/runtime/**/*.txt",
   "src/irx/builder/runtime/**/LICENSE.txt",
 ]
 

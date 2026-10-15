@@ -25,6 +25,7 @@ from irx.buffer import (
 )
 from irx.builtins.collections.array_primitives import (
     ARRAY_PRIMITIVE_TYPE_SPECS,
+    logical_type_for_scalar,
 )
 from irx.typecheck import typechecked
 
@@ -34,7 +35,7 @@ TENSOR_FLAGS_EXTRA = "tensor_flags"
 _DTYPE_ELEMENT_SIZE_BYTES = {
     buffer_dtype_handle(spec.name): spec.element_size_bytes
     for spec in ARRAY_PRIMITIVE_TYPE_SPECS.values()
-    if spec.element_size_bytes is not None
+    if spec.element_size_bytes is not None and spec.buffer_view_compatible
 }
 
 
@@ -269,29 +270,14 @@ def tensor_primitive_type_name(type_: astx.DataType | None) -> str | None:
     returns:
       type: str | None
     """
-    if isinstance(type_, astx.Boolean):
-        return "bool"
-    if isinstance(type_, astx.Int8):
-        return "int8"
-    if isinstance(type_, astx.Int16):
-        return "int16"
-    if isinstance(type_, astx.Int32):
-        return "int32"
-    if isinstance(type_, astx.Int64):
-        return "int64"
-    if isinstance(type_, astx.UInt8):
-        return "uint8"
-    if isinstance(type_, astx.UInt16):
-        return "uint16"
-    if isinstance(type_, astx.UInt32):
-        return "uint32"
-    if isinstance(type_, astx.UInt64):
-        return "uint64"
-    if isinstance(type_, astx.Float32):
-        return "float32"
-    if isinstance(type_, astx.Float64):
-        return "float64"
-    return None
+    logical = None if type_ is None else logical_type_for_scalar(type_)
+    if (
+        logical is None
+        or logical.kind.value not in ARRAY_PRIMITIVE_TYPE_SPECS
+        or logical.kind.value == "float16"
+    ):
+        return None
+    return logical.kind.value
 
 
 @public

@@ -17,6 +17,8 @@ without sharing a source grammar.
 - classes, structs, inheritance, member access, visibility, and mutability
 - FFI pointers and opaque handles
 - list, buffer-view, Tensor, DataFrame, and Series nodes
+- immutable [logical type and schema descriptors](../arrow-type-schemas.md),
+  independent of backend storage
 - YAML, JSON, Mermaid, PNG, and optional ASCII visualization
 
 ## Architecture boundary

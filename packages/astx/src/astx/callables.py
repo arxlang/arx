@@ -332,16 +332,16 @@ class FunctionReturn(StatementType):
       kind:
         type: ASTKind
       value:
-        type: DataType
+        type: DataType | None
     """
 
     kind: ASTKind
 
-    value: DataType
+    value: DataType | None
 
     def __init__(
         self,
-        value: DataType,
+        value: DataType | None,
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
     ) -> None:
@@ -349,7 +349,7 @@ class FunctionReturn(StatementType):
         title: Initialize the Return instance.
         parameters:
           value:
-            type: DataType
+            type: DataType | None
           loc:
             type: SourceLocation
           parent:
@@ -377,7 +377,7 @@ class FunctionReturn(StatementType):
           type: ReprStruct
         """
         key = "RETURN"
-        value = self.value.get_struct(simplified)
+        value = {} if self.value is None else self.value.get_struct(simplified)
         return self._prepare_struct(key, value, simplified)
 
 

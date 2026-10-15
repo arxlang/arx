@@ -6,6 +6,9 @@ from irx.builder.runtime.assertions.feature import (
     ASSERT_FAILURE_SYMBOL_NAME as ASSERT_FAILURE_SYMBOL_NAME,
 )
 from irx.builder.runtime.assertions.feature import (
+    ASSERT_REPORT_SYMBOL_NAME as ASSERT_REPORT_SYMBOL_NAME,
+)
+from irx.builder.runtime.assertions.feature import (
     ASSERT_RUNTIME_FEATURE_NAME as ASSERT_RUNTIME_FEATURE_NAME,
 )
 from irx.builder.runtime.assertions.feature import (
@@ -27,6 +30,7 @@ from irx.builder.runtime.assertions.reporting import (
 __all__ = [
     "ASSERT_FAILURE_PREFIX",
     "ASSERT_FAILURE_SYMBOL_NAME",
+    "ASSERT_REPORT_SYMBOL_NAME",
     "ASSERT_RUNTIME_FEATURE_NAME",
     "AssertionFailureReport",
     "build_assertions_runtime_feature",

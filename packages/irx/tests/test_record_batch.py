@@ -30,6 +30,7 @@ from irx.builder.runtime.record_batch import (
 from irx.record_batch import (
     RECORD_BATCH_ABI_VERSION,
     IrxColumnType,
+    RecordBatch,
     RecordBatchBuilder,
     RecordBatchSchema,
     RecordBatchStreamReader,
@@ -503,6 +504,66 @@ def fill_builder(builder: RecordBatchBuilder, n: int) -> None:
     for i in range(n):
         builder.append_int32(0, i)
         builder.append_float64(1, i * 1.5)
+
+
+def test_record_batch_wrappers_close_deterministically_and_fail_closed() -> (
+    None
+):
+    """
+    title: Core Python wrappers reject use after release or builder finish.
+    """
+    schema = make_simple_schema()
+    builder = RecordBatchBuilder(schema)
+    fill_builder(builder, 1)
+    batch = builder.finish()
+
+    with pytest.raises(RuntimeError, match="released or finished"):
+        builder.append_int32(0, 2)
+
+    with batch as entered_batch:
+        assert entered_batch.num_rows == 1
+    with pytest.raises(RuntimeError, match="RecordBatch is released"):
+        _ = batch.num_rows
+
+    schema.release()
+    schema.release()
+    with pytest.raises(RuntimeError, match="RecordBatchSchema is released"):
+        _ = schema.num_fields
+
+
+def test_stream_wrappers_reject_operations_after_close_or_release() -> None:
+    """
+    title: Stream wrappers fail closed after their terminal lifecycle action.
+    """
+    schema = make_simple_schema()
+    writer = RecordBatchStreamWriter.open_buffer(schema)
+    writer.close()
+    with pytest.raises(
+        RuntimeError,
+        match="RecordBatchStreamWriter is closed",
+    ):
+        writer.write_batch(RecordBatch(ctypes.c_void_p(), writer._lib))
+    _ = writer.buffer_data()
+    writer.release()
+    with pytest.raises(
+        RuntimeError,
+        match="RecordBatchStreamWriter is released",
+    ):
+        writer.buffer_data()
+
+    writer = RecordBatchStreamWriter.open_buffer(schema)
+    writer.close()
+    data = writer.buffer_data()
+    writer.release()
+    reader = RecordBatchStreamReader.open_buffer(data)
+    reader.close()
+    reader.close()
+    with pytest.raises(
+        RuntimeError,
+        match="RecordBatchStreamReader is closed",
+    ):
+        reader.next_batch()
+    schema.release()
 
 
 # Schema tests

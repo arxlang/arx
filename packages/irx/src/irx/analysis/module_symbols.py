@@ -449,6 +449,25 @@ def mangle_class_dispatch_name(
 
 @public
 @typechecked
+def mangle_class_destructor_name(
+    module_key: ModuleKey,
+    class_name: str,
+) -> str:
+    """
+    title: Return a deterministic LLVM class-destructor symbol name.
+    parameters:
+      module_key:
+        type: ModuleKey
+      class_name:
+        type: str
+    returns:
+      type: str
+    """
+    return _mangle_parts(str(module_key), class_name, "destroy")
+
+
+@public
+@typechecked
 def mangle_class_static_name(
     module_key: ModuleKey,
     class_name: str,

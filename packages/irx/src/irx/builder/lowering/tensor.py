@@ -12,11 +12,17 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.ownership import arrow_resource_ownership
+from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
 from irx.analysis.types import is_float_type, is_unsigned_type
 from irx.buffer import BUFFER_VIEW_FIELD_INDICES
-from irx.builder.core import VisitorCore
+from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.arrow.lowering import (
+    call_arrow_runtime,
+    require_arrow_runtime_success,
+)
 from irx.builder.types import is_int_type
 from irx.builtins.collections.array_primitives import (
     ARRAY_PRIMITIVE_TYPE_SPECS,
@@ -226,6 +232,33 @@ class TensorVisitorMixin(VisitorMixinBase):
             raise Exception("tensor lowering requires a TensorType value")
         return value
 
+    def _tensor_release_slot(
+        self,
+        base: astx.AST,
+        value: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Return mutable storage for one explicit Tensor release.
+        parameters:
+          base:
+            type: astx.AST
+          value:
+            type: ir.Value
+        returns:
+          type: ir.Value
+        """
+        if isinstance(base, astx.Identifier):
+            symbol_key = semantic_symbol_key(base, base.name)
+            storage = self.named_values.get(symbol_key)
+            if isinstance(storage, ir.Value):
+                return storage
+        slot = self._llvm.ir_builder.alloca(
+            self._llvm.BUFFER_VIEW_TYPE,
+            name="irx_tensor_release_view",
+        )
+        self._llvm.ir_builder.store(value, slot)
+        return slot
+
     def _tensor_primitive_spec(
         self,
         element_type: astx.DataType,
@@ -289,7 +322,18 @@ class TensorVisitorMixin(VisitorMixinBase):
                     self._llvm.DOUBLE_TYPE,
                     name="irx_tensor_double_promote",
                 )
-            self._llvm.ir_builder.call(append, [builder_handle, value])
+            status, _ = call_arrow_runtime(
+                self,
+                append,
+                [builder_handle, value],
+                "tensor_builder_append_double",
+            )
+            require_arrow_runtime_success(
+                self,
+                value_node,
+                status,
+                "tensor_builder_append_double",
+            )
             return
 
         if not is_int_type(value.type):
@@ -312,7 +356,18 @@ class TensorVisitorMixin(VisitorMixinBase):
                     self._llvm.INT64_TYPE,
                     name="irx_tensor_uint_trunc",
                 )
-            self._llvm.ir_builder.call(append, [builder_handle, value])
+            status, _ = call_arrow_runtime(
+                self,
+                append,
+                [builder_handle, value],
+                "tensor_builder_append_uint",
+            )
+            require_arrow_runtime_success(
+                self,
+                value_node,
+                status,
+                "tensor_builder_append_uint",
+            )
             return
 
         append = self.require_runtime_symbol(
@@ -331,14 +386,26 @@ class TensorVisitorMixin(VisitorMixinBase):
                 self._llvm.INT64_TYPE,
                 name="irx_tensor_int_trunc",
             )
-        self._llvm.ir_builder.call(append, [builder_handle, value])
+        status, _ = call_arrow_runtime(
+            self,
+            append,
+            [builder_handle, value],
+            "tensor_builder_append_int",
+        )
+        require_arrow_runtime_success(
+            self,
+            value_node,
+            status,
+            "tensor_builder_append_int",
+        )
 
     def _build_arrow_tensor_from_values(
         self,
         values: list[astx.AST],
         element_type: astx.DataType,
         layout: TensorLayout,
-    ) -> ir.Value:
+        node: astx.TensorLiteral,
+    ) -> tuple[ir.Value, ir.Value]:
         """
         title: Build one Arrow tensor handle from scalar AST values.
         parameters:
@@ -348,8 +415,10 @@ class TensorVisitorMixin(VisitorMixinBase):
             type: astx.DataType
           layout:
             type: TensorLayout
+          node:
+            type: astx.TensorLiteral
         returns:
-          type: ir.Value
+          type: tuple[ir.Value, ir.Value]
         """
         spec = self._tensor_primitive_spec(element_type)
         builder_new = self.require_runtime_symbol(
@@ -365,7 +434,12 @@ class TensorVisitorMixin(VisitorMixinBase):
             self._llvm.TENSOR_BUILDER_HANDLE_TYPE,
             name="irx_tensor_builder_slot",
         )
-        self._llvm.ir_builder.call(
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.TENSOR_BUILDER_HANDLE_TYPE, None),
+            builder_slot,
+        )
+        status, _ = call_arrow_runtime(
+            self,
             builder_new,
             [
                 ir.Constant(self._llvm.INT32_TYPE, spec.type_id),
@@ -382,6 +456,20 @@ class TensorVisitorMixin(VisitorMixinBase):
                 ),
                 builder_slot,
             ],
+            "tensor_builder_new",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "tensor_builder_new",
+        )
+        cast(Any, self)._register_resource_slot_cleanup(
+            arrow_resource_ownership(
+                ResourceKind.TENSOR_BUILDER,
+                OwnershipKind.OWNED,
+            ),
+            builder_slot,
         )
         builder_handle = self._llvm.ir_builder.load(
             builder_slot,
@@ -399,19 +487,43 @@ class TensorVisitorMixin(VisitorMixinBase):
             self._llvm.TENSOR_HANDLE_TYPE,
             name="irx_tensor_handle_slot",
         )
-        self._llvm.ir_builder.call(
-            finish_builder,
-            [builder_handle, tensor_slot],
-        )
-        return self._llvm.ir_builder.load(
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.TENSOR_HANDLE_TYPE, None),
             tensor_slot,
-            name="irx_tensor_handle",
+        )
+        status, _ = call_arrow_runtime(
+            self,
+            finish_builder,
+            [builder_slot, tensor_slot],
+            "tensor_builder_finish",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "tensor_builder_finish",
+        )
+        cast(Any, self)._register_resource_slot_cleanup(
+            arrow_resource_ownership(
+                ResourceKind.TENSOR,
+                OwnershipKind.OWNED,
+            ),
+            tensor_slot,
+        )
+        return (
+            self._llvm.ir_builder.load(
+                tensor_slot,
+                name="irx_tensor_handle",
+            ),
+            tensor_slot,
         )
 
     def _wrap_arrow_tensor_handle_as_tensor(
         self,
         *,
         tensor_handle: ir.Value,
+        tensor_slot: ir.Value,
+        node: astx.AST,
         layout: TensorLayout,
         flags: int,
     ) -> ir.Value:
@@ -420,6 +532,10 @@ class TensorVisitorMixin(VisitorMixinBase):
         parameters:
           tensor_handle:
             type: ir.Value
+          tensor_slot:
+            type: ir.Value
+          node:
+            type: astx.AST
           layout:
             type: TensorLayout
           flags:
@@ -437,16 +553,28 @@ class TensorVisitorMixin(VisitorMixinBase):
         )
         release_tensor = self.require_runtime_symbol(
             "tensor",
-            "irx_arrow_tensor_release",
+            "irx_arrow_tensor_release_callback",
         )
 
         borrowed_slot = self._llvm.ir_builder.alloca(
             self._llvm.BUFFER_VIEW_TYPE,
             name="irx_tensor_borrowed_view",
         )
-        self._llvm.ir_builder.call(
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.BUFFER_VIEW_TYPE, None),
+            borrowed_slot,
+        )
+        status, _ = call_arrow_runtime(
+            self,
             borrow_view,
             [tensor_handle, borrowed_slot],
+            "tensor_borrow_buffer_view",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "tensor_borrow_buffer_view",
         )
         borrowed_view = self._llvm.ir_builder.load(
             borrowed_slot,
@@ -457,18 +585,39 @@ class TensorVisitorMixin(VisitorMixinBase):
             self._llvm.BUFFER_OWNER_HANDLE_TYPE,
             name="irx_tensor_owner_slot",
         )
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.BUFFER_OWNER_HANDLE_TYPE, None),
+            owner_slot,
+        )
         release_fn = self._llvm.ir_builder.bitcast(
             release_tensor,
             self._llvm.OPAQUE_POINTER_TYPE,
             name="irx_tensor_release_fn",
         )
-        self._llvm.ir_builder.call(
+        owner_status = self._llvm.ir_builder.call(
             owner_new,
             [tensor_handle, release_fn, owner_slot],
+        )
+        owner_ok = self._llvm.ir_builder.icmp_signed(
+            "==",
+            owner_status,
+            ir.Constant(self._llvm.INT32_TYPE, 0),
+            name="irx_tensor_owner_new_ok",
+        )
+        cast(Any, self)._guard_runtime_condition(
+            node,
+            owner_ok,
+            code="ARX-RUNTIME-TENSOR-002",
+            message="failed to create tensor buffer owner",
+            block_name="tensor.owner.new",
         )
         owner_handle = self._llvm.ir_builder.load(
             owner_slot,
             name="irx_tensor_owner",
+        )
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.TENSOR_HANDLE_TYPE, None),
+            tensor_slot,
         )
 
         borrowed_offset = self._extract_view_field(
@@ -513,18 +662,21 @@ class TensorVisitorMixin(VisitorMixinBase):
         layout = self._static_tensor_layout(node)
         flags = self._static_tensor_flags(node)
         element_type = self._static_tensor_element_type(node)
-        tensor_handle = self._build_arrow_tensor_from_values(
+        tensor_handle, tensor_slot = self._build_arrow_tensor_from_values(
             node.values,
             element_type,
             layout,
+            node,
         )
-        self.result_stack.append(
-            self._wrap_arrow_tensor_handle_as_tensor(
-                tensor_handle=tensor_handle,
-                layout=layout,
-                flags=flags,
-            )
+        value = self._wrap_arrow_tensor_handle_as_tensor(
+            tensor_handle=tensor_handle,
+            tensor_slot=tensor_slot,
+            node=node,
+            layout=layout,
+            flags=flags,
         )
+        cast(Any, self)._register_owned_resource_temporary(node, value)
+        self.result_stack.append(value)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.TensorView) -> None:
@@ -538,27 +690,55 @@ class TensorVisitorMixin(VisitorMixinBase):
         layout = self._static_tensor_layout(node)
         flags = self._static_tensor_flags(node)
 
-        self.result_stack.append(
-            self._tensor_value_from_parts(
-                data=self._extract_view_field(
-                    base_value,
-                    "data",
-                    name="irx_tensor_view_data",
-                ),
-                owner=self._extract_view_field(
-                    base_value,
-                    "owner",
-                    name="irx_tensor_view_owner",
-                ),
-                dtype=self._extract_view_field(
-                    base_value,
-                    "dtype",
-                    name="irx_tensor_view_dtype",
-                ),
-                layout=layout,
-                flags=flags,
-            )
+        retain = self.require_runtime_symbol(
+            "buffer",
+            "irx_buffer_view_retain",
         )
+        base_slot = self._llvm.ir_builder.alloca(
+            self._llvm.BUFFER_VIEW_TYPE,
+            name="irx_tensor_view_parent",
+        )
+        self._llvm.ir_builder.store(base_value, base_slot)
+        retain_status = self._llvm.ir_builder.call(
+            retain,
+            [base_slot],
+            name="irx_tensor_view_retain_status",
+        )
+        retain_ok = self._llvm.ir_builder.icmp_signed(
+            "==",
+            retain_status,
+            ir.Constant(self._llvm.INT32_TYPE, 0),
+            name="irx_tensor_view_retain_ok",
+        )
+        cast(Any, self)._guard_runtime_condition(
+            node,
+            retain_ok,
+            code="ARX-RUNTIME-TENSOR-001",
+            message="failed to retain tensor view parent storage",
+            block_name="tensor.view.retain",
+        )
+
+        value = self._tensor_value_from_parts(
+            data=self._extract_view_field(
+                base_value,
+                "data",
+                name="irx_tensor_view_data",
+            ),
+            owner=self._extract_view_field(
+                base_value,
+                "owner",
+                name="irx_tensor_view_owner",
+            ),
+            dtype=self._extract_view_field(
+                base_value,
+                "dtype",
+                name="irx_tensor_view_dtype",
+            ),
+            layout=layout,
+            flags=flags,
+        )
+        cast(Any, self)._register_owned_resource_temporary(node, value)
+        self.result_stack.append(value)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.TensorIndex) -> None:
@@ -753,11 +933,7 @@ class TensorVisitorMixin(VisitorMixinBase):
             "irx_buffer_view_release",
         )
         value = self._require_tensor_value(node.base)
-        slot = self._llvm.ir_builder.alloca(
-            self._llvm.BUFFER_VIEW_TYPE,
-            name="irx_tensor_release_view",
-        )
-        self._llvm.ir_builder.store(value, slot)
+        slot = self._tensor_release_slot(node.base, value)
         self.result_stack.append(
             self._llvm.ir_builder.call(
                 release,

@@ -40,6 +40,7 @@ from arx.parser.state import (
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
     TypeUseContext,
+    list_annotation,
 )
 from arx.tensor import (
     TensorBinding,
@@ -373,7 +374,9 @@ class DeclarationParserMixin(ParserMixinBase):
             )
 
         self._consume_operator(":")
-        field_type = self.parse_type(type_context=TypeUseContext.FIELD)
+        field_type = self.parse_type(
+            allow_union=True, type_context=TypeUseContext.FIELD
+        )
 
         initializer: astx.Expr | None = None
         if self._is_operator("="):
@@ -1167,5 +1170,5 @@ class DeclarationParserMixin(ParserMixinBase):
         return tuple(
             argument.name
             for argument in arguments
-            if isinstance(argument.type_, astx.ListType)
+            if list_annotation(argument.type_)
         )

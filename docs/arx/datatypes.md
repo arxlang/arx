@@ -50,7 +50,7 @@ Common places where types appear:
 - multidimensional tensor annotations: `tensor[i32, 2, 2]`
 - runtime-shaped tensor parameters: `fn sink(x: tensor[i32, ...]) -> none:`
 - static-schema DataFrame annotations: `dataframe[id: i32, score: f64]`
-- runtime-schema DataFrame parameters: `fn sink(rows: dataframe[...]) -> none:`
+- runtime-schema DataFrame annotations: `dataframe[...]`
 - typed DataFrame column annotations: `series[f64]`
 
 `tensor[T, ...]` is currently parameter-only. Use fixed-shape tensor annotations
@@ -58,10 +58,13 @@ for variables, fields, and return types until runtime-shaped storage and return
 semantics are defined. Runtime-shaped tensor parameters can be passed through,
 but indexed access currently requires a static-shape tensor annotation.
 
-`dataframe[...]` follows the same current restriction: it is accepted only in
-function and extern parameter annotations. Static-schema DataFrames can be
-constructed with `dataframe({...})`, and their columns can be accessed with
-either `rows.score` or `rows["score"]`.
+`dataframe[...]` has an opaque owned runtime representation and is accepted in
+locals, calls, returns and instance fields. Convert a table with `to_dataframe`;
+use `column_as(to_table(rows), index, field[name: T])` for checked projection.
+Static-schema DataFrames can be constructed with `dataframe({...})`, and their
+columns can be accessed with either `rows.score` or `rows["score"]`. DataFrame
+and Series owners also accept `| none`; establish validity before accessing the
+payload. This does not change the runtime-shaped tensor restriction above.
 
 ## Type Aliases And Union Types
 

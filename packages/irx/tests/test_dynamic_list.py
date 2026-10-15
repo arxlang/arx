@@ -25,6 +25,7 @@ from irx.analysis import (
 )
 from irx.builder import Builder
 from irx.builder.base import CommandResult
+from llvmlite import binding as llvm
 
 from .conftest import (
     assert_ir_parses,
@@ -432,7 +433,8 @@ def test_dynamic_list_appends_variable_values() -> None:
     ir_text = builder.translate(_singleton_module())
 
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert 'call void @"irx_list_require_ok"' in ir_text
+    assert "ARX-RUNTIME-LIST-003" in ir_text
+    assert 'call void @"irx_list_require_ok"' not in ir_text
     assert 'call i8* @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
@@ -1059,18 +1061,16 @@ def test_list_lowering_cleans_owned_locals_but_moves_returned_storage() -> (
     """
     ir_text = Builder().translate(_singleton_module())
 
-    singleton_ir, main_ir = ir_text.split('define i32 @"main"()', maxsplit=1)
-    assert (
-        'call void @"irx_list_destroy"'
-        not in singleton_ir.split(
-            'define {i8*, i64, i64, i64} @"main__singleton"',
-            maxsplit=1,
-        )[1]
-    )
-    assert main_ir.count('call void @"irx_list_destroy"') == 1
-    assert main_ir.index('call void @"irx_list_destroy"') < main_ir.index(
-        "ret i32"
-    )
+    module = llvm.parse_assembly(ir_text)
+    # Moved return storage must survive the normal path; it is still owned
+    # locally until return, so allocation failures must destroy it.
+    for block in module.get_function("main__singleton").blocks:
+        instructions = tuple(block.instructions)
+        has_cleanup = "irx_list_destroy" in str(block)
+        assert has_cleanup is (instructions[-1].opcode == "unreachable")
+    for block in module.get_function("main").blocks:
+        if tuple(block.instructions)[-1].opcode == "ret":
+            assert str(block).count("irx_list_destroy") == 1
     assert_ir_parses(ir_text)
 
 
@@ -1146,7 +1146,7 @@ def test_list_field_assignment_fails_without_object_cleanup_contract() -> None:
 
     with pytest.raises(
         SemanticError,
-        match="object-field ownership and destruction are not supported",
+        match="struct destruction is not supported",
     ):
         analyze(module)
 

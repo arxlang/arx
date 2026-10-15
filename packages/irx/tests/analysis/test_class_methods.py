@@ -14,7 +14,7 @@ from irx.analysis.resolved_nodes import SemanticInfo
 
 from ..conftest import make_module
 
-CLASS_HEADER_SLOT_COUNT = 2
+CLASS_HEADER_SLOT_COUNT = 4
 FIRST_INSTANCE_STORAGE_INDEX = CLASS_HEADER_SLOT_COUNT
 RENDER_OVERLOAD_COUNT = 2
 STATIC_LITERAL_VALUE = 7

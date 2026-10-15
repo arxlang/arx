@@ -20,7 +20,7 @@ from irx.system import PrintExpr
 
 from .conftest import assert_ir_parses, check_result
 
-EXPECTED_STRING_REPLACEMENT_FREES = 2
+EXPECTED_STRING_REPLACEMENT_FREE_SITES = 3
 
 
 def _string_concat(lhs: str, rhs: str) -> astx.BinaryOp:
@@ -424,7 +424,8 @@ def test_string_semantics_distinguish_static_owned_and_borrowed_storage() -> (
     assert literal_ownership.resource_kind is ResourceKind.STRING
     assert literal_ownership.kind is OwnershipKind.STATIC
     assert static_ownership is not None
-    assert static_ownership.kind is OwnershipKind.STATIC
+    assert static_ownership.kind is OwnershipKind.OWNED
+    assert literal_ownership.transfer_kind is OwnershipTransferKind.COPY
     assert concat_ownership is not None
     assert concat_ownership.kind is OwnershipKind.OWNED
     assert concat_ownership.transfer_kind is OwnershipTransferKind.MOVE
@@ -484,7 +485,8 @@ def test_owned_string_assignment_releases_each_lifetime_generation() -> None:
     ir_text = LLVMBuilder().translate(module)
 
     assert (
-        ir_text.count('call void @"free"') == EXPECTED_STRING_REPLACEMENT_FREES
+        ir_text.count('call void @"free"')
+        == EXPECTED_STRING_REPLACEMENT_FREE_SITES
     )
     assert_ir_parses(ir_text)
     check_result(
@@ -615,12 +617,12 @@ def test_printed_string_temporary_is_released_after_consumption() -> None:
         (_string_concat("owned", " value"), astx.LiteralString("static")),
     ],
 )
-def test_string_assignment_rejects_storage_class_changes(
+def test_string_assignment_copies_into_owned_storage(
     initializer: astx.AST,
     replacement: astx.AST,
 ) -> None:
     """
-    title: Assignment should not mix static and heap string lifetimes.
+    title: Static and heap replacements use independently owned local storage.
     parameters:
       initializer:
         type: astx.AST
@@ -641,16 +643,12 @@ def test_string_assignment_rejects_storage_class_changes(
         ),
     )
 
-    with pytest.raises(
-        SemanticError,
-        match="must preserve its static or owned storage class",
-    ):
-        analyze(module)
+    assert_ir_parses(LLVMBuilder().translate(module))
 
 
-def test_borrowed_string_parameter_cannot_escape_as_owned_result() -> None:
+def test_borrowed_string_parameter_returns_a_copy() -> None:
     """
-    title: Borrowed string parameters should not escape through owned returns.
+    title: Borrowed string parameters return an independent allocation.
     """
     echo = astx.FunctionDef(
         astx.FunctionPrototype(
@@ -664,16 +662,14 @@ def test_borrowed_string_parameter_cannot_escape_as_owned_result() -> None:
     module = astx.Module()
     module.block.append(echo)
 
-    with pytest.raises(
-        SemanticError,
-        match="cannot return a borrowed string as an owned result",
-    ):
-        analyze(module)
+    text = LLVMBuilder().translate(module)
+    assert 'call i8* @"strcat_inline"' in text
+    assert_ir_parses(text)
 
 
-def test_borrowed_string_parameter_cannot_initialize_local_alias() -> None:
+def test_borrowed_string_parameter_initializes_owned_copy() -> None:
     """
-    title: Borrowed string aliases should fail without a copy operation.
+    title: Borrowed string bindings own a clone rather than a dangling alias.
     """
     copy = astx.FunctionDef(
         astx.FunctionPrototype(
@@ -694,11 +690,9 @@ def test_borrowed_string_parameter_cannot_initialize_local_alias() -> None:
     module = astx.Module()
     module.block.append(copy)
 
-    with pytest.raises(
-        SemanticError,
-        match="would alias borrowed storage",
-    ):
-        analyze(module)
+    text = LLVMBuilder().translate(module)
+    assert 'call i8* @"strcat_inline"' in text
+    assert_ir_parses(text)
 
 
 def test_external_string_return_requires_explicit_ownership_abi() -> None:

@@ -11,7 +11,14 @@ from typing import Any, cast
 import astx
 import pytest
 
-from irx.analysis import SemanticError, analyze
+from irx.analysis import (
+    OwnershipKind,
+    ResourceKind,
+    ResourceViewKind,
+    SemanticError,
+    analyze,
+    resource_ownership,
+)
 from irx.buffer import buffer_dtype_handle
 from irx.builder import Builder
 from irx.builtins.collections.tensor import (
@@ -230,7 +237,32 @@ def test_tensor_view_lowers_custom_shape_stride_and_offset() -> None:
         "irx_tensor_offset_bytes" in ir_text
         or "irx_buffer_index_offset_1" in ir_text
     )
+    assert '@"irx_buffer_view_retain"' in ir_text
+    assert '@"irx_buffer_view_release"' in ir_text
     assert_ir_parses(ir_text)
+
+
+def test_tensor_views_record_retained_parent_ownership() -> None:
+    """
+    title: Escaping Tensor views own a retained parent-storage reference.
+    """
+    literal = _int32_tensor([1, 2, 3, 4], shape=(2, 2))
+    view = astx.TensorView(literal, shape=(4,))
+    module = _module_with_main(
+        astx.FunctionReturn(astx.TensorIndex(view, [astx.LiteralInt32(0)]))
+    )
+
+    analyze(module)
+
+    literal_ownership = resource_ownership(literal)
+    view_ownership = resource_ownership(view)
+    assert literal_ownership is not None
+    assert literal_ownership.resource_kind is ResourceKind.BUFFER_VIEW
+    assert literal_ownership.kind is OwnershipKind.OWNED
+    assert view_ownership is not None
+    assert view_ownership.resource_kind is ResourceKind.BUFFER_VIEW
+    assert view_ownership.kind is OwnershipKind.OWNED
+    assert view_ownership.view_kind is ResourceViewKind.RETAINED
 
 
 def test_tensor_queries_lower_to_shape_stride_metadata() -> None:

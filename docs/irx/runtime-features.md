@@ -28,6 +28,8 @@ Registered features:
 | `libm`         | math symbols and the platform math linker flag       |
 | `assertions`   | fatal assertion helper and machine-readable reports  |
 | `errors`       | fatal checked-runtime diagnostics and stable records |
+| `core`         | Arrow ABI versions, statuses, and owned errors       |
+| `lifecycle`    | module-local class and generator retain/release      |
 | `buffer`       | buffer-owner and view lifetime helpers               |
 | `list`         | minimal dynamic list creation, growth, and indexing  |
 | `array`        | one-dimensional Apache Arrow array runtime           |
@@ -82,6 +84,39 @@ The `array` feature provides:
 
 Boolean arrays are valid Arrow handles but are not projected through the generic
 buffer view because Arrow stores Boolean values as packed bits.
+
+### Builder failure safety
+
+Primitive Array append failures preserve logical length and existing values,
+even if one buffer has already grown before validity allocation fails. Finish
+prepares an independent snapshot and consumes the builder only on success;
+failure leaves values and nulls available for retry or release. This currently
+copies the primitive value/validity buffers once at finish, increasing peak
+memory during that operation. It does not copy on every append.
+
+Tensor builders use shared Arrow-pool storage. Finish retains that storage while
+preparing the Tensor and its metadata, so a failure does not move data out of
+the builder. Successful finish remains zero-copy for the value buffer.
+
+Tests inject real Arrow pool allocation/reallocation failures and sweep C++
+object allocations in standalone finish calls. This evidence covers the tested
+primitive builders and copy import, not every legacy IPC or move-import path.
+
+### Fatal diagnostics and cleanup
+
+Assertions emit their diagnostic before releasing current-function owners,
+because a diagnostic message may borrow an owned string. They then clean up and
+exit with status 1. Integer division/remainder guards use the common
+cleanup-aware failure path. These fatal exits do not implement cross-function
+exception unwinding or cycle collection.
+
+`makim irx.check-arrow-ownership-sanitizers` checks native handle loops and
+generated class/generator programs, including suspension, early close, and
+resumed failure. Generated LLVM functions are explicitly ASan-instrumented;
+registered C/C++ artifacts use ASan/UBSan, and LSan is enabled by default. This
+does not claim UBSan frontend instrumentation of LLVM IR. The explicit
+`--skip-leak-detection` script flag is for ptrace-constrained local checks, not
+the CI gate or evidence of leak-freedom.
 
 ### Import and export ownership
 
@@ -207,3 +242,10 @@ IRx currently does not provide:
 
 See [Native Apache Arrow Support](../apache-arrow.md) for the cross-project view
 and [Buffer View Model](buffer-view-model.md) for the low-level descriptor.
+
+## Recursive schema feature contract
+
+The `array` feature contract is 1.1.0 for recursive schema copy/export support;
+the overall C ABI remains 1.0.0 and earlier feature consumers remain compatible.
+See [Logical types and schemas](../arrow-type-schemas.md) for the descriptor
+model and its explicit limitations.

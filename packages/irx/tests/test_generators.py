@@ -9,8 +9,8 @@ import shutil
 import astx
 import pytest
 
-from irx.analysis import SemanticError, analyze
-from irx.analysis.resolved_nodes import IterationKind
+from irx.analysis import SemanticError, analyze, resource_ownership
+from irx.analysis.resolved_nodes import IterationKind, OwnershipKind
 from irx.builder import Builder
 
 from .conftest import assert_build_output, assert_ir_parses
@@ -313,10 +313,9 @@ def test_nested_yield_is_diagnosed() -> None:
         analyze(module)
 
 
-def test_owned_list_local_in_generator_is_diagnosed() -> None:
+def test_owned_list_local_in_generator_has_frame_cleanup() -> None:
     """
-    title: >-
-      Generator frames should reject owned lists until close cleanup exists.
+    title: Generator frames should destroy owned list locals when closed.
     """
     list_type = astx.ListType([astx.Int32()])
     module = astx.Module()
@@ -339,17 +338,23 @@ def test_owned_list_local_in_generator_is_diagnosed() -> None:
         )
     )
 
-    with pytest.raises(
-        SemanticError,
-        match="owned list locals in generators require generator lifecycle",
-    ):
-        analyze(module)
+    analyze(module)
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    declaration = function.body.nodes[0]
+    ownership = resource_ownership(declaration)
+    assert ownership is not None
+    assert ownership.kind is OwnershipKind.OWNED
+
+    ir_text = Builder().translate(module)
+    assert "bad_list_owner.__destroy" in ir_text
+    assert 'call void @"irx_list_destroy"' in ir_text
+    assert_ir_parses(ir_text)
 
 
-def test_owned_string_local_in_generator_is_diagnosed() -> None:
+def test_owned_string_local_in_generator_has_frame_cleanup() -> None:
     """
-    title: >-
-      Generator frames should reject owned strings until close cleanup exists.
+    title: Generator frames should free owned string locals when closed.
     """
     module = astx.Module()
     module.block.append(
@@ -374,11 +379,60 @@ def test_owned_string_local_in_generator_is_diagnosed() -> None:
         )
     )
 
-    with pytest.raises(
-        SemanticError,
-        match="owned string locals in generators require generator lifecycle",
-    ):
-        analyze(module)
+    analyze(module)
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    declaration = function.body.nodes[0]
+    ownership = resource_ownership(declaration)
+    assert ownership is not None
+    assert ownership.kind is OwnershipKind.OWNED
+
+    ir_text = Builder().translate(module)
+    assert "bad_string_owner.__destroy" in ir_text
+    assert 'call void @"free"' in ir_text
+    assert_ir_parses(ir_text)
+
+
+def test_owned_tensor_local_in_generator_has_frame_cleanup() -> None:
+    """
+    title: Generator frames should release owned tensor locals when closed.
+    """
+    tensor_type = astx.TensorType(astx.Int32(), shape=(1,))
+    module = astx.Module()
+    module.block.append(
+        astx.FunctionDef(
+            prototype=astx.FunctionPrototype(
+                "bad_tensor_owner",
+                args=astx.Arguments(),
+                return_type=astx.GeneratorType(astx.Int32()),
+            ),
+            body=_block_of(
+                astx.VariableDeclaration(
+                    "values",
+                    tensor_type,
+                    value=astx.TensorLiteral(
+                        (astx.LiteralInt32(1),),
+                        element_type=astx.Int32(),
+                        shape=(1,),
+                    ),
+                ),
+                astx.YieldStmt(astx.LiteralInt32(1)),
+            ),
+        )
+    )
+
+    analyze(module)
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    declaration = function.body.nodes[0]
+    ownership = resource_ownership(declaration)
+    assert ownership is not None
+    assert ownership.kind is OwnershipKind.OWNED
+
+    ir_text = Builder().translate(module)
+    assert "bad_tensor_owner.__destroy" in ir_text
+    assert 'call i32 @"irx_buffer_view_release"' in ir_text
+    assert_ir_parses(ir_text)
 
 
 def test_yield_from_is_diagnosed() -> None:
@@ -481,3 +535,104 @@ def test_exhausted_generator_stays_done() -> None:
         _guarded_exhaustion_module(),
         str(expected_sum),
     )
+
+
+def test_resumed_owned_locals_have_dominating_failure_cleanup() -> None:
+    """
+    title: Cleanup after yield must not reference storage in an earlier state.
+    """
+    module = _sum_generator_module()
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    function.body.nodes.insert(
+        0,
+        astx.VariableDeclaration(
+            "first",
+            astx.String(),
+            value=astx.BinaryOp(
+                "+", astx.LiteralString("a"), astx.LiteralString("b")
+            ),
+        ),
+    )
+    function.body.nodes.insert(
+        3,
+        astx.VariableDeclaration(
+            "second",
+            astx.String(),
+            value=astx.BinaryOp(
+                "+", astx.LiteralString("c"), astx.LiteralString("d")
+            ),
+        ),
+    )
+    ir_text = Builder().translate(module)
+    assert "generator.allocation.fail" in ir_text
+    assert "ARX-RUNTIME-ALLOCATION-001" in ir_text
+    assert_ir_parses(ir_text)
+    if HAS_CLANG:
+        assert_build_output(Builder(), module, "6")
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+@pytest.mark.parametrize("present", [False, True])
+@pytest.mark.parametrize("tensor", [False, True])
+def test_generator_captures_nullable_owners(
+    present: bool, tensor: bool
+) -> None:
+    """
+    title: Copy valid captures and guard absent pointer or aggregate payloads.
+    parameters:
+      present:
+        type: bool
+      tensor:
+        type: bool
+    """
+    payload = (
+        astx.TensorType(astx.Int32(), shape=(1,)) if tensor else astx.String()
+    )
+    generator = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "capture",
+            astx.Arguments(astx.Argument("value", astx.NullableType(payload))),
+            astx.GeneratorType(astx.Boolean()),
+        ),
+        _block_of(
+            astx.YieldStmt(
+                astx.NullableQuery(
+                    astx.NullableOperation.IS_VALID, astx.Identifier("value")
+                )
+            )
+        ),
+    )
+    value: astx.Expr = astx.LiteralNone()
+    if present:
+        value = (
+            astx.TensorLiteral(
+                (astx.LiteralInt32(5),), element_type=astx.Int32(), shape=(1,)
+            )
+            if tensor
+            else astx.LiteralString("owned")
+        )
+    main = astx.FunctionDef(
+        astx.FunctionPrototype("main", astx.Arguments(), astx.Int32()),
+        _block_of(
+            astx.ForInLoopStmt(
+                astx.Identifier("item"),
+                astx.FunctionCall("capture", [value]),
+                _block_of(
+                    astx.AssertStmt(
+                        astx.BinaryOp(
+                            "==",
+                            astx.Identifier("item"),
+                            astx.LiteralBoolean(present),
+                        )
+                    )
+                ),
+            ),
+            astx.FunctionReturn(astx.LiteralInt32(0)),
+        ),
+    )
+    module = astx.Module()
+    module.block.append(generator)
+    module.block.append(main)
+    assert_ir_parses(Builder().translate(module))
+    assert_build_output(Builder(), module, "0")

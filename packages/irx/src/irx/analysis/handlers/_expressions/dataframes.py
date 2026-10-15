@@ -10,20 +10,32 @@ summary: >-
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import astx
 
+from irx.analysis.dataframe_values import dataframe_literal
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
-from irx.analysis.validation import validate_assignment
+from irx.analysis.ownership import (
+    arrow_resource_ownership,
+    resource_ownership,
+    transfer_resource_ownership,
+)
+from irx.analysis.resolved_nodes import (
+    OwnershipKind,
+    OwnershipTransferKind,
+    ResourceKind,
+    ResourceViewKind,
+)
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
     DATAFRAME_SCHEMA_EXTRA,
     SERIES_ELEMENT_TYPE_EXTRA,
     SERIES_NULLABLE_EXTRA,
     DataFrameSchema,
-    dataframe_column_type_is_supported,
     schema_from_type,
 )
 from irx.diagnostics import DiagnosticCodes
@@ -118,6 +130,30 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         )
         self._semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = column.type_
         self._semantic(node).extras[SERIES_NULLABLE_EXTRA] = column.nullable
+        base_ownership = resource_ownership(node.base)
+        self._set_resource_ownership(
+            node,
+            arrow_resource_ownership(
+                ResourceKind.CHUNKED_ARRAY,
+                OwnershipKind.OWNED,
+                owner_root_symbol_id=(
+                    base_ownership.owner_root_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+                source_symbol_id=(
+                    base_ownership.source_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+                view_kind=ResourceViewKind.RETAINED,
+                view_parent_symbol_id=(
+                    base_ownership.source_symbol_id
+                    if base_ownership is not None
+                    else None
+                ),
+            ),
+        )
         self._set_type(node, node.type_)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -128,79 +164,33 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameLiteral
         """
-        schema = schema_from_type(node.type_)
-        if schema is None:
+        try:
+            normalized = dataframe_literal(node)
+        except ValueError as error:
             self.context.diagnostics.add(
-                "dataframe literals require an explicit static DataFrame type",
+                str(error),
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        else:
-            declared_names = {column.name for column in schema.columns}
-            literal_names = {column.name for column in node.columns}
-            missing = sorted(declared_names - literal_names)
-            extra = sorted(literal_names - declared_names)
-            if missing:
-                self.context.diagnostics.add(
-                    "dataframe literal is missing columns: "
-                    + ", ".join(missing),
-                    node=node,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-            if extra:
-                self.context.diagnostics.add(
-                    "dataframe literal has undeclared columns: "
-                    + ", ".join(extra),
-                    node=node,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-            for column in schema.columns:
-                if not dataframe_column_type_is_supported(column.type_):
-                    self.context.diagnostics.add(
-                        "dataframe columns currently support only "
-                        "fixed-width numeric and bool types",
-                        node=node,
-                        code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                    )
-
-        seen_names: set[str] = set()
-        row_count: int | None = None
-        for literal_column in node.columns:
-            if literal_column.name in seen_names:
-                self.context.diagnostics.add(
-                    f"duplicate dataframe column '{literal_column.name}'",
-                    node=node,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-            seen_names.add(literal_column.name)
-
-            if row_count is None:
-                row_count = len(literal_column.values)
-            elif len(literal_column.values) != row_count:
-                self.context.diagnostics.add(
-                    "dataframe literal columns must have the same length",
-                    node=node,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-
-            declared_column = (
-                None if schema is None else schema.column(literal_column.name)
-            )
-            for value in literal_column.values:
-                self.visit(value)
-                if declared_column is not None:
-                    validate_assignment(
-                        self.context.diagnostics,
-                        target_name=(
-                            f"dataframe column '{literal_column.name}'"
-                        ),
-                        target_type=declared_column.type_,
-                        value_type=self._expr_type(value),
-                        node=value,
-                    )
-
-        self._set_dataframe_schema(node, schema)
+            self._set_type(node, None)
+            return
+        self.visit(normalized)
+        resolved = self._semantic(normalized).resolved_tabular
+        if resolved is None:
+            self._set_type(node, None)
+            return
+        self._semantic(node).resolved_tabular = replace(
+            resolved, result_type=node.type_
+        )
+        self._set_dataframe_schema(node, schema_from_type(node.type_))
         self._set_type(node, node.type_)
+        self._set_resource_ownership(
+            node,
+            arrow_resource_ownership(
+                ResourceKind.TABLE,
+                OwnershipKind.OWNED,
+            ),
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameColumnAccess) -> None:
@@ -288,6 +278,15 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
+        ownership = resource_ownership(node.base)
+        if ownership is not None:
+            self._set_resource_ownership(
+                node.base,
+                transfer_resource_ownership(
+                    ownership,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
         self._set_type(node, astx.Int32())
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -321,6 +320,15 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 "series release requires a Series value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+        ownership = resource_ownership(node.base)
+        if ownership is not None:
+            self._set_resource_ownership(
+                node.base,
+                transfer_resource_ownership(
+                    ownership,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
             )
         self._set_type(node, astx.Int32())
 

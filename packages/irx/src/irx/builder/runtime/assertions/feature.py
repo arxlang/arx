@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 ASSERT_RUNTIME_FEATURE_NAME = "assertions"
 ASSERT_FAILURE_SYMBOL_NAME = "__arx_assert_fail"
+ASSERT_REPORT_SYMBOL_NAME = "__arx_assert_report"
 
 
 @typechecked
@@ -36,6 +37,10 @@ def build_assertions_runtime_feature() -> RuntimeFeature:
     return RuntimeFeature(
         name=ASSERT_RUNTIME_FEATURE_NAME,
         symbols={
+            ASSERT_REPORT_SYMBOL_NAME: ExternalSymbolSpec(
+                ASSERT_REPORT_SYMBOL_NAME,
+                declare_assert_report,
+            ),
             ASSERT_FAILURE_SYMBOL_NAME: ExternalSymbolSpec(
                 ASSERT_FAILURE_SYMBOL_NAME,
                 _declare_assert_failure,
@@ -49,6 +54,22 @@ def build_assertions_runtime_feature() -> RuntimeFeature:
                 compile_flags=("-std=c99",),
             ),
         ),
+    )
+
+
+@typechecked
+def declare_assert_report(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare a nonterminating report so owners can be cleaned afterward.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    failure = _declare_assert_failure(visitor)
+    return declare_external_function(
+        visitor._llvm.module, ASSERT_REPORT_SYMBOL_NAME, failure.function_type
     )
 
 

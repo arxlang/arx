@@ -1,0 +1,2250 @@
+{
+  "schema_version": 1,
+  "arrow_cpp_version": "24.0.0",
+  "dependency_constraints": {
+    "pyarrow": ">=24.0.0,<25.0.0",
+    "arx_arrowcpp_sources": "== 24.0.0"
+  },
+  "distribution": {
+    "strategy": "dedicated_runtime_wheels",
+    "core_package": "arx-arrowcpp-runtime",
+    "optional_packages": [
+      "arx-arrowcpp-flight-runtime",
+      "arx-arrowcpp-cloud-runtime",
+      "arx-arrowcpp-device-runtime"
+    ],
+    "pyarrow_role": "optional_arxpy_interop_and_test_bootstrap",
+    "system_arrow_role": "explicit_validated_developer_override",
+    "source_build_role": "explicit_advanced_fallback",
+    "compiled_output_policy": "bundle_activated_libraries",
+    "python_abi": "abi_independent_platform_wheels"
+  },
+  "abi": {
+    "name": "irx_arrow",
+    "major": 1,
+    "minor": 0,
+    "patch": 0,
+    "symbol_prefix": "irx_arrow_",
+    "legacy_prefixes": ["irx_rb_"],
+    "compatibility": "same_major_runtime_minor_gte_consumer",
+    "version_query": "irx_arrow_abi_version",
+    "feature_query": "irx_arrow_runtime_has_feature"
+  },
+  "foundations": [
+    {
+      "id": "FND-001",
+      "name": "Scalar numerics and Boolean",
+      "owner": "IRx analysis and native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_numeric_semantics.py",
+        "packages/irx/tests/test_arrow_runtime.py"
+      ],
+      "blocks": ["M2", "M5"],
+      "baseline": "Core signed and unsigned integers, floats, casts, and Boolean rules exist.",
+      "completion": "Define exact Arrow cast, overflow, comparison, NaN, and non-finite behavior."
+    },
+    {
+      "id": "FND-002",
+      "name": "Null values",
+      "owner": "ASTx types and IRx analysis",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_none.py",
+        "packages/irx/tests/test_arrow_runtime.py",
+        "packages/astx/tests/test_nullable_model.py",
+        "packages/irx/tests/test_nullable_runtime.py",
+        "packages/arx/tests/python/test_nullable_syntax.py",
+        "packages/arx/tests/python/test_nullable_operations.py",
+        "packages/arx/tests/python/test_array_values.py",
+        "packages/irx/tests/test_array_value_runtime.py",
+        "packages/arx/tests/python/test_nullable_owners.py",
+        "packages/arx/tests/python/test_chunked_values.py",
+        "packages/arx/tests/python/test_nullable_refinement_casts.py",
+        "packages/arx/tests/python/test_nullable_fields.py",
+        "packages/arx/tests/python/test_tabular_values.py",
+        "packages/arx/tests/python/test_nullable_collections.py",
+        "packages/irx/tests/analysis/test_nullable_aggregate_owners.py"
+      ],
+      "blocks": ["M2", "M3", "M5"],
+      "baseline": "Primitive nullable operators, proofs and casts; optional shared opaque/class/scalar owners, unique builders and instance fields execute natively. Typed primitive and logical arrays, chunks, batches/tables, nested scalar children and buffer-to-array copying preserve ownership. Nullable strings, explicit DataFrame/Series adapters, extension storage and checked C Data/packed-buffer source constructors execute natively. Optional by-value list and tensor/buffer-view owners have explicit validity, cleanup and affine/shared ownership respectively.",
+      "completion": "Complete managed by-value struct destruction, nested nullable collection elements and recursive managed language aggregates, cyclic class/static managed lifetime policies and fatal cleanup across generated caller frames."
+    },
+    {
+      "id": "FND-003",
+      "name": "Strings and bytes",
+      "owner": "ASTx types, IRx analysis, and IRx native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_string.py",
+        "packages/irx/tests/test_record_batch.py"
+      ],
+      "blocks": ["M2", "M3"],
+      "baseline": "UTF-8 strings exist, and Arrow RecordBatch supports UTF-8 internally.",
+      "completion": "Add owned and borrowed binary values, large offsets, Unicode conversion, view lifetimes, and zero-copy rules."
+    },
+    {
+      "id": "FND-004",
+      "name": "Decimal values",
+      "owner": "ASTx types, Arx frontend, and IRx",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_schema.py",
+        "packages/irx/tests/test_schema_interop.py",
+        "packages/astx/tests/datatypes/test_types.py",
+        "packages/irx/tests/analysis/test_sized_type_metadata.py"
+      ],
+      "blocks": ["M2", "M5"],
+      "baseline": "Decimal32/64/128/256 descriptors validate precision and scale and round-trip through C Data and IPC schemas; executable decimal values remain absent.",
+      "completion": "Add types and literals, precision and scale checks, 32/64/128/256-bit representation, arithmetic, casts, and ABI rules."
+    },
+    {
+      "id": "FND-005",
+      "name": "Temporal values",
+      "owner": "ASTx types, Arx frontend, and IRx",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_schema.py",
+        "packages/irx/tests/test_schema_interop.py",
+        "packages/astx/tests/datatypes/test_date_time.py",
+        "packages/irx/tests/test_record_batch.py"
+      ],
+      "blocks": ["M2", "M5", "M6"],
+      "baseline": "Existing temporal literals are unchanged; logical descriptors now preserve units, durations, intervals and timezone metadata with explicit conversion rules.",
+      "completion": "Add Arrow units, duration and interval types, timezone metadata, range checks, and conversion policy."
+    },
+    {
+      "id": "FND-006",
+      "name": "Parametric and structural types",
+      "owner": "ASTx types and IRx analysis",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_schema.py",
+        "packages/irx/tests/test_schema_interop.py",
+        "packages/irx/tests/analysis/test_templates.py",
+        "packages/irx/tests/analysis/test_sized_type_metadata.py",
+        "packages/arx/tests/python/test_descriptors.py",
+        "packages/irx/tests/test_descriptor_execution.py"
+      ],
+      "blocks": ["M2", "M3"],
+      "baseline": "Recursive type/field/schema literals execute natively with canonical validation, physical sidecars, shared owners, projection and exact identity. General nested container values remain pending.",
+      "completion": "Support recursive schema parameters, fixed sizes, dictionary types, union codes, field nullability, and canonical equality."
+    },
+    {
+      "id": "FND-007",
+      "name": "Compile-time values",
+      "owner": "ASTx types and IRx analysis",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_schema.py",
+        "packages/irx/tests/test_schema_interop.py",
+        "packages/astx/tests/test_sized_type_metadata.py",
+        "packages/irx/tests/analysis/test_sized_type_metadata.py",
+        "packages/arx/tests/python/test_descriptors.py",
+        "packages/irx/tests/test_descriptor_execution.py"
+      ],
+      "blocks": ["M2", "M4"],
+      "baseline": "Builtin Arx descriptor literals carry checked precision, scale, time units, widths, fixed sizes, union codes and recursive fields through ASTx and resolved IRx sidecars. conversion_kind classifies literal types/schemas without executing casts.",
+      "completion": "Provide checked type parameters for dimensions, decimal precision and scale, time units, fixed sizes, and schema fields."
+    },
+    {
+      "id": "FND-008",
+      "name": "Ownership and destruction",
+      "owner": "IRx analysis and lowering",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_runtime_features.py",
+        "packages/irx/tests/test_generators.py",
+        "packages/irx/tests/test_aggregate_ownership.py",
+        "packages/irx/tests/test_arrow_runtime.py",
+        "packages/irx/tests/test_record_batch_compatibility.py"
+      ],
+      "blocks": ["M1", "M3", "M6"],
+      "baseline": "Current managed values carry semantic ownership through handles, views, fields, calls, returns, temporaries, failures, class objects, and generator frames. Native Arrow handles, including batches produced through irx_rb compatibility, use checked shared or unique owner tokens.",
+      "completion": "Extend the mandatory ownership and deterministic-cleanup contract with every later container, compute, stream, dataset, and file operation."
+    },
+    {
+      "id": "FND-009",
+      "name": "Buffer and bitmap model",
+      "owner": "IRx analysis and native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_buffer_view.py",
+        "packages/irx/tests/test_arrow_runtime.py"
+      ],
+      "blocks": ["M2", "M3"],
+      "baseline": "irx_buffer_view models data, owner, dtype, shape, strides, offset, and flags.",
+      "completion": "Add checked bounds, validity bitmaps, variable-width offsets, alignment, endianness, and large-buffer overflow checks."
+    },
+    {
+      "id": "FND-010",
+      "name": "Collection sizes and indices",
+      "owner": "IRx analysis, lowering, and native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_array.py",
+        "packages/irx/tests/test_dataframe.py"
+      ],
+      "blocks": ["M1", "M2", "M3"],
+      "baseline": "Existing APIs mix static metadata with several integer result widths.",
+      "completion": "Standardize Arrow lengths, row counts, offsets, and indices on checked i64 semantics with explicit narrowing only."
+    },
+    {
+      "id": "FND-011",
+      "name": "Methods, overloads, and intrinsics",
+      "owner": "IRx analysis and lowering",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_function_semantics.py",
+        "packages/irx/tests/test_semantic_pipeline.py"
+      ],
+      "blocks": ["M3", "M5"],
+      "baseline": "Typed calls and semantic sidecars exist without a canonical Arrow intrinsic registry.",
+      "completion": "Add one typed builtin and intrinsic registry for containers and kernels that lowering consumes without re-resolution."
+    },
+    {
+      "id": "FND-012",
+      "name": "Error handling",
+      "owner": "IRx analysis, lowering, and native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_runtime_errors.py",
+        "packages/irx/tests/test_record_batch.py",
+        "packages/irx/tests/test_arrow_runtime.py"
+      ],
+      "blocks": ["M1", "M5", "M6"],
+      "baseline": "The unified irx_arrow runtime uses fixed-width, Arx-owned status codes plus thread-local capture and immutable owned error snapshots. Deprecated irx_rb entry points preserve their integer results and translate failures from delegated unified operations.",
+      "completion": "Implement recoverable/fatal propagation and failure cleanup across semantics, lowering, kernels, streams, and I/O."
+    },
+    {
+      "id": "FND-013",
+      "name": "Iteration and streaming",
+      "owner": "IRx analysis and lowering",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/test_iterables.py",
+        "packages/irx/tests/test_generators.py"
+      ],
+      "blocks": ["M3", "M6", "M7"],
+      "baseline": "List iteration and initial generator support exist.",
+      "completion": "Define Array and Series iteration, EOF, early close, cancellation, backpressure, and deterministic stream cleanup."
+    },
+    {
+      "id": "FND-014",
+      "name": "Classes and aggregate storage",
+      "owner": "IRx analysis and lowering",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_class_semantics.py",
+        "packages/irx/tests/test_class_layout.py",
+        "packages/irx/tests/test_aggregate_ownership.py"
+      ],
+      "blocks": ["M3", "M6"],
+      "baseline": "Classes use shared references plus deterministic reverse-order field destruction; structs still reject owning managed fields.",
+      "completion": "Add equivalent ownership and deterministic field destruction for future owning struct and schema-defined record values."
+    },
+    {
+      "id": "FND-015",
+      "name": "FFI and opaque handles",
+      "owner": "IRx analysis and native runtime",
+      "status": "partial",
+      "test_targets": [
+        "packages/irx/tests/analysis/test_ffi_semantics.py",
+        "packages/irx/tests/test_arrow_runtime.py",
+        "packages/irx/tests/test_arrow_abi_manifest.py",
+        "packages/irx/tests/test_record_batch_compatibility.py"
+      ],
+      "blocks": ["M1", "M3", "M6"],
+      "baseline": "C externs, version and feature queries, stable opaque handle kinds, checked owner-slot lifecycle operations, and cross-ABI RecordBatch C Data interchange exist.",
+      "completion": "Add ownership and nullability annotations, complete C Data and C Stream contracts, and ABI conformance checks."
+    },
+    {
+      "id": "FND-016",
+      "name": "Modules, builtins, and standard library",
+      "owner": "Arx frontend and IRx analysis",
+      "status": "partial",
+      "test_targets": [
+        "packages/arx/tests/python/test_builtins.py",
+        "packages/arx/tests/python/test_stdlib.py"
+      ],
+      "blocks": ["M3", "M5", "M6", "M7"],
+      "baseline": "Ambient builtins, bundled builtin modules, and a small standard library exist.",
+      "completion": "Define stable intrinsic registration and public stdlib.compute, stdlib.io, and stdlib.dataset facades without an Arrow namespace."
+    },
+    {
+      "id": "FND-017",
+      "name": "Execution context",
+      "owner": "IRx analysis and native runtime",
+      "status": "not_started",
+      "test_targets": [
+        "packages/irx/tests/test_runtime_features.py",
+        "packages/irx/tests/test_arrow_runtime.py"
+      ],
+      "blocks": ["M5", "M6", "M7"],
+      "baseline": "Runtime features declare typed transitive dependencies and automatically collect their native artifacts and linker flags during activation, but there is no Arrow execution-context value.",
+      "completion": "Add memory pool, allocator, thread count, cancellation, resource limits, and optional device selection."
+    },
+    {
+      "id": "FND-018",
+      "name": "Native packaging",
+      "owner": "IRx build, CI, and release tooling",
+      "status": "partial",
+      "test_targets": [
+        "packages/arx/tests/python/test_wheel_smoke_script.py",
+        "packages/irx/tests/test_record_batch.py"
+      ],
+      "blocks": ["M9", "M10"],
+      "baseline": "Runtime sources build on demand from Arrow and PyArrow package metadata.",
+      "completion": "Provide matched headers and libraries, platform discovery, clean-wheel execution, and cross-platform CI."
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "null-boolean",
+      "category": "Logical types",
+      "name": "Null and Boolean",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_nullable_numeric_bridge_is_explicit",
+          "purpose": "Exercises explicit validity handling at the native array boundary."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_null_values",
+          "purpose": "Exercises null values in RecordBatch construction and access."
+        },
+        {
+          "path": "packages/irx/tests/test_nullable_runtime.py",
+          "symbol": "test_every_primitive_nullable_executes_natively",
+          "purpose": "Executes null and valid zero/false payloads for twelve primitive types with checked extraction and no Arrow C++ layout dependency."
+        },
+        {
+          "path": "packages/arx/tests/python/test_nullable_operations.py",
+          "symbol": "test_kleene_truth_tables_and_short_circuit",
+          "purpose": "Executes all three-valued Boolean truth-table cells and verifies decisive left operands skip the RHS."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "primitive-numeric",
+      "category": "Logical types",
+      "name": "Signed and unsigned integers and floats",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "complete",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_import_export_roundtrips_supported_primitives",
+          "purpose": "Round-trips every currently supported primitive type through Arrow C Data."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "binary",
+      "category": "Logical types",
+      "name": "Binary, large binary, and binary view",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps this required Arrow 24 family explicit until conformance tests replace inventory-only evidence."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "utf8",
+      "category": "Logical types",
+      "name": "UTF-8, large UTF-8, and string view",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_irx_strings_read_by_pyarrow",
+          "purpose": "Validates UTF-8 RecordBatch buffers through PyArrow."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_rejects_unsupported_string_arrays",
+          "purpose": "The legacy primitive C Data import entry point still rejects strings; logical constructors and batch import are separate supported paths."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        },
+        {
+          "path": "packages/irx/tests/test_logical_scalar_runtime.py",
+          "symbol": "test_scalar_builder_roundtrip",
+          "purpose": "Checks logical scalar publication, nulls, C Data/PyArrow export, independent children and reusable builders."
+        }
+      ]
+    },
+    {
+      "id": "fixed-size-binary",
+      "category": "Logical types",
+      "name": "Fixed-size binary",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps this required Arrow 24 family explicit until feature conformance exists."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "decimal",
+      "category": "Logical types",
+      "name": "Decimal32, Decimal64, Decimal128, and Decimal256",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Prevents reserved enum kinds from being reported as implemented decimal support."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "temporal",
+      "category": "Logical types",
+      "name": "Date, time, timestamp, duration, and interval",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_irx_temporal_read_by_pyarrow",
+          "purpose": "Validates current native temporal RecordBatch buffers through PyArrow."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_date32_overflow_rejected",
+          "purpose": "Checks one existing temporal overflow boundary."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "list-family",
+      "category": "Logical types",
+      "name": "List, large list, fixed-size list, and list view",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_irx_list_read_by_pyarrow",
+          "purpose": "Validates supported fixed-width list children through PyArrow."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_unsupported_element_type_raises",
+          "purpose": "Documents the current list child-type limitation."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "struct-map",
+      "category": "Logical types",
+      "name": "Struct and map",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_irx_struct_read_by_pyarrow",
+          "purpose": "Validates the supported RecordBatch struct representation through PyArrow."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_unsupported_field_type_raises",
+          "purpose": "Documents the current struct field-type limitation."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "union",
+      "category": "Logical types",
+      "name": "Sparse and dense union",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps Arrow unions distinct from existing language union types."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "dictionary",
+      "category": "Logical types",
+      "name": "Dictionary encoding",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps this required Arrow 24 family explicit until feature conformance exists."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "run-end-encoded",
+      "category": "Logical types",
+      "name": "Run-end encoded",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_schema_interop.py",
+          "symbol": "test_native_schema_copy_preserves_recursive_descriptor",
+          "purpose": "Validates recursive descriptors through native copy, retain, export and release; not container value execution."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps this required Arrow 24 family explicit until feature conformance exists."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "extension-types",
+      "category": "Logical types",
+      "name": "Extension types",
+      "scope": "core",
+      "target_milestone": "M4",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Registered Arrow extension codecs and opaque non-reserved storage codecs preserve exact name, serialized metadata and storage type. Native scalar wrapping/extraction, arrays, builders and copies execute without domain-specific arithmetic. Unregistered reserved arrow.* codecs fail rather than erase type identity; general Compute is separate.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_extension_values.py",
+          "symbol": "test_extension_array_roundtrip",
+          "purpose": "Native C Data, parent release, extension storage and copies across canonical codecs."
+        },
+        {
+          "path": "packages/irx/tests/test_extension_values.py",
+          "symbol": "test_opaque_extension_identity",
+          "purpose": "Opaque extension identity and binary metadata survive native import/export; metadata mismatch fails."
+        },
+        {
+          "path": "packages/arx/tests/python/test_extension_values.py",
+          "symbol": "test_extension_values_example",
+          "purpose": "Builds registered and opaque extension values directly from Arx."
+        }
+      ]
+    },
+    {
+      "id": "scalar-buffer",
+      "category": "Containers",
+      "name": "Scalar and Buffer",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_buffer_view.py",
+          "symbol": "test_buffer_runtime_owner_retain_release_harness",
+          "purpose": "Exercises current native buffer owner lifetime operations."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        },
+        {
+          "path": "packages/irx/tests/test_logical_scalar_runtime.py",
+          "symbol": "test_scalar_builder_roundtrip",
+          "purpose": "Checks logical scalar publication, nulls, C Data/PyArrow export, independent children and reusable builders."
+        }
+      ]
+    },
+    {
+      "id": "array",
+      "category": "Containers",
+      "name": "Array",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_builder_supports_supported_primitives",
+          "purpose": "Builds the primitive Array families implemented by the native runtime."
+        },
+        {
+          "path": "packages/irx/tests/test_array.py",
+          "symbol": "test_array_int32_array_length_get_struct_shapes",
+          "purpose": "Covers the current internal Array length lowering helper."
+        },
+        {
+          "path": "packages/arx/tests/python/test_array_values.py",
+          "symbol": "test_array_example_executes",
+          "purpose": "Executes primitive constructors, offset/nullable access, immutable transformations and owner calls/returns from Arx source."
+        },
+        {
+          "path": "packages/irx/tests/test_array_value_runtime.py",
+          "symbol": "test_scalar_offsets_copy_and_parent_release",
+          "purpose": "Validates all twelve primitive storage families, nonzero slice offsets, independent copies, C Data/PyArrow interchange and parent/child ownership."
+        },
+        {
+          "path": "packages/arx/tests/python/test_nullable_owners.py",
+          "symbol": "test_nullable_array_owners",
+          "purpose": "Checks nullable shared owners across borrowing, copying, reassignment and return boundaries."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        },
+        {
+          "path": "packages/irx/tests/test_logical_scalar_runtime.py",
+          "symbol": "test_scalar_builder_roundtrip",
+          "purpose": "Checks logical scalar publication, nulls, C Data/PyArrow export, independent children and reusable builders."
+        }
+      ]
+    },
+    {
+      "id": "chunked-array-series",
+      "category": "Containers",
+      "name": "ChunkedArray and Series",
+      "scope": "core",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "not_started"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_dataframe.py",
+          "symbol": "test_dataframe_column_access_lowers_to_chunked_array_handle",
+          "purpose": "Checks the existing Table column projection to a chunked array handle."
+        },
+        {
+          "path": "packages/arx/tests/python/test_chunked_values.py",
+          "symbol": "test_builders_and_chunks_execute",
+          "purpose": "Executes reusable builders and chunk transformations from Arx source."
+        },
+        {
+          "path": "packages/irx/tests/test_chunked_value_runtime.py",
+          "symbol": "test_chunk_views_outlive_all_parents",
+          "purpose": "Verifies independent child owners and exported buffers after parent release."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "record-batch",
+      "category": "Containers",
+      "name": "RecordBatch",
+      "scope": "core",
+      "target_milestone": "M4",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_single_batch_round_trip",
+          "purpose": "Exercises one RecordBatch through the current IPC stream API."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_record_batch_native_abi_version_matches_python_contract",
+          "purpose": "Keeps the transitional RecordBatch ABI version available during migration."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch_compatibility.py",
+          "symbol": "test_legacy_batches_are_unified_handles_across_both_abis",
+          "purpose": "Proves legacy construction and access share the canonical handle, owner token, and C Data path."
+        },
+        {
+          "path": "packages/arx/tests/python/test_tabular_values.py",
+          "symbol": "test_tabular_translation_contract",
+          "purpose": "Verifies generated LLVM and tabular ABI activation."
+        },
+        {
+          "path": "packages/arx/tests/python/test_tabular_values.py",
+          "symbol": "test_tabular_execution",
+          "purpose": "Builds and runs typed construction, projections, transforms and conversions."
+        },
+        {
+          "path": "packages/irx/tests/test_tabular_runtime.py",
+          "symbol": "test_imported_nested_tabular_views",
+          "purpose": "Checks metadata and nested native views outliving their producer; not Arx source nested-value support."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "table-dataframe",
+      "category": "Containers",
+      "name": "Table and DataFrame",
+      "scope": "core",
+      "target_milestone": "M4",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Typed scalar/array/builder/chunk and batch/table value paths execute natively, including string/binary, temporal, decimal, interval, list/view, struct, map, dictionary, union and run-end families. Scalar owners, nested child extraction, deep copies, explicit row selection and numeric buffer copying are implemented. Extension storage, checked external C Data/buffer constructors and explicit legacy adapters now execute. Nested nullable collection elements and managed by-value struct destruction remain incomplete; Compute is a separate milestone.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_dataframe.py",
+          "symbol": "test_dataframe_literal_lowers_through_arrow_table_runtime",
+          "purpose": "Checks current DataFrame literal lowering through the Arrow Table runtime."
+        },
+        {
+          "path": "packages/arx/tests/python/test_dataframe.py",
+          "symbol": "test_dataframe_and_series_accept_string_columns",
+          "purpose": "Validates accepted string columns through the typed-table semantic plan."
+        },
+        {
+          "path": "packages/arx/tests/python/test_tabular_values.py",
+          "symbol": "test_tabular_translation_contract",
+          "purpose": "Verifies generated LLVM and tabular ABI activation."
+        },
+        {
+          "path": "packages/arx/tests/python/test_tabular_values.py",
+          "symbol": "test_tabular_execution",
+          "purpose": "Builds and runs typed construction, projections, transforms and conversions."
+        },
+        {
+          "path": "packages/irx/tests/test_tabular_runtime.py",
+          "symbol": "test_imported_nested_tabular_views",
+          "purpose": "Checks metadata and nested native views outliving their producer; not Arx source nested-value support."
+        },
+        {
+          "path": "packages/arx/tests/python/test_logical_scalar_values.py",
+          "symbol": "test_logical_value_examples",
+          "purpose": "Executes typed logical values, nullable/class owners, nested extraction, tables, row selection and buffer copying from Arx source."
+        }
+      ]
+    },
+    {
+      "id": "dense-tensor",
+      "category": "Containers",
+      "name": "Dense Tensor",
+      "scope": "core",
+      "target_milestone": "M4",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "partial",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "partial",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Readonly fixed-width numeric dense tensors support shape, strides, views, and indexing; broader dtypes, mutation, conversion, and full interchange remain incomplete.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_tensor.py",
+          "symbol": "test_tensor_literal_lowers_through_tensor_runtime_and_owner_bridge",
+          "purpose": "Checks compiler lowering through the Arrow dense Tensor owner bridge."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_cpp_tensor_runtime_borrows_buffer_views",
+          "purpose": "Checks native Tensor shape, strides, values, and borrowed owner lifetime."
+        }
+      ]
+    },
+    {
+      "id": "sparse-tensors",
+      "category": "Containers",
+      "name": "Sparse tensors",
+      "scope": "staged",
+      "target_milestone": "M4",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "Sparse COO, CSR, CSC, and CSF types and validation are not implemented.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps staged sparse tensor formats in the Arrow 24 inventory."
+        }
+      ]
+    },
+    {
+      "id": "c-data-interface",
+      "category": "Interchange and execution",
+      "name": "Arrow C Data interface",
+      "scope": "interop",
+      "target_milestone": "M3",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "not_applicable",
+        "irx_semantics": "partial",
+        "llvm_lowering": "partial",
+        "arx_surface": "not_applicable",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "Primitive arrays support import, export, copy, and move; variable-width, nested, dictionary, and other required Arrow types remain unsupported. Source export_c_data and array_from_c_data use an owned carrier; native moves preserve callbacks before reservation and consume both after import starts.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_harness_c_data_roundtrip",
+          "purpose": "Exercises current native Arrow C Data export and import ownership."
+        },
+        {
+          "path": "packages/irx/tests/test_arrow_runtime.py",
+          "symbol": "test_arrow_runtime_import_move_adopts_offset_arrays",
+          "purpose": "Checks move import of an offset Array and adopted release callback."
+        },
+        {
+          "path": "packages/irx/tests/test_interchange_values.py",
+          "symbol": "test_external_c_data_owner",
+          "purpose": "Checks producer consumption, independent owners, nested values and metadata preservation."
+        }
+      ]
+    },
+    {
+      "id": "c-stream-interface",
+      "category": "Interchange and execution",
+      "name": "Arrow C Stream interface",
+      "scope": "interop",
+      "target_milestone": "M6",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "A local C Stream struct declaration exists, but the ownership, EOF, cancellation, and general stream bridge are not implemented.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Prevents a declaration-only C Stream header from being treated as support."
+        }
+      ]
+    },
+    {
+      "id": "compute",
+      "category": "Interchange and execution",
+      "name": "Compute kernels",
+      "scope": "core",
+      "target_milestone": "M5",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "partial",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_applicable"
+      },
+      "overall": "not_started",
+      "notes": "Arx has scalar operators, but no typed Arrow kernel registry, options, execution context, native dispatch, or stdlib.compute facade.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps Arrow Compute distinct from existing scalar operator lowering."
+        }
+      ]
+    },
+    {
+      "id": "ipc",
+      "category": "Interchange and execution",
+      "name": "IPC streams and files",
+      "scope": "core",
+      "target_milestone": "M6",
+      "stages": {
+        "native_runtime": "partial",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "partial"
+      },
+      "overall": "partial",
+      "notes": "The separate Python RecordBatch API reads and writes IPC streams and files; native Arx Stream and stdlib.io APIs do not exist.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_file_round_trip",
+          "purpose": "Round-trips the current Python RecordBatch API through an IPC file."
+        },
+        {
+          "path": "packages/irx/tests/test_record_batch.py",
+          "symbol": "test_context_manager",
+          "purpose": "Checks deterministic close behavior for the existing stream API."
+        }
+      ]
+    },
+    {
+      "id": "csv-json-parquet",
+      "category": "Interchange and execution",
+      "name": "CSV, JSON, and Parquet",
+      "scope": "staged",
+      "target_milestone": "M6",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "No stdlib.io readers, writers, option types, projection, pushdown, or native runtime features exist for these formats.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps required file-format modules explicit until feature conformance exists."
+        }
+      ]
+    },
+    {
+      "id": "filesystem-dataset-scanner",
+      "category": "Interchange and execution",
+      "name": "Filesystem, Dataset, and Scanner",
+      "scope": "staged",
+      "target_milestone": "M7",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "Dataset expressions, scan builders, path and URI types, partitioning, streaming output, and stdlib.dataset are absent.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps dataset execution in the staged Arrow 24 inventory."
+        }
+      ]
+    },
+    {
+      "id": "acero",
+      "category": "Interchange and execution",
+      "name": "Acero execution plans",
+      "scope": "staged",
+      "target_milestone": "M7",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_applicable"
+      },
+      "overall": "not_started",
+      "notes": "Typed plan nodes, schema propagation, execution ownership, cancellation, and bounded-memory behavior are absent.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Keeps Acero separate from a general-purpose query-language promise."
+        }
+      ]
+    },
+    {
+      "id": "flight",
+      "category": "Optional modules",
+      "name": "Flight and Flight SQL",
+      "scope": "optional",
+      "target_milestone": "M8",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "Flight remains an optional runtime feature so networking and RPC dependencies do not enter core programs.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Tracks Flight as optional rather than ambient core support."
+        }
+      ]
+    },
+    {
+      "id": "substrait",
+      "category": "Optional modules",
+      "name": "Substrait",
+      "scope": "optional",
+      "target_milestone": "M8",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "Substrait import and export will be optional and must preserve unsupported extensions without weakening static checks.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Tracks Substrait as an optional interchange module."
+        }
+      ]
+    },
+    {
+      "id": "device-dlpack",
+      "category": "Optional modules",
+      "name": "Device backends and DLPack",
+      "scope": "optional",
+      "target_milestone": "M8",
+      "stages": {
+        "native_runtime": "not_started",
+        "astx_model": "not_started",
+        "irx_semantics": "not_started",
+        "llvm_lowering": "not_started",
+        "arx_surface": "not_started",
+        "interop": "not_started"
+      },
+      "overall": "not_started",
+      "notes": "CPU is the required baseline; device identity, synchronization, transfers, and DLPack ownership are optional future features.",
+      "evidence": [
+        {
+          "path": "packages/irx/tests/test_arrow_capability_matrix.py",
+          "symbol": "test_required_arrow_24_capabilities_are_classified",
+          "purpose": "Tracks device support as optional while preserving a CPU baseline."
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "type-field-schema",
+      "name": "Field and schema types",
+      "surface": "datatype[T], field[name: T], schema[name: T, ...]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": [
+        "struct-map",
+        "union",
+        "extension-types",
+        "record-batch",
+        "table-dataframe"
+      ],
+      "rationale": "Recursive fields, metadata, and nullability determine static validity and ABI representation."
+    },
+    {
+      "id": "type-nullable-scalar",
+      "name": "Nullable scalar type",
+      "surface": "T | none",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M2",
+      "capabilities": ["null-boolean", "scalar-buffer"],
+      "rationale": "Nullability participates in assignment, branching, kernel typing, scalar extraction, and schema compatibility."
+    },
+    {
+      "id": "type-array",
+      "name": "Array type",
+      "surface": "array[T]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["array"],
+      "rationale": "Array ownership, element nullability, calls, returns, indexing, and lowering require compiler knowledge."
+    },
+    {
+      "id": "type-series",
+      "name": "Series and chunked-array type",
+      "surface": "series[T]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["chunked-array-series"],
+      "rationale": "Series is Arx's public typed chunked-column value and must carry ownership and chunking semantics."
+    },
+    {
+      "id": "type-record-batch",
+      "name": "RecordBatch type",
+      "surface": "recordbatch[...]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["record-batch"],
+      "rationale": "A batch schema and row count are part of its static and native value contract."
+    },
+    {
+      "id": "type-dataframe-table",
+      "name": "DataFrame and table type",
+      "surface": "dataframe[...]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["table-dataframe"],
+      "rationale": "DataFrame remains the Arx-native table surface; the Arrow Table handle is an implementation detail."
+    },
+    {
+      "id": "type-tensor",
+      "name": "Dense tensor type",
+      "surface": "tensor[T, shape]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M4",
+      "capabilities": ["dense-tensor", "sparse-tensors"],
+      "rationale": "Element type, rank, shape, strides, mutability, and device determine static safety and lowering."
+    },
+    {
+      "id": "type-stream",
+      "name": "Batch stream type",
+      "surface": "stream[T]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M6",
+      "capabilities": ["c-stream-interface", "ipc"],
+      "rationale": "EOF, close, cancellation, iteration, and element ownership require compiler-visible resource semantics."
+    },
+    {
+      "id": "type-dataset-scanner",
+      "name": "Dataset and scanner handle types",
+      "surface": "dataset[S], scanner[S]",
+      "placement": "compiler_builtin_type",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "Handle and expression types are builtin for schema safety; orchestration remains in stdlib.dataset."
+    },
+    {
+      "id": "type-execution-plan",
+      "name": "Execution plan type",
+      "surface": "execution_plan[S]",
+      "placement": "compiler_builtin_type",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": ["acero"],
+      "rationale": "Plan schemas, ownership, and execution state are compiler-visible while plan construction is library-oriented."
+    },
+    {
+      "id": "type-execution-context",
+      "name": "Execution context type",
+      "surface": "execution_context",
+      "placement": "bundled_builtin_module",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "filesystem-dataset-scanner"],
+      "rationale": "Memory pools, cancellation, limits, and thread policy need an opaque builtin value but not ambient syntax."
+    },
+    {
+      "id": "type-result-error",
+      "name": "Recoverable result and data error types",
+      "surface": "result[T, data_error]",
+      "placement": "compiler_builtin_type",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M1",
+      "capabilities": [
+        "compute",
+        "ipc",
+        "csv-json-parquet",
+        "filesystem-dataset-scanner",
+        "acero"
+      ],
+      "rationale": "Fallible native operations need typed success and error control flow without Python exceptions or unchecked output slots."
+    },
+    {
+      "id": "construct-array",
+      "name": "Array literals and builders",
+      "surface": "array[T](...), array_builder[T]()",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["array"],
+      "rationale": "Construction resolves element type, validity, allocation, partial failure cleanup, and result ownership."
+    },
+    {
+      "id": "construct-series",
+      "name": "Series construction",
+      "surface": "series(...)",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["chunked-array-series"],
+      "rationale": "Chunk compatibility and result ownership must be checked before native construction."
+    },
+    {
+      "id": "construct-record-batch",
+      "name": "RecordBatch construction",
+      "surface": "recordbatch(...)",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["record-batch"],
+      "rationale": "Schema and equal-length validation are static when possible and use one native owning constructor."
+    },
+    {
+      "id": "construct-dataframe",
+      "name": "DataFrame construction",
+      "surface": "dataframe(...)",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["table-dataframe"],
+      "rationale": "The existing native literal syntax remains builtin and gains the canonical schema and ownership model."
+    },
+    {
+      "id": "construct-tensor",
+      "name": "Tensor literals and views",
+      "surface": "tensor(...), value.view(...) ",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M4",
+      "capabilities": ["dense-tensor", "sparse-tensors"],
+      "rationale": "Shape, strides, offset, owner lifetime, mutability, and overflow need semantic and lowering support."
+    },
+    {
+      "id": "core-length-shape",
+      "name": "Length, row count, and shape queries",
+      "surface": "len(value), value.shape, value.nrows",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": [
+        "array",
+        "chunked-array-series",
+        "record-batch",
+        "table-dataframe",
+        "dense-tensor"
+      ],
+      "rationale": "These are universal safe collection queries with checked i64 results and natural language syntax."
+    },
+    {
+      "id": "core-index",
+      "name": "Indexing and scalar extraction",
+      "surface": "value[index]",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": [
+        "array",
+        "chunked-array-series",
+        "dense-tensor",
+        "null-boolean"
+      ],
+      "rationale": "Bounds, scalar type, null validity, and view ownership must be proven or checked by the compiler."
+    },
+    {
+      "id": "core-slice",
+      "name": "Zero-copy slicing",
+      "surface": "value.slice(offset, length)",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": [
+        "array",
+        "chunked-array-series",
+        "record-batch",
+        "table-dataframe"
+      ],
+      "rationale": "Slicing creates borrowed or shared views whose bounds and owner lifetime need compiler support."
+    },
+    {
+      "id": "core-project-field",
+      "name": "Field and column projection",
+      "surface": "value.field, value[\"field\"], value.column<T>(\"field\")",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["record-batch", "table-dataframe", "struct-map"],
+      "rationale": "Static schemas resolve projections during analysis; dynamic schemas must return checked dynamic values."
+    },
+    {
+      "id": "core-null-inspection",
+      "name": "Null inspection and validity",
+      "surface": "value.is_null(), value.is_valid(), value.expect_valid()",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M2",
+      "capabilities": ["null-boolean", "array", "chunked-array-series"],
+      "rationale": "Validity is part of core value semantics and must work without a library import."
+    },
+    {
+      "id": "core-cast",
+      "name": "Checked casts",
+      "surface": "cast(value, T), value.cast[T]()",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M2",
+      "capabilities": [
+        "primitive-numeric",
+        "decimal",
+        "temporal",
+        "array",
+        "chunked-array-series"
+      ],
+      "rationale": "The compiler resolves result type, overflow policy, nullability, and the exact native kernel."
+    },
+    {
+      "id": "core-iteration",
+      "name": "Collection and stream iteration",
+      "surface": "for item in value",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["array", "chunked-array-series", "c-stream-interface"],
+      "rationale": "Iteration controls scalar validity, chunk traversal, early exit, stream close, and cleanup."
+    },
+    {
+      "id": "core-chunks",
+      "name": "Chunk inspection and normalization",
+      "surface": "chunk_count(value), chunk_at(value, index), combine_chunks(value)",
+      "placement": "compiler_intrinsic",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M3",
+      "capabilities": ["chunked-array-series", "table-dataframe"],
+      "rationale": "Chunking changes representation, allocation, and ownership and must not be hidden in ordinary Arx code."
+    },
+    {
+      "id": "core-ownership",
+      "name": "Retain, release, move, and borrow primitives",
+      "surface": "compiler-generated only",
+      "placement": "internal_runtime",
+      "module": "internal",
+      "visibility": "compiler_only",
+      "target_milestone": "M1",
+      "capabilities": [
+        "scalar-buffer",
+        "array",
+        "chunked-array-series",
+        "record-batch",
+        "table-dataframe",
+        "dense-tensor"
+      ],
+      "rationale": "Ordinary Arx values get safe deterministic semantics; users do not balance native reference counts."
+    },
+    {
+      "id": "compute-arithmetic",
+      "name": "Elementwise arithmetic",
+      "surface": "left + right, left - right, left * right, left / right",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "primitive-numeric", "decimal"],
+      "rationale": "Natural operators use typed kernel resolution and preserve Arx overflow and null rules."
+    },
+    {
+      "id": "compute-comparison",
+      "name": "Elementwise comparisons",
+      "surface": "left == right, left < right",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": [
+        "compute",
+        "null-boolean",
+        "primitive-numeric",
+        "utf8",
+        "temporal"
+      ],
+      "rationale": "Comparisons are native operators whose nullable Boolean result type is decided during analysis."
+    },
+    {
+      "id": "compute-boolean",
+      "name": "Elementwise Boolean and Kleene logic",
+      "surface": "left and right, left or right, not value",
+      "placement": "builtin_operator",
+      "module": "ambient",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "null-boolean"],
+      "rationale": "Boolean operators need language-defined three-valued behavior and typed kernel selection."
+    },
+    {
+      "id": "compute-selection",
+      "name": "Selection and conditional kernels",
+      "surface": "filter, take, drop_null, fill_null, if_else, coalesce",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": [
+        "compute",
+        "null-boolean",
+        "array",
+        "chunked-array-series"
+      ],
+      "rationale": "Typed intrinsics back a discoverable domain module without adding keywords or an Arrow namespace."
+    },
+    {
+      "id": "compute-aggregate",
+      "name": "Aggregate kernels",
+      "surface": "sum, mean, min, max, count, any, all",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "array", "chunked-array-series"],
+      "rationale": "Aggregates need option types and typed scalar results but are better organized as domain functions."
+    },
+    {
+      "id": "compute-sort-rank",
+      "name": "Sort, partition, and rank kernels",
+      "surface": "sort_indices, partition_nth_indices, rank",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": [
+        "compute",
+        "array",
+        "chunked-array-series",
+        "table-dataframe"
+      ],
+      "rationale": "Ordering policy and structured options belong in stdlib.compute over resolved intrinsic calls."
+    },
+    {
+      "id": "compute-set-lookup",
+      "name": "Set and lookup kernels",
+      "surface": "unique, value_counts, index_in, is_in",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": [
+        "compute",
+        "dictionary",
+        "array",
+        "chunked-array-series"
+      ],
+      "rationale": "These are typed kernel families with nontrivial result schemas and options, not new syntax."
+    },
+    {
+      "id": "compute-string",
+      "name": "String and binary kernels",
+      "surface": "utf8_*, binary_*",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "utf8", "binary", "fixed-size-binary"],
+      "rationale": "A typed registry can expose the long-tail kernel family without parser special cases."
+    },
+    {
+      "id": "compute-temporal",
+      "name": "Temporal kernels",
+      "surface": "year, month, day, strftime, strptime, assume_timezone",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "temporal"],
+      "rationale": "Units, timezones, formats, and result types are resolved by builtins and organized in stdlib.compute."
+    },
+    {
+      "id": "compute-nested",
+      "name": "Nested and encoding kernels",
+      "surface": "list_*, struct_field, dictionary_encode, run_end_encode",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": [
+        "compute",
+        "list-family",
+        "struct-map",
+        "dictionary",
+        "run-end-encoded"
+      ],
+      "rationale": "Recursive result typing needs intrinsic metadata while the function families stay out of ambient syntax."
+    },
+    {
+      "id": "compute-cumulative",
+      "name": "Cumulative, sliding, and vector kernels",
+      "surface": "cumulative_*, pairwise_diff, variance, tdigest",
+      "placement": "stdlib_compute",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute", "array", "chunked-array-series"],
+      "rationale": "Long-tail analytics use the same typed registry and execution context without becoming compiler syntax."
+    },
+    {
+      "id": "compute-options",
+      "name": "Compute option values",
+      "surface": "*Options",
+      "placement": "bundled_builtin_module",
+      "module": "stdlib.compute",
+      "visibility": "public",
+      "target_milestone": "M5",
+      "capabilities": ["compute"],
+      "rationale": "Closed typed option records are compiler-known declarations exposed through the compute facade."
+    },
+    {
+      "id": "io-ipc",
+      "name": "IPC stream and file I/O",
+      "surface": "read_ipc, write_ipc",
+      "placement": "stdlib_io",
+      "module": "stdlib.io",
+      "visibility": "public",
+      "target_milestone": "M6",
+      "capabilities": ["ipc", "c-stream-interface"],
+      "rationale": "I/O needs policy and options, while native intrinsics retain ownership and status handling."
+    },
+    {
+      "id": "io-csv-json",
+      "name": "CSV and JSON I/O",
+      "surface": "read_csv, write_csv, read_json",
+      "placement": "stdlib_io",
+      "module": "stdlib.io",
+      "visibility": "public",
+      "target_milestone": "M6",
+      "capabilities": ["csv-json-parquet", "table-dataframe"],
+      "rationale": "Format options and streaming policy belong in stdlib.io over optional native runtime features."
+    },
+    {
+      "id": "io-parquet",
+      "name": "Parquet I/O",
+      "surface": "read_parquet, write_parquet",
+      "placement": "stdlib_io",
+      "module": "stdlib.io",
+      "visibility": "public",
+      "target_milestone": "M6",
+      "capabilities": ["csv-json-parquet", "table-dataframe"],
+      "rationale": "Projection, row groups, codecs, and pushdown are library policy backed by typed native primitives."
+    },
+    {
+      "id": "io-filesystem",
+      "name": "Filesystem and URI operations",
+      "surface": "FileSystem, Path, URI",
+      "placement": "stdlib_io",
+      "module": "stdlib.io",
+      "visibility": "public",
+      "target_milestone": "M6",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "Filesystem selection and credentials are policy-heavy and feature-gated rather than ambient language behavior."
+    },
+    {
+      "id": "dataset-open",
+      "name": "Dataset discovery and opening",
+      "surface": "dataset, open_dataset",
+      "placement": "stdlib_dataset",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "Dataset orchestration is a domain API while schema and native handles remain compiler builtins."
+    },
+    {
+      "id": "dataset-scan",
+      "name": "Scanner construction and execution",
+      "surface": "scan, project, filter, to_batches",
+      "placement": "stdlib_dataset",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": [
+        "filesystem-dataset-scanner",
+        "c-stream-interface",
+        "compute"
+      ],
+      "rationale": "Typed expressions and schemas are builtins; scan planning and execution form a composable library API."
+    },
+    {
+      "id": "dataset-fragments",
+      "name": "Fragments and partitioning",
+      "surface": "fragments, partitioning, inspect_schema",
+      "placement": "stdlib_dataset",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "These domain operations expose typed handles and metadata without adding core syntax."
+    },
+    {
+      "id": "dataset-acero",
+      "name": "Acero plan composition and execution",
+      "surface": "source, project, filter, aggregate, join, order_by, sink",
+      "placement": "stdlib_dataset",
+      "module": "stdlib.dataset",
+      "visibility": "public",
+      "target_milestone": "M7",
+      "capabilities": ["acero", "compute", "c-stream-interface"],
+      "rationale": "A focused typed plan API composes runtime primitives without turning Arx into a separate query engine."
+    },
+    {
+      "id": "interop-c-data",
+      "name": "Arrow C Data import and export",
+      "surface": "compiler and FFI bridge only",
+      "placement": "interop_only",
+      "module": "internal",
+      "visibility": "compiler_only",
+      "target_milestone": "M3",
+      "capabilities": ["c-data-interface"],
+      "rationale": "The stable interchange ABI is available to bridges, but ordinary Arx code should use safe native values."
+    },
+    {
+      "id": "interop-c-stream",
+      "name": "Arrow C Stream import and export",
+      "surface": "compiler and FFI bridge only",
+      "placement": "interop_only",
+      "module": "internal",
+      "visibility": "compiler_only",
+      "target_milestone": "M6",
+      "capabilities": ["c-stream-interface"],
+      "rationale": "The callback ABI stays behind safe Stream ownership, EOF, cancellation, and close semantics."
+    },
+    {
+      "id": "interop-pyarrow",
+      "name": "PyArrow conversion",
+      "surface": "from_pyarrow, to_pyarrow",
+      "placement": "interop_only",
+      "module": "arxpy",
+      "visibility": "interop_api",
+      "target_milestone": "M8",
+      "capabilities": ["c-data-interface", "c-stream-interface"],
+      "rationale": "Python conversion belongs to ArxPy and must not appear in native Arx execution or the language namespace."
+    },
+    {
+      "id": "optional-flight",
+      "name": "Flight clients and servers",
+      "surface": "Client, Server",
+      "placement": "optional_module",
+      "module": "stdlib.flight",
+      "visibility": "public",
+      "target_milestone": "M8",
+      "capabilities": ["flight"],
+      "rationale": "RPC dependencies are optional and capability-named rather than nested below an Arrow namespace."
+    },
+    {
+      "id": "optional-substrait",
+      "name": "Substrait import and export",
+      "surface": "read_plan, write_plan",
+      "placement": "optional_module",
+      "module": "stdlib.substrait",
+      "visibility": "public",
+      "target_milestone": "M8",
+      "capabilities": ["substrait", "acero"],
+      "rationale": "Plan interchange is optional and named for Substrait, with compiler checks around unsupported extensions."
+    },
+    {
+      "id": "optional-dlpack-device",
+      "name": "DLPack and device adapters",
+      "surface": "to_dlpack, from_dlpack, Device",
+      "placement": "optional_module",
+      "module": "stdlib.device",
+      "visibility": "public",
+      "target_milestone": "M8",
+      "capabilities": ["device-dlpack", "dense-tensor", "sparse-tensors"],
+      "rationale": "Device dependencies and synchronization stay optional while compiler-known ownership prevents unsafe transfer."
+    }
+  ],
+  "modules": [
+    {
+      "id": "core-data-model",
+      "upstream": "arrow/{array,buffer,scalar,type,table,record_batch,chunked_array}",
+      "classification": "core_language",
+      "public_module": "ambient",
+      "runtime_feature": "core",
+      "capabilities": [
+        "scalar-buffer",
+        "array",
+        "chunked-array-series",
+        "record-batch",
+        "table-dataframe",
+        "null-boolean",
+        "primitive-numeric",
+        "binary",
+        "utf8",
+        "fixed-size-binary",
+        "decimal",
+        "temporal",
+        "list-family",
+        "struct-map",
+        "union",
+        "dictionary",
+        "run-end-encoded"
+      ],
+      "rationale": "These types and containers define Arx's native data model and are compiler builtins rather than an imported library."
+    },
+    {
+      "id": "tensor",
+      "upstream": "arrow/{tensor,sparse_tensor,device}",
+      "classification": "core_language",
+      "public_module": "ambient",
+      "runtime_feature": "tensor",
+      "capabilities": ["dense-tensor", "sparse-tensors", "device-dlpack"],
+      "rationale": "CPU dense and sparse types are language containers; non-CPU device execution remains separately optional."
+    },
+    {
+      "id": "extension",
+      "upstream": "arrow/extension",
+      "classification": "core_language",
+      "public_module": "ambient",
+      "runtime_feature": "array",
+      "capabilities": ["extension-types"],
+      "rationale": "Registered extension validation and opaque storage execution preserve identity without assuming domain-specific compute semantics."
+    },
+    {
+      "id": "c-data-stream",
+      "upstream": "arrow/c",
+      "classification": "interoperability",
+      "public_module": "internal",
+      "runtime_feature": "c_interop",
+      "capabilities": ["c-data-interface", "c-stream-interface"],
+      "rationale": "The C Data and C Stream layouts are stable bridge ABIs hidden behind safe Arx values."
+    },
+    {
+      "id": "compute",
+      "upstream": "arrow/compute",
+      "classification": "core_language",
+      "public_module": "stdlib.compute",
+      "runtime_feature": "compute",
+      "capabilities": ["compute"],
+      "rationale": "Common operations are builtin operators while the typed long-tail registry is exposed through stdlib.compute."
+    },
+    {
+      "id": "acero",
+      "upstream": "arrow/acero",
+      "classification": "standard_library",
+      "public_module": "stdlib.dataset",
+      "runtime_feature": "acero",
+      "capabilities": ["acero"],
+      "rationale": "Focused plan composition is a dataset library surface backed by compiler-known schemas and handles."
+    },
+    {
+      "id": "io-core",
+      "upstream": "arrow/io",
+      "classification": "internal",
+      "public_module": "none",
+      "runtime_feature": "io_core",
+      "capabilities": ["ipc", "csv-json-parquet", "filesystem-dataset-scanner"],
+      "rationale": "Arrow stream and file primitives implement public stdlib.io operations but are not a separate Arx module."
+    },
+    {
+      "id": "ipc",
+      "upstream": "arrow/ipc",
+      "classification": "standard_library",
+      "public_module": "stdlib.io",
+      "runtime_feature": "ipc",
+      "capabilities": ["ipc"],
+      "rationale": "IPC stream and file APIs are required native I/O with typed options and Stream ownership."
+    },
+    {
+      "id": "csv",
+      "upstream": "arrow/csv",
+      "classification": "standard_library",
+      "public_module": "stdlib.io",
+      "runtime_feature": "csv",
+      "capabilities": ["csv-json-parquet"],
+      "rationale": "CSV readers and writers are required stdlib.io capabilities activated only when used."
+    },
+    {
+      "id": "json",
+      "upstream": "arrow/json",
+      "classification": "standard_library",
+      "public_module": "stdlib.io",
+      "runtime_feature": "json",
+      "capabilities": ["csv-json-parquet"],
+      "rationale": "JSON readers are required stdlib.io capabilities with explicit schema and resource policies."
+    },
+    {
+      "id": "parquet",
+      "upstream": "parquet/{api,arrow}",
+      "classification": "standard_library",
+      "public_module": "stdlib.io",
+      "runtime_feature": "parquet",
+      "capabilities": ["csv-json-parquet"],
+      "rationale": "Parquet is a required columnar format but remains an independently linked runtime feature."
+    },
+    {
+      "id": "parquet-encryption",
+      "upstream": "parquet/encryption",
+      "classification": "optional",
+      "public_module": "stdlib.io",
+      "runtime_feature": "parquet_encryption",
+      "capabilities": ["csv-json-parquet"],
+      "rationale": "Encryption adds crypto and credential policy and is excluded from the mandatory runtime payload."
+    },
+    {
+      "id": "parquet-geospatial",
+      "upstream": "parquet/geospatial",
+      "classification": "optional",
+      "public_module": "stdlib.io",
+      "runtime_feature": "parquet_geospatial",
+      "capabilities": ["csv-json-parquet", "extension-types"],
+      "rationale": "Geospatial logical metadata is preserved by core Parquet and interpreted only by an optional typed feature."
+    },
+    {
+      "id": "filesystem-local",
+      "upstream": "arrow/filesystem local and URI support",
+      "classification": "standard_library",
+      "public_module": "stdlib.io",
+      "runtime_feature": "filesystem_local",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "Local files and URIs are required for I/O and datasets without adding cloud dependencies."
+    },
+    {
+      "id": "filesystem-cloud-hdfs",
+      "upstream": "arrow/filesystem/{s3fs,gcsfs,azurefs,hdfs}",
+      "classification": "optional",
+      "public_module": "stdlib.io",
+      "runtime_feature": "filesystem_cloud",
+      "capabilities": ["filesystem-dataset-scanner"],
+      "rationale": "Provider SDKs, credentials, and platform dependencies ship only in the cloud companion runtime."
+    },
+    {
+      "id": "dataset",
+      "upstream": "arrow/dataset",
+      "classification": "standard_library",
+      "public_module": "stdlib.dataset",
+      "runtime_feature": "dataset",
+      "capabilities": ["filesystem-dataset-scanner", "c-stream-interface"],
+      "rationale": "Dataset, fragment, and scanner orchestration is a required domain facade over builtin typed handles."
+    },
+    {
+      "id": "flight",
+      "upstream": "arrow/flight",
+      "classification": "optional",
+      "public_module": "stdlib.flight",
+      "runtime_feature": "flight",
+      "capabilities": ["flight", "c-stream-interface"],
+      "rationale": "RPC, TLS, and authentication dependencies are optional and named directly for the capability."
+    },
+    {
+      "id": "flight-sql",
+      "upstream": "arrow/flight/sql",
+      "classification": "optional",
+      "public_module": "stdlib.flight",
+      "runtime_feature": "flight_sql",
+      "capabilities": ["flight"],
+      "rationale": "Flight SQL is an optional protocol API and does not make SQL a core Arx language feature."
+    },
+    {
+      "id": "substrait",
+      "upstream": "arrow/engine/substrait",
+      "classification": "optional",
+      "public_module": "stdlib.substrait",
+      "runtime_feature": "substrait",
+      "capabilities": ["substrait", "acero"],
+      "rationale": "Plan interchange is optional and accepted only for operations mapped to typed Arx primitives."
+    },
+    {
+      "id": "device-gpu",
+      "upstream": "arrow/{device,gpu}",
+      "classification": "optional",
+      "public_module": "stdlib.device",
+      "runtime_feature": "device",
+      "capabilities": ["device-dlpack", "dense-tensor", "sparse-tensors"],
+      "rationale": "CPU remains mandatory; device memory, synchronization, and transfers require an optional runtime."
+    },
+    {
+      "id": "orc-adapter",
+      "upstream": "arrow/adapters/orc",
+      "classification": "optional",
+      "public_module": "stdlib.io",
+      "runtime_feature": "orc",
+      "capabilities": ["table-dataframe"],
+      "rationale": "ORC is a useful optional format adapter but is not part of the required CSV, JSON, Parquet, and IPC baseline."
+    },
+    {
+      "id": "tensorflow-adapter",
+      "upstream": "arrow/adapters/tensorflow",
+      "classification": "out_of_scope",
+      "public_module": "none",
+      "runtime_feature": "none",
+      "capabilities": [],
+      "rationale": "Framework-specific TensorFlow integration belongs in an external ecosystem package, not the native language core."
+    },
+    {
+      "id": "gandiva",
+      "upstream": "gandiva",
+      "classification": "out_of_scope",
+      "public_module": "none",
+      "runtime_feature": "none",
+      "capabilities": [],
+      "rationale": "Arx already lowers typed operations through IRx and Arrow Compute; a second LLVM expression compiler is not supported."
+    },
+    {
+      "id": "stl-adapters",
+      "upstream": "arrow/{stl,stl_allocator,stl_iterator,adapters}",
+      "classification": "interoperability",
+      "public_module": "none",
+      "runtime_feature": "none",
+      "capabilities": ["c-data-interface"],
+      "rationale": "C++-specific adapters may be used inside native bridges but are not stable Arx or C ABI surfaces."
+    },
+    {
+      "id": "telemetry",
+      "upstream": "arrow/telemetry",
+      "classification": "internal",
+      "public_module": "none",
+      "runtime_feature": "telemetry",
+      "capabilities": [],
+      "rationale": "Telemetry may instrument execution contexts but does not define language-visible data semantics."
+    },
+    {
+      "id": "testing-integration",
+      "upstream": "arrow/{testing,integration}",
+      "classification": "out_of_scope",
+      "public_module": "none",
+      "runtime_feature": "none",
+      "capabilities": [],
+      "rationale": "Upstream test utilities and integration executables are development inputs, not shipped public APIs."
+    },
+    {
+      "id": "util-vendored-generated",
+      "upstream": "arrow/{util,vendored} and generated",
+      "classification": "internal",
+      "public_module": "none",
+      "runtime_feature": "core",
+      "capabilities": [],
+      "rationale": "Implementation utilities and vendored dependencies inherit the feature that uses them and have no public Arx identity."
+    },
+    {
+      "id": "python-bridge",
+      "upstream": "libarrow_python and PyArrow",
+      "classification": "interoperability",
+      "public_module": "arxpy",
+      "runtime_feature": "python_interop",
+      "capabilities": ["c-data-interface", "c-stream-interface"],
+      "rationale": "Python conversion belongs to ArxPy tests and adapters and is never a dependency of native Arx execution."
+    },
+    {
+      "id": "benchmarks-examples",
+      "upstream": "Arrow C++ benchmarks, examples, fuzzers, and tools",
+      "classification": "out_of_scope",
+      "public_module": "none",
+      "runtime_feature": "none",
+      "capabilities": [],
+      "rationale": "Upstream developer programs inform Arx tests but are not distributable language or standard-library APIs."
+    }
+  ]
+}

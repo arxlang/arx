@@ -21,16 +21,18 @@ from irx.analysis.handlers.base import (
 )
 from irx.analysis.module_symbols import qualified_local_name
 from irx.analysis.ownership import (
-    list_resource_ownership,
-    string_resource_ownership,
+    resource_contract_for_type,
+    typed_resource_ownership,
 )
 from irx.analysis.resolved_nodes import (
     OwnershipKind,
     OwnershipTransferKind,
+    ResolvedGeneratorCapture,
     ResolvedGeneratorFunction,
+    ResourceSharingKind,
     SemanticFunction,
 )
-from irx.analysis.types import clone_type, is_string_type
+from irx.analysis.types import clone_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -222,10 +224,41 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
 
+        resource_captures: list[ResolvedGeneratorCapture] = []
+        for symbol in function.args:
+            contract = resource_contract_for_type(symbol.type_)
+            if contract is None:
+                continue
+            if contract.sharing_kind is ResourceSharingKind.UNIQUE:
+                self.context.diagnostics.add(
+                    f"generator parameter '{symbol.name}' cannot capture "
+                    "a borrowed unique resource",
+                    node=symbol.declaration,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    notes=(
+                        "generator resource parameters require a future "
+                        "explicit consuming-parameter contract",
+                    ),
+                )
+                continue
+            resource_captures.append(
+                ResolvedGeneratorCapture(
+                    symbol=symbol,
+                    ownership=typed_resource_ownership(
+                        symbol.type_,
+                        OwnershipKind.OWNED,
+                        owner_symbol_id=symbol.symbol_id,
+                        source_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.COPY,
+                    ),
+                )
+            )
+
         generator = ResolvedGeneratorFunction(
             function=function,
             yield_type=clone_type(function.signature.return_type.yield_type),
             yield_nodes=yield_nodes,
+            resource_captures=tuple(resource_captures),
         )
         function.signature.metadata["generator"] = generator
         self._set_generator_function(node.prototype, generator)
@@ -299,19 +332,14 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     self.context.scopes.declare(arg_symbol)
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    if isinstance(arg_symbol.type_, astx.ListType):
+                    if (
+                        resource_contract_for_type(arg_symbol.type_)
+                        is not None
+                    ):
                         self._set_resource_ownership(
                             arg_node,
-                            list_resource_ownership(
-                                OwnershipKind.BORROWED,
-                                source_symbol_id=arg_symbol.symbol_id,
-                                transfer_kind=OwnershipTransferKind.BORROW,
-                            ),
-                        )
-                    elif is_string_type(arg_symbol.type_):
-                        self._set_resource_ownership(
-                            arg_node,
-                            string_resource_ownership(
+                            typed_resource_ownership(
+                                arg_symbol.type_,
                                 OwnershipKind.BORROWED,
                                 source_symbol_id=arg_symbol.symbol_id,
                                 transfer_kind=OwnershipTransferKind.BORROW,

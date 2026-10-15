@@ -118,7 +118,7 @@ fn main() -> int32:
   return take_counter(counter) + Counter.version
 ```
 
-This surface syntax maps directly onto IRx-owned class nodes:
+This surface syntax maps directly onto ASTx-owned class nodes:
 
 - `Counter` in annotations becomes `astx.ClassType`
 - `Counter()` becomes `astx.ClassConstruct`
@@ -142,3 +142,15 @@ lowering behavior for class features belong in IRx/ASTx, not in Arx.
 
 This keeps Arx syntax aligned with the IRx semantic boundary while preserving
 explicit modifier intent on the same nodes that later lowering consumes.
+
+## Current ownership restrictions
+
+String field initialization and replacement currently require static storage,
+such as a string literal. Heap-producing string expressions and borrowed
+references to local strings are rejected during semantic analysis because
+storage-class-aware string field cleanup is not implemented. Dynamic strings
+remain supported as owned local values.
+
+Class allocation failure produces a structured runtime error. Reference-counted
+class cleanup does not collect cyclic object graphs; general cycle handling and
+static managed-field destruction remain open ownership work.

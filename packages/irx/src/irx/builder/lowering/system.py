@@ -16,6 +16,7 @@ from irx.analysis.types import (
     is_unsigned_type,
 )
 from irx.builder.core import VisitorCore
+from irx.builder.diagnostics import raise_lowering_internal_error
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
@@ -34,11 +35,18 @@ class SystemVisitorMixin(VisitorMixinBase):
         """
         self.visit_child(node.value)
         value = safe_pop(self.result_stack)
-        if value is None:
-            raise Exception("Invalid value in Cast")
-
         source_type = self._resolved_ast_type(node.value)
-        target_type = node.target_type
+        target_type = self._resolved_ast_type(node)
+        if isinstance(target_type, astx.NullableType):
+            self.result_stack.append(
+                self._cast_ast_value(
+                    value, source_type=source_type, target_type=target_type
+                )
+            )
+            return
+        if value is None:
+            raise_lowering_internal_error("cast produced no value", node=node)
+
         target_llvm_type = self._llvm_type_for_ast_type(target_type)
         if target_llvm_type in (
             self._llvm.ASCII_STRING_TYPE,

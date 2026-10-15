@@ -19,11 +19,20 @@ from irx.analysis.handlers._declarations.class_methods import (
     DeclarationClassMethodVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
-from irx.analysis.ownership import resource_ownership
+from irx.analysis.nullability import normalize_nullable
+from irx.analysis.ownership import (
+    resource_contract_for_type,
+    resource_ownership,
+    transfer_resource_ownership,
+    typed_resource_ownership,
+)
 from irx.analysis.resolved_nodes import (
     ClassMemberKind,
     ClassMemberResolutionKind,
     OwnershipKind,
+    OwnershipTransferKind,
+    ResourceKind,
+    ResourceSharingKind,
     SemanticClass,
     SemanticClassMember,
     SemanticClassMemberResolution,
@@ -38,6 +47,95 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
     """
     title: Declaration class-member resolution helpers.
     """
+
+    def _resolve_instance_field_resource_ownership(
+        self,
+        attribute: astx.VariableDeclaration,
+        member: SemanticClassMember,
+    ) -> None:
+        """
+        title: Resolve one managed instance-field initialization transfer.
+        parameters:
+          attribute:
+            type: astx.VariableDeclaration
+          member:
+            type: SemanticClassMember
+        """
+        declared = normalize_nullable(attribute.type_)
+        assert declared is not None
+        contract = resource_contract_for_type(declared)
+        if contract is None:
+            return
+        value = attribute.value
+        if value is None or isinstance(value, astx.Undefined):
+            self._set_resource_ownership(
+                attribute,
+                typed_resource_ownership(
+                    declared,
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=member.symbol_id,
+                ),
+            )
+            return
+
+        value_ownership = resource_ownership(value)
+        if isinstance(
+            normalize_nullable(attribute.type_), astx.NullableType
+        ) and isinstance(value, astx.LiteralNone):
+            value_ownership = typed_resource_ownership(
+                declared, OwnershipKind.OWNED
+            )
+        if value_ownership is None:
+            self.context.diagnostics.add(
+                f"class field initializer '{member.owner_name}."
+                f"{member.name}' is missing ownership metadata",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        transfer_kind = OwnershipTransferKind.MOVE
+        if value_ownership.kind in (
+            OwnershipKind.BORROWED,
+            OwnershipKind.STATIC,
+        ):
+            if contract.sharing_kind is ResourceSharingKind.UNIQUE:
+                self.context.diagnostics.add(
+                    f"unique class field '{member.owner_name}."
+                    f"{member.name}' requires a freshly owned value",
+                    node=value,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            transfer_kind = OwnershipTransferKind.COPY
+        elif value_ownership.kind is OwnershipKind.MOVED:
+            self.context.diagnostics.add(
+                f"class field initializer '{member.owner_name}."
+                f"{member.name}' was already moved",
+                node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        self._set_resource_ownership(
+            value,
+            transfer_resource_ownership(
+                value_ownership,
+                owner_symbol_id=member.symbol_id,
+                transfer_kind=transfer_kind,
+            ),
+        )
+        self._set_resource_ownership(
+            attribute,
+            typed_resource_ownership(
+                declared,
+                OwnershipKind.OWNED,
+                owner_symbol_id=member.symbol_id,
+                source_symbol_id=value_ownership.source_symbol_id,
+                transfer_kind=transfer_kind,
+                view_kind=value_ownership.view_kind,
+                view_parent_symbol_id=(value_ownership.view_parent_symbol_id),
+            ),
+        )
 
     def _resolve_declared_class_members(
         self,
@@ -80,11 +178,25 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 node=attribute,
                 unknown_message="Unknown attribute type '{name}'",
             )
-            if isinstance(attribute.type_, astx.ListType):
+            if self._attribute_is_static(attribute) and isinstance(
+                normalize_nullable(attribute.type_), astx.NullableType
+            ):
+                self.context.diagnostics.add(
+                    "static nullable fields require module initialization; "
+                    "use an instance field or local value",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+            field_contract = resource_contract_for_type(attribute.type_)
+            if (
+                field_contract is not None
+                and field_contract.resource_kind is not ResourceKind.STRING
+                and self._attribute_is_static(attribute)
+            ):
                 self.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "
-                    "own dynamic list storage because class destruction is "
-                    "not supported",
+                    "own static runtime-managed storage because module "
+                    "destruction is not supported",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
@@ -98,6 +210,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     context=(
                         f"Initializer for '{class_.name}.{attribute.name}'"
                     ),
+                    allow_none=isinstance(
+                        normalize_nullable(attribute.type_), astx.NullableType
+                    ),
                 ):
                     validate_assignment(
                         self.context.diagnostics,
@@ -105,18 +220,6 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         target_type=attribute.type_,
                         value_type=self._expr_type(attribute.value),
                         node=attribute,
-                    )
-                initializer_ownership = resource_ownership(attribute.value)
-                if (
-                    initializer_ownership is not None
-                    and initializer_ownership.kind is OwnershipKind.OWNED
-                ):
-                    self.context.diagnostics.add(
-                        f"class field '{class_.name}.{attribute.name}' "
-                        "cannot own runtime-managed storage because class "
-                        "destruction is not supported",
-                        node=attribute.value,
-                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
             is_constant = attribute.mutability == astx.MutabilityKind.constant
             if is_constant and (
@@ -157,19 +260,23 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
                 continue
-            members.append(
-                self.factory.make_class_member(
-                    class_,
-                    name=attribute.name,
-                    kind=ClassMemberKind.ATTRIBUTE,
-                    declaration=attribute,
-                    visibility=attribute.visibility,
-                    is_static=self._attribute_is_static(attribute),
-                    is_constant=is_constant,
-                    is_mutable=not is_constant,
-                    type_=attribute.type_,
-                )
+            member = self.factory.make_class_member(
+                class_,
+                name=attribute.name,
+                kind=ClassMemberKind.ATTRIBUTE,
+                declaration=attribute,
+                visibility=attribute.visibility,
+                is_static=self._attribute_is_static(attribute),
+                is_constant=is_constant,
+                is_mutable=not is_constant,
+                type_=attribute.type_,
             )
+            members.append(member)
+            if not member.is_static:
+                self._resolve_instance_field_resource_ownership(
+                    attribute,
+                    member,
+                )
 
         for method in class_.declaration.methods:
             if method.name in attribute_names:

@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import astx
+
+from astx.schema import LogicalKind, LogicalType
+from public import public
+
 from irx.buffer import (
     BUFFER_DTYPE_BOOL,
     BUFFER_DTYPE_FLOAT32,
@@ -36,6 +41,7 @@ IRX_ARROW_TYPE_UINT64 = 8
 IRX_ARROW_TYPE_FLOAT32 = 9
 IRX_ARROW_TYPE_FLOAT64 = 10
 IRX_ARROW_TYPE_BOOL = 11
+IRX_ARROW_TYPE_FLOAT16 = 12
 
 
 @typechecked
@@ -66,6 +72,7 @@ class ArrayPrimitiveTypeSpec:
 ARRAY_PRIMITIVE_TYPE_SPECS = {
     spec.name: spec
     for spec in (
+        ArrayPrimitiveTypeSpec("float16", IRX_ARROW_TYPE_FLOAT16, 0, 2, False),
         ArrayPrimitiveTypeSpec(
             "int8",
             IRX_ARROW_TYPE_INT8,
@@ -147,9 +154,47 @@ ARRAY_PRIMITIVE_TYPE_SPECS = {
 }
 
 
+AST_LOGICAL_KINDS: dict[type[astx.DataType], LogicalKind] = {
+    astx.NoneType: LogicalKind.NULL,
+    astx.Boolean: LogicalKind.BOOL,
+    astx.Int8: LogicalKind.INT8,
+    astx.Int16: LogicalKind.INT16,
+    astx.Int32: LogicalKind.INT32,
+    astx.Int64: LogicalKind.INT64,
+    astx.UInt8: LogicalKind.UINT8,
+    astx.UInt16: LogicalKind.UINT16,
+    astx.UInt32: LogicalKind.UINT32,
+    astx.UInt64: LogicalKind.UINT64,
+    astx.Float16: LogicalKind.FLOAT16,
+    astx.Float32: LogicalKind.FLOAT32,
+    astx.Float64: LogicalKind.FLOAT64,
+    astx.String: LogicalKind.STRING,
+    astx.UTF8String: LogicalKind.STRING,
+}
+
+
+@public
+@typechecked
+def logical_type_for_scalar(type_: astx.DataType) -> LogicalType | None:
+    """
+    title: Map an existing scalar without guessing temporal parameters.
+    parameters:
+      type_:
+        type: astx.DataType
+    returns:
+      type: LogicalType | None
+    """
+    for scalar_class in type(type_).__mro__:
+        kind = AST_LOGICAL_KINDS.get(scalar_class)
+        if kind is not None:
+            return LogicalType(kind)
+    return None
+
+
 __all__ = [
     "ARRAY_PRIMITIVE_TYPE_SPECS",
     "IRX_ARROW_TYPE_BOOL",
+    "IRX_ARROW_TYPE_FLOAT16",
     "IRX_ARROW_TYPE_FLOAT32",
     "IRX_ARROW_TYPE_FLOAT64",
     "IRX_ARROW_TYPE_INT8",
@@ -162,4 +207,5 @@ __all__ = [
     "IRX_ARROW_TYPE_UINT64",
     "IRX_ARROW_TYPE_UNKNOWN",
     "ArrayPrimitiveTypeSpec",
+    "logical_type_for_scalar",
 ]

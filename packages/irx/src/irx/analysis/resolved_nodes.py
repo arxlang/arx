@@ -15,7 +15,16 @@ import astx
 
 from public import public
 
+from irx.analysis.array_values import ResolvedArray
 from irx.analysis.module_interfaces import ModuleKey
+from irx.analysis.nullability import (
+    ResolvedNullableOperator,
+    ResolvedNullableQuery,
+)
+from irx.analysis.scalar_values import ResolvedScalar
+from irx.analysis.schema_conversions import SchemaConversion
+from irx.analysis.schema_descriptors import ResolvedDescriptor
+from irx.analysis.tabular import ResolvedTabular
 from irx.typecheck import typechecked
 
 
@@ -69,6 +78,25 @@ class ResourceKind(str, Enum):
 
     LIST = "list"
     STRING = "string"
+    BUFFER_VIEW = "buffer_view"
+    CLASS_INSTANCE = "class_instance"
+    GENERATOR_FRAME = "generator_frame"
+    ERROR = "error"
+    TYPE = "type"
+    FIELD = "field"
+    SCHEMA = "schema"
+    SCALAR = "scalar"
+    C_DATA = "c_data"
+    ARRAY_BUILDER = "array_builder"
+    ARRAY = "array"
+    CHUNKED_ARRAY = "chunked_array"
+    RECORD_BATCH = "record_batch"
+    TABLE = "table"
+    TENSOR_BUILDER = "tensor_builder"
+    TENSOR = "tensor"
+    STREAM = "stream"
+    DATASET = "dataset"
+    EXECUTION_PLAN = "execution_plan"
 
 
 @public
@@ -84,6 +112,59 @@ class OwnershipKind(str, Enum):
     OWNED = "owned"
     BORROWED = "borrowed"
     STATIC = "static"
+    MOVED = "moved"
+
+
+@public
+@typechecked
+class ResourceSharingKind(str, Enum):
+    """
+    title: Runtime resource sharing capabilities.
+    summary: >-
+      Distinguish retainable shared handles from unique affine resources that
+      can only be moved, and independently cloned immutable values.
+    """
+
+    SHARED = "shared"
+    UNIQUE = "unique"
+    COPYABLE = "copyable"
+
+
+@public
+@typechecked
+class ResourceMutability(str, Enum):
+    """
+    title: Runtime resource mutability classes.
+    """
+
+    IMMUTABLE = "immutable"
+    MUTABLE = "mutable"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResourceContract:
+    """
+    title: Static lifecycle contract for one runtime resource family.
+    attributes:
+      resource_kind:
+        type: ResourceKind
+      sharing_kind:
+        type: ResourceSharingKind
+      mutability:
+        type: ResourceMutability
+      cleanup_intrinsic:
+        type: str
+      retain_intrinsic:
+        type: str | None
+    """
+
+    resource_kind: ResourceKind
+    sharing_kind: ResourceSharingKind
+    mutability: ResourceMutability
+    cleanup_intrinsic: str
+    retain_intrinsic: str | None
 
 
 @public
@@ -109,6 +190,22 @@ class OwnershipEscapeKind(str, Enum):
     NONE = "none"
     CALL = "call"
     RETURN = "return"
+    YIELD = "yield"
+
+
+@public
+@typechecked
+class ResourceViewKind(str, Enum):
+    """
+    title: Relationship between a resource value and parent storage.
+    summary: >-
+      Distinguish ordinary values from compiler-proven borrowed views and
+      escaping views whose native token retains the storage it references.
+    """
+
+    NONE = "none"
+    BORROWED = "borrowed"
+    RETAINED = "retained"
 
 
 @public
@@ -122,7 +219,17 @@ class ResourceOwnership:
         type: ResourceKind
       kind:
         type: OwnershipKind
+      sharing_kind:
+        type: ResourceSharingKind
+      mutability:
+        type: ResourceMutability
+      cleanup_intrinsic:
+        type: str
+      retain_intrinsic:
+        type: str | None
       owner_symbol_id:
+        type: str | None
+      owner_root_symbol_id:
         type: str | None
       source_symbol_id:
         type: str | None
@@ -130,14 +237,28 @@ class ResourceOwnership:
         type: OwnershipTransferKind
       escape_kind:
         type: OwnershipEscapeKind
+      view_kind:
+        type: ResourceViewKind
+      view_parent_symbol_id:
+        type: str | None
+      nullable_aggregate:
+        type: bool
     """
 
     resource_kind: ResourceKind
     kind: OwnershipKind
+    sharing_kind: ResourceSharingKind
+    mutability: ResourceMutability
+    cleanup_intrinsic: str
+    retain_intrinsic: str | None
     owner_symbol_id: str | None = None
+    owner_root_symbol_id: str | None = None
     source_symbol_id: str | None = None
     transfer_kind: OwnershipTransferKind = OwnershipTransferKind.NONE
     escape_kind: OwnershipEscapeKind = OwnershipEscapeKind.NONE
+    view_kind: ResourceViewKind = ResourceViewKind.NONE
+    view_parent_symbol_id: str | None = None
+    nullable_aggregate: bool = False
 
 
 @public
@@ -561,6 +682,8 @@ class ClassHeaderFieldKind(str, Enum):
 
     TYPE_DESCRIPTOR = "type_descriptor"
     DISPATCH_TABLE = "dispatch_table"
+    DESTRUCTOR = "destructor"
+    REFERENCE_COUNT = "reference_count"
 
 
 @public
@@ -781,6 +904,8 @@ class SemanticClassLayout:
         type: str
       dispatch_global_name:
         type: str
+      destructor_name:
+        type: str
       header_fields:
         type: tuple[SemanticClassHeaderField, Ellipsis]
       instance_fields:
@@ -809,6 +934,7 @@ class SemanticClassLayout:
     object_representation: ClassObjectRepresentationKind
     descriptor_global_name: str
     dispatch_global_name: str
+    destructor_name: str
     header_fields: tuple[SemanticClassHeaderField, ...] = ()
     instance_fields: tuple[SemanticClassLayoutField, ...] = ()
     field_slots: dict[str, SemanticClassLayoutField] = field(
@@ -1135,6 +1261,23 @@ class ReturnResolution:
 @public
 @typechecked
 @dataclass(frozen=True)
+class ResolvedGeneratorCapture:
+    """
+    title: One owned resource capture stored in a generator frame.
+    attributes:
+      symbol:
+        type: SemanticSymbol
+      ownership:
+        type: ResourceOwnership
+    """
+
+    symbol: SemanticSymbol
+    ownership: ResourceOwnership
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
 class ResolvedGeneratorFunction:
     """
     title: Resolved generator-function semantics.
@@ -1148,11 +1291,14 @@ class ResolvedGeneratorFunction:
         type: astx.DataType
       yield_nodes:
         type: tuple[astx.AST, Ellipsis]
+      resource_captures:
+        type: tuple[ResolvedGeneratorCapture, Ellipsis]
     """
 
     function: "SemanticFunction"
     yield_type: astx.DataType
     yield_nodes: tuple[astx.AST, ...] = ()
+    resource_captures: tuple[ResolvedGeneratorCapture, ...] = ()
 
 
 @public
@@ -1676,6 +1822,22 @@ class SemanticInfo:
       Aggregate all semantic sidecar fields that analysis may attach to a
       single AST node.
     attributes:
+      resolved_array:
+        type: ResolvedArray | None
+      resolved_scalar:
+        type: ResolvedScalar | None
+      resolved_tabular:
+        type: ResolvedTabular | None
+      resolved_nullable_query:
+        type: ResolvedNullableQuery | None
+      resolved_nullable_operator:
+        type: ResolvedNullableOperator | None
+      nullable_refined:
+        type: bool
+      resolved_descriptor:
+        type: ResolvedDescriptor | None
+      resolved_descriptor_conversion:
+        type: SchemaConversion | None
       resolved_type:
         type: astx.DataType | None
       resolved_symbol:
@@ -1724,6 +1886,8 @@ class SemanticInfo:
         type: ResolvedIteration | None
       resolved_collection_method:
         type: ResolvedCollectionMethod | None
+      resolved_subscript:
+        type: astx.TensorIndex | None
       resource_ownership:
         type: ResourceOwnership | None
       semantic_flags:
@@ -1732,6 +1896,14 @@ class SemanticInfo:
         type: dict[str, Any]
     """
 
+    resolved_array: ResolvedArray | None = None
+    resolved_scalar: ResolvedScalar | None = None
+    resolved_tabular: ResolvedTabular | None = None
+    resolved_nullable_query: ResolvedNullableQuery | None = None
+    resolved_nullable_operator: ResolvedNullableOperator | None = None
+    nullable_refined: bool = False
+    resolved_descriptor: ResolvedDescriptor | None = None
+    resolved_descriptor_conversion: SchemaConversion | None = None
     resolved_type: astx.DataType | None = None
     resolved_symbol: SemanticSymbol | None = None
     resolved_function: SemanticFunction | None = None
@@ -1760,6 +1932,7 @@ class SemanticInfo:
     resolved_yield: ResolvedYield | None = None
     resolved_iteration: ResolvedIteration | None = None
     resolved_collection_method: ResolvedCollectionMethod | None = None
+    resolved_subscript: astx.TensorIndex | None = None
     resource_ownership: ResourceOwnership | None = None
     semantic_flags: SemanticFlags = field(default_factory=SemanticFlags)
     extras: dict[str, Any] = field(default_factory=dict)

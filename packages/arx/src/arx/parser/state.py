@@ -17,6 +17,27 @@ from astx import SourceLocation
 INDENT_SIZE = 2
 
 
+def list_annotation(type_: astx.DataType) -> bool:
+    """
+    title: Recognize list annotation syntax without deciding nullable validity.
+    parameters:
+      type_:
+        type: astx.DataType
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.ListType):
+        return True
+    if isinstance(type_, astx.NullableType):
+        return isinstance(type_.payload_type, astx.ListType)
+    return (
+        isinstance(type_, astx.UnionType)
+        and len(type_.members) == 2
+        and any(isinstance(member, astx.NoneType) for member in type_.members)
+        and any(isinstance(member, astx.ListType) for member in type_.members)
+    )
+
+
 class TypeUseContext(Enum):
     """
     title: Type annotation use context.
@@ -132,4 +153,5 @@ __all__ = [
     "ParsedAnnotation",
     "ParsedDeclarationPrefixes",
     "TypeUseContext",
+    "list_annotation",
 ]

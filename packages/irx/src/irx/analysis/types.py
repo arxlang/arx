@@ -13,6 +13,9 @@ import astx
 
 from public import public
 
+from irx.analysis.dataframe_values import same_series_elements
+from irx.analysis.nullability import normalize_nullable
+from irx.analysis.schema_types import same_columnar_type
 from irx.typecheck import typechecked
 
 INT_TYPES = (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
@@ -164,6 +167,8 @@ def _metadata_assignment_compatible(
         value,
         astx.DataFrameType,
     ):
+        if target.columns is not None and value.columns is None:
+            return False
         return _target_accepts_known_size(target.row_count, value.row_count)
     return True
 
@@ -232,6 +237,18 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             setattr(cloned, "alias_name", alias_name)
         return cloned
 
+    normalized = normalize_nullable(type_)
+    if isinstance(normalized, astx.NullableType):
+        return astx.NullableType(
+            clone_type(normalized.payload_type),
+            alias_name=normalized.alias_name,
+        )
+    if isinstance(type_, astx.LogicalValueType):
+        return with_alias(
+            type(type_)(type_.element_type, nullable=type_.nullable)
+        )
+    if isinstance(type_, astx.SchemaValueType):
+        return with_alias(type(type_)(type_.schema))
     if isinstance(type_, astx.UnionType):
         return astx.UnionType(
             tuple(clone_type(member) for member in type_.members),
@@ -376,6 +393,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
     alias_name = getattr(type_, "alias_name", None)
     if isinstance(alias_name, str):
         return alias_name
+    if isinstance(type_, astx.NullableType):
+        return display_type_name(type_.payload_type) + " | none"
     if isinstance(type_, astx.UnionType):
         if type_.alias_name is not None:
             return type_.alias_name
@@ -477,8 +496,19 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     returns:
       type: bool
     """
+    lhs, rhs = normalize_nullable(lhs), normalize_nullable(rhs)
+    if isinstance(lhs, astx.NullableType) or isinstance(
+        rhs, astx.NullableType
+    ):
+        return (
+            isinstance(lhs, astx.NullableType)
+            and isinstance(rhs, astx.NullableType)
+            and same_type(lhs.payload_type, rhs.payload_type)
+        )
     if lhs is None or rhs is None:
         return False
+    if isinstance(lhs, (astx.LogicalValueType, astx.SchemaValueType)):
+        return same_columnar_type(lhs, rhs)
     if isinstance(lhs, astx.UnionType) and isinstance(rhs, astx.UnionType):
         if len(lhs.members) != len(rhs.members):
             return False
@@ -594,11 +624,7 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     ):
         if not _same_optional_size(lhs.size, rhs.size):
             return False
-        if lhs.element_type is None or rhs.element_type is None:
-            return True
-        return lhs.nullable == rhs.nullable and same_type(
-            lhs.element_type, rhs.element_type
-        )
+        return same_series_elements(lhs, rhs)
     if isinstance(lhs, astx.DataFrameType) and isinstance(
         rhs,
         astx.DataFrameType,
@@ -760,6 +786,18 @@ def is_type_member(
     returns:
       type: bool
     """
+    target, value = normalize_nullable(target), normalize_nullable(value)
+    if isinstance(target, astx.NullableType):
+        if isinstance(value, astx.NoneType):
+            return True
+        payload = (
+            value.payload_type
+            if isinstance(value, astx.NullableType)
+            else value
+        )
+        return is_type_member(target.payload_type, payload)
+    if isinstance(value, astx.NullableType):
+        return False
     if target is None or value is None:
         return False
     if isinstance(target, astx.UnionType) and isinstance(
@@ -1033,6 +1071,18 @@ def is_assignable(
     returns:
       type: bool
     """
+    target, value = normalize_nullable(target), normalize_nullable(value)
+    if isinstance(target, astx.NullableType):
+        if isinstance(value, astx.NoneType):
+            return True
+        payload = (
+            value.payload_type
+            if isinstance(value, astx.NullableType)
+            else value
+        )
+        return is_assignable(target.payload_type, payload)
+    if isinstance(value, astx.NullableType):
+        return False
     if target is None or value is None:
         return True
     if not _metadata_assignment_compatible(target, value):
@@ -1125,20 +1175,17 @@ def is_assignable(
     ):
         if not _target_accepts_known_size(target.size, value.size):
             return False
-        if target.element_type is None or value.element_type is None:
-            return True
-        return target.nullable == value.nullable and same_type(
-            target.element_type,
-            value.element_type,
-        )
+        return same_series_elements(target, value)
     if isinstance(target, astx.DataFrameType) and isinstance(
         value,
         astx.DataFrameType,
     ):
         if not _target_accepts_known_size(target.row_count, value.row_count):
             return False
-        if target.columns is None or value.columns is None:
+        if target.columns is None:
             return True
+        if value.columns is None:
+            return False
         if len(target.columns) != len(value.columns):
             return False
         return all(

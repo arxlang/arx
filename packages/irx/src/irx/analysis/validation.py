@@ -257,6 +257,12 @@ def validate_call(
     for idx, (param, arg_type) in enumerate(
         zip(signature.parameters, arg_types)
     ):
+        if idx < len(call_args) and _is_void_call_value(call_args[idx]):
+            diagnostics.add(
+                "argument cannot use the result of void call as a value",
+                node=call_args[idx],
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
         if not is_assignable(param.type_, arg_type):
             diagnostics.add(
                 f"argument {idx + 1} of call to '{function.name}' expects "
@@ -358,7 +364,10 @@ def resolve_return(
             returns_void=True,
         )
 
-    if _is_void_return_sentinel(value):
+    if value is None or (
+        isinstance(value, astx.LiteralNone)
+        and not isinstance(expected_type, astx.NullableType)
+    ):
         diagnostics.add(
             f"function '{function.name}' must return "
             f"{display_type_name(expected_type)}",

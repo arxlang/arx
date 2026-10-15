@@ -13,6 +13,7 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.analysis import analyze
 
 
 def _parse_module(code: str) -> astx.Module:
@@ -69,16 +70,17 @@ def test_parse_dataframe_type_constructor_and_column_access() -> None:
     assert ids.value.column_name == "id"
 
 
-def test_parse_runtime_schema_dataframe_only_for_parameters() -> None:
+def test_parse_runtime_schema_dataframe_annotations() -> None:
     """
-    title: Runtime-schema dataframe annotations are parameter-only for now.
+    title: Runtime-schema dataframe owners cross local and call boundaries.
     """
     tree = _parse_module(
         """
         extern sink(rows: dataframe[...]) -> none
 
-        fn accept(rows: dataframe[...]) -> i32:
-          return cast(rows.nrows(), i32)
+        fn accept(rows: dataframe[...]) -> dataframe[...]:
+          var kept: dataframe[...] = rows
+          return kept
         """
     )
 
@@ -94,14 +96,11 @@ def test_parse_runtime_schema_dataframe_only_for_parameters() -> None:
     assert isinstance(arg_type, astx.DataFrameType)
     assert arg_type.columns is None
 
-    with pytest.raises(ParserException, match="function parameter"):
-        _parse_module(
-            """
-            fn bad() -> none:
-              var rows: dataframe[...] = dataframe({id: [1]})
-              return none
-            """
-        )
+    assert isinstance(function.prototype.return_type, astx.DataFrameType)
+    local = function.body.nodes[0]
+    assert isinstance(local, astx.VariableDeclaration)
+    assert isinstance(local.type_, astx.DataFrameType)
+    assert local.type_.columns is None
 
 
 def test_dataframe_constructor_requires_declared_columns() -> None:
@@ -145,23 +144,15 @@ def test_dataframe_name_tracking_respects_inner_scope_shadowing() -> None:
     assert not isinstance(result.value, astx.DataFrameRowCount)
 
 
-def test_dataframe_mvp_rejects_string_columns() -> None:
+def test_dataframe_and_series_accept_string_columns() -> None:
     """
-    title: MVP DataFrame and Series types reject non fixed-width columns.
+    title: String columns are accepted by parsing and semantic analysis.
     """
-    with pytest.raises(ParserException, match="fixed-width numeric and bool"):
-        _parse_module(
-            """
-            fn bad() -> none:
-              var rows: dataframe[name: str] = dataframe({name: ["Ada"]})
-              return none
-            """
-        )
-
-    with pytest.raises(ParserException, match="fixed-width numeric and bool"):
-        _parse_module(
-            """
-            fn bad(value: series[str]) -> none:
-              return none
-            """
-        )
+    module = _parse_module(
+        """
+        fn supported(value: series[str]) -> none:
+          var rows: dataframe[name: str] = dataframe({name: ["Ada"]})
+          return none
+        """
+    )
+    analyze(module)

@@ -84,6 +84,7 @@ class ParserCore(ParserMixinBase):
             "-": 20,
             "*": 40,
             "/": 40,
+            "%": 40,
         }
         self.indent_level = 0
         self.list_scopes = [set()]

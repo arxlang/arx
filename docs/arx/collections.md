@@ -76,17 +76,20 @@ fn main() -> i32:
 
 Rules:
 
-- columns are fixed-width numeric or Boolean
+- columns support numeric/Boolean, nullable, `str` and executable logical
+  `scalar[T]` values, including decimal, temporal, dictionary and nested types
 - the constructor accepts list-literal columns with equal row counts
 - names and types must match the declared static schema
 - statically known columns use `rows.name` or `rows["name"]`
 - `nrows()` and `ncols()` return `i64`
-- `dataframe[...]` is accepted as a runtime-schema parameter type, but its
-  columns cannot yet be accessed by name
+- `dataframe[...]` is an owned runtime-schema value in locals, calls, returns
+  and instance fields; use checked projection through `to_table` rather than
+  unchecked legacy name access
 
-The lower-level IRx RecordBatch API already supports nullable, UTF-8, date,
-timestamp, and time columns. Those capabilities are not yet part of the Arx
-DataFrame language surface.
+`to_dataframe`/`to_table` and `to_series`/`to_chunked` retain independent owners
+without erasing runtime metadata. DataFrame and Series owners accept `| none`;
+checked unwrap or flow-proven validity is required before access. See
+[`dataframe_adapters.x`](../../examples/dataframe_adapters.x).
 
 ## Runtime boundary
 

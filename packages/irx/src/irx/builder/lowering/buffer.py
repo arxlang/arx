@@ -22,7 +22,7 @@ from irx.buffer import (
     BufferIndexBoundsPolicy,
     BufferViewMetadata,
 )
-from irx.builder.core import VisitorCore
+from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
@@ -55,6 +55,33 @@ class BufferVisitorMixin(VisitorMixinBase):
         assert handle.address is not None
         token = ir.Constant(self._llvm.INT64_TYPE, handle.address)
         return token.inttoptr(target_type)
+
+    def _buffer_release_slot(
+        self,
+        base: astx.AST,
+        value: ir.Value,
+    ) -> ir.Value:
+        """
+        title: Return mutable storage for one explicit buffer-view release.
+        parameters:
+          base:
+            type: astx.AST
+          value:
+            type: ir.Value
+        returns:
+          type: ir.Value
+        """
+        if isinstance(base, astx.Identifier):
+            symbol_key = semantic_symbol_key(base, base.name)
+            storage = self.named_values.get(symbol_key)
+            if isinstance(storage, ir.Value):
+                return storage
+        slot = self._llvm.ir_builder.alloca(
+            self._llvm.BUFFER_VIEW_TYPE,
+            name="irx_buffer_release_view",
+        )
+        self._llvm.ir_builder.store(value, slot)
+        return slot
 
     def _i64_array_pointer(
         self,
@@ -612,10 +639,11 @@ class BufferVisitorMixin(VisitorMixinBase):
             "buffer",
             "irx_buffer_view_release",
         )
-        view_ptr = self._buffer_view_pointer_for_call(
-            node.view,
-            name="irx_buffer_release_view",
-        )
+        self.visit_child(node.view)
+        view = safe_pop(self.result_stack)
+        if view is None or view.type != self._llvm.BUFFER_VIEW_TYPE:
+            raise Exception("buffer release requires a BufferViewType value")
+        view_ptr = self._buffer_release_slot(node.view, view)
         result = self._llvm.ir_builder.call(
             release,
             [view_ptr],

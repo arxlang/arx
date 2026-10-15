@@ -11,7 +11,10 @@ import astx
 from llvmlite import binding as llvm
 from llvmlite import ir
 
-from irx.analysis.resolved_nodes import FunctionSignature
+from irx.analysis.resolved_nodes import (
+    FunctionSignature,
+    ResolvedGeneratorFunction,
+)
 from irx.base.visitors.protocols import BaseVisitorProtocol
 from irx.builder.state import (
     CleanupAction,
@@ -70,6 +73,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         type: ir.Value | None
       _current_generator_next_state:
         type: int | None
+      _current_generator_metadata:
+        type: ResolvedGeneratorFunction | None
       target:
         type: llvm.TargetRef
       target_machine:
@@ -96,6 +101,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     _current_generator_frame_slots: dict[str, int]
     _current_generator_out_ptr: ir.Value | None
     _current_generator_next_state: int | None
+    _current_generator_metadata: ResolvedGeneratorFunction | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
 
@@ -281,6 +287,31 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
           type: ir.Function
         """
         ...
+
+    def _guard_runtime_condition(
+        self,
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+    ) -> None:
+        """
+        title: Guard a runtime condition with current-function owner cleanup.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+        """
+        _ = node, condition, code, message, block_name
 
     def _emit_active_cleanups(
         self,
@@ -684,6 +715,8 @@ class VisitorMixinTypingBase:
         type: ir.Value | None
       _current_generator_next_state:
         type: int | None
+      _current_generator_metadata:
+        type: ResolvedGeneratorFunction | None
       target:
         type: llvm.TargetRef
       target_machine:
@@ -710,6 +743,7 @@ class VisitorMixinTypingBase:
     _current_generator_frame_slots: dict[str, int]
     _current_generator_out_ptr: ir.Value | None
     _current_generator_next_state: int | None
+    _current_generator_metadata: ResolvedGeneratorFunction | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
 
@@ -901,6 +935,31 @@ class VisitorMixinTypingBase:
         """
         return cast(ir.Function, None)
 
+    def _guard_runtime_condition(
+        self,
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+    ) -> None:
+        """
+        title: Guard a runtime condition with current-function owner cleanup.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+        """
+        _ = node, condition, code, message, block_name
+
     def _emit_active_cleanups(
         self,
         _start_depth: int = 0,
@@ -1068,7 +1127,7 @@ class VisitorMixinTypingBase:
 
     def _cast_ast_value(
         self,
-        _value: ir.Value,
+        _value: ir.Value | None,
         *,
         source_type: astx.DataType | None,
         target_type: astx.DataType | None,
@@ -1077,7 +1136,7 @@ class VisitorMixinTypingBase:
         title: Cast ast value.
         parameters:
           _value:
-            type: ir.Value
+            type: ir.Value | None
           source_type:
             type: astx.DataType | None
           target_type:

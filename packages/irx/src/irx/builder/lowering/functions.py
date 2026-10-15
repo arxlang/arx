@@ -69,11 +69,12 @@ class FunctionVisitorMixin(VisitorMixinBase):
         if ownership.resource_kind is ResourceKind.STRING:
             self._register_owned_string_temporary(node, result)
             return
-        if ownership.resource_kind is not ResourceKind.LIST:
-            raise_lowering_internal_error(
-                "call result has an unsupported owned resource kind",
-                node=node,
-            )
+        if (
+            ownership.resource_kind is not ResourceKind.LIST
+            or ownership.nullable_aggregate
+        ):
+            cast(Any, self)._register_owned_resource_temporary(node, result)
+            return
         current_block = self._llvm.ir_builder.block
         result_ptr = self.create_entry_block_alloca(
             "owned_list_call_result",
@@ -223,16 +224,18 @@ class FunctionVisitorMixin(VisitorMixinBase):
         llvm_args: list[ir.Value] = []
         for index, arg in enumerate(args):
             self.visit_child(arg)
-            llvm_arg = require_lowered_value(
-                safe_pop(self.result_stack),
-                node=arg,
-                context=f"argument {index + 1} of {label}",
-            )
+            llvm_arg = safe_pop(self.result_stack)
             target_type = (
                 resolution.resolved_argument_types[index]
                 if index < len(resolution.resolved_argument_types)
                 else None
             )
+            if not isinstance(target_type, astx.NullableType):
+                llvm_arg = require_lowered_value(
+                    llvm_arg,
+                    node=arg,
+                    context=f"argument {index + 1} of {label}",
+                )
             llvm_args.append(
                 self._cast_ast_value(
                     llvm_arg,
@@ -358,18 +361,17 @@ class FunctionVisitorMixin(VisitorMixinBase):
                         node=argument,
                     )
                 self.visit_child(argument.default)
-                lowered_default = require_lowered_value(
-                    safe_pop(self.result_stack),
-                    node=argument.default,
-                    context=(
-                        f"default value for parameter '{argument.name}' of "
-                        f"{label}"
-                    ),
-                )
+                lowered_default = safe_pop(self.result_stack)
                 parameter_index = hidden_parameter_count + visible_index
                 target_type = function.signature.parameters[
                     parameter_index
                 ].type_
+                if not isinstance(target_type, astx.NullableType):
+                    lowered_default = require_lowered_value(
+                        lowered_default,
+                        node=argument.default,
+                        context=f"default for '{argument.name}' of {label}",
+                    )
                 lowered_default = self._cast_ast_value(
                     lowered_default,
                     source_type=self._resolved_ast_type(argument.default),
@@ -1023,32 +1025,24 @@ class FunctionVisitorMixin(VisitorMixinBase):
 
         if node.value is not None:
             self.visit_child(node.value)
-            retval = require_lowered_value(
-                safe_pop(self.result_stack),
-                node=node.value,
-                context="return expression",
-            )
+            retval = safe_pop(self.result_stack)
         else:
             retval = None
 
-        if retval is None:
-            raise_lowering_internal_error(
-                "return expression did not lower to a value",
-                node=node,
+        if not isinstance(return_resolution.expected_type, astx.NullableType):
+            retval = require_lowered_value(
+                retval, node=node, context="return expression"
             )
-
         retval = self._cast_ast_value(
             retval,
             source_type=self._resolved_ast_type(node.value),
             target_type=return_resolution.expected_type,
         )
-        return_ownership = resource_ownership(node)
-        if (
-            return_ownership is not None
-            and return_ownership.resource_kind is ResourceKind.STRING
-            and return_ownership.transfer_kind is OwnershipTransferKind.COPY
-        ):
-            retval = self._copy_string_to_heap(node, retval)
+        retval = cast(Any, self)._retain_copied_resource_value(
+            node.value if node.value is not None else node,
+            retval,
+            target_type=return_resolution.expected_type,
+        )
         fn_return_type = (
             self._llvm.ir_builder.function.function_type.return_type
         )

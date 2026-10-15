@@ -8,11 +8,21 @@ title: Array visitor mixin for llvmliteir.
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import astx
 
+from llvmlite import ir
+
+from irx.analysis.ownership import arrow_resource_ownership
+from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
 from irx.builder.core import VisitorCore
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.arrow.lowering import (
+    call_arrow_runtime,
+    require_arrow_runtime_success,
+)
 from irx.builder.types import is_int_type
 from irx.typecheck import typechecked
 
@@ -51,7 +61,29 @@ class ArrayVisitorMixin(VisitorMixinBase):
             self._llvm.ARRAY_BUILDER_HANDLE_TYPE,
             name="array_builder_slot",
         )
-        self._llvm.ir_builder.call(builder_new, [builder_slot])
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.ARRAY_BUILDER_HANDLE_TYPE, None),
+            builder_slot,
+        )
+        status, _ = call_arrow_runtime(
+            self,
+            builder_new,
+            [builder_slot],
+            "array_builder_new",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "array_builder_new",
+        )
+        cast(Any, self)._register_resource_slot_cleanup(
+            arrow_resource_ownership(
+                ResourceKind.ARRAY_BUILDER,
+                OwnershipKind.OWNED,
+            ),
+            builder_slot,
+        )
         builder_handle = self._llvm.ir_builder.load(
             builder_slot, "array_builder"
         )
@@ -75,20 +107,79 @@ class ArrayVisitorMixin(VisitorMixinBase):
                     value, self._llvm.INT32_TYPE, "array_i32_trunc"
                 )
 
-            self._llvm.ir_builder.call(append_int32, [builder_handle, value])
+            status, _ = call_arrow_runtime(
+                self,
+                append_int32,
+                [builder_handle, value],
+                "array_builder_append",
+            )
+            require_arrow_runtime_success(
+                self,
+                node,
+                status,
+                "array_builder_append",
+            )
 
         array_slot = self._llvm.ir_builder.alloca(
             self._llvm.ARRAY_HANDLE_TYPE,
             name="array_slot",
         )
-        self._llvm.ir_builder.call(
-            finish_builder, [builder_handle, array_slot]
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.ARRAY_HANDLE_TYPE, None),
+            array_slot,
+        )
+        status, _ = call_arrow_runtime(
+            self,
+            finish_builder,
+            [builder_slot, array_slot],
+            "array_builder_finish",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "array_builder_finish",
+        )
+        cast(Any, self)._register_resource_slot_cleanup(
+            arrow_resource_ownership(
+                ResourceKind.ARRAY,
+                OwnershipKind.OWNED,
+            ),
+            array_slot,
         )
         array_handle = self._llvm.ir_builder.load(array_slot, "array_handle")
-        length_i64 = self._llvm.ir_builder.call(
-            array_length, [array_handle], "array_length"
+        length_slot = self._llvm.ir_builder.alloca(
+            self._llvm.INT64_TYPE,
+            name="array_length_slot",
         )
-        self._llvm.ir_builder.call(release_array, [array_handle])
+        status, _ = call_arrow_runtime(
+            self,
+            array_length,
+            [array_handle, length_slot],
+            "array_length",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "array_length",
+        )
+        length_i64 = self._llvm.ir_builder.load(
+            length_slot,
+            "array_length",
+        )
+        status, _ = call_arrow_runtime(
+            self,
+            release_array,
+            [array_slot],
+            "array_release",
+        )
+        require_arrow_runtime_success(
+            self,
+            node,
+            status,
+            "array_release",
+        )
 
         length_i32 = self._llvm.ir_builder.trunc(
             length_i64, self._llvm.INT32_TYPE, "array_length_i32"

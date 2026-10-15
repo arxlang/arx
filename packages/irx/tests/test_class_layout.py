@@ -188,7 +188,7 @@ def test_class_definition_emits_header_and_instance_layout(
     ir_text = builder.translate(module)
     llvm_name = mangle_class_name("main", "Vector")
 
-    assert f'%"{llvm_name}" = type {{i8*, i8*, i32, i1}}' in ir_text
+    assert f'%"{llvm_name}" = type {{i8*, i8*, i8*, i64, i32, i1}}' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -229,7 +229,7 @@ def test_class_layout_flattens_canonical_shared_ancestor_storage(
 
     assert re.search(
         rf'%"{re.escape(llvm_name)}(?:\.\d+)?" = type '
-        r"\{i8\*, i8\*, i32, i1, double, i8\}",
+        r"\{i8\*, i8\*, i8\*, i64, i32, i1, double, i8\}",
         ir_text,
     )
     assert_ir_parses(ir_text)
@@ -531,6 +531,8 @@ def test_class_type_bodies_do_not_leak_across_translations(
     second_ir = builder.translate(second)
     llvm_name = mangle_class_name("main", "Widget")
 
-    assert f'%"{llvm_name}" = type {{i8*, i8*, i32}}' in first_ir
-    assert f'%"{llvm_name}" = type {{i8*, i8*, i32, i1}}' in second_ir
+    assert f'%"{llvm_name}" = type {{i8*, i8*, i8*, i64, i32}}' in first_ir
+    assert (
+        f'%"{llvm_name}" = type {{i8*, i8*, i8*, i64, i32, i1}}' in second_ir
+    )
     assert_ir_parses(second_ir)
