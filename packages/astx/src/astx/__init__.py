@@ -77,6 +77,7 @@ from astx.callables import (
     FunctionDef,
     FunctionPrototype,
     FunctionReturn,
+    KeywordArgument,
     LambdaExpr,
     YieldExpr,
     YieldFromExpr,
@@ -172,6 +173,7 @@ from astx.flows import (
     WhileExpr,
     WhileStmt,
 )
+from astx.io import FileType
 from astx.iterables import (
     DictComprehension,
     ForInLoopStmt,
@@ -433,6 +435,7 @@ __all__ = [
     "Expr",
     "ExprType",
     "FieldAccess",
+    "FileType",
     "FinallyHandlerStmt",
     "Float16",
     "Float32",
@@ -467,6 +470,7 @@ __all__ = [
     "Int64",
     "Integer",
     "IsInstanceExpr",
+    "KeywordArgument",
     "LambdaExpr",
     "LeBinOp",
     "ListAppend",

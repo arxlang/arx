@@ -20,6 +20,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.types import (
     bit_width,
+    contains_file_type,
     display_type_name,
     is_assignable,
     is_boolean_type,
@@ -170,6 +171,16 @@ def validate_assignment(
       node:
         type: astx.AST
     """
+    if contains_file_type(target_type) or contains_file_type(value_type):
+        if not isinstance(
+            node, (astx.VariableDeclaration, astx.InlineVariableDeclaration)
+        ):
+            diagnostics.add(
+                "file reassignment and copies are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
     if not is_assignable(target_type, value_type):
         diagnostics.add(
             "cannot assign "
@@ -435,6 +446,13 @@ def validate_cast(
         type: astx.AST
     """
     if source_type is None or target_type is None:
+        return
+    if contains_file_type(source_type) or contains_file_type(target_type):
+        diagnostics.add(
+            "file casts are unsupported",
+            node=node,
+            code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+        )
         return
     if is_explicitly_castable(source_type, target_type):
         return

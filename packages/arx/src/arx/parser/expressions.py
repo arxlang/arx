@@ -120,6 +120,7 @@ class ExpressionParserMixin(ParserMixinBase):
                     "Parser: Expected member name after '.'."
                 )
 
+            member_loc = self.tokens.cur_tok.location
             member_name = cast(str, self.tokens.cur_tok.value)
             self.tokens.get_next_token()
 
@@ -130,6 +131,14 @@ class ExpressionParserMixin(ParserMixinBase):
                 args: list[astx.DataType] = []
                 if not self._is_operator(")"):
                     while True:
+                        if (
+                            self.tokens.cur_tok.kind == TokenKind.identifier
+                            and self._peek_token().value == "="
+                        ):
+                            raise ParserException(
+                                "Keyword arguments are supported only "
+                                "for open."
+                            )
                         args.append(
                             cast(astx.DataType, self.parse_expression())
                         )
@@ -186,6 +195,7 @@ class ExpressionParserMixin(ParserMixinBase):
                         member_name,
                         args,
                     )
+                    expr.loc = member_loc
                 if template_args is not None:
                     astx.set_template_args(expr, template_args)
                 continue
@@ -414,14 +424,37 @@ class ExpressionParserMixin(ParserMixinBase):
             return astx.LiteralTimestamp(arg.value, loc=id_loc)
 
         args: list[astx.DataType] = []
-        if not self._is_operator(")"):
-            while True:
+        keywords: list[astx.KeywordArgument] = []
+        while not self._is_operator(")"):
+            if (
+                self.tokens.cur_tok.kind == TokenKind.identifier
+                and self._peek_token().value == "="
+            ):
+                if id_name != builtins.BUILTIN_OPEN:
+                    raise ParserException(
+                        "Keyword arguments are supported only for open."
+                    )
+                keyword_token = self.tokens.cur_tok
+                self.tokens.get_next_token()
+                self._consume_operator("=")
+                keywords.append(
+                    astx.KeywordArgument(
+                        cast(str, keyword_token.value),
+                        cast(astx.DataType, self.parse_expression()),
+                        loc=keyword_token.location,
+                    )
+                )
+            else:
+                if keywords:
+                    raise ParserException(
+                        "Positional arguments cannot follow keywords."
+                    )
                 args.append(cast(astx.DataType, self.parse_expression()))
-
-                if self._is_operator(")"):
-                    break
-
-                self._consume_operator(",")
+            if self._is_operator(")"):
+                break
+            self._consume_operator(",")
+            if id_name != builtins.BUILTIN_OPEN and self._is_operator(")"):
+                raise ParserException("Expected an argument after ','.")
 
         self._consume_operator(")")
         if id_name in self.known_class_names and not self._name_is_shadowed(
@@ -431,13 +464,15 @@ class ExpressionParserMixin(ParserMixinBase):
                 raise ParserException(
                     "class construction does not accept template arguments"
                 )
-            if args:
+            if args or keywords:
                 raise ParserException(
                     "class construction does not accept arguments"
                 )
             return astx.ClassConstruct(id_name)
 
-        call = astx.FunctionCall(id_name, args, loc=id_loc)
+        call = astx.FunctionCall(
+            id_name, args, loc=id_loc, keywords=tuple(keywords)
+        )
         if template_args is not None:
             astx.set_template_args(call, template_args)
         return call

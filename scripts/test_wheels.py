@@ -62,6 +62,8 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
+    "irx/builder/runtime/file/native/irx_file_runtime.c",
+    "irx/builder/runtime/file/native/irx_file_runtime.h",
 )
 
 SCALAR_MODULE = """```
@@ -132,6 +134,21 @@ fn main() -> i32:
   return values[1] - 5
 """
 
+FILE_MODULE = """```
+title: Installed wheel file I/O smoke
+```
+fn main() -> i32:
+  ```
+  title: main
+  ```
+  var output: file = open("file-smoke.txt", mode="w")
+  assert output.write("hello") == 5
+  output.close()
+  var input: file = open(file="file-smoke.txt")
+  assert input.read() == "hello"
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
 from pathlib import Path
 
@@ -157,6 +174,7 @@ for source_name in (
     "class_smoke.x",
     "list_smoke.x",
     "tensor_smoke.x",
+    "file_smoke.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -389,6 +407,7 @@ def run_smoke(
             "class_smoke.x": CLASS_MODULE,
             "list_smoke.x": LIST_MODULE,
             "tensor_smoke.x": TENSOR_MODULE,
+            "file_smoke.x": FILE_MODULE,
         }
         for name, content in sources.items():
             (work_dir / name).write_text(content, encoding="utf-8")

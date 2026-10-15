@@ -151,3 +151,20 @@ double-release a moved value.
 9. Test output slots remain unread on all injected non-success statuses.
 10. Document any intentionally immortal allocation; process-lifetime leakage is
     not an implicit ownership policy.
+
+## Enforced file contract
+
+`ResourceKind.FILE` describes single-owner local handles and discarded open
+results. An initializer's owner transfers to its directly initialized local;
+method receivers borrow without sharing. Copies, reassignment, signatures,
+aggregate storage, globals, casts, and generator storage fail closed.
+`node.semantic.resolved_file_open` records operand evaluation order and bound
+path/mode indices; `resolved_file_operation` identifies a validated method.
+Lowering uses those sidecars, not name-based rediscovery.
+
+`close` clears the stream pointer without freeing the wrapper. Lexical release
+closes if necessary and frees exactly once, including explicit close followed by
+release. Read strings are independent heap owners. Status errors are copied into
+caller-owned buffers before wrapper destruction; close failures during normal
+cleanup remain observable. Existing fatal exits do not unwind caller frames;
+there is no new exception or exit-handler framework.

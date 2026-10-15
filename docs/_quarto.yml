@@ -119,6 +119,8 @@ website:
               href: arx/modules.md
             - text: Functions
               href: arx/functions.md
+            - text: Text File I/O
+              href: arx/file-io.md
             - text: Classes
               href: arx/classes.md
             - text: Data Types

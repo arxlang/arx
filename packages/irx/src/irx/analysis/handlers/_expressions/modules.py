@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -33,6 +34,7 @@ from irx.analysis.resolved_nodes import (
     OwnershipTransferKind,
     ResolvedModuleMemberAccess,
     ResourceKind,
+    ResourceOwnership,
     SemanticBinding,
     SemanticModule,
 )
@@ -68,6 +70,12 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             ownership = resource_ownership(arg)
             if ownership is None:
                 continue
+            if ownership.resource_kind is ResourceKind.FILE:
+                self.context.diagnostics.add(
+                    "file arguments cannot cross function-call boundaries",
+                    node=arg,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if (
                 ownership.resource_kind is ResourceKind.LIST
                 and ownership.kind is OwnershipKind.STATIC
@@ -372,7 +380,17 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if symbol is not None:
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
-            if isinstance(symbol.type_, astx.ListType):
+            if isinstance(symbol.type_, astx.FileType):
+                self._set_resource_ownership(
+                    node,
+                    ResourceOwnership(
+                        ResourceKind.FILE,
+                        OwnershipKind.BORROWED,
+                        source_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.BORROW,
+                    ),
+                )
+            elif isinstance(symbol.type_, astx.ListType):
                 declaration_ownership = symbol_resource_ownership(symbol)
                 self._set_resource_ownership(
                     node,
@@ -433,6 +451,29 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FunctionCall
         """
+        info = self._semantic(node)
+        if info.resolved_file_open is not None:
+            info.resource_ownership = None
+        info.resolved_file_open = None
+        if node.fn == "open":
+            local = self.context.scopes.resolve(node.fn)
+            if local is not None:
+                self.context.diagnostics.add(
+                    "name 'open' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            if self.bindings.resolve(node.fn) is None:
+                resolve_file_open(cast(SemanticAnalyzerCore, self), node)
+                return
+        if node.keywords:
+            self.context.diagnostics.add(
+                "keyword arguments are supported only for builtin open",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
+            )
+            return
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
             self.visit(arg)

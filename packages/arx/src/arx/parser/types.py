@@ -49,6 +49,7 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
     "bool": astx.Boolean(),
     "boolean": astx.Boolean(),
     "none": astx.NoneType(),
+    "file": astx.FileType(),
     "str": astx.String(),
     "string": astx.String(),
     "char": astx.Int8(),
