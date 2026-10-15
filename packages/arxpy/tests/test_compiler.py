@@ -304,3 +304,34 @@ def test_repeated_and_concurrent_parse_calls_are_isolated() -> None:
     with ThreadPoolExecutor(max_workers=4) as executor:
         actual = list(executor.map(parse, module_names))
     assert actual == module_names
+
+
+def test_file_builtin_through_check_and_build(tmp_path: Path) -> None:
+    """
+    title: ArxPy shares the file builtin's semantic and native paths.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = (
+        MODULE_DOCSTRING
+        + """fn main() -> i32:
+  var f: file = open("arxpy-file.txt", mode="w")
+  assert f.write("ok") == 2
+  return 0
+"""
+    )
+    compiler = Compiler()
+    parsed = compiler.parse_string(source)
+    compiler.check(parsed)
+    artifact = compiler.compile(parsed, output=tmp_path / "file-program")
+    assert artifact.path is not None
+    result = subprocess.run(
+        [str(artifact.path)],
+        cwd=tmp_path,
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "arxpy-file.txt").read_bytes() == b"ok"

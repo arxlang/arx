@@ -10,6 +10,7 @@ from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from llvmlite import binding as llvm
 
 
 @pytest.mark.parametrize(
@@ -181,3 +182,23 @@ def test_ast_to_output(code: str) -> None:
 
     result = ir.translate(module_ast)
     assert result
+
+
+def test_file_operations_translate_with_checked_cleanup() -> None:
+    """
+    title: The public translate path emits status guards and lexical release.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: File translate regression\n```\n"
+        "fn main() -> i32:\n"
+        '  var output: file = open("output.txt", mode="w")\n'
+        '  output.write("ok")\n'
+        "  output.close()\n"
+        "  return 0\n"
+    )
+    builder = ArxBuilder()
+    result = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(result).verify()
+    assert "irx_file_open" in result
+    assert "irx_file_release" in result
+    assert "ARX-RUNTIME-FILE-001" in result

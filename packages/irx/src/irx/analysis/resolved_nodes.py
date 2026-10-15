@@ -69,6 +69,7 @@ class ResourceKind(str, Enum):
 
     LIST = "list"
     STRING = "string"
+    FILE = "file"
 
 
 @public
@@ -1668,6 +1669,40 @@ class ResolvedCollectionMethod:
 
 @public
 @typechecked
+@dataclass(frozen=True)
+class ResolvedFileOpen:
+    """
+    title: Validated open operands in original evaluation order.
+    attributes:
+      evaluations:
+        type: tuple[astx.DataType, Ellipsis]
+      path_index:
+        type: int
+      mode_index:
+        type: int | None
+    """
+
+    evaluations: tuple[astx.DataType, ...]
+    path_index: int
+    mode_index: int | None
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedFileOperation:
+    """
+    title: A validated operation on an owned native file.
+    attributes:
+      name:
+        type: str
+    """
+
+    name: str
+
+
+@public
+@typechecked
 @dataclass
 class SemanticInfo:
     """
@@ -1692,6 +1727,10 @@ class SemanticInfo:
         type: SemanticModule | None
       resolved_imports:
         type: tuple[ResolvedImportBinding, Ellipsis]
+      resolved_file_open:
+        type: ResolvedFileOpen | None
+      resolved_file_operation:
+        type: ResolvedFileOperation | None
       resolved_call:
         type: CallResolution | None
       resolved_operator:
@@ -1740,6 +1779,8 @@ class SemanticInfo:
     resolved_class: SemanticClass | None = None
     resolved_module: SemanticModule | None = None
     resolved_imports: tuple[ResolvedImportBinding, ...] = ()
+    resolved_file_open: ResolvedFileOpen | None = None
+    resolved_file_operation: ResolvedFileOperation | None = None
     resolved_call: CallResolution | None = None
     resolved_operator: ResolvedOperator | None = None
     resolved_assignment: ResolvedAssignment | None = None

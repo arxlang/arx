@@ -25,6 +25,7 @@ Registered features:
 | Feature        | Responsibility                                       |
 | -------------- | ---------------------------------------------------- |
 | `libc`         | `puts`, checked allocation, formatting, and `free`   |
+| `file`         | Checked single-owner POSIX UTF-8 text files          |
 | `libm`         | math symbols and the platform math linker flag       |
 | `assertions`   | fatal assertion helper and machine-readable reports  |
 | `errors`       | fatal checked-runtime diagnostics and stable records |
@@ -207,3 +208,18 @@ IRx currently does not provide:
 
 See [Native Apache Arrow Support](../apache-arrow.md) for the cross-project view
 and [Buffer View Model](buffer-view-model.md) for the low-level descriptor.
+
+## Text file runtime
+
+The `file` feature exposes opaque `irx_file_*` handles and caller-owned error
+buffers (`IRX_FILE_ERROR_CAPACITY` bytes). Open/read/write outputs are
+initialized on all paths and may be consumed only after a zero status. EOF is a
+successful empty string. Read buffers transfer to the caller and use the
+existing `free` string ABI. Malformed UTF-8 and interior NUL are rejected. Close
+is idempotent; release consumes the wrapper even when closing fails. Handles are
+synchronous, single-owner, and not thread-safe. Lowering activates `errors` when
+status guards are emitted and `libc` when returned strings require cleanup;
+dependencies do not depend on passive feature metadata.
+
+See [Arx Text File I/O](../arx/file-io.md) for the intentionally restricted
+parameter and lifetime surface. The native header is the C ABI contract.

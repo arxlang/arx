@@ -312,6 +312,8 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
         )
     if isinstance(type_, astx.BufferOwnerType):
         return with_alias(type_.__class__())
+    if isinstance(type_, astx.FileType):
+        return with_alias(astx.FileType())
     if isinstance(type_, astx.OpaqueHandleType):
         return with_alias(astx.OpaqueHandleType(type_.handle_name))
     if isinstance(type_, astx.BufferViewType):
@@ -429,6 +431,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
             f"{display_type_name(cast(astx.DataType, type_.key_type))}, "
             f"{display_type_name(cast(astx.DataType, type_.value_type))}]"
         )
+    if isinstance(type_, astx.FileType):
+        return "file"
     if isinstance(type_, astx.OpaqueHandleType):
         return type_.handle_name
     if isinstance(type_, astx.BufferViewType):
@@ -566,6 +570,10 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         ) and same_type(
             cast(astx.DataType, lhs.value_type),
             cast(astx.DataType, rhs.value_type),
+        )
+    if isinstance(lhs, astx.FileType) or isinstance(rhs, astx.FileType):
+        return isinstance(lhs, astx.FileType) and isinstance(
+            rhs, astx.FileType
         )
     if isinstance(lhs, astx.OpaqueHandleType) and isinstance(
         rhs,
@@ -1167,4 +1175,43 @@ def is_assignable(
         return True
     if is_none_type(target) and is_none_type(value):
         return True
+    return False
+
+
+@public
+@typechecked
+def contains_file_type(type_: astx.DataType | None) -> bool:
+    """
+    title: Detect unsupported nested native-file storage.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.FileType):
+        return True
+    if isinstance(type_, astx.DataFrameType) and type_.columns is not None:
+        return any(
+            contains_file_type(column.type_) for column in type_.columns
+        )
+    for attribute in (
+        "element_types",
+        "members",
+        "element_type",
+        "key_type",
+        "value_type",
+        "yield_type",
+        "pointee_type",
+        "bound",
+    ):
+        value: object = getattr(type_, attribute, None)
+        if isinstance(value, astx.DataType) and contains_file_type(value):
+            return True
+        if isinstance(value, (list, tuple)):
+            if any(
+                isinstance(item, astx.DataType) and contains_file_type(item)
+                for item in value
+            ):
+                return True
     return False

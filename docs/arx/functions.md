@@ -129,3 +129,10 @@ summary: Declares an external function signature.
 ```
 extern putchard(x: i32) -> i32
 ````
+
+## Builtin `open`
+
+`open` supports positional and keyword arguments for a restricted native text
+file interface. General user-function keyword calls are not implemented. See
+[Text File I/O](file-io.md) for supported defaults, methods, and ownership
+rules.

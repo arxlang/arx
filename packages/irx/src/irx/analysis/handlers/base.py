@@ -49,7 +49,12 @@ from irx.analysis.resolved_nodes import (
     SemanticSymbol,
 )
 from irx.analysis.session import CompilationSession
-from irx.analysis.types import clone_type, display_type_name, is_assignable
+from irx.analysis.types import (
+    clone_type,
+    contains_file_type,
+    display_type_name,
+    is_assignable,
+)
 from irx.base.visitors.base import BaseVisitor
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -1580,6 +1585,25 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.DataType
         """
+        if contains_file_type(type_):
+            if not (
+                isinstance(type_, astx.FileType)
+                and isinstance(
+                    node,
+                    (astx.VariableDeclaration, astx.InlineVariableDeclaration),
+                )
+                and self.context.current_function is not None
+                and node.scope == astx.ScopeKind.local
+            ):
+                self.context.diagnostics.add(
+                    "file types are supported only as local owners; "
+                    "parameters, "
+                    "returns, fields and containers are unsupported",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            self._set_type(type_, type_)
+            return type_
         if isinstance(type_, astx.UnionType):
             for member in type_.members:
                 self._resolve_declared_type(

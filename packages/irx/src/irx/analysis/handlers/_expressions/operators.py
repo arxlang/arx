@@ -76,6 +76,13 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 "unary operator '!' requires Boolean operand",
                 node=node,
             )
+        if isinstance(operand_type, astx.FileType):
+            self.context.diagnostics.add(
+                "file operators are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
         result_type = unary_result_type(node.op_code, operand_type)
         if node.op_code in {"++", "--"}:
             resolved_target = self._resolve_mutation_target(
@@ -114,6 +121,15 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self.visit(node.rhs)
         lhs_type = self._expr_type(node.lhs)
         rhs_type = self._expr_type(node.rhs)
+        if isinstance(lhs_type, astx.FileType) or isinstance(
+            rhs_type, astx.FileType
+        ):
+            self.context.diagnostics.add(
+                "file operators and reassignment are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)
         self._set_flags(node, flags)
         specialized = specialize_binary_op(node)

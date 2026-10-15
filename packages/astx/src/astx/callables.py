@@ -158,12 +158,65 @@ class Arguments(ASTNodes[Argument]):
 
 @public
 @typechecked
+class KeywordArgument(Expr):
+    """
+    title: One named call argument, preserving its source expression.
+    attributes:
+      name:
+        type: str
+      value:
+        type: DataType
+    """
+
+    name: str
+    value: DataType
+
+    def __init__(
+        self,
+        name: str,
+        value: DataType,
+        loc: SourceLocation = NO_SOURCE_LOCATION,
+    ) -> None:
+        """
+        title: Initialize a named argument.
+        parameters:
+          name:
+            type: str
+          value:
+            type: DataType
+          loc:
+            type: SourceLocation
+        """
+        super().__init__(loc=loc)
+        self.name = name
+        self.value = value
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Render the named argument and its value.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
+        return self._prepare_struct(
+            f"KEYWORD[{self.name}]",
+            self.value.get_struct(simplified),
+            simplified,
+        )
+
+
+@public
+@typechecked
 class FunctionCall(DataType):
     """
     title: AST class for function call.
     attributes:
       kind:
         type: ASTKind
+      keywords:
+        type: tuple[KeywordArgument, Ellipsis]
       fn:
         type: str
       args:
@@ -174,6 +227,7 @@ class FunctionCall(DataType):
 
     kind: ASTKind
 
+    keywords: tuple[KeywordArgument, ...]
     fn: str
     args: Iterable[DataType]
     type_: DataType = AnyType()
@@ -185,6 +239,8 @@ class FunctionCall(DataType):
         type_: DataType = AnyType(),
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
+        *,
+        keywords: tuple[KeywordArgument, ...] = (),
     ) -> None:
         """
         title: Initialize the Call instance.
@@ -199,10 +255,13 @@ class FunctionCall(DataType):
             type: SourceLocation
           parent:
             type: Optional[ASTNodes]
+          keywords:
+            type: tuple[KeywordArgument, Ellipsis]
         """
         super().__init__(loc=loc, parent=parent)
         self.fn = fn if not isinstance(fn, FunctionDef) else fn.name
         self.args = args
+        self.keywords = keywords
         self.kind = ASTKind.CallKind
         self.type_ = type_
 
@@ -213,6 +272,7 @@ class FunctionCall(DataType):
           type: str
         """
         args = [str(arg) for arg in self.args]
+        args.extend(f"{item.name}={item.value}" for item in self.keywords)
         return f"Call[{self.fn}: {', '.join(args)}]"
 
     def get_struct(self, simplified: bool = False) -> ReprStruct:
@@ -240,6 +300,10 @@ class FunctionCall(DataType):
             },
         )
 
+        if self.keywords and isinstance(value, dict):
+            value["Keywords"] = [
+                item.get_struct(simplified) for item in self.keywords
+            ]
         return self._prepare_struct(key, value, simplified)
 
 

@@ -33,6 +33,7 @@ Arx source
 
 - [Modules and imports](modules.md)
 - [Functions](functions.md)
+- [Text file I/O](file-io.md)
 - [Classes](classes.md)
 - [Data types](datatypes.md)
 - [Built-in types](built-in-types.md)
@@ -51,6 +52,7 @@ The current frontend supports:
   package imports
 - classes, inheritance, fields, methods, modifiers, and default construction
 - lists and builtin `range`
+- restricted native UTF-8 text files with builtin `open`
 - fixed-shape numeric tensors and runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
 - assertions and the compiled `arx test` runner

@@ -80,6 +80,12 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 node=attribute,
                 unknown_message="Unknown attribute type '{name}'",
             )
+            if isinstance(attribute.type_, astx.FileType):
+                self.context.diagnostics.add(
+                    "file fields require unsupported aggregate destruction",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if isinstance(attribute.type_, astx.ListType):
                 self.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "

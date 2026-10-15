@@ -203,6 +203,7 @@
       "bool",
       "boolean",
       "none",
+      "file",
       "str",
       "string",
       "char",
@@ -215,6 +216,14 @@
       "series",
       "tensor"
     ],
-    "functions": ["cast", "dataframe", "isinstance", "print", "range", "type"]
+    "functions": [
+      "cast",
+      "dataframe",
+      "isinstance",
+      "open",
+      "print",
+      "range",
+      "type"
+    ]
   }
 }

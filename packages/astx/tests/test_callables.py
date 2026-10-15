@@ -4,6 +4,10 @@ title: Test callable ASTx objects.
 
 import pytest
 
+from typeguard import TypeCheckError
+
+import astx
+
 from astx.blocks import Block
 from astx.callables import (
     Argument,
@@ -279,3 +283,22 @@ def test_yield_stmt_in_generator_block() -> None:
     assert isinstance(gen_block[1], WhileStmt)
     assert str(gen_block[1].body[0])
     visualize_image(gen_block.get_struct())
+
+
+def test_keyword_call_model_preserves_order_and_validates_items() -> None:
+    """
+    title: Named arguments preserve order and validate every collection item.
+    """
+    keywords = (
+        astx.KeywordArgument("mode", astx.LiteralString("r")),
+        astx.KeywordArgument("file", astx.LiteralString("input.txt")),
+    )
+    call = FunctionCall("open", [], keywords=keywords)
+    assert call.keywords == keywords
+    assert "Keywords" in str(call.get_struct())
+    assert str(call).index("mode=") < str(call).index("file=")
+    assert keywords[0].get_struct(simplified=True)
+    with pytest.raises(TypeCheckError):
+        astx.KeywordArgument("file", "not an expression")  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        FunctionCall("open", [], keywords=(keywords[0], 123))  # type: ignore[arg-type]

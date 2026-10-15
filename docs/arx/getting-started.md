@@ -119,3 +119,7 @@ when the compilation unit uses those features.
 - [Projects and imports](projects.md)
 - [Compiled tests](testing.md)
 - [Apache Arrow runtime](../apache-arrow.md)
+
+For native text files, see [Text File I/O](file-io.md) and `examples/file-io.x`.
+Run the example in a scratch directory: it creates or truncates
+`file-io-example.txt` relative to the running program.

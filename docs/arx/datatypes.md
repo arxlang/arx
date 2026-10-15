@@ -104,3 +104,6 @@ That page covers:
 - lists, tensors, dataframes, series, and current limitations
 - the `cast(value, type)` helper
 - the `isinstance(value, type)` and `type(value)` helpers
+
+Native text streams use the local-only [`file` type](file-io.md), with explicit
+`open` initialization and lexical cleanup. They are not copyable scalar values.

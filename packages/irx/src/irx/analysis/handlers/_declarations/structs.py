@@ -68,6 +68,12 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
             )
+            if isinstance(attr.type_, astx.FileType):
+                self.context.diagnostics.add(
+                    "file fields require unsupported aggregate destruction",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if isinstance(attr.type_, astx.ListType):
                 self.context.diagnostics.add(
                     f"struct field '{struct.name}.{attr.name}' cannot own "

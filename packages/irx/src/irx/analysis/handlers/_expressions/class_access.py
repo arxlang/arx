@@ -10,8 +10,11 @@ summary: >-
 
 from __future__ import annotations
 
+from typing import cast
+
 import astx
 
+from irx.analysis.file_io import resolve_file_method
 from irx.analysis.handlers._expressions.class_support import (
     ExpressionClassSupportVisitorMixin,
 )
@@ -139,6 +142,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.MethodCall
         """
+        info = self._semantic(node)
+        if info.resolved_file_operation is not None:
+            info.resource_ownership = None
+        info.resolved_file_operation = None
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
@@ -150,11 +157,14 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         ):
             self._set_type(node, None)
             return
+        receiver_type = self._expr_type(node.receiver)
+        if isinstance(receiver_type, astx.FileType):
+            resolve_file_method(cast(SemanticAnalyzerCore, self), node)
+            return
         module = self._module_namespace(node.receiver)
         if module is not None:
             self._resolve_module_namespace_call(node, module, arg_types)
             return
-        receiver_type = self._expr_type(node.receiver)
         class_ = self._resolve_class_from_type(
             receiver_type,
             node=node,

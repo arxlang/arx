@@ -1,8 +1,9 @@
 # Built-in Types
 
 Arx has a small set of built-in types that can be used in variable annotations,
-function parameters, and function return types. This page is the reference for
-their canonical spellings, accepted aliases, and current surface syntax.
+function parameters, and function return types, except for the local-only `file`
+type. This page is the reference for their canonical spellings, accepted
+aliases, and current surface syntax.
 
 ## Overview
 
@@ -202,6 +203,12 @@ type Count = i32
 fn type_name(value: Count) -> str:
   return type(value)
 ```
+
+## `file`
+
+`var stream: file = open("input.txt")` declares a single-owner native text file.
+It requires a direct initializer and cannot be copied, reassigned, passed, or
+returned. See [Text File I/O](file-io.md) for its methods and limitations.
 
 ## See Also
 

@@ -24,6 +24,7 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     ReturnResolution,
     SemanticFunction,
+    SemanticInfo,
 )
 from irx.analysis.types import display_type_name
 from irx.builder.core import (
@@ -36,7 +37,7 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.lowering.file import FileVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
 from irx.diagnostics import DiagnosticCodes
@@ -44,7 +45,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class FunctionVisitorMixin(VisitorMixinBase):
+class FunctionVisitorMixin(FileVisitorMixin):
     def _register_call_result_cleanup(
         self,
         node: astx.AST,
@@ -663,6 +664,13 @@ class FunctionVisitorMixin(VisitorMixinBase):
           node:
             type: astx.FunctionCall
         """
+        semantic = getattr(node, "semantic", None)
+        if (
+            isinstance(semantic, SemanticInfo)
+            and semantic.resolved_file_open is not None
+        ):
+            self.lower_file_open(node)
+            return
         resolution = self._semantic_call_resolution(node)
         target_function = resolution.callee.function
         callee_f = self._declare_semantic_function(target_function)
@@ -691,6 +699,12 @@ class FunctionVisitorMixin(VisitorMixinBase):
             type: astx.MethodCall
         """
         semantic = getattr(node, "semantic", None)
+        if (
+            isinstance(semantic, SemanticInfo)
+            and semantic.resolved_file_operation is not None
+        ):
+            self.lower_file_method(node)
+            return
         module_member = getattr(
             semantic,
             "resolved_module_member_access",

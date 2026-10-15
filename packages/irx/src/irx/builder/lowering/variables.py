@@ -22,7 +22,7 @@ from irx.builder.diagnostics import (
     raise_lowering_error,
     raise_lowering_internal_error,
 )
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.lowering.file import FileVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
@@ -34,7 +34,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class VariableVisitorMixin(VisitorMixinBase):
+class VariableVisitorMixin(FileVisitorMixin):
     def _register_owned_list_cleanup(
         self,
         node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
@@ -507,6 +507,13 @@ class VariableVisitorMixin(VisitorMixinBase):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
+        if isinstance(node.type_, astx.FileType):
+            ownership = resource_ownership(node)
+            if ownership is None or ownership.owner_symbol_id is None:
+                raise_lowering_internal_error(
+                    "file local is missing ownership", node=node
+                )
+            self.file_cleanup(node, init_val, ownership.owner_symbol_id)
         self._register_owned_list_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
 
@@ -569,6 +576,13 @@ class VariableVisitorMixin(VisitorMixinBase):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
+        if isinstance(node.type_, astx.FileType):
+            ownership = resource_ownership(node)
+            if ownership is None or ownership.owner_symbol_id is None:
+                raise_lowering_internal_error(
+                    "file local is missing ownership", node=node
+                )
+            self.file_cleanup(node, init_val, ownership.owner_symbol_id)
         self._register_owned_list_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
         self.result_stack.append(init_val)
