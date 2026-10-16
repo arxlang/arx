@@ -98,9 +98,18 @@ IRx supports multiple inheritance with deterministic C3 linearization.
 
 ## Current Limitations
 
-- `ClassConstruct("Name", args, keywords=...)` binds an optional `init` hook;
-  `deinit` runs on final reference release, before reverse-order field cleanup
-- hooks are compiler entry points, not dispatchable ordinary methods
+- `ClassConstruct("Name", args, keywords=...)` binds an optional `__init__`
+  hook; `__del__` runs on final reference release, before reverse-order field
+  cleanup
+- lifecycle hooks are compiler entry points, not dispatchable ordinary methods
+- IRx's immutable `CLASS_HOOKS` registry owns supported dunder names;
+  `LIFECYCLE_HOOKS` selects compiler-only lifecycle signature/invocation rules
+- existing `__enter__` and `__exit__` context protocols retain ordinary dispatch
+  and call-site signature validation, not lifecycle restrictions
+- unsupported dunder method names are rejected, and lifecycle names cannot be
+  fields; plain `init` and `deinit` are ordinary methods
+- lowering consumes the resolved `is_class_initializer` signature metadata,
+  rather than interpreting source method names
 - no stable foreign object ABI for general classes
 - no callback/function-pointer class interop in the public FFI layer
 - overload selection requires exact provided-argument matches after accounting

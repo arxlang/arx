@@ -101,16 +101,16 @@ class Counter:
   @[public, static, mutable]
   destroyed: i32 = 0
 
-  fn init(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     ```
-    title: init
+    title: __init__
     ```
     self.value = value
     return none
 
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     ```
-    title: deinit
+    title: __del__
     ```
     Counter.destroyed = Counter.destroyed + 1
     return none

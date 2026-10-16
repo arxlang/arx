@@ -1006,10 +1006,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                         self.class_cleanup(
                             argument, alloca, symbol_key, storage=True
                         )
-                if (
-                    idx == 0
-                    and signature.metadata.get("method_name") == "init"
-                ):
+                if idx == 0 and signature.metadata.get("is_class_initializer"):
                     self.class_construction_stack = [llvm_arg]
 
             self.visit_child(node.body)

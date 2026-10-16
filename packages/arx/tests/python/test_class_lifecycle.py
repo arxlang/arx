@@ -20,10 +20,10 @@ from llvmlite import binding as llvm
 
 COUNTER = """class Counter:
   value: i32 = 0
-  fn init(self, value: i32 = 3) -> none:
+  fn __init__(self, value: i32 = 3) -> none:
     self.value = value
     return none
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print(self.value)
     return none
 """
@@ -169,7 +169,7 @@ def test_keyword_evaluation_order(tmp_path: Path) -> None:
     """
     declarations = """class Pair:
   sum: i32 = 0
-  fn init(self, first: i32, second: i32 = 2) -> none:
+  fn __init__(self, first: i32, second: i32 = 2) -> none:
     self.sum = first + second
     return none
 fn value(number: i32) -> i32:
@@ -194,22 +194,22 @@ def test_inheritance_drop_order(tmp_path: Path) -> None:
         type: Path
     """
     declarations = """class Root:
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     print("root init")
     return none
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("root drop")
     return none
 class Left(Root):
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("left drop")
     return none
 class Right(Root):
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("right drop")
     return none
 class Child(Left, Right):
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("child drop")
     return none
 fn produce() -> Root:
@@ -232,14 +232,14 @@ def test_receiver_pin_before_later_argument_effects(tmp_path: Path) -> None:
     """
     declarations = (
         COUNTER.replace(
-            "  fn deinit",
+            "  fn __del__",
             """  fn read(self, offset: i32) -> i32:
     return self.value + offset
-  fn deinit""",
+  fn __del__""",
         )
         + """class Holder:
   child: Counter
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.child = Counter(value=1)
     return none
 fn replace_child(holder: Holder) -> i32:
@@ -260,7 +260,7 @@ fn replace_child(holder: Holder) -> i32:
 RESOURCE = """class Log:
   path: str = ""
   handle: file
-  fn init(self, path: str, mode: str = "w") -> none:
+  fn __init__(self, path: str, mode: str = "w") -> none:
     self.path = path
     self.handle = open(self.path, mode=mode)
     return none
@@ -316,7 +316,7 @@ def test_file_field_initialization_restrictions(constructor: str) -> None:
         type: str
     """
     declarations = (
-        "class Log:\n  handle: file\n  fn init(self) -> none:\n"
+        "class Log:\n  handle: file\n  fn __init__(self) -> none:\n"
         + "\n".join("    " + line for line in constructor.splitlines())
         + "\n"
     )
@@ -324,7 +324,7 @@ def test_file_field_initialization_restrictions(constructor: str) -> None:
         analyze(parsed(declarations, "Log()"))
 
 
-@pytest.mark.parametrize("body", ["value.init()", "value.deinit()"])
+@pytest.mark.parametrize("body", ["value.__init__()", "value.__del__()"])
 def test_hooks_cannot_be_called_explicitly(body: str) -> None:
     """
     title: Source cannot reinitialize or manually destroy class objects.
@@ -334,6 +334,54 @@ def test_hooks_cannot_be_called_explicitly(body: str) -> None:
     """
     with pytest.raises(SemanticError, match="explicitly"):
         analyze(parsed(COUNTER, "var value: Counter = Counter()\n" + body))
+
+
+@pytest.mark.parametrize("name", ["__inti__", "__str__", "__new__"])
+def test_unsupported_dunder_methods_fail_in_analysis(name: str) -> None:
+    """
+    title: Parse ordinary identifiers but reject unsupported class protocols.
+    parameters:
+      name:
+        type: str
+    """
+    declarations = (
+        f"class Value:\n  fn {name}(self) -> none:\n    return none\n"
+    )
+    with pytest.raises(
+        SemanticError, match="dunder method names are reserved"
+    ):
+        analyze(parsed(declarations, "Value()"))
+
+
+@pytest.mark.parametrize(
+    "name", ["init", "deinit", "_helper", "__helper", "helper__"]
+)
+def test_non_protocol_method_names_remain_ordinary(
+    tmp_path: Path, name: str
+) -> None:
+    """
+    title: Old hook names and partial underscore prefixes are ordinary APIs.
+    parameters:
+      tmp_path:
+        type: Path
+      name:
+        type: str
+    """
+    declarations = f"""class Value:
+  value: i32 = 0
+  fn {name}(self, value: i32) -> i32:
+    self.value = value
+    return self.value
+"""
+    result = run_class(
+        tmp_path,
+        declarations,
+        "var value: Value = Value()\nassert value.value == 0\n"
+        f"assert value.{name}(7) == 7",
+    )
+    assert result.returncode == 0, result.stderr
+    with pytest.raises(SemanticError, match="constructor"):
+        analyze(parsed(declarations, "Value(7)"))
 
 
 @pytest.mark.parametrize(
@@ -391,10 +439,10 @@ def test_nonprefix_base_fields_in_hooks(tmp_path: Path) -> None:
   left: i32 = 11
 class Right:
   right: i32 = 0
-  fn init(self, value: i32 = 23) -> none:
+  fn __init__(self, value: i32 = 23) -> none:
     self.right = value
     return none
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print(self.right)
     return none
 class Child(Left, Right):
@@ -454,15 +502,15 @@ def test_partial_constructor_drops_only_completed_hooks(
     """
     declarations = """class Base:
   name: str = "base"
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print(self.name)
     return none
 class Child(Base):
   handle: file
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.handle = open("missing-directory/file.txt", "w")
     return none
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("incomplete")
     return none
 """
@@ -490,7 +538,7 @@ def test_lifecycle_self_cannot_escape(body: str) -> None:
         """class Counter:
   fn read(self) -> i32:
     return 1
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     """
         + body
         + "\n"
@@ -589,7 +637,7 @@ def test_field_drop_failure_continues_other_fields(tmp_path: Path) -> None:
   first: Counter = Counter(value=1)
   handle: file = open("/dev/full", "w")
   second: Counter = Counter(value=2)
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.handle.write("buffered")
     return none
 """
@@ -609,7 +657,7 @@ def test_base_defaults_use_abi_conversions(tmp_path: Path) -> None:
     """
     declarations = """class Base:
   value: i64 = 0
-  fn init(self, value: i64 = 7) -> none:
+  fn __init__(self, value: i64 = 7) -> none:
     self.value = value
     return none
 class Child(Base):
@@ -626,12 +674,13 @@ class Child(Base):
 @pytest.mark.parametrize(
     "declaration",
     [
-        "class Item:\n  @[static]\n  fn init() -> none:\n    return none\n",
+        "class Item:\n  @[static]\n"
+        "  fn __init__() -> none:\n    return none\n",
         "class Item:\n"
-        "  fn deinit(self, value: i32) -> none:\n    return none\n",
-        "class Item:\n  fn init(self) -> i32:\n    return 1\n",
-        "class Item:\n  fn init(self) -> none:\n    return none\n"
-        "  fn init(self, value: i32) -> none:\n    return none\n",
+        "  fn __del__(self, value: i32) -> none:\n    return none\n",
+        "class Item:\n  fn __init__(self) -> i32:\n    return 1\n",
+        "class Item:\n  fn __init__(self) -> none:\n    return none\n"
+        "  fn __init__(self, value: i32) -> none:\n    return none\n",
     ],
 )
 def test_invalid_hook_declarations(declaration: str) -> None:
@@ -667,7 +716,7 @@ def test_constructor_allocation_failure_releases_argument(
         COUNTER
         + """class Holder:
   child: Counter
-  fn init(self, child: Counter) -> none:
+  fn __init__(self, child: Counter) -> none:
     self.child = child
     return none
 """
@@ -723,17 +772,17 @@ def test_failed_replacement_rolls_back_current_field(tmp_path: Path) -> None:
     if not Path("/dev/full").exists():
         pytest.skip("requires the POSIX failing-write device")
     declarations = """class Base:
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print("base")
     return none
 class Failing(Base):
   handle: file = open("/dev/full", "w")
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.handle.write("buffered")
     return none
 class Holder:
   child: Base = Failing()
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.child = Base()
     return none
 """
@@ -760,12 +809,12 @@ def test_constructor_in_hook_can_use_later_class(tmp_path: Path) -> None:
     """
     declarations = """class Holder:
   child: Leaf
-  fn init(self) -> none:
+  fn __init__(self) -> none:
     self.child = Leaf(value=7)
     return none
 class Leaf:
   value: i32 = 0
-  fn init(self, value: i32) -> none:
+  fn __init__(self, value: i32) -> none:
     self.value = value
     return none
   fn read(self) -> i32:

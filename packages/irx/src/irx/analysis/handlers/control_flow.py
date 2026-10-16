@@ -16,7 +16,11 @@ import astx
 
 from astx.types import AnyType as AstxAnyType
 
-from irx.analysis.class_lifecycle import class_ownership
+from irx.analysis.class_lifecycle import (
+    CONTEXT_ENTER_HOOK,
+    CONTEXT_EXIT_HOOK,
+    class_ownership,
+)
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -816,13 +820,13 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         enter = self._resolve_context_method(
             node,
             class_,
-            "__enter__",
+            CONTEXT_ENTER_HOOK.name,
             resolved_manager_type,
         )
         exit_ = self._resolve_context_method(
             node,
             class_,
-            "__exit__",
+            CONTEXT_EXIT_HOOK.name,
             resolved_manager_type,
         )
 

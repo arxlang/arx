@@ -210,7 +210,11 @@ tests, this document, examples, and any derived editor grammars.
 
 `file` is a builtin type spelling; `open` remains an identifier. The builtin
 `open` interface accepts named call arguments (`file=`, `mode=`, etc.), and
-class constructors accept names from their own `init` parameters. `init` and
-`deinit` remain ordinary identifiers, not reserved keywords. See
-[Classes](classes.md) and [Text File I/O](file-io.md) for restrictions. This
-does not add general function/method keyword calls or `with` statements.
+class constructors accept names from their own `__init__` parameters. Dunder
+spellings remain identifier tokens, not lexer keywords. Class methods named
+`__name__` are reserved for documented language protocols. `__init__` and
+`__del__` are lifecycle hooks; existing IRx `__enter__` and `__exit__` names are
+also recognized without adding Arx `with` syntax. Plain `init` and `deinit` have
+no special meaning. See [Classes](classes.md) and [Text File I/O](file-io.md)
+for restrictions. This does not add general function/method keyword calls or
+`with` statements.

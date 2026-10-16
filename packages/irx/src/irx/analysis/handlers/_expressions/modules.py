@@ -16,7 +16,7 @@ from typing import cast
 
 import astx
 
-from irx.analysis.class_lifecycle import HOOKS, class_ownership
+from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -419,7 +419,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 self._semantic(node).lifecycle_self = (
                     node.name == "self"
                     and function is not None
-                    and function.signature.metadata.get("method_name") in HOOKS
+                    and function.signature.metadata.get("method_name")
+                    in LIFECYCLE_HOOKS
                 )
             elif isinstance(symbol.type_, astx.FileType):
                 self._set_resource_ownership(

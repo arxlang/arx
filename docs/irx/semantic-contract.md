@@ -358,25 +358,37 @@ to lowering or runtime behavior.
 
 ## Class Construction Contract
 
-IRx now exposes one low-level default-construction path for classes without
-introducing high-level constructor syntax yet.
+IRx exposes one analyzed class-construction path with optional lifecycle hooks.
 
-- `ClassConstruct("Name")` allocates one heap object and returns the analyzed
+- `ClassConstruct("Name", args, keywords=...)` binds the class's own optional
+  `__init__` parameters, allocates one heap object, and returns the analyzed
   class pointer type for `Name`
 - construction initializes object headers first, then instance fields in the
   same canonical flattened storage order recorded in
   `SemanticClass.layout.instance_fields`
-- the reserved type-descriptor header slot is initialized to null for now
+- lifetime and concrete-field-descriptor header slots identify ownership and the
+  concrete layout, including through non-prefix multiple-inheritance views
 - the dispatch-table header slot is initialized to the class dispatch global
   when one exists, otherwise null
 - instance fields use their declaration initializer when present; otherwise they
   receive the same zero/null default used for ordinary local declarations
-- instance constant fields must have declaration initializers in the current
-  model because dedicated constructors are not implemented yet
+- instance constant fields must still have declaration initializers; lifecycle
+  hooks do not permit later mutation of constant storage
 - static class fields initialize once at module load from literal declaration
   initializers or their zero/null default when no initializer is present
 - non-literal static field initializers are rejected during semantic analysis in
   this phase so codegen never has to invent runtime initialization order
+- lifecycle hooks are `__init__(self, ...) -> none` and `__del__(self) -> none`;
+  existing `__enter__` and `__exit__` context protocols remain supported, while
+  other dunder method names are reserved and rejected
+- lifecycle hooks are compiler-only entry points: normal final release runs
+  `__del__` before field cleanup, and base phases chain automatically in
+  canonical order
+- signature and invocation validation belong to analysis; lowering consumes
+  resolved phases and the `is_class_initializer` signature flag, not hook names
+
+See [Class Model](class-model.md#lifecycle-and-ownership) for lifetime and
+failure-path restrictions. These names do not imply Python finalization rules.
 
 ## Class ABI And Interop Contract
 

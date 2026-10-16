@@ -11,7 +11,7 @@ from dataclasses import replace
 
 import astx
 
-from irx.analysis.class_lifecycle import class_ownership
+from irx.analysis.class_lifecycle import INITIALIZER_HOOK, class_ownership
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     class_method_symbol_basename,
@@ -204,6 +204,9 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
                     "class_name": class_.name,
                     "method_name": declaration.name,
                     "has_hidden_receiver": True,
+                    "is_class_initializer": (
+                        declaration.name == INITIALIZER_HOOK.name
+                    ),
                 },
             )
             receiver_args = (receiver_symbol,)

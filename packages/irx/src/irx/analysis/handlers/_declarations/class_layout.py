@@ -15,7 +15,11 @@ from dataclasses import replace
 
 import astx
 
-from irx.analysis.class_lifecycle import HOOKS, field_resource, lifecycle_plan
+from irx.analysis.class_lifecycle import (
+    LIFECYCLE_HOOKS,
+    field_resource,
+    lifecycle_plan,
+)
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     mangle_class_descriptor_name,
@@ -182,7 +186,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                     or member.dispatch_slot is None
                     or member.lowered_function is None
                     or member.signature_key is None
-                    or member.name in HOOKS
+                    or member.name in LIFECYCLE_HOOKS
                 ):
                     continue
                 dispatch_entry = SemanticClassMethodDispatch(
@@ -415,7 +419,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             for member in class_.declared_members:
                 if (
                     member.kind is not ClassMemberKind.METHOD
-                    or member.name in HOOKS
+                    or member.name in LIFECYCLE_HOOKS
                     or member.is_static
                     or member.visibility is astx.VisibilityKind.private
                     or member.signature_key is None

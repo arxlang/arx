@@ -10,7 +10,9 @@ import pytest
 from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
+from arx.lexer.syntax import load_syntax_manifest
 from arx.parser import Parser
+from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS
 
 
 def _parse_module(code: str) -> astx.Module:
@@ -24,6 +26,43 @@ def _parse_module(code: str) -> astx.Module:
     """
     ArxIO.string_to_buffer(code)
     return Parser().parse(Lexer().lex())
+
+
+def test_parse_dunder_hooks_preserves_protocol_names() -> None:
+    """
+    title: Parse protocol methods without imposing semantic hook rules.
+    """
+    tree = _parse_module("""class Value:
+  fn __init__(self, value: i32 = 1) -> none:
+    return none
+  fn __del__(self) -> none:
+    return none
+  fn __inti__(self) -> none:
+    return none
+""")
+    declaration = tree.block[0]
+    assert isinstance(declaration, astx.ClassDefStmt)
+    assert [method.name for method in declaration.methods] == [
+        "__init__",
+        "__del__",
+        "__inti__",
+    ]
+    initializer = declaration.methods[0]
+    assert [arg.name for arg in initializer.prototype.args.nodes] == ["value"]
+    assert isinstance(
+        initializer.prototype.args.nodes[0].default, astx.LiteralInt32
+    )
+
+
+def test_class_hook_manifest_matches_semantic_registry() -> None:
+    """
+    title: Editor-facing hook spellings stay aligned with semantic support.
+    """
+    syntax = load_syntax_manifest().data["structural_forms"][
+        "class_constructor"
+    ]
+    assert set(syntax["hooks"]) == set(LIFECYCLE_HOOKS)
+    assert syntax["reserved_method_pattern"] == "__name__"
 
 
 def test_parse_complex_class_module_with_irx_class_nodes() -> None:

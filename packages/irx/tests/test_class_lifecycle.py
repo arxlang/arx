@@ -302,7 +302,7 @@ def test_class_cleanup_on_loop_transfer(continue_loop: bool) -> None:
         methods=[
             astx.FunctionDef(
                 astx.FunctionPrototype(
-                    "deinit", astx.Arguments(), astx.NoneType()
+                    "__del__", astx.Arguments(), astx.NoneType()
                 ),
                 destructor_body,
             )
@@ -382,7 +382,7 @@ def test_hook_constructs_later_declared_class() -> None:
         methods=[
             astx.FunctionDef(
                 astx.FunctionPrototype(
-                    "init", astx.Arguments(), astx.NoneType()
+                    "__init__", astx.Arguments(), astx.NoneType()
                 ),
                 init_body,
             )

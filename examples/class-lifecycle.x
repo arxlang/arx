@@ -11,18 +11,18 @@ class TextLog:
   path: str = ""
   handle: file
 
-  fn init(self, path: str) -> none:
+  fn __init__(self, path: str) -> none:
     ```
-    title: init
+    title: __init__
     summary: Copies the path and opens exactly one owned stream.
     ```
     self.path = path
     self.handle = open(self.path, mode="w")
     return none
 
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     ```
-    title: deinit
+    title: __del__
     summary: Observes fields before compiler-generated field cleanup.
     ```
     print(self.path)

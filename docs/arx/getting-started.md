@@ -126,7 +126,7 @@ Run the example in a scratch directory: it creates or truncates
 
 ## Class Lifetimes
 
-Classes support `init(self, ...) -> none` and `deinit(self) -> none` hooks.
+Classes support `__init__(self, ...) -> none` and `__del__(self) -> none` hooks.
 `Counter(value=7)` binds constructor keywords; ordinary function/method keywords
 remain unsupported. Class aliases share identity, and final reference release
 runs the destructor and releases owned string/file/class fields. Cycles and

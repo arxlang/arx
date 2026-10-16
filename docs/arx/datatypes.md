@@ -112,7 +112,7 @@ Native text streams use the local-only [`file` type](file-io.md), with explicit
 
 Declared class names denote identity-preserving, reference-managed object
 pointers. Local copies and owned returns keep objects alive; final release runs
-`deinit` and drops owned fields. Acyclic instance class/string/file fields are
+`__del__` and drops owned fields. Acyclic instance class/string/file fields are
 supported, but class values in containers/unions/structs, globals/statics, and
 generators are rejected. See [Classes](classes.md) for construction and lifetime
 rules; there is no general external ownership ABI.

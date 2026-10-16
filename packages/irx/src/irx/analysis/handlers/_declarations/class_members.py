@@ -16,7 +16,8 @@ from typing import cast
 import astx
 
 from irx.analysis.class_lifecycle import (
-    HOOKS,
+    INITIALIZER_HOOK,
+    LIFECYCLE_HOOKS,
     unsupported_class_field,
     validate_file_fields,
     validate_hook,
@@ -69,6 +70,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         ancestor_methods = self._ancestor_declared_method_groups(mro)
 
         for attribute in class_.declaration.attributes:
+            if attribute.name in LIFECYCLE_HOOKS:
+                self.context.diagnostics.add(
+                    f"class member '{attribute.name}' is reserved for a "
+                    "lifecycle method, not a field",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+                )
+                continue
             if (
                 attribute.name in attribute_names
                 or attribute.name in method_groups
@@ -211,7 +220,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
 
         for method in class_.declaration.methods:
             validate_hook(cast(SemanticAnalyzerCore, self), method)
-            if method.name in HOOKS and method_groups.get(method.name):
+            if method.name in LIFECYCLE_HOOKS and method_groups.get(
+                method.name
+            ):
                 self.context.diagnostics.add(
                     "lifecycle hooks cannot be overloaded",
                     node=method,
@@ -342,7 +353,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 continue
             inherited_methods = (
                 ()
-                if method.name in HOOKS
+                if method.name in LIFECYCLE_HOOKS
                 else ancestor_methods.get(method.name, ())
             )
             if any(
@@ -532,7 +543,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 method_name_order.append(name)
 
         for name in method_name_order:
-            if name in HOOKS:
+            if name in LIFECYCLE_HOOKS:
                 continue
             local_group = declared_method_groups.get(name, ())
             inherited_candidates = ancestor_methods.get(name, ())
@@ -795,7 +806,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 body = astx.Block()
                 definition = astx.FunctionDef(
                     astx.FunctionPrototype(
-                        "init", astx.Arguments(), astx.NoneType()
+                        INITIALIZER_HOOK.name,
+                        astx.Arguments(),
+                        astx.NoneType(),
                     ),
                     body,
                 )

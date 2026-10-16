@@ -15,10 +15,11 @@ from typing import cast
 import astx
 
 from irx.analysis.class_lifecycle import (
-    HOOKS,
+    INITIALIZER_HOOK,
     class_ownership,
     constructor_arguments,
     field_resource,
+    reject_hook_call,
 )
 from irx.analysis.file_io import resolve_file_method
 from irx.analysis.handlers._expressions.class_support import (
@@ -135,7 +136,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_class(node, class_)
-        initializer = class_.declared_member_table.get("init")
+        initializer = class_.declared_member_table.get(INITIALIZER_HOOK.name)
         if (
             initializer is not None
             and initializer.lowered_function is not None
@@ -176,13 +177,6 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if info.resolved_file_operation is not None:
             info.resource_ownership = None
         info.resolved_file_operation = None
-        if node.method_name in HOOKS:
-            self.context.diagnostics.add(
-                "lifecycle hooks cannot be called explicitly",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-            )
-            return
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
@@ -217,6 +211,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
             self._set_type(node, None)
+            return
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
             return
         resolved_overload = self._resolve_method_overload(
             class_,
@@ -295,12 +293,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.BaseMethodCall
         """
-        if node.method_name in HOOKS:
-            self.context.diagnostics.add(
-                "lifecycle hooks cannot be called explicitly",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-            )
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
             return
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
@@ -398,12 +393,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.StaticMethodCall
         """
-        if node.method_name in HOOKS:
-            self.context.diagnostics.add(
-                "lifecycle hooks cannot be called explicitly",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
-            )
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:

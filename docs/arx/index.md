@@ -50,8 +50,8 @@ The current frontend supports:
 - `if`/`else`, `while`, count-style `for`, and list-valued `for ... in`
 - absolute, relative, grouped, namespace, standard-library, and installed
   package imports
-- classes, inheritance, fields, methods, constructor keywords, and acyclic
-  reference-managed lifetimes
+- classes, inheritance, fields, methods, constructor keywords, `__init__` and
+  `__del__` hooks, and acyclic reference-managed lifetimes
 - lists and builtin `range`
 - restricted native UTF-8 text files with builtin `open`
 - fixed-shape numeric tensors and runtime-shaped tensor parameters

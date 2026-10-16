@@ -2,9 +2,10 @@
 title: Class ownership, constructor binding, and bounded lifecycle validity.
 """
 
-from collections.abc import Iterator
-from dataclasses import replace
-from typing import cast
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass, replace
+from types import MappingProxyType
+from typing import Final, cast
 
 import astx
 
@@ -27,7 +28,98 @@ from irx.analysis.types import is_assignable, is_string_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
-HOOKS = {"init", "deinit"}
+
+@private
+@typechecked
+@dataclass(frozen=True)
+class ClassHookSpec:
+    """
+    title: One language-defined class protocol, not a private method.
+    attributes:
+      name:
+        type: str
+      accepts_parameters:
+        type: bool
+      is_lifecycle:
+        type: bool
+    """
+
+    name: str
+    accepts_parameters: bool
+    is_lifecycle: bool = True
+
+    def __init__(
+        self,
+        name: str,
+        accepts_parameters: bool,
+        is_lifecycle: bool = True,
+    ) -> None:
+        """
+        title: Validate hook specification inputs before freezing them.
+        parameters:
+          name:
+            type: str
+          accepts_parameters:
+            type: bool
+          is_lifecycle:
+            type: bool
+        """
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "accepts_parameters", accepts_parameters)
+        object.__setattr__(self, "is_lifecycle", is_lifecycle)
+
+
+INITIALIZER_HOOK: Final = ClassHookSpec("__init__", accepts_parameters=True)
+FINALIZER_HOOK: Final = ClassHookSpec("__del__", accepts_parameters=False)
+CONTEXT_ENTER_HOOK: Final = ClassHookSpec(
+    "__enter__", accepts_parameters=True, is_lifecycle=False
+)
+CONTEXT_EXIT_HOOK: Final = ClassHookSpec(
+    "__exit__", accepts_parameters=True, is_lifecycle=False
+)
+CLASS_HOOKS: Final[Mapping[str, ClassHookSpec]] = MappingProxyType(
+    {
+        hook.name: hook
+        for hook in (
+            INITIALIZER_HOOK,
+            FINALIZER_HOOK,
+            CONTEXT_ENTER_HOOK,
+            CONTEXT_EXIT_HOOK,
+        )
+    }
+)
+LIFECYCLE_HOOKS: Final[Mapping[str, ClassHookSpec]] = MappingProxyType(
+    {name: hook for name, hook in CLASS_HOOKS.items() if hook.is_lifecycle}
+)
+DUNDER_MIN_LENGTH: Final = 4
+
+
+@private
+@typechecked
+def reject_hook_call(
+    analyzer: SemanticAnalyzerCore, node: astx.AST, name: str
+) -> bool:
+    """
+    title: Reject explicit calls to compiler-only lifecycle entry points.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.AST
+      name:
+        type: str
+    returns:
+      type: bool
+    """
+    if name not in LIFECYCLE_HOOKS:
+        return False
+    lifecycle_error(
+        analyzer,
+        node,
+        f"lifecycle hook '{name}' cannot be called explicitly; "
+        "construct with Class(...) and let ownership release the object",
+    )
+    return True
 
 
 @private
@@ -275,7 +367,7 @@ def lifecycle_plan(
         hooks = {
             member.name: member.lowered_function
             for member in owner.declared_members
-            if member.name in HOOKS
+            if member.name in LIFECYCLE_HOOKS
         }
         phases.append(
             ClassLifecyclePhase(
@@ -285,8 +377,8 @@ def lifecycle_plan(
                     for item in initialization.instance_initializers
                     if item.owner_qualified_name == owner.qualified_name
                 ),
-                hooks.get("init"),
-                hooks.get("deinit"),
+                hooks.get(INITIALIZER_HOOK.name),
+                hooks.get(FINALIZER_HOOK.name),
             )
         )
     return replace(initialization, phases=tuple(phases))
@@ -428,7 +520,24 @@ def validate_hook(
       declaration:
         type: astx.FunctionDef
     """
-    if declaration.name not in HOOKS:
+    hook = CLASS_HOOKS.get(declaration.name)
+    if hook is None:
+        if (
+            len(declaration.name) >= DUNDER_MIN_LENGTH
+            and declaration.name.startswith("__")
+            and declaration.name.endswith("__")
+        ):
+            analyzer.context.diagnostics.add(
+                f"unsupported class hook '{declaration.name}'; "
+                "dunder method names are reserved for language protocols; "
+                f"supported hooks: {', '.join(CLASS_HOOKS)}",
+                node=declaration,
+                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+            )
+        return
+    # Context hooks retain ordinary dispatch and their existing call-site
+    # validation; lifecycle-only restrictions must not change that protocol.
+    if not hook.is_lifecycle:
         return
     prototype = declaration.prototype
     if (
@@ -437,10 +546,12 @@ def validate_hook(
         or getattr(prototype, "is_extern", False)
         or astx.is_template_node(prototype)
         or not isinstance(prototype.return_type, astx.NoneType)
-        or (declaration.name == "deinit" and prototype.args.nodes)
+        or (not hook.accepts_parameters and prototype.args.nodes)
     ):
         lifecycle_error(
-            analyzer, declaration, "invalid lifecycle hook signature"
+            analyzer,
+            declaration,
+            f"invalid lifecycle hook signature for '{hook.name}'",
         )
     for arg in prototype.args.nodes:
         if not isinstance(arg.default, astx.Undefined) and not isinstance(
@@ -569,7 +680,7 @@ def resolve_store(
             function = analyzer.context.current_function
             if (
                 function is None
-                or function.signature.metadata.get("method_name") != "init"
+                or not function.signature.metadata.get("is_class_initializer")
                 or not isinstance(node.lhs, astx.FieldAccess)
                 or not isinstance(node.lhs.value, astx.Identifier)
                 or node.lhs.value.name != "self"
@@ -583,7 +694,8 @@ def resolve_store(
                 lifecycle_error(
                     analyzer,
                     node,
-                    "file fields require a fresh open in their owning init; "
+                    "file fields require a fresh open in their owning "
+                    f"{INITIALIZER_HOOK.name}; "
                     "replacement is unsupported",
                 )
         analyzer._set_resource_ownership(

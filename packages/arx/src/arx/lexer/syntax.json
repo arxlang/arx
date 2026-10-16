@@ -174,7 +174,8 @@
     },
     "class_constructor": {
       "form": "Class(positional, name=value, ...)",
-      "hooks": ["init", "deinit"],
+      "hooks": ["__init__", "__del__"],
+      "reserved_method_pattern": "__name__",
       "allows_keyword_arguments": true
     },
     "dataframe_constructor": {

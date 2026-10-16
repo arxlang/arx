@@ -182,9 +182,9 @@ once. Nullable field references allow retain/release of null, but access is
 checked. Last release always consumes payload/token even on callback error.
 
 Owned string/file/class fields drop in reverse canonical storage phases, after
-each completed phase's `deinit`. Partial construction skips incomplete hooks but
-releases all initialized fields. Native field-release errors preserve the first
-status and continue other field releases. Source hook bodies cannot
+each completed phase's `__del__`. Partial construction skips incomplete hooks
+but releases all initialized fields. Native field-release errors preserve the
+first status and continue other field releases. Source hook bodies cannot
 escape/resurrect `self`; fatal called code still does not unwind callers.
 String-field reads take owned snapshots so later expression effects cannot
 invalidate an evaluated string pointer. Reference counts are non-atomic, and

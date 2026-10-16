@@ -348,10 +348,10 @@ def test_lifecycle_through_facade(tmp_path: Path) -> None:
         MODULE_DOCSTRING
         + """class Counter:
   value: i32 = 0
-  fn init(self, value: i32) -> none:
+  fn __init__(self, value: i32) -> none:
     self.value = value
     return none
-  fn deinit(self) -> none:
+  fn __del__(self) -> none:
     print(self.value)
     return none
 fn make() -> Counter:
