@@ -133,6 +133,8 @@ extern putchard(x: i32) -> i32
 ## Builtin `open`
 
 `open` supports positional and keyword arguments for a restricted native text
-file interface. General user-function keyword calls are not implemented. See
+file interface. Class constructors also accept keywords from their `__init__`
+parameters (see [Classes](classes.md)). General user-function/method keyword
+calls are a separate follow-up PR and are not implemented here. See
 [Text File I/O](file-io.md) for supported defaults, methods, and ownership
 rules.

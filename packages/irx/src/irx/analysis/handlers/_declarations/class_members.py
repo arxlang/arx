@@ -11,9 +11,17 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import astx
 
+from irx.analysis.class_lifecycle import (
+    INITIALIZER_HOOK,
+    LIFECYCLE_HOOKS,
+    unsupported_class_field,
+    validate_file_fields,
+    validate_hook,
+)
 from irx.analysis.handlers._declarations.class_methods import (
     IMPLICIT_METHOD_RECEIVER_NAME,
     DeclarationClassMethodVisitorMixin,
@@ -24,6 +32,7 @@ from irx.analysis.resolved_nodes import (
     ClassMemberKind,
     ClassMemberResolutionKind,
     OwnershipKind,
+    OwnershipTransferKind,
     SemanticClass,
     SemanticClassMember,
     SemanticClassMemberResolution,
@@ -61,6 +70,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         ancestor_methods = self._ancestor_declared_method_groups(mro)
 
         for attribute in class_.declaration.attributes:
+            if attribute.name in LIFECYCLE_HOOKS:
+                self.context.diagnostics.add(
+                    f"class member '{attribute.name}' is reserved for a "
+                    "lifecycle method, not a field",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+                )
+                continue
             if (
                 attribute.name in attribute_names
                 or attribute.name in method_groups
@@ -80,25 +97,37 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 node=attribute,
                 unknown_message="Unknown attribute type '{name}'",
             )
-            if isinstance(attribute.type_, astx.FileType):
+            if self._attribute_is_static(attribute) and isinstance(
+                attribute.type_, (astx.FileType, astx.ClassType)
+            ):
                 self.context.diagnostics.add(
-                    "file fields require unsupported aggregate destruction",
+                    "owning static class fields are unsupported",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if isinstance(attribute.type_, astx.ListType):
                 self.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "
-                    "own dynamic list storage because class destruction is "
-                    "not supported",
+                    "own dynamic list storage in this lifecycle subset",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            if attribute.value is not None and not isinstance(
-                attribute.value,
-                astx.Undefined,
+            elif unsupported_class_field(attribute.type_):
+                self.context.diagnostics.add(
+                    "this resource kind has no class-field ownership ABI",
+                    node=attribute,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            if (
+                self._attribute_is_static(attribute)
+                and attribute.value is not None
+                and not isinstance(
+                    attribute.value,
+                    astx.Undefined,
+                )
             ):
-                self.visit(attribute.value)
+                with self.context.in_class(class_):
+                    self.visit(attribute.value)
                 if self._require_value_expression(
                     attribute.value,
                     context=(
@@ -114,15 +143,27 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     )
                 initializer_ownership = resource_ownership(attribute.value)
                 if (
-                    initializer_ownership is not None
+                    self._attribute_is_static(attribute)
+                    and initializer_ownership is not None
                     and initializer_ownership.kind is OwnershipKind.OWNED
                 ):
                     self.context.diagnostics.add(
                         f"class field '{class_.name}.{attribute.name}' "
-                        "cannot own runtime-managed storage because class "
-                        "destruction is not supported",
+                        "cannot own static runtime-managed storage",
                         node=attribute.value,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    )
+            if (
+                not self._attribute_is_static(attribute)
+                and attribute.value is not None
+            ):
+                owned = resource_ownership(attribute.value)
+                if owned is not None and owned.kind is OwnershipKind.OWNED:
+                    self._set_resource_ownership(
+                        attribute.value,
+                        replace(
+                            owned, transfer_kind=OwnershipTransferKind.MOVE
+                        ),
                     )
             is_constant = attribute.mutability == astx.MutabilityKind.constant
             if is_constant and (
@@ -178,6 +219,15 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             )
 
         for method in class_.declaration.methods:
+            validate_hook(cast(SemanticAnalyzerCore, self), method)
+            if method.name in LIFECYCLE_HOOKS and method_groups.get(
+                method.name
+            ):
+                self.context.diagnostics.add(
+                    "lifecycle hooks cannot be overloaded",
+                    node=method,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if method.name in attribute_names:
                 self.context.diagnostics.add(
                     (
@@ -301,7 +351,11 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
                 continue
-            inherited_methods = ancestor_methods.get(method.name, ())
+            inherited_methods = (
+                ()
+                if method.name in LIFECYCLE_HOOKS
+                else ancestor_methods.get(method.name, ())
+            )
             if any(
                 inherited.is_static != is_static
                 for inherited in inherited_methods
@@ -489,6 +543,8 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 method_name_order.append(name)
 
         for name in method_name_order:
+            if name in LIFECYCLE_HOOKS:
+                continue
             local_group = declared_method_groups.get(name, ())
             inherited_candidates = ancestor_methods.get(name, ())
             if not local_group and not inherited_candidates:
@@ -746,10 +802,72 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         self.bindings.bind_class(node.name, class_, node=node)
         with self.context.in_class(class_):
             class_ = self._resolve_class_definition(class_)
+            if class_.initialization is not None:
+                body = astx.Block()
+                definition = astx.FunctionDef(
+                    astx.FunctionPrototype(
+                        INITIALIZER_HOOK.name,
+                        astx.Arguments(),
+                        astx.NoneType(),
+                    ),
+                    body,
+                )
+                signature = self.registry.normalize_function_signature(
+                    definition.prototype,
+                    definition=definition,
+                    validate_ffi=False,
+                    validate_main=False,
+                )
+                context = self._make_lowered_method_function(
+                    class_,
+                    definition,
+                    signature,
+                    is_static=False,
+                    signature_key="field-initializers",
+                )
+                with self.context.in_function(context):
+                    with self.context.scope("instance_initializers"):
+                        self.context.scopes.declare(context.args[0])
+                        for (
+                            initializer
+                        ) in class_.initialization.instance_initializers:
+                            if (
+                                initializer.owner_qualified_name
+                                != class_.qualified_name
+                                or initializer.value is None
+                            ):
+                                continue
+                            value = initializer.value
+                            body.append(value)
+                            self.visit(value)
+                            self._semantic(
+                                value
+                            ).initializer_receiver = context.args[0]
+                            validate_assignment(
+                                self.context.diagnostics,
+                                target_name=initializer.field.member.name,
+                                target_type=initializer.field.member.type_,
+                                value_type=self._expr_type(value),
+                                node=initializer.field.member.declaration,
+                            )
+                            ownership = resource_ownership(value)
+                            if (
+                                ownership is not None
+                                and ownership.kind is OwnershipKind.OWNED
+                            ):
+                                self._set_resource_ownership(
+                                    value,
+                                    replace(
+                                        ownership,
+                                        transfer_kind=OwnershipTransferKind.MOVE,
+                                    ),
+                                )
+                validate_hook(cast(SemanticAnalyzerCore, self), definition)
         with self.context.in_class(class_):
             for member in class_.declared_members:
                 if member.kind is not ClassMemberKind.METHOD:
                     continue
                 self._analyze_class_method_body(class_, member)
+        validate_file_fields(cast(SemanticAnalyzerCore, self), class_)
         self._set_class(node, class_)
         self._set_type(node, None)

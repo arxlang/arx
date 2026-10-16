@@ -14,6 +14,13 @@ from typing import cast
 
 import astx
 
+from irx.analysis.class_lifecycle import (
+    INITIALIZER_HOOK,
+    class_ownership,
+    constructor_arguments,
+    field_resource,
+    reject_hook_call,
+)
 from irx.analysis.file_io import resolve_file_method
 from irx.analysis.handlers._expressions.class_support import (
     ExpressionClassSupportVisitorMixin,
@@ -21,12 +28,16 @@ from irx.analysis.handlers._expressions.class_support import (
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.resolved_nodes import (
     MethodDispatchKind,
+    OwnershipKind,
+    OwnershipTransferKind,
     ResolvedBaseClassFieldAccess,
     ResolvedClassConstruction,
     ResolvedClassFieldAccess,
     ResolvedFieldAccess,
     ResolvedMethodCall,
     ResolvedStaticClassFieldAccess,
+    ResourceKind,
+    ResourceOwnership,
     SemanticClassMember,
 )
 from irx.analysis.types import display_type_name
@@ -125,14 +136,34 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_class(node, class_)
+        initializer = class_.declared_member_table.get(INITIALIZER_HOOK.name)
+        if (
+            initializer is not None
+            and initializer.lowered_function is not None
+            and not self._member_is_accessible(initializer)
+        ):
+            self.context.diagnostics.add(
+                "constructor is not accessible from this context",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+        evaluations, indices, types = constructor_arguments(
+            cast(SemanticAnalyzerCore, self), node, class_
+        )
         self._set_class_construction(
             node,
             ResolvedClassConstruction(
                 class_=class_,
                 initialization=class_.initialization,
+                evaluations=evaluations,
+                argument_indices=indices,
+                argument_types=types,
             ),
         )
         self._set_type(node, resolved_type)
+        self._set_resource_ownership(
+            node, class_ownership(OwnershipKind.OWNED)
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.MethodCall) -> None:
@@ -146,6 +177,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if info.resolved_file_operation is not None:
             info.resource_ownership = None
         info.resolved_file_operation = None
+        self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
@@ -179,6 +211,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
             self._set_type(node, None)
+            return
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
             return
         resolved_overload = self._resolve_method_overload(
             class_,
@@ -257,6 +293,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.BaseMethodCall
         """
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
+            return
+        self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
@@ -352,6 +393,10 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.StaticMethodCall
         """
+        if reject_hook_call(
+            cast(SemanticAnalyzerCore, self), node, node.method_name
+        ):
+            return
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
             self.visit(arg)
@@ -431,6 +476,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.BaseFieldAccess
         """
+        self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         if not self._require_value_expression(
             node.receiver,
@@ -495,6 +541,24 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ),
         )
         self._set_type(node, member.type_)
+        kind = field_resource(member.type_)
+        if kind is not None:
+            self._set_resource_ownership(
+                node,
+                ResourceOwnership(
+                    kind,
+                    (
+                        OwnershipKind.OWNED
+                        if kind is ResourceKind.STRING
+                        else OwnershipKind.BORROWED
+                    ),
+                    transfer_kind=(
+                        OwnershipTransferKind.NONE
+                        if kind is ResourceKind.STRING
+                        else OwnershipTransferKind.BORROW
+                    ),
+                ),
+            )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.StaticFieldAccess) -> None:
@@ -559,6 +623,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.FieldAccess
         """
+        self._semantic(node).resource_ownership = None
         self.visit(node.value)
         if not self._require_value_expression(
             node.value,
@@ -665,3 +730,21 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             ResolvedClassFieldAccess(class_, member, field),
         )
         self._set_type(node, member.type_)
+        kind = field_resource(member.type_)
+        if kind is not None:
+            self._set_resource_ownership(
+                node,
+                ResourceOwnership(
+                    kind,
+                    (
+                        OwnershipKind.OWNED
+                        if kind is ResourceKind.STRING
+                        else OwnershipKind.BORROWED
+                    ),
+                    transfer_kind=(
+                        OwnershipTransferKind.NONE
+                        if kind is ResourceKind.STRING
+                        else OwnershipTransferKind.BORROW
+                    ),
+                ),
+            )

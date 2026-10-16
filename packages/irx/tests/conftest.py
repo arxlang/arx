@@ -4,6 +4,7 @@ title: General configuration module for pytest.
 
 import ctypes
 import os
+import subprocess
 import tempfile
 
 from collections.abc import Iterator
@@ -19,6 +20,7 @@ from irx.analysis import ModuleKey, ParsedModule
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder, CommandResult
+from irx.builder.runtime.linking import compile_native_artifacts
 from irx.builder.runtime.record_batch import (
     ensure_record_batch_shared_library,
 )
@@ -218,6 +220,31 @@ def jit_int_main(builder: Builder, module: astx.Module) -> int:
       type: int
     """
     ir_text = translate_ir(builder, module)
+    if (
+        isinstance(builder, LLVMBuilder)
+        and "class"
+        in builder.translator.runtime_features.active_feature_names()
+    ):
+        with tempfile.TemporaryDirectory(
+            dir=workspace_test_temp_root()
+        ) as root:
+            inputs = compile_native_artifacts(
+                builder.translator.runtime_features.native_artifacts(),
+                Path(root),
+            )
+            library = Path(root) / "lifecycle.so"
+            subprocess.run(
+                [
+                    "clang",
+                    "-shared",
+                    "-o",
+                    str(library),
+                    *(str(path) for path in inputs.objects),
+                    *inputs.linker_flags,
+                ],
+                check=True,
+            )
+            llvm.load_library_permanently(str(library))
     llvm_module = llvm.parse_assembly(ir_text)
     llvm_module.verify()
 

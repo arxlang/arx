@@ -172,6 +172,7 @@ class SemanticVisitorMixinTypingBase:
           result_type:
             type: astx.DataType | None
         """
+        del result_type
         raise NotImplementedError
 
     def _set_iteration(
@@ -948,6 +949,11 @@ class SemanticAnalyzerCore(BaseVisitor):
                 reset_templates(parsed_module.ast)
         with self.context.in_module(parsed_module.key):
             self._visit_module(parsed_module.ast, predeclared=predeclared)
+        from irx.analysis.class_lifecycle import (  # noqa: PLC0415
+            validate_class_graph,
+        )
+
+        validate_class_graph(self)
         return parsed_module.ast
 
     def _semantic(self, node: astx.AST) -> SemanticInfo:
@@ -1585,6 +1591,16 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.DataType
         """
+        from irx.analysis.class_lifecycle import (  # noqa: PLC0415
+            contains_class,
+        )
+
+        if not isinstance(type_, astx.ClassType) and contains_class(type_):
+            self.context.diagnostics.add(
+                "class references inside containers/unions are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         if contains_file_type(type_):
             if not (
                 isinstance(type_, astx.FileType)
@@ -1592,13 +1608,16 @@ class SemanticAnalyzerCore(BaseVisitor):
                     node,
                     (astx.VariableDeclaration, astx.InlineVariableDeclaration),
                 )
-                and self.context.current_function is not None
+                and (
+                    self.context.current_function is not None
+                    or self.context.current_class is not None
+                )
                 and node.scope == astx.ScopeKind.local
             ):
                 self.context.diagnostics.add(
-                    "file types are supported only as local owners; "
+                    "file types are supported only as locals or class fields; "
                     "parameters, "
-                    "returns, fields and containers are unsupported",
+                    "returns, struct fields and containers are unsupported",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )

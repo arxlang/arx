@@ -20,6 +20,7 @@ from astx.binary_op import (
     specialize_binary_op,
 )
 
+from irx.analysis.class_lifecycle import class_ownership, resolve_store
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -117,12 +118,18 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.BinaryOp
         """
+        self._semantic(node).resource_ownership = None
+        self._semantic(node).resolved_resource_store = None
+        self._semantic(node).lifecycle_field_store = False
         self.visit(node.lhs)
         self.visit(node.rhs)
         lhs_type = self._expr_type(node.lhs)
         rhs_type = self._expr_type(node.rhs)
-        if isinstance(lhs_type, astx.FileType) or isinstance(
-            rhs_type, astx.FileType
+        if (
+            isinstance(lhs_type, astx.FileType)
+            or isinstance(rhs_type, astx.FileType)
+        ) and not (
+            node.op_code == "=" and isinstance(node.lhs, astx.FieldAccess)
         ):
             self.context.diagnostics.add(
                 "file operators and reassignment are unsupported",
@@ -149,6 +156,9 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             if resolved_target is None:
                 return
             assignment_symbol, target_name, target_type = resolved_target
+            managed_store = resolve_store(
+                cast(SemanticAnalyzerCore, self), node, assignment_symbol
+            )
             if self._require_value_expression(
                 node.rhs,
                 context=f"Assignment to '{target_name}'",
@@ -174,6 +184,8 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                     flags=flags,
                 ),
             )
+            if managed_store:
+                return
             self._resolve_list_assignment_ownership(
                 node,
                 node.rhs,
@@ -272,6 +284,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.Cast
         """
+        self._semantic(node).resource_ownership = None
         self.visit(node.value)
         if not self._require_value_expression(
             node.value,
@@ -288,6 +301,10 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             node=node,
         )
         self._set_type(node, target_type)
+        if isinstance(target_type, astx.ClassType):
+            self._set_resource_ownership(
+                node, class_ownership(OwnershipKind.BORROWED)
+            )
         if not is_string_type(target_type):
             return
         source_ownership = resource_ownership(node.value)

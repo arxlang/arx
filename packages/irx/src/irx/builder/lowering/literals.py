@@ -13,7 +13,6 @@ import astx
 from llvmlite import ir
 
 from irx.analysis.resolved_nodes import (
-    ClassHeaderFieldKind,
     ResolvedClassConstruction,
 )
 from irx.builder.core import VisitorCore
@@ -21,13 +20,12 @@ from irx.builder.diagnostics import (
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.protocols import VisitorMixinBase
-from irx.builder.runtime import safe_pop
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.typecheck import typechecked
 
 
 @typechecked
-class LiteralVisitorMixin(VisitorMixinBase):
+class LiteralVisitorMixin(ClassVisitorMixin):
     def _semantic_class_construction(
         self,
         node: astx.ClassConstruct,
@@ -141,107 +139,9 @@ class LiteralVisitorMixin(VisitorMixinBase):
           node:
             type: astx.ClassConstruct
         """
-        resolution = self._semantic_class_construction(node)
-        class_ = resolution.class_
-        layout = class_.layout
-        result_type = self._resolved_ast_type(node)
-        llvm_type = self._llvm_type_for_ast_type(result_type)
-        if layout is None or not isinstance(llvm_type, ir.PointerType):
-            raise_lowering_internal_error(
-                "class construction is missing resolved object layout",
-                node=node,
-            )
-
-        malloc = self._create_malloc_decl()
-        object_size_ptr = self._llvm.ir_builder.gep(
-            ir.Constant(llvm_type, None),
-            [ir.Constant(self._llvm.INT32_TYPE, 1)],
-            name=f"{class_.name}_size_ptr",
+        self.lower_class_construct(
+            node, self._semantic_class_construction(node)
         )
-        object_size = self._llvm.ir_builder.ptrtoint(
-            object_size_ptr,
-            self._llvm.SIZE_T_TYPE,
-            f"{class_.name}_size",
-        )
-        raw_ptr = self._llvm.ir_builder.call(
-            malloc,
-            [object_size],
-            f"{class_.name}_raw",
-        )
-        object_ptr = self._llvm.ir_builder.bitcast(
-            raw_ptr,
-            llvm_type,
-            f"{class_.name}_obj",
-        )
-
-        for header in layout.header_fields:
-            header_addr = self._llvm.ir_builder.gep(
-                object_ptr,
-                [
-                    ir.Constant(self._llvm.INT32_TYPE, 0),
-                    ir.Constant(self._llvm.INT32_TYPE, header.storage_index),
-                ],
-                inbounds=True,
-                name=f"{class_.name}_{header.name}_addr",
-            )
-            header_value: ir.Value = ir.Constant(
-                self._llvm.OPAQUE_POINTER_TYPE,
-                None,
-            )
-            if (
-                header.kind is ClassHeaderFieldKind.DISPATCH_TABLE
-                and layout.dispatch_table_size > 0
-            ):
-                dispatch_global = self._llvm.module.globals.get(
-                    layout.dispatch_global_name
-                )
-                if dispatch_global is None:
-                    raise_lowering_internal_error(
-                        "class construction is missing dispatch metadata",
-                        node=node,
-                    )
-                header_value = self._llvm.ir_builder.bitcast(
-                    dispatch_global,
-                    self._llvm.OPAQUE_POINTER_TYPE,
-                    name=f"{class_.name}_{header.name}_init",
-                )
-            self._llvm.ir_builder.store(header_value, header_addr)
-
-        for initializer in resolution.initialization.instance_initializers:
-            field = initializer.field
-            field_addr = self._llvm.ir_builder.gep(
-                object_ptr,
-                [
-                    ir.Constant(self._llvm.INT32_TYPE, 0),
-                    ir.Constant(
-                        self._llvm.INT32_TYPE,
-                        field.storage_index,
-                    ),
-                ],
-                inbounds=True,
-                name=f"{field.member.name}_init_addr",
-            )
-            if initializer.value is None:
-                field_value = self._default_runtime_initializer(
-                    field.member.type_,
-                    name_hint=f"{class_.name}_{field.member.name}",
-                )
-            else:
-                self.visit_child(initializer.value)
-                raw_value = safe_pop(self.result_stack)
-                if raw_value is None:
-                    raise_lowering_internal_error(
-                        "class field initializer did not lower to a value",
-                        node=initializer.value,
-                    )
-                field_value = self._cast_ast_value(
-                    raw_value,
-                    source_type=self._resolved_ast_type(initializer.value),
-                    target_type=field.member.type_,
-                )
-            self._llvm.ir_builder.store(field_value, field_addr)
-
-        self.result_stack.append(object_ptr)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.LiteralInt32) -> None:
@@ -413,7 +313,7 @@ class LiteralVisitorMixin(VisitorMixinBase):
         string_data = ir.GlobalVariable(
             self._llvm.module,
             string_data_type,
-            name=f"str_ascii_{id(expr)}",
+            name=self._llvm.module.get_unique_name(f"str_ascii_{id(expr)}"),
         )
         string_data.linkage = "internal"
         string_data.global_constant = True
@@ -443,7 +343,9 @@ class LiteralVisitorMixin(VisitorMixinBase):
         string_data_type = ir.ArrayType(
             self._llvm.INT8_TYPE, string_length + 1
         )
-        unique_name = f"str_utf8_{abs(hash(string_value))}_{id(expr)}"
+        unique_name = self._llvm.module.get_unique_name(
+            f"str_utf8_{abs(hash(string_value))}_{id(expr)}"
+        )
         string_data = ir.GlobalVariable(
             self._llvm.module, string_data_type, name=unique_name
         )

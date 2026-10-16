@@ -16,6 +16,11 @@ import astx
 
 from astx.types import AnyType as AstxAnyType
 
+from irx.analysis.class_lifecycle import (
+    CONTEXT_ENTER_HOOK,
+    CONTEXT_EXIT_HOOK,
+    class_ownership,
+)
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -67,11 +72,22 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FunctionReturn
         """
+        self._semantic(node).resource_ownership = None
         if self.context.current_function is None:
             return
         if node.value is None:
             return
         return_type = self.context.current_function.signature.return_type
+        if isinstance(return_type, astx.ClassType):
+            self._set_resource_ownership(
+                node,
+                class_ownership(
+                    OwnershipKind.OWNED,
+                    transfer=OwnershipTransferKind.COPY,
+                    escape=OwnershipEscapeKind.RETURN,
+                ),
+            )
+            return
         if is_string_type(return_type):
             self._resolve_string_return_resource_ownership(node)
             return
@@ -804,13 +820,13 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         enter = self._resolve_context_method(
             node,
             class_,
-            "__enter__",
+            CONTEXT_ENTER_HOOK.name,
             resolved_manager_type,
         )
         exit_ = self._resolve_context_method(
             node,
             class_,
-            "__exit__",
+            CONTEXT_EXIT_HOOK.name,
             resolved_manager_type,
         )
 

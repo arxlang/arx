@@ -93,9 +93,10 @@ fn get(self) -> int32:
 
 ## Construction And Typed Class Values
 
-Declared classes can also be used directly in type annotations and default
-construction expressions. Construction is currently default-only, so `Counter()`
-does not accept constructor arguments yet.
+Declared classes can be used in type annotations and construction expressions.
+`Counter()` remains valid when no required initializer parameters are declared.
+An optional `__init__` hook adds positional arguments, constructor keywords, and
+literal defaults; an optional `__del__` hook runs at final release.
 
 ```arx
 class Counter:
@@ -121,9 +122,118 @@ fn main() -> int32:
 This surface syntax maps directly onto IRx-owned class nodes:
 
 - `Counter` in annotations becomes `astx.ClassType`
-- `Counter()` becomes `astx.ClassConstruct`
+- `Counter(...)` becomes `astx.ClassConstruct` with ordered arguments/keywords
 - `Counter.version` becomes `astx.StaticFieldAccess`
 - `CounterFactory.make()` becomes `astx.StaticMethodCall`
+
+## Lifecycle Hooks
+
+```arx
+class Counter:
+  value: i32 = 0
+
+  fn __init__(self, value: i32 = 1) -> none:
+    self.value = value
+    return none
+
+  fn __del__(self) -> none:
+    print(self.value)
+    return none
+
+fn main() -> i32:
+  var counter: Counter = Counter(value=7)
+  var alias: Counter = counter
+  counter = Counter(3)
+  assert alias.value == 7
+  return 0
+```
+
+The two variables initially refer to the same object; copying a reference does
+not copy fields. Reassignment releases only the replaced reference. Locals,
+discarded temporaries, loop-body locals, and early returns release their
+references on ordinary lexical exits. Final release calls `__del__` exactly
+once, then drops owned fields and frees storage. Returns preserve object
+identity and can outlive the creating function. Calls borrow objects; evaluated
+class arguments and receivers are pinned before later arguments can replace
+fields. Rebinding a class parameter replaces its independent local reference,
+not the caller's binding.
+
+Hook rules:
+
+- Double-underscore (dunder) method names are reserved for language protocols.
+  The supported lifecycle names are `__init__` and `__del__`; unknown names such
+  as `__inti__` or `__str__` are semantic errors, including on static methods.
+  Lifecycle hooks cannot be declared as fields. Plain `init` and `deinit` are
+  ordinary method names, not compatibility aliases. Existing IRx `__enter__` and
+  `__exit__` context protocols remain recognized and callable, but do not enable
+  Arx `with` syntax.
+- Dunders identify language-defined behavior, not private visibility or
+  inheritance from a universal builtin superclass. Implementations are written
+  by users; normal visibility annotations still apply.
+- `__init__(self, ...) -> none` and `__del__(self) -> none` are compiler entry
+  points, not ordinary callable methods. Explicit calls are rejected.
+- Hooks cannot be static, abstract, external, overloaded, templated, or
+  variadic. Constructor defaults are existing scalar/string literals, not
+  resource values.
+- Constructor arguments bind by parameter name, excluding `self`. Unknown,
+  duplicate, missing, excessive, and incompatible arguments are errors. Supplied
+  expressions evaluate once in source order, including keywords.
+- A class without its own `__init__` has a zero-argument constructor. Base hooks
+  run with their defaults; a base requiring arguments is rejected when
+  constructing the derived class. Explicit base-argument forwarding is deferred.
+- Shared ancestors initialize once in canonical base-first storage order. Each
+  phase initializes its declared fields before calling its own `__init__`. Final
+  release reverses those phases, calling each `__del__` before dropping its
+  fields in reverse declaration order. This also works through a base-typed
+  reference; non-prefix multiple-inheritance views locate concrete storage.
+- Inside hooks, `self` is only a field-access receiver: it cannot be aliased,
+  returned, passed elsewhere, or used to invoke an ordinary self method. This
+  prevents escape during construction and resurrection during destruction.
+
+These names are familiar from Python, but Arx keeps its own lifecycle contract:
+normal final-reference release synchronously runs cleanup, base phases chain
+automatically, and direct hook calls and resurrection are forbidden. This does
+not add Python's garbage collector, `super()` chaining, `__new__`, or unwinding
+after fatal errors. Ordinary operations such as `close()` remain callable and
+are separate from object destruction.
+
+Only constructors and builtin `open` accept keyword calls in this PR. **General
+function/method keyword calls are the next PR**, not implemented here.
+
+## Owned Fields And Boundaries
+
+Scalar fields keep their existing behavior. Instance strings own independent
+heap copies (or move fresh owned results); replacing a string field safely
+releases its previous allocation. String-field reads produce owned snapshots, so
+evaluated arguments, local copies, and returns survive later replacement of that
+field. Acyclic class-reference fields hold strong references and default to
+empty; dereferencing an empty class value reports a checked runtime error rather
+than using a null pointer. Field declarations may refer to already initialized
+fields through `self`.
+
+A `file` field must be initialized exactly once with a fresh `open(...)`, either
+in its declaration or directly in its declaring class's `__init__`. Analysis
+checks every normal constructor exit, rejects reads before initialization, and
+rejects replacement, copies, extraction, and initialization hidden in loops.
+Ordinary file methods, including idempotent `close()`, remain available. Final
+class release automatically releases the native file wrapper. See the complete
+[owned-file example](../../examples/class-lifecycle.x) and
+[file API](file-io.md). There is no new public `File` class yet.
+
+This reference-counted subset is synchronous and non-atomic. Cyclic field-type
+graphs are rejected conservatively, including edges through assignable subtypes,
+even if a particular program would not create a cycle. Class values in
+containers/unions/struct fields, owned globals/statics, generator capture,
+list/Arrow/resource aggregate fields, and an external class ownership ABI are
+not supported. There is no garbage collector, weak reference, resurrection,
+explicit deletion, or thread-safe reference counting.
+
+Allocation and empty-reference failures use `ARX-RUNTIME-CLASS-001`. Checked
+compiler-local construction failures release initialized fields, run only
+completed base-phase destructors, and free partial storage. Native field-release
+errors preserve the first error while continuing remaining field releases and
+freeing the object. Fatal errors inside called user code still exit without
+unwinding caller frames; this is not catchable exception support.
 
 ## IRx Alignment
 

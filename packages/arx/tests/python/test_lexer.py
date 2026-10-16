@@ -10,6 +10,20 @@ from arx.lexer import Lexer, LexerError, Token, TokenKind, TokenList
 from astx import SourceLocation
 
 
+@pytest.mark.parametrize(
+    "name", ["__init__", "__del__", "__inti__", "init", "deinit"]
+)
+def test_class_hook_spellings_are_identifiers(name: str) -> None:
+    """
+    title: Lifecycle names use existing identifiers, not new lexer keywords.
+    parameters:
+      name:
+        type: str
+    """
+    ArxIO.string_to_buffer(name)
+    assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
+
+
 def test_token_name() -> None:
     """
     title: Test token name.

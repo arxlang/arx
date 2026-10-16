@@ -33,6 +33,7 @@ from astx.binary_op import (
 )
 from llvmlite import ir
 
+from irx.analysis.resolved_nodes import OwnershipTransferKind, ResourceKind
 from irx.analysis.types import common_numeric_type, is_string_type
 from irx.builder.core import (
     VisitorCore,
@@ -41,8 +42,11 @@ from irx.builder.core import (
     semantic_fma_rhs,
     uses_unsigned_semantics,
 )
-from irx.builder.diagnostics import raise_lowering_internal_error
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_lowered_value,
+)
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.errors import (
     RUNTIME_FAILURE_FEATURE_NAME,
@@ -54,7 +58,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class BinaryOpVisitorMixin(VisitorMixinBase):
+class BinaryOpVisitorMixin(ClassVisitorMixin):
     def _resolved_binary_variant(self, node: astx.BinaryOp) -> astx.BinaryOp:
         """
         title: Resolved binary variant.
@@ -556,6 +560,46 @@ class BinaryOpVisitorMixin(VisitorMixinBase):
                 f"Cannot assign to '{lhs_name}': declared as constant"
             )
 
+        semantic = getattr(node, "semantic", None)
+        managed = (
+            semantic.resolved_resource_store if semantic is not None else None
+        )
+        if (
+            managed is not None
+            and managed.resource_kind
+            in {ResourceKind.CLASS, ResourceKind.FILE}
+        ) or (semantic is not None and semantic.lifecycle_field_store):
+            address = self._lvalue_address(var_lhs)
+            self.visit_child(node.rhs)
+            value = require_lowered_value(
+                safe_pop(self.result_stack),
+                node=node.rhs,
+                context="managed assignment",
+            )
+            value = self._cast_ast_value(
+                value,
+                source_type=self._resolved_ast_type(node.rhs),
+                target_type=self._resolved_ast_type(node),
+            )
+            assert managed is not None
+            if managed.resource_kind is ResourceKind.CLASS:
+                value = self.class_acquire(node, value)
+                previous = self._llvm.ir_builder.load(address)
+                # A failing release still consumes the old reference. Publish
+                # the new generation before checked rollback can revisit it.
+                self._llvm.ir_builder.store(value, address)
+                self.class_operation(node, "release", previous)
+            elif managed.resource_kind is ResourceKind.STRING:
+                if managed.transfer_kind is OwnershipTransferKind.COPY:
+                    value = self._copy_string_to_heap(node, value)
+                free = self.require_runtime_symbol("libc", "free")
+                self._llvm.ir_builder.call(
+                    free, [self._llvm.ir_builder.load(address)]
+                )
+            if managed.resource_kind is not ResourceKind.CLASS:
+                self._llvm.ir_builder.store(value, address)
+            self.result_stack.append(value)
+            return
         self.visit_child(node.rhs)
         llvm_rhs = safe_pop(self.result_stack)
         if llvm_rhs is None:

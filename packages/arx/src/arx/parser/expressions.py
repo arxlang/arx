@@ -430,9 +430,12 @@ class ExpressionParserMixin(ParserMixinBase):
                 self.tokens.cur_tok.kind == TokenKind.identifier
                 and self._peek_token().value == "="
             ):
-                if id_name != builtins.BUILTIN_OPEN:
+                if id_name != builtins.BUILTIN_OPEN and not (
+                    id_name in self.known_class_names
+                    and not self._name_is_shadowed(id_name)
+                ):
                     raise ParserException(
-                        "Keyword arguments are supported only for open."
+                        "Keyword arguments require open or a constructor."
                     )
                 keyword_token = self.tokens.cur_tok
                 self.tokens.get_next_token()
@@ -453,7 +456,11 @@ class ExpressionParserMixin(ParserMixinBase):
             if self._is_operator(")"):
                 break
             self._consume_operator(",")
-            if id_name != builtins.BUILTIN_OPEN and self._is_operator(")"):
+            if (
+                id_name != builtins.BUILTIN_OPEN
+                and id_name not in self.known_class_names
+                and self._is_operator(")")
+            ):
                 raise ParserException("Expected an argument after ','.")
 
         self._consume_operator(")")
@@ -464,11 +471,9 @@ class ExpressionParserMixin(ParserMixinBase):
                 raise ParserException(
                     "class construction does not accept template arguments"
                 )
-            if args or keywords:
-                raise ParserException(
-                    "class construction does not accept arguments"
-                )
-            return astx.ClassConstruct(id_name)
+            return astx.ClassConstruct(
+                id_name, tuple(args), keywords=tuple(keywords), loc=id_loc
+            )
 
         call = astx.FunctionCall(
             id_name, args, loc=id_loc, keywords=tuple(keywords)

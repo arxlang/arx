@@ -174,6 +174,8 @@ def validate_assignment(
     if contains_file_type(target_type) or contains_file_type(value_type):
         if not isinstance(
             node, (astx.VariableDeclaration, astx.InlineVariableDeclaration)
+        ) and not getattr(
+            getattr(node, "semantic", None), "lifecycle_field_store", False
         ):
             diagnostics.add(
                 "file reassignment and copies are unsupported",

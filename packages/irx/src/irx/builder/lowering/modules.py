@@ -4,10 +4,14 @@
 title: Module-level visitor mixins for llvmliteir.
 """
 
+from typing import cast
+
 import astx
 
 from llvmlite import ir
+from plum import Function
 
+from irx.analysis.resolved_nodes import SemanticClass
 from irx.builder.core import (
     VisitorCore,
     semantic_class_key,
@@ -15,13 +19,13 @@ from irx.builder.core import (
     semantic_struct_key,
     semantic_struct_name,
 )
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.types import is_fp_type, is_int_type
 from irx.typecheck import typechecked
 
 
 @typechecked
-class ModuleVisitorMixin(VisitorMixinBase):
+class ModuleVisitorMixin(ClassVisitorMixin):
     def _default_global_initializer(self, llvm_type: ir.Type) -> ir.Constant:
         """
         title: Return one zero or null global initializer.
@@ -189,8 +193,7 @@ class ModuleVisitorMixin(VisitorMixinBase):
             field_types,
         )
 
-    @VisitorCore.visit.dispatch
-    def visit(self, node: astx.ClassDefStmt) -> None:
+    def declare_class(self, node: astx.ClassDefStmt) -> None:
         """
         title: Visit ClassDefStmt nodes.
         parameters:
@@ -224,6 +227,8 @@ class ModuleVisitorMixin(VisitorMixinBase):
             semantic_class_name(node, node.name),
             field_types,
         )
+
+        self.class_field_function(cast(SemanticClass, resolved_class))
 
         for static_initializer in initialization.static_initializers:
             storage = static_initializer.storage
@@ -266,6 +271,16 @@ class ModuleVisitorMixin(VisitorMixinBase):
             dispatch_global.global_constant = True
             dispatch_global.initializer = dispatch_initializer
 
+    # Plum adds dispatch beyond the Callable type inferred for visit.
+    @cast(Function, VisitorCore.visit).dispatch
+    def visit(self, node: astx.ClassDefStmt) -> None:
+        """
+        title: Lower methods after module object layouts are declared.
+        parameters:
+          node:
+            type: astx.ClassDefStmt
+        """
+        self.declare_class(node)
         for method in node.methods:
             if (
                 astx.is_template_node(method.prototype)

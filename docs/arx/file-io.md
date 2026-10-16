@@ -62,12 +62,15 @@ fn main() -> i32:
 
 Each `file` local must be initialized directly with `open`. It is one owner, not
 an integer descriptor or a freely copyable pointer. Copies, reassignment, file
-parameters/returns, fields, containers, globals, and generator storage are
-rejected. Locals and discarded temporaries are released on ordinary scope exit
-and function return. Explicitly closing a stream does not double-free its
-wrapper when that automatic release occurs. Read results own their memory
-independently of the stream and may use the existing string return/cleanup
-rules.
+parameters/returns, struct fields, containers, globals, and generator storage
+are rejected. A class instance may own a file field initialized exactly once by
+a fresh `open`, in its declaration or directly in its own `__init__`;
+replacement and extraction remain rejected. The class releases its wrapper at
+final reference release. See [Classes](classes.md). Locals and discarded
+temporaries are released on ordinary scope exit and function return. Explicitly
+closing a stream does not double-free its wrapper when that automatic release
+occurs. Read results own their memory independently of the stream and may use
+the existing string return/cleanup rules.
 
 I/O failures report `ARX-RUNTIME-FILE-001` and exit nonzero. Fatal errors do not
 unwind caller frames or provide catchable exceptions; explicit close/flush are

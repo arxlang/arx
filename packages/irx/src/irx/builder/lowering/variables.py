@@ -22,7 +22,7 @@ from irx.builder.diagnostics import (
     raise_lowering_error,
     raise_lowering_internal_error,
 )
-from irx.builder.lowering.file import FileVisitorMixin
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
@@ -34,7 +34,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class VariableVisitorMixin(FileVisitorMixin):
+class VariableVisitorMixin(ClassVisitorMixin):
     def _register_owned_list_cleanup(
         self,
         node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
@@ -331,7 +331,15 @@ class VariableVisitorMixin(FileVisitorMixin):
                 ),
             )
 
-        if isinstance(node.value, astx.FieldAccess):
+        if (
+            isinstance(node.value, astx.FieldAccess)
+            and getattr(
+                getattr(node, "semantic", None),
+                "resolved_class_field_access",
+                None,
+            )
+            is None
+        ):
             parent_ptr = self._field_address(node.value)
             parent_value = self._llvm.ir_builder.load(
                 parent_ptr,
@@ -354,7 +362,7 @@ class VariableVisitorMixin(FileVisitorMixin):
 
         field_ptr = self._field_address(node)
         result = self._llvm.ir_builder.load(field_ptr, node.field_name)
-        self.result_stack.append(result)
+        self.result_stack.append(self.class_field_value(node, result))
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.BaseFieldAccess) -> None:
@@ -366,7 +374,7 @@ class VariableVisitorMixin(FileVisitorMixin):
         """
         field_ptr = self._base_class_field_address(node)
         result = self._llvm.ir_builder.load(field_ptr, node.field_name)
-        self.result_stack.append(result)
+        self.result_stack.append(self.class_field_value(node, result))
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.StaticFieldAccess) -> None:
@@ -514,6 +522,14 @@ class VariableVisitorMixin(FileVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
+        if isinstance(node.type_, astx.ClassType):
+            acquired = self.class_acquire(node, init_val)
+            self._llvm.ir_builder.store(acquired, alloca)
+            ownership = resource_ownership(node)
+            assert ownership is not None
+            self.class_cleanup(
+                node, alloca, ownership.owner_symbol_id, storage=True
+            )
         self._register_owned_list_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
 
@@ -583,6 +599,14 @@ class VariableVisitorMixin(FileVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
+        if isinstance(node.type_, astx.ClassType):
+            acquired = self.class_acquire(node, init_val)
+            self._llvm.ir_builder.store(acquired, alloca)
+            ownership = resource_ownership(node)
+            assert ownership is not None
+            self.class_cleanup(
+                node, alloca, ownership.owner_symbol_id, storage=True
+            )
         self._register_owned_list_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
         self.result_stack.append(init_val)

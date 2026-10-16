@@ -27,7 +27,7 @@ from irx.analysis.resolved_nodes import SemanticInfo
 
 from ..conftest import make_module
 
-CLASS_HEADER_SLOT_COUNT = 2
+CLASS_HEADER_SLOT_COUNT = 3
 FIRST_INSTANCE_STORAGE_INDEX = CLASS_HEADER_SLOT_COUNT
 SECOND_INSTANCE_STORAGE_INDEX = FIRST_INSTANCE_STORAGE_INDEX + 1
 THIRD_INSTANCE_STORAGE_INDEX = SECOND_INSTANCE_STORAGE_INDEX + 1
@@ -864,6 +864,7 @@ def test_analyze_builds_pointer_layout_and_static_storage_metadata() -> None:
         "Vector",
     )
     assert [header.kind for header in resolved.layout.header_fields] == [
+        ClassHeaderFieldKind.LIFETIME,
         ClassHeaderFieldKind.TYPE_DESCRIPTOR,
         ClassHeaderFieldKind.DISPATCH_TABLE,
     ]
@@ -872,6 +873,7 @@ def test_analyze_builds_pointer_layout_and_static_storage_metadata() -> None:
     ] == [
         0,
         1,
+        2,
     ]
     assert [
         field.member.name for field in resolved.layout.instance_fields

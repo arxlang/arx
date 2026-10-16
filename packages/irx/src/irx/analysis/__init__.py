@@ -34,6 +34,7 @@ from irx.analysis.ownership import (
 from irx.analysis.resolved_nodes import (
     ClassHeaderFieldKind,
     ClassInitializationSourceKind,
+    ClassLifecyclePhase,
     ClassMemberKind,
     ClassMemberResolutionKind,
     ClassObjectRepresentationKind,
@@ -91,6 +92,7 @@ from irx.diagnostics import Diagnostic, DiagnosticBag, SemanticError
 __all__ = [
     "ClassHeaderFieldKind",
     "ClassInitializationSourceKind",
+    "ClassLifecyclePhase",
     "ClassMemberKind",
     "ClassMemberResolutionKind",
     "ClassObjectRepresentationKind",

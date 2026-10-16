@@ -48,6 +48,9 @@ class FileVisitorMixin(VisitorMixinBase):
         node: astx.AST,
         status: ir.Value,
         error: ir.Value,
+        *,
+        code: str = "ARX-RUNTIME-FILE-001",
+        cleanup_temporaries: bool = False,
     ) -> None:
         """
         title: Guard file outputs before use, reporting caller-owned errors.
@@ -58,7 +61,13 @@ class FileVisitorMixin(VisitorMixinBase):
             type: ir.Value
           error:
             type: ir.Value
+          code:
+            type: str
+          cleanup_temporaries:
+            type: bool
         """
+        if self.emitting_failure_cleanup:
+            return
         function = self._llvm.ir_builder.function
         fail = function.append_basic_block("file.fail")
         success = function.append_basic_block("file.ok")
@@ -69,12 +78,30 @@ class FileVisitorMixin(VisitorMixinBase):
         )
         self._llvm.ir_builder.cbranch(ok, success, fail)
         self._llvm.ir_builder.position_at_end(fail)
+        if cleanup_temporaries:
+            # Do not replace the original failure with a cleanup error.
+            self.emitting_failure_cleanup = True
+            try:
+                for cleanup in reversed(self.cleanup_stack):
+                    if cleanup.owner_symbol_id is None:
+                        cleanup.emitter()
+            finally:
+                self.emitting_failure_cleanup = False
+        for instance in reversed(self.class_construction_stack):
+            rollback_error = self.file_error_buffer()
+            release = self.require_runtime_symbol("class", "irx_class_release")
+            pointer = instance
+            if pointer.type != self._llvm.INT8_TYPE.as_pointer():
+                pointer = self._llvm.ir_builder.bitcast(
+                    pointer, self._llvm.INT8_TYPE.as_pointer()
+                )
+            self._llvm.ir_builder.call(release, [pointer, rollback_error])
         failure = self.require_runtime_symbol("errors", "__arx_runtime_fail")
         self._llvm.ir_builder.call(
             failure,
             [
                 cast(ControlFlowVisitorMixin, self)._constant_c_string_pointer(
-                    "ARX-RUNTIME-FILE-001", name_hint="file_code"
+                    code, name_hint="file_code"
                 ),
                 cast(ControlFlowVisitorMixin, self)._constant_c_string_pointer(
                     cast(ControlFlowVisitorMixin, self)._assert_source_name(

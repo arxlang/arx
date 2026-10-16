@@ -194,9 +194,9 @@ def resolve_file_open(
             )
             valid = False
     function = analyzer.context.current_function
-    if (
-        function is None
-        or function.signature.metadata.get("generator") is not None
+    if (function is None and analyzer.context.current_class is None) or (
+        function is not None
+        and function.signature.metadata.get("generator") is not None
     ):
         file_error(
             analyzer,

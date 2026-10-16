@@ -64,6 +64,8 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
     "irx/builder/runtime/file/native/irx_file_runtime.c",
     "irx/builder/runtime/file/native/irx_file_runtime.h",
+    "irx/builder/runtime/classes/native/irx_class_runtime.c",
+    "irx/builder/runtime/classes/native/irx_class_runtime.h",
 )
 
 SCALAR_MODULE = """```
@@ -89,27 +91,52 @@ fn answer() -> i32:
 """
 
 CLASS_MODULE = """```
-title: Installed wheel class smoke
+title: Installed wheel class lifecycle smoke
 ```
 class Counter:
   ```
   title: Counter
   ```
-  @[public, mutable]
-  value: i32 = 1
+  value: i32 = 0
+  @[public, static, mutable]
+  destroyed: i32 = 0
 
-  fn get(self) -> i32:
+  fn __init__(self, value: i32 = 1) -> none:
     ```
-    title: get
+    title: __init__
     ```
-    return self.value
+    self.value = value
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: __del__
+    ```
+    Counter.destroyed = Counter.destroyed + 1
+    return none
+
+fn make() -> Counter:
+  ```
+  title: make
+  ```
+  return Counter(value=7)
+
+fn use() -> none:
+  ```
+  title: use
+  ```
+  var counter: Counter = make()
+  var alias: Counter = counter
+  counter = Counter()
+  assert alias.value == 7
+  return none
 
 fn main() -> i32:
   ```
   title: main
   ```
-  var counter: Counter = Counter()
-  return counter.get() - 1
+  use()
+  return Counter.destroyed - 2
 """
 
 LIST_MODULE = """```
