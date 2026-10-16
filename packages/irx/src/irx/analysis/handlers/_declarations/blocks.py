@@ -15,6 +15,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.class_lifecycle import class_local
 from irx.analysis.file_io import resolve_file_local
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -58,6 +59,10 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           symbol:
             type: SemanticSymbol
         """
+        self._semantic(node).resource_ownership = None
+        if isinstance(node.type_, astx.ClassType):
+            class_local(cast(SemanticAnalyzerCore, self), node, symbol)
+            return
         if isinstance(node.type_, astx.FileType):
             resolve_file_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return

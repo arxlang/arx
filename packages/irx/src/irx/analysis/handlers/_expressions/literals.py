@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.class_lifecycle import contains_class
 from irx.analysis.collections import (
     collection_contains_types,
     collection_supports_sequence_search,
@@ -223,6 +224,21 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_temporal_literal(node)
 
+    def reject_class_element(self, node: astx.AST) -> None:
+        """
+        title: Reject class references in aggregate storage without ownership.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        if contains_class(self._expr_type(node)):
+            self.context.diagnostics.add(
+                "class references inside containers/generators "
+                "are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+
     def _visit_element_sequence_literal(self, node: astx.AST) -> None:
         """
         title: Visit one element-sequence literal.
@@ -232,6 +248,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         for element in cast(list[astx.AST], getattr(node, "elements")):
             self.visit(element)
+            self.reject_class_element(element)
         self._set_type(node, getattr(node, "type_", None))
 
     def _has_compatible_collection_probe(
@@ -671,6 +688,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         for element in node.elements:
             self.visit(element)
+            self.reject_class_element(element)
         if node.elements and not all(
             isinstance(element, astx.Literal) for element in node.elements
         ):
@@ -694,6 +712,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         for key, value in node.elements.items():
             self.visit(key)
             self.visit(value)
+            self.reject_class_element(key)
+            self.reject_class_element(value)
         self._set_type(
             node, cast(astx.DataType | None, getattr(node, "type_", None))
         )
@@ -707,6 +727,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ListCreate
         """
         self._set_type(node, node.type_)
+        if contains_class(node.element_type):
+            self.reject_class_element(node)
         if isinstance(node.element_type, astx.ListType):
             self.context.diagnostics.add(
                 "dynamic lists cannot own dynamic-list elements because "
@@ -742,6 +764,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         with self.context.scope("list-comprehension"):
             self._visit_comprehension_clauses(list(node.generators.nodes))
             self.visit(node.element)
+            self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
         if element_type is None:
             self._set_type(node, None)
@@ -771,6 +794,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         with self.context.scope("generator-expression"):
             self._visit_comprehension_clauses(list(node.generators.nodes))
             self.visit(node.element)
+            self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
         if element_type is None:
             self._set_type(node, None)
@@ -788,6 +812,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         with self.context.scope("set-comprehension"):
             self._visit_comprehension_clauses(list(node.generators.nodes))
             self.visit(node.element)
+            self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
         if element_type is None:
             self._set_type(node, None)
@@ -806,6 +831,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self._visit_comprehension_clauses(list(node.generators.nodes))
             self.visit(node.key)
             self.visit(node.value)
+            self.reject_class_element(node.key)
+            self.reject_class_element(node.value)
             key_type = self._expr_type(node.key)
             value_type = self._expr_type(node.value)
         if key_type is None or value_type is None:
@@ -883,6 +910,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.base)
         self.visit(node.value)
+        self.reject_class_element(node.value)
 
         resolved_target = self._resolve_mutation_target(
             node.base,

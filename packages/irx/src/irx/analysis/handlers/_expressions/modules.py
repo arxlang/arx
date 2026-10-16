@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.class_lifecycle import HOOKS, class_ownership
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -66,6 +67,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           result_type:
             type: astx.DataType | None
         """
+        self._semantic(node).resource_ownership = None
         for arg in args:
             ownership = resource_ownership(arg)
             if ownership is None:
@@ -98,7 +100,18 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     escape_kind=OwnershipEscapeKind.CALL,
                 ),
             )
-        if isinstance(result_type, astx.ListType):
+        if isinstance(result_type, astx.ClassType):
+            call = self._semantic(node).resolved_call
+            if call is not None and call.callee.function.definition is None:
+                self.context.diagnostics.add(
+                    "external class results require an ownership ABI",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            self._set_resource_ownership(
+                node, class_ownership(OwnershipKind.OWNED)
+            )
+        elif isinstance(result_type, astx.ListType):
             self._set_resource_ownership(
                 node,
                 list_resource_ownership(OwnershipKind.OWNED),
@@ -376,11 +389,39 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.Identifier
         """
+        self._semantic(node).resource_ownership = None
+        self._semantic(node).lifecycle_self = False
         symbol = self.context.scopes.resolve(node.name)
         if symbol is not None:
             self._set_symbol(node, symbol)
             self._set_type(node, symbol.type_)
-            if isinstance(symbol.type_, astx.FileType):
+            if isinstance(symbol.type_, astx.ClassType):
+                function = self.context.current_function
+                if (
+                    function is not None
+                    and function.signature.metadata.get("generator")
+                    is not None
+                ):
+                    self.context.diagnostics.add(
+                        "class references in generators are unsupported",
+                        node=node,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    )
+                self._set_resource_ownership(
+                    node,
+                    class_ownership(
+                        OwnershipKind.BORROWED,
+                        symbol=symbol.symbol_id,
+                        transfer=OwnershipTransferKind.BORROW,
+                    ),
+                )
+                function = self.context.current_function
+                self._semantic(node).lifecycle_self = (
+                    node.name == "self"
+                    and function is not None
+                    and function.signature.metadata.get("method_name") in HOOKS
+                )
+            elif isinstance(symbol.type_, astx.FileType):
                 self._set_resource_ownership(
                     node,
                     ResourceOwnership(

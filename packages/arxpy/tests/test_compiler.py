@@ -335,3 +335,37 @@ def test_file_builtin_through_check_and_build(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "arxpy-file.txt").read_bytes() == b"ok"
+
+
+def test_lifecycle_through_facade(tmp_path: Path) -> None:
+    """
+    title: ArxPy check and compile share constructor and lifetime semantics.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = (
+        MODULE_DOCSTRING
+        + """class Counter:
+  value: i32 = 0
+  fn init(self, value: i32) -> none:
+    self.value = value
+    return none
+  fn deinit(self) -> none:
+    print(self.value)
+    return none
+fn make() -> Counter:
+  return Counter(value=7)
+fn main() -> i32:
+  var counter: Counter = make()
+  var alias: Counter = counter
+  return alias.value - 7
+"""
+    )
+    compiler = Compiler()
+    parsed = compiler.parse_string(source)
+    compiler.check(parsed)
+    artifact = compiler.compile(parsed, output=tmp_path / "lifecycle")
+    result = compiler.run(artifact, timeout=15)
+    assert result.exit_code == 0, result.stderr
+    assert result.stdout == "7\n"

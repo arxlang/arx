@@ -15,6 +15,7 @@ from dataclasses import replace
 
 import astx
 
+from irx.analysis.class_lifecycle import HOOKS, field_resource, lifecycle_plan
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     mangle_class_descriptor_name,
@@ -41,6 +42,7 @@ from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 _CLASS_HEADER_LAYOUT: tuple[tuple[str, ClassHeaderFieldKind], ...] = (
+    ("lifetime", ClassHeaderFieldKind.LIFETIME),
     ("descriptor", ClassHeaderFieldKind.TYPE_DESCRIPTOR),
     ("dispatch", ClassHeaderFieldKind.DISPATCH_TABLE),
 )
@@ -59,6 +61,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         declared_members: tuple[SemanticClassMember, ...],
         member_table: dict[str, SemanticClassMember],
         method_groups: dict[str, tuple[SemanticClassMember, ...]],
+        field_ids: dict[str, int],
     ) -> SemanticClassLayout:
         """
         title: Build one canonical low-level class layout.
@@ -73,6 +76,8 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             type: dict[str, SemanticClassMember]
           method_groups:
             type: dict[str, tuple[SemanticClassMember, Ellipsis]]
+          field_ids:
+            type: dict[str, int]
         returns:
           type: SemanticClassLayout
         """
@@ -119,6 +124,8 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                     storage_index=len(header_fields) + logical_index,
                     owner_name=storage_owner.name,
                     owner_qualified_name=storage_owner.qualified_name,
+                    resource_kind=field_resource(member.type_),
+                    access_index=field_ids[member.qualified_name],
                 )
                 instance_fields.append(slot)
                 field_slots[member.qualified_name] = slot
@@ -175,6 +182,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                     or member.dispatch_slot is None
                     or member.lowered_function is None
                     or member.signature_key is None
+                    or member.name in HOOKS
                 ):
                     continue
                 dispatch_entry = SemanticClassMethodDispatch(
@@ -407,6 +415,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             for member in class_.declared_members:
                 if (
                     member.kind is not ClassMemberKind.METHOD
+                    or member.name in HOOKS
                     or member.is_static
                     or member.visibility is astx.VisibilityKind.private
                     or member.signature_key is None
@@ -439,6 +448,20 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         member_slots = self._assign_family_dispatch_slots(family)
         ordered_family = self._topologically_sorted_class_family(family)
+        field_ids = {
+            name: index
+            for index, name in enumerate(
+                sorted(
+                    {
+                        member.qualified_name
+                        for owner in ordered_family
+                        for member in owner.declared_members
+                        if member.kind is ClassMemberKind.ATTRIBUTE
+                        and not member.is_static
+                    }
+                )
+            )
+        }
 
         for structural_class in ordered_family:
             bases = tuple(
@@ -493,6 +516,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 declared_members,
                 member_table,
                 method_groups,
+                field_ids,
             )
             visible_methods = tuple(
                 member for group in method_groups.values() for member in group
@@ -521,6 +545,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 class_stub,
                 layout,
             )
+            initialization = lifecycle_plan(class_stub, initialization)
             updated = replace(
                 class_stub,
                 member_table=member_table,

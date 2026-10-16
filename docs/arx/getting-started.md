@@ -123,3 +123,12 @@ when the compilation unit uses those features.
 For native text files, see [Text File I/O](file-io.md) and `examples/file-io.x`.
 Run the example in a scratch directory: it creates or truncates
 `file-io-example.txt` relative to the running program.
+
+## Class Lifetimes
+
+Classes support `init(self, ...) -> none` and `deinit(self) -> none` hooks.
+`Counter(value=7)` binds constructor keywords; ordinary function/method keywords
+remain unsupported. Class aliases share identity, and final reference release
+runs the destructor and releases owned string/file/class fields. Cycles and
+owned containers/globals/generator captures are deliberately excluded. See
+[Classes](classes.md) and `examples/class-lifecycle.x` for the complete slice.

@@ -208,7 +208,9 @@ ordinary identifier in context.
 Changes to lexical syntax must update `syntax.json` first, then the lexer,
 tests, this document, examples, and any derived editor grammars.
 
-`file` is a builtin type spelling; `open` remains an identifier. Only the
-builtin `open` interface currently accepts named call arguments (`file=`,
-`mode=`, etc.). See [Text File I/O](file-io.md) for restrictions; this does not
-add general keyword calls or `with` statements.
+`file` is a builtin type spelling; `open` remains an identifier. The builtin
+`open` interface accepts named call arguments (`file=`, `mode=`, etc.), and
+class constructors accept names from their own `init` parameters. `init` and
+`deinit` remain ordinary identifiers, not reserved keywords. See
+[Classes](classes.md) and [Text File I/O](file-io.md) for restrictions. This
+does not add general function/method keyword calls or `with` statements.

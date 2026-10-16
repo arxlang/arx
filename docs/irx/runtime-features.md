@@ -223,3 +223,14 @@ dependencies do not depend on passive feature metadata.
 
 See [Arx Text File I/O](../arx/file-io.md) for the intentionally restricted
 parameter and lifetime surface. The native header is the C ABI contract.
+
+## Class Lifetime Feature
+
+The registered `class` feature packages a C99 runtime and header. It provides
+checked create/retain/release/require operations, compiler-only phase progress,
+and first-error aggregation. Creation initializes the output slot to null before
+failure; lowering reads it only on success. An opaque token in payload slot zero
+holds counts/progress and a generated concrete drop callback. Final release
+consumes both allocations even if a native field release fails. Counts are
+non-atomic and no public external ownership ABI is promised. See
+[Class Model](class-model.md) for the supported acyclic subset.

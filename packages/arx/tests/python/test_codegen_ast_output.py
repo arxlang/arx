@@ -202,3 +202,36 @@ def test_file_operations_translate_with_checked_cleanup() -> None:
     assert "irx_file_open" in result
     assert "irx_file_release" in result
     assert "ARX-RUNTIME-FILE-001" in result
+
+
+def test_class_lifecycle_translate_verifies() -> None:
+    """
+    title: Constructor binding and lifetime callbacks produce valid LLVM.
+    """
+    ArxIO.string_to_buffer("""```
+title: Lifecycle translate regression
+```
+class Counter:
+  value: i32 = 0
+  fn init(self, value: i32 = 1) -> none:
+    self.value = value
+    return none
+  fn deinit(self) -> none:
+    print(self.value)
+    return none
+fn main() -> i32:
+  var first: Counter = Counter(value=7)
+  var alias: Counter = first
+  first = Counter()
+  return alias.value - 7
+""")
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    for symbol in (
+        "irx_class_create",
+        "irx_class_retain",
+        "irx_class_release",
+        "irx_class_complete",
+    ):
+        assert symbol in text
+    assert "irx.drop." in text

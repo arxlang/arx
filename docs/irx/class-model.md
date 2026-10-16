@@ -56,12 +56,13 @@ IRx supports multiple inheritance with deterministic C3 linearization.
 - conflicting inherited methods with the same effective signature are rejected
   unless the subclass supplies a legal override
 - shared diamond ancestors are stored once in the canonical flattened layout
-- implicit ancestor field views are still deferred; explicit base-qualified
-  access is the supported form in this phase
+- base-typed and explicit base-qualified field views use the concrete object
+  descriptor, including non-prefix multiple-inheritance bases
 
 ## Layout And Dispatch
 
-- every class object reserves a type-descriptor slot and a dispatch-table slot
+- every class object starts with lifetime-token, concrete-field-descriptor, and
+  dispatch-table slots
 - instance fields are flattened in canonical ancestor-first order
 - static attributes lower to internal module globals
 - instance methods lower to ordinary functions with a hidden receiver parameter
@@ -97,10 +98,10 @@ IRx supports multiple inheritance with deterministic C3 linearization.
 
 ## Current Limitations
 
-- no high-level constructor bodies yet; `ClassConstruct("Name")` is the current
-  low-level construction form
+- `ClassConstruct("Name", args, keywords=...)` binds an optional `init` hook;
+  `deinit` runs on final reference release, before reverse-order field cleanup
+- hooks are compiler entry points, not dispatchable ordinary methods
 - no stable foreign object ABI for general classes
-- no implicit ancestor field views beyond explicit base-qualified access
 - no callback/function-pointer class interop in the public FFI layer
 - overload selection requires exact provided-argument matches after accounting
   for any trailing declared defaults; conversion-ranked method overloads remain
@@ -231,3 +232,24 @@ read_limit = astx.StaticFieldAccess("Counter", "limit")
 
 For the normative lowering and semantic details, see
 [`docs/semantic-contract.md`](./semantic-contract.md).
+
+## Lifecycle And Ownership
+
+Class layouts now begin with lifetime-token, concrete-field-descriptor, and
+dispatch pointers. The descriptor keeps multiple-inheritance base field views
+correct even when a base is not a prefix. `ClassLifecyclePhase` metadata orders
+base-first field initialization and hooks, deduplicating diamonds. Destruction
+reverses phases and fields through a concrete callback, including base-typed
+references. The registered `class` native feature owns non-atomic reference
+counts, zeroed allocation, and construction progress behind an opaque token.
+
+Local references, independent parameter slots, retained aliases, expression
+pins, and owned returns share identity. Owned string fields clone borrows or
+move fresh results. File fields require exactly one fresh `open` initializer;
+acyclic class fields retain references. Analysis rejects cycles through possible
+subtypes, escaping lifecycle receivers, owned statics/globals, classes in
+containers/unions/structs/generators, and unmodeled resource fields. Fatal user
+calls do not gain cross-frame unwinding. See the
+[Arx lifecycle rules](../arx/classes.md) for the exact constructor and cleanup
+boundaries. General function/method keywords and a public `File` class remain
+separate follow-ups.

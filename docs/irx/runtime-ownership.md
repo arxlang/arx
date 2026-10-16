@@ -3,11 +3,12 @@
 ## Status and purpose
 
 This inventory was checked against the local IRx lowering and native runtime on
-2026-09-02. It is the starting point for the Arx resource model, not yet a
-complete production ownership specification. Scalar dynamic lists now have the
-first enforced ownership slice. A resource may be promoted to the stable
-language only after its create, borrow, transfer, escape, release, and failure
-paths are represented here and enforced by semantic metadata and lowering.
+2026-10-15. It is the starting point for the Arx resource model, not yet a
+complete production ownership specification. Scalar dynamic lists, immutable
+strings, text files, and acyclic class references have bounded enforced
+ownership slices. A resource may be promoted to the stable language only after
+its create, borrow, transfer, escape, release, and failure paths are represented
+here and enforced by semantic metadata and lowering.
 
 ## Required vocabulary
 
@@ -25,32 +26,32 @@ metadata; it must not infer ownership again from AST shape.
 
 ## Current inventory
 
-| Resource                                    | Creation/allocation                                 | Current release path                                                                | Current ownership state                           | Required work                                                                                                                |
-| ------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Scalar values and literal aggregate storage | LLVM values, globals, or stack allocation           | Function/stack lifetime                                                             | Non-owning values                                 | Specify overflow and invalid-operation behavior.                                                                             |
-| Dynamic list backing bytes                  | `realloc` in `irx_list_append`                      | Semantic owners call idempotent `irx_list_destroy` on lexical exits and replacement | One scalar-list owner; return transfers ownership | Add nested owning elements, generator/object-field lifecycle, and sanitizer/fault proof.                                     |
-| Literal-list runtime view                   | Stack descriptor over stack/literal data            | Stack lifetime                                                                      | Static/non-owning sidecar                         | Escape and mutation are rejected; retain conformance coverage as literal representation evolves.                             |
-| Concatenated string                         | Checked `malloc` in generated `strcat_inline`       | Semantic owner calls `free` on lexical exit/replacement                             | One owner; return moves to caller                 | Add sanitizer/fault-injection and long-running leak proof.                                                                   |
-| Numeric/string formatting result            | Checked `malloc` in `_snprintf_heap`                | Consuming print frees immediately; string values follow semantic cleanup            | Temporary or transferred owner                    | Add injected `snprintf` failure and allocator-fault execution tests.                                                         |
-| String literals, empty strings, type names  | LLVM global constant                                | No release required                                                                 | Static/non-owning sidecar                         | Retain negative coverage so static pointers never reach `free`.                                                              |
-| Class instance                              | `malloc` in `ClassConstruct` lowering               | None                                                                                | Untracked heap pointer                            | Define constructors, object owner/reference model, field destruction order, inheritance lifecycle, null/OOM checks, and ABI. |
-| Generator frame                             | `malloc` in generator factory                       | No matching free found                                                              | Escaping opaque pointer                           | Add close/exhaustion/drop operation, cleanup captured owners, allocation checks, and double-close rules.                     |
-| Buffer owner                                | Native `malloc`; optional external release callback | `irx_buffer_owner_release`                                                          | Reference-counted owner                           | Add sanitizer/fault tests and prove all retain/release/status paths, including interpreter/FFI failures.                     |
-| Buffer view                                 | Native view plus owner handle                       | `irx_buffer_view_release`                                                           | Shared owner with borrowed byte range             | Enforce view lifetime and status checks at every lowering path.                                                              |
-| Arrow schema                                | C++ handle owning shared Arrow schema               | `irx_arrow_schema_release`                                                          | Opaque owner                                      | Audit every create failure and output slot; keep Python wrappers idempotent.                                                 |
-| Arrow array builder                         | C++ unique builder handle                           | finish consumes or builder release                                                  | Opaque owner with consuming finish                | Prove exactly-once consume/release on success and failure.                                                                   |
-| Arrow array                                 | C++ handle with shared Arrow array                  | `irx_arrow_array_release`                                                           | Opaque shared-data owner                          | Document borrow/transfer for C Data Interface export/import.                                                                 |
-| Arrow tensor builder                        | C++ unique builder handle                           | finish consumes or builder release                                                  | Opaque owner with consuming finish                | Prove cleanup for append/shape/finish failures.                                                                              |
-| Arrow tensor                                | C++ handle with shared buffer                       | `irx_arrow_tensor_release`                                                          | Opaque shared-data owner                          | Specify Arx return/argument/view ownership and shape validation.                                                             |
-| Arrow table/DataFrame                       | C++ table handle                                    | `irx_arrow_table_release`                                                           | Opaque owner                                      | Ensure all lowered construction paths release intermediate arrays and table results.                                         |
-| Arrow Series/chunked array                  | C++ chunked-array handle                            | `irx_arrow_chunked_array_release`                                                   | Opaque owner                                      | Define whether field selection returns an owned handle or borrow; test parent release ordering.                              |
-| RecordBatch type descriptor                 | C++ allocated descriptor                            | `irx_type_release`                                                                  | Opaque owner                                      | Keep local descriptor cleanup on every nested schema failure.                                                                |
-| RecordBatch schema                          | C++ schema handle                                   | `irx_rb_schema_release`                                                             | Python wrapper owner                              | Partial-construction safety is implemented; add context-manager and explicit closed-state checks.                            |
-| RecordBatch builder                         | C++ builder handle                                  | finish consumes native builder; wrapper release                                     | Python wrapper owner                              | Specify wrapper behavior after finish and reject reuse deterministically.                                                    |
-| RecordBatch batch                           | C++ shared RecordBatch handle                       | `irx_rb_batch_release`                                                              | Python wrapper owner                              | Retain idempotent release and reject access after release.                                                                   |
-| RecordBatch stream writer                   | C++ writer and sink                                 | close plus `irx_rb_stream_writer_release`                                           | Python wrapper owner                              | Define close failure versus unconditional release; test both file and buffer errors.                                         |
-| RecordBatch stream reader                   | C++ reader                                          | `irx_rb_stream_reader_close`                                                        | Python wrapper owner                              | Clarify whether close deletes the handle and make repeated close/access rules explicit.                                      |
-| PyArrow interchange capsules                | Arrow C Data Interface callbacks                    | Arrow release callbacks                                                             | Transferred/shared by protocol                    | Test both release orders, partial imports, and abandoned capsules.                                                           |
+| Resource                                    | Creation/allocation                                 | Current release path                                                                | Current ownership state                                                | Required work                                                                                            |
+| ------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Scalar values and literal aggregate storage | LLVM values, globals, or stack allocation           | Function/stack lifetime                                                             | Non-owning values                                                      | Specify overflow and invalid-operation behavior.                                                         |
+| Dynamic list backing bytes                  | `realloc` in `irx_list_append`                      | Semantic owners call idempotent `irx_list_destroy` on lexical exits and replacement | One scalar-list owner; return transfers ownership                      | Add nested owning elements, generator/object-field lifecycle, and sanitizer/fault proof.                 |
+| Literal-list runtime view                   | Stack descriptor over stack/literal data            | Stack lifetime                                                                      | Static/non-owning sidecar                                              | Escape and mutation are rejected; retain conformance coverage as literal representation evolves.         |
+| Concatenated string                         | Checked `malloc` in generated `strcat_inline`       | Semantic owner calls `free` on lexical exit/replacement                             | One owner; return moves to caller                                      | Add sanitizer/fault-injection and long-running leak proof.                                               |
+| Numeric/string formatting result            | Checked `malloc` in `_snprintf_heap`                | Consuming print frees immediately; string values follow semantic cleanup            | Temporary or transferred owner                                         | Add injected `snprintf` failure and allocator-fault execution tests.                                     |
+| String literals, empty strings, type names  | LLVM global constant                                | No release required                                                                 | Static/non-owning sidecar                                              | Retain negative coverage so static pointers never reach `free`.                                          |
+| Class instance                              | Checked zeroed `irx_class_create`                   | Last `irx_class_release` invokes concrete drop then frees payload/token             | Acyclic reference-managed identities; strings/files/class fields owned | Cycles, concurrency, general container/generator/global/external ownership deferred.                     |
+| Generator frame                             | `malloc` in generator factory                       | No matching free found                                                              | Escaping opaque pointer                                                | Add close/exhaustion/drop operation, cleanup captured owners, allocation checks, and double-close rules. |
+| Buffer owner                                | Native `malloc`; optional external release callback | `irx_buffer_owner_release`                                                          | Reference-counted owner                                                | Add sanitizer/fault tests and prove all retain/release/status paths, including interpreter/FFI failures. |
+| Buffer view                                 | Native view plus owner handle                       | `irx_buffer_view_release`                                                           | Shared owner with borrowed byte range                                  | Enforce view lifetime and status checks at every lowering path.                                          |
+| Arrow schema                                | C++ handle owning shared Arrow schema               | `irx_arrow_schema_release`                                                          | Opaque owner                                                           | Audit every create failure and output slot; keep Python wrappers idempotent.                             |
+| Arrow array builder                         | C++ unique builder handle                           | finish consumes or builder release                                                  | Opaque owner with consuming finish                                     | Prove exactly-once consume/release on success and failure.                                               |
+| Arrow array                                 | C++ handle with shared Arrow array                  | `irx_arrow_array_release`                                                           | Opaque shared-data owner                                               | Document borrow/transfer for C Data Interface export/import.                                             |
+| Arrow tensor builder                        | C++ unique builder handle                           | finish consumes or builder release                                                  | Opaque owner with consuming finish                                     | Prove cleanup for append/shape/finish failures.                                                          |
+| Arrow tensor                                | C++ handle with shared buffer                       | `irx_arrow_tensor_release`                                                          | Opaque shared-data owner                                               | Specify Arx return/argument/view ownership and shape validation.                                         |
+| Arrow table/DataFrame                       | C++ table handle                                    | `irx_arrow_table_release`                                                           | Opaque owner                                                           | Ensure all lowered construction paths release intermediate arrays and table results.                     |
+| Arrow Series/chunked array                  | C++ chunked-array handle                            | `irx_arrow_chunked_array_release`                                                   | Opaque owner                                                           | Define whether field selection returns an owned handle or borrow; test parent release ordering.          |
+| RecordBatch type descriptor                 | C++ allocated descriptor                            | `irx_type_release`                                                                  | Opaque owner                                                           | Keep local descriptor cleanup on every nested schema failure.                                            |
+| RecordBatch schema                          | C++ schema handle                                   | `irx_rb_schema_release`                                                             | Python wrapper owner                                                   | Partial-construction safety is implemented; add context-manager and explicit closed-state checks.        |
+| RecordBatch builder                         | C++ builder handle                                  | finish consumes native builder; wrapper release                                     | Python wrapper owner                                                   | Specify wrapper behavior after finish and reject reuse deterministically.                                |
+| RecordBatch batch                           | C++ shared RecordBatch handle                       | `irx_rb_batch_release`                                                              | Python wrapper owner                                                   | Retain idempotent release and reject access after release.                                               |
+| RecordBatch stream writer                   | C++ writer and sink                                 | close plus `irx_rb_stream_writer_release`                                           | Python wrapper owner                                                   | Define close failure versus unconditional release; test both file and buffer errors.                     |
+| RecordBatch stream reader                   | C++ reader                                          | `irx_rb_stream_reader_close`                                                        | Python wrapper owner                                                   | Clarify whether close deletes the handle and make repeated close/access rules explicit.                  |
+| PyArrow interchange capsules                | Arrow C Data Interface callbacks                    | Arrow release callbacks                                                             | Transferred/shared by protocol                                         | Test both release orders, partial imports, and abandoned capsules.                                       |
 
 ## Current status and output-slot rules
 
@@ -111,7 +112,7 @@ emit structured `ARX-RUNTIME-STRING-001` or `ARX-RUNTIME-STRING-002` records and
 terminate before a null pointer is used.
 
 Bindings cannot change between static and owned storage. Borrowed parameters
-cannot initialize owned locals or escape through returns. Owned fields,
+cannot initialize owned locals or escape through returns. Owning struct fields,
 generator locals, external string results without an ownership ABI, and identity
 casts that would obscure an owner fail closed with `IRX-S013`.
 
@@ -136,8 +137,8 @@ double-release a moved value.
 
 ## Enforcement and verification backlog
 
-1. Extend the ownership sidecar model to classes, generators, and native
-   handles.
+1. Extend the ownership sidecar model beyond acyclic classes to generators and
+   native handles.
 2. Add sanitizer, allocator-fault, and bounded-growth proof for list and string
    cleanup.
 3. Decide whether the stable ABI keeps compile-time-classified C-string pointers
@@ -154,13 +155,14 @@ double-release a moved value.
 
 ## Enforced file contract
 
-`ResourceKind.FILE` describes single-owner local handles and discarded open
-results. An initializer's owner transfers to its directly initialized local;
-method receivers borrow without sharing. Copies, reassignment, signatures,
-aggregate storage, globals, casts, and generator storage fail closed.
-`node.semantic.resolved_file_open` records operand evaluation order and bound
-path/mode indices; `resolved_file_operation` identifies a validated method.
-Lowering uses those sidecars, not name-based rediscovery.
+`ResourceKind.FILE` describes single-owner locals, discarded open results, and
+exactly-once initialized class fields. An initializer's owner transfers to its
+directly initialized local; method receivers borrow without sharing. Copies,
+reassignment, signatures, struct/container storage, globals, casts, and
+generator storage fail closed. `node.semantic.resolved_file_open` records
+operand evaluation order and bound path/mode indices; `resolved_file_operation`
+identifies a validated method. Lowering uses those sidecars, not name-based
+rediscovery.
 
 `close` clears the stream pointer without freeing the wrapper. Lexical release
 closes if necessary and frees exactly once, including explicit close followed by
@@ -168,3 +170,24 @@ release. Read strings are independent heap owners. Status errors are copied into
 caller-owned buffers before wrapper destruction; close failures during normal
 cleanup remain observable. Existing fatal exits do not unwind caller frames;
 there is no new exception or exit-handler framework.
+
+## Acyclic Class References
+
+The class slice uses `ResourceKind.CLASS`, analyzed retain/move decisions,
+slot-based mutable cleanup, argument/receiver pins, and concrete final-drop
+callbacks. Three pointer header slots carry lifetime token, field descriptor,
+and dispatch. The opaque native token stores reference count, phase progress,
+and callback; LLVM never models its C layout. Each owned reference releases
+once. Nullable field references allow retain/release of null, but access is
+checked. Last release always consumes payload/token even on callback error.
+
+Owned string/file/class fields drop in reverse canonical storage phases, after
+each completed phase's `deinit`. Partial construction skips incomplete hooks but
+releases all initialized fields. Native field-release errors preserve the first
+status and continue other field releases. Source hook bodies cannot
+escape/resurrect `self`; fatal called code still does not unwind callers.
+String-field reads take owned snapshots so later expression effects cannot
+invalidate an evaluated string pointer. Reference counts are non-atomic, and
+cyclic schemas (including subtype edges) are rejected. General containers,
+generator capture, global owners, and external class ownership remain out of
+scope.

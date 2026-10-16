@@ -172,6 +172,11 @@
     "series_type": {
       "form": "series[type]"
     },
+    "class_constructor": {
+      "form": "Class(positional, name=value, ...)",
+      "hooks": ["init", "deinit"],
+      "allows_keyword_arguments": true
+    },
     "dataframe_constructor": {
       "form": "dataframe({name: [literal, ...], ...})",
       "column_access": ["value.name", "value[\"name\"]"]

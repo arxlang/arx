@@ -15,6 +15,7 @@ from dataclasses import replace
 
 import astx
 
+from irx.analysis.class_lifecycle import class_ownership
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -222,6 +223,14 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
 
+        for argument in function.args:
+            if isinstance(argument.type_, astx.ClassType):
+                self.context.diagnostics.add(
+                    "class parameters in generators are unsupported",
+                    node=node.prototype,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+
         generator = ResolvedGeneratorFunction(
             function=function,
             yield_type=clone_type(function.signature.return_type.yield_type),
@@ -299,7 +308,17 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     self.context.scopes.declare(arg_symbol)
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    if isinstance(arg_symbol.type_, astx.ListType):
+                    self._semantic(arg_node).resource_ownership = None
+                    if isinstance(arg_symbol.type_, astx.ClassType):
+                        self._set_resource_ownership(
+                            arg_node,
+                            class_ownership(
+                                OwnershipKind.OWNED,
+                                symbol=arg_symbol.symbol_id,
+                                transfer=OwnershipTransferKind.COPY,
+                            ),
+                        )
+                    elif isinstance(arg_symbol.type_, astx.ListType):
                         self._set_resource_ownership(
                             arg_node,
                             list_resource_ownership(

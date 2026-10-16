@@ -48,6 +48,10 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         type: list[LoopTargets]
       cleanup_stack:
         type: list[CleanupAction]
+      class_construction_stack:
+        type: list[ir.Value]
+      emitting_failure_cleanup:
+        type: bool
       struct_types:
         type: dict[str, ir.Type]
       llvm_structs_by_qualified_name:
@@ -85,6 +89,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     _buffer_view_global_counter: int
     loop_stack: list[LoopTargets]
     cleanup_stack: list[CleanupAction]
+    class_construction_stack: list[ir.Value]
+    emitting_failure_cleanup: bool
     struct_types: dict[str, ir.Type]
     llvm_structs_by_qualified_name: dict[str, ir.IdentifiedStructType]
     runtime_features: RuntimeFeatureState
@@ -98,6 +104,15 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     _current_generator_next_state: int | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
+
+    def declare_class(self, node: astx.ClassDefStmt) -> None:
+        """
+        title: Declare a resolved class layout before lowering method bodies.
+        parameters:
+          node:
+            type: astx.ClassDefStmt
+        """
+        ...
 
     def get_function(self, _name: str) -> ir.Function | None:
         """
@@ -662,6 +677,10 @@ class VisitorMixinTypingBase:
         type: list[LoopTargets]
       cleanup_stack:
         type: list[CleanupAction]
+      class_construction_stack:
+        type: list[ir.Value]
+      emitting_failure_cleanup:
+        type: bool
       struct_types:
         type: dict[str, ir.Type]
       llvm_structs_by_qualified_name:
@@ -699,6 +718,8 @@ class VisitorMixinTypingBase:
     _buffer_view_global_counter: int
     loop_stack: list[LoopTargets]
     cleanup_stack: list[CleanupAction]
+    class_construction_stack: list[ir.Value]
+    emitting_failure_cleanup: bool
     struct_types: dict[str, ir.Type]
     llvm_structs_by_qualified_name: dict[str, ir.IdentifiedStructType]
     runtime_features: RuntimeFeatureState

@@ -11,6 +11,7 @@ from dataclasses import replace
 
 import astx
 
+from irx.analysis.class_lifecycle import class_ownership
 from irx.analysis.handlers.base import SemanticVisitorMixinBase
 from irx.analysis.module_symbols import (
     class_method_symbol_basename,
@@ -280,7 +281,17 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
                     ]
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    if isinstance(arg_symbol.type_, astx.ListType):
+                    self._semantic(arg_node).resource_ownership = None
+                    if isinstance(arg_symbol.type_, astx.ClassType):
+                        self._set_resource_ownership(
+                            arg_node,
+                            class_ownership(
+                                OwnershipKind.OWNED,
+                                symbol=arg_symbol.symbol_id,
+                                transfer=OwnershipTransferKind.COPY,
+                            ),
+                        )
+                    elif isinstance(arg_symbol.type_, astx.ListType):
                         self._set_resource_ownership(
                             arg_node,
                             list_resource_ownership(

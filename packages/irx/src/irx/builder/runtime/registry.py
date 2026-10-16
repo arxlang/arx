@@ -14,6 +14,7 @@ from irx.builder.runtime.assertions.feature import (
     build_assertions_runtime_feature,
 )
 from irx.builder.runtime.buffer.feature import build_buffer_runtime_feature
+from irx.builder.runtime.classes import build_class_runtime_feature
 from irx.builder.runtime.dataframe.feature import (
     build_dataframe_runtime_feature,
 )
@@ -306,6 +307,7 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_assertions_runtime_feature())
     registry.register(build_runtime_failure_feature())
     registry.register(build_file_runtime_feature())
+    registry.register(build_class_runtime_feature())
     registry.register(build_libm_runtime_feature())
     registry.register(build_buffer_runtime_feature())
     registry.register(build_array_runtime_feature())

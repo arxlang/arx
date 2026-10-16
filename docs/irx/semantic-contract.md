@@ -233,11 +233,10 @@ before lowering.
 
 - class values lower as pointers to identified object structs, not by-value
   composites
-- every class object reserves two hidden header slots first: one type-descriptor
-  pointer slot and one dispatch-table pointer slot
-- the type-descriptor header slot is reserved in semantic layout metadata now,
-  but codegen does not populate a descriptor global yet; that slot is kept
-  stable for later construction/runtime work
+- every class object starts with three hidden pointer slots: an opaque lifetime
+  token, a concrete field-descriptor function, and a dispatch table
+- the concrete descriptor maps analysis-assigned family field access IDs to
+  concrete storage addresses; base views do not assume prefix layouts
 - instance storage is flattened in one canonical ancestor-first order with
   shared ancestors stored once per logical base class
 - `SemanticClass.layout.instance_fields` records stable storage indices for all
@@ -956,3 +955,25 @@ Explicit `Cast(...)` expressions allow the full scalar conversions:
 - Imports are currently part of the stable contract only at module top level.
 - Wildcard imports and import expressions are not part of the current stable
   lowering contract and are rejected semantically.
+
+## Class Lifecycle Contract
+
+`ClassConstruct` carries positional expressions and `KeywordArgument` nodes.
+`ResolvedClassConstruction` records source-order evaluations, ABI argument
+indices/types, and canonical `ClassLifecyclePhase` entries. Hooks are resolved
+only by analysis; lowering never selects them from source names.
+
+`ResourceKind.CLASS` describes owned references, borrowed reads, retain/copy,
+move into storage, and owned returns. `resolved_resource_store` separates the
+store's ownership acquisition from the assignment expression's borrowed result.
+Parameter slots acquire independent local references; receivers remain pinned
+borrows. Mutable cleanup loads the current slot, not its original generation.
+Field metadata records resource kinds and concrete-descriptor access IDs.
+String-field reads resolve as owned snapshots: pinning the object alone cannot
+protect a string allocation replaced by a later argument.
+
+The `class` native feature owns opaque reference counts and phase progress;
+generated concrete callbacks own field traversal. Analysis rejects recursive
+field graphs (including subtypes), escaping hook receivers, unsupported storage,
+and non-exact initialization of native file fields. See the
+[class model](class-model.md) and [ownership inventory](runtime-ownership.md).

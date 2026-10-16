@@ -579,11 +579,11 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: main
                   summary: Triggers one invalid class-construction call.
                   ```
-                  var counter: Counter = Counter(1)
+                  var counter: Counter = Counter(value=1, 2)
                   return 0
                 """
             ).lstrip(),
-            "class construction does not accept arguments",
+            "Positional arguments cannot follow keywords",
         ),
         (
             dedent(

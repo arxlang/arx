@@ -37,7 +37,7 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.lowering.file import FileVisitorMixin
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
 from irx.diagnostics import DiagnosticCodes
@@ -45,7 +45,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class FunctionVisitorMixin(FileVisitorMixin):
+class FunctionVisitorMixin(ClassVisitorMixin):
     def _register_call_result_cleanup(
         self,
         node: astx.AST,
@@ -69,6 +69,9 @@ class FunctionVisitorMixin(FileVisitorMixin):
             return
         if ownership.resource_kind is ResourceKind.STRING:
             self._register_owned_string_temporary(node, result)
+            return
+        if ownership.resource_kind is ResourceKind.CLASS:
+            self.class_cleanup(node, result)
             return
         if ownership.resource_kind is not ResourceKind.LIST:
             raise_lowering_internal_error(
@@ -229,6 +232,7 @@ class FunctionVisitorMixin(FileVisitorMixin):
                 node=arg,
                 context=f"argument {index + 1} of {label}",
             )
+            self.class_pin(arg, llvm_arg)
             target_type = (
                 resolution.resolved_argument_types[index]
                 if index < len(resolution.resolved_argument_types)
@@ -760,16 +764,18 @@ class FunctionVisitorMixin(FileVisitorMixin):
             return
 
         method_resolution = self._semantic_method_call(node)
-        llvm_args = self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=method_resolution.call,
-            label=f"method call '{method_resolution.member.name}'",
-        )
         self.visit_child(node.receiver)
         receiver_value = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.receiver,
             context=f"receiver for '{method_resolution.member.name}'",
+        )
+        self.class_operation(node.receiver, "require", receiver_value)
+        self.class_pin(node.receiver, receiver_value)
+        llvm_args = self._lower_explicit_call_arguments(
+            args=list(node.args),
+            resolution=method_resolution.call,
+            label=f"method call '{method_resolution.member.name}'",
         )
         receiver_parameter_type = (
             method_resolution.function.signature.parameters[0].type_
@@ -819,20 +825,22 @@ class FunctionVisitorMixin(FileVisitorMixin):
             type: astx.BaseMethodCall
         """
         method_resolution = self._semantic_method_call(node)
-        llvm_args = self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=method_resolution.call,
-            label=(
-                f"base method call '{method_resolution.class_.name}."
-                f"{method_resolution.member.name}'"
-            ),
-        )
         self.visit_child(node.receiver)
         receiver_value = require_lowered_value(
             safe_pop(self.result_stack),
             node=node.receiver,
             context=(
                 f"receiver for '{method_resolution.class_.name}."
+                f"{method_resolution.member.name}'"
+            ),
+        )
+        self.class_operation(node.receiver, "require", receiver_value)
+        self.class_pin(node.receiver, receiver_value)
+        llvm_args = self._lower_explicit_call_arguments(
+            args=list(node.args),
+            resolution=method_resolution.call,
+            label=(
+                f"base method call '{method_resolution.class_.name}."
                 f"{method_resolution.member.name}'"
             ),
         )
@@ -935,6 +943,10 @@ class FunctionVisitorMixin(FileVisitorMixin):
         self._llvm.ir_builder = ir.IRBuilder(basic_block)
         previous_return_type = self._current_function_return_type
         previous_signature = self._current_function_signature
+        previous_cleanups = self.cleanup_stack
+        self.cleanup_stack = []
+        previous_construction = self.class_construction_stack
+        self.class_construction_stack = []
         self._current_function_return_type = signature.return_type
         self._current_function_signature = signature
 
@@ -980,11 +992,31 @@ class FunctionVisitorMixin(FileVisitorMixin):
                         arg_symbol.symbol_id,
                     )
                 self.named_values[symbol_key] = alloca
+                if idx >= hidden_parameter_count:
+                    argument = function.prototype.args.nodes[
+                        idx - hidden_parameter_count
+                    ]
+                    ownership = resource_ownership(argument)
+                    if (
+                        ownership is not None
+                        and ownership.resource_kind is ResourceKind.CLASS
+                        and ownership.kind is OwnershipKind.OWNED
+                    ):
+                        self.class_acquire(argument, llvm_arg)
+                        self.class_cleanup(
+                            argument, alloca, symbol_key, storage=True
+                        )
+                if (
+                    idx == 0
+                    and signature.metadata.get("method_name") == "init"
+                ):
+                    self.class_construction_stack = [llvm_arg]
 
             self.visit_child(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
                 return_type = fn.function_type.return_type
                 if isinstance(return_type, ir.VoidType):
+                    self._emit_active_cleanups()
                     self._llvm.ir_builder.ret_void()
                 else:
                     raise_lowering_internal_error(
@@ -997,6 +1029,8 @@ class FunctionVisitorMixin(FileVisitorMixin):
                         ),
                     )
         finally:
+            self.cleanup_stack = previous_cleanups
+            self.class_construction_stack = previous_construction
             self._current_function_return_type = previous_return_type
             self._current_function_signature = previous_signature
 
@@ -1057,6 +1091,11 @@ class FunctionVisitorMixin(FileVisitorMixin):
             target_type=return_resolution.expected_type,
         )
         return_ownership = resource_ownership(node)
+        if (
+            return_ownership is not None
+            and return_ownership.resource_kind is ResourceKind.CLASS
+        ):
+            self.class_operation(node, "retain", retval)
         if (
             return_ownership is not None
             and return_ownership.resource_kind is ResourceKind.STRING

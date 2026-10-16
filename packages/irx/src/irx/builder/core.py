@@ -35,11 +35,14 @@ from irx.analysis.module_symbols import (
 )
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
+    ClassHeaderFieldKind,
     FunctionSignature,
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
     ResourceKind,
+    SemanticClassLayout,
+    SemanticClassLayoutField,
 )
 from irx.analysis.types import (
     bit_width,
@@ -366,6 +369,8 @@ class VisitorCore(BuilderVisitor):
     const_vars: set[str]
     loop_stack: list[LoopTargets]
     cleanup_stack: list[CleanupAction]
+    class_construction_stack: list[ir.Value]
+    emitting_failure_cleanup: bool
     _set_value_ids: dict[int, ir.Value]
     _buffer_view_global_counter: int
     struct_types: dict[str, ir.Type]
@@ -408,6 +413,8 @@ class VisitorCore(BuilderVisitor):
         self.result_stack = []
         self.loop_stack = []
         self.cleanup_stack = []
+        self.class_construction_stack = []
+        self.emitting_failure_cleanup = False
         self._set_value_ids = {}
         self._buffer_view_global_counter = 0
         self.struct_types = {}
@@ -617,6 +624,17 @@ class VisitorCore(BuilderVisitor):
         self._llvm.ir_builder.cbranch(condition, pass_block, fail_block)
 
         self._llvm.ir_builder.position_at_start(fail_block)
+        for instance in reversed(self.class_construction_stack):
+            release = self.require_runtime_symbol("class", "irx_class_release")
+            from irx.builder.lowering.classes import (  # noqa: PLC0415
+                ClassVisitorMixin,
+            )
+
+            lifetime = cast(ClassVisitorMixin, self)
+            details = lifetime.file_error_buffer()
+            self._llvm.ir_builder.call(
+                release, [lifetime.class_raw(instance), details]
+            )
         string_pointer = cast(Any, self)._constant_c_string_pointer
         failure = self.require_runtime_symbol(
             RUNTIME_FAILURE_FEATURE_NAME,
@@ -864,13 +882,35 @@ class VisitorCore(BuilderVisitor):
           modules:
             type: list[astx.Module]
         """
+        # Declare pointer identities before any layout asks for a class field
+        # type; acyclic reference fields can point to later declarations.
+        for module in modules:
+            for node in module.nodes:
+                if isinstance(node, astx.ClassDefStmt):
+                    key = semantic_class_key(node, node.name)
+                    type_ = self._llvm.module.context.get_identified_type(
+                        semantic_class_name(node, node.name)
+                    )
+                    self.struct_types[key] = type_
+                    self.llvm_structs_by_qualified_name[key] = type_
+
         for module in modules:
             self._current_module_display_name = self._module_display_names.get(
                 id(module),
                 getattr(module, "name", "") or "<module>",
             )
             for node in module.nodes:
-                if isinstance(node, (astx.StructDefStmt, astx.ClassDefStmt)):
+                if isinstance(node, astx.ClassDefStmt):
+                    cast(VisitorProtocol, self).declare_class(node)
+                elif isinstance(node, astx.StructDefStmt):
+                    self.visit(node)
+
+        for module in modules:
+            self._current_module_display_name = self._module_display_names.get(
+                id(module), getattr(module, "name", "") or "<module>"
+            )
+            for node in module.nodes:
+                if isinstance(node, astx.ClassDefStmt):
                     self.visit(node)
 
         for module in modules:
@@ -1403,7 +1443,8 @@ class VisitorCore(BuilderVisitor):
         *,
         receiver: astx.AST,
         member_name: str,
-        storage_index: int,
+        layout: SemanticClassLayout,
+        field: SemanticClassLayoutField,
     ) -> ir.Value:
         """
         title: Lower one resolved class-instance field slot to an address.
@@ -1412,8 +1453,10 @@ class VisitorCore(BuilderVisitor):
             type: astx.AST
           member_name:
             type: str
-          storage_index:
-            type: int
+          layout:
+            type: SemanticClassLayout
+          field:
+            type: SemanticClassLayoutField
         returns:
           type: ir.Value
         """
@@ -1421,22 +1464,46 @@ class VisitorCore(BuilderVisitor):
         base_value = safe_pop(self.result_stack)
         if base_value is None:
             raise Exception("codegen: invalid class field access base.")
-        base_type = self._resolved_ast_type(receiver)
-        llvm_base_type = self._llvm_type_for_ast_type(base_type)
-        if llvm_base_type is not None and base_value.type != llvm_base_type:
-            base_value = self._llvm.ir_builder.bitcast(
-                base_value,
-                llvm_base_type,
-                name=f"{member_name}_class_base",
-            )
-        return self._llvm.ir_builder.gep(
+        from irx.builder.lowering.classes import (  # noqa: PLC0415
+            ClassVisitorMixin,
+        )
+
+        lifetime = cast(ClassVisitorMixin, self)
+        lifetime.class_operation(receiver, "require", base_value)
+        lifetime.class_pin(receiver, base_value)
+        descriptor_index = next(
+            header.storage_index
+            for header in layout.header_fields
+            if header.kind is ClassHeaderFieldKind.TYPE_DESCRIPTOR
+        )
+        integer = self._llvm.INT32_TYPE
+        descriptor_slot = self._llvm.ir_builder.gep(
             base_value,
-            [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, storage_index),
-            ],
+            [ir.Constant(integer, 0), ir.Constant(integer, descriptor_index)],
             inbounds=True,
-            name=f"{member_name}_addr",
+        )
+        pointer = self._llvm.INT8_TYPE.as_pointer()
+        function_type = ir.FunctionType(pointer, [pointer, integer])
+        descriptor = self._llvm.ir_builder.bitcast(
+            self._llvm.ir_builder.load(descriptor_slot),
+            function_type.as_pointer(),
+        )
+        address = self._llvm.ir_builder.call(
+            descriptor,
+            [
+                lifetime.class_raw(base_value),
+                ir.Constant(integer, field.access_index),
+            ],
+            name=f"{member_name}_raw_addr",
+        )
+        lifetime.class_operation(receiver, "require", address)
+        llvm_field_type = self._llvm_type_for_ast_type(field.member.type_)
+        if llvm_field_type is None:
+            raise_lowering_internal_error(
+                "class field has no LLVM type", node=receiver
+            )
+        return self._llvm.ir_builder.bitcast(
+            address, llvm_field_type.as_pointer(), name=f"{member_name}_addr"
         )
 
     def _field_address(self, node: astx.FieldAccess) -> ir.Value:
@@ -1458,7 +1525,8 @@ class VisitorCore(BuilderVisitor):
             return self._resolved_class_receiver_field_address(
                 receiver=node.value,
                 member_name=resolved_class_field_access.member.name,
-                storage_index=resolved_class_field_access.field.storage_index,
+                layout=resolved_class_field_access.class_.layout,
+                field=resolved_class_field_access.field,
             )
 
         resolved_field_access = getattr(
@@ -1547,7 +1615,8 @@ class VisitorCore(BuilderVisitor):
         return self._resolved_class_receiver_field_address(
             receiver=node.receiver,
             member_name=resolved_base_field_access.member.name,
-            storage_index=resolved_base_field_access.field.storage_index,
+            layout=resolved_base_field_access.receiver_class.layout,
+            field=resolved_base_field_access.field,
         )
 
     def _static_class_field_address(

@@ -70,6 +70,7 @@ class ResourceKind(str, Enum):
     LIST = "list"
     STRING = "string"
     FILE = "file"
+    CLASS = "class"
 
 
 @public
@@ -562,6 +563,7 @@ class ClassHeaderFieldKind(str, Enum):
 
     TYPE_DESCRIPTOR = "type_descriptor"
     DISPATCH_TABLE = "dispatch_table"
+    LIFETIME = "lifetime"
 
 
 @public
@@ -607,6 +609,10 @@ class SemanticClassLayoutField:
         type: str
       owner_qualified_name:
         type: str
+      resource_kind:
+        type: ResourceKind | None
+      access_index:
+        type: int
     """
 
     member: SemanticClassMember
@@ -614,6 +620,8 @@ class SemanticClassLayoutField:
     storage_index: int
     owner_name: str
     owner_qualified_name: str
+    resource_kind: ResourceKind | None = None
+    access_index: int = 0
 
 
 @public
@@ -757,10 +765,36 @@ class SemanticClassInitialization:
         type: tuple[SemanticClassFieldInitializer, Ellipsis]
       static_initializers:
         type: tuple[SemanticClassStaticInitializer, Ellipsis]
+      phases:
+        type: tuple[ClassLifecyclePhase, Ellipsis]
     """
 
     instance_initializers: tuple[SemanticClassFieldInitializer, ...] = ()
     static_initializers: tuple[SemanticClassStaticInitializer, ...] = ()
+    phases: tuple[ClassLifecyclePhase, ...] = ()
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ClassLifecyclePhase:
+    """
+    title: One canonical initialization and destruction phase.
+    attributes:
+      owner:
+        type: str
+      fields:
+        type: tuple[SemanticClassFieldInitializer, Ellipsis]
+      initializer:
+        type: SemanticFunction | None
+      destructor:
+        type: SemanticFunction | None
+    """
+
+    owner: str
+    fields: tuple[SemanticClassFieldInitializer, ...]
+    initializer: SemanticFunction | None = None
+    destructor: SemanticFunction | None = None
 
 
 @public
@@ -1467,10 +1501,19 @@ class ResolvedClassConstruction:
         type: SemanticClass
       initialization:
         type: SemanticClassInitialization
+      evaluations:
+        type: tuple[astx.DataType, Ellipsis]
+      argument_indices:
+        type: tuple[int, Ellipsis]
+      argument_types:
+        type: tuple[astx.DataType, Ellipsis]
     """
 
     class_: SemanticClass
     initialization: SemanticClassInitialization
+    evaluations: tuple[astx.DataType, ...] = ()
+    argument_indices: tuple[int, ...] = ()
+    argument_types: tuple[astx.DataType, ...] = ()
 
 
 @public
@@ -1765,6 +1808,14 @@ class SemanticInfo:
         type: ResolvedCollectionMethod | None
       resource_ownership:
         type: ResourceOwnership | None
+      lifecycle_self:
+        type: bool
+      lifecycle_field_store:
+        type: bool
+      resolved_resource_store:
+        type: ResourceOwnership | None
+      initializer_receiver:
+        type: SemanticSymbol | None
       semantic_flags:
         type: SemanticFlags
       extras:
@@ -1802,5 +1853,9 @@ class SemanticInfo:
     resolved_iteration: ResolvedIteration | None = None
     resolved_collection_method: ResolvedCollectionMethod | None = None
     resource_ownership: ResourceOwnership | None = None
+    lifecycle_self: bool = False
+    lifecycle_field_store: bool = False
+    resolved_resource_store: ResourceOwnership | None = None
+    initializer_receiver: SemanticSymbol | None = None
     semantic_flags: SemanticFlags = field(default_factory=SemanticFlags)
     extras: dict[str, Any] = field(default_factory=dict)

@@ -251,29 +251,47 @@ class ClassDefStmt(StructDeclStmt):
 @typechecked
 class ClassConstruct(astx.DataType):
     """
-    title: Low-level default class construction expression.
+    title: Class construction with ordered positional and keyword expressions.
     attributes:
       class_name:
         type: str
       type_:
         type: AnyType
+      args:
+        type: tuple[astx.DataType, Ellipsis]
+      keywords:
+        type: tuple[astx.KeywordArgument, Ellipsis]
     """
 
     class_name: str
     type_: AnyType
+    args: tuple[astx.DataType, ...]
+    keywords: tuple[astx.KeywordArgument, ...]
 
     def __init__(
         self,
         class_name: str,
+        args: tuple[astx.DataType, ...] = (),
+        *,
+        keywords: tuple[astx.KeywordArgument, ...] = (),
+        loc: astx.SourceLocation = NO_SOURCE_LOCATION,
     ) -> None:
         """
         title: Initialize one default class construction expression.
         parameters:
           class_name:
             type: str
+          args:
+            type: tuple[astx.DataType, Ellipsis]
+          keywords:
+            type: tuple[astx.KeywordArgument, Ellipsis]
+          loc:
+            type: astx.SourceLocation
         """
-        super().__init__()
+        super().__init__(loc=loc)
         self.class_name = class_name
+        self.args = args
+        self.keywords = keywords
         self.type_ = AnyType()
 
     def __str__(self) -> str:
@@ -282,7 +300,11 @@ class ClassConstruct(astx.DataType):
         returns:
           type: str
         """
-        return f"ClassConstruct[{self.class_name}]"
+        if not self.args and not self.keywords:
+            return f"ClassConstruct[{self.class_name}]"
+        values = [str(value) for value in self.args]
+        values.extend(f"{item.name}={item.value}" for item in self.keywords)
+        return f"ClassConstruct[{self.class_name}: {', '.join(values)}]"
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -294,7 +316,18 @@ class ClassConstruct(astx.DataType):
           type: astx.base.ReprStruct
         """
         key = f"CLASS-CONSTRUCT[{self.class_name}]"
-        return self._prepare_struct(key, self.class_name, simplified)
+        if not self.args and not self.keywords:
+            return self._prepare_struct(key, self.class_name, simplified)
+        return self._prepare_struct(
+            key,
+            {
+                "args": [value.get_struct(simplified) for value in self.args],
+                "keywords": [
+                    item.get_struct(simplified) for item in self.keywords
+                ],
+            },
+            simplified,
+        )
 
 
 @typechecked
