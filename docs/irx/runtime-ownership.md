@@ -155,21 +155,27 @@ double-release a moved value.
 
 ## Enforced file contract
 
-`ResourceKind.FILE` describes single-owner locals, discarded open results, and
-exactly-once initialized class fields. An initializer's owner transfers to its
-directly initialized local; method receivers borrow without sharing. Copies,
-reassignment, signatures, struct/container storage, globals, casts, and
-generator storage fail closed. `node.semantic.resolved_file_open` records
-operand evaluation order and bound path/mode indices; `resolved_file_operation`
-identifies a validated method. Lowering uses those sidecars, not name-based
-rediscovery.
+Public File objects use `ResourceKind.CLASS` reference ownership. Their private
+native field retains `ResourceKind.FILE` unique ownership; existing low-level
+IRx handle locals/fields keep their original no-copy/no-escape contract.
+`ParsedModule.native_file_class` is an explicit host capability referring to a
+validated declaration in that module, not a privilege inferred from its name or
+origin string. IRx never discovers/parses frontend builtin source.
 
-`close` clears the stream pointer without freeing the wrapper. Lexical release
-closes if necessary and frees exactly once, including explicit close followed by
-release. Read strings are independent heap owners. Status errors are copied into
-caller-owned buffers before wrapper destruction; close failures during normal
-cleanup remain observable. Existing fatal exits do not unwind caller frames;
-there is no new exception or exit-handler framework.
+Both public factory forms share a `ResolvedClassConstruction` with a typed
+`native_file` initialization descriptor containing the bound operands and native
+field. Creation checks the native status in the caller before publishing the
+handle and completing the phase, preserving active construction rollback.
+Native-backed method metadata records the private receiver field so the backend
+can pin the class receiver, check emptiness, and preserve real call-site I/O
+locations without rediscovering class rules. Ordinary cleanup releases the raw
+field once. Public references may alias, cross normal function boundaries, and
+live in class fields; existing class aggregate/global/generator limits remain.
+
+The optional registered file runtime still uses the opaque `irx_file_*` C ABI.
+Every output slot is read only after successful status checking. Explicit close
+is idempotent; final class release also frees the native wrapper. This does not
+add catchable exceptions or general cross-frame fatal-error unwinding.
 
 ## Acyclic Class References
 

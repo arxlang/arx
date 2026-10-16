@@ -178,6 +178,13 @@
       "reserved_method_pattern": "__name__",
       "allows_keyword_arguments": true
     },
+    "file_constructor": {
+      "class": "File",
+      "factory": "open",
+      "type_alias": "file",
+      "opens_immediately": true,
+      "allows_keyword_arguments": true
+    },
     "dataframe_constructor": {
       "form": "dataframe({name: [literal, ...], ...})",
       "column_access": ["value.name", "value[\"name\"]"]
@@ -191,6 +198,7 @@
   ],
 
   "builtins": {
+    "classes": ["File"],
     "types": [
       "i8",
       "i16",

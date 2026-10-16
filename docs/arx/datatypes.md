@@ -105,8 +105,10 @@ That page covers:
 - the `cast(value, type)` helper
 - the `isinstance(value, type)` and `type(value)` helpers
 
-Native text streams use the local-only [`file` type](file-io.md), with explicit
-`open` initialization and lexical cleanup. They are not copyable scalar values.
+Native text streams use the builtin [`File` class](file-io.md); lowercase `file`
+is a compatibility spelling. `File(...)` and `open(...)` open immediately.
+Copies share an object/stream, while the private native handle remains uniquely
+owned. File references support ordinary class parameters, returns, and fields.
 
 ## Class References
 

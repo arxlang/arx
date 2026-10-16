@@ -39,6 +39,12 @@ class Parser(
         type: int
       known_class_names:
         type: set[str]
+      imported_type_names:
+        type: set[str]
+      namespace_roots:
+        type: set[str]
+      builtin_type_bindings:
+        type: dict[str, astx.DataType]
       tensor_scopes:
         type: list[dict[str, TensorBinding | None]]
       return_type_scopes:
@@ -56,6 +62,9 @@ class Parser(
     bin_op_precedence: dict[str, int] = {}
     indent_level: int = 0
     known_class_names: set[str]
+    imported_type_names: set[str]
+    namespace_roots: set[str]
+    builtin_type_bindings: dict[str, astx.DataType]
     tensor_scopes: list[dict[str, TensorBinding | None]]
     return_type_scopes: list[astx.DataType]
     template_type_scopes: list[dict[str, astx.DataType]]
@@ -67,6 +76,8 @@ class Parser(
         self,
         tokens: TokenList,
         module_name: str = "main",
+        *,
+        builtin_types: dict[str, astx.DataType] | None = None,
     ) -> astx.Module:
         """
         title: Parse tokens and attach the active token location to failures.
@@ -75,11 +86,15 @@ class Parser(
             type: TokenList
           module_name:
             type: str
+          builtin_types:
+            type: dict[str, astx.DataType] | None
         returns:
           type: astx.Module
         """
         try:
-            return super().parse(tokens, module_name)
+            return super().parse(
+                tokens, module_name, builtin_types=builtin_types
+            )
         except RecursionError:
             raise ParserException(
                 "Source nesting exceeds the parser recursion limit",

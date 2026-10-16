@@ -19,9 +19,11 @@ from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.main import ArxMain
 from arx.parser import Parser
-from irx.analysis import SemanticError, analyze
+from irx.analysis import SemanticError
 from irx.builder.runtime.errors import parse_runtime_failure_output
 from llvmlite import binding as llvm
+
+from .file_support import analyze_arx as analyze
 
 
 def parse_module(body: str, declarations: str = "") -> astx.Module:
@@ -149,28 +151,12 @@ def test_open_keyword_syntax_restrictions(call: str) -> None:
         parse_module(call)
 
 
-@pytest.mark.parametrize(
-    "body, declarations",
-    [
-        ("var f: file", ""),
-        ('var f: file = open("x")\nvar other: file = f', ""),
-        ('var f: file = open("x")\nf = open("y")', ""),
-        ("var f: list[file]", ""),
-        ("", "fn invalid(f: file) -> none:\n  return none\n"),
-        ("", 'fn invalid() -> file:\n  return open("x")\n'),
-    ],
-)
-def test_file_ownership_restrictions(body: str, declarations: str) -> None:
+def test_public_file_containers_remain_unsupported() -> None:
     """
-    title: Default handles, aliases, containers, and file signatures fail.
-    parameters:
-      body:
-        type: str
-      declarations:
-        type: str
+    title: The public class retains the existing class-container boundary.
     """
     with pytest.raises((SemanticError, ParserException)):
-        analyze(parse_module(body, declarations))
+        analyze(parse_module("var f: list[file]"))
 
 
 def test_open_shadowing() -> None:
@@ -186,12 +172,17 @@ def test_open_shadowing() -> None:
         analyze(parse_module('var open: i32 = 1\nopen("x")'))
 
 
-def test_open_native_roundtrip_and_cleanup(tmp_path: Path) -> None:
+@pytest.mark.parametrize("factory", ["open", "File"])
+def test_open_native_roundtrip_and_cleanup(
+    tmp_path: Path, factory: str
+) -> None:
     """
     title: Native text counts, independent reads, append, and cleanup.
     parameters:
       tmp_path:
         type: Path
+      factory:
+        type: str
     """
     result = execute(
         tmp_path,
@@ -211,7 +202,7 @@ assert data == "hé😀!\\n"
 open("discarded.txt", "w").write("temporary")
 assert open("discarded.txt").read() == "temporary"
 var automatic: file = open("automatic.txt", "w")
-automatic.write("flushed on return")""",
+automatic.write("flushed on return")""".replace("open(", factory + "("),
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "data.txt").read_text() == "hé😀!\n"
@@ -256,18 +247,23 @@ def test_open_native_bad_text(tmp_path: Path, content: bytes) -> None:
     assert failure is not None and failure.code == "ARX-RUNTIME-FILE-001"
 
 
+@pytest.mark.parametrize("factory", ["open", "File"])
 def test_open_runtime_mode_is_checked_before_truncation(
     tmp_path: Path,
+    factory: str,
 ) -> None:
     """
     title: Runtime values are validated before calling fopen.
     parameters:
       tmp_path:
         type: Path
+      factory:
+        type: str
     """
     (tmp_path / "keep").write_bytes(b"unchanged")
     result = execute(
-        tmp_path, 'var mode: str = "wb"\nvar f: file = open("keep", mode)'
+        tmp_path,
+        f'var mode: str = "wb"\nvar f: file = {factory}("keep", mode)',
     )
     assert result.returncode == 1
     assert (tmp_path / "keep").read_bytes() == b"unchanged"
@@ -291,12 +287,15 @@ def test_open_filesystem_failures(tmp_path: Path, arguments: str) -> None:
     assert "open failed" in result.stderr
 
 
-def test_open_keyword_evaluation_order(tmp_path: Path) -> None:
+@pytest.mark.parametrize("factory", ["open", "File"])
+def test_open_keyword_evaluation_order(tmp_path: Path, factory: str) -> None:
     """
     title: Source-order keyword evaluation survives ABI-slot reordering.
     parameters:
       tmp_path:
         type: Path
+      factory:
+        type: str
     """
     declarations = """fn mode() -> str:
   print("mode")
@@ -306,7 +305,9 @@ fn path() -> str:
   return "out"
 """
     result = execute(
-        tmp_path, "var f: file = open(mode=mode(), file=path())", declarations
+        tmp_path,
+        f"var f: file = {factory}(mode=mode(), file=path())",
+        declarations,
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "mode\npath\n"
@@ -377,7 +378,6 @@ def test_file_scope_cleanup_on_early_return(tmp_path: Path) -> None:
         'var f: file = open("x")\nf.read(1)',
         'var f: file = open("x")\nf.write(1)',
         'var f: file = open("x")\nf.seek(0)',
-        'var f: file = open("x")\nprint(f == f)',
         'var f: file = open("x")\nvar other: file = cast(f, file)',
         'var encoding: str = "utf-8"\nopen("x", encoding=encoding)',
     ],

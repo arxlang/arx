@@ -53,7 +53,7 @@ The current frontend supports:
 - classes, inheritance, fields, methods, constructor keywords, `__init__` and
   `__del__` hooks, and acyclic reference-managed lifetimes
 - lists and builtin `range`
-- restricted native UTF-8 text files with builtin `open`
+- restricted native UTF-8 text files with builtin `File` and its `open` adapter
 - fixed-shape numeric tensors and runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
 - assertions and the compiled `arx test` runner

@@ -33,6 +33,12 @@ class ParserCore(ParserMixinBase):
         type: list[set[str]]
       known_class_names:
         type: set[str]
+      imported_type_names:
+        type: set[str]
+      namespace_roots:
+        type: set[str]
+      builtin_type_bindings:
+        type: dict[str, astx.DataType]
       tensor_scopes:
         type: list[dict[str, TensorBinding | None]]
       dataframe_scopes:
@@ -53,6 +59,9 @@ class ParserCore(ParserMixinBase):
     indent_level: int = 0
     list_scopes: list[set[str]]
     known_class_names: set[str]
+    imported_type_names: set[str]
+    namespace_roots: set[str]
+    builtin_type_bindings: dict[str, astx.DataType]
     tensor_scopes: list[dict[str, TensorBinding | None]]
     dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]
@@ -88,6 +97,9 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
+        self.imported_type_names = set()
+        self.namespace_roots = set()
+        self.builtin_type_bindings = {}
         self.tensor_scopes = [{}]
         self.dataframe_scopes = [{}]
         self.return_type_scopes = []
@@ -103,6 +115,9 @@ class ParserCore(ParserMixinBase):
         self.indent_level = 0
         self.list_scopes = [set()]
         self.known_class_names = set()
+        self.imported_type_names = set()
+        self.namespace_roots = set()
+        self.builtin_type_bindings = {}
         self.tensor_scopes = [{}]
         self.dataframe_scopes = [{}]
         self.return_type_scopes = []
@@ -112,7 +127,11 @@ class ParserCore(ParserMixinBase):
         self.tokens = TokenList([])
 
     def parse(
-        self, tokens: TokenList, module_name: str = "main"
+        self,
+        tokens: TokenList,
+        module_name: str = "main",
+        *,
+        builtin_types: dict[str, astx.DataType] | None = None,
     ) -> astx.Module:
         """
         title: Parse the input code.
@@ -121,10 +140,13 @@ class ParserCore(ParserMixinBase):
             type: TokenList
           module_name:
             type: str
+          builtin_types:
+            type: dict[str, astx.DataType] | None
         returns:
           type: astx.Module
         """
         self.clean()
+        self.builtin_type_bindings = dict(builtin_types or {})
         self.known_class_names = self._collect_class_names(tokens)
         self.tokens = tokens
 
@@ -200,7 +222,15 @@ class ParserCore(ParserMixinBase):
                 )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_import:
-                tree.nodes.append(self.parse_import_stmt())
+                import_node = self.parse_import_stmt()
+                tree.nodes.append(import_node)
+                for alias in import_node.names:
+                    local = alias.asname or alias.name.split(".")[0]
+                    if isinstance(import_node, astx.ImportFromStmt):
+                        self.imported_type_names.add(local)
+                    self.namespace_roots.add(local)
+                    if isinstance(import_node, astx.ImportStmt):
+                        self.namespace_roots.add(alias.asname or alias.name)
                 allow_module_docstring = False
                 continue
 

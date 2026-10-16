@@ -1,4 +1,5 @@
 # mypy: disable-error-code=no-redef
+# mypy: disable-error-code=attr-defined
 # mypy: disable-error-code=untyped-decorator
 
 """
@@ -14,6 +15,10 @@ from typing import cast
 
 import astx
 
+from irx.analysis.builtin_file import (
+    is_native_file_class,
+    resolve_public_file_construction,
+)
 from irx.analysis.class_lifecycle import (
     INITIALIZER_HOOK,
     class_ownership,
@@ -21,7 +26,10 @@ from irx.analysis.class_lifecycle import (
     field_resource,
     reject_hook_call,
 )
-from irx.analysis.file_io import resolve_file_method
+from irx.analysis.file_io import (
+    resolve_file_method,
+    validate_file_method_arguments,
+)
 from irx.analysis.handlers._expressions.class_support import (
     ExpressionClassSupportVisitorMixin,
 )
@@ -34,10 +42,12 @@ from irx.analysis.resolved_nodes import (
     ResolvedClassConstruction,
     ResolvedClassFieldAccess,
     ResolvedFieldAccess,
+    ResolvedFileOperation,
     ResolvedMethodCall,
     ResolvedStaticClassFieldAccess,
     ResourceKind,
     ResourceOwnership,
+    SemanticClass,
     SemanticClassMember,
 )
 from irx.analysis.types import display_type_name
@@ -97,10 +107,26 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
           node:
             type: astx.ClassConstruct
         """
+        self._semantic(node).resolved_class_construction = None
         class_ = self._resolve_named_class(node.class_name, node=node)
         if class_ is None:
             self._set_type(node, None)
             return
+        self.resolve_class_construction(node, class_)
+
+    def resolve_class_construction(
+        self,
+        node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall,
+        class_: SemanticClass,
+    ) -> None:
+        """
+        title: Resolve a class-valued callable after ordinary symbol lookup.
+        parameters:
+          node:
+            type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
+          class_:
+            type: SemanticClass
+        """
         resolve_definition = getattr(self, "_resolve_class_definition", None)
         if callable(resolve_definition) and not class_.is_resolved:
             class_ = resolve_definition(class_)
@@ -126,6 +152,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             raise TypeError(
                 "class construction requires resolved layout metadata"
             )
+        if is_native_file_class(cast(SemanticAnalyzerCore, self), class_):
+            resolve_public_file_construction(
+                cast(SemanticAnalyzerCore, self), node, class_
+            )
+            return
         resolved_type = astx.ClassType(
             class_.name,
             resolved_name=class_.name,
@@ -177,8 +208,20 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if info.resolved_file_operation is not None:
             info.resource_ownership = None
         info.resolved_file_operation = None
+        info.resolved_class_construction = None
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
+        module = self._module_namespace(node.receiver)
+        if module is not None:
+            self._resolve_module_namespace_call(node, module, [])
+            return
+        if node.keywords:
+            self.context.diagnostics.add(
+                "keyword arguments require a class constructor",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
+            )
+            return
         arg_types: list[astx.DataType | None] = []
         for arg in node.args:
             self.visit(arg)
@@ -192,10 +235,6 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         receiver_type = self._expr_type(node.receiver)
         if isinstance(receiver_type, astx.FileType):
             resolve_file_method(cast(SemanticAnalyzerCore, self), node)
-            return
-        module = self._module_namespace(node.receiver)
-        if module is not None:
-            self._resolve_module_namespace_call(node, module, arg_types)
             return
         class_ = self._resolve_class_from_type(
             receiver_type,
@@ -211,6 +250,12 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
             self._set_type(node, None)
+            return
+        if is_native_file_class(
+            cast(SemanticAnalyzerCore, self), class_
+        ) and not validate_file_method_arguments(
+            cast(SemanticAnalyzerCore, self), node
+        ):
             return
         if reject_hook_call(
             cast(SemanticAnalyzerCore, self), node, node.method_name
@@ -284,6 +329,16 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             list(node.args),
             call_resolution.result_type,
         )
+        if is_native_file_class(cast(SemanticAnalyzerCore, self), class_):
+            if class_.layout is None:
+                raise TypeError(
+                    "native File method requires a resolved layout"
+                )
+            self._semantic(
+                node
+            ).resolved_file_operation = ResolvedFileOperation(
+                node.method_name, class_.layout.instance_fields[0]
+            )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BaseMethodCall) -> None:

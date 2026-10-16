@@ -211,14 +211,14 @@ empty; dereferencing an empty class value reports a checked runtime error rather
 than using a null pointer. Field declarations may refer to already initialized
 fields through `self`.
 
-A `file` field must be initialized exactly once with a fresh `open(...)`, either
-in its declaration or directly in its declaring class's `__init__`. Analysis
-checks every normal constructor exit, rejects reads before initialization, and
-rejects replacement, copies, extraction, and initialization hidden in loops.
-Ordinary file methods, including idempotent `close()`, remain available. Final
-class release automatically releases the native file wrapper. See the complete
-[owned-file example](../../examples/class-lifecycle.x) and
-[file API](file-io.md). There is no new public `File` class yet.
+A public `File` (or lowercase `file`) field holds an ordinary class reference.
+It may be initialized with `File(...)`, `open(...)`, or another File reference,
+and may be replaced or shared. Empty fields use the normal checked class
+reference behavior. The builtin File class itself owns one private native handle
+initialized once by its compiler-provided constructor; users cannot extract or
+replace that handle. Final File release invokes normal owned-field cleanup. See
+the [owned-file example](../../examples/class-lifecycle.x) and
+[file API](file-io.md). File subclassing and reopening are deferred.
 
 This reference-counted subset is synchronous and non-atomic. Cyclic field-type
 graphs are rejected conservatively, including edges through assignable subtypes,

@@ -35,6 +35,8 @@ class ImportParserMixin(ParserMixinBase):
           level:
             type: int
         """
+        if module_path == builtins.BUILTIN_FILE_MODULE and level == 0:
+            return
         if level != 0 or not builtins.is_builtin_module_specifier(module_path):
             return
         raise ParserException(

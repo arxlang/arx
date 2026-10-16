@@ -341,6 +341,8 @@ class MethodCall(astx.DataType):
         type: str
       args:
         type: tuple[astx.DataType, Ellipsis]
+      keywords:
+        type: tuple[astx.KeywordArgument, Ellipsis]
       type_:
         type: AnyType
     """
@@ -348,6 +350,7 @@ class MethodCall(astx.DataType):
     receiver: astx.AST
     method_name: str
     args: tuple[astx.DataType, ...]
+    keywords: tuple[astx.KeywordArgument, ...]
     type_: AnyType
 
     def __init__(
@@ -355,6 +358,8 @@ class MethodCall(astx.DataType):
         receiver: astx.AST,
         method_name: str,
         args: Iterable[astx.DataType],
+        *,
+        keywords: tuple[astx.KeywordArgument, ...] = (),
     ) -> None:
         """
         title: Initialize one instance method call expression.
@@ -365,11 +370,14 @@ class MethodCall(astx.DataType):
             type: str
           args:
             type: Iterable[astx.DataType]
+          keywords:
+            type: tuple[astx.KeywordArgument, Ellipsis]
         """
         super().__init__()
         self.receiver = receiver
         self.method_name = method_name
         self.args = tuple(args)
+        self.keywords = keywords
         self.type_ = AnyType()
 
     def __str__(self) -> str:
@@ -397,6 +405,11 @@ class MethodCall(astx.DataType):
             "receiver": self.receiver.get_struct(simplified),
             "args": arg_nodes.get_struct(simplified),
         }
+        if self.keywords:
+            keyword_nodes = astx.ASTNodes[astx.KeywordArgument]("keywords")
+            for keyword in self.keywords:
+                keyword_nodes.append(keyword)
+            value["keywords"] = keyword_nodes.get_struct(simplified)
         return self._prepare_struct(
             key,
             cast(astx.base.ReprStruct, value),

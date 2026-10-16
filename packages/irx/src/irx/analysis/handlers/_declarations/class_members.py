@@ -700,6 +700,20 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         returns:
           type: SemanticClass
         """
+        with self.context.in_module(class_.module_key):
+            return self.resolve_class_structure_in_module(class_)
+
+    def resolve_class_structure_in_module(
+        self, class_: SemanticClass
+    ) -> SemanticClass:
+        """
+        title: Resolve structural members in the declaring module's namespace.
+        parameters:
+          class_:
+            type: SemanticClass
+        returns:
+          type: SemanticClass
+        """
         current = self.context.get_class(class_.module_key, class_.name)
         if current is None:
             current = class_
@@ -725,6 +739,19 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         active_stack.append(current)
         try:
             bases = self._resolve_class_bases(current)
+            from irx.analysis.builtin_file import (  # noqa: PLC0415
+                is_native_file_class,
+            )
+
+            if any(
+                is_native_file_class(cast(SemanticAnalyzerCore, self), base)
+                for base in bases
+            ):
+                self.context.diagnostics.add(
+                    "subclassing builtin File is unsupported",
+                    node=current.declaration,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             raw_mro = self._compute_class_mro(current, bases)
             mro = (
                 current,
@@ -759,6 +786,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 updated.name,
                 updated,
                 node=updated.declaration,
+                module_key=updated.module_key,
             )
             self._set_class(updated.declaration, updated)
             return updated

@@ -22,6 +22,8 @@ BUILTIN_CAST = "cast"
 BUILTIN_DATAFRAME = "dataframe"
 BUILTIN_ISINSTANCE = "isinstance"
 BUILTIN_OPEN = "open"
+BUILTIN_FILE = "File"
+BUILTIN_FILE_MODULE = "builtins.files"
 BUILTIN_PRINT = "print"
 BUILTIN_RANGE = "range"
 BUILTIN_TYPE = "type"
@@ -69,11 +71,14 @@ class AmbientBuiltinBinding:
 
 _AMBIENT_BUILTIN_BINDINGS = (
     AmbientBuiltinBinding(name=BUILTIN_RANGE, module=_GENERATORS_MODULE),
+    AmbientBuiltinBinding(name=BUILTIN_FILE, module=BUILTIN_FILE_MODULE),
 )
 
 __all__ = [
     "BUILTIN_CAST",
     "BUILTIN_DATAFRAME",
+    "BUILTIN_FILE",
+    "BUILTIN_FILE_MODULE",
     "BUILTIN_ISINSTANCE",
     "BUILTIN_NAMESPACE",
     "BUILTIN_OPEN",

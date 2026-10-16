@@ -671,6 +671,14 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         semantic = getattr(node, "semantic", None)
         if (
             isinstance(semantic, SemanticInfo)
+            and semantic.resolved_class_construction is not None
+        ):
+            self.lower_class_construct(
+                node, semantic.resolved_class_construction
+            )
+            return
+        if (
+            isinstance(semantic, SemanticInfo)
             and semantic.resolved_file_open is not None
         ):
             self.lower_file_open(node)
@@ -703,6 +711,14 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             type: astx.MethodCall
         """
         semantic = getattr(node, "semantic", None)
+        if (
+            isinstance(semantic, SemanticInfo)
+            and semantic.resolved_class_construction is not None
+        ):
+            self.lower_class_construct(
+                node, semantic.resolved_class_construction
+            )
+            return
         if (
             isinstance(semantic, SemanticInfo)
             and semantic.resolved_file_operation is not None

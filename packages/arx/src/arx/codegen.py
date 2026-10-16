@@ -54,6 +54,29 @@ class ArxBuilder(LLVMBuilder):
             active_runtime_features=set(self.runtime_feature_names)
         )
 
+    def translate(self, expr: astx.AST) -> str:
+        """
+        title: >-
+          Supply bundled dependencies when compiling an Arx module directly.
+        parameters:
+          expr:
+            type: astx.AST
+        returns:
+          type: str
+        """
+        from arx.builtin_files import needs_file_builtin  # noqa: PLC0415
+        from arx.main import (  # noqa: PLC0415
+            FileImportResolver,
+            inject_ambient_builtin_imports,
+        )
+
+        if isinstance(expr, astx.Module) and needs_file_builtin(expr):
+            return self.translate_modules(
+                ParsedModule(expr.name, inject_ambient_builtin_imports(expr)),
+                FileImportResolver(input_files=()),
+            )
+        return super().translate(expr)
+
     def _build_from_ir_result(
         self,
         result: str,

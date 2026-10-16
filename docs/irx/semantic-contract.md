@@ -390,6 +390,23 @@ IRx exposes one analyzed class-construction path with optional lifecycle hooks.
 See [Class Model](class-model.md#lifecycle-and-ownership) for lifetime and
 failure-path restrictions. These names do not imply Python finalization rules.
 
+## Native-Backed File Class
+
+Hosts can register one validated class declaration through
+`ParsedModule.native_file_class`. The capability must reference a node in that
+module and have the required private native field and method ABI. A source name
+or origin string alone grants nothing. Class resolution uses declaring-module
+bindings and preserves already-qualified class type identities.
+
+Public `File(...)` and builtin `open(...)` share argument validation and a
+`ResolvedClassConstruction.native_file` action. Lowering performs this native
+initialization in the constructing frame, checks status before output-slot use,
+and publishes the field before completing its phase. Native-backed method
+`ResolvedFileOperation.receiver_field` metadata pins the class receiver and
+selects its private handle at the real call site. No class-name/type lookup is
+performed by lowering. Raw `astx.FileType` remains available to low-level hosts
+under its existing unique-owner constraints.
+
 ## Class ABI And Interop Contract
 
 IRx now makes the internal class ABI explicit without treating it as a stable

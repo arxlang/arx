@@ -331,6 +331,19 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             member_name=node.method_name,
             binding=binding,
         )
+        if binding.class_ is not None:
+            self.resolve_class_construction(node, binding.class_)
+            return
+        if node.keywords:
+            self.context.diagnostics.add(
+                "keyword arguments require a class constructor",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
+            )
+            return
+        for argument in node.args:
+            self.visit(argument)
+            arg_types.append(self._expr_type(argument))
         function = binding.function
         if function is None:
             self.context.diagnostics.add(
@@ -497,6 +510,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if info.resolved_file_open is not None:
             info.resource_ownership = None
         info.resolved_file_open = None
+        info.resolved_class_construction = None
         if node.fn == "open":
             local = self.context.scopes.resolve(node.fn)
             if local is not None:
@@ -509,6 +523,17 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             if self.bindings.resolve(node.fn) is None:
                 resolve_file_open(cast(SemanticAnalyzerCore, self), node)
                 return
+        binding = self.bindings.resolve(node.fn)
+        if binding is not None and binding.class_ is not None:
+            if self.context.scopes.resolve(node.fn) is not None:
+                self.context.diagnostics.add(
+                    f"name '{node.fn}' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            self.resolve_class_construction(node, binding.class_)
+            return
         if node.keywords:
             self.context.diagnostics.add(
                 "keyword arguments are supported only for builtin open",

@@ -7,7 +7,7 @@ fn main() -> i32:
   title: main
   summary: Writes UTF-8 text and reads it back with explicit close.
   ```
-  var output: file = open("file-io-example.txt", mode="w")
+  var output: File = File("file-io-example.txt", mode="w")
   assert output.write("hello\n") == 6
   output.close()
   var source: file = open(file="file-io-example.txt")

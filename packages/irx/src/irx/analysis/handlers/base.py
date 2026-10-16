@@ -94,6 +94,22 @@ class SemanticVisitorMixinTypingBase:
         """
         raise NotImplementedError
 
+    def resolve_class_construction(
+        self,
+        node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall,
+        class_: SemanticClass,
+    ) -> None:
+        """
+        title: Resolve a class-valued callable after ordinary symbol lookup.
+        parameters:
+          node:
+            type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
+          class_:
+            type: SemanticClass
+        """
+        del class_
+        raise NotImplementedError
+
     def _semantic(self, node: astx.AST) -> SemanticInfo:
         """
         title: Return one node's semantic sidecar.
@@ -1531,15 +1547,14 @@ class SemanticAnalyzerCore(BaseVisitor):
         if not isinstance(type_, astx.ClassType):
             return None
 
-        binding = self.bindings.resolve(type_.name)
-        class_ = (
-            binding.class_
-            if binding is not None and binding.kind == "class"
-            else None
-        )
-        if class_ is None and type_.module_key is not None:
+        class_ = None
+        if type_.module_key is not None:
             lookup_name = type_.resolved_name or type_.name
             class_ = self.context.get_class(type_.module_key, lookup_name)
+        else:
+            binding = self.bindings.resolve(type_.name)
+            if binding is not None and binding.kind == "class":
+                class_ = binding.class_
         if class_ is None:
             self.context.diagnostics.add(
                 unknown_message.format(name=type_.name),

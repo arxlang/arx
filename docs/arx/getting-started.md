@@ -120,7 +120,9 @@ when the compilation unit uses those features.
 - [Compiled tests](testing.md)
 - [Apache Arrow runtime](../apache-arrow.md)
 
-For native text files, see [Text File I/O](file-io.md) and `examples/file-io.x`.
+For native text files, construct `File(path, mode="w")` or use its `open(...)`
+factory adapter. Both return shared class references; lowercase `file` remains
+valid in annotations. See [Text File I/O](file-io.md) and `examples/file-io.x`.
 Run the example in a scratch directory: it creates or truncates
 `file-io-example.txt` relative to the running program.
 

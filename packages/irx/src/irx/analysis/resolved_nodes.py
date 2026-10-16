@@ -1507,6 +1507,8 @@ class ResolvedClassConstruction:
         type: tuple[int, Ellipsis]
       argument_types:
         type: tuple[astx.DataType, Ellipsis]
+      native_file:
+        type: ResolvedNativeFileInitialization | None
     """
 
     class_: SemanticClass
@@ -1514,6 +1516,7 @@ class ResolvedClassConstruction:
     evaluations: tuple[astx.DataType, ...] = ()
     argument_indices: tuple[int, ...] = ()
     argument_types: tuple[astx.DataType, ...] = ()
+    native_file: ResolvedNativeFileInitialization | None = None
 
 
 @public
@@ -1733,15 +1736,49 @@ class ResolvedFileOpen:
 @public
 @typechecked
 @dataclass(frozen=True)
+class ResolvedNativeFileInitialization:
+    """
+    title: Caller-checked native initialization of a real File class field.
+    attributes:
+      field:
+        type: SemanticClassLayoutField
+      operands:
+        type: ResolvedFileOpen
+    """
+
+    field: SemanticClassLayoutField
+    operands: ResolvedFileOpen
+
+    def __init__(
+        self, field: SemanticClassLayoutField, operands: ResolvedFileOpen
+    ) -> None:
+        """
+        title: Validate the native initializer descriptor at runtime.
+        parameters:
+          field:
+            type: SemanticClassLayoutField
+          operands:
+            type: ResolvedFileOpen
+        """
+        object.__setattr__(self, "field", field)
+        object.__setattr__(self, "operands", operands)
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
 class ResolvedFileOperation:
     """
     title: A validated operation on an owned native file.
     attributes:
       name:
         type: str
+      receiver_field:
+        type: SemanticClassLayoutField | None
     """
 
     name: str
+    receiver_field: SemanticClassLayoutField | None = None
 
 
 @public

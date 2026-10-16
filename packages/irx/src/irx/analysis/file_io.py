@@ -122,74 +122,84 @@ def supported_option(name: str, value: astx.DataType) -> bool:
 
 @private
 @typechecked
-def resolve_file_open(
+def bind_file_arguments(
     analyzer: SemanticAnalyzerCore,
-    node: astx.FunctionCall,
-) -> None:
+    node: astx.FunctionCall | astx.ClassConstruct | astx.MethodCall,
+    entry: str,
+) -> ResolvedFileOpen | None:
     """
     title: Bind the restricted eight-argument open interface in source order.
     parameters:
       analyzer:
         type: SemanticAnalyzerCore
       node:
-        type: astx.FunctionCall
+        type: astx.FunctionCall | astx.ClassConstruct | astx.MethodCall
+      entry:
+        type: str
+    returns:
+      type: ResolvedFileOpen | None
     """
-    info = analyzer._semantic(node)
-    info.resolved_call = None
-    info.resolved_callable = None
-    info.resolved_function = None
     supplied = list(node.args)
     values: dict[str, astx.DataType] = {}
     if len(supplied) > len(OPEN_PARAMETERS):
-        file_error(analyzer, node, "open expects at most eight arguments")
-        return
+        file_error(analyzer, node, f"{entry} expects at most eight arguments")
+        return None
     ordered = list(zip(OPEN_PARAMETERS, supplied))
     for name, value in ordered:
         values[name] = value
     for keyword in node.keywords:
         if keyword.name not in OPEN_PARAMETERS:
             file_error(
-                analyzer, keyword, f"unknown open argument '{keyword.name}'"
+                analyzer, keyword, f"unknown {entry} argument '{keyword.name}'"
             )
-            return
+            return None
         if keyword.name in values:
             file_error(
-                analyzer, keyword, f"duplicate open argument '{keyword.name}'"
+                analyzer,
+                keyword,
+                f"duplicate {entry} argument '{keyword.name}'",
             )
-            return
+            return None
         values[keyword.name] = keyword.value
         supplied.append(keyword.value)
         ordered.append((keyword.name, keyword.value))
     if "file" not in values:
-        file_error(analyzer, node, "open requires a file path")
-        return
+        file_error(analyzer, node, f"{entry} requires a file path")
+        return None
     if astx.get_template_args(node) is not None:
-        file_error(analyzer, node, "open does not accept template arguments")
-        return
+        file_error(
+            analyzer, node, f"{entry} does not accept template arguments"
+        )
+        return None
     for value in supplied:
         analyzer.visit(value)
     valid = True
     for name, value in values.items():
         if name in {"file", "mode"}:
             if not is_string_type(analyzer._expr_type(value)):
-                file_error(analyzer, value, f"open {name} requires a string")
+                file_error(
+                    analyzer, value, f"{entry} {name} requires a string"
+                )
                 valid = False
             if literal_nul(value):
-                file_error(analyzer, value, f"open {name} cannot contain NUL")
+                file_error(
+                    analyzer, value, f"{entry} {name} cannot contain NUL"
+                )
                 valid = False
             if name == "mode" and isinstance(value, astx.LiteralString):
                 if value.value not in FILE_MODES:
                     file_error(
                         analyzer,
                         value,
-                        "open supports only r, w, a, rt, wt, at modes",
+                        f"{entry} supports only r, w, a, rt, wt, at modes",
                     )
                     valid = False
         elif not supported_option(name, value):
             file_error(
                 analyzer,
                 value,
-                f"open {name} supports only its documented constant default "
+                f"{entry} {name} supports only its documented "
+                "constant default "
                 "(or utf-8/strict)",
             )
             valid = False
@@ -201,11 +211,11 @@ def resolve_file_open(
         file_error(
             analyzer,
             node,
-            "open requires a non-generator function with lexical cleanup",
+            f"{entry} requires a non-generator function with lexical cleanup",
         )
         valid = False
     if not valid:
-        return
+        return None
     # Optional arguments are validated constants, not runtime/void operands.
     operands = [
         (name, value) for name, value in ordered if name in {"file", "mode"}
@@ -217,16 +227,84 @@ def resolve_file_open(
     mode_index = next(
         (i for i, (name, value) in enumerate(operands) if name == "mode"), None
     )
-    analyzer._semantic(node).resolved_file_open = ResolvedFileOpen(
-        evaluations,
-        path_index,
-        mode_index,
+    return ResolvedFileOpen(evaluations, path_index, mode_index)
+
+
+@private
+@typechecked
+def resolve_file_open(
+    analyzer: SemanticAnalyzerCore, node: astx.FunctionCall
+) -> None:
+    """
+    title: Resolve the open adapter, preserving explicit low-level IRx use.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.FunctionCall
+    """
+    from irx.analysis.builtin_file import (  # noqa: PLC0415
+        registered_file_class,
+        resolve_public_file_construction,
     )
+
+    info = analyzer._semantic(node)
+    info.resolved_call = None
+    info.resolved_callable = None
+    info.resolved_function = None
+    class_ = registered_file_class(analyzer)
+    if class_ is not None:
+        resolve_public_file_construction(analyzer, node, class_)
+        return
+    operands = bind_file_arguments(analyzer, node, "open")
+    if operands is None:
+        return
+    info.resolved_file_open = operands
     analyzer._set_type(node, astx.FileType())
     analyzer._set_resource_ownership(
-        node,
-        ResourceOwnership(ResourceKind.FILE, OwnershipKind.OWNED),
+        node, ResourceOwnership(ResourceKind.FILE, OwnershipKind.OWNED)
     )
+
+
+@private
+@typechecked
+def validate_file_method_arguments(
+    analyzer: SemanticAnalyzerCore, node: astx.MethodCall
+) -> bool:
+    """
+    title: Preserve native method validation at public class call sites.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.MethodCall
+    returns:
+      type: bool
+    """
+    arity = {"read": 0, "write": 1, "flush": 0, "close": 0}
+    if node.method_name not in arity:
+        file_error(
+            analyzer, node, f"unsupported file method '{node.method_name}'"
+        )
+        return False
+    if (
+        len(node.args) != arity[node.method_name]
+        or astx.get_template_args(node) is not None
+    ):
+        file_error(
+            analyzer,
+            node,
+            f"file {node.method_name} expects {arity[node.method_name]} "
+            "arguments and no templates",
+        )
+        return False
+    if node.method_name == "write":
+        if not is_string_type(
+            analyzer._expr_type(node.args[0])
+        ) or literal_nul(node.args[0]):
+            file_error(analyzer, node, "file write requires a NUL-free string")
+            return False
+    return True
 
 
 @private
@@ -250,29 +328,8 @@ def resolve_file_method(
     info.resolved_function = None
     info.resolved_module_member_access = None
     info.resource_ownership = None
-    arity = {"read": 0, "write": 1, "flush": 0, "close": 0}
-    if node.method_name not in arity:
-        file_error(
-            analyzer, node, f"unsupported file method '{node.method_name}'"
-        )
+    if not validate_file_method_arguments(analyzer, node):
         return
-    if (
-        len(node.args) != arity[node.method_name]
-        or astx.get_template_args(node) is not None
-    ):
-        file_error(
-            analyzer,
-            node,
-            f"file {node.method_name} expects {arity[node.method_name]} "
-            "arguments and no templates",
-        )
-        return
-    if node.method_name == "write":
-        if not is_string_type(
-            analyzer._expr_type(node.args[0])
-        ) or literal_nul(node.args[0]):
-            file_error(analyzer, node, "file write requires a NUL-free string")
-            return
     ownership = resource_ownership(node.receiver)
     if ownership is None or ownership.resource_kind is not ResourceKind.FILE:
         file_error(

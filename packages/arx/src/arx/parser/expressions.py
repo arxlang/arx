@@ -129,24 +129,52 @@ class ExpressionParserMixin(ParserMixinBase):
             if self._is_operator("("):
                 self._consume_operator("(")
                 args: list[astx.DataType] = []
+                keywords: list[astx.KeywordArgument] = []
                 if not self._is_operator(")"):
                     while True:
                         if (
                             self.tokens.cur_tok.kind == TokenKind.identifier
                             and self._peek_token().value == "="
                         ):
-                            raise ParserException(
-                                "Keyword arguments are supported only "
-                                "for open."
+                            root = expr
+                            while isinstance(root, astx.FieldAccess):
+                                root = root.value
+                            if not (
+                                isinstance(root, astx.Identifier)
+                                and root.name in self.namespace_roots
+                                and not self._name_is_shadowed(root.name)
+                            ):
+                                raise ParserException(
+                                    "Keyword arguments require a constructor."
+                                )
+                            keyword = self.tokens.cur_tok
+                            self.tokens.get_next_token()
+                            self._consume_operator("=")
+                            keywords.append(
+                                astx.KeywordArgument(
+                                    cast(str, keyword.value),
+                                    cast(
+                                        astx.DataType, self.parse_expression()
+                                    ),
+                                    loc=keyword.location,
+                                )
                             )
-                        args.append(
-                            cast(astx.DataType, self.parse_expression())
-                        )
+                        else:
+                            if keywords:
+                                raise ParserException(
+                                    "Positional arguments cannot follow "
+                                    "keywords."
+                                )
+                            args.append(
+                                cast(astx.DataType, self.parse_expression())
+                            )
 
                         if self._is_operator(")"):
                             break
 
                         self._consume_operator(",")
+                        if self._is_operator(")") and keywords:
+                            break
 
                 self._consume_operator(")")
                 if self._is_dataframe_expr(expr) and member_name in {
@@ -194,6 +222,7 @@ class ExpressionParserMixin(ParserMixinBase):
                         expr,
                         member_name,
                         args,
+                        keywords=tuple(keywords),
                     )
                     expr.loc = member_loc
                 if template_args is not None:
@@ -322,6 +351,50 @@ class ExpressionParserMixin(ParserMixinBase):
             return astx.LiteralTuple(tuple(elements))
         return astx.LiteralList(elements)
 
+    def parse_imported_namespace_name(self, name: str) -> str:
+        """
+        title: Match a dotted import's complete binding before member access.
+        parameters:
+          name:
+            type: str
+        returns:
+          type: str
+        """
+        if self._name_is_shadowed(name):
+            return name
+        candidates = sorted(
+            (
+                item
+                for item in self.namespace_roots
+                if item.startswith(name + ".")
+            ),
+            key=len,
+            reverse=True,
+        )
+        start = self.tokens.position - 1
+        for candidate in candidates:
+            expected = [
+                value
+                for part in candidate[len(name) + 1 :].split(".")
+                for value in (".", part)
+            ]
+            actual = self.tokens.tokens[start : start + len(expected)]
+            if len(actual) != len(expected) or not all(
+                token.value == value
+                and token.kind
+                is (
+                    TokenKind.operator
+                    if value == "."
+                    else TokenKind.identifier
+                )
+                for token, value in zip(actual, expected)
+            ):
+                continue
+            for _ in expected:
+                self.tokens.get_next_token()
+            return candidate
+        return name
+
     def parse_identifier_expr(self) -> astx.AST:
         """
         title: Parse the identifier expression.
@@ -331,7 +404,8 @@ class ExpressionParserMixin(ParserMixinBase):
         id_name = cast(str, self.tokens.cur_tok.value)
         id_loc = self.tokens.cur_tok.location
 
-        self.tokens.get_next_token()  # eat identifier
+        self.tokens.get_next_token()
+        id_name = self.parse_imported_namespace_name(id_name)  # eat identifier
 
         template_args = self._parse_template_args_for_call()
 
@@ -430,9 +504,14 @@ class ExpressionParserMixin(ParserMixinBase):
                 self.tokens.cur_tok.kind == TokenKind.identifier
                 and self._peek_token().value == "="
             ):
-                if id_name != builtins.BUILTIN_OPEN and not (
-                    id_name in self.known_class_names
-                    and not self._name_is_shadowed(id_name)
+                if (
+                    id_name
+                    not in {builtins.BUILTIN_OPEN, builtins.BUILTIN_FILE}
+                    and id_name not in self.imported_type_names
+                    and not (
+                        id_name in self.known_class_names
+                        and not self._name_is_shadowed(id_name)
+                    )
                 ):
                     raise ParserException(
                         "Keyword arguments require open or a constructor."
@@ -457,8 +536,9 @@ class ExpressionParserMixin(ParserMixinBase):
                 break
             self._consume_operator(",")
             if (
-                id_name != builtins.BUILTIN_OPEN
+                id_name not in {builtins.BUILTIN_OPEN, builtins.BUILTIN_FILE}
                 and id_name not in self.known_class_names
+                and id_name not in self.imported_type_names
                 and self._is_operator(")")
             ):
                 raise ParserException("Expected an argument after ','.")
