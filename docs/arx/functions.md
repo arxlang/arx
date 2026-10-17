@@ -40,10 +40,47 @@ fn main() -> i32:
   return double(10)
 ````
 
+## Keyword Arguments
+
+Ordinary functions and instance/static methods accept named arguments, including
+through imported aliases and module namespaces:
+
+```text
+add(y=2, x=1)
+add(1, y=2)
+helpers.add(x=1, y=2)
+counter.read(offset=3)
+identity<i32>(value=7)
+```
+
+Positional arguments must precede keywords. Names are case-sensitive and must
+match the resolved declaration. Existing ordinary function-call lookup remains
+module-visible and separate from lexical local-value lookup; builtin/class
+shadowing rules are unchanged. Duplicate names, positional/name collisions,
+unknown names, and missing required parameters are compilation errors. A named
+call may end with a trailing comma. Unpacking (`*args`, `**kwargs`) and
+keyword-only/positional-only parameter declarations are not supported.
+
+The receiver is evaluated first, then all explicitly supplied values exactly
+once in source order, even when their names reverse parameter order. Omitted
+defaults run afterward in parameter declaration order. Unlike Python, Arx
+already evaluates defaults at **call time**; they may reference earlier bound
+parameters, and method defaults may read `self`. For `f(a, b=a+1, c=b+1)`,
+`f(c=9, a=2)` calls with `(2, 3, 9)` and does not evaluate `c`'s default.
+Dynamic methods bind names/defaults through the statically selected interface,
+then dispatch positional values to the override.
+
+Fixed extern parameter names can be used; any existing C variadic tail stays
+positional and uses existing promotions. Keywords do not enable unsupported FFI
+types. Parser intrinsics and collection operations without a named-call schema
+still reject keywords. Signature-backed bundled functions such as
+`range(start=0, stop=3)` use their declared parameters, not Python overloads.
+
 ## Default Parameter Values
 
 Function, method, and extern parameters can declare trailing default values with
-`=`. Calls may omit those trailing arguments.
+`=`. Calls may omit defaulted parameters, including a middle default when a
+later parameter is supplied by name.
 
 ````arx
 ```
@@ -136,7 +173,9 @@ extern putchard(x: i32) -> i32
 support the same eight-argument restricted native text-file profile and return
 ordinary File class references, including through positional and keyword calls.
 Class constructors also accept keywords from their `__init__` parameters (see
-[Classes](classes.md)). General user-function/method keyword calls are a
-separate follow-up PR and are not implemented here. See
-[Text File I/O](file-io.md) for supported defaults, methods, and ownership
-rules.
+[Classes](classes.md)). Ordinary functions and methods also support keywords as
+described above; `File.write(text="hello")` uses its declared method parameter.
+The file creation profile retains its compile-time-only optional settings and
+checked construction path; it is not an ordinary source wrapper with arbitrary
+keyword forwarding. See [Text File I/O](file-io.md) for supported defaults,
+methods, and ownership rules.

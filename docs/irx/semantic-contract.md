@@ -1006,3 +1006,14 @@ generated concrete callbacks own field traversal. Analysis rejects recursive
 field graphs (including subtypes), escaping hook receivers, unsupported storage,
 and non-exact initialization of native file fields. See the
 [class model](class-model.md) and [ownership inventory](runtime-ownership.md).
+
+## Bound Call Arguments
+
+`CallResolution.arguments` records explicit evaluations in source order, their
+ABI destination indices, omitted defaults with resolved target types, and
+parameter/receiver symbols for default environments. Argument types and
+conversions are indexed by explicit evaluation order, not destination order. IRx
+binds names before validation, overload matching, and template inference; Arx
+only preserves call syntax. Declaration defaults retain their original semantic
+resolution. Lowering must require this metadata rather than infer missing
+defaults from a positional prefix or reorder/mutate source AST operands.

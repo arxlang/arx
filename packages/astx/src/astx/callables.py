@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional, cast
 
-from public import public
+from public import private, public
 
 from astx.base import (
     NO_SOURCE_LOCATION,
@@ -207,6 +207,22 @@ class KeywordArgument(Expr):
         )
 
 
+@private
+@typechecked
+def materialize_call_operands(
+    args: Iterable[DataType],
+) -> tuple[DataType, ...]:
+    """
+    title: Snapshot and validate iterable call operands, including generators.
+    parameters:
+      args:
+        type: Iterable[DataType]
+    returns:
+      type: tuple[DataType, Ellipsis]
+    """
+    return tuple(args)
+
+
 @public
 @typechecked
 class FunctionCall(DataType):
@@ -260,7 +276,7 @@ class FunctionCall(DataType):
         """
         super().__init__(loc=loc, parent=parent)
         self.fn = fn if not isinstance(fn, FunctionDef) else fn.name
-        self.args = args
+        self.args = materialize_call_operands(args)
         self.keywords = keywords
         self.kind = ASTKind.CallKind
         self.type_ = type_

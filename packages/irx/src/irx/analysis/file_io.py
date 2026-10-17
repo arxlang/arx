@@ -269,7 +269,10 @@ def resolve_file_open(
 @private
 @typechecked
 def validate_file_method_arguments(
-    analyzer: SemanticAnalyzerCore, node: astx.MethodCall
+    analyzer: SemanticAnalyzerCore,
+    node: astx.MethodCall,
+    *,
+    public: bool = False,
 ) -> bool:
     """
     title: Preserve native method validation at public class call sites.
@@ -278,6 +281,8 @@ def validate_file_method_arguments(
         type: SemanticAnalyzerCore
       node:
         type: astx.MethodCall
+      public:
+        type: bool
     returns:
       type: bool
     """
@@ -287,8 +292,17 @@ def validate_file_method_arguments(
             analyzer, node, f"unsupported file method '{node.method_name}'"
         )
         return False
+    args = list(node.args)
+    if node.keywords:
+        if not public:
+            file_error(
+                analyzer, node, "raw file methods do not accept keywords"
+            )
+            return False
+        # Ordinary class binding below diagnoses duplicate/unknown names.
+        args.extend(keyword.value for keyword in node.keywords)
     if (
-        len(node.args) != arity[node.method_name]
+        len(args) != arity[node.method_name]
         or astx.get_template_args(node) is not None
     ):
         file_error(
@@ -299,9 +313,9 @@ def validate_file_method_arguments(
         )
         return False
     if node.method_name == "write":
-        if not is_string_type(
-            analyzer._expr_type(node.args[0])
-        ) or literal_nul(node.args[0]):
+        if not is_string_type(analyzer._expr_type(args[0])) or literal_nul(
+            args[0]
+        ):
             file_error(analyzer, node, "file write requires a NUL-free string")
             return False
     return True

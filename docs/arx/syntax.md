@@ -217,5 +217,8 @@ reserved for documented language protocols. `__init__` and `__del__` are
 lifecycle hooks; existing IRx `__enter__` and `__exit__` names are also
 recognized without adding Arx `with` syntax. Plain `init` and `deinit` have no
 special meaning. See [Classes](classes.md) and [Text File I/O](file-io.md) for
-restrictions. This does not add general function/method keyword calls or `with`
-statements.
+restrictions. Ordinary function/method calls also accept positional arguments
+followed by named values (`callee(value=expr)`). They reject positional-after-
+keyword calls, duplicates, unknown names, and argument unpacking. See
+[Functions](functions.md#keyword-arguments). Arx `with` statements remain
+unsupported.

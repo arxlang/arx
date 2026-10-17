@@ -452,7 +452,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         method_resolution: ResolvedMethodCall,
         manager_value: ir.Value,
         manager_type: astx.DataType | None,
-        label: str,
     ) -> ir.Value | None:
         """
         title: Lower one resolved context-manager method call.
@@ -465,8 +464,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             type: ir.Value
           manager_type:
             type: astx.DataType | None
-          label:
-            type: str
         returns:
           type: ir.Value | None
         """
@@ -480,10 +477,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             source_type=manager_type,
             target_type=receiver_parameter_type,
         )
-        llvm_defaults = cast(Any, self)._lower_default_call_arguments(
-            function=method_resolution.function,
-            explicit_arg_values=[],
-            label=label,
+        llvm_defaults = cast(Any, self).lower_bound_call_arguments(
+            method_resolution.call,
             receiver_value=lowered_manager,
         )
         lowered_args = [lowered_manager, *llvm_defaults]
@@ -1363,7 +1358,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             method_resolution=resolution.enter,
             manager_value=manager_value,
             manager_type=resolution.manager_type,
-            label="with __enter__",
         )
 
         def cleanup() -> None:
@@ -1375,7 +1369,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 method_resolution=resolution.exit,
                 manager_value=manager_value,
                 manager_type=resolution.manager_type,
-                label="with __exit__",
             )
 
         with self._cleanup_scope(cleanup):

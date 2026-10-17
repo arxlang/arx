@@ -272,3 +272,9 @@ references may alias and cross normal function boundaries. Native-backed method
 metadata preserves call-site status checks and receiver pinning. Canonical File
 subclassing is explicitly rejected in this slice. See the
 [semantic contract](semantic-contract.md#native-backed-file-class).
+
+Named method arguments bind against the statically selected visible signature,
+not hidden receiver parameters or the runtime override's parameter names.
+`ResolvedMethodCall.call.arguments` records the same source-order/ABI-slot plan
+as ordinary functions. Static, direct-base, and dynamically dispatched calls
+share this lowering contract; method defaults can retain resolved `self` access.

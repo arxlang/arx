@@ -428,6 +428,8 @@ class StaticMethodCall(astx.DataType):
         type: str
       args:
         type: tuple[astx.DataType, Ellipsis]
+      keywords:
+        type: tuple[astx.KeywordArgument, Ellipsis]
       type_:
         type: AnyType
     """
@@ -435,6 +437,7 @@ class StaticMethodCall(astx.DataType):
     class_name: str
     method_name: str
     args: tuple[astx.DataType, ...]
+    keywords: tuple[astx.KeywordArgument, ...]
     type_: AnyType
 
     def __init__(
@@ -442,6 +445,8 @@ class StaticMethodCall(astx.DataType):
         class_name: str,
         method_name: str,
         args: Iterable[astx.DataType],
+        *,
+        keywords: tuple[astx.KeywordArgument, ...] = (),
     ) -> None:
         """
         title: Initialize one static method call expression.
@@ -452,10 +457,13 @@ class StaticMethodCall(astx.DataType):
             type: str
           args:
             type: Iterable[astx.DataType]
+          keywords:
+            type: tuple[astx.KeywordArgument, Ellipsis]
         """
         super().__init__()
         self.class_name = class_name
         self.method_name = method_name
+        self.keywords = keywords
         self.args = tuple(args)
         self.type_ = AnyType()
 
@@ -483,6 +491,11 @@ class StaticMethodCall(astx.DataType):
         value = {
             "args": arg_nodes.get_struct(simplified),
         }
+        if self.keywords:
+            named = astx.ASTNodes[astx.KeywordArgument]("keywords")
+            for keyword in self.keywords:
+                named.append(keyword)
+            value["keywords"] = named.get_struct(simplified)
         return self._prepare_struct(
             key,
             cast(astx.base.ReprStruct, value),
@@ -633,6 +646,8 @@ class BaseMethodCall(astx.DataType):
         type: str
       args:
         type: tuple[astx.DataType, Ellipsis]
+      keywords:
+        type: tuple[astx.KeywordArgument, Ellipsis]
       type_:
         type: AnyType
     """
@@ -641,6 +656,7 @@ class BaseMethodCall(astx.DataType):
     base_class_name: str
     method_name: str
     args: tuple[astx.DataType, ...]
+    keywords: tuple[astx.KeywordArgument, ...]
     type_: AnyType
 
     def __init__(
@@ -649,6 +665,8 @@ class BaseMethodCall(astx.DataType):
         base_class_name: str,
         method_name: str,
         args: Iterable[astx.DataType],
+        *,
+        keywords: tuple[astx.KeywordArgument, ...] = (),
     ) -> None:
         """
         title: Initialize one base-qualified method call expression.
@@ -661,11 +679,14 @@ class BaseMethodCall(astx.DataType):
             type: str
           args:
             type: Iterable[astx.DataType]
+          keywords:
+            type: tuple[astx.KeywordArgument, Ellipsis]
         """
         super().__init__()
         self.receiver = receiver
         self.base_class_name = base_class_name
         self.method_name = method_name
+        self.keywords = keywords
         self.args = tuple(args)
         self.type_ = AnyType()
 
@@ -694,6 +715,11 @@ class BaseMethodCall(astx.DataType):
             "receiver": self.receiver.get_struct(simplified),
             "args": arg_nodes.get_struct(simplified),
         }
+        if self.keywords:
+            named = astx.ASTNodes[astx.KeywordArgument]("keywords")
+            for keyword in self.keywords:
+                named.append(keyword)
+            value["keywords"] = named.get_struct(simplified)
         return self._prepare_struct(
             key,
             cast(astx.base.ReprStruct, value),

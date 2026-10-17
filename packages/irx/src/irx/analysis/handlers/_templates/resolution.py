@@ -11,6 +11,7 @@ from dataclasses import replace
 
 import astx
 
+from irx.analysis.call_arguments import argument_slots
 from irx.analysis.handlers._templates.build import (
     TemplateBuildVisitorMixin,
 )
@@ -173,10 +174,15 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
             concrete_args = tuple(clone_type(arg) for arg in explicit_args)
         else:
             inferred: dict[str, astx.DataType] = {}
-            for parameter, arg_type in zip(
-                function.signature.parameters,
-                arg_types,
-            ):
+            slots = argument_slots(
+                function, node, self.context.diagnostics if diagnose else None
+            )
+            if slots is None:
+                return None
+            for slot, arg_type in zip(slots, arg_types):
+                if slot >= len(function.signature.parameters):
+                    continue
+                parameter = function.signature.parameters[slot]
                 if not self._collect_inferred_template_bindings(
                     parameter.type_,
                     arg_type,

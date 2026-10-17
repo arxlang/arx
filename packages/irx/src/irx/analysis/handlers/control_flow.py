@@ -419,6 +419,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             function=visible_function,
             arg_types=[],
             node=node,
+            binding_function=function,
         )
         dispatch_kind = MethodDispatchKind.DIRECT
         if member.dispatch_slot is not None:

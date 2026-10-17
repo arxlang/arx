@@ -240,3 +240,20 @@ fn main() -> i32:
     ):
         assert symbol in text
     assert "irx.drop." in text
+
+
+def test_keyword_default_holes_translate_verifies() -> None:
+    """
+    title: Named calls with dependent default holes produce valid LLVM.
+    """
+    ArxIO.string_to_buffer("""```
+title: Keyword translate regression
+```
+fn combine(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
+  return a * 100 + b * 10 + c
+fn main() -> i32:
+  return combine(c=9, a=2) - 239
+""")
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert 'call i32 @"main__combine"' in text

@@ -389,3 +389,22 @@ def test_file_builtin_is_available_in_memory(factory: str) -> None:
     artifact = compiler.compile(checked, kind=ArtifactKind.LLVM_IR)
     assert artifact.llvm_ir is not None
     assert "irx_file_open" in artifact.llvm_ir
+
+
+def test_keyword_calls_compile_without_filesystem_origin() -> None:
+    """
+    title: The public facade retains named arguments through check and compile.
+    """
+    compiler = Compiler()
+    parsed = compiler.parse_string(
+        MODULE_DOCSTRING
+        + """fn f(a: i32, b: i32 = a + 1, c: i32 = 4) -> i32:
+  return a + b + c
+fn main() -> i32:
+  return f(c=9, a=2)
+"""
+    )
+    artifact = compiler.compile(
+        compiler.check(parsed), kind=ArtifactKind.LLVM_IR
+    )
+    assert artifact.llvm_ir is not None

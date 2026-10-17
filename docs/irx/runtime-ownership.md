@@ -197,3 +197,14 @@ invalidate an evaluated string pointer. Reference counts are non-atomic, and
 cyclic schemas (including subtype edges) are rejected. General containers,
 generator capture, global owners, and external class ownership remain out of
 scope.
+
+## Named Calls And Default Arguments
+
+Named operands receive the same borrow/escape checks and lifetime pins as
+positional operands. Calls evaluate/pin the receiver, evaluate supplied values
+in source order, then fill omitted defaults in declaration order using resolved
+parameter symbols. The completed values are emitted in positional ABI order.
+Class and string-field snapshots must survive later keyword/default effects.
+Public File method lowering consumes this same binding plan while retaining
+caller-side native status checks and locations. No new native ABI, implicit
+unwinding, cyclic ownership, or raw file-handle escape is introduced.

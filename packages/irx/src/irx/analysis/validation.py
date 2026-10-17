@@ -8,13 +8,17 @@ summary: >-
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from typing import cast
 
 import astx
 
+from irx.analysis.call_arguments import argument_slots, call_evaluations
 from irx.analysis.resolved_nodes import (
     CallableResolution,
     CallResolution,
     ImplicitConversion,
+    ResolvedCallArguments,
+    ResolvedDefaultArgument,
     ReturnResolution,
     SemanticFunction,
 )
@@ -207,6 +211,7 @@ def validate_call(
         | astx.StaticMethodCall
         | astx.WithStmt
     ),
+    binding_function: SemanticFunction | None = None,
 ) -> CallResolution:
     """
     title: Validate a function call.
@@ -221,105 +226,81 @@ def validate_call(
         type: >-
           astx.BaseMethodCall | astx.FunctionCall | astx.MethodCall |
           astx.StaticMethodCall | astx.WithStmt
+      binding_function:
+        type: SemanticFunction | None
     returns:
       type: CallResolution
     """
     signature = function.signature
-    fixed_param_count = len(signature.parameters)
-    required_param_count = sum(
-        1
-        for argument in function.prototype.args.nodes
-        if isinstance(argument.default, astx.Undefined)
-    )
-    arg_count = len(arg_types)
-    if signature.is_variadic:
-        if arg_count < required_param_count:
-            diagnostics.add(
-                f"call to '{function.name}' expects at least "
-                f"{required_param_count} arguments but got {arg_count}",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-            )
-    elif arg_count < required_param_count:
-        expected_count = (
-            required_param_count
-            if required_param_count != fixed_param_count
-            else fixed_param_count
-        )
-        qualifier = (
-            "at least " if required_param_count != fixed_param_count else ""
-        )
-        diagnostics.add(
-            f"call to '{function.name}' expects {qualifier}{expected_count} "
-            f"arguments but got {arg_count}",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-        )
-    elif arg_count > fixed_param_count:
-        diagnostics.add(
-            f"call to '{function.name}' expects {fixed_param_count} "
-            f"arguments but got {arg_count}",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-        )
-
+    slots = argument_slots(function, node, diagnostics)
+    evaluations = call_evaluations(node)
     resolved_argument_types: list[astx.DataType | None] = []
     implicit_conversions: list[ImplicitConversion | None] = []
-    call_args = list(getattr(node, "args", ()))
-
-    for idx, (param, arg_type) in enumerate(
-        zip(signature.parameters, arg_types)
+    for source_index, (slot, arg_type) in enumerate(
+        zip(slots or (), arg_types)
     ):
-        if not is_assignable(param.type_, arg_type):
-            diagnostics.add(
-                f"argument {idx + 1} of call to '{function.name}' expects "
-                f"{display_type_name(param.type_)} but got "
-                f"{display_type_name(arg_type)}",
-                node=call_args[idx],
-                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                notes=_implicit_conversion_note(arg_type, param.type_),
-            )
-            resolved_argument_types.append(arg_type)
-            implicit_conversions.append(None)
-            continue
-        resolved_argument_types.append(param.type_)
-        if same_type(param.type_, arg_type):
-            implicit_conversions.append(None)
-        else:
-            implicit_conversions.append(
-                ImplicitConversion(arg_type, param.type_)
-            )
-
-    for idx, arg_type in enumerate(
-        arg_types[fixed_param_count:],
-        start=fixed_param_count,
-    ):
-        promoted_type = _variadic_argument_type(arg_type)
-        if signature.is_variadic and promoted_type is not None:
-            resolved_argument_types.append(promoted_type)
-            if same_type(promoted_type, arg_type):
-                implicit_conversions.append(None)
-            else:
-                implicit_conversions.append(
-                    ImplicitConversion(arg_type, promoted_type)
+        if slot < len(signature.parameters):
+            target: astx.DataType | None = signature.parameters[slot].type_
+            if not is_assignable(target, arg_type):
+                diagnostics.add(
+                    f"argument {slot + 1} of call to '{function.name}' "
+                    "expects "
+                    f"{display_type_name(target)} but got "
+                    f"{display_type_name(arg_type)}",
+                    node=evaluations[source_index],
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                    notes=_implicit_conversion_note(arg_type, target),
                 )
-            continue
-        if signature.is_variadic:
-            diagnostics.add(
-                f"variadic argument {idx + 1} of call to '{function.name}' "
-                f"uses unsupported type {display_type_name(arg_type)}",
-                node=call_args[idx],
-                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-            )
-        resolved_argument_types.append(arg_type)
-        implicit_conversions.append(None)
-
+        else:
+            target = _variadic_argument_type(arg_type)
+            if target is None:
+                diagnostics.add(
+                    f"variadic argument {slot + 1} of call to "
+                    f"'{function.name}' uses unsupported type "
+                    f"{display_type_name(arg_type)}",
+                    node=evaluations[source_index],
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+        resolved_argument_types.append(target)
+        implicit_conversions.append(
+            None
+            if same_type(target, arg_type) or target is None
+            else ImplicitConversion(arg_type, target)
+        )
+    actual = binding_function or function
+    visible = tuple(actual.prototype.args.nodes)
+    hidden = len(actual.args) - len(visible)
+    parameters = actual.args[hidden:] if hidden >= 0 else ()
+    defaults = tuple(
+        ResolvedDefaultArgument(
+            index,
+            cast(astx.DataType, parameter.default),
+            signature.parameters[index].type_,
+        )
+        for index, parameter in enumerate(visible)
+        if slots is not None
+        and index not in slots
+        and not isinstance(parameter.default, astx.Undefined)
+    )
+    plan = (
+        None
+        if slots is None
+        else ResolvedCallArguments(
+            evaluations,
+            slots,
+            defaults,
+            parameters,
+            actual.args[0] if hidden > 0 else None,
+            max(len(visible), max(slots, default=-1) + 1),
+        )
+    )
     return CallResolution(
         callee=_callable_resolution(function),
         signature=signature,
         resolved_argument_types=tuple(resolved_argument_types),
         result_type=signature.return_type,
         implicit_conversions=tuple(implicit_conversions),
+        arguments=plan,
     )
 
 

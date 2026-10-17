@@ -280,15 +280,32 @@ class FileVisitorMixin(VisitorMixinBase):
             )
             handle = self._llvm.ir_builder.load(address)
         arguments = [handle]
-        for expression in node.args:
-            self.visit_child(expression)
-            arguments.append(
-                require_lowered_value(
-                    safe_pop(self.result_stack),
-                    node=expression,
-                    context="file argument",
+        if operation.receiver_field is not None:
+            from irx.builder.lowering.functions import (  # noqa: PLC0415
+                FunctionVisitorMixin,
+            )
+
+            resolution = require_semantic_metadata(
+                semantic.resolved_call,
+                node=node,
+                metadata="resolved_call",
+                context="public File method",
+            )
+            arguments.extend(
+                cast(FunctionVisitorMixin, self).lower_bound_call_arguments(
+                    resolution
                 )
             )
+        else:
+            for expression in node.args:
+                self.visit_child(expression)
+                arguments.append(
+                    require_lowered_value(
+                        safe_pop(self.result_stack),
+                        node=expression,
+                        context="file argument",
+                    )
+                )
         output: ir.Value | None = None
         if operation.name in {"read", "write"}:
             output_type = (
