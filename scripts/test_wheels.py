@@ -77,17 +77,17 @@ fn main() -> i32:
   ```
   title: main
   ```
-  return answer()
+  return answer(value=0)
 """
 
 SUPPORT_MODULE = """```
 title: Installed wheel support module
 ```
-fn answer() -> i32:
+fn answer(value: i32 = 0) -> i32:
   ```
   title: answer
   ```
-  return 0
+  return value
 """
 
 CLASS_MODULE = """```
@@ -170,7 +170,7 @@ fn main() -> i32:
   ```
   var output: File = File("file-smoke.txt", mode="w")
   var alias: file = output
-  assert alias.write("hello") == 5
+  assert alias.write(text="hello") == 5
   output.close()
   var input: file = open(file="file-smoke.txt")
   assert input.read() == "hello"

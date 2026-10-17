@@ -172,6 +172,13 @@
     "series_type": {
       "form": "series[type]"
     },
+    "call_arguments": {
+      "form": "callee(positional, name=value, ...)",
+      "function_keywords": true,
+      "method_keywords": true,
+      "positional_after_keyword": false,
+      "unpacking": false
+    },
     "class_constructor": {
       "form": "Class(positional, name=value, ...)",
       "hooks": ["__init__", "__del__"],

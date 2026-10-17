@@ -27,8 +27,9 @@ open(file, mode="r", buffering=-1, encoding=none, errors=none,
 
 The first two arguments may be runtime string expressions. All other arguments
 must be supported constants. Positional arguments and keywords may be mixed; the
-File builtin profile and ordinary class constructors support keywords, but
-ordinary function/method keyword calls remain unsupported. Invalid options are
+File builtin profile, class constructors, and ordinary functions/methods support
+named arguments. `stream.write(text="hello")` uses the declared method name;
+`read`, `flush`, and `close` still accept no arguments. Invalid options are
 rejected before compilation can execute file I/O; dynamic modes are checked
 before opening or truncating a path.
 

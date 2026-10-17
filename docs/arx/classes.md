@@ -197,8 +197,12 @@ not add Python's garbage collector, `super()` chaining, `__new__`, or unwinding
 after fatal errors. Ordinary operations such as `close()` remain callable and
 are separate from object destruction.
 
-Only constructors and builtin `open` accept keyword calls in this PR. **General
-function/method keyword calls are the next PR**, not implemented here.
+Ordinary instance and static methods also accept named arguments. An instance
+receiver is implicit; it cannot be supplied as a keyword. Keywords bind against
+the statically selected declaration, including through inheritance and dynamic
+dispatch. Values evaluate in source order, then omitted defaults in declaration
+order. See [Functions](functions.md#keyword-arguments). Direct lifecycle-hook
+calls remain forbidden.
 
 ## Owned Fields And Boundaries
 

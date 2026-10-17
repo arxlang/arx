@@ -100,6 +100,50 @@ class ExpressionParserMixin(ParserMixinBase):
             self.tokens.get_next_token()
         raise ParserException(msg)
 
+    def parse_call_arguments(
+        self,
+        *,
+        allow_trailing: bool = False,
+    ) -> tuple[list[astx.DataType], list[astx.KeywordArgument]]:
+        """
+        title: Preserve source-ordered operands after an opening parenthesis.
+        parameters:
+          allow_trailing:
+            type: bool
+        returns:
+          type: tuple[list[astx.DataType], list[astx.KeywordArgument]]
+        """
+        args: list[astx.DataType] = []
+        keywords: list[astx.KeywordArgument] = []
+        while not self._is_operator(")"):
+            if (
+                self.tokens.cur_tok.kind == TokenKind.identifier
+                and self._peek_token().value == "="
+            ):
+                token = self.tokens.cur_tok
+                self.tokens.get_next_token()
+                self._consume_operator("=")
+                keywords.append(
+                    astx.KeywordArgument(
+                        cast(str, token.value),
+                        cast(astx.DataType, self.parse_expression()),
+                        loc=token.location,
+                    )
+                )
+            else:
+                if keywords:
+                    raise ParserException(
+                        "Positional arguments cannot follow keywords."
+                    )
+                args.append(cast(astx.DataType, self.parse_expression()))
+            if self._is_operator(")"):
+                break
+            self._consume_operator(",")
+            if self._is_operator(")") and not keywords and not allow_trailing:
+                raise ParserException("Expected an argument after comma.")
+        self._consume_operator(")")
+        return args, keywords
+
     def parse_postfix(self) -> astx.AST:
         """
         title: Parse postfix member access and method calls.
@@ -128,55 +172,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
             if self._is_operator("("):
                 self._consume_operator("(")
-                args: list[astx.DataType] = []
-                keywords: list[astx.KeywordArgument] = []
-                if not self._is_operator(")"):
-                    while True:
-                        if (
-                            self.tokens.cur_tok.kind == TokenKind.identifier
-                            and self._peek_token().value == "="
-                        ):
-                            root = expr
-                            while isinstance(root, astx.FieldAccess):
-                                root = root.value
-                            if not (
-                                isinstance(root, astx.Identifier)
-                                and root.name in self.namespace_roots
-                                and not self._name_is_shadowed(root.name)
-                            ):
-                                raise ParserException(
-                                    "Keyword arguments require a constructor."
-                                )
-                            keyword = self.tokens.cur_tok
-                            self.tokens.get_next_token()
-                            self._consume_operator("=")
-                            keywords.append(
-                                astx.KeywordArgument(
-                                    cast(str, keyword.value),
-                                    cast(
-                                        astx.DataType, self.parse_expression()
-                                    ),
-                                    loc=keyword.location,
-                                )
-                            )
-                        else:
-                            if keywords:
-                                raise ParserException(
-                                    "Positional arguments cannot follow "
-                                    "keywords."
-                                )
-                            args.append(
-                                cast(astx.DataType, self.parse_expression())
-                            )
-
-                        if self._is_operator(")"):
-                            break
-
-                        self._consume_operator(",")
-                        if self._is_operator(")") and keywords:
-                            break
-
-                self._consume_operator(")")
+                args, keywords = self.parse_call_arguments()
                 if self._is_dataframe_expr(expr) and member_name in {
                     "nrows",
                     "ncols",
@@ -186,7 +182,7 @@ class ExpressionParserMixin(ParserMixinBase):
                             "DataFrame metadata methods do not accept "
                             "template arguments."
                         )
-                    if args:
+                    if args or keywords:
                         raise ParserException(
                             f"DataFrame {member_name} expects no arguments."
                         )
@@ -204,6 +200,10 @@ class ExpressionParserMixin(ParserMixinBase):
                         raise ParserException(
                             "List append does not accept template arguments."
                         )
+                    if keywords:
+                        raise ParserException(
+                            "List append does not accept keywords."
+                        )
                     if len(args) != 1:
                         raise ParserException(
                             "List append expects exactly one argument."
@@ -216,6 +216,7 @@ class ExpressionParserMixin(ParserMixinBase):
                         class_name,
                         member_name,
                         args,
+                        keywords=tuple(keywords),
                     )
                 else:
                     expr = astx.MethodCall(
@@ -224,7 +225,7 @@ class ExpressionParserMixin(ParserMixinBase):
                         args,
                         keywords=tuple(keywords),
                     )
-                    expr.loc = member_loc
+                expr.loc = member_loc
                 if template_args is not None:
                     astx.set_template_args(expr, template_args)
                 continue
@@ -497,53 +498,13 @@ class ExpressionParserMixin(ParserMixinBase):
                 return astx.LiteralDateTime(arg.value, loc=id_loc)
             return astx.LiteralTimestamp(arg.value, loc=id_loc)
 
-        args: list[astx.DataType] = []
-        keywords: list[astx.KeywordArgument] = []
-        while not self._is_operator(")"):
-            if (
-                self.tokens.cur_tok.kind == TokenKind.identifier
-                and self._peek_token().value == "="
-            ):
-                if (
-                    id_name
-                    not in {builtins.BUILTIN_OPEN, builtins.BUILTIN_FILE}
-                    and id_name not in self.imported_type_names
-                    and not (
-                        id_name in self.known_class_names
-                        and not self._name_is_shadowed(id_name)
-                    )
-                ):
-                    raise ParserException(
-                        "Keyword arguments require open or a constructor."
-                    )
-                keyword_token = self.tokens.cur_tok
-                self.tokens.get_next_token()
-                self._consume_operator("=")
-                keywords.append(
-                    astx.KeywordArgument(
-                        cast(str, keyword_token.value),
-                        cast(astx.DataType, self.parse_expression()),
-                        loc=keyword_token.location,
-                    )
-                )
-            else:
-                if keywords:
-                    raise ParserException(
-                        "Positional arguments cannot follow keywords."
-                    )
-                args.append(cast(astx.DataType, self.parse_expression()))
-            if self._is_operator(")"):
-                break
-            self._consume_operator(",")
-            if (
-                id_name not in {builtins.BUILTIN_OPEN, builtins.BUILTIN_FILE}
-                and id_name not in self.known_class_names
-                and id_name not in self.imported_type_names
-                and self._is_operator(")")
-            ):
-                raise ParserException("Expected an argument after ','.")
-
-        self._consume_operator(")")
+        args, keywords = self.parse_call_arguments(
+            allow_trailing=(
+                id_name in self.known_class_names
+                or id_name in self.imported_type_names
+                or id_name in {builtins.BUILTIN_OPEN, builtins.BUILTIN_FILE}
+            )
+        )
         if id_name in self.known_class_names and not self._name_is_shadowed(
             id_name
         ):

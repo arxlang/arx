@@ -1111,6 +1111,114 @@ class CallableResolution:
 
 @public
 @typechecked
+@dataclass(frozen=True, init=False)
+class ResolvedDefaultArgument:
+    """
+    title: One declaration-resolved omitted argument and its destination.
+    attributes:
+      index:
+        type: int
+      expression:
+        type: astx.DataType
+      type_:
+        type: astx.DataType
+    """
+
+    index: int
+    expression: astx.DataType
+    type_: astx.DataType
+
+    def __init__(
+        self, index: int, expression: astx.DataType, type_: astx.DataType
+    ) -> None:
+        """
+        title: Validate one default operand descriptor.
+        parameters:
+          index:
+            type: int
+          expression:
+            type: astx.DataType
+          type_:
+            type: astx.DataType
+        """
+        object.__setattr__(self, "index", index)
+        object.__setattr__(self, "expression", expression)
+        object.__setattr__(self, "type_", type_)
+
+
+@public
+@typechecked
+@dataclass(frozen=True, init=False)
+class ResolvedCallArguments:
+    """
+    title: Source-ordered evaluations mapped onto positional ABI slots.
+    attributes:
+      evaluations:
+        type: tuple[astx.DataType, Ellipsis]
+      indices:
+        type: tuple[int, Ellipsis]
+      defaults:
+        type: tuple[ResolvedDefaultArgument, Ellipsis]
+      parameters:
+        type: tuple[SemanticSymbol, Ellipsis]
+      receiver:
+        type: SemanticSymbol | None
+      argument_count:
+        type: int
+    """
+
+    evaluations: tuple[astx.DataType, ...]
+    indices: tuple[int, ...]
+    defaults: tuple[ResolvedDefaultArgument, ...]
+    parameters: tuple[SemanticSymbol, ...]
+    receiver: SemanticSymbol | None
+    argument_count: int
+
+    def __init__(
+        self,
+        evaluations: tuple[astx.DataType, ...],
+        indices: tuple[int, ...],
+        defaults: tuple[ResolvedDefaultArgument, ...],
+        parameters: tuple[SemanticSymbol, ...],
+        receiver: SemanticSymbol | None,
+        argument_count: int,
+    ) -> None:
+        """
+        title: Validate the complete bound-call descriptor.
+        parameters:
+          evaluations:
+            type: tuple[astx.DataType, Ellipsis]
+          indices:
+            type: tuple[int, Ellipsis]
+          defaults:
+            type: tuple[ResolvedDefaultArgument, Ellipsis]
+          parameters:
+            type: tuple[SemanticSymbol, Ellipsis]
+          receiver:
+            type: SemanticSymbol | None
+          argument_count:
+            type: int
+        """
+        object.__setattr__(self, "evaluations", evaluations)
+        object.__setattr__(self, "indices", indices)
+        object.__setattr__(self, "defaults", defaults)
+        object.__setattr__(self, "parameters", parameters)
+        object.__setattr__(self, "receiver", receiver)
+        object.__setattr__(self, "argument_count", argument_count)
+        destinations = (*indices, *(default.index for default in defaults))
+        if (
+            len(evaluations) != len(indices)
+            or argument_count < len(parameters)
+            or len(destinations) != len(set(destinations))
+            or set(destinations) != set(range(argument_count))
+        ):
+            raise ValueError(
+                "call argument plan must populate every slot exactly once"
+            )
+
+
+@public
+@typechecked
 @dataclass(frozen=True)
 class CallResolution:
     """
@@ -1129,6 +1237,8 @@ class CallResolution:
         type: astx.DataType
       implicit_conversions:
         type: tuple[ImplicitConversion | None, Ellipsis]
+      arguments:
+        type: ResolvedCallArguments | None
     """
 
     callee: CallableResolution
@@ -1136,6 +1246,7 @@ class CallResolution:
     resolved_argument_types: tuple[astx.DataType | None, ...]
     result_type: astx.DataType
     implicit_conversions: tuple[ImplicitConversion | None, ...] = ()
+    arguments: ResolvedCallArguments | None = None
 
 
 @public

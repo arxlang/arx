@@ -129,8 +129,9 @@ Run the example in a scratch directory: it creates or truncates
 ## Class Lifetimes
 
 Classes support `__init__(self, ...) -> none` and `__del__(self) -> none` hooks.
-`Counter(value=7)` binds constructor keywords; ordinary function/method keywords
-remain unsupported. Class aliases share identity, and final reference release
-runs the destructor and releases owned string/file/class fields. Cycles and
-owned containers/globals/generator captures are deliberately excluded. See
+`Counter(value=7)` binds constructor keywords. Ordinary functions and methods
+also accept names from their declarations (see [Functions](functions.md)). Class
+aliases share identity, and final reference release runs the destructor and
+releases owned string/file/class fields. Cycles and owned
+containers/globals/generator captures are deliberately excluded. See
 [Classes](classes.md) and `examples/class-lifecycle.x` for the complete slice.

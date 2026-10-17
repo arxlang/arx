@@ -56,3 +56,45 @@ def test_namespace_constructor_keyword_model() -> None:
             [],
             keywords=(keyword, "bad"),  # type: ignore[arg-type]
         )
+
+
+@pytest.mark.parametrize("kind", ["static", "base"])
+def test_static_and_base_keywords(kind: str) -> None:
+    """
+    title: >-
+      Named values survive static/base model rendering and type validation.
+    parameters:
+      kind:
+        type: str
+    """
+    keywords = (astx.KeywordArgument("value", astx.LiteralInt32(1)),)
+    if kind == "static":
+        call = astx.StaticMethodCall("C", "method", [], keywords=keywords)
+        with pytest.raises(TypeCheckError):
+            astx.StaticMethodCall("C", "method", [], keywords=(*keywords, 1))  # type: ignore[arg-type]
+    else:
+        call = astx.BaseMethodCall(
+            astx.Identifier("self"), "C", "method", [], keywords=keywords
+        )
+        with pytest.raises(TypeCheckError):
+            astx.BaseMethodCall(
+                astx.Identifier("self"),
+                "C",
+                "method",
+                [],
+                keywords=(*keywords, 1),
+            )  # type: ignore[arg-type]
+    assert call.keywords == keywords
+    assert "keywords" in str(call.get_struct())
+
+
+def test_function_call_materializes_iterable_once() -> None:
+    """
+    title: Repeated analysis does not consume or lose generator operands.
+    """
+    value = astx.LiteralInt32(1)
+    call = astx.FunctionCall("f", (item for item in (value,)))
+    assert tuple(call.args) == (value,)
+    assert tuple(call.args) == (value,)
+    with pytest.raises(TypeCheckError):
+        astx.FunctionCall("f", (item for item in (value, 1)))  # type: ignore[arg-type]

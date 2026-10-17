@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.call_arguments import call_evaluations
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
@@ -334,14 +335,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if binding.class_ is not None:
             self.resolve_class_construction(node, binding.class_)
             return
-        if node.keywords:
-            self.context.diagnostics.add(
-                "keyword arguments require a class constructor",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-            )
-            return
-        for argument in node.args:
+        for argument in call_evaluations(node):
             self.visit(argument)
             arg_types.append(self._expr_type(argument))
         function = binding.function
@@ -390,7 +384,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self._set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
-            list(node.args),
+            list(call_evaluations(node)),
             call_resolution.result_type,
         )
 
@@ -534,15 +528,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 return
             self.resolve_class_construction(node, binding.class_)
             return
-        if node.keywords:
-            self.context.diagnostics.add(
-                "keyword arguments are supported only for builtin open",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-            )
-            return
         arg_types: list[astx.DataType | None] = []
-        for arg in node.args:
+        for arg in call_evaluations(node):
             self.visit(arg)
             arg_types.append(self._expr_type(arg))
         binding = self.bindings.resolve(node.fn)
@@ -595,6 +582,6 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         self._set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
-            list(node.args),
+            list(call_evaluations(node)),
             call_resolution.result_type,
         )

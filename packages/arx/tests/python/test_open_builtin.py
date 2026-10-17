@@ -136,8 +136,6 @@ def test_open_rejects_unsupported_arguments(
     "call",
     [
         'open(file="x", "r")',
-        'other(file="x")',
-        'stream.write(value="text")',
     ],
 )
 def test_open_keyword_syntax_restrictions(call: str) -> None:
@@ -166,7 +164,7 @@ def test_open_shadowing() -> None:
     declarations = "fn open(value: i32) -> i32:\n  return value\n"
     module = parse_module("assert open(7) == 7", declarations)
     assert "irx_file_open" not in ArxBuilder().translate(module)
-    with pytest.raises(SemanticError, match="keyword"):
+    with pytest.raises(SemanticError, match="unknown argument"):
         analyze(parse_module("open(file=7)", declarations))
     with pytest.raises(SemanticError, match="does not resolve to a function"):
         analyze(parse_module('var open: i32 = 1\nopen("x")'))

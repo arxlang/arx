@@ -7,8 +7,11 @@ summary: >-
 
 from __future__ import annotations
 
+from typing import cast
+
 import astx
 
+from irx.analysis.call_arguments import argument_slots
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )
@@ -429,71 +432,41 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         suffix = " static" if is_static else ""
         return f"{method_name}({parameters}){suffix}"
 
-    def _method_arguments_exactly_match(
+    def bound_method_matches(
         self,
+        class_: SemanticClass,
         member: SemanticClassMember,
         arg_types: list[astx.DataType | None],
+        node: astx.AST,
+        *,
+        exact: bool,
     ) -> bool:
         """
-        title: Return whether one method exactly matches explicit arg types.
+        title: >-
+          Match a candidate's own keyword names without speculative visits.
         parameters:
+          class_:
+            type: SemanticClass
           member:
             type: SemanticClassMember
           arg_types:
             type: list[astx.DataType | None]
+          node:
+            type: astx.AST
+          exact:
+            type: bool
         returns:
           type: bool
         """
-        if member.signature is None:
+        function = self._visible_method_function(class_, member)
+        slots = argument_slots(function, node)
+        if slots is None:
             return False
-        if len(member.signature.parameters) != len(arg_types):
-            return False
-        return all(
-            same_type(parameter.type_, arg_type)
-            for parameter, arg_type in zip(
-                member.signature.parameters,
-                arg_types,
-            )
-        )
-
-    def _method_arguments_match_declared_defaults(
-        self,
-        member: SemanticClassMember,
-        arg_types: list[astx.DataType | None],
-    ) -> bool:
-        """
-        title: Return whether one method can accept omitted trailing defaults.
-        parameters:
-          member:
-            type: SemanticClassMember
-          arg_types:
-            type: list[astx.DataType | None]
-        returns:
-          type: bool
-        """
-        declaration = member.declaration
-        if member.signature is None or not isinstance(
-            declaration, astx.FunctionDef
-        ):
-            return False
-        provided_count = len(arg_types)
-        fixed_param_count = len(member.signature.parameters)
-        required_param_count = sum(
-            1
-            for argument in declaration.prototype.args.nodes
-            if isinstance(argument.default, astx.Undefined)
-        )
-        if (
-            provided_count < required_param_count
-            or provided_count > fixed_param_count
-        ):
+        if exact and len(slots) != len(function.signature.parameters):
             return False
         return all(
-            same_type(parameter.type_, arg_type)
-            for parameter, arg_type in zip(
-                member.signature.parameters,
-                arg_types,
-            )
+            same_type(function.signature.parameters[slot].type_, type_)
+            for slot, type_ in zip(slots, arg_types)
         )
 
     def _resolve_method_overload(
@@ -607,7 +580,9 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         exact_matches = tuple(
             candidate
             for candidate in accessible_candidates
-            if self._method_arguments_exactly_match(candidate, arg_types)
+            if self.bound_method_matches(
+                class_, candidate, arg_types, node, exact=True
+            )
         )
         if len(exact_matches) == 1:
             return exact_matches[0], accessible_candidates
@@ -629,9 +604,8 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         compatible_matches = tuple(
             candidate
             for candidate in accessible_candidates
-            if self._method_arguments_match_declared_defaults(
-                candidate,
-                arg_types,
+            if self.bound_method_matches(
+                class_, candidate, arg_types, node, exact=False
             )
         )
         if len(compatible_matches) == 1:
@@ -660,10 +634,20 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             self._format_method_signature(candidate)
             for candidate in accessible_candidates
         )
+        keywords = cast(
+            tuple[astx.KeywordArgument, ...], getattr(node, "keywords", ())
+        )
+        keyword_names = tuple(keyword.name for keyword in keywords)
+        keyword_label = (
+            f" with keyword(s) {', '.join(keyword_names)}"
+            if keyword_names
+            else ""
+        )
         self.context.diagnostics.add(
             (
                 f"class '{class_.name}' has no exact overload for "
-                f"'{requested}'; available overloads: {available}"
+                f"'{requested}'{keyword_label}; "
+                f"available overloads: {available}"
             ),
             node=node,
             code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,

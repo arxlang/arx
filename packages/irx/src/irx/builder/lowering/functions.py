@@ -289,108 +289,91 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 continue
             self.named_values[symbol_id] = previous
 
-    def _lower_default_call_arguments(
+    def lower_bound_call_arguments(
         self,
+        resolution: CallResolution,
         *,
-        function: SemanticFunction,
-        explicit_arg_values: Sequence[ir.Value],
-        label: str,
         receiver_value: ir.Value | None = None,
     ) -> list[ir.Value]:
         """
-        title: Lower omitted trailing default arguments for one call.
+        title: >-
+          Evaluate in source order, fill defaults, then assemble ABI slots.
         parameters:
-          function:
-            type: SemanticFunction
-          explicit_arg_values:
-            type: Sequence[ir.Value]
-          label:
-            type: str
+          resolution:
+            type: CallResolution
           receiver_value:
             type: ir.Value | None
         returns:
           type: list[ir.Value]
         """
-        visible_arguments = tuple(function.prototype.args.nodes)
-        explicit_arg_count = len(explicit_arg_values)
-        if explicit_arg_count >= len(visible_arguments):
-            return []
-
-        hidden_parameter_count = len(function.args) - len(visible_arguments)
-        if hidden_parameter_count < 0:
-            raise_lowering_internal_error(
-                "call lowering found fewer semantic arguments than declared "
-                "prototype parameters",
-                node=function.prototype,
-            )
-
-        saved_bindings: dict[str, Any | None] = {}
+        plan = require_semantic_metadata(
+            resolution.arguments,
+            node=resolution.callee.function.prototype,
+            metadata="arguments",
+            context="bound call",
+        )
+        explicit = self._lower_explicit_call_arguments(
+            args=plan.evaluations,
+            resolution=resolution,
+            label="bound call",
+        )
+        values: list[ir.Value | None] = [None] * plan.argument_count
+        for index, value in zip(plan.indices, explicit):
+            values[index] = value
+        saved: dict[str, Any | None] = {}
+        defaults = {item.index: item for item in plan.defaults}
         try:
-            if hidden_parameter_count > 0:
+            if plan.receiver is not None and plan.defaults:
                 if receiver_value is None:
                     raise_lowering_internal_error(
-                        "instance method default-argument lowering requires "
-                        "a lowered receiver value",
-                        node=function.prototype,
+                        "method defaults require a resolved receiver",
+                        node=resolution.callee.function.prototype,
                     )
-                receiver_symbol = function.args[0]
                 self._bind_temporary_call_symbol(
-                    symbol_name=receiver_symbol.name,
-                    symbol_id=receiver_symbol.symbol_id,
+                    symbol_name=plan.receiver.name,
+                    symbol_id=plan.receiver.symbol_id,
                     llvm_value=receiver_value,
-                    saved_bindings=saved_bindings,
+                    saved_bindings=saved,
                 )
-
-            for index, llvm_value in enumerate(explicit_arg_values):
-                arg_symbol = function.args[hidden_parameter_count + index]
-                self._bind_temporary_call_symbol(
-                    symbol_name=arg_symbol.name,
-                    symbol_id=arg_symbol.symbol_id,
-                    llvm_value=llvm_value,
-                    saved_bindings=saved_bindings,
-                )
-
-            llvm_defaults: list[ir.Value] = []
-            for visible_index in range(
-                explicit_arg_count,
-                len(visible_arguments),
-            ):
-                argument = visible_arguments[visible_index]
-                if isinstance(argument.default, astx.Undefined):
-                    raise_lowering_internal_error(
-                        "call lowering reached an omitted parameter without "
-                        "a declared default value",
-                        node=argument,
+            for index in range(len(resolution.signature.parameters)):
+                default = defaults.get(index)
+                if default is not None:
+                    self.visit_child(default.expression)
+                    value = require_lowered_value(
+                        safe_pop(self.result_stack),
+                        node=default.expression,
+                        context="default call argument",
                     )
-                self.visit_child(argument.default)
-                lowered_default = require_lowered_value(
-                    safe_pop(self.result_stack),
-                    node=argument.default,
-                    context=(
-                        f"default value for parameter '{argument.name}' of "
-                        f"{label}"
-                    ),
+                    self.class_pin(default.expression, value)
+                    values[index] = self._cast_ast_value(
+                        value,
+                        source_type=self._resolved_ast_type(
+                            default.expression
+                        ),
+                        target_type=default.type_,
+                    )
+                value = values[index]
+                if value is None:
+                    raise_lowering_internal_error(
+                        "bound call contains an unpopulated parameter slot",
+                        node=resolution.callee.function.prototype,
+                    )
+                if plan.defaults and index < len(plan.parameters):
+                    symbol = plan.parameters[index]
+                    self._bind_temporary_call_symbol(
+                        symbol_name=symbol.name,
+                        symbol_id=symbol.symbol_id,
+                        llvm_value=value,
+                        saved_bindings=saved,
+                    )
+            if any(value is None for value in values):
+                raise_lowering_internal_error(
+                    "bound call contains an unpopulated variadic slot",
+                    node=resolution.callee.function.prototype,
                 )
-                parameter_index = hidden_parameter_count + visible_index
-                target_type = function.signature.parameters[
-                    parameter_index
-                ].type_
-                lowered_default = self._cast_ast_value(
-                    lowered_default,
-                    source_type=self._resolved_ast_type(argument.default),
-                    target_type=target_type,
-                )
-                llvm_defaults.append(lowered_default)
-                arg_symbol = function.args[parameter_index]
-                self._bind_temporary_call_symbol(
-                    symbol_name=arg_symbol.name,
-                    symbol_id=arg_symbol.symbol_id,
-                    llvm_value=lowered_default,
-                    saved_bindings=saved_bindings,
-                )
-            return llvm_defaults
+            return [cast(ir.Value, value) for value in values]
         finally:
-            self._restore_temporary_call_bindings(saved_bindings)
+            self._restore_temporary_call_bindings(saved)
 
     def _indirect_method_callee(
         self,
@@ -639,27 +622,6 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         self.llvm_functions_by_symbol_id[function_key] = fn
         return fn
 
-    def _lower_call_arguments(
-        self,
-        node: astx.FunctionCall,
-        resolution: CallResolution,
-    ) -> list[ir.Value]:
-        """
-        title: Lower one semantically validated call argument list.
-        parameters:
-          node:
-            type: astx.FunctionCall
-          resolution:
-            type: CallResolution
-        returns:
-          type: list[ir.Value]
-        """
-        return self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=resolution,
-            label=f"call to '{node.fn}'",
-        )
-
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.FunctionCall) -> None:
         """
@@ -686,14 +648,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         resolution = self._semantic_call_resolution(node)
         target_function = resolution.callee.function
         callee_f = self._declare_semantic_function(target_function)
-        llvm_args = self._lower_call_arguments(node, resolution)
-        llvm_args.extend(
-            self._lower_default_call_arguments(
-                function=target_function,
-                explicit_arg_values=llvm_args,
-                label=f"call to '{node.fn}'",
-            )
-        )
+        llvm_args = self.lower_bound_call_arguments(resolution)
         self._apply_calling_convention(resolution.signature)
         if isinstance(callee_f.function_type.return_type, ir.VoidType):
             self._llvm.ir_builder.call(callee_f, llvm_args)
@@ -754,22 +709,9 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 ),
             )
             callee = self._declare_semantic_function(function)
-            llvm_args = self._lower_explicit_call_arguments(
-                args=list(node.args),
-                resolution=resolution,
-                label=(f"module namespace call '{module_member.member_name}'"),
-            )
             self.visit_child(node.receiver)
             _ = safe_pop(self.result_stack)
-            llvm_args.extend(
-                self._lower_default_call_arguments(
-                    function=function,
-                    explicit_arg_values=llvm_args,
-                    label=(
-                        f"module namespace call '{module_member.member_name}'"
-                    ),
-                )
-            )
+            llvm_args = self.lower_bound_call_arguments(resolution)
             self._apply_calling_convention(function.signature)
             if isinstance(callee.function_type.return_type, ir.VoidType):
                 self._llvm.ir_builder.call(callee, llvm_args)
@@ -788,11 +730,6 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         )
         self.class_operation(node.receiver, "require", receiver_value)
         self.class_pin(node.receiver, receiver_value)
-        llvm_args = self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=method_resolution.call,
-            label=f"method call '{method_resolution.member.name}'",
-        )
         receiver_parameter_type = (
             method_resolution.function.signature.parameters[0].type_
             if method_resolution.function.signature.parameters
@@ -803,13 +740,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             source_type=self._resolved_ast_type(node.receiver),
             target_type=receiver_parameter_type,
         )
-        llvm_defaults = self._lower_default_call_arguments(
-            function=method_resolution.function,
-            explicit_arg_values=llvm_args,
-            label=f"method call '{method_resolution.member.name}'",
+        llvm_args = self.lower_bound_call_arguments(
+            method_resolution.call,
             receiver_value=lowered_receiver,
         )
-        lowered_args = [lowered_receiver, *llvm_args, *llvm_defaults]
+        lowered_args = [lowered_receiver, *llvm_args]
         callee: ir.Value
         if method_resolution.dispatch_kind is MethodDispatchKind.INDIRECT:
             callee = self._indirect_method_callee(
@@ -852,14 +787,6 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         )
         self.class_operation(node.receiver, "require", receiver_value)
         self.class_pin(node.receiver, receiver_value)
-        llvm_args = self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=method_resolution.call,
-            label=(
-                f"base method call '{method_resolution.class_.name}."
-                f"{method_resolution.member.name}'"
-            ),
-        )
         receiver_parameter_type = (
             method_resolution.function.signature.parameters[0].type_
             if method_resolution.function.signature.parameters
@@ -870,16 +797,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             source_type=self._resolved_ast_type(node.receiver),
             target_type=receiver_parameter_type,
         )
-        llvm_defaults = self._lower_default_call_arguments(
-            function=method_resolution.function,
-            explicit_arg_values=llvm_args,
-            label=(
-                f"base method call '{method_resolution.class_.name}."
-                f"{method_resolution.member.name}'"
-            ),
+        llvm_args = self.lower_bound_call_arguments(
+            method_resolution.call,
             receiver_value=lowered_receiver,
         )
-        lowered_args = [lowered_receiver, *llvm_args, *llvm_defaults]
+        lowered_args = [lowered_receiver, *llvm_args]
         callee = self._declare_semantic_function(method_resolution.function)
         self._apply_calling_convention(method_resolution.function.signature)
         if isinstance(
@@ -902,24 +824,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         """
         method_resolution = self._semantic_method_call(node)
         callee = self._declare_semantic_function(method_resolution.function)
-        llvm_args = self._lower_explicit_call_arguments(
-            args=list(node.args),
-            resolution=method_resolution.call,
-            label=(
-                f"static method call '{method_resolution.class_.name}."
-                f"{method_resolution.member.name}'"
-            ),
-        )
-        llvm_args.extend(
-            self._lower_default_call_arguments(
-                function=method_resolution.function,
-                explicit_arg_values=llvm_args,
-                label=(
-                    f"static method call '{method_resolution.class_.name}."
-                    f"{method_resolution.member.name}'"
-                ),
-            )
-        )
+        llvm_args = self.lower_bound_call_arguments(method_resolution.call)
         self._apply_calling_convention(method_resolution.function.signature)
         if isinstance(callee.function_type.return_type, ir.VoidType):
             self._llvm.ir_builder.call(callee, llvm_args)

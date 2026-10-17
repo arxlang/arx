@@ -321,6 +321,29 @@ def test_with_statement_binds_enter_result_to_target(
     assert_jit_int_main_result(builder, module, ENTER_VALUE)
 
 
+def test_context_protocol_uses_bound_default_arguments() -> None:
+    """
+    title: Synthesized context calls consume the same default binding plan.
+    """
+    enter = _method(
+        "__enter__",
+        astx.Int32(),
+        astx.FunctionReturn(astx.Identifier("value")),
+    )
+    enter.prototype.args.append(
+        astx.Argument("value", astx.Int32(), default=astx.LiteralInt32(7))
+    )
+    body = astx.Block()
+    body.append(astx.FunctionReturn(astx.Identifier("value")))
+    with_stmt = astx.WithStmt(
+        astx.ClassConstruct("Manager"),
+        body,
+        target=astx.Identifier("value"),
+    )
+    module = _module(_manager_class(enter, _exit_method()), _main(with_stmt))
+    assert_jit_int_main_result(LLVMBuilder(), module, ENTER_VALUE)
+
+
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_break_inside_with_calls_exit(
     builder_class: type[Builder],

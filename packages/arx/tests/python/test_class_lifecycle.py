@@ -432,12 +432,16 @@ def test_null_class_reference_is_checked(tmp_path: Path) -> None:
     assert "ARX-RUNTIME-CLASS-001" in result.stderr
 
 
-def test_ordinary_keyword_calls_are_still_deferred() -> None:
+def test_ordinary_keyword_calls_parse() -> None:
     """
-    title: General function/method keywords remain deferred.
+    title: Ordinary method keywords preserve their value expressions.
     """
-    with pytest.raises(ParserException, match="Keyword"):
-        parsed(COUNTER, "var c: Counter = Counter()\nc.read(offset=1)")
+    module = parsed(COUNTER, "var c: Counter = Counter()\nc.read(offset=1)")
+    main = module.nodes[-1]
+    assert isinstance(main, astx.FunctionDef)
+    call = main.body.nodes[1]
+    assert isinstance(call, astx.MethodCall)
+    assert [keyword.name for keyword in call.keywords] == ["offset"]
 
 
 def test_nonprefix_base_fields_in_hooks(tmp_path: Path) -> None:

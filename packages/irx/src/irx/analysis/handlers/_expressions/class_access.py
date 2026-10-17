@@ -19,6 +19,7 @@ from irx.analysis.builtin_file import (
     is_native_file_class,
     resolve_public_file_construction,
 )
+from irx.analysis.call_arguments import call_evaluations
 from irx.analysis.class_lifecycle import (
     INITIALIZER_HOOK,
     class_ownership,
@@ -215,15 +216,8 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if module is not None:
             self._resolve_module_namespace_call(node, module, [])
             return
-        if node.keywords:
-            self.context.diagnostics.add(
-                "keyword arguments require a class constructor",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_CALL_ARITY,
-            )
-            return
         arg_types: list[astx.DataType | None] = []
-        for arg in node.args:
+        for arg in call_evaluations(node):
             self.visit(arg)
             arg_types.append(self._expr_type(arg))
         if not self._require_value_expression(
@@ -250,12 +244,6 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
             self._set_type(node, None)
-            return
-        if is_native_file_class(
-            cast(SemanticAnalyzerCore, self), class_
-        ) and not validate_file_method_arguments(
-            cast(SemanticAnalyzerCore, self), node
-        ):
             return
         if reject_hook_call(
             cast(SemanticAnalyzerCore, self), node, node.method_name
@@ -303,7 +291,14 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             function=visible_function,
             arg_types=arg_types,
             node=node,
+            binding_function=function,
         )
+        if is_native_file_class(
+            cast(SemanticAnalyzerCore, self), class_
+        ) and not validate_file_method_arguments(
+            cast(SemanticAnalyzerCore, self), node, public=True
+        ):
+            return
         dispatch_kind = MethodDispatchKind.DIRECT
         if member.dispatch_slot is not None:
             dispatch_kind = MethodDispatchKind.INDIRECT
@@ -326,7 +321,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
-            list(node.args),
+            list(call_evaluations(node)),
             call_resolution.result_type,
         )
         if is_native_file_class(cast(SemanticAnalyzerCore, self), class_):
@@ -355,7 +350,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
-        for arg in node.args:
+        for arg in call_evaluations(node):
             self.visit(arg)
             arg_types.append(self._expr_type(arg))
         if not self._require_value_expression(
@@ -417,6 +412,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             function=visible_function,
             arg_types=arg_types,
             node=node,
+            binding_function=function,
         )
         self._set_call(node, call_resolution)
         self._set_method_call(
@@ -436,7 +432,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
-            list(node.args),
+            list(call_evaluations(node)),
             call_resolution.result_type,
         )
 
@@ -453,7 +449,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         ):
             return
         arg_types: list[astx.DataType | None] = []
-        for arg in node.args:
+        for arg in call_evaluations(node):
             self.visit(arg)
             arg_types.append(self._expr_type(arg))
         class_ = self._resolve_named_class(node.class_name, node=node)
@@ -502,6 +498,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             function=visible_function,
             arg_types=arg_types,
             node=node,
+            binding_function=function,
         )
         self._set_call(node, call_resolution)
         self._set_method_call(
@@ -519,7 +516,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self._set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
-            list(node.args),
+            list(call_evaluations(node)),
             call_resolution.result_type,
         )
 
