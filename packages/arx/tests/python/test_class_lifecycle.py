@@ -15,8 +15,10 @@ from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
-from irx.analysis import SemanticError, analyze
+from irx.analysis import SemanticError
 from llvmlite import binding as llvm
+
+from .file_support import analyze_arx as analyze
 
 COUNTER = """class Counter:
   value: i32 = 0
@@ -308,10 +310,16 @@ log.close()""",
         'self.handle.read()\nself.handle = open("x", "w")\nreturn none',
     ],
 )
-def test_file_field_initialization_restrictions(constructor: str) -> None:
+def test_public_file_fields_use_class_initialization(
+    tmp_path: Path, constructor: str
+) -> None:
     """
-    title: Missing, repeated, and premature file initialization fails closed.
+    title: >-
+      Public file references may be empty or replaced, but not dereferenced
+      empty.
     parameters:
+      tmp_path:
+        type: Path
       constructor:
         type: str
     """
@@ -320,8 +328,12 @@ def test_file_field_initialization_restrictions(constructor: str) -> None:
         + "\n".join("    " + line for line in constructor.splitlines())
         + "\n"
     )
-    with pytest.raises(SemanticError, match="file"):
-        analyze(parsed(declarations, "Log()"))
+    result = run_class(tmp_path, declarations, "Log()")
+    assert result.returncode == (1 if "read()" in constructor else 0), (
+        result.stderr
+    )
+    if "read()" in constructor:
+        assert "ARX-RUNTIME-CLASS-001" in result.stderr
 
 
 @pytest.mark.parametrize("body", ["value.__init__()", "value.__del__()"])
@@ -610,16 +622,26 @@ fn early(flag: bool) -> none:
     assert result.stdout == "0\n1\n2\n9\n9\n"
 
 
-def test_file_field_cannot_copy_another_field() -> None:
+def test_public_file_fields_can_share_one_object(tmp_path: Path) -> None:
     """
-    title: Field declarations never duplicate a single-owner native handle.
+    title: >-
+      Public class fields alias one stream without copying its native handle.
+    parameters:
+      tmp_path:
+        type: Path
     """
     declarations = """class Log:
   first: file = open("log.txt", "w")
   second: file = self.first
 """
-    with pytest.raises(SemanticError, match="fresh open initializer"):
-        analyze(parsed(declarations, "Log()"))
+    result = run_class(
+        tmp_path,
+        declarations,
+        'var log: Log = Log()\nlog.first.write("saved")\n'
+        'log.second.write("!")',
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "log.txt").read_text() == "saved!"
 
 
 def test_field_drop_failure_continues_other_fields(tmp_path: Path) -> None:

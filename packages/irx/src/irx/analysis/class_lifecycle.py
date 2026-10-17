@@ -388,7 +388,7 @@ def lifecycle_plan(
 @typechecked
 def constructor_arguments(
     analyzer: SemanticAnalyzerCore,
-    node: astx.ClassConstruct,
+    node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall,
     class_: SemanticClass,
 ) -> tuple[
     tuple[astx.DataType, ...], tuple[int, ...], tuple[astx.DataType, ...]
@@ -399,7 +399,7 @@ def constructor_arguments(
       analyzer:
         type: SemanticAnalyzerCore
       node:
-        type: astx.ClassConstruct
+        type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
       class_:
         type: SemanticClass
     returns:
@@ -425,11 +425,12 @@ def constructor_arguments(
     phases = class_.initialization.phases
     initializer = phases[-1].initializer if phases else None
     params = list(initializer.prototype.args.nodes) if initializer else []
-    evaluations = list(node.args)
+    positional = list(node.args)
+    evaluations = list(positional)
     supplied: dict[str, int] = {}
-    if len(node.args) > len(params):
+    if len(positional) > len(params):
         lifecycle_error(analyzer, node, "too many constructor arguments")
-    for param, index in zip(params, range(len(node.args))):
+    for param, index in zip(params, range(len(positional))):
         supplied[param.name] = index
     for item in node.keywords:
         if item.name == "self" or item.name not in {p.name for p in params}:
@@ -633,12 +634,13 @@ def validate_class_graph(analyzer: SemanticAnalyzerCore) -> None:
 
     for owner in classes:
         if cyclic(owner.qualified_name, frozenset()):
-            lifecycle_error(
-                analyzer,
-                owner.declaration,
-                "cyclic class-field ownership is unsupported "
-                "(including subtypes)",
-            )
+            with analyzer.context.in_module(owner.module_key):
+                lifecycle_error(
+                    analyzer,
+                    owner.declaration,
+                    "cyclic class-field ownership is unsupported "
+                    "(including subtypes)",
+                )
 
 
 @private
@@ -745,6 +747,14 @@ def validate_file_fields(
       class_:
         type: SemanticClass
     """
+    from irx.analysis.builtin_file import (  # noqa: PLC0415
+        is_native_file_class,
+        validate_native_file_class,
+    )
+
+    if is_native_file_class(analyzer, class_):
+        validate_native_file_class(analyzer, class_)
+        return
     if class_.initialization is None:
         return
     phase = class_.initialization.phases[-1]

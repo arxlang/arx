@@ -31,6 +31,12 @@ class ParserMixinBase:
         type: list[set[str]]
       known_class_names:
         type: set[str]
+      imported_type_names:
+        type: set[str]
+      namespace_roots:
+        type: set[str]
+      builtin_type_bindings:
+        type: dict[str, astx.DataType]
       tensor_scopes:
         type: list[dict[str, TensorBinding | None]]
       dataframe_scopes:
@@ -51,6 +57,9 @@ class ParserMixinBase:
     indent_level: int
     list_scopes: list[set[str]]
     known_class_names: set[str]
+    imported_type_names: set[str]
+    namespace_roots: set[str]
+    builtin_type_bindings: dict[str, astx.DataType]
     tensor_scopes: list[dict[str, TensorBinding | None]]
     dataframe_scopes: list[dict[str, DataFrameBinding | None]]
     return_type_scopes: list[astx.DataType]

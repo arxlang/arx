@@ -9,7 +9,7 @@ class TextLog:
   summary: Owns its path string and native file stream.
   ```
   path: str = ""
-  handle: file
+  handle: File
 
   fn __init__(self, path: str) -> none:
     ```
@@ -17,7 +17,7 @@ class TextLog:
     summary: Copies the path and opens exactly one owned stream.
     ```
     self.path = path
-    self.handle = open(self.path, mode="w")
+    self.handle = File(self.path, mode="w")
     return none
 
   fn __del__(self) -> none:

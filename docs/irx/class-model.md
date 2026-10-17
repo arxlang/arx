@@ -262,3 +262,13 @@ calls do not gain cross-frame unwinding. See the
 [Arx lifecycle rules](../arx/classes.md) for the exact constructor and cleanup
 boundaries. General function/method keywords and a public `File` class remain
 separate follow-ups.
+
+## Native-Backed File Builtin
+
+Public File uses this same ClassType/layout/reference lifecycle, not a renamed
+opaque handle. Its host-registered native initializer checks creation in the
+caller; its private FileType field is released by normal class drop. Public
+references may alias and cross normal function boundaries. Native-backed method
+metadata preserves call-site status checks and receiver pinning. Canonical File
+subclassing is explicitly rejected in this slice. See the
+[semantic contract](semantic-contract.md#native-backed-file-class).

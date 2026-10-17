@@ -321,7 +321,25 @@ def program_context(
     """
     if not has_imports(program.module):
         return None
-    if program.origin is None and program.has_source_imports:
+    source_imports = [
+        node
+        for node in program.module.nodes
+        if isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
+    ]
+    filesystem_imports = any(
+        (
+            node.level != 0
+            or node.module not in {"builtins.files", "builtins.generators"}
+            if isinstance(node, astx.ImportFromStmt)
+            else any(alias.name != "builtins.files" for alias in node.names)
+        )
+        for node in source_imports
+    )
+    if (
+        program.origin is None
+        and program.has_source_imports
+        and filesystem_imports
+    ):
         diagnostic = api_diagnostic(
             "imports from in-memory source require a filesystem origin",
             filename=program.filename,

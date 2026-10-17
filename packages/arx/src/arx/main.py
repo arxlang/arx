@@ -151,12 +151,17 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
     returns:
       type: astx.Module
     """
+    from arx.builtin_files import needs_file_builtin  # noqa: PLC0415
+
+    needs_file = needs_file_builtin(module)
     implicit_imports = arx_builtins.get_ambient_builtin_imports(module.name)
     missing_imports: list[astx.ImportFromStmt] = []
 
     for import_node in implicit_imports:
         module_name = import_node.module
         if module_name is None:
+            continue
+        if module_name == arx_builtins.BUILTIN_FILE_MODULE and not needs_file:
             continue
         names = tuple(
             alias.name
@@ -165,7 +170,22 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
             and not _has_top_level_binding_name(module, alias.name)
         )
         if not names:
-            continue
+            if module_name != arx_builtins.BUILTIN_FILE_MODULE:
+                continue
+            if any(
+                (
+                    isinstance(node, astx.ImportFromStmt)
+                    and node.module == module_name
+                )
+                or (
+                    isinstance(node, astx.ImportStmt)
+                    and any(alias.name == module_name for alias in node.names)
+                )
+                for node in module.nodes
+            ):
+                continue
+        # An empty import still records the canonical type dependency when
+        # a user declaration shadows the ambient File binding.
         aliases = [astx.AliasExpr(name) for name in names]
         missing_imports.append(
             astx.ImportFromStmt(
@@ -607,13 +627,29 @@ class FileImportResolver:
 
         builtin_asset = arx_builtins.load_builtin_module(requested_specifier)
         ArxIO.string_to_buffer(builtin_asset.source)
-        module_ast = Parser().parse(Lexer().lex(), requested_specifier)
+        file_builtin = requested_specifier == arx_builtins.BUILTIN_FILE_MODULE
+        module_ast = Parser().parse(
+            Lexer().lex(),
+            requested_specifier,
+            builtin_types={"NativeFileHandle": astx.FileType()}
+            if file_builtin
+            else None,
+        )
         module_ast = inject_ambient_builtin_imports(module_ast)
         return ParsedModule(
             key=requested_specifier,
             ast=module_ast,
             display_name=requested_specifier,
             origin=builtin_asset.origin,
+            native_file_class=(
+                next(
+                    node
+                    for node in module_ast.nodes
+                    if isinstance(node, astx.ClassDefStmt)
+                )
+                if file_builtin
+                else None
+            ),
         )
 
     def _current_package_parts(

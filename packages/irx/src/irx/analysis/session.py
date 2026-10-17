@@ -135,6 +135,17 @@ class CompilationSession:
         returns:
           type: ParsedModule
         """
+        if parsed_module.native_file_class is not None and any(
+            item.native_file_class is not None
+            and item.key != parsed_module.key
+            for item in self.modules.values()
+        ):
+            self.diagnostics.add(
+                "a compilation may register only one native File class",
+                node=parsed_module.native_file_class,
+                code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
+                module_key=parsed_module.key,
+            )
         existing = self.modules.get(parsed_module.key)
         if existing is not None:
             return existing

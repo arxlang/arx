@@ -596,6 +596,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 updated.name,
                 updated,
                 node=updated.declaration,
+                module_key=updated.module_key,
             )
             self._set_class(updated.declaration, updated)
 

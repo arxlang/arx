@@ -344,13 +344,13 @@ class ClassVisitorMixin(FileVisitorMixin):
         return function
 
     def lower_class_construct(
-        self, node: astx.ClassConstruct, resolution: ResolvedClassConstruction
+        self, node: astx.AST, resolution: ResolvedClassConstruction
     ) -> None:
         """
         title: Construct an owner with ordered arguments and phase progress.
         parameters:
           node:
-            type: astx.ClassConstruct
+            type: astx.AST
           resolution:
             type: ResolvedClassConstruction
         """
@@ -427,7 +427,15 @@ class ClassVisitorMixin(FileVisitorMixin):
                 for item in phase.fields:
                     field = item.field
                     assert field.member.type_ is not None
-                    if item.value is None:
+                    native_file = resolution.native_file
+                    if native_file is not None and field == native_file.field:
+                        value = self.create_native_file(
+                            node,
+                            native_file.operands,
+                            values,
+                            cleanup_temporaries=True,
+                        )
+                    elif item.value is None:
                         value = literal._default_runtime_initializer(
                             field.member.type_, name_hint=field.member.name
                         )

@@ -12,7 +12,7 @@ from typing import Protocol, TypeAlias, runtime_checkable
 
 import astx
 
-from public import public
+from public import private, public
 
 from irx.typecheck import typechecked
 
@@ -49,12 +49,40 @@ class ParsedModule:
         type: str | None
       origin:
         type: str | None
+      native_file_class:
+        type: astx.ClassDefStmt | None
     """
 
     key: ModuleKey
     ast: astx.Module
     display_name: str | None = None
     origin: str | None = None
+    native_file_class: astx.ClassDefStmt | None = None
+
+    def __post_init__(self) -> None:
+        """
+        title: Validate an explicit host capability against its parsed module.
+        """
+        validate_file_registration(self.native_file_class, self.ast)
+
+
+@private
+@typechecked
+def validate_file_registration(
+    declaration: astx.ClassDefStmt | None, module: astx.Module
+) -> None:
+    """
+    title: Require native File privileges to reference a host-supplied node.
+    parameters:
+      declaration:
+        type: astx.ClassDefStmt | None
+      module:
+        type: astx.Module
+    """
+    if declaration is not None and not any(
+        node is declaration for node in module.nodes
+    ):
+        raise ValueError("native File declaration must belong to its module")
 
 
 @public

@@ -31,7 +31,7 @@ def test_bundled_builtin_package_data_is_present() -> None:
     """
     title: Bundled builtin sources are present in package resources.
     """
-    assert builtins.list_builtin_modules() == ("generators",)
+    assert builtins.list_builtin_modules() == ("files", "generators")
     assert builtins.resolve_builtin_resource("generators").name == (
         "generators.x"
     )
@@ -152,14 +152,16 @@ def test_ambient_builtin_imports_expose_range_by_default() -> None:
     title: Ambient builtin imports expose range outside its source module.
     """
     implicit_imports = builtins.get_ambient_builtin_imports("main")
-    assert len(implicit_imports) == 1
+    assert len(implicit_imports) == 2
     assert implicit_imports[0].module == "builtins.generators"
     assert [alias.name for alias in implicit_imports[0].names] == ["range"]
 
     source_module_imports = builtins.get_ambient_builtin_imports(
         "builtins.generators"
     )
-    assert source_module_imports == ()
+    assert [item.module for item in source_module_imports] == [
+        "builtins.files"
+    ]
 
 
 def test_arxmain_compiles_program_using_ambient_range_and_stdlib(

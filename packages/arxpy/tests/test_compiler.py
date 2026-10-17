@@ -369,3 +369,23 @@ fn main() -> i32:
     result = compiler.run(artifact, timeout=15)
     assert result.exit_code == 0, result.stderr
     assert result.stdout == "7\n"
+
+
+@pytest.mark.parametrize("factory", ["File", "open"])
+def test_file_builtin_is_available_in_memory(factory: str) -> None:
+    """
+    title: ArxPy supplies canonical File registration without project files.
+    parameters:
+      factory:
+        type: str
+    """
+    compiler = Compiler()
+    program = compiler.parse_string(
+        MODULE_DOCSTRING + "import File as F from builtins.files\n"
+        "fn make(path: str) -> F:\n"
+        f"  return {factory}(file=path)\n"
+    )
+    checked = compiler.check(program)
+    artifact = compiler.compile(checked, kind=ArtifactKind.LLVM_IR)
+    assert artifact.llvm_ir is not None
+    assert "irx_file_open" in artifact.llvm_ir

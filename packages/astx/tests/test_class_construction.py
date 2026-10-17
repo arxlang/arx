@@ -35,3 +35,24 @@ def test_constructor_checks_all_collection_items() -> None:
         astx.ClassConstruct("Counter", (astx.LiteralInt32(1), "bad"))  # type: ignore[arg-type]
     with pytest.raises(TypeCheckError):
         astx.ClassConstruct("Counter", keywords=("bad",))  # type: ignore[arg-type]
+
+
+def test_namespace_constructor_keyword_model() -> None:
+    """
+    title: >-
+      Method syntax preserves constructor keywords without granting meaning.
+    """
+    keyword = astx.KeywordArgument("file", astx.LiteralString("x"))
+    call = astx.MethodCall(
+        astx.Identifier("io"), "File", [], keywords=(keyword,)
+    )
+    assert call.keywords == (keyword,)
+    assert "keywords" in str(call.get_struct())
+    assert call.get_struct(simplified=True)
+    with pytest.raises(TypeCheckError):
+        astx.MethodCall(
+            astx.Identifier("io"),
+            "File",
+            [],
+            keywords=(keyword, "bad"),  # type: ignore[arg-type]
+        )

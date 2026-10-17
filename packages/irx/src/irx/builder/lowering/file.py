@@ -10,7 +10,11 @@ from llvmlite import ir
 from public import private
 
 from irx.analysis.ownership import resource_ownership
-from irx.analysis.resolved_nodes import OwnershipTransferKind, SemanticInfo
+from irx.analysis.resolved_nodes import (
+    OwnershipTransferKind,
+    ResolvedFileOpen,
+    SemanticInfo,
+)
 from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
@@ -177,6 +181,39 @@ class FileVisitorMixin(VisitorMixinBase):
                     context="open argument",
                 )
             )
+        handle = self.create_native_file(node, resolution, values)
+        ownership = require_semantic_metadata(
+            resource_ownership(node),
+            node=node,
+            metadata="resource_ownership",
+            context="file open",
+        )
+        if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
+            self.file_cleanup(node, handle, None)
+        self.result_stack.append(handle)
+
+    def create_native_file(
+        self,
+        node: astx.AST,
+        resolution: ResolvedFileOpen,
+        values: list[ir.Value],
+        *,
+        cleanup_temporaries: bool = False,
+    ) -> ir.Value:
+        """
+        title: Publish a native handle only after caller-side status checking.
+        parameters:
+          node:
+            type: astx.AST
+          resolution:
+            type: ResolvedFileOpen
+          values:
+            type: list[ir.Value]
+          cleanup_temporaries:
+            type: bool
+        returns:
+          type: ir.Value
+        """
         mode = (
             values[resolution.mode_index]
             if resolution.mode_index is not None
@@ -192,17 +229,10 @@ class FileVisitorMixin(VisitorMixinBase):
         status = self._llvm.ir_builder.call(
             function, [values[resolution.path_index], mode, output, error]
         )
-        self.file_check(node, status, error)
-        handle = self._llvm.ir_builder.load(output, name="file_handle")
-        ownership = require_semantic_metadata(
-            resource_ownership(node),
-            node=node,
-            metadata="resource_ownership",
-            context="file open",
+        self.file_check(
+            node, status, error, cleanup_temporaries=cleanup_temporaries
         )
-        if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
-            self.file_cleanup(node, handle, None)
-        self.result_stack.append(handle)
+        return self._llvm.ir_builder.load(output, name="file_handle")
 
     def lower_file_method(self, node: astx.MethodCall) -> None:
         """
@@ -230,6 +260,25 @@ class FileVisitorMixin(VisitorMixinBase):
             node=node.receiver,
             context="file receiver",
         )
+        if operation.receiver_field is not None:
+            from irx.builder.lowering.classes import (  # noqa: PLC0415
+                ClassVisitorMixin,
+            )
+
+            classes = cast(ClassVisitorMixin, self)
+            classes.class_pin(node.receiver, handle)
+            classes.class_operation(node, "require", handle)
+            address = self._llvm.ir_builder.gep(
+                handle,
+                [
+                    ir.Constant(self._llvm.INT32_TYPE, 0),
+                    ir.Constant(
+                        self._llvm.INT32_TYPE,
+                        operation.receiver_field.storage_index,
+                    ),
+                ],
+            )
+            handle = self._llvm.ir_builder.load(address)
         arguments = [handle]
         for expression in node.args:
             self.visit_child(expression)

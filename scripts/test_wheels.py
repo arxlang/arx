@@ -168,8 +168,9 @@ fn main() -> i32:
   ```
   title: main
   ```
-  var output: file = open("file-smoke.txt", mode="w")
-  assert output.write("hello") == 5
+  var output: File = File("file-smoke.txt", mode="w")
+  var alias: file = output
+  assert alias.write("hello") == 5
   output.close()
   var input: file = open(file="file-smoke.txt")
   assert input.read() == "hello"
@@ -300,6 +301,10 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
             if typed_marker not in names:
                 raise RuntimeError(f"{wheel} is missing {typed_marker}")
 
+            if package.directory == "arx":
+                if "arx/builtins/files.x" not in names:
+                    raise RuntimeError(f"{wheel} is missing the File builtin")
+
             if package.directory == "irx":
                 missing = [
                     asset
@@ -312,6 +317,11 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                     )
 
         with tarfile.open(sdist, "r:gz") as archive:
+            if package.directory == "arx" and not any(
+                name.endswith("/src/arx/builtins/files.x")
+                for name in archive.getnames()
+            ):
+                raise RuntimeError(f"{sdist} is missing the File builtin")
             license_members = [
                 member
                 for member in archive.getmembers()

@@ -49,7 +49,7 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
     "bool": astx.Boolean(),
     "boolean": astx.Boolean(),
     "none": astx.NoneType(),
-    "file": astx.FileType(),
+    "file": astx.ClassType("File", module_key=builtins.BUILTIN_FILE_MODULE),
     "str": astx.String(),
     "string": astx.String(),
     "char": astx.Int8(),
@@ -402,7 +402,11 @@ class TypeParserMixin(ParserMixinBase):
                         raise ParserException(str(err)) from err
             else:
                 self.tokens.get_next_token()  # eat type identifier
-                if type_name in _BUILTIN_TYPE_MAP:
+                if type_name in self.builtin_type_bindings:
+                    type_ = copy.deepcopy(
+                        self.builtin_type_bindings[type_name]
+                    )
+                elif type_name in _BUILTIN_TYPE_MAP:
                     type_ = copy.deepcopy(_BUILTIN_TYPE_MAP[type_name])
                 elif template_bound is not None:
                     type_ = astx.TemplateTypeVar(
@@ -411,7 +415,11 @@ class TypeParserMixin(ParserMixinBase):
                     )
                 elif type_name in self.type_aliases:
                     type_ = self._clone_type_for_alias(type_name)
-                elif type_name in self.known_class_names:
+                elif (
+                    type_name in self.known_class_names
+                    or type_name in self.imported_type_names
+                    or type_name == builtins.BUILTIN_FILE
+                ):
                     type_ = astx.ClassType(type_name)
                 else:
                     raise ParserException(

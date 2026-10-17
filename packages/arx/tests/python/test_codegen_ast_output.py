@@ -184,14 +184,18 @@ def test_ast_to_output(code: str) -> None:
     assert result
 
 
-def test_file_operations_translate_with_checked_cleanup() -> None:
+@pytest.mark.parametrize("factory", ["open", "File"])
+def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     """
     title: The public translate path emits status guards and lexical release.
+    parameters:
+      factory:
+        type: str
     """
     ArxIO.string_to_buffer(
         "```\ntitle: File translate regression\n```\n"
         "fn main() -> i32:\n"
-        '  var output: file = open("output.txt", mode="w")\n'
+        f'  var output: File = {factory}("output.txt", mode="w")\n'
         '  output.write("ok")\n'
         "  output.close()\n"
         "  return 0\n"
@@ -199,6 +203,7 @@ def test_file_operations_translate_with_checked_cleanup() -> None:
     builder = ArxBuilder()
     result = builder.translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(result).verify()
+    assert "irx_class_create" in result
     assert "irx_file_open" in result
     assert "irx_file_release" in result
     assert "ARX-RUNTIME-FILE-001" in result
