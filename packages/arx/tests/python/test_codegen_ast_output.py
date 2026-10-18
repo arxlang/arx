@@ -290,3 +290,39 @@ def test_native_package_translate_verifies(tmp_path: Path) -> None:
     artifacts = builder.translator.runtime_features.native_artifacts()
     assert any(artifact.path.name == "fixture.c" for artifact in artifacts)
     assert 'declare external i64 @"fixture_create"' in text
+
+
+def test_logical_compound_inequalities_translate_verifies() -> None:
+    """
+    title: Logical compound inequalities translate to valid LLVM IR.
+    """
+    source = (
+        "```\ntitle: Logical compound translate test\n```\n"
+        "fn check(x: i32) -> bool:\n"
+        "  return x > 1 and x < 5\n"
+        "fn main() -> i32:\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "icmp sgt i32" in text
+    assert "icmp slt i32" in text
+
+
+def test_parenthesized_comparisons_translate_verifies() -> None:
+    """
+    title: Explicitly parenthesized comparisons translate to valid LLVM IR.
+    """
+    source = (
+        "```\ntitle: Parenthesized compare translate test\n```\n"
+        "fn check(a: i32, b: i32, c: bool) -> bool:\n"
+        "  return (a < b) == c\n"
+        "fn main() -> i32:\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "icmp slt i32" in text
+    assert "icmp eq i1" in text

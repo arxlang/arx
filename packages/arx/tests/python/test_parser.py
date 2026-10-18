@@ -2,6 +2,8 @@
 title: Test parser methods.
 """
 
+import re
+
 from textwrap import dedent
 
 import astx
@@ -903,3 +905,147 @@ def test_parse_block_with_comment_and_blank_lines() -> None:
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.body.nodes[0], astx.VariableDeclaration)
     assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected_message"),
+    [
+        (
+            "1 < x < 5",
+            "Chained comparisons are not supported yet; "
+            "use 'a < b and b < c' instead.",
+        ),
+        (
+            "a <= b < c",
+            "Chained comparisons are not supported yet; "
+            "use 'a <= b and b < c' instead.",
+        ),
+        (
+            "a < b > c",
+            "Chained comparisons are not supported yet; "
+            "use 'a < b and b > c' instead.",
+        ),
+        (
+            "a < b < c < d",
+            "Chained comparisons are not supported yet; "
+            "use 'a < b and b < c' instead.",
+        ),
+        (
+            "1 < x < 1",
+            "Chained comparisons are not supported yet; "
+            "use 'a < b and b < c' instead.",
+        ),
+        (
+            "a >= b >= c",
+            "Chained comparisons are not supported yet; "
+            "use 'a >= b and b >= c' instead.",
+        ),
+        (
+            "a > b > c",
+            "Chained comparisons are not supported yet; "
+            "use 'a > b and b > c' instead.",
+        ),
+        (
+            "1.5 < x < 5.0",
+            "Chained comparisons are not supported yet; "
+            "use 'a < b and b < c' instead.",
+        ),
+        (
+            "a == b == c",
+            "Chained comparisons are not supported yet.",
+        ),
+        (
+            "a != b != c",
+            "Chained comparisons are not supported yet.",
+        ),
+        (
+            "a < b == c",
+            "Chained comparisons are not supported yet.",
+        ),
+        (
+            "a == b < c",
+            "Chained comparisons are not supported yet.",
+        ),
+    ],
+)
+def test_chained_comparisons_rejected_with_diagnostic(
+    expr: str, expected_message: str
+) -> None:
+    """
+    title: Chained comparisons are rejected with an actionable diagnostic.
+    parameters:
+      expr:
+        type: str
+      expected_message:
+        type: str
+    """
+    code = (
+        "```\ntitle: Chained comparison test\n```\n"
+        "fn check(x: i32, a: i32, b: i32, c: i32, d: i32) -> bool:\n"
+        f"  return {expr}\n"
+    )
+    with pytest.raises(
+        ParserException,
+        match=re.escape(expected_message),
+    ):
+        _parse_module(code)
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "x > 1 and x < 5",
+        "x < 1 or x > 5",
+        "x >= 1 && x <= 5",
+        "x < 1 || x > 5",
+        "(x > 1) and (x < 5)",
+    ],
+)
+def test_logical_compound_inequalities_accepted(expr: str) -> None:
+    """
+    title: Compound inequalities using logical operators parse successfully.
+    parameters:
+      expr:
+        type: str
+    """
+    code = (
+        "```\ntitle: Logical compound test\n```\n"
+        "fn check(x: i32) -> bool:\n"
+        f"  return {expr}\n"
+    )
+    tree = _parse_module(code)
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    ret = fn.body.nodes[0]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.BinaryOp)
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "(a < b) == c",
+        "(1 < x) < 5",
+        "1 < (x < 5)",
+        "(a < b) == (c < d)",
+        "c == (a < b)",
+    ],
+)
+def test_parenthesized_comparisons_accepted(expr: str) -> None:
+    """
+    title: Explicitly parenthesized comparisons parse successfully.
+    parameters:
+      expr:
+        type: str
+    """
+    code = (
+        "```\ntitle: Parenthesized comparison test\n```\n"
+        "fn check(x: i32, a: i32, b: i32, c: bool, d: i32) -> bool:\n"
+        f"  return {expr}\n"
+    )
+    tree = _parse_module(code)
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    ret = fn.body.nodes[0]
+    assert isinstance(ret, astx.FunctionReturn)
+    assert isinstance(ret.value, astx.BinaryOp)

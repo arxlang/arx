@@ -145,6 +145,11 @@ Current groups:
 `++` and `--` are lexed as unary operators. Availability in a particular
 semantic context depends on the parser and IRx type rules.
 
+Chained comparisons (such as `1 < x < 5` or `a <= b < c`) are not supported;
+compound inequalities must be written explicitly with logical operators, for
+example `1 < x and x < 5`. Explicitly parenthesized comparisons such as
+`(a < b) == c` remain valid.
+
 ## Structural forms
 
 ### Declaration modifiers
