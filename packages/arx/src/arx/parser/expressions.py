@@ -26,11 +26,49 @@ from arx.parser.base import ParserMixinBase
 from arx.parser.state import TypeUseContext
 from arx.tensor import attach_binding, infer_literal
 
+ORDERING_OPERATORS: frozenset[str] = frozenset({"<", ">", "<=", ">="})
+COMPARISON_OPERATORS: frozenset[str] = ORDERING_OPERATORS | {"==", "!="}
+
+
+def _chained_comparison_error(op1: str, op2: str) -> str:
+    """
+    title: Return the diagnostic message for a chained comparison.
+    parameters:
+      op1:
+        type: str
+      op2:
+        type: str
+    returns:
+      type: str
+    """
+    if op1 in ORDERING_OPERATORS and op2 in ORDERING_OPERATORS:
+        return (
+            f"Chained comparisons are not supported yet; "
+            f"use 'a {op1} b and b {op2} c' instead."
+        )
+    return "Chained comparisons are not supported yet."
+
 
 class ExpressionParserMixin(ParserMixinBase):
     """
     title: Expression parser mixin.
     """
+
+    def _is_unparenthesized_comparison(self, node: astx.AST) -> bool:
+        """
+        title: >-
+          Return whether a node is an unparenthesized comparison expression.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: bool
+        """
+        return (
+            isinstance(node, astx.BinaryOp)
+            and node.op_code in COMPARISON_OPERATORS
+            and id(node) not in self.parenthesized_nodes
+        )
 
     def parse_primary(self) -> astx.AST:
         """
@@ -318,6 +356,8 @@ class ExpressionParserMixin(ParserMixinBase):
         self._consume_operator("(")
         expr = self.parse_expression()
         self._consume_operator(")")
+        if isinstance(expr, astx.AST):
+            self.parenthesized_nodes.add(id(expr))
         return expr
 
     def parse_array_expr(self) -> astx.Literal:
@@ -887,6 +927,15 @@ class ExpressionParserMixin(ParserMixinBase):
 
             bin_op = cast(str, self.tokens.cur_tok.value)
             bin_loc = self.tokens.cur_tok.location
+            if (
+                bin_op in COMPARISON_OPERATORS
+                and self._is_unparenthesized_comparison(lhs)
+            ):
+                prev_op = cast(astx.BinaryOp, lhs).op_code
+                raise ParserException(
+                    _chained_comparison_error(prev_op, bin_op),
+                    bin_loc,
+                )
             self.tokens.get_next_token()  # eat operator
 
             rhs = self.parse_unary()
@@ -902,6 +951,15 @@ class ExpressionParserMixin(ParserMixinBase):
                 raise ParserException(
                     f"Binary operator '{bin_op}' requires expression "
                     "operands.",
+                    bin_loc,
+                )
+            if (
+                bin_op in COMPARISON_OPERATORS
+                and self._is_unparenthesized_comparison(rhs)
+            ):
+                next_op = cast(astx.BinaryOp, rhs).op_code
+                raise ParserException(
+                    _chained_comparison_error(bin_op, next_op),
                     bin_loc,
                 )
             lhs = astx.BinaryOp(

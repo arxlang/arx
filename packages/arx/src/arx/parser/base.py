@@ -49,6 +49,8 @@ class ParserMixinBase:
         type: dict[str, astx.DataType]
       value_scopes:
         type: list[set[str]]
+      parenthesized_nodes:
+        type: set[int]
       tokens:
         type: TokenList
     """
@@ -66,6 +68,7 @@ class ParserMixinBase:
     template_type_scopes: list[dict[str, astx.DataType]]
     type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
+    parenthesized_nodes: set[int]
     tokens: TokenList
 
     def _push_value_scope(

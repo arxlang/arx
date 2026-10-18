@@ -51,6 +51,8 @@ class ParserCore(ParserMixinBase):
         type: dict[str, astx.DataType]
       value_scopes:
         type: list[set[str]]
+      parenthesized_nodes:
+        type: set[int]
       tokens:
         type: TokenList
     """
@@ -68,6 +70,7 @@ class ParserCore(ParserMixinBase):
     template_type_scopes: list[dict[str, astx.DataType]]
     type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
+    parenthesized_nodes: set[int]
     tokens: TokenList
 
     def __init__(self, tokens: TokenList = TokenList([])) -> None:
@@ -106,6 +109,7 @@ class ParserCore(ParserMixinBase):
         self.template_type_scopes = []
         self.type_aliases = {}
         self.value_scopes = [set()]
+        self.parenthesized_nodes = set()
         self.tokens = tokens
 
     def clean(self) -> None:
@@ -124,6 +128,7 @@ class ParserCore(ParserMixinBase):
         self.template_type_scopes = []
         self.type_aliases = {}
         self.value_scopes = [set()]
+        self.parenthesized_nodes = set()
         self.tokens = TokenList([])
 
     def parse(
