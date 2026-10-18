@@ -55,6 +55,11 @@ def test_run_smoke_uses_and_removes_only_a_tool_owned_directory(
     install = Mock(return_value=(Path(sys.executable), {}))
     execute = Mock()
     monkeypatch.setattr(wheel_smoke, "_install_wheels", install)
+    monkeypatch.setattr(
+        wheel_smoke,
+        "build_native_fixture_wheel",
+        Mock(return_value=tmp_path / "fixture.whl"),
+    )
     monkeypatch.setattr(wheel_smoke.subprocess, "run", execute)
 
     wheel_smoke.run_smoke(tmp_path, (), False)

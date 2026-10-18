@@ -542,9 +542,28 @@ The public FFI layer accepts a validated subset of IRx structs:
   compatible in calling convention, variadic status, symbol name, parameter
   types, return type, and required runtime features
 
+### Host-Supplied Native Package Capabilities
+
+`irx.native` defines immutable `NativeArtifact`, `NativeFeature`, and
+`NativeBinding` records without LLVM factories. Hosts supply resolved paths and
+bindings to actual extern identities through `ParsedModule.native_features` and
+`native_bindings`. IRx never discovers distributions or reads package manifests.
+
+The reachable session collects consistent capabilities. Analysis validates
+feature availability, builtin isolation, and extern ABI/native requirements
+across modules, recording features on semantic signatures. Lowering consumes the
+same capabilities through a compilation-local registry and existing native
+linking. No external registration mutates the cached builtin registry. Source
+parameter aliases/defaults are not differences in the C ABI.
+
+Arx exposes this declaratively through dependency-scoped native package
+metadata, not executable plugins or dynamic loading. Known NUL-containing
+literal extern arguments are rejected; owned extern string returns remain
+unsupported.
+
 ### Intentionally Unsupported For Now
 
-- dynamic loading or plugin discovery
+- dynamic loading or executable plugin discovery
 - callbacks and public function-pointer interop
 - broad platform-specific ABI tuning beyond the current LLVM/data-layout model
 - arbitrary variadic IRx-defined functions

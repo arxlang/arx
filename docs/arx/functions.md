@@ -159,6 +159,10 @@ fn add(x: i32, y: i32) -> i32:
 
 Arx also supports external function declarations:
 
+[Native package metadata](native-packages.md) can supply build/link requirements
+for resolved extern declarations. Calls retain normal parameter/keyword binding;
+the compiler does not infer a native dependency from a function's name.
+
 ````arx
 ```
 title: Extern prototype example

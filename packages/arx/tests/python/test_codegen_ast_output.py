@@ -2,6 +2,9 @@
 title: Test code generation AST output.
 """
 
+import shutil
+
+from pathlib import Path
 from textwrap import dedent
 
 import pytest
@@ -9,6 +12,7 @@ import pytest
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
+from arx.main import FileImportResolver
 from arx.parser import Parser
 from llvmlite import binding as llvm
 
@@ -257,3 +261,32 @@ fn main() -> i32:
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(text).verify()
     assert 'call i32 @"main__combine"' in text
+
+
+def test_native_package_translate_verifies(tmp_path: Path) -> None:
+    """
+    title: The public translate path consumes resolved native package features.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    fixture = Path(__file__).parents[1] / "fixtures" / "native-package"
+    root_dir = tmp_path / "native"
+    shutil.copytree(fixture, root_dir)
+    path = root_dir / "src" / "main.x"
+    source = (
+        "```\ntitle: Native translate regression\n```\n"
+        "import fixture_create from native_fixture.bridge\n"
+        "fn main() -> i32:\n  return cast(fixture_create(size=1), i32)\n"
+    )
+    path.write_text(source)
+    ArxIO.string_to_buffer(source)
+    module = Parser().parse(Lexer().lex(), "main")
+    resolver = FileImportResolver((str(path),))
+    root = resolver.prepare_module(module, "main", str(path))
+    builder = ArxBuilder()
+    text = builder.translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
+    artifacts = builder.translator.runtime_features.native_artifacts()
+    assert any(artifact.path.name == "fixture.c" for artifact in artifacts)
+    assert 'declare external i64 @"fixture_create"' in text

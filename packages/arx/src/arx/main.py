@@ -15,7 +15,7 @@ import astx
 from irx.analysis.module_interfaces import ImportResolutionError, ParsedModule
 
 from arx import builtins as arx_builtins
-from arx import package_index
+from arx import native_packages, package_index
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.exceptions import ArxError
@@ -317,6 +317,42 @@ class FileImportResolver:
 
         self._source_root_cache[directory] = result
         return result
+
+    def prepare_module(
+        self, module: astx.Module, key: str, origin: str | None
+    ) -> ParsedModule:
+        """
+        title: Preserve native metadata for actual local or installed origins.
+        parameters:
+          module:
+            type: astx.Module
+          key:
+            type: str
+          origin:
+            type: str | None
+        returns:
+          type: ParsedModule
+        """
+        if origin is None:
+            return ParsedModule(key, module, key)
+        path = Path(origin).resolve()
+        head = key.split(".", maxsplit=1)[0]
+        package = self._installed_packages().packages.get(head)
+        if (
+            package is not None
+            and package.manifest_path is not None
+            and path.is_relative_to(package.source_root)
+        ):
+            return native_packages.prepare_module(
+                module,
+                key,
+                path,
+                manifest=package.manifest_path,
+                owner=package.distribution_name,
+                package_name=package.module_name,
+                source_root=package.source_root,
+            )
+        return native_packages.prepare_module(module, key, path)
 
     def _candidate_roots(self) -> tuple[Path, ...]:
         """
@@ -751,7 +787,7 @@ class FileImportResolver:
             )
         except ImportResolutionError:
             raise
-        except (ArxError, ValueError) as error:
+        except (ArxError, ValueError, arx_settings.ArxProjectError) as error:
             raise ImportResolutionError(str(error)) from error
 
     def resolve(
@@ -792,11 +828,8 @@ class FileImportResolver:
         ArxIO.file_to_buffer(str(module_file))
         module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
         module_ast = inject_ambient_builtin_imports(module_ast)
-        parsed_module = ParsedModule(
-            key=resolved_specifier,
-            ast=module_ast,
-            display_name=resolved_specifier,
-            origin=str(module_file),
+        parsed_module = self.prepare_module(
+            module_ast, resolved_specifier, str(module_file)
         )
         self.cache[resolved_specifier] = parsed_module
         return parsed_module
@@ -979,10 +1012,24 @@ class ArxMain:
         returns:
           type: bool
         """
-        return any(
+        if any(
             isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
             for node in module.nodes
+        ):
+            return True
+        if not self.input_files:
+            return False
+        config = arx_settings.find_config_file(
+            Path(self.input_files[0]).resolve().parent
         )
+        if config is None:
+            return False
+        try:
+            return native_packages.native_project(config) is not None
+        except arx_settings.ArxProjectError as error:
+            raise ArxError(
+                str(error), code="ARX-PACKAGE-NATIVE-001"
+            ) from error
 
     def _build_multimodule_context(
         self,
@@ -997,13 +1044,14 @@ class ArxMain:
           type: tuple[ParsedModule, FileImportResolver]
         """
         origin = self.input_files[0] if self.input_files else None
-        root = ParsedModule(
-            key=module.name,
-            ast=module,
-            display_name=module.name,
-            origin=origin,
-        )
-        return root, FileImportResolver(tuple(self.input_files))
+        resolver = FileImportResolver(tuple(self.input_files))
+        try:
+            root = resolver.prepare_module(module, module.name, origin)
+        except arx_settings.ArxProjectError as error:
+            raise ArxError(
+                str(error), code="ARX-PACKAGE-NATIVE-001"
+            ) from error
+        return root, resolver
 
     def _has_main_entry(self, node: astx.AST) -> bool:
         """

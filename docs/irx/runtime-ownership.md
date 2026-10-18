@@ -1,5 +1,12 @@
 # Runtime Ownership Inventory
 
+External native packages initially use existing scalar/string extern contracts.
+An external Arx class may own a checked integer token through `__init__` and
+`__del__`, but token validation and foreign allocations belong to its C ABI
+wrapper. This adds no raw pointer ownership, binary strings, owned extern string
+results, or cross-frame unwind. See
+[native packages](../arx/native-packages.md).
+
 ## Status and purpose
 
 This inventory was checked against the local IRx lowering and native runtime on

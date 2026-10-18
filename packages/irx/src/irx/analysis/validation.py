@@ -234,6 +234,14 @@ def validate_call(
     signature = function.signature
     slots = argument_slots(function, node, diagnostics)
     evaluations = call_evaluations(node)
+    if signature.is_extern:
+        for value in evaluations:
+            if isinstance(value, astx.LiteralString) and "\x00" in value.value:
+                diagnostics.add(
+                    "extern string arguments cannot contain NUL",
+                    node=value,
+                    code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+                )
     resolved_argument_types: list[astx.DataType | None] = []
     implicit_conversions: list[ImplicitConversion | None] = []
     for source_index, (slot, arg_type) in enumerate(

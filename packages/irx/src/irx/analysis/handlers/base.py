@@ -911,6 +911,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         self.context = context or SemanticContext()
         if session is not None:
             self.context.diagnostics = session.diagnostics
+            self.context.native_feature_names = tuple(session.native_features)
+            self.context.native_bindings = dict(session.native_bindings)
         self.factory = SemanticEntityFactory(self.context)
         self.registry = SemanticRegistry(self.context, self.factory)
         self.bindings = VisibleBindings(

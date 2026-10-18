@@ -5,48 +5,20 @@ title: Runtime feature specifications and LLVM symbol helpers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Literal, Mapping, TypeAlias, cast
+from typing import TYPE_CHECKING, Callable, Mapping, TypeAlias, cast
 
 from llvmlite import ir
 
+from irx.native import NativeArtifact, NativeArtifactKind
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
     from irx.builder.protocols import VisitorProtocol
 
-NativeArtifactKind = Literal[
-    "c_source", "cxx_source", "object", "static_library"
-]
 if TYPE_CHECKING:
     RuntimeSymbolFactory: TypeAlias = Callable[[VisitorProtocol], ir.Function]
 else:
     RuntimeSymbolFactory: TypeAlias = Callable[[object], ir.Function]
-
-
-@typechecked
-@dataclass(frozen=True)
-class NativeArtifact:
-    """
-    title: Describe one native artifact required by a runtime feature.
-    attributes:
-      kind:
-        type: NativeArtifactKind
-      path:
-        type: Path
-      include_dirs:
-        type: tuple[Path, Ellipsis]
-      compile_flags:
-        type: tuple[str, Ellipsis]
-      link_flags:
-        type: tuple[str, Ellipsis]
-    """
-
-    kind: NativeArtifactKind
-    path: Path
-    include_dirs: tuple[Path, ...] = ()
-    compile_flags: tuple[str, ...] = ()
-    link_flags: tuple[str, ...] = ()
 
 
 @typechecked
@@ -119,3 +91,12 @@ def declare_external_function(
     fn = ir.Function(module, fn_type, name=name)
     fn.linkage = "external"
     return fn
+
+
+__all__ = [
+    "ExternalSymbolSpec",
+    "NativeArtifact",
+    "NativeArtifactKind",
+    "RuntimeFeature",
+    "declare_external_function",
+]

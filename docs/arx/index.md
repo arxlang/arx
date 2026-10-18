@@ -1,5 +1,8 @@
 # Arx Programming Language
 
+Independent libraries can use [native package dependencies](native-packages.md)
+to link C ABI backends without adding domain-specific runtime features to Arx.
+
 Arx is the programming language and source frontend in the ArxLang ecosystem.
 The `arxlang` distribution provides the `arx` Python package and the `arx`
 command-line compiler.

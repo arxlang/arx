@@ -190,6 +190,103 @@
           "minLength": 1
         }
       }
+    },
+    "native": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "features", "modules"],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "features": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+            "not": {
+              "pattern": "\\s"
+            }
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "path"],
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "c_source",
+                        "cxx_source",
+                        "object",
+                        "static_library"
+                      ]
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "include_dirs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "uniqueItems": true
+                    }
+                  }
+                },
+                "uniqueItems": true
+              },
+              "libraries": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.+-]*$",
+                  "not": {
+                    "pattern": "\\s"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$",
+            "not": {
+              "pattern": "\\s"
+            }
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["features"],
+            "properties": {
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

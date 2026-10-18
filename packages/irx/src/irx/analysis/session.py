@@ -21,6 +21,7 @@ from irx.analysis.module_interfaces import (
 )
 from irx.analysis.resolved_nodes import SemanticBinding
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
+from irx.native import NativeFeature
 from irx.typecheck import typechecked
 
 _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
@@ -92,6 +93,10 @@ class CompilationSession:
         type: DiagnosticBag
       visible_bindings:
         type: dict[ModuleKey, dict[str, SemanticBinding]]
+      native_features:
+        type: dict[str, NativeFeature]
+      native_bindings:
+        type: dict[int, tuple[str, Ellipsis]]
       _resolution_cache:
         type: dict[tuple[ModuleKey, str], ParsedModule | None]
       _probe_cache:
@@ -107,6 +112,8 @@ class CompilationSession:
     visible_bindings: dict[ModuleKey, dict[str, SemanticBinding]] = field(
         default_factory=dict
     )
+    native_features: dict[str, NativeFeature] = field(default_factory=dict)
+    native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     _resolution_cache: dict[tuple[ModuleKey, str], ParsedModule | None] = (
         field(default_factory=dict)
     )
@@ -135,6 +142,10 @@ class CompilationSession:
         returns:
           type: ParsedModule
         """
+        existing = self.modules.get(parsed_module.key)
+        if existing is not None:
+            return existing
+        self.register_native_capabilities(parsed_module)
         if parsed_module.native_file_class is not None and any(
             item.native_file_class is not None
             and item.key != parsed_module.key
@@ -146,13 +157,49 @@ class CompilationSession:
                 code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 module_key=parsed_module.key,
             )
-        existing = self.modules.get(parsed_module.key)
-        if existing is not None:
-            return existing
         self.modules[parsed_module.key] = parsed_module
         self.graph.setdefault(parsed_module.key, set())
         self.visible_bindings.setdefault(parsed_module.key, {})
         return parsed_module
+
+    def register_native_capabilities(self, module: ParsedModule) -> None:
+        """
+        title: Collect consistent native capabilities only from loaded modules.
+        parameters:
+          module:
+            type: ParsedModule
+        """
+        for feature in module.native_features:
+            known_artifacts = {
+                (artifact.kind, artifact.path): artifact
+                for previous_feature in self.native_features.values()
+                for artifact in previous_feature.artifacts
+            }
+            for artifact in feature.artifacts:
+                previous_artifact = known_artifacts.get(
+                    (artifact.kind, artifact.path)
+                )
+                if (
+                    previous_artifact is not None
+                    and previous_artifact != artifact
+                ):
+                    self.diagnostics.add(
+                        f"conflicting native artifact inputs: {artifact.path}",
+                        module_key=module.key,
+                        code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+                    )
+                known_artifacts[(artifact.kind, artifact.path)] = artifact
+            previous = self.native_features.get(feature.name)
+            if previous is not None and previous != feature:
+                self.diagnostics.add(
+                    f"conflicting native feature '{feature.name}'",
+                    module_key=module.key,
+                    code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+                )
+                continue
+            self.native_features[feature.name] = feature
+        for binding in module.native_bindings:
+            self.native_bindings[id(binding.declaration)] = binding.features
 
     def module(self, module_key: ModuleKey) -> ParsedModule:
         """
