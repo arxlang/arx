@@ -14,6 +14,7 @@ import astx
 
 from public import private, public
 
+from irx.native import NativeBinding, NativeFeature
 from irx.typecheck import typechecked
 
 ModuleKey: TypeAlias = str
@@ -51,6 +52,10 @@ class ParsedModule:
         type: str | None
       native_file_class:
         type: astx.ClassDefStmt | None
+      native_features:
+        type: tuple[NativeFeature, Ellipsis]
+      native_bindings:
+        type: tuple[NativeBinding, Ellipsis]
     """
 
     key: ModuleKey
@@ -58,12 +63,49 @@ class ParsedModule:
     display_name: str | None = None
     origin: str | None = None
     native_file_class: astx.ClassDefStmt | None = None
+    native_features: tuple[NativeFeature, ...] = ()
+    native_bindings: tuple[NativeBinding, ...] = ()
 
     def __post_init__(self) -> None:
         """
         title: Validate an explicit host capability against its parsed module.
         """
         validate_file_registration(self.native_file_class, self.ast)
+        validate_native_registration(
+            self.native_features, self.native_bindings, self.ast
+        )
+
+
+@private
+@typechecked
+def validate_native_registration(
+    features: tuple[NativeFeature, ...],
+    bindings: tuple[NativeBinding, ...],
+    module: astx.Module,
+) -> None:
+    """
+    title: Validate capabilities against actual top-level extern identities.
+    parameters:
+      features:
+        type: tuple[NativeFeature, Ellipsis]
+      bindings:
+        type: tuple[NativeBinding, Ellipsis]
+      module:
+        type: astx.Module
+    """
+    names = tuple(feature.name for feature in features)
+    if len(names) != len(set(names)):
+        raise ValueError("duplicate native feature declarations")
+    declarations: set[int] = set()
+    for binding in bindings:
+        declaration = binding.declaration
+        if not any(node is declaration for node in module.nodes):
+            raise ValueError("native extern must belong to its module")
+        if not getattr(declaration, "is_extern", False):
+            raise ValueError("native binding requires an extern declaration")
+        if id(declaration) in declarations:
+            raise ValueError("duplicate native extern binding")
+        declarations.add(id(declaration))
 
 
 @private

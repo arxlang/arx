@@ -345,6 +345,32 @@ class SemanticRegistry:
                 return f"parameter {idx} default value differs"
         return "signature differs"
 
+    def extern_abis_match(
+        self, lhs: FunctionSignature, rhs: FunctionSignature
+    ) -> bool:
+        """
+        title: Compare external ABI contracts independently of source aliases.
+        parameters:
+          lhs:
+            type: FunctionSignature
+          rhs:
+            type: FunctionSignature
+        returns:
+          type: bool
+        """
+        return (
+            lhs.calling_convention is rhs.calling_convention
+            and lhs.is_variadic == rhs.is_variadic
+            and lhs.symbol_name == rhs.symbol_name
+            and lhs.required_runtime_features == rhs.required_runtime_features
+            and same_type(lhs.return_type, rhs.return_type)
+            and len(lhs.parameters) == len(rhs.parameters)
+            and all(
+                same_type(left.type_, right.type_)
+                for left, right in zip(lhs.parameters, rhs.parameters)
+            )
+        )
+
     def signatures_match(
         self,
         lhs: FunctionSignature,
@@ -434,6 +460,8 @@ class SemanticRegistry:
         required_runtime_features = normalize_runtime_features(
             prototype,
             diagnostics=self.context.diagnostics,
+            available_features=self.context.native_feature_names,
+            bound_features=self.context.native_bindings.get(id(prototype), ()),
         )
         calling_convention = self._prototype_calling_convention(
             prototype,
@@ -667,16 +695,17 @@ class SemanticRegistry:
 
         if signature.is_extern:
             for candidate in self.context.functions.values():
-                if candidate.module_key != module_key:
-                    continue
                 candidate_signature = candidate.signature
                 if not candidate_signature.is_extern:
                     continue
                 if candidate_signature.symbol_name != signature.symbol_name:
                     continue
-                if candidate_signature.name == prototype.name:
+                if (
+                    candidate.module_key == module_key
+                    and candidate_signature.name == prototype.name
+                ):
                     continue
-                if self.signatures_match(candidate_signature, signature):
+                if self.extern_abis_match(candidate_signature, signature):
                     continue
                 mismatch = self._signature_mismatch_detail(
                     candidate_signature,

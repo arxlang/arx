@@ -85,6 +85,10 @@ fn main() -> i32:
 
 ## Build settings
 
+Libraries may bind native artifacts and system libraries to their own extern
+modules. See [External Native Packages](native-packages.md) for versioned
+metadata, package-relative paths, distribution layout, and the C ABI contract.
+
 The `[build]` table can select:
 
 - `src_dir`: source root

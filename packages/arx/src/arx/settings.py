@@ -19,6 +19,8 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
 
+from arx.native_config import NativeConfig
+
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -290,6 +292,8 @@ class ArxProject:
         type: Tests | None
       source_path:
         type: Path | None
+      native:
+        type: NativeConfig | None
     """
 
     project: Project
@@ -302,6 +306,7 @@ class ArxProject:
     arxpm: Arxpm | None = None
     tests: Tests | None = None
     source_path: Path | None = None
+    native: NativeConfig | None = None
 
     def __post_init__(self) -> None:
         """
@@ -897,6 +902,14 @@ def _validate_data(data: dict[str, Any]) -> None:
     _validate_build_system(data.get("build-system"), data["project"])
     _validate_dependency_groups(data)
     _validate_environment(data.get("environment"))
+    if "native" in data:
+        native = NativeConfig.from_data(data["native"])
+        for names in native.modules.values():
+            for name in names:
+                if name not in native.features:
+                    raise ArxProjectError(
+                        f"native module requires unknown feature '{name}'"
+                    )
 
 
 def _build_arx_project(
@@ -930,6 +943,11 @@ def _build_arx_project(
         ),
         tests=_build_tests(data.get("tests")),
         source_path=source_path,
+        native=(
+            NativeConfig.from_data(data["native"])
+            if "native" in data
+            else None
+        ),
     )
 
 
@@ -983,6 +1001,8 @@ def _settings_to_data(settings: ArxProject) -> dict[str, Any]:
         ]
 
     data: dict[str, Any] = {"project": project}
+    if settings.native is not None:
+        data["native"] = settings.native.to_data()
 
     default_build_system_dependencies = _normalize_build_system_dependencies(
         (),
@@ -1289,6 +1309,8 @@ def dump_settings(settings: ArxProject) -> str:
     _append_environment(lines, settings.environment)
     _append_build(lines, settings.build)
     _append_tests(lines, settings.tests)
+    if settings.native is not None:
+        settings.native.append_toml(lines)
     return "\n".join(lines) + "\n"
 
 

@@ -50,11 +50,14 @@ class InstalledArxPackage:
         type: Path
       distribution_name:
         type: str
+      manifest_path:
+        type: Path | None
     """
 
     module_name: str
     source_root: Path
     distribution_name: str
+    manifest_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -358,6 +361,7 @@ def _package_from_manifest(
         module_name=module_name,
         source_root=source_root,
         distribution_name=distribution_name,
+        manifest_path=manifest_path,
     )
 
 

@@ -55,6 +55,8 @@ def normalize_runtime_features(
     prototype: astx.FunctionPrototype,
     *,
     diagnostics: DiagnosticBag,
+    available_features: tuple[str, ...] = (),
+    bound_features: tuple[str, ...] = (),
 ) -> tuple[str, ...]:
     """
     title: Normalize runtime-feature metadata from one prototype.
@@ -63,6 +65,10 @@ def normalize_runtime_features(
         type: astx.FunctionPrototype
       diagnostics:
         type: DiagnosticBag
+      available_features:
+        type: tuple[str, Ellipsis]
+      bound_features:
+        type: tuple[str, Ellipsis]
     returns:
       type: tuple[str, Ellipsis]
     """
@@ -98,8 +104,8 @@ def normalize_runtime_features(
 
     normalized: list[str] = []
     seen: set[str] = set()
-    known_features = set(_runtime_feature_names())
-    for value in values:
+    known_features = set(_runtime_feature_names()) | set(available_features)
+    for value in (*values, *bound_features):
         if not isinstance(value, str) or not value.strip():
             diagnostics.add(
                 f"Extern function '{prototype.name}' has an invalid runtime "

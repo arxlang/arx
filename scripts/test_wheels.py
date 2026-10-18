@@ -177,8 +177,29 @@ fn main() -> i32:
   return 0
 """
 
+NATIVE_MODULE = """```
+title: Installed external native package smoke
+```
+import Resource from native_fixture.owned
+fn write_payload() -> none:
+  ```
+  title: write_payload
+  ```
+  var resource: Resource = Resource(size=1)
+  assert resource.note(label="wheel π", value=cast(2, f64)) == 0
+  assert resource.write(path="native-smoke.jpg") == 0
+  return none
+fn main() -> i32:
+  ```
+  title: main
+  ```
+  write_payload()
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
 from pathlib import Path
+from importlib import metadata
 
 import aix
 import arx
@@ -203,6 +224,7 @@ for source_name in (
     "list_smoke.x",
     "tensor_smoke.x",
     "file_smoke.x",
+    "native_smoke.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -213,6 +235,15 @@ for source_name in (
         raise RuntimeError(
             f"{source_name} returned {result.exit_code}: {result.stderr}"
         )
+
+dependency = metadata.distribution("arx-native-fixture")
+expected = next(
+    path for path in dependency.files if path.name == "expected.jpg"
+)
+if (root / "native-smoke.jpg").read_bytes() != Path(
+    dependency.locate_file(expected)
+).read_bytes():
+    raise RuntimeError("external native wheel wrote unexpected JPEG bytes")
 
 schema = RecordBatchSchema()
 schema.add_field("value", IrxColumnType.INT32, nullable=False)
@@ -410,6 +441,43 @@ def _install_wheels(
     return python, env
 
 
+def build_native_fixture_wheel(workspace: Path, output: Path) -> Path:
+    """
+    title: Package the independent native test dependency without build hooks.
+    parameters:
+      workspace:
+        type: Path
+      output:
+        type: Path
+    returns:
+      type: Path
+    """
+    fixture = workspace / "packages/arx/tests/fixtures/native-package"
+    if not (fixture / ".arxproject.toml").is_file():
+        raise FileNotFoundError(f"native wheel fixture is missing: {fixture}")
+    wheel = output / "arx_native_fixture-0.0.0-py3-none-any.whl"
+    info = "arx_native_fixture-0.0.0.dist-info"
+    entries: dict[str, bytes] = {}
+    for path in fixture.rglob("*"):
+        if not path.is_file():
+            continue
+        name = f"native_fixture_data/{path.relative_to(fixture).as_posix()}"
+        entries[name] = path.read_bytes()
+    entries[f"{info}/METADATA"] = (
+        b"Metadata-Version: 2.1\nName: arx-native-fixture\nVersion: 0.0.0\n"
+    )
+    entries[f"{info}/WHEEL"] = (
+        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
+    )
+    entries[f"{info}/RECORD"] = "\n".join(
+        f"{name},," for name in (*entries, f"{info}/RECORD")
+    ).encode()
+    with ZipFile(wheel, "w") as archive:
+        for name, content in entries.items():
+            archive.writestr(name, content)
+    return wheel
+
+
 def run_smoke(
     workspace: Path,
     wheels: tuple[Path, ...],
@@ -432,8 +500,9 @@ def run_smoke(
         dir=smoke_root,
     ) as temporary_path:
         work_dir = Path(temporary_path)
+        dependency = build_native_fixture_wheel(workspace, work_dir)
         python, env = _install_wheels(
-            wheels,
+            (*wheels, dependency),
             work_dir,
             current_environment,
         )
@@ -445,7 +514,13 @@ def run_smoke(
             "list_smoke.x": LIST_MODULE,
             "tensor_smoke.x": TENSOR_MODULE,
             "file_smoke.x": FILE_MODULE,
+            "native_smoke.x": NATIVE_MODULE,
         }
+        (work_dir / ".arxproject.toml").write_text(
+            '[project]\nname="wheel-consumer"\nversion="0"\n'
+            'dependencies=["arx-native-fixture"]\n',
+            encoding="utf-8",
+        )
         for name, content in sources.items():
             (work_dir / name).write_text(content, encoding="utf-8")
         driver = work_dir / "smoke.py"

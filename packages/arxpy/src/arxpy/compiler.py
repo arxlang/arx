@@ -312,14 +312,14 @@ def program_context(
     program: ParsedProgram,
 ) -> tuple[ParsedModule, ImportResolver] | None:
     """
-    title: Build an IRx root and resolver when a module uses imports.
+    title: Build import and native capabilities from a program's origin.
     parameters:
       program:
         type: ParsedProgram
     returns:
       type: tuple[ParsedModule, ImportResolver] | None
     """
-    if not has_imports(program.module):
+    if not has_imports(program.module) and program.origin is None:
         return None
     source_imports = [
         node
@@ -351,16 +351,28 @@ def program_context(
         )
 
     from arx.main import FileImportResolver
-    from irx.analysis.module_interfaces import ParsedModule
+    from arx.settings import ArxProjectError
 
-    root = ParsedModule(
-        key=program.module_name,
-        ast=program.module,
-        display_name=program.module_name,
-        origin=str(program.origin),
-    )
     input_files = () if program.origin is None else (str(program.origin),)
-    resolver: ImportResolver = FileImportResolver(input_files)
+    file_resolver = FileImportResolver(input_files)
+    try:
+        root = file_resolver.prepare_module(
+            program.module,
+            program.module_name,
+            str(program.origin) if program.origin is not None else None,
+        )
+    except ArxProjectError as error:
+        raise CompileError(
+            "native package configuration failed",
+            diagnostics=[
+                api_diagnostic(
+                    str(error),
+                    filename=program.filename,
+                    code="ARX-PACKAGE-NATIVE-001",
+                )
+            ],
+        ) from None
+    resolver: ImportResolver = file_resolver
     return root, resolver
 
 

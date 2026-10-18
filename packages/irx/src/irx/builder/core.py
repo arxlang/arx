@@ -727,6 +727,14 @@ class VisitorCore(BuilderVisitor):
           type: str
         """
         session = analyze_modules(root, resolver)
+        registry = get_default_runtime_feature_registry().with_native_features(
+            tuple(session.native_features.values())
+        )
+        self.runtime_features = RuntimeFeatureState(
+            owner=cast(VisitorProtocol, self),
+            registry=registry,
+            active_features=self.runtime_features.active_feature_names(),
+        )
         ordered_modules = session.ordered_modules()
         self._module_display_names = {
             id(parsed_module.ast): (

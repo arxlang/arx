@@ -52,6 +52,10 @@ class SemanticContext:
         type: ModuleKey | None
       loop_depth:
         type: int
+      native_feature_names:
+        type: tuple[str, Ellipsis]
+      native_bindings:
+        type: dict[int, tuple[str, Ellipsis]]
       _symbol_counter:
         type: int
       _method_slot_counter:
@@ -73,6 +77,8 @@ class SemanticContext:
     current_class: SemanticClass | None = None
     current_module_key: ModuleKey | None = None
     loop_depth: int = 0
+    native_feature_names: tuple[str, ...] = ()
+    native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
 

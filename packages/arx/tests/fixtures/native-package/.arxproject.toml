@@ -1,0 +1,20 @@
+[project]
+name = "arx-native-fixture"
+version = "0.0.0"
+
+[build]
+package = "native_fixture"
+src_dir = "src"
+
+[native]
+version = 1
+
+[native.features.backend]
+
+[[native.features.backend.artifacts]]
+kind = "c_source"
+path = "native/fixture.c"
+include_dirs = ["native"]
+
+[native.modules."native_fixture.bridge"]
+features = ["backend"]

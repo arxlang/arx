@@ -15,11 +15,13 @@ import astx
 from public import public
 
 from irx.analysis.analyzer import SemanticAnalyzer
+from irx.analysis.ffi import _runtime_feature_names
 from irx.analysis.module_interfaces import (
     ImportResolver,
     ParsedModule,
 )
 from irx.analysis.session import CompilationSession
+from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 __all__ = [
@@ -88,7 +90,12 @@ def analyze_modules(
     """
     session = CompilationSession(root=root, resolver=resolver)
     session.expand_graph()
-
+    for name in session.native_features:
+        if name in _runtime_feature_names():
+            session.diagnostics.add(
+                f"native feature '{name}' conflicts with a builtin feature",
+                code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+            )
     analyzer = SemanticAnalyzer(session=session)
 
     for parsed_module in session.ordered_modules():

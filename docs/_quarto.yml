@@ -105,6 +105,8 @@ website:
               href: arx/compiler-cli.md
             - text: Projects and Imports
               href: arx/projects.md
+            - text: External Native Packages
+              href: arx/native-packages.md
             - text: Compiled Tests
               href: arx/testing.md
         - section: Language Reference

@@ -128,6 +128,9 @@ Run the example in a scratch directory: it creates or truncates
 
 ## Class Lifetimes
 
+For external C ABI backends, see [Native Packages](native-packages.md). Native
+sources and libraries are explicit dependency metadata, not compiler builtins.
+
 Classes support `__init__(self, ...) -> none` and `__del__(self) -> none` hooks.
 `Counter(value=7)` binds constructor keywords. Ordinary functions and methods
 also accept names from their declarations (see [Functions](functions.md)). Class

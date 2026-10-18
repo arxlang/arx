@@ -33,6 +33,7 @@ from irx.diagnostics import (
     DiagnosticCodes,
     RuntimeFeatureError,
 )
+from irx.native import NativeFeature
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -66,6 +67,30 @@ class RuntimeFeatureRegistry:
                 f"Runtime feature '{feature.name}' already exists"
             )
         self._features[feature.name] = feature
+
+    def with_native_features(
+        self, features: tuple[NativeFeature, ...]
+    ) -> RuntimeFeatureRegistry:
+        """
+        title: Copy builtin definitions into an isolated compilation registry.
+        parameters:
+          features:
+            type: tuple[NativeFeature, Ellipsis]
+        returns:
+          type: RuntimeFeatureRegistry
+        """
+        registry = RuntimeFeatureRegistry()
+        for feature in self._features.values():
+            registry.register(feature)
+        for native in features:
+            registry.register(
+                RuntimeFeature(
+                    name=native.name,
+                    artifacts=native.artifacts,
+                    linker_flags=native.linker_flags,
+                )
+            )
+        return registry
 
     def get(self, name: str) -> RuntimeFeature:
         """
