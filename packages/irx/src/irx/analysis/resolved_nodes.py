@@ -71,6 +71,8 @@ class ResourceKind(str, Enum):
     STRING = "string"
     FILE = "file"
     CLASS = "class"
+    DATAFRAME = "dataframe"
+    SERIES = "series"
 
 
 @public

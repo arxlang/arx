@@ -56,6 +56,8 @@ class ParsedModule:
         type: tuple[NativeFeature, Ellipsis]
       native_bindings:
         type: tuple[NativeBinding, Ellipsis]
+      native_record_batch_class:
+        type: astx.ClassDefStmt | None
     """
 
     key: ModuleKey
@@ -65,12 +67,17 @@ class ParsedModule:
     native_file_class: astx.ClassDefStmt | None = None
     native_features: tuple[NativeFeature, ...] = ()
     native_bindings: tuple[NativeBinding, ...] = ()
+    native_record_batch_class: astx.ClassDefStmt | None = None
 
     def __post_init__(self) -> None:
         """
         title: Validate an explicit host capability against its parsed module.
         """
         validate_file_registration(self.native_file_class, self.ast)
+        if self.native_record_batch_class is not None and not any(
+            node is self.native_record_batch_class for node in self.ast.nodes
+        ):
+            raise ValueError("native RecordBatch must belong to its module")
         validate_native_registration(
             self.native_features, self.native_bindings, self.ast
         )

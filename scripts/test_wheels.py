@@ -59,6 +59,8 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_arrow_c_abi.h",
     "irx/builder/runtime/arrow/native/irx_record_batch.cpp",
     "irx/builder/runtime/arrow/native/irx_record_batch.h",
+    "irx/builder/runtime/arrow/native/irx_record_batch_api.cc",
+    "irx/builder/runtime/arrow/native/irx_record_batch_api.h",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
@@ -197,6 +199,32 @@ fn main() -> i32:
   return 0
 """
 
+CSV_MODULE = """```
+title: Stream CSV through checked DataFrame conversions
+summary: Run from the repository root; input and output must be distinct files.
+```
+import (Schema, RecordBatch, CSVReader, CSVWriter) from stdlib.arrow
+
+fn main() -> i32:
+  ```
+  title: Convert every CSV batch without discarding rows
+  ```
+  var schema: Schema = Schema()
+  schema.add("id", 3, false)
+  var reader: CSVReader = CSVReader()
+  reader.open_file_as("input.csv", schema)
+  var writer: CSVWriter = CSVWriter(schema)
+  writer.open_file("compiled.csv")
+  while reader.next():
+    var batch: RecordBatch = reader.batch()
+    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
+    var output: RecordBatch = cast(frame, RecordBatch)
+    writer.write(output)
+  writer.close()
+  reader.close()
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
 from pathlib import Path
 from importlib import metadata
@@ -214,6 +242,7 @@ from irx.record_batch import (
     RecordBatchBuilder,
     RecordBatchSchema,
     RecordBatchStreamWriter,
+    RecordBatchStreamReader,
 )
 
 root = Path.cwd()
@@ -225,6 +254,7 @@ for source_name in (
     "tensor_smoke.x",
     "file_smoke.x",
     "native_smoke.x",
+    "csv_smoke.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -257,6 +287,16 @@ data = writer.buffer_data()
 table = pa.ipc.open_stream(pa.py_buffer(data)).read_all()
 if table.column("value").to_pylist() != [42]:
     raise RuntimeError("RecordBatch/PyArrow wheel smoke returned wrong data")
+with RecordBatchStreamWriter.open_csv(schema, root / "python.csv") as csv:
+    csv.write_batch(batch)
+csv_reader = RecordBatchStreamReader.open_csv(
+    root / "python.csv", schema=schema
+)
+with csv_reader as csv:
+    csv_batch = csv.next_batch()
+    if csv_batch is None or csv_batch.get_int32(0, 0) != 42:
+        raise RuntimeError("CSV wheel smoke returned wrong data")
+    csv_batch.release()
 batch.release()
 builder.release()
 writer.release()
@@ -507,6 +547,7 @@ def run_smoke(
             current_environment,
         )
 
+        (work_dir / "input.csv").write_text("id\n1\n2\n3\n", encoding="utf-8")
         sources = {
             "main.x": SCALAR_MODULE,
             "support.x": SUPPORT_MODULE,
@@ -515,6 +556,7 @@ def run_smoke(
             "tensor_smoke.x": TENSOR_MODULE,
             "file_smoke.x": FILE_MODULE,
             "native_smoke.x": NATIVE_MODULE,
+            "csv_smoke.x": CSV_MODULE,
         }
         (work_dir / ".arxproject.toml").write_text(
             '[project]\nname="wheel-consumer"\nversion="0"\n'

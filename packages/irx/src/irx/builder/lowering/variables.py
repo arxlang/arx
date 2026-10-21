@@ -474,7 +474,10 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(node.type_, astx.ClassType):
+            elif isinstance(
+                node.type_,
+                (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+            ):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
@@ -522,7 +525,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
-        if isinstance(node.type_, astx.ClassType):
+        if isinstance(
+            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+        ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)
             ownership = resource_ownership(node)
@@ -570,7 +575,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 ir.Constant,
                 cast(Any, self)._empty_list_value_for_type(node.type_),
             )
-        elif isinstance(node.type_, astx.ClassType):
+        elif isinstance(
+            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+        ):
             init_val = ir.Constant(llvm_type, None)
         elif isinstance(node.type_, astx.GeneratorType):
             init_val = ir.Constant(llvm_type, None)
@@ -599,7 +606,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     "file local is missing ownership", node=node
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
-        if isinstance(node.type_, astx.ClassType):
+        if isinstance(
+            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+        ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)
             ownership = resource_ownership(node)

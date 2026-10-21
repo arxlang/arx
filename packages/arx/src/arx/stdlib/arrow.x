@@ -472,6 +472,10 @@ class BatchBuilder:
     return result
 
 
+extern irx_rb_api_reader_csv(box: ArrowReaderHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_reader_csv_as(box: ArrowReaderHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_writer_csv(box: ArrowWriterHandle, path: str, delimiter: str, header: i32) -> none
+
 class IPCReader:
   ```
   title: IPCReader
@@ -630,6 +634,142 @@ class IPCWriter:
     summary: Connects to a numeric IP address for IPC streaming over TCP.
     ```
     irx_rb_api_writer_tcp(self.handle, host, port, timeout_ms)
+    return none
+
+  fn write(self, batch: RecordBatch) -> none:
+    ```
+    title: write
+    summary: Writes one batch with exact schema validation.
+    ```
+    irx_rb_api_writer_write(self.handle, batch.native_handle())
+    return none
+
+
+class CSVReader:
+  ```
+  title: CSVReader
+  summary: Scoped owner of a native Arrow reader.
+  ```
+  @[private]
+  handle: ArrowReaderHandle
+
+  fn __init__(self) -> none:
+    ```
+    title: __init__
+    summary: Creates one native owner.
+    ```
+    self.handle = irx_rb_api_reader_new()
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: __del__
+    summary: Releases the native box at the last class reference.
+    ```
+    irx_rb_api_reader_destroy(self.handle)
+    return none
+
+  fn close(self) -> none:
+    ```
+    title: close
+    summary: Releases native resources idempotently; aliases observe closure.
+    ```
+    irx_rb_api_reader_close(self.handle)
+    return none
+
+  fn native_handle(self) -> ArrowReaderHandle:
+    ```
+    title: native_handle
+    summary: Borrows the opaque handle for trusted native integrations only.
+    ```
+    return self.handle
+
+  fn open_file(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+    ```
+    title: open_file
+    summary: Streams UTF-8 CSV with first-block inference and a frozen schema.
+    ```
+    irx_rb_api_reader_csv(self.handle, path, delimiter, cast(header, i32), block_size)
+    return none
+
+  fn open_file_as(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+    ```
+    title: open_file_as
+    summary: Streams CSV with exact column order and explicit physical types.
+    ```
+    irx_rb_api_reader_csv_as(self.handle, path, schema.native_handle(), delimiter, cast(header, i32), block_size)
+    return none
+
+  fn next(self) -> bool:
+    ```
+    title: next
+    summary: Advances one batch; false means an orderly end, not an empty batch.
+    ```
+    return irx_rb_api_reader_next(self.handle) == 0
+
+  fn batch(self) -> RecordBatch:
+    ```
+    title: batch
+    summary: Returns an independently owned snapshot.
+    ```
+    var result: RecordBatch = RecordBatch()
+    irx_rb_api_reader_batch(self.handle, result.native_handle())
+    return result
+
+  fn schema(self) -> Schema:
+    ```
+    title: schema
+    summary: Returns an independently owned snapshot.
+    ```
+    var result: Schema = Schema()
+    irx_rb_api_reader_schema(self.handle, result.native_handle())
+    return result
+
+class CSVWriter:
+  ```
+  title: CSVWriter
+  summary: Scoped owner of a native Arrow writer.
+  ```
+  @[private]
+  handle: ArrowWriterHandle
+
+  fn __init__(self, schema: Schema) -> none:
+    ```
+    title: __init__
+    summary: Creates one native owner.
+    ```
+    self.handle = irx_rb_api_writer_new(schema.native_handle())
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: __del__
+    summary: Releases the native box at the last class reference.
+    ```
+    irx_rb_api_writer_destroy(self.handle)
+    return none
+
+  fn close(self) -> none:
+    ```
+    title: close
+    summary: Releases native resources idempotently; aliases observe closure.
+    ```
+    irx_rb_api_writer_close(self.handle)
+    return none
+
+  fn native_handle(self) -> ArrowWriterHandle:
+    ```
+    title: native_handle
+    summary: Borrows the opaque handle for trusted native integrations only.
+    ```
+    return self.handle
+
+  fn open_file(self, path: str, delimiter: str = ",", header: bool = true) -> none:
+    ```
+    title: open_file
+    summary: Creates or truncates CSV after validating the schema and options.
+    ```
+    irx_rb_api_writer_csv(self.handle, path, delimiter, cast(header, i32))
     return none
 
   fn write(self, batch: RecordBatch) -> none:

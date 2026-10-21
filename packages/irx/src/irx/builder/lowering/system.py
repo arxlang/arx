@@ -10,20 +10,27 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.arrow_conversion import ARROW_CONVERSION, ArrowConversion
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import (
     display_type_name,
     is_boolean_type,
     is_unsigned_type,
 )
 from irx.builder.core import VisitorCore
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
+from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.control_flow import ControlFlowVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
 from irx.typecheck import typechecked
 
 
 @typechecked
-class SystemVisitorMixin(VisitorMixinBase):
+class SystemVisitorMixin(ClassVisitorMixin):
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.Cast) -> None:
         """
@@ -37,8 +44,29 @@ class SystemVisitorMixin(VisitorMixinBase):
         if value is None:
             raise Exception("Invalid value in Cast")
 
+        semantic = require_semantic_metadata(
+            getattr(node, "semantic", None),
+            node=node,
+            metadata="semantic",
+            context="cast",
+        )
+        plan = semantic.extras.get(ARROW_CONVERSION)
+        if isinstance(plan, ArrowConversion):
+            self.lower_arrow_cast(node, value, plan)
+            return
         source_type = self._resolved_ast_type(node.value)
         target_type = node.target_type
+        if (
+            isinstance(source_type, astx.ClassType)
+            and isinstance(target_type, astx.DataFrameType)
+        ) or (
+            isinstance(source_type, astx.DataFrameType)
+            and isinstance(target_type, astx.ClassType)
+        ):
+            raise_lowering_internal_error(
+                "Arrow cast is missing its conversion plan", node=node
+            )
+
         target_llvm_type = self._llvm_type_for_ast_type(target_type)
         if target_llvm_type in (
             self._llvm.ASCII_STRING_TYPE,
@@ -172,3 +200,70 @@ class SystemVisitorMixin(VisitorMixinBase):
             name_hint="type_name",
         )
         self.result_stack.append(pointer)
+
+    def lower_arrow_cast(
+        self, node: astx.Cast, value: ir.Value, plan: ArrowConversion
+    ) -> None:
+        """
+        title: >-
+          Lower a resolved RecordBatch conversion through checked runtime APIs.
+        parameters:
+          node:
+            type: astx.Cast
+          value:
+            type: ir.Value
+          plan:
+            type: ArrowConversion
+        """
+        builder = self._llvm.ir_builder
+        zero = ir.Constant(ir.IntType(32), 0)
+        index = ir.Constant(ir.IntType(32), plan.handle_index)
+        if plan.to_dataframe:
+            self.class_operation(node.value, "require", value)
+            box = builder.load(builder.gep(value, [zero, index]))
+            create = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_new"
+            )
+            schema = builder.call(create, [])
+            add = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_add"
+            )
+            for name, type_id in plan.columns:
+                pointer = cast(
+                    ControlFlowVisitorMixin, self
+                )._constant_c_string_pointer(name, name_hint="dataframe_field")
+                builder.call(
+                    add,
+                    [
+                        schema,
+                        pointer,
+                        ir.Constant(ir.IntType(32), type_id),
+                        zero,
+                    ],
+                )
+            convert = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_batch_to_table"
+            )
+            table = builder.call(convert, [box, schema])
+            destroy = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_destroy"
+            )
+            builder.call(destroy, [schema])
+            self.arrow_temporary(node, table)
+            self.result_stack.append(table)
+            return
+        resolution = require_semantic_metadata(
+            cast(
+                SemanticInfo, getattr(node, "semantic", None)
+            ).resolved_class_construction,
+            node=node,
+            metadata="resolved_class_construction",
+            context="Arrow cast",
+        )
+        self.lower_class_construct(node, resolution)
+        instance = self.result_stack[-1]
+        box = builder.load(builder.gep(instance, [zero, index]))
+        convert = self.require_runtime_symbol(
+            "record_batch", "irx_rb_api_table_to_batch"
+        )
+        builder.call(convert, [value, box])

@@ -87,7 +87,10 @@ Rules:
 For nullable, UTF-8, date, timestamp and time columns, import `Schema`,
 `BatchBuilder`, `RecordBatch`, `IPCReader` and `IPCWriter` from `stdlib.arrow`.
 These ordinary classes retain runtime Arrow schemas without weakening static
-DataFrame types. There is no implicit DataFrame/RecordBatch conversion.
+DataFrame types. Conversion is explicit: `cast(batch, dataframe[id: i64])` and
+`cast(frame, RecordBatch)` validate exact types and reject actual nulls.
+`CSVReader` and `CSVWriter` use the same batch API for CSV files. See
+[CSV files and DataFrames](csv.md) for restrictions and examples.
 
 `IPCReader.next()` advances one batch; `batch()` and `schema()` return
 independent snapshots. `open_file` selects IPC file format, `open_stream`

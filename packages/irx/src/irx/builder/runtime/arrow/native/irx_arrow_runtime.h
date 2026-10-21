@@ -162,6 +162,12 @@ int irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
     irx_arrow_chunked_array_handle** out_column);
+/* C Data imports consume the supplied callbacks; exports own fresh references.
+ * Table export combines all chunks, and may allocate. Outputs must be empty. */
+int irx_arrow_table_import_batch(struct ArrowArray* array, struct ArrowSchema* schema,
+                                 irx_arrow_table_handle** out_table);
+int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
+                                 struct ArrowArray* array, struct ArrowSchema* schema);
 int irx_arrow_table_retain(irx_arrow_table_handle* table);
 void irx_arrow_table_release(irx_arrow_table_handle* table);
 int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column);

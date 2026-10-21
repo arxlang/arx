@@ -3,6 +3,11 @@ title: Checked RecordBatch facade ABI signatures.
 """
 
 ARROW_API_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "irx_rb_api_reader_csv": ("v", ("p", "p", "p", "i32", "i32")),
+    "irx_rb_api_reader_csv_as": ("v", ("p", "p", "p", "p", "i32", "i32")),
+    "irx_rb_api_writer_csv": ("v", ("p", "p", "p", "i32")),
+    "irx_rb_api_batch_to_table": ("p", ("p", "p")),
+    "irx_rb_api_table_to_batch": ("v", ("p", "p")),
     "irx_rb_api_schema_new": ("p", ()),
     "irx_rb_api_batch_new": ("p", ()),
     "irx_rb_api_reader_new": ("p", ()),

@@ -15,6 +15,7 @@ from dataclasses import replace
 
 import astx
 
+from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.class_lifecycle import class_ownership
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -224,9 +225,12 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
             )
 
         for argument in function.args:
-            if isinstance(argument.type_, astx.ClassType):
+            if isinstance(
+                argument.type_,
+                (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+            ):
                 self.context.diagnostics.add(
-                    "class parameters in generators are unsupported",
+                    "owned reference parameters in generators are unsupported",
                     node=node.prototype,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
@@ -316,6 +320,18 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                                 OwnershipKind.OWNED,
                                 symbol=arg_symbol.symbol_id,
                                 transfer=OwnershipTransferKind.COPY,
+                            ),
+                        )
+                    elif isinstance(
+                        arg_symbol.type_, astx.DataFrameType | astx.SeriesType
+                    ):
+                        self._set_resource_ownership(
+                            arg_node,
+                            arrow_ownership(
+                                arg_symbol.type_,
+                                OwnershipKind.OWNED,
+                                arg_symbol.symbol_id,
+                                OwnershipTransferKind.COPY,
                             ),
                         )
                     elif isinstance(arg_symbol.type_, astx.ListType):

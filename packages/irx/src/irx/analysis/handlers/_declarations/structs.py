@@ -74,6 +74,12 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
+            if isinstance(attr.type_, astx.DataFrameType | astx.SeriesType):
+                self.context.diagnostics.add(
+                    "Arrow fields require unsupported aggregate destruction",
+                    node=attr,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
             if isinstance(attr.type_, astx.FileType):
                 self.context.diagnostics.add(
                     "file fields require unsupported aggregate destruction",

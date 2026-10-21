@@ -14,7 +14,7 @@ from llvmlite import ir
 
 from irx.analysis.types import is_float_type, is_unsigned_type
 from irx.builder.core import VisitorCore
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.assertions.feature import (
     ASSERT_FAILURE_SYMBOL_NAME,
@@ -29,7 +29,7 @@ from irx.typecheck import typechecked
 
 
 @typechecked
-class DataFrameVisitorMixin(VisitorMixinBase):
+class DataFrameVisitorMixin(ClassVisitorMixin):
     """
     title: DataFrame visitor mixin.
     """
@@ -298,6 +298,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             column_slot,
             "dataframe_column",
         )
+        self.arrow_temporary(node, column_handle)
         self.result_stack.append(column_handle)
 
     @VisitorCore.visit.dispatch
@@ -407,6 +408,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
         for array_handle in array_handles:
             self._llvm.ir_builder.call(release_array, [array_handle])
 
+        self.arrow_temporary(node, table_handle)
         self.result_stack.append(table_handle)
 
     @VisitorCore.visit.dispatch
@@ -485,6 +487,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
         )
         status = self._llvm.ir_builder.call(retain, [table_handle])
         self._check_arrow_status(status, "dataframe_table_retain")
+        self.arrow_explicit_lifetime(node.base, table_handle, retain=True)
         self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
@@ -502,6 +505,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "irx_arrow_table_release",
         )
         self._llvm.ir_builder.call(release, [table_handle])
+        self.arrow_explicit_lifetime(node.base, table_handle, retain=False)
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     @VisitorCore.visit.dispatch
@@ -520,6 +524,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
         )
         status = self._llvm.ir_builder.call(retain, [column_handle])
         self._check_arrow_status(status, "dataframe_series_retain")
+        self.arrow_explicit_lifetime(node.base, column_handle, retain=True)
         self.result_stack.append(status)
 
     @VisitorCore.visit.dispatch
@@ -537,6 +542,7 @@ class DataFrameVisitorMixin(VisitorMixinBase):
             "irx_arrow_chunked_array_release",
         )
         self._llvm.ir_builder.call(release, [column_handle])
+        self.arrow_explicit_lifetime(node.base, column_handle, retain=False)
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
 
 

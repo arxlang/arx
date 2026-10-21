@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.call_arguments import call_evaluations
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
 from irx.analysis.ffi import ffi_returns_owned_string
@@ -112,6 +113,10 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 )
             self._set_resource_ownership(
                 node, class_ownership(OwnershipKind.OWNED)
+            )
+        elif isinstance(result_type, astx.DataFrameType | astx.SeriesType):
+            self._set_resource_ownership(
+                node, arrow_ownership(result_type, OwnershipKind.OWNED)
             )
         elif isinstance(result_type, astx.ListType):
             self._set_resource_ownership(
@@ -434,6 +439,29 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     and function is not None
                     and function.signature.metadata.get("method_name")
                     in LIFECYCLE_HOOKS
+                )
+            elif isinstance(
+                symbol.type_, astx.DataFrameType | astx.SeriesType
+            ):
+                function = self.context.current_function
+                if (
+                    function is not None
+                    and function.signature.metadata.get("generator")
+                    is not None
+                ):
+                    self.context.diagnostics.add(
+                        "Arrow references in generators are unsupported",
+                        node=node,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                    )
+                self._set_resource_ownership(
+                    node,
+                    arrow_ownership(
+                        symbol.type_,
+                        OwnershipKind.BORROWED,
+                        symbol.symbol_id,
+                        OwnershipTransferKind.BORROW,
+                    ),
                 )
             elif isinstance(symbol.type_, astx.FileType):
                 self._set_resource_ownership(

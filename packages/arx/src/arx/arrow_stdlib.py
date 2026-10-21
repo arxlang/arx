@@ -51,4 +51,13 @@ def prepare_module(module: astx.Module, origin: str) -> ParsedModule:
         MODULE_NAME,
         origin,
         native_bindings=tuple(bindings),
+        native_record_batch_class=next(
+            (
+                node
+                for node in module.nodes
+                if isinstance(node, astx.ClassDefStmt)
+                and node.name == "RecordBatch"
+            ),
+            None,
+        ),
     )
