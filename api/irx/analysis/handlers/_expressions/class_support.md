@@ -20,3 +20,25 @@ summary: >-
 ```yaml
 title: Expression class-resolution helpers.
 ```
+
+#### Methods
+
+##### `bound_method_matches(self, class_: SemanticClass, member: SemanticClassMember, arg_types: list[astx.DataType | None], node: astx.AST, *, exact: bool) -> bool`
+
+```yaml
+title: >-
+  Match a candidate's own keyword names without speculative visits.
+parameters:
+  class_:
+    type: SemanticClass
+  member:
+    type: SemanticClassMember
+  arg_types:
+    type: list[astx.DataType | None]
+  node:
+    type: astx.AST
+  exact:
+    type: bool
+returns:
+  type: bool
+```

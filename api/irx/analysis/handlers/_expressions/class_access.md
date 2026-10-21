@@ -32,6 +32,17 @@ parameters:
     type: astx.ClassConstruct
 ```
 
+##### `resolve_class_construction(self, node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall, class_: SemanticClass) -> None`
+
+```yaml
+title: Resolve a class-valued callable after ordinary symbol lookup.
+parameters:
+  node:
+    type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
+  class_:
+    type: SemanticClass
+```
+
 ##### `visit(self, node: astx.MethodCall) -> None`
 
 ```yaml

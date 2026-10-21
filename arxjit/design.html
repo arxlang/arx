@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -397,6 +397,24 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/locations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.locations</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/lowering.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.lowering</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/reconcile.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.reconcile</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arxjit/source.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arxjit.source</span></a>
   </div>
@@ -437,7 +455,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#source-extraction" id="toc-source-extraction" class="nav-link" data-scroll-target="#source-extraction">Source extraction</a></li>
   <li><a href="#validation" id="toc-validation" class="nav-link" data-scroll-target="#validation">Validation</a></li>
   </ul></li>
-  <li><a href="#proposed-astx-mapping" id="toc-proposed-astx-mapping" class="nav-link" data-scroll-target="#proposed-astx-mapping">Proposed ASTx mapping</a></li>
+  <li><a href="#implemented-astx-mapping" id="toc-implemented-astx-mapping" class="nav-link" data-scroll-target="#implemented-astx-mapping">Implemented ASTx mapping</a></li>
   <li><a href="#compilation-and-runtime-work-remaining" id="toc-compilation-and-runtime-work-remaining" class="nav-link" data-scroll-target="#compilation-and-runtime-work-remaining">Compilation and runtime work remaining</a></li>
   </ul></li>
   </ul>
@@ -452,7 +470,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="design-python-ast-to-astx-lowering" class="level1">
 <h1>Design: Python AST to ASTx lowering</h1>
-<p>Status: staged design. Source extraction and Python-subset validation are implemented; ASTx lowering, IRx compilation, and native dispatch are not.</p>
+<p>Status: staged implementation. Source extraction, Python-subset validation, signature reconciliation, and initial fail-closed ASTx lowering are implemented. IRx compilation, native bridging, caching, and dispatch are not.</p>
 <section id="goal" class="level2">
 <h2 class="anchored" data-anchor-id="goal">Goal</h2>
 <p>Compile a restricted subset of pure, built-in Python through the existing Arx compiler stack. Users write ordinary Python and add <code>@jit</code>; they do not embed Arx source strings or opt into another compiler backend.</p>
@@ -462,7 +480,8 @@ ul.task-list li input[type="checkbox"] {
 <pre class="text"><code>pure Python function
   -&gt; source extraction       implemented
   -&gt; Python AST validation   implemented
-  -&gt; ASTx lowering           not implemented
+  -&gt; signature resolution    implemented
+  -&gt; ASTx lowering           initial straight-line subset
   -&gt; IRx/LLVM compilation    not implemented
   -&gt; native call bridge      not implemented</code></pre>
 <p><code>arxjit</code> owns source handling, validation, the future Python-to-ASTx lowering, and the callable wrapper. ASTx owns the node model, while IRx owns semantic analysis, LLVM lowering, native runtime features, and artifact generation. The Arx source frontend is intentionally not in this path.</p>
@@ -510,9 +529,9 @@ ul.task-list li input[type="checkbox"] {
 <p>Unsupported forms produce one structured diagnostic per violation. Examples include imports, closures, methods, async code, exceptions, generators, collections, attributes, subscripting, comprehensions, <code>break</code>/<code>continue</code>, variadic/default arguments, and arbitrary calls.</p>
 </section>
 </section>
-<section id="proposed-astx-mapping" class="level2">
-<h2 class="anchored" data-anchor-id="proposed-astx-mapping">Proposed ASTx mapping</h2>
-<p>The following mapping is a design target, not current runtime behavior:</p>
+<section id="implemented-astx-mapping" class="level2">
+<h2 class="anchored" data-anchor-id="implemented-astx-mapping">Implemented ASTx mapping</h2>
+<p>The following straight-line mappings are implemented by <code>arxjit.lowering</code>:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 41%">
@@ -538,40 +557,24 @@ ul.task-list li input[type="checkbox"] {
 <td><code>astx.FunctionReturn</code></td>
 </tr>
 <tr class="even">
-<td>single-name <code>ast.Assign</code></td>
-<td>variable declaration or assignment</td>
-</tr>
-<tr class="odd">
 <td><code>ast.Name</code></td>
 <td>identifier/variable reference</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>numeric or Boolean <code>ast.Constant</code></td>
 <td>matching typed literal node</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>ast.BinOp</code></td>
 <td><code>astx.BinaryOp</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>ast.UnaryOp</code></td>
 <td><code>astx.UnaryOp</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>ast.Compare</code></td>
 <td>comparison expression</td>
-</tr>
-<tr class="even">
-<td><code>ast.If</code></td>
-<td><code>astx.IfStmt</code></td>
-</tr>
-<tr class="odd">
-<td><code>ast.While</code></td>
-<td><code>astx.WhileStmt</code></td>
-</tr>
-<tr class="even">
-<td><code>ast.For</code> over <code>range</code></td>
-<td><code>astx.ForRangeLoopStmt</code></td>
 </tr>
 <tr class="odd">
 <td>statement body</td>
@@ -579,14 +582,13 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p>The lowerer should build a single-function <code>astx.Module</code>, derive parameter and return types from the explicit <code>Signature</code>, and lower expressions bottom-up. IRx must remain the only owner of semantic analysis and feature lowering.</p>
+<p>The lowerer builds a single-function <code>astx.Module</code>, uses the reconciled <code>Signature</code>, range-checks contextual literal widths, preserves source locations, mangles names reserved by IRx, and lowers expressions bottom-up. Boolean short-circuiting, chained comparisons, assignments, <code>if</code>, <code>while</code>, and <code>for</code> remain fail-closed because their Python evaluation semantics are not yet preserved. IRx remains the only owner of semantic analysis and feature lowering.</p>
 </section>
 <section id="compilation-and-runtime-work-remaining" class="level2">
 <h2 class="anchored" data-anchor-id="compilation-and-runtime-work-remaining">Compilation and runtime work remaining</h2>
 <p>After lowering, the design hands the module to <code>irx.builder.Builder</code> for translation and native artifact generation. ArxJIT still needs:</p>
 <ol type="1">
-<li>the Python-AST-to-ASTx lowerer</li>
-<li>signature/argument consistency checks at the compiler boundary</li>
+<li>assignment and control-flow ASTx lowering with Python semantics</li>
 <li>an in-process native callable bridge and scalar marshalling</li>
 <li>compilation and dispatch integration in <code>JitFunction.__call__</code></li>
 <li>a cache key covering source, signature, tool versions, and platform</li>

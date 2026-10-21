@@ -36,7 +36,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
 <link href="../arx/datatypes.html" rel="next">
-<link href="../arx/functions.html" rel="prev">
+<link href="../arx/file-io.html" rel="prev">
 <link href="../favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/classes.html">Classes</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/classes.html">Classes</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -382,6 +382,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/native-packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">External Native Packages</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/testing.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Compiled Tests</span></a>
   </div>
@@ -399,6 +405,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Specification Status</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/capability-matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capability Matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/syntax.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Lexical Syntax</span></a>
   </div>
@@ -413,6 +431,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/functions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/file-io.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Text File I/O</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -473,6 +497,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/arrow_stdlib.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.arrow_stdlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/builtin_files.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.builtin_files</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/builtins.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.builtins</span></a>
   </div>
@@ -529,6 +565,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../api/arx/main.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.main</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_config.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_config</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_packages</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -669,13 +717,15 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#annotation-rules" id="toc-annotation-rules" class="nav-link" data-scroll-target="#annotation-rules">Annotation Rules</a></li>
   <li><a href="#defaults" id="toc-defaults" class="nav-link" data-scroll-target="#defaults">Defaults</a></li>
   <li><a href="#construction-and-typed-class-values" id="toc-construction-and-typed-class-values" class="nav-link" data-scroll-target="#construction-and-typed-class-values">Construction And Typed Class Values</a></li>
+  <li><a href="#lifecycle-hooks" id="toc-lifecycle-hooks" class="nav-link" data-scroll-target="#lifecycle-hooks">Lifecycle Hooks</a></li>
+  <li><a href="#owned-fields-and-boundaries" id="toc-owned-fields-and-boundaries" class="nav-link" data-scroll-target="#owned-fields-and-boundaries">Owned Fields And Boundaries</a></li>
   <li><a href="#irx-alignment" id="toc-irx-alignment" class="nav-link" data-scroll-target="#irx-alignment">IRx Alignment</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/classes.html">Classes</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/classes.html">Classes</a></li></ol></nav></header>
 
 
 
@@ -754,7 +804,7 @@ fn get(self) -&gt; int32:
 </section>
 <section id="construction-and-typed-class-values" class="level2">
 <h2 class="anchored" data-anchor-id="construction-and-typed-class-values">Construction And Typed Class Values</h2>
-<p>Declared classes can also be used directly in type annotations and default construction expressions. Construction is currently default-only, so <code>Counter()</code> does not accept constructor arguments yet.</p>
+<p>Declared classes can be used in type annotations and construction expressions. <code>Counter()</code> remains valid when no required initializer parameters are declared. An optional <code>__init__</code> hook adds positional arguments, constructor keywords, and literal defaults; an optional <code>__del__</code> hook runs at final release.</p>
 <pre class="arx"><code>class Counter:
   @[public, static, constant]
   version: int32 = 3
@@ -776,10 +826,51 @@ fn main() -&gt; int32:
 <p>This surface syntax maps directly onto IRx-owned class nodes:</p>
 <ul>
 <li><code>Counter</code> in annotations becomes <code>astx.ClassType</code></li>
-<li><code>Counter()</code> becomes <code>astx.ClassConstruct</code></li>
+<li><code>Counter(...)</code> becomes <code>astx.ClassConstruct</code> with ordered arguments/keywords</li>
 <li><code>Counter.version</code> becomes <code>astx.StaticFieldAccess</code></li>
 <li><code>CounterFactory.make()</code> becomes <code>astx.StaticMethodCall</code></li>
 </ul>
+</section>
+<section id="lifecycle-hooks" class="level2">
+<h2 class="anchored" data-anchor-id="lifecycle-hooks">Lifecycle Hooks</h2>
+<pre class="arx"><code>class Counter:
+  value: i32 = 0
+
+  fn __init__(self, value: i32 = 1) -&gt; none:
+    self.value = value
+    return none
+
+  fn __del__(self) -&gt; none:
+    print(self.value)
+    return none
+
+fn main() -&gt; i32:
+  var counter: Counter = Counter(value=7)
+  var alias: Counter = counter
+  counter = Counter(3)
+  assert alias.value == 7
+  return 0</code></pre>
+<p>The two variables initially refer to the same object; copying a reference does not copy fields. Reassignment releases only the replaced reference. Locals, discarded temporaries, loop-body locals, and early returns release their references on ordinary lexical exits. Final release calls <code>__del__</code> exactly once, then drops owned fields and frees storage. Returns preserve object identity and can outlive the creating function. Calls borrow objects; evaluated class arguments and receivers are pinned before later arguments can replace fields. Rebinding a class parameter replaces its independent local reference, not the caller’s binding.</p>
+<p>Hook rules:</p>
+<ul>
+<li>Double-underscore (dunder) method names are reserved for language protocols. The supported lifecycle names are <code>__init__</code> and <code>__del__</code>; unknown names such as <code>__inti__</code> or <code>__str__</code> are semantic errors, including on static methods. Lifecycle hooks cannot be declared as fields. Plain <code>init</code> and <code>deinit</code> are ordinary method names, not compatibility aliases. Existing IRx <code>__enter__</code> and <code>__exit__</code> context protocols remain recognized and callable, but do not enable Arx <code>with</code> syntax.</li>
+<li>Dunders identify language-defined behavior, not private visibility or inheritance from a universal builtin superclass. Implementations are written by users; normal visibility annotations still apply.</li>
+<li><code>__init__(self, ...) -&gt; none</code> and <code>__del__(self) -&gt; none</code> are compiler entry points, not ordinary callable methods. Explicit calls are rejected.</li>
+<li>Hooks cannot be static, abstract, external, overloaded, templated, or variadic. Constructor defaults are existing scalar/string literals, not resource values.</li>
+<li>Constructor arguments bind by parameter name, excluding <code>self</code>. Unknown, duplicate, missing, excessive, and incompatible arguments are errors. Supplied expressions evaluate once in source order, including keywords.</li>
+<li>A class without its own <code>__init__</code> has a zero-argument constructor. Base hooks run with their defaults; a base requiring arguments is rejected when constructing the derived class. Explicit base-argument forwarding is deferred.</li>
+<li>Shared ancestors initialize once in canonical base-first storage order. Each phase initializes its declared fields before calling its own <code>__init__</code>. Final release reverses those phases, calling each <code>__del__</code> before dropping its fields in reverse declaration order. This also works through a base-typed reference; non-prefix multiple-inheritance views locate concrete storage.</li>
+<li>Inside hooks, <code>self</code> is only a field-access receiver: it cannot be aliased, returned, passed elsewhere, or used to invoke an ordinary self method. This prevents escape during construction and resurrection during destruction.</li>
+</ul>
+<p>These names are familiar from Python, but Arx keeps its own lifecycle contract: normal final-reference release synchronously runs cleanup, base phases chain automatically, and direct hook calls and resurrection are forbidden. This does not add Python’s garbage collector, <code>super()</code> chaining, <code>__new__</code>, or unwinding after fatal errors. Ordinary operations such as <code>close()</code> remain callable and are separate from object destruction.</p>
+<p>Ordinary instance and static methods also accept named arguments. An instance receiver is implicit; it cannot be supplied as a keyword. Keywords bind against the statically selected declaration, including through inheritance and dynamic dispatch. Values evaluate in source order, then omitted defaults in declaration order. See <a href="../arx/functions.html#keyword-arguments">Functions</a>. Direct lifecycle-hook calls remain forbidden.</p>
+</section>
+<section id="owned-fields-and-boundaries" class="level2">
+<h2 class="anchored" data-anchor-id="owned-fields-and-boundaries">Owned Fields And Boundaries</h2>
+<p>Scalar fields keep their existing behavior. Instance strings own independent heap copies (or move fresh owned results); replacing a string field safely releases its previous allocation. String-field reads produce owned snapshots, so evaluated arguments, local copies, and returns survive later replacement of that field. Acyclic class-reference fields hold strong references and default to empty; dereferencing an empty class value reports a checked runtime error rather than using a null pointer. Field declarations may refer to already initialized fields through <code>self</code>.</p>
+<p>A public <code>File</code> (or lowercase <code>file</code>) field holds an ordinary class reference. It may be initialized with <code>File(...)</code>, <code>open(...)</code>, or another File reference, and may be replaced or shared. Empty fields use the normal checked class reference behavior. The builtin File class itself owns one private native handle initialized once by its compiler-provided constructor; users cannot extract or replace that handle. Final File release invokes normal owned-field cleanup. See the <a href="../../examples/class-lifecycle.x">owned-file example</a> and <a href="../arx/file-io.html">file API</a>. File subclassing and reopening are deferred.</p>
+<p>This reference-counted subset is synchronous and non-atomic. Cyclic field-type graphs are rejected conservatively, including edges through assignable subtypes, even if a particular program would not create a cycle. Class values in containers/unions/struct fields, owned globals/statics, generator capture, list/Arrow/resource aggregate fields, and an external class ownership ABI are not supported. There is no garbage collector, weak reference, resurrection, explicit deletion, or thread-safe reference counting.</p>
+<p>Allocation and empty-reference failures use <code>ARX-RUNTIME-CLASS-001</code>. Checked compiler-local construction failures release initialized fields, run only completed base-phase destructors, and free partial storage. Native field-release errors preserve the first error while continuing remaining field releases and freeing the object. Fatal errors inside called user code still exit without unwinding caller frames; this is not catchable exception support.</p>
 </section>
 <section id="irx-alignment" class="level2">
 <h2 class="anchored" data-anchor-id="irx-alignment">IRx Alignment</h2>
@@ -1218,8 +1309,8 @@ fn main() -&gt; int32:
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../arx/functions.html" class="pagination-link" aria-label="Functions">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Functions</span>
+      <a href="../arx/file-io.html" class="pagination-link" aria-label="Text File I/O">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Text File I/O</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

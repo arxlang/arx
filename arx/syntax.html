@@ -36,7 +36,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
 <link href="../arx/modules.html" rel="next">
-<link href="../arx/testing.html" rel="prev">
+<link href="../arx/capability-matrix.html" rel="prev">
 <link href="../favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -382,6 +382,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/native-packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">External Native Packages</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/testing.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Compiled Tests</span></a>
   </div>
@@ -399,6 +405,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Specification Status</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/capability-matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capability Matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/syntax.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Lexical Syntax</span></a>
   </div>
@@ -413,6 +431,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/functions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/file-io.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Text File I/O</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -473,6 +497,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/arrow_stdlib.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.arrow_stdlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/builtin_files.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.builtin_files</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/builtins.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.builtins</span></a>
   </div>
@@ -529,6 +565,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../api/arx/main.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.main</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_config.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_config</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_packages</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -686,7 +734,7 @@ ul.task-list li input[type="checkbox"] {
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav></header>
 
 
 
@@ -856,6 +904,7 @@ series[T]</code></pre>
 <section id="consistency-rule" class="level2">
 <h2 class="anchored" data-anchor-id="consistency-rule">Consistency rule</h2>
 <p>Changes to lexical syntax must update <code>syntax.json</code> first, then the lexer, tests, this document, examples, and any derived editor grammars.</p>
+<p><code>File</code> and <code>open</code> remain identifiers. Lowercase <code>file</code> is a compatibility type spelling for the canonical builtin File class, not a native handle. Both public file constructors accept named arguments (<code>file=</code>, <code>mode=</code>, etc.), and class constructors accept names from their own <code>__init__</code> parameters. Dunder spellings remain identifier tokens, not lexer keywords. Class methods named <code>__name__</code> are reserved for documented language protocols. <code>__init__</code> and <code>__del__</code> are lifecycle hooks; existing IRx <code>__enter__</code> and <code>__exit__</code> names are also recognized without adding Arx <code>with</code> syntax. Plain <code>init</code> and <code>deinit</code> have no special meaning. See <a href="../arx/classes.html">Classes</a> and <a href="../arx/file-io.html">Text File I/O</a> for restrictions. Ordinary function/method calls also accept positional arguments followed by named values (<code>callee(value=expr)</code>). They reject positional-after- keyword calls, duplicates, unknown names, and argument unpacking. See <a href="../arx/functions.html#keyword-arguments">Functions</a>. Arx <code>with</code> statements remain unsupported.</p>
 
 
 </section>
@@ -1282,8 +1331,8 @@ series[T]</code></pre>
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../arx/testing.html" class="pagination-link" aria-label="Compiled Tests">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Compiled Tests</span>
+      <a href="../arx/capability-matrix.html" class="pagination-link" aria-label="Capability Matrix">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Capability Matrix</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

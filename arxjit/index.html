@@ -83,9 +83,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -286,8 +286,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -431,6 +431,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/locations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.locations</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/lowering.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.lowering</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arxjit/reconcile.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxjit.reconcile</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arxjit/source.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arxjit.source</span></a>
   </div>
@@ -480,7 +498,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>ArxJIT</h1>
 <p>ArxJIT is a developing Numba-style decorator path from a restricted subset of pure Python to ASTx, IRx, LLVM, and native callable code.</p>
 <blockquote class="blockquote">
-<p><strong>Current behavior:</strong> decorated calls execute the original Python function. Native lowering and compilation have not landed.</p>
+<p><strong>Current behavior:</strong> decorated calls execute the original Python function. Initial Python-AST-to-ASTx lowering exists as a public, fail-closed stage, but the decorator does not invoke it and native compilation has not landed.</p>
 </blockquote>
 <section id="implemented-foundations" class="level2">
 <h2 class="anchored" data-anchor-id="implemented-foundations">Implemented foundations</h2>
@@ -490,6 +508,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>function-source extraction with corrected real-file source locations</li>
 <li>structured errors when source cannot be retrieved or parsed</li>
 <li>exhaustive validation and diagnostics for the proposed Python subset</li>
+<li>signature reconciliation from explicit signatures or reserved scalar annotations</li>
+<li>initial ASTx lowering for function shells, typed arguments and returns, scalar literals, parameter reads, arithmetic, supported unary operators, and single comparisons</li>
 </ul>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> arxjit <span class="im">import</span> i64, jit</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -501,13 +521,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> add(<span class="dv">20</span>, <span class="dv">22</span>) <span class="op">==</span> <span class="dv">42</span>  <span class="co"># Python fallback in the current implementation</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The current validator accepts scalar expressions, assignments, <code>if</code>/<code>else</code>, <code>while</code>, <code>for</code> over the unshadowed builtin <code>range</code>, and returns. Collections, closures, imports, methods, async code, generators, exceptions, attributes, and subscripting are rejected.</p>
+<p>The lowerer deliberately covers less than the validator. Assignments, Boolean short-circuit expressions, chained comparisons, and control flow still fail closed in lowering rather than producing an incomplete ASTx module.</p>
 </section>
 <section id="deferred-pipeline" class="level2">
 <h2 class="anchored" data-anchor-id="deferred-pipeline">Deferred pipeline</h2>
 <pre class="text"><code>Python function
   -&gt; source extraction       implemented
   -&gt; Python AST validation   implemented
-  -&gt; ASTx lowering           not implemented
+  -&gt; signature resolution    implemented
+  -&gt; ASTx lowering           initial straight-line subset
   -&gt; IRx native compilation  not implemented
   -&gt; Python-callable bridge  not implemented</code></pre>
 <p>Arrow-backed arrays and tensors are intentionally deferred until scalar compilation and runtime marshalling are stable.</p>

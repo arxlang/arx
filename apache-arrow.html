@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -287,8 +287,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="./index.html">
     <span class="navbar-title">ArxLang</span>
@@ -422,6 +422,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./support-matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Support Matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./contributing.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Contributing</span></a>
   </div>
@@ -499,6 +505,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#array-interoperability" id="toc-array-interoperability" class="nav-link" data-scroll-target="#array-interoperability">Array interoperability</a></li>
   <li><a href="#recordbatch-ipc-and-pyarrow" id="toc-recordbatch-ipc-and-pyarrow" class="nav-link" data-scroll-target="#recordbatch-ipc-and-pyarrow">RecordBatch IPC and PyArrow</a></li>
   <li><a href="#deliberate-boundaries" id="toc-deliberate-boundaries" class="nav-link" data-scroll-target="#deliberate-boundaries">Deliberate boundaries</a></li>
+  <li><a href="#compiled-arx-interoperability-stdlib.arrow" id="toc-compiled-arx-interoperability-stdlib.arrow" class="nav-link" data-scroll-target="#compiled-arx-interoperability-stdlib.arrow">Compiled Arx interoperability (<code>stdlib.arrow</code>)</a>
+  <ul class="collapse">
+  <li><a href="#build-requirements-and-demonstrations" id="toc-build-requirements-and-demonstrations" class="nav-link" data-scroll-target="#build-requirements-and-demonstrations">Build requirements and demonstrations</a></li>
+  <li><a href="#public-api" id="toc-public-api" class="nav-link" data-scroll-target="#public-api">Public API</a></li>
+  <li><a href="#same-process-c-data-and-c-stream" id="toc-same-process-c-data-and-c-stream" class="nav-link" data-scroll-target="#same-process-c-data-and-c-stream">Same-process C Data and C Stream</a></li>
+  <li><a href="#across-machines" id="toc-across-machines" class="nav-link" data-scroll-target="#across-machines">Across machines</a></li>
+  <li><a href="#compatibility-and-limitations" id="toc-compatibility-and-limitations" class="nav-link" data-scroll-target="#compatibility-and-limitations">Compatibility and limitations</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -629,8 +643,8 @@ fn rows() -&gt; i32:
 <li>Arrow IPC streams in files and in-memory buffers</li>
 </ul>
 <p>The test suite verifies both directions of interoperability: IRx-written IPC is read by PyArrow, and PyArrow-written IPC is read by IRx.</p>
-<p>The direct Python API currently requires its native shared library to be built from a source checkout before first use:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import build_record_batch_shared_library; build_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The direct Python API builds a fingerprinted native shared library on first use. To pre-warm that cache explicitly:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import ensure_record_batch_shared_library; ensure_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Generated IRx programs use the runtime-feature system instead; their required native artifacts are collected during the normal build/link flow.</p>
 </section>
 <section id="deliberate-boundaries" class="level2">
@@ -638,14 +652,231 @@ fn rows() -&gt; i32:
 <p>Native Arrow support does not yet imply a complete Arrow product surface. The current implementation does not provide:</p>
 <ul>
 <li>an Arx query language or Arrow Compute kernel API</li>
-<li>general RecordBatch syntax in Arx</li>
-<li>nested, dictionary, decimal, or arbitrary extension types</li>
+<li>dedicated RecordBatch syntax (use <code>stdlib.arrow</code> classes instead)</li>
+<li>general nested scalar access, dictionary, decimal, or arbitrary extension types</li>
 <li>mutable Tensor storage or a NumPy-compatible tensor algebra API</li>
 <li>automatic zero-copy guarantees for every import/export path</li>
 </ul>
 <p>These limits keep ownership, semantics, and compiler lowering explicit while the public APIs mature.</p>
+</section>
+<section id="compiled-arx-interoperability-stdlib.arrow" class="level2">
+<h2 class="anchored" data-anchor-id="compiled-arx-interoperability-stdlib.arrow">Compiled Arx interoperability (<code>stdlib.arrow</code>)</h2>
+<p><code>stdlib.arrow</code> exposes runtime-schema RecordBatches without changing the language grammar or converting them to statically typed DataFrames. It reuses the <code>irx_rb_*</code> implementation; the small <code>irx_rb_api_*</code> facade checks statuses before reading output slots and supplies scoped class-owned handles. The frontend only binds ASTx opaque types and native capabilities for the reserved bundled module. IRx performs normal class, call, FFI, ownership analysis and lowering. Importing unrelated standard-library modules does not activate the RecordBatch runtime.</p>
+<section id="build-requirements-and-demonstrations" class="level3">
+<h3 class="anchored" data-anchor-id="build-requirements-and-demonstrations">Build requirements and demonstrations</h3>
+<p>Use the normal Arx development environment, including Clang, a <strong>C++20</strong> compiler, PyArrow and <code>arx-arrowcpp-sources</code>. Native sources are compiled on demand through the existing runtime feature registry. The executable must be able to load the Arrow shared library used at link time; it does not start Python to serialize or deserialize data. The Python peer needs PyArrow; the demonstration runner also uses the compiler to build the Arx programs.</p>
+<p>From the repository root:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> examples/arrow/run.py <span class="at">--directory</span> .tmp/arrow-demo</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Or choose --scenario files, --scenario c, or --scenario tcp.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The runner uses temporary build/output paths chosen by <code>--directory</code> and <strong>ephemeral loopback ports</strong>. Its examples are also integration-test inputs:</p>
+<ul>
+<li><code>examples/arrow/write_file.x</code> creates integer, floating-point and Boolean columns in compiled Arx and writes <code>arx.arrow</code>. Python uses <code>pa.ipc.open_file</code> and checks the schema and every value.</li>
+<li><code>examples/arrow/read_file.x</code> reads <code>python.arrow</code>, created by Python with <code>pa.ipc.new_file</code>, and checks the full schema and every value. A separate test supplies a mismatched schema and requires failure.</li>
+<li><code>examples/arrow/tcp.x</code> sends or receives <strong>two distinct RecordBatches</strong>. The runner builds real Arx launchers and exchanges standard IPC streaming bytes with a Python process over TCP in both directions.</li>
+<li><code>examples/arrow/types.x</code> exercises every scalar append/get family, schema inspection, nullable values, empty batches, builder reuse and repeated close.</li>
+<li><code>examples/arrow/component.x</code> builds a shared native component. Python invokes <code>component__produce_stream</code> / <code>component__produce_array</code>, then imports their outputs using PyArrow’s <code>_import_from_c</code> APIs. The producing Arx locals have already been destroyed. The reverse functions consume PyArrow-exported data. This is compiled Arx, not the <code>irx.record_batch</code> Python wrapper.</li>
+</ul>
+</section>
+<section id="public-api" class="level3">
+<h3 class="anchored" data-anchor-id="public-api">Public API</h3>
+<pre class="arx"><code>```
+title: Write a RecordBatch
+```
+import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
+
+fn main() -&gt; i32:
+  var schema: Schema = Schema()
+  schema.add("id", 3)
+  schema.add("score", 9)
+  schema.add("active", 10)
+  var builder: BatchBuilder = BatchBuilder(schema)
+  builder.append_i64(0, 42)
+  builder.append_f64(1, 1.5)
+  builder.append_bool(2, true)
+  var batch: RecordBatch = builder.finish()
+  var writer: IPCWriter = IPCWriter(schema)
+  writer.open_file("example.arrow")
+  writer.write(batch)
+  writer.close()
+  return 0</code></pre>
+<p><code>Schema.add(name, type_id, nullable=false)</code> uses the stable <code>IrxColumnType</code> IDs:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 40%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>IDs</th>
+<th>Arrow types</th>
+<th>Arx append/get suffix</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0–3</td>
+<td>int8, int16, int32, int64</td>
+<td><code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code></td>
+</tr>
+<tr class="even">
+<td>4–7</td>
+<td>uint8, uint16, uint32, uint64</td>
+<td>Preserve/forward; no unsigned Arx scalar accessor</td>
+</tr>
+<tr class="odd">
+<td>8–10</td>
+<td>float32, float64, Boolean</td>
+<td><code>f32</code>, <code>f64</code>, <code>bool</code></td>
+</tr>
+<tr class="even">
+<td>11–12</td>
+<td>UTF-8, large UTF-8</td>
+<td><code>utf8</code></td>
+</tr>
+<tr class="odd">
+<td>13–14</td>
+<td>date32 (days), date64 (milliseconds)</td>
+<td><code>date</code> (<code>i64</code> count)</td>
+</tr>
+<tr class="even">
+<td>15–18</td>
+<td>timestamp s, ms, us, ns</td>
+<td><code>timestamp</code> (<code>i64</code> count)</td>
+</tr>
+<tr class="odd">
+<td>19–22</td>
+<td>time32 s/ms, time64 us/ns</td>
+<td><code>time</code> (<code>i64</code> count)</td>
+</tr>
+</tbody>
+</table>
+<p>Types, units, timezones, field nullability and schema/field metadata are retained on imported batches, schema snapshots and IPC/C exports. Imported supported list/struct layouts can be forwarded intact, but the Arx scalar methods do not provide nested traversal or construction. IDs 23/24 are inspection results, not primitive arguments to <code>Schema.add</code>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 83%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Class</th>
+<th>Operations</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Schema()</code></td>
+<td><code>add</code>, <code>nfields</code>, <code>name(col)</code>, <code>type(col)</code>, <code>type_name(col)</code>, <code>nullable(col)</code>, <code>equals(other)</code></td>
+</tr>
+<tr class="even">
+<td><code>BatchBuilder(schema)</code></td>
+<td><code>append_&lt;suffix&gt;(col, value)</code>, <code>append_null(col)</code>, <code>finish()</code></td>
+</tr>
+<tr class="odd">
+<td><code>RecordBatch()</code></td>
+<td>Empty output holder; <code>nrows</code>, <code>ncols</code>, <code>schema</code>, <code>is_null(col,row)</code>, <code>get_&lt;suffix&gt;(col,row)</code></td>
+</tr>
+<tr class="even">
+<td><code>IPCReader()</code></td>
+<td><code>open_file(path)</code>, <code>open_stream(path)</code>, <code>connect(host,port,timeout_ms=30000)</code>, <code>next()</code>, <code>batch()</code>, <code>schema()</code></td>
+</tr>
+<tr class="odd">
+<td><code>IPCWriter(schema)</code></td>
+<td><code>open_file(path)</code>, <code>open_stream(path)</code>, <code>connect(host,port,timeout_ms=30000)</code>, <code>write(batch)</code></td>
+</tr>
+</tbody>
+</table>
+<p>All five classes have idempotent <code>close()</code> and automatic destruction at their last class reference. <code>finish()</code> resets the builder’s column buffers for reuse; it does not destroy the builder. <code>next()</code> returns false only at end of stream, not for an empty batch. <code>batch()</code> returns an independent batch snapshot and is valid only after a successful <code>next()</code>. A reader’s schema can be inspected before reading any batches. <code>equals</code> and <code>write</code> compare metadata as well as types and nullability. Close readers/writers before reopening them.</p>
+<p>Use <code>open_file</code> for the Arrow random-access <strong>file format</strong>, and <code>open_stream</code> for <strong>streaming format stored at a path</strong>. Both support multiple batches. Zero-field builders produce zero rows; imported zero-column batches retain their original row count. For nullable data, test <code>is_null</code> before a getter. Typed getters reject nulls and wrong types rather than inventing default values. Arx <code>str</code> cannot represent embedded NUL: getters reject such text explicitly; IPC and C sharing still preserve string values without conversion. Field names and timestamp timezone strings containing NUL can round-trip through IPC, but C schema export rejects them rather than silently truncating them.</p>
+<p>Arx operations use <code>ARX-RUNTIME-ARROW-001</code> on failure and terminate the process, consistent with the current File API. No source location is invented for native failures (line/column are zero). Native embedding callers needing <strong>recoverable</strong> errors should use the status-returning <code>irx_rb_*</code> ABI, inspect <code>irx_record_batch_errmsg()</code> immediately, and never read output slots on error.</p>
+</section>
+<section id="same-process-c-data-and-c-stream" class="level3">
+<h3 class="anchored" data-anchor-id="same-process-c-data-and-c-stream">Same-process C Data and C Stream</h3>
+<p>The native header <code>irx_record_batch.h</code> provides schema/batch export and move import, batch-to-stream export, and reader-to-stream export/import. It reuses <code>irx_arrow_c_abi.h</code>. Arrow C++ supplies the standard <code>get_schema</code>, <code>get_next</code>, <code>get_last_error</code> and <code>release</code> callbacks. No Arrow C++ layouts appear in LLVM. The pre-existing array C Data copy/move APIs remain available unchanged.</p>
+<p>Arx additionally provides:</p>
+<ul>
+<li><code>batch.export_c(array_address, schema_address) -&gt; i32</code></li>
+<li><code>batch.export_stream(stream_address) -&gt; i32</code></li>
+<li><code>batch.import_c(array_address, schema_address)</code></li>
+<li><code>reader.import_stream(stream_address)</code></li>
+</ul>
+<p>These addresses are <strong>trusted, same-process pointers</strong> encoded as <code>i64</code> for the current 64-bit native targets. They are not serialized handles. Allocate zero-initialized standard structs in the host, keep their outer storage alive, and check export status before importing into PyArrow. Arbitrary addresses are unsafe. <code>native_handle()</code> is a borrowed opaque FFI escape hatch, not a transferable owner; never destroy it, wrap it in a second owning object, or use it after the class closes. Normal Arx code does not need this method.</p>
+<p>Exports retain Arrow buffers independently of the producing handle. Importing moves C ownership; after any attempted import, call a release callback only if it is still non-null. Import failures may already have consumed inputs. Native <code>irx_rb_c_{array,schema,stream}_release</code> helpers guard repeated release attempts on <strong>still-allocated outer structs</strong>, not on freed pointers. Raw opaque-handle release functions still free once and must not be called twice.</p>
+<p><code>irx_rb_stream_reader_export</code> transfers the remaining iteration to the C stream; the original reader becomes exhausted and may be closed. Schema and array outputs outlive the stream. An array with <code>release == NULL</code> denotes end of stream; an empty batch has a live release callback. Stream callbacks are not thread-safe: serialize calls. Keep the producer shared library loaded until all exported objects have been released.</p>
+<p>RecordBatch C exports/imports share or adopt buffers without serialization; schema descriptors and wrapper objects allocate. IPC serializes data, socket reads allocate per-message buffers, and the existing buffer-input API copies its input. Existing array copy APIs also copy. These are <strong>not universal zero-copy guarantees</strong>. See the standard <a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data</a> and <a href="https://arrow.apache.org/docs/format/CStreamInterface.html">C Stream</a> contracts.</p>
+</section>
+<section id="across-machines" class="level3">
+<h3 class="anchored" data-anchor-id="across-machines">Across machines</h3>
+<p>The Python peer listens and Arx connects, in either data direction. To move the loopback demonstration across hosts, run the Python listener on the receiving host (bind to its chosen interface), and compile the generated Arx launcher with that host’s <strong>numeric IPv4 or IPv6 address</strong> and agreed port instead of loopback. Use <code>send</code> when Python reads with <code>pa.ipc.open_stream(socket_file)</code>, or <code>receive</code> when Python writes with <code>pa.ipc.new_stream(socket_file, schema)</code>. Close the Arrow writer before closing the socket so it emits the end marker. The runner’s <code>tcp()</code> contains the complete Python peer and launcher implementation.</p>
+<p>Transport is separate from serialization (<code>irx_arrow_transport.*</code>). Native <code>irx_rb_fd_reader_open</code> / <code>irx_rb_fd_writer_open</code> duplicate a borrowed POSIX file descriptor, allowing host-supplied files/pipes as streaming endpoints. Closing these streams does not close the caller’s descriptor; offsets are shared. For pipe writes, the host must arrange its SIGPIPE policy. TCP writes suppress SIGPIPE and handle partial writes, interrupted calls and connection failures.</p>
+<p>TCP is blocking, POSIX-only, numeric-address-only, with a positive connect and per-I/O timeout. It buffers messages/batches rather than an entire unbounded stream. This is <strong>not an untrusted network service</strong>: there is no authentication, TLS, batch-size quota, hostname resolution, listener API in Arx, or Flight. Use trusted peers and network controls. A slow peer can extend total transfer time by making progress; the timeout is not a whole-transfer deadline.</p>
+<p>Interop stream readers require an explicit Arrow end marker, even though some Arrow implementations accept transport EOF in its place. This detects a connection cut exactly between batches as well as truncated messages. Both PyArrow’s normal writer close and the Arx writer emit this marker.</p>
+<p>A future Flight adapter can feed the same opaque batches/readers without changing the public data representation; Flight authentication and RPC are not part of this transport.</p>
+</section>
+<section id="compatibility-and-limitations" class="level3">
+<h3 class="anchored" data-anchor-id="compatibility-and-limitations">Compatibility and limitations</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 49%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Capability</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Standalone Arx ↔︎ PyArrow IPC files and streams</td>
+<td>Implemented, multiple/empty batches</td>
+</tr>
+<tr class="even">
+<td>Nullable numeric/Boolean, UTF-8 and temporal batches</td>
+<td>Runtime-schema API; checked typed methods</td>
+</tr>
+<tr class="odd">
+<td>Full field/schema metadata and timestamp timezone preservation</td>
+<td>IPC and C sharing; not projected into DataFrames</td>
+</tr>
+<tr class="even">
+<td>Zero-column input with nonzero rows</td>
+<td>Preserved</td>
+</tr>
+<tr class="odd">
+<td>C Data/C Stream, both directions</td>
+<td>Standard structs; explicit ownership transfer</td>
+</tr>
+<tr class="even">
+<td>TCP, both directions</td>
+<td>POSIX blocking clients; trusted numeric-address peers</td>
+</tr>
+<tr class="odd">
+<td>DataFrame ↔︎ RecordBatch conversion</td>
+<td>Not implemented; construct/use <code>RecordBatch</code> instead</td>
+</tr>
+<tr class="even">
+<td>Dictionary, decimal, binary, extension and other unclassified Arrow types</td>
+<td>Rejected at import/open; no silent conversion</td>
+</tr>
+<tr class="odd">
+<td>Unsigned and supported nested values</td>
+<td>Forwarding supported; Arx scalar access/construction limited as above</td>
+</tr>
+<tr class="even">
+<td>Arbitrary metadata editing, timestamp timezone creation in Arx</td>
+<td>Not exposed; imported schemas retain them</td>
+</tr>
+<tr class="odd">
+<td>Memory safety</td>
+<td>Functional ownership tests and a sanitizer harness; no blanket guarantee</td>
+</tr>
+</tbody>
+</table>
+<p>The sanitizer harness is <code>packages/irx/tests/native/arrow_interop.cpp</code>. Compile it with <code>irx_record_batch.cpp</code>, <code>irx_arrow_transport.cc</code>, the Arrow include/link flags, and <code>-fsanitize=address,undefined -fno-omit-frame-pointer</code>. It exercises schema snapshots, exported lifetimes, import moves, repeated guarded releases, EOF and corrupt-input cleanup. Arrow’s prebuilt shared library itself is not sanitizer-instrumented by this command.</p>
 
 
+</section>
 </section>
 </section>
 

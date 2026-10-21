@@ -23,6 +23,15 @@ title: Expression visitors for literals, list operations, and subscripts
 
 #### Methods
 
+##### `visit(self, node: astx.LiteralString) -> None`
+
+```yaml
+title: Visit string literal nodes as immortal static storage.
+parameters:
+  node:
+    type: astx.LiteralString
+```
+
 ##### `visit(self, node: astx.AliasExpr) -> None`
 
 ```yaml
@@ -57,6 +66,15 @@ title: Visit LiteralDateTime nodes.
 parameters:
   node:
     type: astx.LiteralDateTime
+```
+
+##### `reject_class_element(self, node: astx.AST) -> None`
+
+```yaml
+title: Reject class references in aggregate storage without ownership.
+parameters:
+  node:
+    type: astx.AST
 ```
 
 ##### `visit(self, node: astx.CollectionLength) -> None`

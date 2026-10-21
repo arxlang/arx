@@ -35,7 +35,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../arx/classes.html" rel="next">
+<link href="../arx/file-io.html" rel="next">
 <link href="../arx/modules.html" rel="prev">
 <link href="../favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -382,6 +382,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/native-packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">External Native Packages</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/testing.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Compiled Tests</span></a>
   </div>
@@ -399,6 +405,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Specification Status</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/capability-matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capability Matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../arx/syntax.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Lexical Syntax</span></a>
   </div>
@@ -413,6 +431,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/functions.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Functions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/file-io.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Text File I/O</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -473,6 +497,18 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/arrow_stdlib.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.arrow_stdlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/builtin_files.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.builtin_files</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/builtins.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.builtins</span></a>
   </div>
@@ -529,6 +565,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../api/arx/main.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.main</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_config.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_config</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arx/native_packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.native_packages</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -667,16 +715,18 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#definition-syntax" id="toc-definition-syntax" class="nav-link" data-scroll-target="#definition-syntax">Definition Syntax</a></li>
   <li><a href="#calling-functions" id="toc-calling-functions" class="nav-link" data-scroll-target="#calling-functions">Calling Functions</a></li>
+  <li><a href="#keyword-arguments" id="toc-keyword-arguments" class="nav-link" data-scroll-target="#keyword-arguments">Keyword Arguments</a></li>
   <li><a href="#default-parameter-values" id="toc-default-parameter-values" class="nav-link" data-scroll-target="#default-parameter-values">Default Parameter Values</a></li>
   <li><a href="#template-functions" id="toc-template-functions" class="nav-link" data-scroll-target="#template-functions">Template Functions</a></li>
   <li><a href="#function-body-rules" id="toc-function-body-rules" class="nav-link" data-scroll-target="#function-body-rules">Function Body Rules</a></li>
   <li><a href="#extern-prototypes" id="toc-extern-prototypes" class="nav-link" data-scroll-target="#extern-prototypes">Extern Prototypes</a></li>
+  <li><a href="#builtin-open" id="toc-builtin-open" class="nav-link" data-scroll-target="#builtin-open">Builtin <code>open</code></a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/syntax.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav></header>
 
 
 
@@ -718,9 +768,21 @@ fn main() -&gt; i32:
   ```
   return double(10)</code></pre>
 </section>
+<section id="keyword-arguments" class="level2">
+<h2 class="anchored" data-anchor-id="keyword-arguments">Keyword Arguments</h2>
+<p>Ordinary functions and instance/static methods accept named arguments, including through imported aliases and module namespaces:</p>
+<pre class="text"><code>add(y=2, x=1)
+add(1, y=2)
+helpers.add(x=1, y=2)
+counter.read(offset=3)
+identity&lt;i32&gt;(value=7)</code></pre>
+<p>Positional arguments must precede keywords. Names are case-sensitive and must match the resolved declaration. Existing ordinary function-call lookup remains module-visible and separate from lexical local-value lookup; builtin/class shadowing rules are unchanged. Duplicate names, positional/name collisions, unknown names, and missing required parameters are compilation errors. A named call may end with a trailing comma. Unpacking (<code>*args</code>, <code>**kwargs</code>) and keyword-only/positional-only parameter declarations are not supported.</p>
+<p>The receiver is evaluated first, then all explicitly supplied values exactly once in source order, even when their names reverse parameter order. Omitted defaults run afterward in parameter declaration order. Unlike Python, Arx already evaluates defaults at <strong>call time</strong>; they may reference earlier bound parameters, and method defaults may read <code>self</code>. For <code>f(a, b=a+1, c=b+1)</code>, <code>f(c=9, a=2)</code> calls with <code>(2, 3, 9)</code> and does not evaluate <code>c</code>’s default. Dynamic methods bind names/defaults through the statically selected interface, then dispatch positional values to the override.</p>
+<p>Fixed extern parameter names can be used; any existing C variadic tail stays positional and uses existing promotions. Keywords do not enable unsupported FFI types. Parser intrinsics and collection operations without a named-call schema still reject keywords. Signature-backed bundled functions such as <code>range(start=0, stop=3)</code> use their declared parameters, not Python overloads.</p>
+</section>
 <section id="default-parameter-values" class="level2">
 <h2 class="anchored" data-anchor-id="default-parameter-values">Default Parameter Values</h2>
-<p>Function, method, and extern parameters can declare trailing default values with <code>=</code>. Calls may omit those trailing arguments.</p>
+<p>Function, method, and extern parameters can declare trailing default values with <code>=</code>. Calls may omit defaulted parameters, including a middle default when a later parameter is supplied by name.</p>
 <pre class="arx"><code>```
 title: Default argument example
 summary: Calls a helper using an optional offset.
@@ -786,11 +848,16 @@ fn add(x: i32, y: i32) -&gt; i32:
 <section id="extern-prototypes" class="level2">
 <h2 class="anchored" data-anchor-id="extern-prototypes">Extern Prototypes</h2>
 <p>Arx also supports external function declarations:</p>
+<p><a href="../arx/native-packages.html">Native package metadata</a> can supply build/link requirements for resolved extern declarations. Calls retain normal parameter/keyword binding; the compiler does not infer a native dependency from a function’s name.</p>
 <pre class="arx"><code>```
 title: Extern prototype example
 summary: Declares an external function signature.
 ```
 extern putchard(x: i32) -&gt; i32</code></pre>
+</section>
+<section id="builtin-open" class="level2">
+<h2 class="anchored" data-anchor-id="builtin-open">Builtin <code>open</code></h2>
+<p><code>open</code> is a compiler-backed adapter to the builtin <code>File</code> constructor. Both support the same eight-argument restricted native text-file profile and return ordinary File class references, including through positional and keyword calls. Class constructors also accept keywords from their <code>__init__</code> parameters (see <a href="../arx/classes.html">Classes</a>). Ordinary functions and methods also support keywords as described above; <code>File.write(text="hello")</code> uses its declared method parameter. The file creation profile retains its compile-time-only optional settings and checked construction path; it is not an ordinary source wrapper with arbitrary keyword forwarding. See <a href="../arx/file-io.html">Text File I/O</a> for supported defaults, methods, and ownership rules.</p>
 
 
 </section>
@@ -1222,8 +1289,8 @@ extern putchard(x: i32) -&gt; i32</code></pre>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../arx/classes.html" class="pagination-link" aria-label="Classes">
-        <span class="nav-page-text">Classes</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../arx/file-io.html" class="pagination-link" aria-label="Text File I/O">
+        <span class="nav-page-text">Text File I/O</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

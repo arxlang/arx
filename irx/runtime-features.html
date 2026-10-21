@@ -70,7 +70,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../irx/buffer-view-model.html" rel="next">
+<link href="../irx/runtime-ownership.html" rel="next">
 <link href="../irx/semantic-contract.html" rel="prev">
 <link href="../favicon.ico" rel="icon">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -287,8 +287,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -423,6 +423,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../irx/runtime-ownership.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Runtime Ownership</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Buffer View Model</span></a>
   </div>
@@ -520,8 +526,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/native.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.native</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/record_batch.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.record_batch</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/record_batch_abi.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.record_batch_abi</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -571,6 +589,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/analysis/builtin_file.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.analysis.builtin_file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/analysis/call_arguments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.analysis.call_arguments</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/analysis/class_lifecycle.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.analysis.class_lifecycle</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/analysis/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.analysis.collections</span></a>
   </div>
@@ -601,6 +637,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/analysis/file_io.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.analysis.file_io</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/analysis/handlers.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.analysis.handlers</span></a>
   </div>
@@ -627,6 +669,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../api/irx/analysis/normalization.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.analysis.normalization</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/analysis/ownership.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.analysis.ownership</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -882,6 +930,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/lowering/classes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.lowering.classes</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/lowering/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.builder.lowering.collections</span></a>
   </div>
@@ -896,6 +950,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/lowering/dataframe.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.builder.lowering.dataframe</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/lowering/file.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.lowering.file</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -995,8 +1055,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/classes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.classes</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/dataframe.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.builder.runtime.dataframe</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/errors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.errors</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -1019,6 +1091,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/file.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.file</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/linking.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.builder.runtime.linking</span></a>
   </div>
@@ -1033,6 +1111,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/record_batch.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">irx.builder.runtime.record_batch</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/record_batch_api.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.record_batch_api</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -1107,12 +1191,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false">
- <span class="menu-text">Dataframe</span></a>
+ <span class="menu-text">Classes</span></a>
           <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-15" class="collapse list-unstyled sidebar-section depth5 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/classes/feature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.classes.feature</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false">
+ <span class="menu-text">Dataframe</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-16" class="collapse list-unstyled sidebar-section depth5 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/dataframe/feature.html" class="sidebar-item-text sidebar-link">
@@ -1123,13 +1224,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false">
- <span class="menu-text">List</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false">
+ <span class="menu-text">Errors</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-16" class="collapse list-unstyled sidebar-section depth5 ">  
+      <ul id="quarto-sidebar-section-17" class="collapse list-unstyled sidebar-section depth5 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/errors/feature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.errors.feature</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/errors/reporting.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.errors.reporting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false">
+ <span class="menu-text">File</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-18" class="collapse list-unstyled sidebar-section depth5 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/irx/builder/runtime/file/feature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">irx.builder.runtime.file.feature</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false">
+ <span class="menu-text">List</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-19" class="collapse list-unstyled sidebar-section depth5 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/list/feature.html" class="sidebar-item-text sidebar-link">
@@ -1140,13 +1281,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false">
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false">
  <span class="menu-text">Tensor</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-17" class="collapse list-unstyled sidebar-section depth5 ">  
+      <ul id="quarto-sidebar-section-20" class="collapse list-unstyled sidebar-section depth5 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builder/runtime/tensor/feature.html" class="sidebar-item-text sidebar-link">
@@ -1161,13 +1302,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false">
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false">
  <span class="menu-text">Builtins</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-18" class="collapse list-unstyled sidebar-section depth3 ">  
+      <ul id="quarto-sidebar-section-21" class="collapse list-unstyled sidebar-section depth3 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builtins/collections.html" class="sidebar-item-text sidebar-link">
@@ -1176,13 +1317,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false">
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false">
  <span class="menu-text">Collections</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-19" class="collapse list-unstyled sidebar-section depth4 ">  
+      <ul id="quarto-sidebar-section-22" class="collapse list-unstyled sidebar-section depth4 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../api/irx/builtins/collections/array_primitives.html" class="sidebar-item-text sidebar-link">
@@ -1239,7 +1380,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#recordbatch-runtime" id="toc-recordbatch-runtime" class="nav-link" data-scroll-target="#recordbatch-runtime">RecordBatch runtime</a></li>
   <li><a href="#assertions" id="toc-assertions" class="nav-link" data-scroll-target="#assertions">Assertions</a></li>
   <li><a href="#dynamic-list-caveat" id="toc-dynamic-list-caveat" class="nav-link" data-scroll-target="#dynamic-list-caveat">Dynamic list caveat</a></li>
+  <li><a href="#string-lifetime-caveat" id="toc-string-lifetime-caveat" class="nav-link" data-scroll-target="#string-lifetime-caveat">String lifetime caveat</a></li>
   <li><a href="#deliberate-limits" id="toc-deliberate-limits" class="nav-link" data-scroll-target="#deliberate-limits">Deliberate limits</a></li>
+  <li><a href="#text-file-runtime" id="toc-text-file-runtime" class="nav-link" data-scroll-target="#text-file-runtime">Text file runtime</a></li>
+  <li><a href="#class-lifetime-feature" id="toc-class-lifetime-feature" class="nav-link" data-scroll-target="#class-lifetime-feature">Class Lifetime Feature</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -1268,8 +1412,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Registered features:</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 20%">
-<col style="width: 79%">
+<col style="width: 21%">
+<col style="width: 78%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -1280,15 +1424,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td><code>libc</code></td>
-<td><code>puts</code>, allocation, formatting, and related C symbols</td>
+<td><code>puts</code>, checked allocation, formatting, and <code>free</code></td>
 </tr>
 <tr class="even">
+<td><code>file</code></td>
+<td>Checked single-owner POSIX UTF-8 text files</td>
+</tr>
+<tr class="odd">
 <td><code>libm</code></td>
 <td>math symbols and the platform math linker flag</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>assertions</code></td>
 <td>fatal assertion helper and machine-readable reports</td>
+</tr>
+<tr class="odd">
+<td><code>errors</code></td>
+<td>fatal checked-runtime diagnostics and stable records</td>
 </tr>
 <tr class="even">
 <td><code>buffer</code></td>
@@ -1330,7 +1482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="native-apache-arrow-backend" class="level2">
 <h2 class="anchored" data-anchor-id="native-apache-arrow-backend">Native Apache Arrow backend</h2>
-<p>IRx uses a C++ wrapper with a stable C ABI. Arrow C++ containers remain opaque to generated LLVM.</p>
+<p>IRx uses a C++ wrapper with an opaque C ABI. Arrow C++ containers remain opaque to generated LLVM. The RecordBatch bridge currently reports ABI version 1; other native surfaces remain pre-production contracts.</p>
 <pre class="text"><code>ASTx collection node
   -&gt; IRx lowering
   -&gt; irx_arrow_* or irx_rb_* C ABI call
@@ -1400,8 +1552,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>multiple batches per stream</li>
 <li>interoperability in both directions with PyArrow</li>
 </ul>
-<p>The Python API uses a standalone ctypes-loaded shared library. Build it in a source checkout before direct use:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import build_record_batch_shared_library; build_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The Python API uses a standalone ctypes-loaded shared library. Ensure a current source/toolchain-fingerprinted build before direct use:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import ensure_record_batch_shared_library; ensure_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Generated libraries live in an ABI-scoped user cache rather than the installed package tree. Set <code>IRX_NATIVE_CACHE_DIR</code> to select the cache root or <code>IRX_RECORD_BATCH_LIBRARY</code> to load/build one exact path. Concurrent builders use an OS-managed file lock that is released if its owner terminates, outputs are replaced atomically, and the loader rejects a missing or mismatched ABI query before binding other symbols.</p>
 <p>This is RecordBatch IPC support, not an implementation of the Arrow C Stream <code>ArrowArrayStream</code> interface.</p>
 </section>
 <section id="assertions" class="level2">
@@ -1412,7 +1565,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="dynamic-list-caveat" class="level2">
 <h2 class="anchored" data-anchor-id="dynamic-list-caveat">Dynamic list caveat</h2>
-<p>The <code>list</code> runtime supports append/growth and indexed access but does not yet expose a destroy helper. Dynamically produced list storage is therefore process-lifetime in the current MVP.</p>
+<p>The <code>list</code> runtime supports checked append/growth, indexed access, and an idempotent destroy helper. Semantic ownership sidecars classify scalar dynamic lists as owned, borrowed, or static and record borrow/move/return boundaries. Lowering destroys owned locals and non-transferred temporaries on lexical fallthrough, return, <code>break</code>, and <code>continue</code>, while excluding storage moved to a caller. Borrowed/static copies, append through borrowed storage, owned list locals in generators, owning list elements, and object-field ownership remain unsupported.</p>
+</section>
+<section id="string-lifetime-caveat" class="level2">
+<h2 class="anchored" data-anchor-id="string-lifetime-caveat">String lifetime caveat</h2>
+<p>String literals and empty defaults are immutable static pointers. Heap strings from concatenation, numeric formatting, and defined Arx string-returning calls carry semantic owner/copy/move metadata. Lowering guards allocation and formatting failure with <code>ARX-RUNTIME-STRING-001</code> or <code>ARX-RUNTIME-STRING-002</code>, frees non-transferred temporaries and owned locals, releases the old generation on owned replacement, and moves return cleanup to the caller. Static-to-owned return uses a checked heap copy.</p>
+<p>The preview intentionally rejects borrowed parameter escape, static/owned storage-class changes, owned string fields and generator locals, redundant identity casts of owned strings, and external string results without an explicit ownership ABI.</p>
 </section>
 <section id="deliberate-limits" class="level2">
 <h2 class="anchored" data-anchor-id="deliberate-limits">Deliberate limits</h2>
@@ -1426,6 +1584,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>DataFrame query semantics or a general compute-kernel API</li>
 </ul>
 <p>See <a href="../apache-arrow.html">Native Apache Arrow Support</a> for the cross-project view and <a href="../irx/buffer-view-model.html">Buffer View Model</a> for the low-level descriptor.</p>
+</section>
+<section id="text-file-runtime" class="level2">
+<h2 class="anchored" data-anchor-id="text-file-runtime">Text file runtime</h2>
+<p>The <code>file</code> feature exposes opaque <code>irx_file_*</code> handles and caller-owned error buffers (<code>IRX_FILE_ERROR_CAPACITY</code> bytes). Open/read/write outputs are initialized on all paths and may be consumed only after a zero status. EOF is a successful empty string. Read buffers transfer to the caller and use the existing <code>free</code> string ABI. Malformed UTF-8 and interior NUL are rejected. Close is idempotent; release consumes the wrapper even when closing fails. Handles are synchronous, single-owner, and not thread-safe. Lowering activates <code>errors</code> when status guards are emitted and <code>libc</code> when returned strings require cleanup; dependencies do not depend on passive feature metadata.</p>
+<p>See <a href="../arx/file-io.html">Arx Text File I/O</a> for the intentionally restricted parameter and lifetime surface. The native header is the C ABI contract.</p>
+</section>
+<section id="class-lifetime-feature" class="level2">
+<h2 class="anchored" data-anchor-id="class-lifetime-feature">Class Lifetime Feature</h2>
+<p>The registered <code>class</code> feature packages a C99 runtime and header. It provides checked create/retain/release/require operations, compiler-only phase progress, and first-error aggregation. Creation initializes the output slot to null before failure; lowering reads it only on success. An opaque token in payload slot zero holds counts/progress and a generated concrete drop callback. Final release consumes both allocations even if a native field release fails. Counts are non-atomic and no public external ownership ABI is promised. See <a href="../irx/class-model.html">Class Model</a> for the supported acyclic subset.</p>
 
 
 </section>
@@ -1857,8 +2024,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../irx/buffer-view-model.html" class="pagination-link" aria-label="Buffer View Model">
-        <span class="nav-page-text">Buffer View Model</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../irx/runtime-ownership.html" class="pagination-link" aria-label="Runtime Ownership">
+        <span class="nav-page-text">Runtime Ownership</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

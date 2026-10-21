@@ -83,9 +83,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -286,8 +286,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ArxLang</span>
@@ -407,6 +407,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arxpy/compiler.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxpy.compiler</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arxpy/diagnostics.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arxpy.diagnostics</span></a>
   </div>
@@ -415,6 +421,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../api/arxpy/errors.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arxpy.errors</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../api/arxpy/typecheck.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arxpy.typecheck</span></a>
   </div>
 </li>
       </ul>
@@ -435,7 +447,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current status</a></li>
   <li><a href="#install" id="toc-install" class="nav-link" data-scroll-target="#install">Install</a></li>
-  <li><a href="#current-usage" id="toc-current-usage" class="nav-link" data-scroll-target="#current-usage">Current usage</a></li>
+  <li><a href="#usage" id="toc-usage" class="nav-link" data-scroll-target="#usage">Usage</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -449,10 +461,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="arxpy" class="level1">
 <h1>ArxPy</h1>
-<p>ArxPy is the planned stable Python API for parsing, compiling, and running Arx programs without invoking the CLI.</p>
+<p>ArxPy is the typed Python API for parsing, checking, compiling, and running Arx programs without invoking the CLI.</p>
 <section id="current-status" class="level2">
 <h2 class="anchored" data-anchor-id="current-status">Current status</h2>
-<p>ArxPy is currently an API foundation, not an end-to-end compiler facade.</p>
+<p>ArxPy now has a pre-stable end-to-end compiler facade.</p>
 <p>Implemented:</p>
 <ul>
 <li><code>Diagnostic</code> and <code>DiagnosticSeverity</code></li>
@@ -460,38 +472,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>ArxError</code> as the public base exception</li>
 <li><code>ParseError</code>, <code>CompileError</code>, and <code>ExecutionError</code></li>
 <li>lightweight imports that do not initialize LLVM at module import time</li>
+<li>parse-from-string and parse-from-file entry points through <code>Compiler</code></li>
+<li>semantic checking and structured diagnostic translation</li>
+<li>host LLVM IR, object, and executable artifacts</li>
+<li>captured execution with arguments, environment, working directory, and timeout</li>
+<li>runtime validation of public arguments and every collection item</li>
+<li>serialized repeated/concurrent operations while the frontend uses global input state</li>
 </ul>
-<p>Not implemented:</p>
+<p>Not yet stable or implemented:</p>
 <ul>
-<li>parse-from-string or parse-from-file entry points</li>
-<li>compiler/session configuration objects</li>
-<li>native artifact and execution result APIs</li>
-<li>an end-to-end exception translation boundary</li>
+<li>cancellation and asynchronous compilation</li>
+<li>cross-target selection and target discovery</li>
+<li>compiler test-discovery facade</li>
+<li>cache controls and a query/LSP protocol</li>
+<li>compatibility guarantees for the pre-1.0 facade</li>
 </ul>
 </section>
 <section id="install" class="level2">
 <h2 class="anchored" data-anchor-id="install">Install</h2>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install arxpy</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="current-usage" class="level2">
-<h2 class="anchored" data-anchor-id="current-usage">Current usage</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> arxpy <span class="im">import</span> ArxError, Diagnostic, DiagnosticSeverity</span>
+<section id="usage" class="level2">
+<h2 class="anchored" data-anchor-id="usage">Usage</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>diagnostic <span class="op">=</span> Diagnostic(</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    severity<span class="op">=</span>DiagnosticSeverity.ERROR,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    message<span class="op">=</span><span class="st">"example failure"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    filename<span class="op">=</span><span class="st">"example.x"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    line<span class="op">=</span><span class="dv">3</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    column<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    code<span class="op">=</span><span class="st">"S001"</span>,</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> ArxError(<span class="st">"compilation failed"</span>, diagnostics<span class="op">=</span>[diagnostic])</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> ArxError <span class="im">as</span> error:</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> item <span class="kw">in</span> error.diagnostics:</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(item.message)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Use the <a href="../arx/compiler-cli.html">Arx CLI</a> for current end-to-end compilation. The <a href="../roadmap.html">roadmap</a> lists the compiler facade planned for ArxPy.</p>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> arxpy <span class="im">import</span> ArtifactKind, Compiler</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>compiler <span class="op">=</span> Compiler()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>parsed <span class="op">=</span> compiler.parse_file(<span class="st">"program.x"</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>checked <span class="op">=</span> compiler.check(parsed)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>artifact <span class="op">=</span> compiler.<span class="bu">compile</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    checked,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    kind<span class="op">=</span>ArtifactKind.EXECUTABLE,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    output<span class="op">=</span>Path(<span class="st">"build/program"</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> compiler.run(artifact, timeout<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result.exit_code, result.stdout, result.stderr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Expected failures expose structured diagnostics:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> arxpy <span class="im">import</span> ArxError, Compiler</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    Compiler().check(Compiler().parse_file(<span class="st">"program.x"</span>))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> ArxError <span class="im">as</span> error:</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> item <span class="kw">in</span> error.diagnostics:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(item.code, item.filename, item.line, item.column, item.message)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In-memory native compilation requires an explicit output path. File compilation defaults beside the source. No implicit persistent temporary directory is created. Compiler calls are safe to repeat and are serialized across instances because the current lexer reads a process-wide source buffer. Execution never uses a shell; a non-zero program exit is returned in <code>ExecutionResult</code> rather than raised. Command arguments must be supplied as a non-string sequence of strings; scalar <code>str</code> and <code>bytes</code> values are rejected.</p>
+<p>Use the <a href="../arx/compiler-cli.html">Arx CLI</a> for compiler test discovery and other CLI-specific workflows. The <a href="../roadmap.html">roadmap</a> tracks the remaining API stability work.</p>
 
 
 </section>

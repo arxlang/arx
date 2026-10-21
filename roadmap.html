@@ -35,7 +35,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./contributing.html" rel="next">
+<link href="./support-matrix.html" rel="next">
 <link href="./apache-arrow.html" rel="prev">
 <link href="./favicon.ico" rel="icon">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-6bdd8a9ea3ea165fec6b2ae93a120637.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-1a499eeb98a7c1c2a2f1eec793c3a263.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,8 +252,8 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="./images/arx.png" alt="ArxLang" class="navbar-logo dark-content">
+    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
+    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
     </a>
     <a class="navbar-brand" href="./index.html">
     <span class="navbar-title">ArxLang</span>
@@ -383,6 +383,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="./roadmap.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Roadmap</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./support-matrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Support Matrix</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -518,7 +524,7 @@ ul.task-list li input[type="checkbox"] {
 <li><label><input type="checkbox">Add <code>break</code> and <code>continue</code> to the Arx surface after aligning parser, ASTx, IRx, and documentation behavior.</label></li>
 <li><label><input type="checkbox">Expand string, temporal, and collection operations.</label></li>
 <li><label><input type="checkbox">Define constructor arguments and richer class lifecycle behavior.</label></li>
-<li><label><input type="checkbox">Implement the interactive <code>arx --shell</code> mode.</label></li>
+<li><label><input type="checkbox" checked="">Remove the unimplemented <code>arx --shell</code> option from the stable CLI. An interactive shell can return later as a separately designed feature.</label></li>
 <li><label><input type="checkbox">Grow the bundled pure-Arx standard library.</label></li>
 </ul>
 </section>
@@ -546,7 +552,8 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="arxjit">ArxJIT</h3>
 <ul class="task-list">
 <li><label><input type="checkbox">Connect source extraction and validation to <code>@jit</code>.</label></li>
-<li><label><input type="checkbox">Lower the accepted Python subset to ASTx.</label></li>
+<li><label><input type="checkbox" checked="">Add fail-closed ASTx lowering for the scalar function shell and straight-line literal, parameter, arithmetic, unary, and comparison expressions.</label></li>
+<li><label><input type="checkbox">Extend ASTx lowering to assignments and validated control flow.</label></li>
 <li><label><input type="checkbox">Compile and call native functions through IRx.</label></li>
 <li><label><input type="checkbox">Implement signature inference, runtime marshalling, and caching.</label></li>
 <li><label><input type="checkbox">Add Arrow-backed array and tensor signatures after scalar compilation is stable.</label></li>
@@ -992,8 +999,8 @@ ul.task-list li input[type="checkbox"] {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./contributing.html" class="pagination-link" aria-label="Contributing">
-        <span class="nav-page-text">Contributing</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./support-matrix.html" class="pagination-link" aria-label="Support Matrix">
+        <span class="nav-page-text">Support Matrix</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

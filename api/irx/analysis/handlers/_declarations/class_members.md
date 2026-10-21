@@ -23,6 +23,17 @@ title: Declaration class-member resolution helpers.
 
 #### Methods
 
+##### `resolve_class_structure_in_module(self, class_: SemanticClass) -> SemanticClass`
+
+```yaml
+title: Resolve structural members in the declaring module's namespace.
+parameters:
+  class_:
+    type: SemanticClass
+returns:
+  type: SemanticClass
+```
+
 ##### `visit(self, node: astx.ClassDefStmt) -> None`
 
 ```yaml
