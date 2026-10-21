@@ -21,7 +21,7 @@ website:
     limit: 8
     keyboard-shortcut: ["/", "s"]
   navbar:
-    logo: images/arx.png
+    logo: images/arx-logo-terracotta.png
     logo-alt: ArxLang
     pinned: true
     collapse-below: lg

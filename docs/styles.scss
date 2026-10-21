@@ -381,6 +381,13 @@ code:not(.sourceCode) {
   padding: clamp(4rem, 8vw, 7.5rem) clamp(1.25rem, 4vw, 3.5rem);
 }
 
+.arx-hero-logo {
+  display: block;
+  width: clamp(5rem, 10vw, 8rem);
+  height: auto;
+  margin-bottom: 1.25rem;
+}
+
 .arx-eyebrow,
 .arx-card-kicker {
   margin-bottom: 0.85rem;

@@ -15,6 +15,9 @@ sidebar: false
 <div class="arx-hero-inner">
 <div class="arx-hero-copy">
 
+<img class="arx-hero-logo" src="images/arx-logo-terracotta.png"
+     alt="ArxLang logo" width="1287" height="1222">
+
 <div class="arx-eyebrow">ArxLang</div>
 
 # ArxLang compiler ecosystem
