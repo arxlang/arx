@@ -197,6 +197,41 @@ def test_builtin_imports_and_aliases(declarations: str, call: str) -> None:
 
 
 @pytest.mark.parametrize(
+    "imports, target",
+    [
+        ("", "file"),
+        ("", "File"),
+        ("import File as Stream from builtins.files\n", "Stream"),
+    ],
+)
+def test_builtin_file_casts_fail_before_lowering(
+    imports: str, target: str
+) -> None:
+    """
+    title: >-
+      File identity casts are rejected through builtin spellings and aliases.
+    parameters:
+      imports:
+        type: str
+      target:
+        type: str
+    """
+    compiler = Compiler()
+    program = compiler.parse_string(
+        MODULE_DOC + imports + "fn main() -> i32:\n"
+        '  var stream: file = open("x")\n'
+        f"  var alias: {target} = cast(stream, {target})\n"
+        "  return 0\n"
+    )
+    with pytest.raises(CompileError) as failure:
+        compiler.check(program)
+    assert any(
+        "file casts are unsupported" in item.message
+        for item in failure.value.diagnostics
+    )
+
+
+@pytest.mark.parametrize(
     "body",
     [
         'var File: i32 = 1\nFile("x")',
@@ -235,6 +270,8 @@ def test_user_file_class_does_not_replace_lowercase_alias() -> None:
 fn main() -> i32:
   var custom: File = File()
   assert custom.value == 7
+  var alias: File = cast(custom, File)
+  assert alias == custom
   var stream: file = open("x", "w")
   stream.close()
   return 0

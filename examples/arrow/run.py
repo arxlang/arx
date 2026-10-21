@@ -205,7 +205,9 @@ def tcp(directory: Path) -> None:
             process = subprocess.Popen([str(binary)], cwd=directory)
             try:
                 connection, _ = server.accept()
-                with connection, connection.makefile("rwb", buffering=0) as io:
+                # Arrow needs full reads/writes; raw sockets may transfer less
+                # than requested. Closing this wrapper flushes before wait().
+                with connection, connection.makefile("rwb") as io:
                     connection.settimeout(30)
                     if direction == "send":
                         batches = list(pa.ipc.open_stream(io))

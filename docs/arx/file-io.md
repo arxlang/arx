@@ -78,6 +78,9 @@ references on ordinary lexical exits. The last reference releases the native
 wrapper once, even if the stream was explicitly closed earlier. Read strings own
 independent memory and can outlive the file. See [Classes](classes.md).
 
+Explicit casts to or from builtin `File`, including identity casts, remain
+unsupported. Use ordinary assignment to create an alias instead.
+
 Construction opens immediately: there is no public unopened constructor,
 instance `open()` method, reopening, or builtin subclassing. A default-empty
 `File` reference is not an unopened stream; dereferencing it raises the checked

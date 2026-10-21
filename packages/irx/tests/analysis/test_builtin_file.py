@@ -118,6 +118,54 @@ def test_native_class_requires_explicit_host_registration(
     assert "irx_file_release" in result
 
 
+@pytest.mark.parametrize(
+    "native_source, native_target",
+    [(True, True), (True, False), (False, True)],
+)
+def test_native_file_casts_are_rejected(
+    native_source: bool, native_target: bool
+) -> None:
+    """
+    title: Cast restrictions follow the registered class, not its spelling.
+    parameters:
+      native_source:
+        type: bool
+      native_target:
+        type: bool
+    """
+    declaration = file_declaration()
+    builtin = ParsedModule(
+        "host.streams",
+        make_module("host.streams", declaration),
+        native_file_class=declaration,
+    )
+    value = (
+        astx.FunctionCall("Factory", [astx.LiteralString("x")])
+        if native_source
+        else astx.LiteralInt64(0)
+    )
+    target = astx.ClassType("Factory") if native_target else astx.Int64()
+    body = astx.Block()
+    body.append(astx.Cast(value, target))
+    body.append(astx.FunctionReturn(astx.LiteralInt32(0)))
+    root = ParsedModule(
+        "main",
+        make_module(
+            "main",
+            astx.ImportFromStmt(
+                [astx.AliasExpr("NativeStream", asname="Factory")],
+                module="host.streams",
+            ),
+            astx.FunctionDef(
+                astx.FunctionPrototype("main", astx.Arguments(), astx.Int32()),
+                body,
+            ),
+        ),
+    )
+    with pytest.raises(SemanticError, match="file casts are unsupported"):
+        analyze_modules(root, StaticImportResolver({"host.streams": builtin}))
+
+
 def test_invalid_registration_inputs() -> None:
     """
     title: Host capabilities validate types and membership, not origin strings.

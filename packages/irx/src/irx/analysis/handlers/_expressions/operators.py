@@ -25,6 +25,7 @@ from irx.analysis.arrow_conversion import (
     resolve_arrow_cast,
     resolve_arrow_store,
 )
+from irx.analysis.builtin_file import reject_native_file_cast
 from irx.analysis.class_lifecycle import class_ownership, resolve_store
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -301,6 +302,8 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             return
         self._resolve_declared_type(node.target_type, node=node)
         if resolve_arrow_cast(cast(SemanticAnalyzerCore, self), node):
+            return
+        if reject_native_file_cast(cast(SemanticAnalyzerCore, self), node):
             return
         source_type = self._expr_type(node.value)
         target_type = cast(astx.DataType | None, node.target_type)
