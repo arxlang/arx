@@ -14,8 +14,8 @@ import astx
 
 from irx.analysis.module_interfaces import ImportResolutionError, ParsedModule
 
+from arx import arrow_stdlib, native_packages, package_index
 from arx import builtins as arx_builtins
-from arx import native_packages, package_index
 from arx import settings as arx_settings
 from arx.codegen import ArxBuilder
 from arx.exceptions import ArxError
@@ -826,10 +826,20 @@ class FileImportResolver:
 
         module_file = self._resolve_module_file(resolved_specifier)
         ArxIO.file_to_buffer(str(module_file))
-        module_ast = Parser().parse(Lexer().lex(), resolved_specifier)
+        module_ast = Parser().parse(
+            Lexer().lex(),
+            resolved_specifier,
+            builtin_types=arrow_stdlib.type_bindings()
+            if resolved_specifier == arrow_stdlib.MODULE_NAME
+            else None,
+        )
         module_ast = inject_ambient_builtin_imports(module_ast)
-        parsed_module = self.prepare_module(
-            module_ast, resolved_specifier, str(module_file)
+        parsed_module = (
+            arrow_stdlib.prepare_module(module_ast, str(module_file))
+            if resolved_specifier == arrow_stdlib.MODULE_NAME
+            else self.prepare_module(
+                module_ast, resolved_specifier, str(module_file)
+            )
         )
         self.cache[resolved_specifier] = parsed_module
         return parsed_module

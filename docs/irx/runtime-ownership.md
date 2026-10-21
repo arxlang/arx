@@ -54,7 +54,7 @@ metadata; it must not infer ownership again from AST shape.
 | Arrow Series/chunked array                  | C++ chunked-array handle                            | `irx_arrow_chunked_array_release`                                                   | Opaque owner                                                           | Define whether field selection returns an owned handle or borrow; test parent release ordering.          |
 | RecordBatch type descriptor                 | C++ allocated descriptor                            | `irx_type_release`                                                                  | Opaque owner                                                           | Keep local descriptor cleanup on every nested schema failure.                                            |
 | RecordBatch schema                          | C++ schema handle                                   | `irx_rb_schema_release`                                                             | Python wrapper owner                                                   | Partial-construction safety is implemented; add context-manager and explicit closed-state checks.        |
-| RecordBatch builder                         | C++ builder handle                                  | finish consumes native builder; wrapper release                                     | Python wrapper owner                                                   | Specify wrapper behavior after finish and reject reuse deterministically.                                |
+| RecordBatch builder                         | C++ builder handle                                  | finish resets column buffers; builder release                                       | Python wrapper owner                                                   | Specify wrapper behavior after finish and reject reuse deterministically.                                |
 | RecordBatch batch                           | C++ shared RecordBatch handle                       | `irx_rb_batch_release`                                                              | Python wrapper owner                                                   | Retain idempotent release and reject access after release.                                               |
 | RecordBatch stream writer                   | C++ writer and sink                                 | close plus `irx_rb_stream_writer_release`                                           | Python wrapper owner                                                   | Define close failure versus unconditional release; test both file and buffer errors.                     |
 | RecordBatch stream reader                   | C++ reader                                          | `irx_rb_stream_reader_close`                                                        | Python wrapper owner                                                   | Clarify whether close deletes the handle and make repeated close/access rules explicit.                  |
@@ -215,3 +215,33 @@ Class and string-field snapshots must survive later keyword/default effects.
 Public File method lowering consumes this same binding plan while retaining
 caller-side native status checks and locations. No new native ABI, implicit
 unwinding, cyclic ownership, or raw file-handle escape is introduced.
+
+## RecordBatch IPC and C sharing
+
+The native builder owns a schema snapshot, so its source schema may be released
+or modified independently. `finish()` transfers completed column buffers to an
+independent batch and leaves the builder reusable. Batch and reader schema
+snapshots retain the entire Arrow schema, including metadata and timezones.
+
+The `stdlib.arrow` classes own `IrxRbApi*` boxes in private opaque fields. Their
+ordinary class destructors destroy each box exactly once. `close()` releases the
+box's contained resource but keeps the box alive for aliases and repeated close.
+A closed object rejects value access. Writer destruction closes best-effort;
+call `close()` explicitly to observe flush/footer failures. Native errors in the
+checked facade terminate the process and do not promise stack unwinding.
+
+C Data exports and stream outputs retain buffers independently. Move imports
+consume the supplied C structs; failure can also consume them, so inspect the
+release pointer before cleanup. `irx_rb_stream_reader_export` transfers
+remaining iteration, leaving the old handle exhausted. The host owns outer C
+struct storage and must keep the producer library loaded. Guarded
+`irx_rb_c_*_release` can be repeated on allocated structs, but raw handle
+releases still free exactly once. These operations are not
+concurrent/thread-safe.
+
+IPC readers own file/socket resources; closing a reader does not invalidate a
+previously returned batch. Descriptor endpoints duplicate the host descriptor;
+the host must not interleave reads/writes on shared offsets. The transport reads
+one Arrow message/batch at a time. Native errors leave output handles
+unreadable; callers must check status before loading any output, even if a
+failure path currently clears it to null.

@@ -61,6 +61,7 @@ The current frontend supports:
 - restricted native UTF-8 text files with builtin `File` and its `open` adapter
 - fixed-shape numeric tensors and runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
+- runtime-schema RecordBatches, IPC and C Data/C Stream through `stdlib.arrow`
 - assertions and the compiled `arx test` runner
 - token, ASTx, LLVM IR, object, executable, and run modes
 

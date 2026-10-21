@@ -280,7 +280,7 @@ corresponding feature.
   <li>Tensors backed by <code>arrow::Tensor</code></li>
   <li>DataFrames backed by <code>arrow::Table</code></li>
   <li>Series backed by <code>arrow::ChunkedArray</code></li>
-  <li>RecordBatch IPC and PyArrow round trips</li>
+  <li>Compiled RecordBatch IPC, C Data/C Stream and TCP interoperability</li>
 </ul>
 </div>
 </div>

@@ -14,6 +14,7 @@ from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.main import FileImportResolver
 from arx.parser import Parser
+from irx.analysis.module_interfaces import ParsedModule
 from llvmlite import binding as llvm
 
 
@@ -290,3 +291,29 @@ def test_native_package_translate_verifies(tmp_path: Path) -> None:
     artifacts = builder.translator.runtime_features.native_artifacts()
     assert any(artifact.path.name == "fixture.c" for artifact in artifacts)
     assert 'declare external i64 @"fixture_create"' in text
+
+
+def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
+    """
+    title: Ordinary Arrow classes lower through registered IRx native bindings.
+    """
+    ArxIO.string_to_buffer(
+        "import (Schema, BatchBuilder) from stdlib.arrow\n"
+        "fn main() -> i32:\n"
+        "  var schema: Schema = Schema()\n"
+        '  schema.add("id", 3)\n'
+        "  var builder: BatchBuilder = BatchBuilder(schema)\n"
+        "  builder.append_i64(0, 42)\n"
+        "  return cast(builder.finish().nrows(), i32)\n"
+    )
+    module = Parser().parse(Lexer().lex(), "arrow_translate")
+    builder = ArxBuilder()
+    ir = builder.translate_modules(
+        ParsedModule("arrow_translate", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(ir).verify()
+    assert "irx_rb_api_builder_finish" in ir
+    assert "irx_rb_api_batch_destroy" in ir
+    assert "record_batch" in (
+        builder.translator.runtime_features.active_feature_names()
+    )

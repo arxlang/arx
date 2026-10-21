@@ -12,6 +12,7 @@ import astx
 import pytest
 
 from irx.builder import Builder
+from irx.diagnostics import SemanticError
 
 from .conftest import assert_ir_parses
 
@@ -281,3 +282,37 @@ def test_build_feature_backed_libm_extern_call(tmp_path: Path) -> None:
     result = builder.run(raise_on_error=False)
 
     assert result.returncode == EXPECTED_SQRT_EXIT_CODE
+
+
+def test_owned_ffi_string_contract_is_explicit() -> None:
+    """
+    title: An explicit malloc-owned string result lowers with scoped cleanup.
+    """
+    prototype = _extern_prototype("owned_text", return_type=astx.String())
+    setattr(prototype, "ffi_return_ownership", "owned")
+    module = _main_module(
+        astx.VariableDeclaration(
+            "text", astx.String(), value=astx.FunctionCall("owned_text", [])
+        )
+    )
+    module.block.insert(0, prototype)
+    builder = Builder()
+    result = builder.translate(module)
+    assert_ir_parses(result)
+    assert 'call void @"free"' in result
+
+
+@pytest.mark.parametrize("ownership", ["borrowed", 42, ["owned"]])
+def test_invalid_ffi_string_ownership_is_rejected(ownership: object) -> None:
+    """
+    title: Reject unsupported ownership contracts before lowering.
+    parameters:
+      ownership:
+        type: object
+    """
+    prototype = _extern_prototype("text", return_type=astx.String())
+    setattr(prototype, "ffi_return_ownership", ownership)
+    module = _main_module()
+    module.block.insert(0, prototype)
+    with pytest.raises(SemanticError, match="ffi_return_ownership"):
+        Builder().translate(module)

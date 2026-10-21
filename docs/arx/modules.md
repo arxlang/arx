@@ -154,7 +154,8 @@ the compiler and cannot be replaced by installed packages.
 Arx ships a first-party standard library namespace called `stdlib`.
 
 - `stdlib` is bundled inside the installed `arx` Python package
-- stdlib modules are written in pure Arx source
+- stdlib modules are written in Arx; `stdlib.arrow` also binds the registered
+  IRx RecordBatch native runtime
 - stdlib modules are resolved from the installed package location, not from the
   user project directory
 - local user modules are not allowed to shadow the reserved `stdlib` namespace
@@ -296,3 +297,9 @@ fn main() -> i32:
 
 For now, module docstrings are parsed and validated but ignored by AST/IR
 generation.
+
+`stdlib.arrow` exports `Schema`, `BatchBuilder`, `RecordBatch`, `IPCReader` and
+`IPCWriter`. It uses ordinary classes and nominal opaque native handles, not new
+keywords. See the [Arrow API and examples](../apache-arrow.md). Native bindings
+are supplied only for the bundled reserved module; a user module cannot gain
+these bindings merely by declaring matching handle type names.

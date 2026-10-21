@@ -37,6 +37,8 @@ include = [
   "LICENSE",
   "src/irx/py.typed",
   "src/irx/builder/runtime/**/*.c",
+  "src/irx/builder/runtime/**/*.cc",
+  "src/irx/builder/runtime/**/*.cpp",
   "src/irx/builder/runtime/**/*.h",
   "src/irx/builder/runtime/**/*.md",
   "src/irx/builder/runtime/**/LICENSE.txt",

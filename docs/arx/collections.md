@@ -1,7 +1,7 @@
 # Collections and Apache Arrow
 
-Arx currently exposes four related collection families with deliberately
-different semantics:
+Arx exposes four built-in collection families with deliberately different
+semantics:
 
 | Surface type     | Purpose                                            | Runtime representation                 |
 | ---------------- | -------------------------------------------------- | -------------------------------------- |
@@ -84,9 +84,18 @@ Rules:
 - `dataframe[...]` is accepted as a runtime-schema parameter type, but its
   columns cannot yet be accessed by name
 
-The lower-level IRx RecordBatch API already supports nullable, UTF-8, date,
-timestamp, and time columns. Those capabilities are not yet part of the Arx
-DataFrame language surface.
+For nullable, UTF-8, date, timestamp and time columns, import `Schema`,
+`BatchBuilder`, `RecordBatch`, `IPCReader` and `IPCWriter` from `stdlib.arrow`.
+These ordinary classes retain runtime Arrow schemas without weakening static
+DataFrame types. There is no implicit DataFrame/RecordBatch conversion.
+
+`IPCReader.next()` advances one batch; `batch()` and `schema()` return
+independent snapshots. `open_file` selects IPC file format, `open_stream`
+selects streaming format at a path, and `connect` exchanges IPC streaming bytes
+over TCP. Writers reject schema mismatches, including metadata and nullability.
+Check `is_null` before typed getters. Objects close on their last scoped
+reference; explicit `close()` is idempotent. See the
+[complete API and tested examples](../apache-arrow.md#compiled-arx-interoperability-stdlib.arrow).
 
 ## Runtime boundary
 

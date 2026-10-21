@@ -926,8 +926,6 @@ Tensor layering rules:
 
 Intentionally out of scope here:
 
-- the Arrow C Stream `ArrowArrayStream` interface (RecordBatch IPC file and
-  buffer streaming is implemented through the native RecordBatch bridge)
 - dataframe query semantics
 - compute kernels
 - nested, dictionary, decimal, and other general Arrow layouts (the RecordBatch
@@ -1036,3 +1034,27 @@ binds names before validation, overload matching, and template inference; Arx
 only preserves call syntax. Declaration defaults retain their original semantic
 resolution. Lowering must require this metadata rather than infer missing
 defaults from a positional prefix or reorder/mutate source AST operands.
+
+## RecordBatch interoperability and FFI-owned strings
+
+`stdlib.arrow` consists of ordinary class/call ASTx nodes and nominal
+`OpaqueHandleType` fields. The host supplies `NativeBinding` declarations for
+the existing `record_batch` feature; IRx resolves their ABI, symbols,
+conversions and class lifetimes before lowering. The frontend has no Arrow
+lowering code.
+
+Extern prototypes may explicitly declare `ffi_return_ownership="owned"` for a
+string result. Analysis validates this contract and records it in
+`FFICallableInfo.return_type.metadata["ownership"]`; incompatible redeclarations
+are rejected. The result must be a non-null, malloc-compatible, NUL-terminated
+UTF-8 allocation transferred to IRx, which uses normal owned-string cleanup.
+Unannotated external string calls remain rejected. Lowering consumes the
+resolved ownership sidecar, not the source annotation. This contract is used by
+the checked Arrow facade's copied string/schema inspection results.
+
+The native status ABI remains recoverable. The Arx facade checks status before
+reading output slots, reports `ARX-RUNTIME-ARROW-001` without fabricated source
+spans, and terminates on errors. Typed null reads, incompatible schemas and
+unsupported Arrow types fail explicitly. Native C Stream callbacks follow Arrow
+errno/EOS conventions rather than IRx status values. See
+[ownership](runtime-ownership.md) and [interoperability](../apache-arrow.md).
