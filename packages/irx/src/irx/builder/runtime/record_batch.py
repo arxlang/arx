@@ -33,6 +33,7 @@ from irx.builder.runtime.features import (
     declare_external_function,
 )
 from irx.builder.runtime.linking import compile_native_artifacts
+from irx.builder.runtime.record_batch_api import ARROW_API_SIGNATURES
 from irx.record_batch_abi import record_batch_library_path
 from irx.typecheck import typechecked
 
@@ -71,6 +72,29 @@ def _native_source() -> Path:
 # how the ``array`` feature declares its symbols.
 
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "irx_rb_file_writer_open": ("i32", ("p", "p", "p")),
+    "irx_rb_file_reader_open": ("i32", ("p", "p")),
+    "irx_rb_tcp_writer_open": ("i32", ("p", "p", "i32", "i32", "p")),
+    "irx_rb_tcp_reader_open": ("i32", ("p", "i32", "i32", "p")),
+    "irx_rb_fd_writer_open": ("i32", ("p", "i32", "p")),
+    "irx_rb_fd_reader_open": ("i32", ("i32", "p")),
+    "irx_rb_batch_schema": ("i32", ("p", "p")),
+    "irx_rb_schema_field": ("i32", ("p", "i32", "p", "p", "p")),
+    "irx_rb_schema_equal": ("i32", ("p", "p")),
+    "irx_rb_schema_export": ("i32", ("p", "p")),
+    "irx_rb_schema_import": ("i32", ("p", "p")),
+    "irx_rb_batch_export": ("i32", ("p", "p", "p")),
+    "irx_rb_batch_import": ("i32", ("p", "p", "p")),
+    "irx_rb_batch_export_stream": ("i32", ("p", "p")),
+    "irx_rb_stream_reader_import": ("i32", ("p", "p")),
+    "irx_rb_stream_reader_export": ("i32", ("p", "p")),
+    "irx_rb_c_stream_release": ("v", ("p",)),
+    "irx_rb_c_array_release": ("v", ("p",)),
+    "irx_rb_c_schema_release": ("v", ("p",)),
+    **ARROW_API_SIGNATURES,
+    "irx_rb_schema_clone": ("i32", ("p", "p")),
+    "irx_rb_batch_clone": ("i32", ("p", "p")),
+    "irx_rb_schema_type_name": ("i32", ("p", "i32", "p")),
     # Error reporting
     "irx_record_batch_errmsg": ("p", ()),
     "irx_record_batch_abi_version": ("i32", ()),
@@ -235,12 +259,27 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
     compile_flags = arrowcpp_compile_flags()
     include_dirs = (native_dir, *arrowcpp_include_dirs())
 
-    artifacts = (
+    artifacts = tuple(
         NativeArtifact(
             kind="cxx_source",
-            path=_native_source(),
+            path=source,
             include_dirs=include_dirs,
             compile_flags=compile_flags,
+        )
+        for source in (
+            _native_source(),
+            native_dir / "irx_arrow_transport.cc",
+            native_dir / "irx_record_batch_api.cc",
+        )
+    )
+
+    artifacts += (
+        NativeArtifact(
+            kind="c_source",
+            path=native_dir.parent.parent
+            / "errors"
+            / "native"
+            / "irx_error_runtime.c",
         ),
     )
 
@@ -349,6 +388,11 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
         path
         for path in _native_source_dir().iterdir()
         if path.suffix in {".cc", ".cpp", ".h"}
+    )
+    native_sources.extend(
+        artifact.path
+        for artifact in feature.artifacts
+        if artifact.path not in native_sources
     )
     for path in native_sources:
         digest.update(path.name.encode("utf-8"))

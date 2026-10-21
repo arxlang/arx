@@ -21,6 +21,7 @@ from irx.analysis.factories import (
 )
 from irx.analysis.ffi import (
     build_ffi_callable_info,
+    ffi_returns_owned_string,
     normalize_runtime_features,
 )
 from irx.analysis.module_interfaces import ModuleKey
@@ -303,6 +304,8 @@ class SemanticRegistry:
                 f"({lhs.required_runtime_features} vs "
                 f"{rhs.required_runtime_features})"
             )
+        if ffi_returns_owned_string(lhs) != ffi_returns_owned_string(rhs):
+            return "FFI string return ownership differs"
         if not same_type(lhs.return_type, rhs.return_type):
             return (
                 "return_type differs "
@@ -398,6 +401,8 @@ class SemanticRegistry:
             return False
         if lhs.required_runtime_features != rhs.required_runtime_features:
             return False
+        if ffi_returns_owned_string(lhs) != ffi_returns_owned_string(rhs):
+            return False
         if not same_type(lhs.return_type, rhs.return_type):
             return False
         if len(lhs.parameters) != len(rhs.parameters):
@@ -455,6 +460,12 @@ class SemanticRegistry:
             )
 
         is_extern = self._prototype_is_extern(prototype)
+        if not is_extern and getattr(prototype, "ffi_return_ownership", None):
+            self.context.diagnostics.add(
+                "ffi_return_ownership is valid only for extern declarations",
+                node=prototype,
+                code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+            )
         is_variadic = self._prototype_is_variadic(prototype)
         symbol_name = self._prototype_symbol_name(prototype)
         required_runtime_features = normalize_runtime_features(

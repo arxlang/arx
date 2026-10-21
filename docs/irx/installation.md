@@ -10,7 +10,7 @@ The distribution is named `pyirx`; Python code imports `irx`.
 
 IRx requires Python 3.10 or newer. Translation uses `llvmlite`. Native object
 and executable workflows require an LLVM/Clang-compatible toolchain, while
-Arrow-backed features additionally require a C++ compiler.
+Arrow-backed features additionally require a C++20 compiler.
 
 PyArrow and `arx-arrowcpp-sources` are installed dependencies. IRx uses their
 Arrow C++ include, source, library, and linker metadata for native runtime
@@ -52,3 +52,11 @@ collection instead of this standalone ctypes setup.
 IRx emits PIC-compatible objects by default for modern PIE-default linkers. If a
 downstream manual link still requires non-PIE output, pass the equivalent of
 `clang -no-pie` or use Arx's `--link-mode no-pie` option.
+
+The `record_batch` feature includes IPC file and stream formats, the C Data/C
+Stream bridge, checked Arx class adapters, and a POSIX TCP byte transport.
+Native source packaging includes these adapters; no separate service or Python
+serialization process is needed by a compiled executable. TCP is unavailable on
+Windows; file and C interface support do not require socket support. See the
+[interoperability guide](../apache-arrow.md) for supported types and executable
+examples.

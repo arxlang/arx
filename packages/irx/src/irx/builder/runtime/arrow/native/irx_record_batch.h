@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "irx_arrow_c_abi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -185,6 +186,46 @@ int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
                                      IrxRbBatch       **batch);
 const IrxRbSchema *irx_rb_stream_reader_schema(const IrxRbStreamReader *r);
 void irx_rb_stream_reader_close(IrxRbStreamReader *r);
+
+
+int irx_rb_schema_clone(const IrxRbSchema *, IrxRbSchema **);
+int irx_rb_batch_clone(const IrxRbBatch *, IrxRbBatch **);
+/* type_name is borrowed until the next call on this thread. */
+int irx_rb_schema_type_name(const IrxRbSchema *, int col, const char **);
+
+/* Additive ABI v1: file means Arrow IPC file format, stream means IPC streaming
+ * bytes. A reader owns its source; batches and schema snapshots outlive it.
+ * All output handles are caller-owned. No output may be read on failure.
+ * Writer schema matching includes metadata and field nullability. */
+int irx_rb_file_writer_open(const IrxRbSchema *, const char *, IrxRbStreamWriter **);
+int irx_rb_file_reader_open(const char *, IrxRbStreamReader **);
+int irx_rb_tcp_writer_open(const IrxRbSchema *, const char *, int port,
+                            int timeout_ms, IrxRbStreamWriter **);
+int irx_rb_tcp_reader_open(const char *, int port, int timeout_ms, IrxRbStreamReader **);
+int irx_rb_fd_writer_open(const IrxRbSchema *, int fd, IrxRbStreamWriter **);
+int irx_rb_fd_reader_open(int fd, IrxRbStreamReader **);
+int irx_rb_batch_schema(const IrxRbBatch *, IrxRbSchema **);
+/* field name is borrowed until schema release; equal includes all metadata. */
+int irx_rb_schema_field(const IrxRbSchema *, int col, const char **name,
+                          int *type, int *nullable);
+int irx_rb_schema_equal(const IrxRbSchema *, const IrxRbSchema *);
+
+/* C outputs must be zero-initialized or released. Exports retain buffers, not
+ * handles, and remain valid after releasing the original handle. Imports move
+ * the C input, including on some failures: call release only if still non-null.
+ * The caller owns the outer C structs. Never call a null release callback.
+ * reader_export transfers iteration to the C stream, leaving an EOF reader. */
+int irx_rb_schema_export(const IrxRbSchema *, struct ArrowSchema *);
+int irx_rb_schema_import(struct ArrowSchema *, IrxRbSchema **);
+int irx_rb_batch_export(const IrxRbBatch *, struct ArrowArray *, struct ArrowSchema *);
+int irx_rb_batch_import(struct ArrowArray *, struct ArrowSchema *, IrxRbBatch **);
+int irx_rb_batch_export_stream(const IrxRbBatch *, struct ArrowArrayStream *);
+int irx_rb_stream_reader_import(struct ArrowArrayStream *, IrxRbStreamReader **);
+int irx_rb_stream_reader_export(IrxRbStreamReader *, struct ArrowArrayStream *);
+/* Idempotent guards; do not pass a freed outer struct. */
+void irx_rb_c_stream_release(struct ArrowArrayStream *);
+void irx_rb_c_array_release(struct ArrowArray *);
+void irx_rb_c_schema_release(struct ArrowSchema *);
 
 #ifdef __cplusplus
 } /* extern "C" */

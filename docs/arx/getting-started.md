@@ -111,6 +111,20 @@ fn main() -> i32:
 The corresponding native runtime sources and linker inputs are included only
 when the compilation unit uses those features.
 
+## Exchange Arrow data with Python
+
+`stdlib.arrow` adds runtime-schema RecordBatches, IPC file/stream readers and
+writers, and TCP clients. No new language syntax or Python serialization is
+needed in the Arx producer. C++20 and the installed Arrow libraries are required
+at build/link time. From a checkout, run all compiled interoperability examples:
+
+```bash
+python examples/arrow/run.py --directory .tmp/arrow-demo
+```
+
+See the [Arrow interoperability guide](../apache-arrow.md) for schema types,
+nullable values, C Data/C Stream ownership and network limitations.
+
 ## Next steps
 
 - [Compiler CLI](compiler-cli.md)

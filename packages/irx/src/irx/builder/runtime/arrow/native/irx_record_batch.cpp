@@ -3,6 +3,8 @@
 #include "irx_record_batch.h"
 
 #include <arrow/api.h>
+#include <arrow/c/bridge.h>
+#include "irx_arrow_transport.h"
 #include <arrow/io/api.h>
 #include <arrow/ipc/api.h>
 #include <arrow/result.h>
@@ -215,7 +217,8 @@ struct IrxRbSchema_ {
 };
 
 struct IrxRbBuilder_ {
-    const IrxRbSchema_                        *schema_ref;
+    IrxRbSchema_ schema_snapshot;
+    const IrxRbSchema_ *schema_ref;
     std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders;
 };
 
@@ -230,6 +233,7 @@ struct IrxRbBatch_ {
 struct IrxRbStreamWriter_ {
     std::shared_ptr<arrow::io::OutputStream>   sink;
     std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
+    std::shared_ptr<arrow::Schema> schema;
     /* For buffer-based writers. */
     std::shared_ptr<arrow::io::BufferOutputStream> buf_sink;
     bool                                       closed{false};
@@ -238,7 +242,9 @@ struct IrxRbStreamWriter_ {
 };
 
 struct IrxRbStreamReader_ {
-    std::shared_ptr<arrow::ipc::RecordBatchStreamReader> reader;
+    std::shared_ptr<arrow::RecordBatchReader> reader;
+    std::shared_ptr<arrow::io::InputStream> source;
+    bool eof{false};
     /* Schema handle exposed to callers (not released by caller). */
     IrxRbSchema_                               schema_handle;
 };
@@ -342,14 +348,15 @@ make_builder(IrxColumnType t, arrow::MemoryPool *pool) {
 int irx_rb_builder_create(const IrxRbSchema *schema, IrxRbBuilder **out) {
     GUARD(schema); GUARD(out);
     auto *b = new IrxRbBuilder_();
-    b->schema_ref = schema;
+    b->schema_snapshot = *schema;
+    b->schema_ref = &b->schema_snapshot;
     auto *pool = arrow::default_memory_pool();
     for (int i = 0; i < (int)schema->col_types.size(); ++i) {
         std::unique_ptr<arrow::ArrayBuilder> bldr;
         if (schema->col_types[i] == IRX_COL_LIST ||
-            schema->col_types[i] == IRX_COL_STRUCT) {
-            /* Nested types are built straight from the Arrow field type so the
-             * child builders are wired up for us. */
+            schema->col_types[i] == IRX_COL_STRUCT ||
+            schema->schema->field(i)->type()->id() == arrow::Type::TIMESTAMP) {
+            /* Preserve nested fields and timestamp timezone parameters. */
             auto st = arrow::MakeBuilder(pool, schema->schema->field(i)->type(),
                                          &bldr);
             if (!st.ok()) {
@@ -785,6 +792,8 @@ int irx_rb_builder_append_null(IrxRbBuilder *b, int col) {
     GUARD(b);
     if (col < 0 || col >= (int)b->builders.size())
         return set_err("column index out of bounds", IRX_ERR_OOB);
+    if (!b->schema_ref->schema->field(col)->nullable())
+        return set_err("null in a non-nullable field", IRX_ERR_TYPE);
     auto st = b->builders[col]->AppendNull();
     if (!st.ok()) return set_err(st);
     return IRX_OK;
@@ -1121,6 +1130,7 @@ int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
     auto *w = new IrxRbStreamWriter_();
     w->sink   = sink;
     w->writer = *writer_result;
+    w->schema = schema->schema;
     *out = w;
     return IRX_OK;
 }
@@ -1140,6 +1150,7 @@ int irx_rb_stream_writer_open_buffer(const IrxRbSchema   *schema,
     w->buf_sink = buf_sink;
     w->sink     = buf_sink;
     w->writer   = *writer_result;
+    w->schema = schema->schema;
     *out = w;
     return IRX_OK;
 }
@@ -1148,6 +1159,10 @@ int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
                                       const IrxRbBatch  *batch) {
     GUARD(w); GUARD(batch);
     if (w->closed) return set_err("writer already closed", IRX_ERR_IO);
+    if (!w->schema->Equals(*batch->batch->schema(), true))
+        return set_err("batch schema mismatch (including metadata/nullability)", IRX_ERR_TYPE);
+    auto validation = batch->batch->ValidateFull();
+    if (!validation.ok()) return set_err(validation);
     auto st = w->writer->WriteRecordBatch(*batch->batch);
     if (!st.ok()) return set_err(st);
     return IRX_OK;
@@ -1192,33 +1207,57 @@ void irx_rb_stream_writer_release(IrxRbStreamWriter *w) {
     delete w;
 }
 
+// Arrow permits a physical EOF in place of an IPC end marker. Interop readers
+// require the marker so an interrupted transfer cannot look like success.
+class CheckedIpcInput final : public arrow::io::InputStream {
+ public:
+    explicit CheckedIpcInput(std::shared_ptr<arrow::io::InputStream> source)
+        : source_(std::move(source)) {}
+    arrow::Status Close() override { return source_->Close(); }
+    bool closed() const override { return source_->closed(); }
+    arrow::Result<int64_t> Tell() const override { return source_->Tell(); }
+    arrow::Result<int64_t> Read(int64_t n, void *out) override {
+        ARROW_ASSIGN_OR_RAISE(auto count, source_->Read(n, out));
+        if (n > 0 && count == 0)
+            return arrow::Status::IOError("truncated IPC stream: missing end marker");
+        return count;
+    }
+    arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t n) override {
+        ARROW_ASSIGN_OR_RAISE(auto buffer, source_->Read(n));
+        if (n > 0 && buffer->size() == 0)
+            return arrow::Status::IOError("truncated IPC stream: missing end marker");
+        return buffer;
+    }
+ private:
+    std::shared_ptr<arrow::io::InputStream> source_;
+};
+
+static int populate_schema(std::shared_ptr<arrow::Schema> schema,
+                           IrxRbSchema *out) {
+    IrxRbSchema result;
+    result.schema = schema;
+    for (const auto &field : schema->fields()) {
+        if (!classify_field(*field->type(), result.col_types, result.col_descs))
+            return set_err("unsupported Arrow field '" + field->name() +
+                           "': " + field->type()->ToString(), IRX_ERR_TYPE);
+    }
+    *out = std::move(result);
+    return IRX_OK;
+}
+
 static int open_stream_reader(std::shared_ptr<arrow::io::InputStream> stream,
                                IrxRbStreamReader **out) {
-    auto reader_result = arrow::ipc::RecordBatchStreamReader::Open(stream);
-    if (!reader_result.ok()) return set_err(reader_result.status());
-
-    auto *r = new IrxRbStreamReader_();
-    r->reader = *reader_result;
-
-    /* Populate the schema handle from the stream schema. */
-    auto arrow_schema = r->reader->schema();
-    r->schema_handle.schema       = arrow_schema;
+    *out = nullptr;
+    auto source = std::make_shared<CheckedIpcInput>(std::move(stream));
+    auto result = arrow::ipc::RecordBatchStreamReader::Open(source);
+    if (!result.ok()) return set_err(result.status());
+    auto r = std::make_unique<IrxRbStreamReader>();
+    r->source = source;
+    r->reader = *result;
+    int status = populate_schema(r->reader->schema(), &r->schema_handle);
+    if (status != IRX_OK) return status;
     r->schema_handle.reader_owned = true;
-    for (int i = 0; i < arrow_schema->num_fields(); ++i) {
-        auto &field = *arrow_schema->field(i);
-        if (!classify_field(*field.type(),
-                            r->schema_handle.col_types,
-                            r->schema_handle.col_descs)) {
-            delete r;
-            return set_err(
-                "stream column '" + field.name() + "' has type '" +
-                    field.type()->ToString() +
-                    "' which is not supported by this reader",
-                IRX_ERR_TYPE);
-        }
-    }
-
-    *out = r;
+    *out = r.release();
     return IRX_OK;
 }
 
@@ -1249,13 +1288,19 @@ int irx_rb_stream_reader_open_buffer(const uint8_t      *data,
 int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
                                      IrxRbBatch       **batch) {
     GUARD(r); GUARD(batch);
+    *batch = nullptr;
+    if (r->eof) return IRX_EOF;
     std::shared_ptr<arrow::RecordBatch> rb;
     auto st = r->reader->ReadNext(&rb);
     if (!st.ok()) return set_err(st);
     if (!rb) {
-        *batch = nullptr;
+        r->eof = true;
         return IRX_EOF;
     }
+    auto validation = rb->ValidateFull();
+    if (!validation.ok()) return set_err(validation);
+    if (!r->schema_handle.schema->Equals(*rb->schema(), true))
+        return set_err("batch schema mismatch", IRX_ERR_TYPE);
     auto *b = new IrxRbBatch_();
     b->batch          = std::move(rb);
     b->col_types      = r->schema_handle.col_types;
@@ -1270,5 +1315,243 @@ const IrxRbSchema *irx_rb_stream_reader_schema(const IrxRbStreamReader *r) {
 }
 
 void irx_rb_stream_reader_close(IrxRbStreamReader *r) {
+    if (!r) return;
+    if (r->reader) (void)r->reader->Close();
+    if (r->source) (void)r->source->Close();
     delete r;
+}
+
+// Additive ABI v1 interoperability entry points. Outputs must be fresh/released.
+int irx_rb_batch_schema(const IrxRbBatch *batch, IrxRbSchema **out) {
+    GUARD(out); *out = nullptr; GUARD(batch);
+    auto schema = std::make_unique<IrxRbSchema>();
+    int status = populate_schema(batch->batch->schema(), schema.get());
+    if (status != IRX_OK) return status;
+    *out = schema.release();
+    return IRX_OK;
+}
+int irx_rb_schema_field(const IrxRbSchema *schema, int col, const char **name,
+                        int *type, int *nullable) {
+    GUARD(schema); GUARD(name); GUARD(type); GUARD(nullable);
+    if (col < 0 || col >= schema->schema->num_fields())
+        return set_err("schema field index out of bounds", IRX_ERR_OOB);
+    if (schema->schema->field(col)->name().find('\0') != std::string::npos)
+        return set_err("embedded NUL in field name cannot be exposed as C text", IRX_ERR_TYPE);
+    *name = schema->schema->field(col)->name().c_str();
+    *type = schema->col_types[col];
+    *nullable = schema->schema->field(col)->nullable();
+    return IRX_OK;
+}
+int irx_rb_schema_equal(const IrxRbSchema *left, const IrxRbSchema *right) {
+    if (!left || !right) return IRX_ERR_NULLPTR;
+    return left->schema->Equals(*right->schema, true) ? 1 : 0;
+}
+// C schema names and timezone formats are NUL-terminated. IPC can preserve
+// embedded NUL here, but a C export must reject it rather than truncate it.
+static int check_c_fields(const arrow::FieldVector &fields) {
+    for (const auto &field : fields) {
+        if (field->name().find('\0') != std::string::npos)
+            return set_err("embedded NUL in field name cannot cross C Data", IRX_ERR_TYPE);
+        if (field->type()->id() == arrow::Type::TIMESTAMP) {
+            const auto &type = static_cast<const arrow::TimestampType &>(*field->type());
+            if (type.timezone().find('\0') != std::string::npos)
+                return set_err("embedded NUL in timezone cannot cross C Data", IRX_ERR_TYPE);
+        }
+        int status = check_c_fields(field->type()->fields());
+        if (status != IRX_OK) return status;
+    }
+    return IRX_OK;
+}
+
+int irx_rb_schema_export(const IrxRbSchema *schema, ArrowSchema *out) {
+    GUARD(schema); GUARD(out);
+    if (out->release) return set_err("output schema is not released", IRX_ERR_ARROW);
+    int valid = check_c_fields(schema->schema->fields());
+    if (valid != IRX_OK) return valid;
+    auto status = arrow::ExportSchema(*schema->schema, out);
+    return status.ok() ? IRX_OK : set_err(status);
+}
+int irx_rb_schema_import(ArrowSchema *schema, IrxRbSchema **out) {
+    GUARD(out); *out = nullptr; GUARD(schema);
+    if (!schema->release) return set_err("schema already released", IRX_ERR_ARROW);
+    auto result = arrow::ImportSchema(schema);
+    if (!result.ok()) return set_err(result.status());
+    auto handle = std::make_unique<IrxRbSchema>();
+    int status = populate_schema(*result, handle.get());
+    if (status != IRX_OK) return status;
+    *out = handle.release();
+    return IRX_OK;
+}
+int irx_rb_batch_export(const IrxRbBatch *batch, ArrowArray *array,
+                         ArrowSchema *schema) {
+    GUARD(batch); GUARD(array); GUARD(schema);
+    if (array->release || schema->release)
+        return set_err("C Data outputs must be released", IRX_ERR_ARROW);
+    int valid = check_c_fields(batch->batch->schema()->fields());
+    if (valid != IRX_OK) return valid;
+    auto status = arrow::ExportRecordBatch(*batch->batch, array, schema);
+    return status.ok() ? IRX_OK : set_err(status);
+}
+int irx_rb_batch_import(ArrowArray *array, ArrowSchema *schema, IrxRbBatch **out) {
+    GUARD(out); *out = nullptr; GUARD(array); GUARD(schema);
+    if (!array->release || !schema->release)
+        return set_err("C Data input already released", IRX_ERR_ARROW);
+    auto result = arrow::ImportRecordBatch(array, schema);
+    if (!result.ok()) return set_err(result.status());
+    auto validation = (*result)->ValidateFull();
+    if (!validation.ok()) return set_err(validation);
+    IrxRbSchema info;
+    int status = populate_schema((*result)->schema(), &info);
+    if (status != IRX_OK) return status;
+    auto batch = std::make_unique<IrxRbBatch>();
+    batch->batch = *result;
+    batch->col_types = std::move(info.col_types);
+    batch->col_descs = std::move(info.col_descs);
+    *out = batch.release();
+    return IRX_OK;
+}
+int irx_rb_batch_export_stream(const IrxRbBatch *batch, ArrowArrayStream *out) {
+    GUARD(batch); GUARD(out);
+    if (out->release) return set_err("output stream is not released", IRX_ERR_ARROW);
+    int valid = check_c_fields(batch->batch->schema()->fields());
+    if (valid != IRX_OK) return valid;
+    auto reader = arrow::RecordBatchReader::Make({batch->batch}, batch->batch->schema());
+    if (!reader.ok()) return set_err(reader.status());
+    auto status = arrow::ExportRecordBatchReader(*reader, out);
+    return status.ok() ? IRX_OK : set_err(status);
+}
+int irx_rb_stream_reader_import(ArrowArrayStream *stream, IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr; GUARD(stream);
+    if (!stream->release) return set_err("stream already released", IRX_ERR_ARROW);
+    auto reader = arrow::ImportRecordBatchReader(stream);
+    if (!reader.ok()) return set_err(reader.status());
+    auto result = std::make_unique<IrxRbStreamReader>();
+    result->reader = *reader;
+    int status = populate_schema(result->reader->schema(), &result->schema_handle);
+    if (status != IRX_OK) return status;
+    *out = result.release();
+    return IRX_OK;
+}
+int irx_rb_stream_reader_export(IrxRbStreamReader *reader, ArrowArrayStream *out) {
+    GUARD(reader); GUARD(out);
+    if (!reader->reader) return set_err("reader already transferred", IRX_ERR_IO);
+    if (out->release) return set_err("output stream is not released", IRX_ERR_ARROW);
+    int valid = check_c_fields(reader->schema_handle.schema->fields());
+    if (valid != IRX_OK) return valid;
+    auto status = arrow::ExportRecordBatchReader(reader->reader, out);
+    if (!status.ok()) return set_err(status);
+    reader->reader.reset();
+    reader->source.reset();
+    reader->eof = true;
+    return IRX_OK;
+}
+void irx_rb_c_stream_release(ArrowArrayStream *stream) {
+    if (stream && stream->release) stream->release(stream);
+}
+void irx_rb_c_array_release(ArrowArray *array) {
+    if (array && array->release) array->release(array);
+}
+void irx_rb_c_schema_release(ArrowSchema *schema) {
+    if (schema && schema->release) schema->release(schema);
+}
+
+class IpcFileReader final : public arrow::RecordBatchReader {
+ public:
+    IpcFileReader(std::shared_ptr<arrow::ipc::RecordBatchFileReader> reader,
+                  std::shared_ptr<arrow::io::RandomAccessFile> source)
+        : reader_(std::move(reader)), source_(std::move(source)) {}
+    std::shared_ptr<arrow::Schema> schema() const override { return reader_->schema(); }
+    arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch> *out) override {
+        if (index_ == reader_->num_record_batches()) { *out = nullptr; return arrow::Status::OK(); }
+        ARROW_ASSIGN_OR_RAISE(*out, reader_->ReadRecordBatch(index_));
+        ++index_;
+        return arrow::Status::OK();
+    }
+    arrow::Status Close() override { return source_->Close(); }
+ private:
+    std::shared_ptr<arrow::ipc::RecordBatchFileReader> reader_;
+    std::shared_ptr<arrow::io::RandomAccessFile> source_;
+    int index_{0};
+};
+int irx_rb_file_reader_open(const char *path, IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr; GUARD(path);
+    auto source = arrow::io::ReadableFile::Open(path);
+    if (!source.ok()) return set_err(source.status(), IRX_ERR_IO);
+    auto reader = arrow::ipc::RecordBatchFileReader::Open(*source);
+    if (!reader.ok()) return set_err(reader.status());
+    auto r = std::make_unique<IrxRbStreamReader>();
+    r->reader = std::make_shared<IpcFileReader>(*reader, *source);
+    r->source = *source;
+    int status = populate_schema(r->reader->schema(), &r->schema_handle);
+    if (status != IRX_OK) return status;
+    *out = r.release();
+    return IRX_OK;
+}
+static int open_writer(const IrxRbSchema *schema,
+                        std::shared_ptr<arrow::io::OutputStream> sink,
+                        bool file_format, IrxRbStreamWriter **out) {
+    auto result = file_format ? arrow::ipc::MakeFileWriter(sink, schema->schema)
+                              : arrow::ipc::MakeStreamWriter(sink, schema->schema);
+    if (!result.ok()) return set_err(result.status());
+    auto w = std::make_unique<IrxRbStreamWriter>();
+    w->sink = std::move(sink);
+    w->writer = *result;
+    w->schema = schema->schema;
+    *out = w.release();
+    return IRX_OK;
+}
+int irx_rb_file_writer_open(const IrxRbSchema *schema, const char *path,
+                             IrxRbStreamWriter **out) {
+    GUARD(out); *out = nullptr; GUARD(schema); GUARD(path);
+    auto sink = arrow::io::FileOutputStream::Open(path);
+    if (!sink.ok()) return set_err(sink.status(), IRX_ERR_IO);
+    return open_writer(schema, *sink, true, out);
+}
+int irx_rb_tcp_reader_open(const char *host, int port, int timeout_ms,
+                            IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr;
+    auto source = irx::tcp_input(host, port, timeout_ms);
+    if (!source.ok()) return set_err(source.status(), IRX_ERR_IO);
+    return open_stream_reader(*source, out);
+}
+int irx_rb_tcp_writer_open(const IrxRbSchema *schema, const char *host,
+                            int port, int timeout_ms, IrxRbStreamWriter **out) {
+    GUARD(out); *out = nullptr; GUARD(schema);
+    auto sink = irx::tcp_output(host, port, timeout_ms);
+    if (!sink.ok()) return set_err(sink.status(), IRX_ERR_IO);
+    return open_writer(schema, *sink, false, out);
+}
+int irx_rb_fd_reader_open(int fd, IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr;
+    auto source = irx::fd_input(fd);
+    if (!source.ok()) return set_err(source.status(), IRX_ERR_IO);
+    return open_stream_reader(*source, out);
+}
+int irx_rb_fd_writer_open(const IrxRbSchema *schema, int fd,
+                           IrxRbStreamWriter **out) {
+    GUARD(out); *out = nullptr; GUARD(schema);
+    auto sink = irx::fd_output(fd);
+    if (!sink.ok()) return set_err(sink.status(), IRX_ERR_IO);
+    return open_writer(schema, *sink, false, out);
+}
+int irx_rb_schema_clone(const IrxRbSchema *schema, IrxRbSchema **out) {
+    GUARD(out); *out = nullptr; GUARD(schema);
+    *out = new IrxRbSchema(*schema);
+    return IRX_OK;
+}
+int irx_rb_batch_clone(const IrxRbBatch *batch, IrxRbBatch **out) {
+    GUARD(out); *out = nullptr; GUARD(batch);
+    *out = new IrxRbBatch(*batch);
+    return IRX_OK;
+}
+int irx_rb_schema_type_name(const IrxRbSchema *schema, int col, const char **out) {
+    GUARD(schema); GUARD(out);
+    if (col < 0 || col >= schema->schema->num_fields())
+        return set_err("schema field index out of bounds", IRX_ERR_OOB);
+    static thread_local std::string name;
+    name = schema->schema->field(col)->type()->ToString();
+    if (name.find('\0') != std::string::npos)
+        return set_err("embedded NUL in type name cannot be exposed as C text", IRX_ERR_TYPE);
+    *out = name.c_str();
+    return IRX_OK;
 }

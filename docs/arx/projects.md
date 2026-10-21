@@ -73,7 +73,7 @@ Relative imports require the `from` form. Plain `import .area` is not supported.
 The resolver checks local project modules before installed Arx packages. The
 compiler reserves:
 
-- `stdlib` for bundled pure-Arx modules
+- `stdlib` for bundled Arx modules, including native-backed Arrow APIs
 - `builtins` for compiler-injected source modules
 
 ```arx

@@ -18,6 +18,7 @@ import astx
 
 from irx.analysis.call_arguments import call_evaluations
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
+from irx.analysis.ffi import ffi_returns_owned_string
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -120,10 +121,15 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         elif is_string_type(result_type):
             call = getattr(self._semantic(node), "resolved_call", None)
             callee = getattr(getattr(call, "callee", None), "function", None)
-            if callee is not None and callee.definition is None:
+            if (
+                callee is not None
+                and callee.definition is None
+                and not ffi_returns_owned_string(callee.signature)
+            ):
                 self.context.diagnostics.add(
                     "external string-returning calls require an explicit "
-                    "ownership ABI, which is not supported yet",
+                    "ownership ABI; declare ffi_return_ownership='owned' "
+                    "only for malloc-owned UTF-8 results",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )

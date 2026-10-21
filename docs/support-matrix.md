@@ -74,3 +74,18 @@ Before any row becomes supported rather than a release candidate, it needs:
 
 Passing on an unlisted platform is useful feedback but is not evidence of
 project support.
+
+## Arrow interoperability qualification
+
+The Arx/IRx package suites include standalone IPC file/stream exchange,
+runtime-schema preservation, C Data/C Stream ownership, and compiled TCP
+producer/consumer tests against PyArrow 24.x. `examples/arrow/run.py` exercises
+the same public API. TCP requires POSIX sockets and trusted numeric-address
+peers; a sandbox-denied socket test is explicitly skipped, not counted as a
+successful interoperability run. C++20 is required for the Arrow build.
+
+The standalone `packages/irx/tests/native/arrow_interop.cpp` harness can be
+built with AddressSanitizer/UndefinedBehaviorSanitizer. LeakSanitizer
+additionally requires an environment that permits its process inspection.
+Neither functional tests nor a sanitizer run with leak detection disabled prove
+absence of leaks.

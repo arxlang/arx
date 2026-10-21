@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import importlib
 
+from dataclasses import replace
 from typing import Iterable, cast
 
 import astx
+
+from public import public
 
 from irx.analysis.context import SemanticContext
 from irx.analysis.resolved_nodes import (
@@ -137,6 +140,23 @@ def normalize_runtime_features(
     return tuple(normalized)
 
 
+@public
+@typechecked
+def ffi_returns_owned_string(signature: FunctionSignature) -> bool:
+    """
+    title: Read the validated malloc-owned native string result contract.
+    parameters:
+      signature:
+        type: FunctionSignature
+    returns:
+      type: bool
+    """
+    return (
+        signature.ffi is not None
+        and signature.ffi.return_type.metadata.get("ownership") == "owned"
+    )
+
+
 @typechecked
 def _display_type_name(type_: astx.DataType) -> str:
     """
@@ -170,6 +190,16 @@ def build_ffi_callable_info(
       type: FFICallableInfo | None
     """
     start_count = len(context.diagnostics.diagnostics)
+    ownership = getattr(prototype, "ffi_return_ownership", None)
+    if ownership is not None and (
+        ownership != "owned" or not is_string_type(signature.return_type)
+    ):
+        context.diagnostics.add(
+            "ffi_return_ownership requires an extern string result and "
+            "the value 'owned' (malloc-compatible UTF-8)",
+            node=prototype,
+            code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
+        )
     parameter_types: list[FFITypeInfo] = []
     for parameter in signature.parameters:
         info = _classify_ffi_type(
@@ -199,6 +229,12 @@ def build_ffi_callable_info(
         or return_type is None
     ):
         return None
+
+    if ownership == "owned":
+        return_type = replace(
+            return_type,
+            metadata={**return_type.metadata, "ownership": "owned"},
+        )
 
     link_strategy = (
         FFILinkStrategy.RUNTIME_FEATURES
@@ -442,4 +478,8 @@ def _resolve_struct(
     return context.get_struct(struct_type.module_key, lookup_name)
 
 
-__all__ = ["build_ffi_callable_info", "normalize_runtime_features"]
+__all__ = [
+    "build_ffi_callable_info",
+    "ffi_returns_owned_string",
+    "normalize_runtime_features",
+]
