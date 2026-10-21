@@ -421,3 +421,33 @@ void irx_rb_api_reader_import(IrxRbApiReader *box, int64_t address) {
         &reader));
     box->reset(reader);
 }
+
+void irx_rb_api_reader_csv_as(IrxRbApiReader *box, const char *path, IrxRbApiSchema *schema,
+                              const char *delimiter, int32_t header, int32_t block_size) {
+    if (box->value) fail("close CSV reader before reopening");
+    IrxRbStreamReader *result = nullptr;
+    checked(irx_rb_csv_reader_open(path, schema ? schema->get() : nullptr,
+                                  delimiter, header, block_size, &result));
+    box->reset(result);
+}
+void irx_rb_api_reader_csv(IrxRbApiReader *box, const char *path,
+                           const char *delimiter, int32_t header, int32_t block_size) {
+    irx_rb_api_reader_csv_as(box, path, nullptr, delimiter, header, block_size);
+}
+void irx_rb_api_writer_csv(IrxRbApiWriter *box, const char *path,
+                           const char *delimiter, int32_t header) {
+    if (box->value) fail("close CSV writer before reopening");
+    IrxRbStreamWriter *result = nullptr;
+    checked(irx_rb_csv_writer_open(box->schema.get(), path, delimiter, header, &result));
+    box->reset(result);
+}
+irx_arrow_table_handle *irx_rb_api_batch_to_table(IrxRbApiBatch *box, IrxRbApiSchema *schema) {
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_batch_to_table(box->get(), schema->get(), &result));
+    return result;
+}
+void irx_rb_api_table_to_batch(irx_arrow_table_handle *table, IrxRbApiBatch *out) {
+    IrxRbBatch *batch = nullptr;
+    checked(irx_rb_table_to_batch(table, &batch));
+    out->reset(batch);
+}

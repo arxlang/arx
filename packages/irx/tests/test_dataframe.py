@@ -284,3 +284,52 @@ def test_dataframe_build_releases_accessed_series_and_returns_ncols() -> None:
     assert result.returncode == EXPECTED_ROW_OR_COLUMN_COUNT, (
         result.stderr or result.stdout
     )
+
+
+def test_explicit_arrow_lifetime_and_scoped_aliases() -> None:
+    """
+    title: >-
+      Explicit retain/release pairs preserve live bindings and scoped aliases.
+    """
+    module = make_main_module(
+        _declare_dataframe(),
+        astx.DataFrameRetain(astx.Identifier("rows")),
+        astx.DataFrameRelease(astx.Identifier("rows")),
+        astx.VariableDeclaration(
+            name="alias",
+            type_=_dataframe_type(),
+            value=astx.Identifier("rows"),
+        ),
+        astx.DataFrameRelease(astx.Identifier("rows")),
+        astx.DataFrameRelease(astx.Identifier("rows")),
+        astx.FunctionReturn(
+            astx.Cast(
+                astx.DataFrameRowCount(astx.Identifier("alias")), astx.Int32()
+            )
+        ),
+    )
+    assert_ir_parses(Builder().translate(module))
+    result = build_and_run(Builder(), module)
+    assert result.returncode == EXPECTED_ROW_OR_COLUMN_COUNT
+
+
+def test_dataframe_identity_cast_keeps_temporary_owner() -> None:
+    """
+    title: >-
+      A redundant cast borrows until its caller acquires an independent owner.
+    """
+    type_ = _dataframe_type()
+    module = make_main_module(
+        astx.VariableDeclaration(
+            name="rows",
+            type_=type_,
+            value=astx.Cast(_dataframe_literal(type_), type_),
+        ),
+        astx.FunctionReturn(
+            astx.Cast(
+                astx.DataFrameRowCount(astx.Identifier("rows")), astx.Int32()
+            )
+        ),
+    )
+    result = build_and_run(Builder(), module)
+    assert result.returncode == EXPECTED_ROW_OR_COLUMN_COUNT

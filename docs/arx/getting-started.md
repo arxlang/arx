@@ -152,3 +152,10 @@ aliases share identity, and final reference release runs the destructor and
 releases owned string/file/class fields. Cycles and owned
 containers/globals/generator captures are deliberately excluded. See
 [Classes](classes.md) and `examples/class-lifecycle.x` for the complete slice.
+
+## Load tabular data
+
+For CSV, use the native `CSVReader` and `CSVWriter` from `stdlib.arrow`.
+[CSV files and DataFrames](csv.md) shows streaming every batch and checked
+conversion into a static numeric/Boolean DataFrame. Unsupported DataFrame types
+can remain in RecordBatches; strings and nulls are not silently discarded.

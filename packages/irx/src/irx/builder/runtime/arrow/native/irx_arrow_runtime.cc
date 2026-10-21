@@ -1835,4 +1835,45 @@ const char* irx_arrow_last_error(void) {
   return last_error;
 }
 
+int irx_arrow_table_import_batch(ArrowArray* array, ArrowSchema* schema,
+                                 irx_arrow_table_handle** out_table) {
+  clear_error();
+  if (!out_table) return set_error(EINVAL, "out_table must not be NULL");
+  *out_table = nullptr;
+  if (!array || !schema) return set_error(EINVAL, "C Data input must not be NULL");
+  try {
+    auto batch = arrow::ImportRecordBatch(array, schema);
+    if (!batch.ok()) return set_error(EINVAL, "%s", batch.status().ToString().c_str());
+    auto valid = (*batch)->ValidateFull();
+    if (!valid.ok()) return set_error(EINVAL, "%s", valid.ToString().c_str());
+    auto table = arrow::Table::FromRecordBatches({*batch});
+    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    auto result = std::make_unique<irx_arrow_table_handle>();
+    result->refcount = kInitialRefcount;
+    result->table = *table;
+    *out_table = result.release();
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_import_batch", error);
+  }
+}
+
+int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
+                                 ArrowArray* array, ArrowSchema* schema) {
+  clear_error();
+  if (!table || !table->table || !array || !schema)
+    return set_error(EINVAL, "table and C Data outputs must not be NULL");
+  if (array->release || schema->release)
+    return set_error(EINVAL, "C Data outputs must be released before export");
+  try {
+    auto batch = table->table->CombineChunksToBatch();
+    if (!batch.ok()) return set_error(EINVAL, "%s", batch.status().ToString().c_str());
+    auto status = arrow::ExportRecordBatch(**batch, array, schema);
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_export_batch", error);
+  }
+}
+
 }  // extern "C"

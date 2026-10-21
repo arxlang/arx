@@ -16,6 +16,7 @@ import astx
 
 from astx.types import AnyType as AstxAnyType
 
+from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.class_lifecycle import (
     CONTEXT_ENTER_HOOK,
     CONTEXT_EXIT_HOOK,
@@ -78,6 +79,16 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if node.value is None:
             return
         return_type = self.context.current_function.signature.return_type
+        if isinstance(return_type, astx.DataFrameType | astx.SeriesType):
+            self._set_resource_ownership(
+                node,
+                arrow_ownership(
+                    return_type,
+                    OwnershipKind.OWNED,
+                    transfer=OwnershipTransferKind.COPY,
+                ),
+            )
+            return
         if isinstance(return_type, astx.ClassType):
             self._set_resource_ownership(
                 node,

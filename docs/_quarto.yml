@@ -131,6 +131,8 @@ website:
               href: arx/built-in-types.md
             - text: Collections and Arrow
               href: arx/collections.md
+            - text: CSV and DataFrames
+              href: arx/csv.md
             - text: Control Flow
               href: arx/control-flow.md
             - text: Docstrings

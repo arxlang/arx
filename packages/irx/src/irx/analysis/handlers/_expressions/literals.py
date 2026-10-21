@@ -16,6 +16,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.arrow_conversion import contains_arrow
 from irx.analysis.class_lifecycle import contains_class
 from irx.analysis.collections import (
     collection_contains_types,
@@ -231,10 +232,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.AST
         """
-        if contains_class(self._expr_type(node)):
+        if contains_class(self._expr_type(node)) or contains_arrow(
+            self._expr_type(node)
+        ):
             self.context.diagnostics.add(
-                "class references inside containers/generators "
-                "are unsupported",
+                ("class" if contains_class(self._expr_type(node)) else "Arrow")
+                + " references inside containers/generators are unsupported",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
@@ -727,7 +730,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ListCreate
         """
         self._set_type(node, node.type_)
-        if contains_class(node.element_type):
+        if contains_class(node.element_type) or contains_arrow(
+            node.element_type
+        ):
             self.reject_class_element(node)
         if isinstance(node.element_type, astx.ListType):
             self.context.diagnostics.add(

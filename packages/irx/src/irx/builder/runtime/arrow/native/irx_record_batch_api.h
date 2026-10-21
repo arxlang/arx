@@ -15,6 +15,14 @@ typedef struct IrxRbApiBatch IrxRbApiBatch;
 typedef struct IrxRbApiBuilder IrxRbApiBuilder;
 typedef struct IrxRbApiReader IrxRbApiReader;
 typedef struct IrxRbApiWriter IrxRbApiWriter;
+void irx_rb_api_reader_csv(IrxRbApiReader *box, const char *path,
+                           const char *delimiter, int32_t header, int32_t block_size);
+void irx_rb_api_reader_csv_as(IrxRbApiReader *box, const char *path, IrxRbApiSchema *schema,
+                              const char *delimiter, int32_t header, int32_t block_size);
+void irx_rb_api_writer_csv(IrxRbApiWriter *box, const char *path,
+                           const char *delimiter, int32_t header);
+struct irx_arrow_table_handle *irx_rb_api_batch_to_table(IrxRbApiBatch *box, IrxRbApiSchema *schema);
+void irx_rb_api_table_to_batch(struct irx_arrow_table_handle *table, IrxRbApiBatch *out);
 IrxRbApiSchema *irx_rb_api_schema_new(void);
 IrxRbApiBatch *irx_rb_api_batch_new(void);
 IrxRbApiReader *irx_rb_api_reader_new(void);

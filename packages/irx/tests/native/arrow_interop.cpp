@@ -1,8 +1,10 @@
 // Copyright IRx contributors. Standalone ASan/LSan interoperability harness.
 #include "irx_record_batch.h"
+#include "irx_arrow_runtime.h"
 #include <cassert>
 
-int main() {
+int main(int argc, char **argv) {
+    assert(argc == 2);
     for (int iteration = 0; iteration < 100; ++iteration) {
         IrxRbSchema *schema = nullptr;
         assert(irx_rb_schema_create(&schema) == IRX_OK);
@@ -17,6 +19,38 @@ int main() {
         IrxRbBatch *batch = nullptr;
         assert(irx_rb_builder_finish(builder, &batch) == IRX_OK);
         irx_rb_builder_release(builder);
+        IrxRbSchema *expected = nullptr;
+        assert(irx_rb_schema_create(&expected) == IRX_OK);
+        assert(irx_rb_schema_add_field(expected, "id", IRX_COL_INT64, 0) == IRX_OK);
+        irx_arrow_table_handle *table = nullptr;
+        // Null-bearing input must fail without publishing or consuming input.
+        assert(irx_rb_batch_to_table(batch, expected, &table) < 0 && !table);
+        IrxRbBuilder *numbers = nullptr;
+        assert(irx_rb_builder_create(expected, &numbers) == IRX_OK);
+        assert(irx_rb_builder_append_int64(numbers, 0, 42) == IRX_OK);
+        IrxRbBatch *single = nullptr;
+        assert(irx_rb_builder_finish(numbers, &single) == IRX_OK);
+        irx_rb_builder_release(numbers);
+        assert(irx_rb_batch_to_table(single, expected, &table) == IRX_OK);
+        irx_rb_batch_release(single);
+        assert(irx_rb_table_to_batch(table, &single) == IRX_OK);
+        irx_arrow_table_release(table);
+        IrxRbStreamWriter *csv_writer = nullptr;
+        assert(irx_rb_csv_writer_open(expected, argv[1], ",", 1, &csv_writer) == IRX_OK);
+        irx_rb_schema_release(expected);
+        assert(irx_rb_stream_writer_write_batch(csv_writer, single) == IRX_OK);
+        irx_rb_batch_release(single);
+        assert(irx_rb_stream_writer_close(csv_writer) == IRX_OK);
+        irx_rb_stream_writer_release(csv_writer);
+        IrxRbStreamReader *csv_reader = nullptr;
+        assert(irx_rb_csv_reader_open(argv[1], nullptr, ",", 1, 1024, &csv_reader) == IRX_OK);
+        assert(irx_rb_stream_reader_next_batch(csv_reader, &single) == IRX_OK);
+        irx_rb_stream_reader_close(csv_reader);
+        int64_t csv_value = 0;
+        assert(irx_rb_batch_get_int64(single, 0, 0, &csv_value) == IRX_OK);
+        assert(csv_value == 42);
+        irx_rb_batch_release(single);
+
         ArrowArrayStream stream{};
         assert(irx_rb_batch_export_stream(batch, &stream) == IRX_OK);
         irx_rb_batch_release(batch);

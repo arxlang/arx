@@ -10,6 +10,7 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     CallingConvention,
@@ -70,7 +71,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         if ownership.resource_kind is ResourceKind.STRING:
             self._register_owned_string_temporary(node, result)
             return
-        if ownership.resource_kind is ResourceKind.CLASS:
+        if ownership.resource_kind in {ResourceKind.CLASS, *ARROW_RESOURCES}:
             self.class_cleanup(node, result)
             return
         if ownership.resource_kind is not ResourceKind.LIST:
@@ -920,7 +921,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     ownership = resource_ownership(argument)
                     if (
                         ownership is not None
-                        and ownership.resource_kind is ResourceKind.CLASS
+                        and ownership.resource_kind
+                        in {ResourceKind.CLASS, *ARROW_RESOURCES}
                         and ownership.kind is OwnershipKind.OWNED
                     ):
                         self.class_acquire(argument, llvm_arg)
@@ -1009,10 +1011,10 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             target_type=return_resolution.expected_type,
         )
         return_ownership = resource_ownership(node)
-        if (
-            return_ownership is not None
-            and return_ownership.resource_kind is ResourceKind.CLASS
-        ):
+        if return_ownership is not None and return_ownership.resource_kind in {
+            ResourceKind.CLASS,
+            *ARROW_RESOURCES,
+        }:
             self.class_operation(node, "retain", retval)
         if (
             return_ownership is not None

@@ -33,6 +33,7 @@ from astx.binary_op import (
 )
 from llvmlite import ir
 
+from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.resolved_nodes import OwnershipTransferKind, ResourceKind
 from irx.analysis.types import common_numeric_type, is_string_type
 from irx.builder.core import (
@@ -567,7 +568,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         if (
             managed is not None
             and managed.resource_kind
-            in {ResourceKind.CLASS, ResourceKind.FILE}
+            in {ResourceKind.CLASS, ResourceKind.FILE, *ARROW_RESOURCES}
         ) or (semantic is not None and semantic.lifecycle_field_store):
             address = self._lvalue_address(var_lhs)
             self.visit_child(node.rhs)
@@ -582,13 +583,23 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 target_type=self._resolved_ast_type(node),
             )
             assert managed is not None
-            if managed.resource_kind is ResourceKind.CLASS:
+            if managed.resource_kind in {ResourceKind.CLASS, *ARROW_RESOURCES}:
                 value = self.class_acquire(node, value)
                 previous = self._llvm.ir_builder.load(address)
                 # A failing release still consumes the old reference. Publish
                 # the new generation before checked rollback can revisit it.
                 self._llvm.ir_builder.store(value, address)
-                self.class_operation(node, "release", previous)
+                if managed.resource_kind in ARROW_RESOURCES:
+                    assert managed.owner_symbol_id is not None
+                    self.arrow_release_binding(
+                        node, previous, managed.owner_symbol_id
+                    )
+                    count = self.arrow_reference_count(managed.owner_symbol_id)
+                    self._llvm.ir_builder.store(
+                        ir.Constant(ir.IntType(64), 1), count
+                    )
+                else:
+                    self.class_operation(node, "release", previous)
             elif managed.resource_kind is ResourceKind.STRING:
                 if managed.transfer_kind is OwnershipTransferKind.COPY:
                     value = self._copy_string_to_heap(node, value)
@@ -596,7 +607,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 self._llvm.ir_builder.call(
                     free, [self._llvm.ir_builder.load(address)]
                 )
-            if managed.resource_kind is not ResourceKind.CLASS:
+            if managed.resource_kind not in {
+                ResourceKind.CLASS,
+                *ARROW_RESOURCES,
+            }:
                 self._llvm.ir_builder.store(value, address)
             self.result_stack.append(value)
             return

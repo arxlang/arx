@@ -10,12 +10,19 @@ summary: >-
 
 from __future__ import annotations
 
+from dataclasses import replace
+from typing import cast
+
 import astx
 
+from irx.analysis.arrow_conversion import arrow_ownership
+from irx.analysis.class_lifecycle import lifecycle_error
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.ownership import resource_ownership
+from irx.analysis.resolved_nodes import OwnershipKind, OwnershipTransferKind
 from irx.analysis.validation import validate_assignment
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
@@ -119,6 +126,19 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = column.type_
         self._semantic(node).extras[SERIES_NULLABLE_EXTRA] = column.nullable
         self._set_type(node, node.type_)
+        function = self.context.current_function
+        if (
+            function is None
+            or function.signature.metadata.get("generator") is not None
+        ):
+            lifecycle_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "Arrow values require a non-generator function",
+            )
+        self._set_resource_ownership(
+            node, arrow_ownership(node.type_, OwnershipKind.OWNED)
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameLiteral) -> None:
@@ -201,6 +221,19 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
 
         self._set_dataframe_schema(node, schema)
         self._set_type(node, node.type_)
+        function = self.context.current_function
+        if (
+            function is None
+            or function.signature.metadata.get("generator") is not None
+        ):
+            lifecycle_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "Arrow values require a non-generator function",
+            )
+        self._set_resource_ownership(
+            node, arrow_ownership(node.type_, OwnershipKind.OWNED)
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.DataFrameColumnAccess) -> None:
@@ -288,6 +321,18 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
+        ownership = resource_ownership(node.base)
+        if ownership is not None and ownership.kind is OwnershipKind.OWNED:
+            self._set_resource_ownership(
+                node.base,
+                replace(ownership, transfer_kind=OwnershipTransferKind.MOVE),
+            )
+        elif not isinstance(node.base, astx.Identifier):
+            self.context.diagnostics.add(
+                "explicit release requires an owned temporary or local",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         self._set_type(node, astx.Int32())
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -321,6 +366,18 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 "series release requires a Series value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+        ownership = resource_ownership(node.base)
+        if ownership is not None and ownership.kind is OwnershipKind.OWNED:
+            self._set_resource_ownership(
+                node.base,
+                replace(ownership, transfer_kind=OwnershipTransferKind.MOVE),
+            )
+        elif not isinstance(node.base, astx.Identifier):
+            self.context.diagnostics.add(
+                "explicit release requires an owned temporary or local",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
         self._set_type(node, astx.Int32())
 

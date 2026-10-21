@@ -55,6 +55,23 @@ typedef struct IrxRbBatch_        IrxRbBatch;
 typedef struct IrxRbStreamWriter_ IrxRbStreamWriter;
 typedef struct IrxRbStreamReader_ IrxRbStreamReader;
 
+/* CSV uses the same owned readers/writers as IPC. A null read schema enables
+ * first-block inference. Outputs are null on failure; schema is borrowed only
+ * for this call. Delimiter must be exactly one non-NUL ASCII byte. */
+int irx_rb_csv_reader_open(const char *path, const IrxRbSchema *schema,
+                          const char *delimiter, int header, int block_size,
+                          IrxRbStreamReader **out);
+int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
+                          const char *delimiter, int header,
+                          IrxRbStreamWriter **out);
+
+struct irx_arrow_table_handle;
+/* Results own independent references. Neither operation consumes its input. */
+int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
+                         struct irx_arrow_table_handle **out);
+int irx_rb_table_to_batch(const struct irx_arrow_table_handle *table,
+                         IrxRbBatch **out);
+
 const char *irx_record_batch_errmsg(void);
 uint32_t irx_record_batch_abi_version(void);
 

@@ -9,6 +9,7 @@ import astx
 from llvmlite import ir
 from public import private
 
+from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     ClassHeaderFieldKind,
@@ -153,6 +154,29 @@ class ClassVisitorMixin(FileVisitorMixin):
           value:
             type: ir.Value
         """
+        ownership = resource_ownership(node)
+        if (
+            ownership is not None
+            and ownership.resource_kind in ARROW_RESOURCES
+        ):
+            prefix = (
+                "table"
+                if ownership.resource_kind is ResourceKind.DATAFRAME
+                else "chunked_array"
+            )
+            function = self.require_runtime_symbol(
+                "dataframe", f"irx_arrow_{prefix}_{operation}"
+            )
+            status = self._llvm.ir_builder.call(function, [value])
+            if operation == "retain":
+                error_function = self.require_runtime_symbol(
+                    "dataframe", "irx_arrow_last_error"
+                )
+                error = self._llvm.ir_builder.call(error_function, [])
+                self.file_check(
+                    node, status, error, code="ARX-RUNTIME-ARROW-001"
+                )
+            return
         error = self.file_error_buffer()
         function = self.require_runtime_symbol(
             "class", f"irx_class_{operation}"
@@ -183,12 +207,31 @@ class ClassVisitorMixin(FileVisitorMixin):
             type: bool
         """
 
+        ownership = resource_ownership(node)
+        counted = (
+            storage
+            and ownership is not None
+            and ownership.resource_kind in ARROW_RESOURCES
+        )
+        if counted:
+            assert owner is not None
+            count = self.create_entry_block_alloca(
+                "arrow.references", ir.IntType(64)
+            )
+            self.named_values[f"arrow.references:{owner}"] = count
+            self._llvm.ir_builder.store(ir.Constant(ir.IntType(64), 1), count)
+
         def release() -> None:
             """
-            title: Release only the reference owned by this cleanup action.
+            title: >-
+              Release only the references owned by this binding or temporary.
             """
             current = self._llvm.ir_builder.load(value) if storage else value
-            self.class_operation(node, "release", current)
+            if counted:
+                assert owner is not None
+                self.arrow_release_binding(node, current, owner)
+            else:
+                self.class_operation(node, "release", current)
 
         self.cleanup_stack.append(
             CleanupAction(release, owner_symbol_id=owner)
@@ -207,7 +250,8 @@ class ClassVisitorMixin(FileVisitorMixin):
         ownership = resource_ownership(node)
         if (
             ownership is None
-            or ownership.resource_kind is not ResourceKind.CLASS
+            or ownership.resource_kind
+            not in {ResourceKind.CLASS, *ARROW_RESOURCES}
             or (isinstance(info, SemanticInfo) and info.lifecycle_self)
         ):
             return
@@ -568,3 +612,124 @@ class ClassVisitorMixin(FileVisitorMixin):
         if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
             self.class_cleanup(node, instance)
         self.result_stack.append(instance)
+
+    def arrow_temporary(self, node: astx.AST, value: ir.Value) -> None:
+        """
+        title: >-
+          Register a temporary Arrow reference unless moved into a binding.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+        """
+        ownership = require_semantic_metadata(
+            resource_ownership(node),
+            node=node,
+            metadata="resource_ownership",
+            context="Arrow temporary",
+        )
+        if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
+            self.class_cleanup(node, value)
+
+    def arrow_reference_count(self, owner: str) -> ir.Value:
+        """
+        title: >-
+          Fetch a resolved binding's reference counter, not its object
+          refcount.
+        parameters:
+          owner:
+            type: str
+        returns:
+          type: ir.Value
+        """
+        return self.named_values[f"arrow.references:{owner}"]
+
+    def arrow_release_binding(
+        self, node: astx.AST, value: ir.Value, owner: str
+    ) -> None:
+        """
+        title: >-
+          Drop all references held by a binding, including explicit retains.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          owner:
+            type: str
+        """
+        builder = self._llvm.ir_builder
+        count = self.arrow_reference_count(owner)
+        function = builder.function
+        test = function.append_basic_block("arrow.drop.test")
+        body = function.append_basic_block("arrow.drop.body")
+        done = function.append_basic_block("arrow.drop.done")
+        builder.branch(test)
+        builder.position_at_end(test)
+        remaining = builder.load(count)
+        zero = ir.Constant(ir.IntType(64), 0)
+        builder.cbranch(
+            builder.icmp_unsigned(">", remaining, zero), body, done
+        )
+        builder.position_at_end(body)
+        self.class_operation(node, "release", value)
+        builder.store(
+            builder.sub(remaining, ir.Constant(ir.IntType(64), 1)), count
+        )
+        builder.branch(test)
+        builder.position_at_end(done)
+
+    def arrow_explicit_lifetime(
+        self, node: astx.AST, value: ir.Value, *, retain: bool
+    ) -> None:
+        """
+        title: >-
+          Reconcile explicit ASTx lifetime operations with scoped ownership.
+        parameters:
+          node:
+            type: astx.AST
+          value:
+            type: ir.Value
+          retain:
+            type: bool
+        """
+        if not isinstance(node, astx.Identifier):
+            if retain:
+                self.class_cleanup(node, value)
+            return
+        ownership = require_semantic_metadata(
+            resource_ownership(node),
+            node=node,
+            metadata="resource_ownership",
+            context="explicit Arrow lifetime",
+        )
+        owner = require_semantic_metadata(
+            ownership.source_symbol_id,
+            node=node,
+            metadata="source_symbol_id",
+            context="explicit Arrow lifetime",
+        )
+        count = self.arrow_reference_count(owner)
+        builder = self._llvm.ir_builder
+        current = builder.load(count)
+        one = ir.Constant(ir.IntType(64), 1)
+        if retain:
+            builder.store(builder.add(current, one), count)
+            return
+        zero = ir.Constant(ir.IntType(64), 0)
+        remaining = builder.select(
+            builder.icmp_unsigned(">", current, zero),
+            builder.sub(current, one),
+            zero,
+        )
+        builder.store(remaining, count)
+        address = self._lvalue_address(node)
+        builder.store(
+            builder.select(
+                builder.icmp_unsigned("==", remaining, zero),
+                ir.Constant(value.type, None),
+                value,
+            ),
+            address,
+        )

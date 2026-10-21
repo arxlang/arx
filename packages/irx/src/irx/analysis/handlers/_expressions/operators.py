@@ -20,6 +20,12 @@ from astx.binary_op import (
     specialize_binary_op,
 )
 
+from irx.analysis.arrow_conversion import (
+    arrow_ownership,
+    resolve_arrow_cast,
+    resolve_arrow_store,
+)
+from irx.analysis.builtin_file import reject_native_file_cast
 from irx.analysis.class_lifecycle import class_ownership, resolve_store
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
@@ -156,7 +162,9 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             if resolved_target is None:
                 return
             assignment_symbol, target_name, target_type = resolved_target
-            managed_store = resolve_store(
+            managed_store = resolve_arrow_store(
+                cast(SemanticAnalyzerCore, self), node, assignment_symbol
+            ) or resolve_store(
                 cast(SemanticAnalyzerCore, self), node, assignment_symbol
             )
             if self._require_value_expression(
@@ -292,6 +300,11 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         ):
             self._set_type(node, cast(astx.DataType | None, node.target_type))
             return
+        self._resolve_declared_type(node.target_type, node=node)
+        if resolve_arrow_cast(cast(SemanticAnalyzerCore, self), node):
+            return
+        if reject_native_file_cast(cast(SemanticAnalyzerCore, self), node):
+            return
         source_type = self._expr_type(node.value)
         target_type = cast(astx.DataType | None, node.target_type)
         validate_cast(
@@ -304,6 +317,10 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(target_type, astx.ClassType):
             self._set_resource_ownership(
                 node, class_ownership(OwnershipKind.BORROWED)
+            )
+        if isinstance(target_type, astx.DataFrameType | astx.SeriesType):
+            self._set_resource_ownership(
+                node, arrow_ownership(target_type, OwnershipKind.BORROWED)
             )
         if not is_string_type(target_type):
             return

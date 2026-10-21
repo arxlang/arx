@@ -20,6 +20,8 @@ from irx.record_batch_abi import (
 )
 from irx.typecheck import typechecked
 
+CSV_MAX_BLOCK_SIZE = (1 << 31) - 1
+
 # Load the native shared library
 
 
@@ -215,6 +217,72 @@ def _configure_lib(lib: ctypes.CDLL) -> None:
     fn("irx_rb_stream_reader_next_batch", i32, vp, pvp)
     fn("irx_rb_stream_reader_schema", vp, vp)
     fn("irx_rb_stream_reader_close", None, vp)
+
+
+@typechecked
+def csv_library() -> ctypes.CDLL:
+    """
+    title: Require and configure the optional CSV extension of the native ABI.
+    returns:
+      type: ctypes.CDLL
+    """
+    lib = _get_lib()
+    try:
+        reader = lib.irx_rb_csv_reader_open
+        writer = lib.irx_rb_csv_writer_open
+    except AttributeError as error:
+        raise RuntimeError(
+            "Native RecordBatch library lacks CSV support; rebuild it or "
+            f"unset {IRX_RECORD_BATCH_LIBRARY_ENV}"
+        ) from error
+    pointer = ctypes.c_void_p
+    reader.restype = ctypes.c_int
+    reader.argtypes = [
+        ctypes.c_char_p,
+        pointer,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.POINTER(pointer),
+    ]
+    writer.restype = ctypes.c_int
+    writer.argtypes = [
+        pointer,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.POINTER(pointer),
+    ]
+    return lib
+
+
+@typechecked
+def csv_strings(
+    path: str | os.PathLike[str], delimiter: str
+) -> tuple[bytes, bytes]:
+    """
+    title: Validate C strings before passing CSV options across the ABI.
+    parameters:
+      path:
+        type: str | os.PathLike[str]
+      delimiter:
+        type: str
+    returns:
+      type: tuple[bytes, bytes]
+    """
+    path_string = os.fspath(path)
+    if "\0" in path_string:
+        raise ValueError("CSV path must not contain NUL")
+    if (
+        len(delimiter) != 1
+        or not delimiter.isascii()
+        or delimiter in '\0"\r\n'
+    ):
+        raise ValueError(
+            "CSV delimiter must be one ASCII byte other than "
+            "NUL, quote, CR or LF"
+        )
+    return os.fsencode(path_string), delimiter.encode("ascii")
 
 
 # Error helpers
@@ -651,6 +719,8 @@ class RecordBatchSchema:
         returns:
           type: ctypes.c_void_p
         """
+        if self._released:
+            raise RuntimeError("RecordBatch schema is released")
         return self._handle
 
 
@@ -1647,6 +1717,47 @@ class RecordBatchStreamWriter:
         self._released = False
 
     @classmethod
+    def open_csv(
+        cls,
+        schema: RecordBatchSchema,
+        path: str | os.PathLike[str],
+        *,
+        delimiter: str = ",",
+        header: bool = True,
+    ) -> "RecordBatchStreamWriter":
+        """
+        title: Create or truncate a local CSV file with an exact batch schema.
+        summary: >-
+          Close explicitly to observe final flush errors; writes are not
+          atomic.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+          path:
+            type: str | os.PathLike[str]
+          delimiter:
+            type: str
+          header:
+            type: bool
+        returns:
+          type: RecordBatchStreamWriter
+        """
+        path_bytes, separator = csv_strings(path, delimiter)
+        lib = csv_library()
+        handle = ctypes.c_void_p()
+        _check(
+            lib.irx_rb_csv_writer_open(
+                schema._raw(),
+                path_bytes,
+                separator,
+                int(header),
+                ctypes.byref(handle),
+            ),
+            lib,
+        )
+        return cls(handle, lib)
+
+    @classmethod
     def open_file(
         cls, schema: RecordBatchSchema, path: str | os.PathLike[str]
     ) -> "RecordBatchStreamWriter":
@@ -1699,6 +1810,10 @@ class RecordBatchStreamWriter:
           batch:
             type: RecordBatch
         """
+        if self._closed or self._released:
+            raise RuntimeError("RecordBatch writer is closed or released")
+        if batch._released:
+            raise RuntimeError("RecordBatch is released")
         _check(
             self._lib.irx_rb_stream_writer_write_batch(
                 self._handle, batch._handle
@@ -1710,7 +1825,7 @@ class RecordBatchStreamWriter:
         """
         title: Close the underlying stream writer.
         """
-        if not self._closed:
+        if not self._closed and not self._released:
             _check(
                 self._lib.irx_rb_stream_writer_close(self._handle), self._lib
             )
@@ -1768,8 +1883,10 @@ class RecordBatchStreamWriter:
             type: object
             variadic: positional
         """
-        self.close()
-        self.release()
+        try:
+            self.close()
+        finally:
+            self.release()
 
 
 @typechecked
@@ -1801,6 +1918,58 @@ class RecordBatchStreamReader:
         self._handle = handle
         self._lib = lib
         self._closed = False
+
+    @classmethod
+    def open_csv(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        schema: RecordBatchSchema | None = None,
+        delimiter: str = ",",
+        header: bool = True,
+        block_size: int = 1048576,
+    ) -> "RecordBatchStreamReader":
+        """
+        title: >-
+          Stream a local UTF-8 CSV file with explicit or first-block schema.
+        summary: >-
+          Unquoted empty fields are null; quoted empty strings remain strings.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema | None
+          delimiter:
+            type: str
+          header:
+            type: bool
+          block_size:
+            type: int
+        returns:
+          type: RecordBatchStreamReader
+        """
+        path_bytes, separator = csv_strings(path, delimiter)
+        if (
+            isinstance(block_size, bool)
+            or not 0 < block_size <= CSV_MAX_BLOCK_SIZE
+        ):
+            raise ValueError(
+                "CSV block_size must be a positive signed 32-bit integer"
+            )
+        lib = csv_library()
+        handle = ctypes.c_void_p()
+        _check(
+            lib.irx_rb_csv_reader_open(
+                path_bytes,
+                schema._raw() if schema is not None else None,
+                separator,
+                int(header),
+                block_size,
+                ctypes.byref(handle),
+            ),
+            lib,
+        )
+        return cls(handle, lib)
 
     @classmethod
     def open_file(
@@ -1851,6 +2020,8 @@ class RecordBatchStreamReader:
         returns:
           type: Optional[RecordBatch]
         """
+        if self._closed:
+            raise RuntimeError("RecordBatch reader is closed")
         batch_handle = ctypes.c_void_p()
         rc = self._lib.irx_rb_stream_reader_next_batch(
             self._handle, ctypes.byref(batch_handle)

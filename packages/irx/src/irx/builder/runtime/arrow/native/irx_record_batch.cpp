@@ -1,26 +1,30 @@
 // Copyright IRx contributors.
 
 #include "irx_record_batch.h"
+#include "irx_arrow_runtime.h"
 
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
+#include <arrow/csv/api.h>
 #include "irx_arrow_transport.h"
 #include <arrow/io/api.h>
 #include <arrow/ipc/api.h>
 #include <arrow/result.h>
 #include <arrow/status.h>
 #include <arrow/type.h>
+#include <arrow/util/utf8.h>
 
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 static thread_local std::string tl_errmsg;
 
-static int set_err(const std::string &msg, int code) {
+static int set_err(const std::string &msg, int code = IRX_ERR_ARROW) {
     tl_errmsg = msg;
     return code;
 }
@@ -237,6 +241,7 @@ struct IrxRbStreamWriter_ {
     /* For buffer-based writers. */
     std::shared_ptr<arrow::io::BufferOutputStream> buf_sink;
     bool                                       closed{false};
+    bool                                       csv{false};
     /* Cached serialised bytes (valid after close for buffer writers). */
     std::shared_ptr<arrow::Buffer>             finished_buf;
 };
@@ -1163,6 +1168,13 @@ int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
         return set_err("batch schema mismatch (including metadata/nullability)", IRX_ERR_TYPE);
     auto validation = batch->batch->ValidateFull();
     if (!validation.ok()) return set_err(validation);
+    if (w->csv) {
+        for (int i = 0; i < batch->batch->num_columns(); ++i) {
+            if (!w->schema->field(i)->nullable() && batch->batch->column(i)->null_count())
+                return set_err("CSV column '" + w->schema->field(i)->name() +
+                               "' contains nulls but is not nullable", IRX_ERR_TYPE);
+        }
+    }
     auto st = w->writer->WriteRecordBatch(*batch->batch);
     if (!st.ok()) return set_err(st);
     return IRX_OK;
@@ -1554,4 +1566,239 @@ int irx_rb_schema_type_name(const IrxRbSchema *schema, int col, const char **out
         return set_err("embedded NUL in type name cannot be exposed as C text", IRX_ERR_TYPE);
     *out = name.c_str();
     return IRX_OK;
+}
+
+namespace {
+arrow::Status csv_schema(const arrow::Schema &schema) {
+    if (!schema.num_fields()) return arrow::Status::Invalid("CSV requires at least one column");
+    std::unordered_set<std::string> names;
+    for (const auto &field : schema.fields()) {
+        const auto &name = field->name();
+        if (name.empty() || name.find('\0') != std::string::npos ||
+            !arrow::util::ValidateUTF8(name) || !names.insert(name).second)
+            return arrow::Status::Invalid("CSV requires unique nonempty UTF-8 column names: '", name, "'");
+        if (col_type_from_arrow(*field->type()) < IRX_COL_INT8 ||
+            col_type_from_arrow(*field->type()) > IRX_COL_TIME64_NS)
+            return arrow::Status::TypeError("Unsupported CSV column '", name, "' (",
+                field->type()->ToString(), "); use an explicit supported schema");
+    }
+    return arrow::Status::OK();
+}
+arrow::Status csv_options(const char *delimiter, int header) {
+    if (!delimiter || !delimiter[0] || delimiter[1] ||
+        static_cast<unsigned char>(delimiter[0]) > 127 ||
+        delimiter[0] == '"' || delimiter[0] == '\r' || delimiter[0] == '\n')
+        return arrow::Status::Invalid("CSV delimiter must be one ASCII byte other than NUL, quote, CR or LF");
+    if (header != 0 && header != 1)
+        return arrow::Status::Invalid("CSV header must be boolean");
+    return arrow::Status::OK();
+}
+
+// Conversion options alone do not enforce header order or field nullability.
+class CsvReader final : public arrow::RecordBatchReader {
+ public:
+    CsvReader(std::shared_ptr<arrow::RecordBatchReader> reader,
+              std::shared_ptr<arrow::Schema> schema)
+        : reader_(std::move(reader)), schema_(std::move(schema)) {}
+    std::shared_ptr<arrow::Schema> schema() const override { return schema_; }
+    arrow::Status Close() override { return reader_->Close(); }
+    arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch> *out) override {
+        *out = nullptr;
+        std::shared_ptr<arrow::RecordBatch> batch;
+        ARROW_RETURN_NOT_OK(reader_->ReadNext(&batch));
+        if (!batch) return arrow::Status::OK();
+        for (int i = 0; i < schema_->num_fields(); ++i) {
+            if (!schema_->field(i)->nullable() && batch->column(i)->null_count())
+                return arrow::Status::Invalid("CSV column '", schema_->field(i)->name(),
+                                              "' contains nulls but is not nullable");
+        }
+        *out = arrow::RecordBatch::Make(schema_, batch->num_rows(), batch->columns());
+        return (*out)->ValidateFull();
+    }
+ private:
+    std::shared_ptr<arrow::RecordBatchReader> reader_;
+    std::shared_ptr<arrow::Schema> schema_;
+};
+
+arrow::Status dataframe_schema(const arrow::Schema &schema) {
+    if (!schema.num_fields()) return arrow::Status::Invalid("DataFrame requires a nonempty static schema");
+    std::unordered_set<std::string> names;
+    for (const auto &field : schema.fields()) {
+        auto type = field->type()->id();
+        if (type != arrow::Type::INT8 && type != arrow::Type::INT16 &&
+            type != arrow::Type::INT32 && type != arrow::Type::INT64 &&
+            type != arrow::Type::FLOAT && type != arrow::Type::DOUBLE &&
+            type != arrow::Type::BOOL)
+            return arrow::Status::TypeError("Cannot convert column '", field->name(),
+                "' (", field->type()->ToString(), ") to DataFrame: only non-null signed integers, "
+                "f32, f64 and bool are supported; keep this data as a RecordBatch");
+        if (field->name().empty() || field->name().find('\0') != std::string::npos ||
+            !arrow::util::ValidateUTF8(field->name()) || !names.insert(field->name()).second)
+            return arrow::Status::Invalid("DataFrame requires unique nonempty column names");
+    }
+    return arrow::Status::OK();
+}
+} // namespace
+
+int irx_rb_csv_reader_open(const char *path, const IrxRbSchema *schema,
+                          const char *delimiter, int header, int block_size,
+                          IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr; GUARD(path);
+    try {
+        auto status = csv_options(delimiter, header);
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        if (block_size <= 0) return set_err("CSV block_size must be positive", IRX_ERR_TYPE);
+        auto read = arrow::csv::ReadOptions::Defaults();
+        auto parse = arrow::csv::ParseOptions::Defaults();
+        auto convert = arrow::csv::ConvertOptions::Defaults();
+        read.use_threads = false;
+        read.block_size = block_size;
+        read.autogenerate_column_names = !header && !schema;
+        parse.delimiter = delimiter[0];
+        parse.newlines_in_values = true;
+        parse.ignore_empty_lines = false;
+        convert.null_values = {""};
+        convert.strings_can_be_null = true;
+        convert.quoted_strings_can_be_null = false;
+        convert.check_utf8 = true;
+        if (schema) {
+            status = csv_schema(*schema->schema);
+            if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+            for (const auto &field : schema->schema->fields()) {
+                convert.column_types.emplace(field->name(), field->type());
+                if (!header) read.column_names.push_back(field->name());
+            }
+        }
+        auto source = arrow::io::ReadableFile::Open(path);
+        if (!source.ok()) return set_err(source.status(), IRX_ERR_IO);
+        auto reader = arrow::csv::StreamingReader::Make(
+            arrow::io::default_io_context(), *source, read, parse, convert);
+        if (!reader.ok()) return set_err(reader.status());
+        auto actual = (*reader)->schema();
+        status = csv_schema(*actual);
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        if (schema) {
+            if (actual->num_fields() != schema->schema->num_fields())
+                return set_err("CSV header column count does not match explicit schema", IRX_ERR_TYPE);
+            for (int i = 0; i < actual->num_fields(); ++i) {
+                if (actual->field(i)->name() != schema->schema->field(i)->name() ||
+                    !actual->field(i)->type()->Equals(schema->schema->field(i)->type()))
+                    return set_err("CSV column '" + actual->field(i)->name() +
+                        "' does not match explicit schema name/order/type", IRX_ERR_TYPE);
+            }
+        }
+        auto result = std::make_unique<IrxRbStreamReader>();
+        result->reader = std::make_shared<CsvReader>(*reader, schema ? schema->schema : actual);
+        result->source = *source;
+        int rc = populate_schema(result->reader->schema(), &result->schema_handle);
+        if (rc != IRX_OK) return rc;
+        result->schema_handle.reader_owned = true;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(std::string("CSV reader: ") + error.what());
+    }
+}
+
+int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
+                          const char *delimiter, int header, IrxRbStreamWriter **out) {
+    GUARD(out); *out = nullptr; GUARD(schema); GUARD(path);
+    try {
+        auto status = csv_options(delimiter, header);
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        status = csv_schema(*schema->schema);
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        auto options = arrow::csv::WriteOptions::Defaults();
+        options.delimiter = delimiter[0];
+        options.include_header = header;
+        status = options.Validate();
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        auto sink = arrow::io::FileOutputStream::Open(path);
+        if (!sink.ok()) return set_err(sink.status(), IRX_ERR_IO);
+        auto writer = arrow::csv::MakeCSVWriter(*sink, schema->schema, options);
+        if (!writer.ok()) return set_err(writer.status());
+        auto result = std::make_unique<IrxRbStreamWriter>();
+        result->sink = *sink;
+        result->writer = *writer;
+        result->schema = schema->schema;
+        result->csv = true;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(std::string("CSV writer: ") + error.what());
+    }
+}
+
+int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
+                         irx_arrow_table_handle **out) {
+    GUARD(out); *out = nullptr; GUARD(batch); GUARD(expected);
+    ArrowArray array{};
+    ArrowSchema schema{};
+    // C Data exports are independent references and must be released on all paths.
+    struct Release {
+        ArrowArray &a; ArrowSchema &s;
+        ~Release() { if (a.release) a.release(&a); if (s.release) s.release(&s); }
+    } release{array, schema};
+    try {
+        auto status = dataframe_schema(*batch->batch->schema());
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        status = dataframe_schema(*expected->schema);
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        if (batch->batch->num_columns() != expected->schema->num_fields())
+            return set_err("DataFrame column count does not match the declared schema", IRX_ERR_TYPE);
+        for (int i = 0; i < batch->batch->num_columns(); ++i) {
+            auto actual = batch->batch->schema()->field(i);
+            auto field = expected->schema->field(i);
+            if (field->nullable()) return set_err("nullable DataFrame targets are unsupported", IRX_ERR_TYPE);
+            if (actual->name() != field->name() || !actual->type()->Equals(field->type()))
+                return set_err("Cannot convert column '" + actual->name() + "' (" +
+                    actual->type()->ToString() + "): expected '" + field->name() + "' (" +
+                    field->type()->ToString() + "); use a matching explicit CSV schema", IRX_ERR_TYPE);
+            if (batch->batch->column(i)->null_count())
+                return set_err("Cannot convert column '" + field->name() +
+                    "' to DataFrame: the current batch contains null values; keep it as a RecordBatch", IRX_ERR_TYPE);
+        }
+        auto converted = arrow::RecordBatch::Make(expected->schema, batch->batch->num_rows(), batch->batch->columns());
+        status = converted->ValidateFull();
+        if (!status.ok()) return set_err(status);
+        status = arrow::ExportRecordBatch(*converted, &array, &schema);
+        if (!status.ok()) return set_err(status);
+        int rc = irx_arrow_table_import_batch(&array, &schema, out);
+        return rc == 0 ? IRX_OK : set_err(irx_arrow_last_error());
+    } catch (const std::exception &error) {
+        return set_err(std::string("DataFrame conversion: ") + error.what());
+    }
+}
+
+int irx_rb_table_to_batch(const irx_arrow_table_handle *table, IrxRbBatch **out) {
+    GUARD(out); *out = nullptr; GUARD(table);
+    ArrowArray array{};
+    ArrowSchema schema{};
+    struct Release {
+        ArrowArray &a; ArrowSchema &s;
+        ~Release() { if (a.release) a.release(&a); if (s.release) s.release(&s); }
+    } release{array, schema};
+    try {
+        if (irx_arrow_table_export_batch(table, &array, &schema) != 0)
+            return set_err(irx_arrow_last_error());
+        auto imported = arrow::ImportRecordBatch(&array, &schema);
+        if (!imported.ok()) return set_err(imported.status());
+        auto status = dataframe_schema(*(*imported)->schema());
+        if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
+        for (int i = 0; i < (*imported)->num_columns(); ++i) {
+            if ((*imported)->column(i)->null_count())
+                return set_err("DataFrame column '" + (*imported)->schema()->field(i)->name() + "' contains null values", IRX_ERR_TYPE);
+        }
+        auto result = std::make_unique<IrxRbBatch>();
+        result->batch = *imported;
+        IrxRbSchema described;
+        int rc = populate_schema(result->batch->schema(), &described);
+        if (rc != IRX_OK) return rc;
+        result->col_types = described.col_types;
+        result->col_descs = described.col_descs;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(std::string("RecordBatch conversion: ") + error.what());
+    }
 }

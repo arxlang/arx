@@ -35,7 +35,7 @@ locations, and linker metadata used by native builds.
 | Tensor runtime      | `arrow::Tensor`                                  | Fixed-width numeric construction, shape/stride metadata, indexing, shallow views |
 | DataFrame runtime   | `arrow::Table`                                   | Named fixed-width numeric/Boolean columns and row/column counts                  |
 | Series runtime      | `arrow::ChunkedArray`                            | Typed column views selected from DataFrames                                      |
-| RecordBatch runtime | `arrow::RecordBatch` and Arrow IPC               | Schemas, builders, nullable values, file/buffer streams, PyArrow round trips     |
+| RecordBatch runtime | `arrow::RecordBatch` and Arrow IPC               | Schemas, builders, nullable values, IPC/CSV streams, PyArrow round trips         |
 
 ## Arx tensors and DataFrames
 
@@ -341,15 +341,28 @@ part of this transport.
 | Zero-column input with nonzero rows                                       | Preserved                                                                |
 | C Data/C Stream, both directions                                          | Standard structs; explicit ownership transfer                            |
 | TCP, both directions                                                      | POSIX blocking clients; trusted numeric-address peers                    |
-| DataFrame ↔ RecordBatch conversion                                       | Not implemented; construct/use `RecordBatch` instead                     |
+| DataFrame ↔ RecordBatch conversion                                       | Checked casts for exact non-null signed numeric/Boolean schemas          |
 | Dictionary, decimal, binary, extension and other unclassified Arrow types | Rejected at import/open; no silent conversion                            |
 | Unsigned and supported nested values                                      | Forwarding supported; Arx scalar access/construction limited as above    |
 | Arbitrary metadata editing, timestamp timezone creation in Arx            | Not exposed; imported schemas retain them                                |
 | Memory safety                                                             | Functional ownership tests and a sanitizer harness; no blanket guarantee |
 
 The sanitizer harness is `packages/irx/tests/native/arrow_interop.cpp`. Compile
-it with `irx_record_batch.cpp`, `irx_arrow_transport.cc`, the Arrow include/link
-flags, and `-fsanitize=address,undefined -fno-omit-frame-pointer`. It exercises
-schema snapshots, exported lifetimes, import moves, repeated guarded releases,
-EOF and corrupt-input cleanup. Arrow's prebuilt shared library itself is not
-sanitizer-instrumented by this command.
+it with `irx_record_batch.cpp`, `irx_arrow_transport.cc`,
+`irx_arrow_runtime.cc`, the Arrow and buffer-native include/link flags, and
+`-fsanitize=address,undefined -fno-omit-frame-pointer`. It exercises schema
+snapshots, exported lifetimes, import moves, repeated guarded releases, EOF, CSV
+and checked table conversions, and corrupt-input cleanup. Pass a workspace-local
+CSV output path as its single argument. Arrow's prebuilt shared library itself
+is not sanitizer-instrumented by this command.
+
+## CSV streaming and checked conversion
+
+`CSVReader` and `CSVWriter` in `stdlib.arrow`, and Python
+`RecordBatchStreamReader.open_csv` / `RecordBatchStreamWriter.open_csv`, reuse
+Arrow C++ streaming readers and writers. Both `cast(batch, dataframe[...])` and
+`cast(frame, RecordBatch)` are supported for exact non-null signed numeric and
+Boolean schemas. Conversion results own their references independently;
+DataFrame-to-RecordBatch export combines **all** chunks and may allocate. See
+[CSV files and DataFrames](arx/csv.md) for schemas, null rules, lifetime,
+streaming failure semantics and the intentionally restricted DataFrame subset.

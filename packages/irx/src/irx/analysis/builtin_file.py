@@ -47,6 +47,38 @@ def is_native_file_class(
 
 @private
 @typechecked
+def reject_native_file_cast(
+    analyzer: SemanticAnalyzerCore, node: astx.Cast
+) -> bool:
+    """
+    title: Preserve file-cast restrictions after resolving public class types.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.Cast
+    returns:
+      type: bool
+    """
+    for type_ in (analyzer._expr_type(node.value), node.target_type):
+        if not isinstance(type_, astx.ClassType):
+            continue
+        class_ = analyzer._resolve_class_from_type(
+            type_, node=node, unknown_message="Unknown type '{name}'"
+        )
+        if class_ is not None and is_native_file_class(analyzer, class_):
+            file_error(
+                analyzer,
+                node,
+                "file casts are unsupported; use assignment to alias a File",
+            )
+            analyzer._set_type(node, node.target_type)
+            return True
+    return False
+
+
+@private
+@typechecked
 def registered_file_class(
     analyzer: SemanticAnalyzerCore,
 ) -> SemanticClass | None:

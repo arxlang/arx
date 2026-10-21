@@ -1608,10 +1608,21 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.DataType
         """
+        from irx.analysis.arrow_conversion import (  # noqa: PLC0415
+            contains_arrow,
+        )
         from irx.analysis.class_lifecycle import (  # noqa: PLC0415
             contains_class,
         )
 
+        if not isinstance(
+            type_, astx.DataFrameType | astx.SeriesType
+        ) and contains_arrow(type_):
+            self.context.diagnostics.add(
+                "Arrow references inside containers/unions are unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         if not isinstance(type_, astx.ClassType) and contains_class(type_):
             self.context.diagnostics.add(
                 "class references inside containers/unions are unsupported",

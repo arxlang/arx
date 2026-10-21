@@ -72,6 +72,10 @@ def _native_source() -> Path:
 # how the ``array`` feature declares its symbols.
 
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "irx_rb_csv_reader_open": ("i32", ("p", "p", "p", "i32", "i32", "p")),
+    "irx_rb_csv_writer_open": ("i32", ("p", "p", "p", "i32", "p")),
+    "irx_rb_batch_to_table": ("i32", ("p", "p", "p")),
+    "irx_rb_table_to_batch": ("i32", ("p", "p")),
     "irx_rb_file_writer_open": ("i32", ("p", "p", "p")),
     "irx_rb_file_reader_open": ("i32", ("p", "p")),
     "irx_rb_tcp_writer_open": ("i32", ("p", "p", "i32", "i32", "p")),
@@ -257,7 +261,11 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
     """
     native_dir = _native_source_dir()
     compile_flags = arrowcpp_compile_flags()
-    include_dirs = (native_dir, *arrowcpp_include_dirs())
+    include_dirs = (
+        native_dir,
+        native_dir.parent.parent / "buffer" / "native",
+        *arrowcpp_include_dirs(),
+    )
 
     artifacts = tuple(
         NativeArtifact(
@@ -268,6 +276,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         )
         for source in (
             _native_source(),
+            native_dir / "irx_arrow_runtime.cc",
             native_dir / "irx_arrow_transport.cc",
             native_dir / "irx_record_batch_api.cc",
         )

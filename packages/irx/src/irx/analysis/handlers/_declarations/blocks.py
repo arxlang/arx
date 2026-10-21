@@ -15,6 +15,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.arrow_conversion import arrow_local
 from irx.analysis.class_lifecycle import class_local
 from irx.analysis.file_io import resolve_file_local
 from irx.analysis.handlers.base import (
@@ -60,6 +61,9 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             type: SemanticSymbol
         """
         self._semantic(node).resource_ownership = None
+        if isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
+            arrow_local(cast(SemanticAnalyzerCore, self), node, symbol)
+            return
         if isinstance(node.type_, astx.ClassType):
             class_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
