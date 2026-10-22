@@ -1877,3 +1877,5 @@ int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
 }
 
 }  // extern "C"
+
+#include "irx_arrow_series.h"

@@ -124,8 +124,11 @@ The `dataframe` feature provides:
 - explicit retain/release operations
 
 This native layer supports the current Arx `dataframe[...]`, `dataframe({...})`,
-and `series[T]` surface. It does not provide query planning or Arrow Compute
-kernels.
+and `series[T]` surface. Focused checked Arrow Compute kernels implement
+numeric/Boolean nullable expressions, broadcasting, null tests/filling and
+bounds-checked scalar access. This is not a query planner. Runtime code keeps
+Arrow objects behind opaque handles; nullable language scalars carry only a
+validity bit and a fixed-width primitive value.
 
 ## RecordBatch runtime
 
@@ -257,9 +260,14 @@ native artifacts link matching `libparquet`, `libarrow_dataset`,
 Parquet dependency. Runtime activation validates dependency availability/cycles
 before activating anything (`R003`/`R004`).
 
-The Python ctypes build intentionally bundles both features. Arx currently
-lowers all declarations in `stdlib.arrow`, including unused Parquet
-declarations, so that import still activates both features. Runtime separation
-is not a claim of lazy language-level imports. See
-[format contracts](../arx/parquet.md) for native options,
-dataset/remote/encryption boundaries and exact ownership guarantees.
+Python loads the base RecordBatch library for CSV/IPC and a separately cached
+Parquet plugin on demand. The plugin links the same base instance so handles and
+thread-local errors are not duplicated. Explicit library overrides retain the
+legacy bundled-symbol contract.
+
+Arx opts its bundled `stdlib.arrow` into declaration reachability: analysis
+still validates every declaration, while lowering retains referenced classes
+(including all methods/destructors) and resolved dependencies. Other modules
+remain eager by default. CSV-only programs therefore do not activate Parquet.
+See [format contracts](../arx/parquet.md) for transactional datasets, durable
+local writes, reconstruction and runtime-schema DataFrames.

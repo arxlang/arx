@@ -66,6 +66,7 @@ groups:
             - task: all.typecheck
             - task: all.lint
             - task: all.wheel-smoke
+            - task: irx.test-sanitizers
 
   arx:
     tasks:
@@ -376,6 +377,10 @@ groups:
 
   irx:
     tasks:
+      test-sanitizers:
+        help: run native Arrow and Parquet ASan/UBSan checks
+        run: python scripts/test_native_sanitizers.py
+
       unittests:
         help: run IRx unit tests
         args:

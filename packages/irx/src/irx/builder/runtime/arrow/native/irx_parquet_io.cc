@@ -1,5 +1,6 @@
 // Copyright IRx contributors.
 #include "irx_parquet_io.h"
+#include "irx_parquet_commit.h"
 
 #include <arrow/api.h>
 #include <arrow/compute/api.h>
@@ -8,6 +9,7 @@
 #include <arrow/extension_type.h>
 #include <arrow/filesystem/api.h>
 #include <arrow/io/api.h>
+#include <arrow/ipc/api.h>
 #include <arrow/util/compression.h>
 #include <arrow/util/key_value_metadata.h>
 #include <arrow/util/utf8.h>
@@ -29,9 +31,11 @@ namespace {
 using arrow::Status;
 namespace ds = arrow::dataset;
 namespace cp = arrow::compute;
+constexpr const char *logical_schema_key = "IRX:logical_schema:v1";
 
 arrow::Result<std::shared_ptr<arrow::DataType>> physical_type(
-    const std::shared_ptr<arrow::DataType> &type, bool normalize) {
+    const std::shared_ptr<arrow::DataType> &type, bool normalize,
+    bool reconstruct = false, bool storage = false) {
     switch (type->id()) {
     case arrow::Type::INT8: case arrow::Type::INT16:
     case arrow::Type::INT32: case arrow::Type::INT64:
@@ -61,33 +65,38 @@ arrow::Result<std::shared_ptr<arrow::DataType>> physical_type(
     case arrow::Type::LIST: case arrow::Type::LARGE_LIST:
     case arrow::Type::FIXED_SIZE_LIST: {
         auto field = type->field(0);
-        ARROW_ASSIGN_OR_RAISE(auto child, physical_type(field->type(), normalize));
+        ARROW_ASSIGN_OR_RAISE(auto child, physical_type(field->type(), normalize, reconstruct, storage));
         field = field->WithType(child);
         if (type->id() == arrow::Type::LIST) return arrow::list(field);
         if (type->id() == arrow::Type::LARGE_LIST) return arrow::large_list(field);
+        if (reconstruct && storage) return arrow::list(field);
         return arrow::fixed_size_list(field, static_cast<const arrow::FixedSizeListType &>(*type).list_size());
     }
     case arrow::Type::STRUCT: {
         arrow::FieldVector fields;
         for (const auto &field : type->fields()) {
-            ARROW_ASSIGN_OR_RAISE(auto child, physical_type(field->type(), normalize));
+            ARROW_ASSIGN_OR_RAISE(auto child, physical_type(field->type(), normalize, reconstruct, storage));
             fields.push_back(field->WithType(child));
         }
         return arrow::struct_(fields);
     }
     case arrow::Type::MAP: {
         auto &t = static_cast<const arrow::MapType &>(*type);
-        ARROW_ASSIGN_OR_RAISE(auto key, physical_type(t.key_type(), normalize));
-        ARROW_ASSIGN_OR_RAISE(auto item, physical_type(t.item_type(), normalize));
+        ARROW_ASSIGN_OR_RAISE(auto key, physical_type(t.key_type(), normalize, reconstruct, storage));
+        ARROW_ASSIGN_OR_RAISE(auto item, physical_type(t.item_type(), normalize, reconstruct, storage));
         return std::make_shared<arrow::MapType>(t.key_field()->WithType(key), t.item_field()->WithType(item), t.keys_sorted());
     }
     case arrow::Type::DICTIONARY: {
         auto &t = static_cast<const arrow::DictionaryType &>(*type);
-        ARROW_ASSIGN_OR_RAISE(auto child, physical_type(t.value_type(), normalize));
+        if (reconstruct && t.ordered())
+            return Status::NotImplemented("logical reconstruction cannot preserve ordered dictionary codebooks; use IPC");
+        ARROW_ASSIGN_OR_RAISE(auto child, physical_type(t.value_type(), normalize, reconstruct, storage));
         // Arrow's Parquet reader reconstructs dictionaries for binary/string
         // values only. Other dictionaries would silently decode to plain arrays.
-        if (child->id() != arrow::Type::STRING && child->id() != arrow::Type::BINARY)
-            return Status::NotImplemented("Parquet dictionary values must be string or binary");
+        if (child->id() != arrow::Type::STRING && child->id() != arrow::Type::BINARY &&
+            !(reconstruct && ((arrow::is_integer(child->id()) || arrow::is_floating(child->id())) || arrow::is_decimal(child->id()))))
+            return Status::NotImplemented("Parquet dictionary values must be string or binary; use reconstruct=true for numeric dictionaries");
+        if (reconstruct && storage) return child;
         return arrow::dictionary(t.index_type(), child, t.ordered());
     }
     case arrow::Type::EXTENSION: {
@@ -107,9 +116,8 @@ arrow::Result<std::shared_ptr<arrow::DataType>> physical_type(
 Status field_names(const arrow::FieldVector &fields) {
     std::unordered_set<std::string> names;
     for (const auto &field : fields) {
-        if (field->metadata() && field->metadata()->Contains("ARROW:extension:name") &&
-            field->type()->id() != arrow::Type::EXTENSION)
-            return Status::NotImplemented("unregistered Arrow extension on column '", field->name(), "'");
+        // Unknown extensions remain opaque storage plus their exact Arrow
+        // extension metadata. No Python callbacks run in compiled programs.
         const auto &name = field->name();
         if (name.empty() || name.find('\0') != std::string::npos ||
             !arrow::util::ValidateUTF8(name) || !names.insert(name).second)
@@ -120,14 +128,17 @@ Status field_names(const arrow::FieldVector &fields) {
 }
 
 arrow::Result<std::shared_ptr<arrow::Schema>> physical_schema(
-    const std::shared_ptr<arrow::Schema> &schema, bool writing, bool normalize) {
+    const std::shared_ptr<arrow::Schema> &schema, bool writing, bool normalize,
+    bool reconstruct = false, bool storage = false) {
     if (!schema->num_fields()) return Status::Invalid("Parquet requires at least one column");
     if (writing && schema->metadata() && schema->metadata()->Contains("ARROW:schema"))
         return Status::Invalid("Parquet reserves the ARROW:schema metadata key");
+    if (writing && schema->metadata() && schema->metadata()->Contains(logical_schema_key))
+        return Status::Invalid("Parquet reserves the IRX logical schema metadata key");
     ARROW_RETURN_NOT_OK(field_names(schema->fields()));
     arrow::FieldVector fields;
     for (const auto &field : schema->fields()) {
-        auto type = physical_type(field->type(), normalize);
+        auto type = physical_type(field->type(), normalize, reconstruct, storage);
         if (!type.ok()) return Status::TypeError("Unsupported Parquet column '", field->name(), "': ", type.status().ToString());
         fields.push_back(field->WithType(*type));
     }
@@ -164,11 +175,11 @@ Status reachable_value(const arrow::Field &field, const arrow::Array &array, int
     return Status::OK();
 }
 
-Status validate_nulls(const arrow::RecordBatch &batch) {
+Status validate_nulls(const arrow::RecordBatch &batch, bool reconstruct = false) {
     for (int i = 0; i < batch.num_columns(); ++i) {
         const auto &field = *batch.schema()->field(i);
         const auto &array = *batch.column(i);
-        if (array.type_id() == arrow::Type::FIXED_SIZE_LIST && array.null_count())
+        if (!reconstruct && array.type_id() == arrow::Type::FIXED_SIZE_LIST && array.null_count())
             return Status::NotImplemented("Parquet fixed-size list null parents cannot roundtrip in this Arrow backend; use variable lists");
         if (field.type()->num_fields() || array.type_id() == arrow::Type::DICTIONARY) {
             for (int64_t row = 0; row < array.length(); ++row)
@@ -183,14 +194,15 @@ Status validate_nulls(const arrow::RecordBatch &batch) {
 // parents. Canonicalize only those unreachable null slots after validating all
 // reachable values; never fill a user-visible null or change the field schema.
 arrow::Result<std::shared_ptr<arrow::Array>> canonical_children(
-    const std::shared_ptr<arrow::Array> &array, const arrow::Field &field) {
-    if (array->type_id() == arrow::Type::FIXED_SIZE_LIST && array->null_count())
+    const std::shared_ptr<arrow::Array> &array, const arrow::Field &field,
+    bool reconstruct = false) {
+    if (!reconstruct && array->type_id() == arrow::Type::FIXED_SIZE_LIST && array->null_count())
         return Status::NotImplemented("Parquet fixed-size list null parents cannot roundtrip in this Arrow backend; use variable lists");
     auto data = array->data()->Copy();
     const auto &fields = array->type()->fields();
     for (size_t i = 0; i < fields.size(); ++i) {
         ARROW_ASSIGN_OR_RAISE(auto child, canonical_children(
-            arrow::MakeArray(data->child_data[i]), *fields[i]));
+            arrow::MakeArray(data->child_data[i]), *fields[i], reconstruct));
         data->child_data[i] = child->data();
     }
     auto result = arrow::MakeArray(data);
@@ -247,11 +259,101 @@ class OwnedReader final : public arrow::RecordBatchReader {
     Status failure_;
 };
 
+arrow::Result<std::shared_ptr<arrow::Array>> restore_array(
+    std::shared_ptr<arrow::Array> array, const std::shared_ptr<arrow::DataType> &type) {
+    if (array->type()->Equals(type)) return array;
+    if (type->id() == arrow::Type::DICTIONARY) {
+        const auto &dictionary = static_cast<const arrow::DictionaryType &>(*type);
+        ARROW_ASSIGN_OR_RAISE(auto encoded, cp::DictionaryEncode(array));
+        auto values = std::static_pointer_cast<arrow::DictionaryArray>(encoded.make_array());
+        ARROW_ASSIGN_OR_RAISE(auto indices, cp::Cast(*values->indices(), dictionary.index_type(), cp::CastOptions::Safe()));
+        return arrow::DictionaryArray::FromArrays(type, indices, values->dictionary());
+    }
+    if (type->id() == arrow::Type::FIXED_SIZE_LIST && array->type_id() == arrow::Type::LIST) {
+        auto intermediate = arrow::fixed_size_list(array->type()->field(0),
+            static_cast<const arrow::FixedSizeListType &>(*type).list_size());
+        ARROW_ASSIGN_OR_RAISE(array, cp::Cast(*array, intermediate, cp::CastOptions::Safe()));
+    }
+    if (type->id() == array->type_id() && type->num_fields()) {
+        auto data = array->data()->Copy();
+        if (data->child_data.size() != static_cast<size_t>(type->num_fields()))
+            return Status::TypeError("invalid reconstructed child count");
+        for (int i = 0; i < type->num_fields(); ++i) {
+            ARROW_ASSIGN_OR_RAISE(auto child, restore_array(arrow::MakeArray(data->child_data[i]), type->field(i)->type()));
+            data->child_data[i] = child->data();
+        }
+        data->type = type;
+        auto restored = arrow::MakeArray(data);
+        ARROW_RETURN_NOT_OK(restored->ValidateFull());
+        return restored;
+    }
+    return cp::Cast(*array, type, cp::CastOptions::Safe());
+}
+
+class RestoringReader final : public arrow::RecordBatchReader {
+ public:
+    RestoringReader(std::shared_ptr<arrow::RecordBatchReader> reader, std::shared_ptr<arrow::Schema> schema)
+        : reader_(std::move(reader)), schema_(std::move(schema)) {}
+    std::shared_ptr<arrow::Schema> schema() const override { return schema_; }
+    Status ReadNext(std::shared_ptr<arrow::RecordBatch> *out) override {
+        *out = nullptr;
+        if (!failure_.ok()) return failure_;
+        if (!reader_) return Status::Invalid("reconstructing Parquet reader is closed");
+        auto next = read();
+        if (!next.ok()) return failure_ = next.status();
+        *out = *next;
+        return Status::OK();
+    }
+    Status Close() override {
+        auto status = reader_ ? reader_->Close() : Status::OK();
+        reader_.reset();
+        return status;
+    }
+ private:
+    arrow::Result<std::shared_ptr<arrow::RecordBatch>> read() {
+        std::shared_ptr<arrow::RecordBatch> batch;
+        ARROW_RETURN_NOT_OK(reader_->ReadNext(&batch));
+        if (!batch) return batch;
+        arrow::ArrayVector columns;
+        for (int i = 0; i < batch->num_columns(); ++i) {
+            ARROW_ASSIGN_OR_RAISE(auto values, restore_array(batch->column(i), schema_->field(i)->type()));
+            columns.push_back(values);
+        }
+        return arrow::RecordBatch::Make(schema_, batch->num_rows(), columns);
+    }
+    std::shared_ptr<arrow::RecordBatchReader> reader_;
+    std::shared_ptr<arrow::Schema> schema_;
+    Status failure_;
+};
+
+arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> restore_reader(
+    const std::shared_ptr<arrow::RecordBatchReader> &reader) {
+    auto actual = reader->schema();
+    if (!actual->metadata() || !actual->metadata()->Contains(logical_schema_key)) return reader;
+    ARROW_RETURN_NOT_OK(cp::Initialize());
+    ARROW_ASSIGN_OR_RAISE(auto serialized, actual->metadata()->Get(logical_schema_key));
+    arrow::io::BufferReader input(arrow::Buffer::FromString(serialized));
+    arrow::ipc::DictionaryMemo dictionaries;
+    ARROW_ASSIGN_OR_RAISE(auto logical, arrow::ipc::ReadSchema(&input, &dictionaries));
+    ARROW_RETURN_NOT_OK(physical_schema(logical, false, false, true).status());
+    arrow::FieldVector fields;
+    for (const auto &field : actual->fields()) {
+        auto original = logical->GetFieldByName(field->name());
+        if (!original) return Status::Invalid("reconstruction metadata is missing a projected field");
+        ARROW_ASSIGN_OR_RAISE(auto storage, physical_type(original->type(), false, true, true));
+        if (!original->WithType(storage)->Equals(field, true))
+            return Status::TypeError("reconstruction metadata does not match physical field '", field->name(), "'");
+        fields.push_back(original);
+    }
+    return std::make_shared<RestoringReader>(reader, arrow::schema(fields, logical->metadata()));
+}
+
 arrow::Result<std::shared_ptr<arrow::Schema>> metadata_schema(
-    const std::shared_ptr<arrow::fs::FileSystem> &fs, const std::string &path) {
+    const std::shared_ptr<arrow::fs::FileSystem> &fs, const std::string &path,
+    const IrxParquetOptions &options) {
     ARROW_ASSIGN_OR_RAISE(auto source, fs->OpenInputFile(path));
     parquet::arrow::FileReaderBuilder builder;
-    ARROW_RETURN_NOT_OK(builder.Open(source));
+    ARROW_RETURN_NOT_OK(builder.Open(source, reader_properties(options)));
     ARROW_ASSIGN_OR_RAISE(auto file, builder.Build());
     std::shared_ptr<arrow::Schema> schema;
     ARROW_RETURN_NOT_OK(file->GetSchema(&schema));
@@ -277,7 +379,7 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> scan_reader(
         if (o.hive) {
             ARROW_ASSIGN_OR_RAISE(auto metadata, fs->GetFileInfo(path + "/_common_metadata"));
             if (metadata.type() == arrow::fs::FileType::File) {
-                ARROW_ASSIGN_OR_RAISE(recorded_schema, metadata_schema(fs, metadata.path()));
+                ARROW_ASSIGN_OR_RAISE(recorded_schema, metadata_schema(fs, metadata.path(), o));
                 factory_options.partitioning = std::make_shared<ds::HivePartitioning>(recorded_schema);
             } else factory_options.partitioning = ds::HivePartitioning::MakeFactory();
         }
@@ -367,24 +469,60 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> scan_reader(
 
 arrow::Result<std::shared_ptr<arrow::RecordBatch>> prepare_batch(
     const arrow::RecordBatch &batch, const std::shared_ptr<arrow::Schema> &physical) {
-    ARROW_RETURN_NOT_OK(validate_nulls(batch));
+    bool reconstruct = physical->metadata() && physical->metadata()->Contains(logical_schema_key);
+    ARROW_RETURN_NOT_OK(validate_nulls(batch, reconstruct));
+    std::shared_ptr<arrow::Array> indices;
+    if (reconstruct) {
+        arrow::Int64Builder builder;
+        ARROW_RETURN_NOT_OK(builder.Reserve(batch.num_rows()));
+        for (int64_t row = 0; row < batch.num_rows(); ++row) builder.UnsafeAppend(row);
+        ARROW_ASSIGN_OR_RAISE(indices, builder.Finish());
+    }
     arrow::ArrayVector arrays;
     for (int i = 0; i < batch.num_columns(); ++i) {
-        ARROW_ASSIGN_OR_RAISE(auto array, canonical_children(batch.column(i), *batch.schema()->field(i)));
+        ARROW_ASSIGN_OR_RAISE(auto array, canonical_children(batch.column(i), *batch.schema()->field(i), reconstruct));
         const auto &type = physical->field(i)->type();
         if (!array->type()->Equals(type)) {
             ARROW_ASSIGN_OR_RAISE(array, cp::Cast(*array, type, cp::CastOptions::Safe()));
+        }
+        if (indices) {
+            // Fixed-to-variable list casts retain child slots beneath null
+            // parents. Parquet rejects those nonzero null ranges. Identity
+            // Take compacts unreachable slots recursively without changing
+            // any visible value, bounded by this input batch.
+            ARROW_ASSIGN_OR_RAISE(auto compact, cp::Take(array, indices));
+            array = compact.make_array();
         }
         arrays.push_back(array);
     }
     return arrow::RecordBatch::Make(physical, batch.num_rows(), arrays);
 }
 
+// Fresh encryption properties give every fragment its own AAD/nonce state.
+// Reusing one FileEncryptionProperties object across fragments is unsafe.
+class KeyedParquetFormat final : public ds::ParquetFileFormat {
+ public:
+    explicit KeyedParquetFormat(arrow::util::SecureString key) : key_(std::move(key)) {}
+    arrow::Result<std::shared_ptr<ds::FileWriter>> MakeWriter(
+        std::shared_ptr<arrow::io::OutputStream> sink, std::shared_ptr<arrow::Schema> schema,
+        std::shared_ptr<ds::FileWriteOptions> options,
+        arrow::fs::FileLocator locator) const override {
+        auto input = std::static_pointer_cast<ds::ParquetFileWriteOptions>(options);
+        auto output = std::make_shared<ds::ParquetFileWriteOptions>(*input);
+        output->writer_properties = parquet::WriterProperties::Builder(*input->writer_properties)
+            .encryption(parquet::FileEncryptionProperties::Builder(key_).build())->build();
+        return ds::ParquetFileFormat::MakeWriter(sink, schema, output, locator);
+    }
+ private:
+    arrow::util::SecureString key_;
+};
+
 class DatasetWriter final : public BatchWriter {
  public:
     DatasetWriter(ds::FileSystemDatasetWriteOptions options,
-                  std::shared_ptr<arrow::Schema> schema, bool threads)
-        : options_(std::move(options)), schema_(std::move(schema)), threads_(threads) {}
+                  std::shared_ptr<arrow::Schema> schema, bool threads,
+                  std::shared_ptr<LocalWriteLease> lease)
+        : options_(std::move(options)), schema_(std::move(schema)), threads_(threads), lease_(std::move(lease)) {}
     Status WriteRecordBatch(const arrow::RecordBatch &batch) override {
         if (!failure_.ok()) return failure_;
         if (closed_) return Status::Invalid("Parquet dataset writer is closed");
@@ -419,25 +557,187 @@ class DatasetWriter final : public BatchWriter {
     }
     Status Close() override {
         closed_ = true;
+        lease_.reset();
         return failure_;
     }
-    void Abandon() override { closed_ = true; }
-    void Invalidate(const Status &status) override { failure_ = status; closed_ = true; }
+    void Abandon() override { closed_ = true; lease_.reset(); }
+    void Invalidate(const Status &status) override { failure_ = status; Abandon(); }
  private:
     ds::FileSystemDatasetWriteOptions options_;
     std::shared_ptr<arrow::Schema> schema_;
     bool threads_, closed_{false};
+    std::shared_ptr<LocalWriteLease> lease_;
     Status failure_;
 };
+
+class SnapshotWriter final : public BatchWriter {
+ public:
+    SnapshotWriter(std::shared_ptr<BatchWriter> writer, std::shared_ptr<arrow::Schema> input,
+                   std::shared_ptr<arrow::Schema> output, std::filesystem::path generation,
+                   std::filesystem::path destination, std::shared_ptr<LocalWriteLease> lease,
+                   bool durable)
+        : writer_(std::move(writer)), input_(std::move(input)), output_(std::move(output)),
+          generation_(std::move(generation)), destination_(std::move(destination)),
+          lease_(std::move(lease)), durable_(durable) {}
+    ~SnapshotWriter() override { Abandon(); }
+    Status WriteRecordBatch(const arrow::RecordBatch &batch) override {
+        if (!failure_.ok()) return failure_;
+        if (closed_) return Status::Invalid("dataset transaction is closed");
+        auto prepared = prepare_batch(batch, input_);
+        if (!prepared.ok()) return failure_ = prepared.status();
+        arrow::ArrayVector arrays;
+        for (const auto &field : output_->fields()) {
+            auto values = (*prepared)->GetColumnByName(field->name());
+            if (!values) {
+                auto nulls = arrow::MakeArrayOfNull(field->type(), batch.num_rows());
+                if (!nulls.ok()) return failure_ = nulls.status();
+                values = *nulls;
+            }
+            arrays.push_back(values);
+        }
+        failure_ = writer_->WriteRecordBatch(*arrow::RecordBatch::Make(output_, batch.num_rows(), arrays));
+        return failure_;
+    }
+    Status Close() override {
+        if (closed_) return failure_;
+        closed_ = true;
+        try {
+            if (failure_.ok()) failure_ = writer_->Close();
+            if (failure_.ok() && durable_) {
+                std::vector<std::filesystem::path> directories{generation_};
+                for (const auto &entry : std::filesystem::recursive_directory_iterator(generation_)) {
+                    if (entry.is_directory()) directories.push_back(entry.path());
+                    else if (failure_.ok()) failure_ = sync_local_path(entry.path(), false);
+                }
+                for (auto it = directories.rbegin(); failure_.ok() && it != directories.rend(); ++it)
+                    failure_ = sync_local_path(*it, true);
+                if (failure_.ok()) failure_ = sync_local_path(generation_.parent_path(), true);
+            }
+#ifndef _WIN32
+            if (failure_.ok()) {
+                std::string pattern = destination_.string() + ".irx-XXXXXX";
+                int fd = ::mkstemp(pattern.data());
+                if (fd < 0) failure_ = Status::IOError("cannot reserve dataset commit pointer");
+                else {
+                    (void)::close(fd);
+                    pointer_ = pattern;
+                    std::filesystem::remove(pointer_);
+                    std::filesystem::create_symlink(generation_, pointer_);
+                    std::filesystem::rename(pointer_, destination_);
+                    pointer_.clear();
+                    committed_ = true;
+                    if (durable_) failure_ = sync_local_path(destination_.parent_path(), true);
+                }
+            }
+#else
+            failure_ = Status::NotImplemented("dataset snapshots require POSIX");
+#endif
+        } catch (const std::exception &error) { failure_ = Status::IOError("dataset commit: ", error.what()); }
+        cleanup();
+        return failure_;
+    }
+    void Invalidate(const Status &status) override { failure_ = status; Abandon(); }
+    void Abandon() override {
+        if (writer_) writer_->Abandon();
+        closed_ = true;
+        cleanup();
+    }
+ private:
+    void cleanup() {
+        std::error_code ignored;
+        if (!pointer_.empty()) std::filesystem::remove(pointer_, ignored);
+        if (!committed_) std::filesystem::remove_all(generation_, ignored);
+        lease_.reset();
+    }
+    std::shared_ptr<BatchWriter> writer_;
+    std::shared_ptr<arrow::Schema> input_, output_;
+    std::filesystem::path generation_, destination_, pointer_;
+    std::shared_ptr<LocalWriteLease> lease_;
+    bool durable_, closed_{false}, committed_{false};
+    Status failure_;
+};
+
+arrow::Result<std::shared_ptr<BatchWriter>> snapshot_writer(
+    const std::shared_ptr<arrow::fs::FileSystem> &fs, const std::string &path,
+    const std::shared_ptr<arrow::Schema> &input, const IrxParquetOptions &o) {
+#ifdef _WIN32
+    return Status::NotImplemented("dataset snapshots require POSIX");
+#else
+    if (fs->type_name() != "local") return Status::NotImplemented("dataset snapshots require a local POSIX filesystem");
+    std::filesystem::path destination = std::filesystem::absolute(path).lexically_normal();
+    destination = std::filesystem::canonical(destination.parent_path()) / destination.filename();
+    ARROW_ASSIGN_OR_RAISE(auto lease, LocalWriteLease::Acquire(destination.string()));
+    auto versions = destination.parent_path() / ("." + destination.filename().string() + ".irx-versions");
+    std::filesystem::path previous;
+    if (std::filesystem::exists(destination) || std::filesystem::is_symlink(destination)) {
+        if (!std::filesystem::is_symlink(destination))
+            return Status::Invalid("atomic dataset replacement requires a new destination or an IRx snapshot dataset");
+        previous = std::filesystem::canonical(destination);
+        if (previous.parent_path() != versions || !previous.filename().string().starts_with("generation-"))
+            return Status::Invalid("destination is not an IRx snapshot dataset");
+    } else if (o.append) return Status::Invalid("dataset append requires an existing snapshot");
+    auto output = input;
+    if (o.append) {
+        ARROW_ASSIGN_OR_RAISE(auto old, metadata_schema(fs, (previous / "_common_metadata").string(), o));
+        if (!o.unify && !old->Equals(*input, true)) return Status::TypeError("dataset append requires exact schema or unify=true");
+        if (o.unify) {
+            for (const auto &side : {old, input}) for (const auto &field : side->fields()) {
+                auto other = (side == old ? input : old)->GetFieldByName(field->name());
+                if (!other && !field->nullable()) return Status::TypeError("missing dataset column must be nullable: ", field->name());
+                if (other && !other->Equals(field, true)) return Status::TypeError("dataset evolution cannot change an existing field: ", field->name());
+            }
+            if ((old->metadata() == nullptr) != (input->metadata() == nullptr) ||
+                (old->metadata() && !old->metadata()->Equals(*input->metadata())))
+                return Status::TypeError("dataset evolution cannot change schema metadata");
+            ARROW_ASSIGN_OR_RAISE(output, arrow::UnifySchemas({old, input}));
+        }
+    }
+    if (std::filesystem::is_symlink(versions)) return Status::Invalid("snapshot storage must not be a symbolic link");
+    std::filesystem::create_directories(versions);
+    std::string pattern = (versions / "generation-XXXXXX").string();
+    if (!::mkdtemp(pattern.data())) return Status::IOError("cannot create dataset generation");
+    std::filesystem::path generation(pattern);
+    struct Guard {
+        std::filesystem::path path; bool transferred{false};
+        ~Guard() { if (!transferred) { std::error_code ignored; std::filesystem::remove_all(path, ignored); } }
+    } guard{generation};
+    if (o.append) {
+        // Immutable fragments are shared; metadata is regenerated, never modified
+        // through a hard link. Old generations remain valid for pinned readers.
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(previous)) {
+            auto relative = entry.path().lexically_relative(previous);
+            if (entry.is_symlink()) return Status::Invalid("snapshot fragments cannot be symbolic links");
+            if (entry.is_directory()) std::filesystem::create_directories(generation / relative);
+            else if (relative != "_common_metadata") std::filesystem::create_hard_link(entry.path(), generation / relative);
+        }
+        // Initialize the new schema before the inner append session opens.
+        auto metadata_options = o;
+        metadata_options.dataset = metadata_options.hive = metadata_options.atomic = false;
+        metadata_options.append = metadata_options.unify = metadata_options.durable = false;
+        metadata_options.partition_columns.clear();
+        ARROW_ASSIGN_OR_RAISE(auto metadata, parquet_writer((generation / "_common_metadata").c_str(), output,
+            o.compression.c_str(), o.row_group_size, &metadata_options));
+        ARROW_RETURN_NOT_OK(metadata->Close());
+    } else std::filesystem::remove(generation);
+    auto inner_options = o;
+    inner_options.atomic = inner_options.durable = inner_options.unify = false;
+    ARROW_ASSIGN_OR_RAISE(auto writer, parquet_writer(generation.c_str(), output,
+        o.compression.c_str(), o.row_group_size, &inner_options));
+    guard.transferred = true;
+    return std::make_shared<SnapshotWriter>(writer, input, output, generation, destination, lease, o.durable);
+#endif
+}
 
 class ParquetWriter final : public BatchWriter {
  public:
     ParquetWriter(std::shared_ptr<arrow::io::OutputStream> sink,
                   std::unique_ptr<parquet::arrow::FileWriter> writer,
                   std::shared_ptr<arrow::Schema> physical,
-                  std::string temporary, std::string destination)
+                  std::string temporary, std::string destination,
+                  std::shared_ptr<LocalWriteLease> lease, bool durable)
         : sink_(std::move(sink)), writer_(std::move(writer)), physical_(std::move(physical)),
-          temporary_(std::move(temporary)), destination_(std::move(destination)) {}
+          temporary_(std::move(temporary)), destination_(std::move(destination)),
+          lease_(std::move(lease)), durable_(durable) {}
     ~ParquetWriter() override { Abandon(); }
     Status WriteRecordBatch(const arrow::RecordBatch &batch) override {
         if (!failure_.ok()) return failure_;
@@ -457,11 +757,15 @@ class ParquetWriter final : public BatchWriter {
             writer_.reset();
             auto status = sink_->Close();
             if (failure_.ok()) failure_ = status;
+            if (failure_.ok() && durable_) failure_ = sync_local_path(temporary_, false);
             if (failure_.ok() && !temporary_.empty()) {
                 std::error_code error;
                 std::filesystem::rename(temporary_, destination_, error);
                 if (error) failure_ = Status::IOError("atomic Parquet replacement failed: ", error.message());
-                else temporary_.clear();
+                else {
+                    temporary_.clear();
+                    if (durable_) failure_ = sync_local_path(std::filesystem::path(destination_).parent_path(), true);
+                }
             }
         } catch (const std::exception &error) {
             if (failure_.ok()) failure_ = Status::IOError("Parquet close: ", error.what());
@@ -490,11 +794,14 @@ class ParquetWriter final : public BatchWriter {
             std::filesystem::remove(temporary_, ignored);
             temporary_.clear();
         }
+        lease_.reset();
     }
     std::shared_ptr<arrow::io::OutputStream> sink_;
     std::unique_ptr<parquet::arrow::FileWriter> writer_;
     std::shared_ptr<arrow::Schema> physical_;
     std::string temporary_, destination_;
+    std::shared_ptr<LocalWriteLease> lease_;
+    bool durable_;
     bool closed_{false};
     Status failure_;
 };
@@ -506,7 +813,7 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> parquet_reader(
     IrxParquetOptions o = options ? *options : IrxParquetOptions{};
     o.batch_size = batch_size;
     if (batch_size <= 0) return Status::Invalid("Parquet batch_size must be positive");
-    if (o.atomic || o.append || o.normalize || !o.partition_columns.empty() ||
+    if (o.atomic || o.durable || o.reconstruct || o.append || o.normalize || !o.partition_columns.empty() ||
         o.compression != "snappy" || o.compression_level || o.row_group_size != 1048576 || o.data_page_size != 1048576)
         return Status::Invalid("write-only Parquet options supplied to a reader");
     if ((o.hive || o.unify) && !o.dataset) return Status::Invalid("hive/unify require dataset=true");
@@ -515,6 +822,10 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> parquet_reader(
         std::string_view(path).find("://") == std::string_view::npos
             ? std::filesystem::absolute(path).string() : std::string(path), &fs_path));
     std::shared_ptr<arrow::RecordBatchReader> result;
+    // Pin one committed generation before discovering fragments. A later commit
+    // changes only the public symlink; this reader keeps its original snapshot.
+    if (o.dataset && fs->type_name() == "local")
+        fs_path = std::filesystem::canonical(fs_path).string();
     if (o.dataset || !o.columns.empty() || !o.predicates.empty()) {
         ARROW_ASSIGN_OR_RAISE(auto reader, scan_reader(fs, fs_path, o));
         result = std::make_shared<OwnedReader>(reader);
@@ -535,7 +846,9 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> parquet_reader(
         ARROW_ASSIGN_OR_RAISE(auto reader, file->GetRecordBatchReader(groups));
         result = std::make_shared<OwnedReader>(std::move(reader), source, std::move(file));
     }
-    ARROW_RETURN_NOT_OK(physical_schema(result->schema(), false, false).status());
+    bool reconstruct = result->schema()->metadata() && result->schema()->metadata()->Contains(logical_schema_key);
+    ARROW_ASSIGN_OR_RAISE(result, restore_reader(result));
+    ARROW_RETURN_NOT_OK(physical_schema(result->schema(), false, false, reconstruct).status());
     if (expected && !expected->Equals(*result->schema(), true))
         return Status::TypeError("Parquet schema mismatch (names/order/types/metadata/nullability); expected schema is an assertion, not a conversion");
     return result;
@@ -545,10 +858,22 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
     const char *path, const std::shared_ptr<arrow::Schema> &schema,
     const char *compression, int64_t row_group_size, const IrxParquetOptions *options) {
     IrxParquetOptions o = options ? *options : IrxParquetOptions{};
-    if (!o.columns.empty() || !o.predicates.empty() || !o.row_groups.empty() || o.pre_buffer || o.unify)
+    if (!o.columns.empty() || !o.predicates.empty() || !o.row_groups.empty() || o.pre_buffer)
         return Status::Invalid("read-only Parquet options supplied to a writer");
+    if (o.unify && !(o.dataset && o.atomic && o.append))
+        return Status::Invalid("write-time unify requires an atomic dataset append");
     if (o.hive && !o.dataset) return Status::Invalid("hive requires dataset=true");
-    ARROW_ASSIGN_OR_RAISE(auto physical, physical_schema(schema, true, o.normalize));
+    if (o.durable && !o.atomic && !o.append) return Status::Invalid("durable requires atomic=true or append=true");
+    ARROW_ASSIGN_OR_RAISE(auto physical, physical_schema(schema, true, o.normalize, o.reconstruct, true));
+    if (o.reconstruct) {
+        if (o.dataset) return Status::NotImplemented("explicit schema reconstruction currently targets single files");
+        ARROW_RETURN_NOT_OK(cp::Initialize());
+        ARROW_ASSIGN_OR_RAISE(auto logical, physical_schema(schema, true, o.normalize, true));
+        ARROW_ASSIGN_OR_RAISE(auto encoded, arrow::ipc::SerializeSchema(*logical));
+        auto metadata = physical->metadata() ? physical->metadata()->Copy() : arrow::key_value_metadata({}, {});
+        ARROW_RETURN_NOT_OK(metadata->Set(logical_schema_key, encoded->ToString()));
+        physical = physical->WithMetadata(metadata);
+    }
     if (row_group_size <= 0 || o.data_page_size <= 0) return Status::Invalid("Parquet sizes must be positive");
     if (o.normalize) ARROW_RETURN_NOT_OK(cp::Initialize());
     ARROW_ASSIGN_OR_RAISE(auto codec, arrow::util::Codec::GetCompressionType(compression));
@@ -576,9 +901,11 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         std::string_view(path).find("://") == std::string_view::npos
             ? std::filesystem::absolute(path).string() : std::string(path), &fs_path));
     if (o.dataset) {
-        if (o.atomic) return Status::NotImplemented("atomic replacement is not a dataset transaction");
         if (!o.hive || o.partition_columns.empty()) return Status::Invalid("dataset output requires hive=true and partition_columns");
-        if (!o.key.empty()) return Status::NotImplemented("dataset encryption requires per-file key management; encrypted single files are supported");
+        if (o.durable && !o.atomic) return Status::Invalid("durable dataset writes require atomic=true");
+        if (o.atomic) return snapshot_writer(fs, fs_path, physical, o);
+        if (fs->type_name() == "local" && std::filesystem::is_symlink(fs_path))
+            return Status::Invalid("snapshot datasets require atomic=true for every write");
         if (o.partition_columns.size() >= static_cast<size_t>(physical->num_fields()))
             return Status::Invalid("dataset output needs at least one non-partition column");
         ARROW_RETURN_NOT_OK(cp::Initialize());
@@ -589,10 +916,17 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
             auto field = physical->GetFieldByName(name);
             if (!field) return Status::Invalid("unknown partition column: ", name);
             if (field->type()->id() != arrow::Type::STRING &&
+                field->type()->id() != arrow::Type::BOOL &&
+                field->type()->id() != arrow::Type::DATE32 &&
+                field->type()->id() != arrow::Type::TIME32 &&
+                field->type()->id() != arrow::Type::TIME64 &&
+                field->type()->id() != arrow::Type::TIMESTAMP &&
                 !arrow::is_integer(field->type()->id()))
-                return Status::TypeError("partition columns must be strings or integers");
+                return Status::TypeError("partition columns must be strings, integers, Boolean, date32, time or timestamp");
             partition_fields.push_back(field);
         }
+        std::shared_ptr<LocalWriteLease> lease;
+        if (fs->type_name() == "local") { ARROW_ASSIGN_OR_RAISE(lease, LocalWriteLease::Acquire(fs_path)); }
         ARROW_ASSIGN_OR_RAISE(auto info, fs->GetFileInfo(fs_path));
         if (!o.append && info.type() != arrow::fs::FileType::NotFound)
             return Status::Invalid("dataset destination exists; use append=true for new fragments");
@@ -603,7 +937,7 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
             // Our schema-only footer records original partition types and a
             // stable append contract. External datasets can be read/unified,
             // but append must not guess their intended partition types.
-            ARROW_ASSIGN_OR_RAISE(auto previous, metadata_schema(fs, metadata_path));
+            ARROW_ASSIGN_OR_RAISE(auto previous, metadata_schema(fs, metadata_path, o));
             if (!previous->Equals(*physical, true)) return Status::TypeError("dataset append requires exact schema including partition types and metadata");
         } else {
             ARROW_RETURN_NOT_OK(fs->CreateDir(fs_path, true));
@@ -613,7 +947,8 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
             ARROW_RETURN_NOT_OK(metadata->Close());
             ARROW_RETURN_NOT_OK(sink->Close());
         }
-        auto format = std::make_shared<ds::ParquetFileFormat>();
+        std::shared_ptr<ds::ParquetFileFormat> format = o.key.empty()
+            ? std::make_shared<ds::ParquetFileFormat>() : std::make_shared<KeyedParquetFormat>(o.key);
         auto write_options = std::static_pointer_cast<ds::ParquetFileWriteOptions>(format->DefaultWriteOptions());
         write_options->writer_properties = properties.build();
         write_options->arrow_writer_properties = arrow_properties;
@@ -625,18 +960,28 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         write.max_rows_per_group = row_group_size;
         write.preserve_order = true;
         write.existing_data_behavior = ds::ExistingDataBehavior::kOverwriteOrIgnore;
-        return std::make_shared<DatasetWriter>(write, physical, o.use_threads);
+        return std::make_shared<DatasetWriter>(write, physical, o.use_threads, lease);
     }
     if (!o.partition_columns.empty()) return Status::Invalid("partition_columns require dataset=true");
     const bool atomic = o.atomic || o.append;
     if (atomic && fs->type_name() != "local") return Status::NotImplemented("atomic replacement and rewrite append require a local filesystem");
+    std::shared_ptr<LocalWriteLease> lease;
+    if (fs->type_name() == "local") {
+        ARROW_ASSIGN_OR_RAISE(lease, LocalWriteLease::Acquire(fs_path));
+        if (std::filesystem::is_symlink(fs_path))
+            return Status::Invalid("Parquet file output must not be a symbolic link");
+    }
     std::shared_ptr<arrow::RecordBatchReader> existing;
     if (o.append) {
         // Check before creating output. Append means rewrite+replace, never
-        // concatenating Parquet footers. Concurrent writers need external locking.
+        // concatenating Parquet footers. Hold the lease before reading old data.
         IrxParquetOptions read;
         read.key = o.key;
-        ARROW_ASSIGN_OR_RAISE(existing, parquet_reader(path, physical, o.batch_size, &read));
+        auto expected = physical;
+        if (o.reconstruct) {
+            ARROW_ASSIGN_OR_RAISE(expected, physical_schema(schema, true, o.normalize, true));
+        }
+        ARROW_ASSIGN_OR_RAISE(existing, parquet_reader(path, expected, o.batch_size, &read));
     }
     std::string temporary;
     struct TemporaryGuard {
@@ -666,7 +1011,7 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         if (!temporary.empty()) std::filesystem::remove(temporary);
         return opened.status();
     }
-    auto writer = std::make_shared<ParquetWriter>(sink, std::move(*opened), physical, temporary, fs_path);
+    auto writer = std::make_shared<ParquetWriter>(sink, std::move(*opened), physical, temporary, fs_path, lease, o.durable);
     guard.transferred = true;
     if (existing) {
         while (true) {

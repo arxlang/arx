@@ -57,13 +57,14 @@ arguments such as `batch_size=`.
 | `row_group`                        | `set_int`, repeatable                   | Select file row groups, in requested order; not valid for a dataset                                                                      |
 | predicates                         | `where(column, operation, value, type)` | AND comparisons; operations `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `is_null`, `is_valid`; literal types `string`, `int64`, `double`, `bool` |
 | `dataset`, `hive`, `unify`         | `set_int`, flags 0/1                    | Directory scan, Hive partition discovery and opt-in schema union                                                                         |
-| `partition_column`                 | `set_text`, repeatable                  | Partition dataset output by named string/integer columns                                                                                 |
+| `partition_column`                 | `set_text`, repeatable                  | Partition output by string/integer, Boolean, date32, time or timestamp columns                                                           |
 | `use_threads`, `pre_buffer`        | `set_int`, flags                        | Threading for reads/writes; read pre-buffering; defaults off                                                                             |
 | `compression`                      | `set_text`                              | `snappy`, `uncompressed`, `zstd`, `gzip`, `brotli`, `lz4`                                                                                |
 | `compression_level`                | `set_int`                               | Codec-specific level, validated against the installed codec                                                                              |
 | `row_group_size`, `data_page_size` | `set_int`                               | Writer row-group row limit and page byte target                                                                                          |
 | `normalize`                        | `set_int`, flag                         | Explicit checked temporal normalization, described below                                                                                 |
-| `atomic`, `append`                 | `set_int`, flags                        | Local atomic replacement or rewrite append; dataset append adds fragments                                                                |
+| `reconstruct`                      | `set_int`, flag                         | Single-file logical reconstruction for numeric dictionaries and nullable fixed-size lists                                                |
+| `atomic`, `durable`, `append`      | `set_int`, flags                        | Local atomic snapshots/rewrite append; optional fsync durability                                                                         |
 
 Python uses `columns`, `row_groups`, `partition_columns` tuples and a tuple of
 `ParquetPredicate(column, operation, value)` objects. Filter columns need not be
@@ -81,9 +82,10 @@ RecordBatch I/O supports:
   `time64[us/ns]`;
 - recursively nested lists, large/fixed lists, structs and maps;
 - Arrow dictionaries with string or binary values;
-- extensions registered in the **native Arrow registry** with supported storage
-  (tested with `arrow.uuid` and `arrow.json`). Python-only extension
-  registration is not available to an independent compiled executable.
+- native registered extensions with supported storage (tested with UUID/JSON);
+- opaque application/Python extension storage with exact Arrow extension
+  metadata. Native code does not execute Python extension callbacks. Python
+  consumers can reconstruct an extension after registering its implementation.
 
 Nulls, type parameters, field order, child names, timezones and user metadata
 are retained. Dictionary codebooks/codes can be reorganized across batches; do
@@ -103,17 +105,24 @@ truncation: for example, a `date64` value not aligned to a whole day fails. The
 reader reports the physical normalized type, not an invented original type.
 Extension storage is never implicitly normalized.
 
-Backend limitations remain explicit:
+### Explicit logical reconstruction
 
-- fixed-size lists with null parent slots are rejected on write because the
-  current Arrow Parquet reader cannot reconstruct them; use variable lists;
-- numeric dictionary arrays, unions, list views, unsupported logical types and
-  unregistered extensions are not silently decoded/coerced;
-- rich values can be passed through compiled RecordBatches and inspected through
-  Arrow C Data. The scalar `BatchBuilder`/getter API is not a recursive value
-  API; Python can construct/import them with `RecordBatch.from_arrow(...)` and
-  `RecordBatchSchema.from_arrow(...)` and export independent `to_arrow()`
-  snapshots.
+`reconstruct=true` on a **single-file writer** supports numeric dictionaries
+(including decimals) and fixed-size lists with null parents. IRx writes ordinary
+value columns/variable lists plus the reserved `IRX:logical_schema:v1` IPC
+schema metadata. IRx readers validate that metadata against the physical schema
+and restore the logical types automatically, including nested fields and
+projected scans. Dictionary codebooks are rebuilt per batch; safe index casts
+reject capacity overflow. Ordered dictionary reconstruction is rejected because
+its codebook ordering cannot be preserved. Codes are not stable identifiers.
+
+Other readers see the documented physical types, not the reconstructed schema.
+Use IPC when arbitrary consumers must see the exact original Arrow types. Strict
+writes without this option still reject numeric dictionaries and null fixed-list
+parents. Dataset reconstruction, unions and list views are not supported; errors
+are explicit. Both internal schema metadata keys are reserved. The scalar
+`BatchBuilder`/getter API is not a recursive value API; use C Data imports and
+`RecordBatch.from_arrow` / `to_arrow` for rich values.
 
 ## Datasets, evolution and filesystems
 
@@ -129,15 +138,34 @@ Dataset writes require `dataset=true`, `hive=true`, and `partition_columns`.
 Each input batch is written as bounded, independently finalized fragments with
 fresh names. At least one non-partition column is required. `_common_metadata`
 records the full schema, preserving original partition types and allowing empty
-datasets. Existing destinations require explicit `append=true`; append requires
-the exact stored schema. External datasets without that metadata can be read,
-but cannot be appended to by guessing their partition types. Dataset writes are
-**not transactions** and may leave successfully written fragments after a later
-failure. Directory-wide atomic replacement and encrypted dataset key management
-are not provided. Hive partition names cannot contain `/`, backslash, `=` or
-`%`; the string value `__HIVE_DEFAULT_PARTITION__` is reserved for nulls and
-rejected rather than silently converted. Other string values are URI-escaped.
-Recorded schemas preserve original column order and metadata on reads.
+datasets. Ordinary writes require `append=true` for an existing destination and
+an exact stored schema. They may leave completed fragments after a later error.
+
+For transactional output use `atomic=true` on a local POSIX filesystem. IRx
+creates immutable generations in a hidden sibling `.<name>.irx-versions`
+directory and atomically switches the public dataset symlink on successful
+close. IRx readers pin one generation at open, so existing readers retain a
+consistent view during replacement. Only new destinations or managed snapshot
+symlinks are accepted, not existing ordinary directories. Subsequent writes to a
+snapshot must also use `atomic=true`.
+
+Snapshot append retains old fragments and adds new ones. With `append=true`,
+`atomic=true`, `unify=true`, incoming schemas can add or omit **nullable**
+fields; shared fields must have identical types, nullability and metadata. There
+is no implicit widening or required-field synthesis. Read evolved datasets with
+`unify=true`. Existing immutable fragments are hardlinked, not rewritten.
+
+Old generations are deliberately retained for active readers. There is no
+automatic garbage collector: remove unreachable generations only after all
+readers have closed. Never edit a published generation or its hardlinked files.
+External readers can follow the public symlink, but only IRx readers implement
+generation pinning. This is a local commit protocol, not an object-store table
+format or distributed transaction.
+
+Hive names cannot contain `/`, backslash, `=` or `%`. The string value
+`__HIVE_DEFAULT_PARTITION__` is reserved for nulls. Other strings are
+URI-escaped. Recorded schemas preserve partition types, column order and
+metadata.
 
 Paths and URIs use Arrow's filesystem implementations. Local paths and `file://`
 are tested; cloud schemes work only when the installed Arrow build and its
@@ -147,23 +175,34 @@ Use credential providers, not credentials embedded in paths or source code.
 
 ## Encryption and safe writes
 
-Single-file encryption uses Parquet AES footer-key encryption. Python accepts
-`ParquetOptions(encryption_key=key_bytes)` with a 16/24/32-byte key. Arx accepts
-`options.encryption_key_hex(runtime_key)` with 32/48/64 hexadecimal digits. Use
-runtime-provided secrets; never commit real keys in examples or source. The same
-key is needed to read encrypted data. Missing/wrong keys fail. Native option
-copies use Arrow's secure string storage; caller-owned Python/Arx values remain
-the caller's responsibility. KMS integration, rotation and per-column keys are
-outside this interface.
+File and dataset encryption use Parquet AES footer-key encryption. Each dataset
+fragment gets fresh encryption properties; the schema footer is encrypted too.
+Python accepts `ParquetOptions(encryption_key=key_bytes)` with a 16/24/32-byte
+key. Arx accepts `options.encryption_key_hex(runtime_key)` with 32/48/64
+hexadecimal digits. Use runtime-provided secrets; never commit real keys in
+examples or source. The same key is needed to read encrypted data. Missing/wrong
+keys fail. Native option copies use Arrow's secure string storage; caller-owned
+Python/Arx values remain the caller's responsibility. KMS integration, rotation
+and per-column keys are outside this interface.
 
 `atomic=true` writes a securely created sibling temporary file and replaces the
 destination only after successful finalization. Abandoning a Python context or
 releasing an unfinished writer does not commit it. Single-file `append=true`
 streams the existing file into a new temporary output and then adds new batches;
 it never concatenates Parquet files. Both operations currently require a **local
-POSIX filesystem**. They guarantee replacement visibility, not fsync-based crash
-durability or concurrent-writer coordination. Use external locking. Abrupt
-process termination can leave temporary files requiring cleanup.
+POSIX filesystem**. Local writers hold a nonblocking advisory lock for their
+entire session, including the old-data read in append. A second cooperating
+writer fails with a busy error before truncation. Locks are released on close,
+abort, failure or process death. Hidden lock files are intentionally persistent;
+do not delete them while writers may exist. Coordination is by canonical path,
+not hardlink identity, and does not exclude non-IRx writers.
+
+`durable=true` requires atomic replacement or file rewrite append. It fsyncs
+completed data and directories before/after publication. A failure **after**
+publication (for example the final directory fsync) can report an error while
+the new data is already visible; its durability is then uncertain. Abrupt
+process death can leave unpublished temporaries/generations. Durability still
+depends on the local filesystem/device honoring fsync.
 
 Without atomic mode, later I/O failures can leave partial output. Options/schema
 validation precedes truncation, but data-dependent failures cannot all be
@@ -173,19 +212,30 @@ metadata.
 
 ## DataFrame conversion
 
-`cast(batch, dataframe[...])` accepts exact names/order/types for
+Static `cast(batch, dataframe[name:T, ...])` accepts exact names/order/types for
 signed/unsigned integers, floats, Boolean, `str`, `date` (date32), `time`
 (time64 microseconds) and `timestamp`/`datetime` (timezone-naive timestamp
 microseconds). Use `T | none` for nullable columns, for example
 `dataframe[id:u64 | none, name:str | none]`. Non-nullable targets still reject
 actual nulls. No implicit unit/timezone conversion is performed. Other temporal
-units/timezones remain RecordBatch data.
+units/timezones can use parameterized static annotations or runtime schemas.
 
-Nullable signed numeric/Boolean/string literals are supported.
-Signed-to-unsigned literal coercion is not implicit; populate unsigned columns
-through RecordBatches. Temporal columns likewise use RecordBatch conversion, not
-new temporal literals. Static DataFrame schemas do not carry arbitrary input
-metadata. Configure output from the converted batch's schema.
+Nullable signed numeric/Boolean/string and temporal literals are supported. Use
+`date("2026-01-01")`, `time("01:02:03")`, `timestamp("2026-01-01T01:02:03")` or
+`datetime("2026-01-01T01:02:03")`. Literal timestamp/time values currently use
+whole seconds and no timezone; other units, fractions and zones can be imported
+as Arrow data. Signed-to-unsigned literal coercion is not implicit; populate
+unsigned columns through RecordBatches. Static conversions preserve input schema
+and field metadata. Configure output from the converted batch's schema.
+`cast(batch, dataframe[...])` with literal ellipsis creates a runtime-schema
+DataFrame preserving RecordBatch-supported Arrow types and metadata, including
+nested, decimal, nullable and timezone-aware columns. These frames support local
+variables, parameters, returns, `nrows()`/`ncols()` and checked RecordBatch
+conversion. They do not infer static column types or permit unchecked narrowing.
+To obtain a static frame, convert back to RecordBatch and perform a checked
+static cast. Numeric/Boolean nullable scalar and Series expressions are
+supported as described in [collections](collections.md).
+
 [CSV conversion ownership rules](csv.md#checked-dataframe-conversion) apply
 unchanged.
 
@@ -212,12 +262,20 @@ with Parquet() as source, Parquet() as target:
 Iteration releases a batch on advancement. Use `next_batch()` and explicit
 `release()` when retaining the native batch longer; exported `to_arrow()` values
 own independent references. Low-level `open_parquet` factories remain available.
-Import does not build native code; opening builds/loads the fingerprinted ctypes
-library, which bundles all format features.
+Import does not build native code. CSV/IPC use the base ctypes library; Parquet
+loads a separate on-demand plugin linked to that same base instance.
+`IRX_RECORD_BATCH_LIBRARY` overrides retain the legacy all-in-one ABI contract.
 
-IRx registers `parquet` separately from `record_batch`, with a checked
-dependency on the latter. The base feature links only Arrow; Parquet
-additionally links matching Parquet, Dataset, Compute and Acero libraries. **The
-current Arx compiler lowers all declarations in `stdlib.arrow`, so importing
-that bundled module still activates Parquet even for CSV-only programs.**
-End-to-end lazy stdlib lowering is not implemented by this runtime separation.
+IRx registers `parquet` separately from `record_batch`. The base feature links
+Arrow and Compute for nullable kernels. Parquet additionally links matching
+Parquet, Dataset and Acero libraries. Arx analyzes all of `stdlib.arrow`, but
+lowers only resolved reachable declarations (whole referenced classes, including
+destructors). CSV-only programs no longer activate or link Parquet.
+
+Static RecordBatch/DataFrame casts now support parameterized decimal,
+timezone/unit, binary, nested and dictionary columns; they preserve input
+metadata without implicit physical conversions. Numeric/Boolean Series support
+checked indexing and null-propagating expressions. See
+[collections](collections.md#nullable-scalars-and-series-expressions). These
+language changes do not remove the format-specific reconstruction restrictions
+or provide distributed cloud transactions.

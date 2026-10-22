@@ -103,3 +103,6 @@ current interoperability features.
 - [Douki](../tools/douki.md) defines the YAML docstring tooling used by Arx.
 
 Source: [github.com/arxlang/arx](https://github.com/arxlang/arx)
+
+For tabular computation, [collections](collections.md) covers nullable scalar
+and Series expressions and parameterized static DataFrame schemas.

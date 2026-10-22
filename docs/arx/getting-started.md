@@ -158,9 +158,16 @@ containers/globals/generator captures are deliberately excluded. See
 For CSV, use the unified native `CSV` class from `stdlib.arrow`. For Parquet,
 use [`Parquet`](parquet.md) with the same explicit read/write session model.
 [CSV files and DataFrames](csv.md) shows streaming every batch and checked
-conversion into an exact static-schema DataFrame. Unsupported DataFrame types
-can remain in RecordBatches; strings and nulls are not silently discarded.
+conversion into an exact static-schema DataFrame. Rich Arrow types can remain in
+RecordBatches or be preserved by runtime-schema `dataframe[...]` locals and
+returns; strings and nulls are not silently discarded.
 
 For nullable data-file columns, use `dataframe[name:str | none]` and the unified
 `CSV`/`Parquet` APIs. See [Parquet configuration](parquet.md) for native scans,
 partitioned datasets and safe-write options, including their current limits.
+
+For nullable tabular data, start with `dataframe[x:i32 | none]`, access
+`frame.x` as a Series, and use `fill_null(frame.x[0], 0)` for a non-nullable
+scalar. [Collections](collections.md#nullable-scalars-and-series-expressions)
+documents checked arithmetic, null masks and rich static schemas for file
+conversions.

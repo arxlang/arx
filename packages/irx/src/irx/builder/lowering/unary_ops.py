@@ -9,6 +9,7 @@ import astx
 from llvmlite import ir
 
 from irx.builder.core import VisitorCore, semantic_assignment_key
+from irx.builder.diagnostics import require_lowered_value
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_fp_type, is_int_type
@@ -25,6 +26,21 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: astx.UnaryOp
         """
+        if node.op_code in {"+", "-"}:
+            self.visit_child(node.operand)
+            value = require_lowered_value(
+                safe_pop(self.result_stack),
+                node=node.operand,
+                context="unary sign",
+            )
+            if node.op_code == "-":
+                value = (
+                    self._llvm.ir_builder.fneg(value)
+                    if is_fp_type(value.type)
+                    else self._llvm.ir_builder.neg(value)
+                )
+            self.result_stack.append(value)
+            return
         if node.op_code == "++":
             self.visit_child(node.operand)
             operand_val = safe_pop(self.result_stack)

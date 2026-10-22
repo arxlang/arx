@@ -101,12 +101,22 @@ def series_type(element_type: astx.DataType) -> astx.SeriesType:
     returns:
       type: astx.SeriesType
     """
+    nullable = isinstance(element_type, astx.NullableType)
+    if isinstance(element_type, astx.NullableType):
+        element_type = element_type.value_type
+    if isinstance(element_type, astx.UnionType):
+        members = [
+            t for t in element_type.members if not isinstance(t, astx.NoneType)
+        ]
+        if len(element_type.members) != 2 or len(members) != 1:
+            raise ValueError("Series nullability requires type | none")
+        element_type, nullable = members[0], True
     if not dataframe_column_type_is_supported(element_type):
         raise ValueError(
             "series element types support numeric, bool, string and "
             "date/time/timestamp types"
         )
-    return astx.SeriesType(element_type)
+    return astx.SeriesType(element_type, nullable=nullable)
 
 
 def binding_from_type(

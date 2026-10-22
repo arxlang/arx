@@ -52,6 +52,12 @@ struct IrxRbApiWriter : Box<IrxRbStreamWriter, irx_rb_stream_writer_release> {
     Box<IrxRbSchema, irx_rb_schema_release> schema;
 };
 
+IrxRbApiSchema *irx_rb_api_schema_ipc(const uint8_t *data, int64_t size) {
+    auto result = std::make_unique<IrxRbApiSchema>();
+    checked(irx_rb_schema_from_ipc(data, size, &result->value));
+    return result.release();
+}
+
 IrxRbApiSchema *irx_rb_api_schema_new(void) {
     auto result = std::make_unique<IrxRbApiSchema>();
     checked(irx_rb_schema_create(&result->value));
@@ -445,6 +451,16 @@ irx_arrow_table_handle *irx_rb_api_batch_to_table(IrxRbApiBatch *box, IrxRbApiSc
     irx_arrow_table_handle *result = nullptr;
     checked(irx_rb_batch_to_table(box->get(), schema->get(), &result));
     return result;
+}
+irx_arrow_table_handle *irx_rb_api_batch_to_dynamic_table(IrxRbApiBatch *box) {
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_batch_to_dynamic_table(box->get(), &result));
+    return result;
+}
+void irx_rb_api_table_to_dynamic_batch(irx_arrow_table_handle *table, IrxRbApiBatch *out) {
+    IrxRbBatch *batch = nullptr;
+    checked(irx_rb_table_to_dynamic_batch(table, &batch));
+    out->reset(batch);
 }
 void irx_rb_api_table_to_batch(irx_arrow_table_handle *table, IrxRbApiBatch *out) {
     IrxRbBatch *batch = nullptr;

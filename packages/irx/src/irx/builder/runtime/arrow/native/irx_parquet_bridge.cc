@@ -84,6 +84,8 @@ int irx_parquet_options_int(IrxParquetOptions *o, const char *name, int64_t valu
             else if (n == "unify") o->unify = value;
             else if (n == "normalize") o->normalize = value;
             else if (n == "atomic") o->atomic = value;
+            else if (n == "durable") o->durable = value;
+            else if (n == "reconstruct") o->reconstruct = value;
             else if (n == "append") o->append = value;
             else return set_err("unknown Parquet integer option");
         }

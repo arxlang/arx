@@ -167,10 +167,19 @@
     },
     "dataframe_type": {
       "static_schema": "dataframe[name: type, ...]",
-      "runtime_schema_parameter": "dataframe[...]"
+      "runtime_schema_parameter": "dataframe[...]",
+      "runtime_schema_contexts": [
+        "parameter",
+        "return",
+        "local",
+        "type_alias",
+        "cast"
+      ]
     },
     "series_type": {
-      "form": "series[type]"
+      "form": "series[type] or series[type | none]",
+      "indexing": "series[index]",
+      "null_operations": ["is_null(value)", "fill_null(value, replacement)"]
     },
     "call_arguments": {
       "form": "callee(positional, name=value, ...)",
@@ -240,15 +249,33 @@
       "dataframe",
       "list",
       "series",
-      "tensor"
+      "tensor",
+      "nullable",
+      "decimal128",
+      "decimal256",
+      "arrow_list",
+      "large_list",
+      "fixed_list",
+      "dictionary",
+      "binary",
+      "large_binary",
+      "large_string",
+      "arrow_struct",
+      "arrow_map"
     ],
     "functions": [
       "cast",
       "dataframe",
+      "date",
+      "datetime",
       "isinstance",
+      "is_null",
+      "fill_null",
       "open",
       "print",
       "range",
+      "time",
+      "timestamp",
       "type"
     ]
   }

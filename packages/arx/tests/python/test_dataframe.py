@@ -69,9 +69,9 @@ def test_parse_dataframe_type_constructor_and_column_access() -> None:
     assert ids.value.column_name == "id"
 
 
-def test_parse_runtime_schema_dataframe_only_for_parameters() -> None:
+def test_parse_runtime_schema_dataframe_annotations() -> None:
     """
-    title: Runtime-schema dataframe annotations are parameter-only for now.
+    title: Runtime schemas support owned conversions but not untyped literals.
     """
     tree = _parse_module(
         """
@@ -94,7 +94,39 @@ def test_parse_runtime_schema_dataframe_only_for_parameters() -> None:
     assert isinstance(arg_type, astx.DataFrameType)
     assert arg_type.columns is None
 
-    with pytest.raises(ParserException, match="function parameter"):
+
+@pytest.mark.parametrize(
+    ("constructor", "value", "kind"),
+    [
+        ("date", "2026-01-01", astx.LiteralDate),
+        ("time", "01:02:03", astx.LiteralTime),
+    ],
+)
+def test_parse_temporal_constructors(
+    constructor: str, value: str, kind: type[astx.AST]
+) -> None:
+    """
+    title: Temporal constructors emit existing reusable ASTx nodes.
+    parameters:
+      constructor:
+        type: str
+      value:
+        type: str
+      kind:
+        type: type[astx.AST]
+    """
+    tree = _parse_module(f'fn main() -> none:\n  {constructor}("{value}")\n')
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert isinstance(function.body.nodes[0], kind)
+
+
+def test_reject_untyped_dataframe_literal() -> None:
+    """
+    title: A runtime schema does not infer heterogeneous literal columns.
+    """
+
+    with pytest.raises(ParserException, match=r"schema|columns"):
         _parse_module(
             """
             fn bad() -> none:
@@ -175,4 +207,69 @@ def test_dataframe_invalid_nullable_union() -> None:
     with pytest.raises(ParserException, match=r"type \| none"):
         _parse_module(
             "fn bad(value: dataframe[x:i64 | str]) -> none:\n  return none"
+        )
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "decimal128[12, -2]",
+        "decimal256[60, 3]",
+        'timestamp["ns", "UTC"]',
+        'time["ms"]',
+        "binary[8]",
+        "large_string",
+        "large_binary",
+        "arrow_list[nullable[i32]]",
+        "large_list[i32]",
+        "fixed_list[i64, 2]",
+        "dictionary[i8, str]",
+        "arrow_map[str, nullable[i32]]",
+        "arrow_struct[x:nullable[i32], label:str]",
+    ],
+)
+def test_parse_parameterized_columns(annotation: str) -> None:
+    """
+    title: Parse storage parameters without treating them as expressions.
+    parameters:
+      annotation:
+        type: str
+    """
+    tree = _parse_module(
+        f"fn accept(frame: dataframe[x:{annotation} | none]) -> i32:\n"
+        "  return 0\n"
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    frame = function.prototype.args.nodes[0].type_
+    assert isinstance(frame, astx.DataFrameType) and frame.columns is not None
+    assert isinstance(frame.columns[0].type_, astx.ColumnType)
+    assert frame.columns[0].nullable
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        'timestamp["hours"]',
+        "decimal128[39, 0]",
+        "fixed_list[i32, 0]",
+        "arrow_struct[x:i32, x:i32]",
+        "series[i32 | f32]",
+        "binary[-1]",
+        "decimal128[1099511627776, 0]",
+        "binary[1099511627776]",
+        "fixed_list[i32, 1099511627776]",
+    ],
+)
+def test_reject_invalid_column_parameters(annotation: str) -> None:
+    """
+    title: Invalid column syntax and physical parameters fail actionably.
+    parameters:
+      annotation:
+        type: str
+    """
+    with pytest.raises(ParserException):
+        _parse_module(
+            f"fn accept(frame: dataframe[x:{annotation}]) -> i32:\n"
+            "  return 0\n"
         )

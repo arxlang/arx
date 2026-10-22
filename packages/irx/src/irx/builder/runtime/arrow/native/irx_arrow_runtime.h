@@ -36,6 +36,19 @@ enum irx_arrow_type_id {
   IRX_ARROW_TYPE_BOOL = 11,
 };
 
+/* Borrowed inputs, independently owned output columns (release once).
+ * Status 0 means outputs are initialized. Failure clears output slots.
+ * Scalar bits contain the exact fixed-width numeric/bool representation;
+ * validity is separate. Null slots carry zero bits. Indexing is zero-based,
+ * rejects negative/out-of-range indices, and never borrows scalar storage.
+ */
+int irx_arrow_series_index(const irx_arrow_chunked_array_handle*, int64_t,
+    int32_t, uint64_t*, int32_t*);
+int irx_arrow_column_compute(const char*, int32_t,
+    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
+    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
+    irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
+
 int irx_arrow_schema_import_copy(
     const struct ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema);

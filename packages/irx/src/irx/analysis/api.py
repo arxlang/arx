@@ -20,6 +20,7 @@ from irx.analysis.module_interfaces import (
     ImportResolver,
     ParsedModule,
 )
+from irx.analysis.reachability import plan_declarations
 from irx.analysis.session import CompilationSession
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -131,4 +132,5 @@ def analyze_modules(
         analyzer.analyze_parsed_module(parsed_module, predeclared=True)
 
     session.diagnostics.raise_if_errors()
+    session.lowering_declarations = plan_declarations(session)
     return session

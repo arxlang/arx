@@ -112,6 +112,8 @@ def is_builtin(name: str) -> bool:
       type: bool
     """
     return name in {
+        "is_null",
+        "fill_null",
         BUILTIN_CAST,
         BUILTIN_DATAFRAME,
         BUILTIN_ISINSTANCE,

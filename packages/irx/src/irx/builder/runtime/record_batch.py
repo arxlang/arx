@@ -89,6 +89,8 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_csv_reader_open": ("i32", ("p", "p", "p", "i32", "i32", "p")),
     "irx_rb_csv_writer_open": ("i32", ("p", "p", "p", "i32", "p")),
     "irx_rb_batch_to_table": ("i32", ("p", "p", "p")),
+    "irx_rb_batch_to_dynamic_table": ("i32", ("p", "p")),
+    "irx_rb_table_to_dynamic_batch": ("i32", ("p", "p")),
     "irx_rb_table_to_batch": ("i32", ("p", "p")),
     "irx_rb_file_writer_open": ("i32", ("p", "p", "p")),
     "irx_rb_file_reader_open": ("i32", ("p", "p")),
@@ -100,6 +102,7 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_schema_field": ("i32", ("p", "i32", "p", "p", "p")),
     "irx_rb_schema_equal": ("i32", ("p", "p")),
     "irx_rb_schema_export": ("i32", ("p", "p")),
+    "irx_rb_schema_from_ipc": ("i32", ("p", "i64", "p")),
     "irx_rb_schema_import": ("i32", ("p", "p")),
     "irx_rb_batch_export": ("i32", ("p", "p", "p")),
     "irx_rb_batch_import": ("i32", ("p", "p", "p")),
@@ -386,20 +389,11 @@ def build_parquet_runtime_feature() -> RuntimeFeature:
 @typechecked
 def shared_record_batch_runtime_feature() -> RuntimeFeature:
     """
-    title: >-
-      Build the ctypes library from independently registered native features.
+    title: Build the base ctypes library without optional Parquet dependencies.
     returns:
       type: RuntimeFeature
     """
-    base = build_record_batch_runtime_feature()
-    parquet = build_parquet_runtime_feature()
-    if parquet.unavailable_reason is not None:
-        raise RuntimeError(parquet.unavailable_reason)
-    return replace(
-        base,
-        artifacts=(*base.artifacts, *parquet.artifacts),
-        linker_flags=parquet.linker_flags,
-    )
+    return build_record_batch_runtime_feature()
 
 
 # Standalone shared-library build (for the ctypes API in irx.record_batch)

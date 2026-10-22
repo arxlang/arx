@@ -429,6 +429,20 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             return self.parse_dataframe_constructor()
 
+        if id_name in {"is_null", "fill_null"}:
+            if template_args is not None:
+                raise ParserException(
+                    "Null operations reject template arguments."
+                )
+            value = cast(astx.Expr, self.parse_expression())
+            if id_name == "is_null":
+                self._consume_operator(")")
+                return astx.NullCheck(value, loc=id_loc)
+            self._consume_operator(",")
+            replacement = cast(astx.Expr, self.parse_expression())
+            self._consume_operator(")")
+            return astx.NullFill(value, replacement, loc=id_loc)
+
         if id_name == builtins.BUILTIN_CAST:
             if template_args is not None:
                 raise ParserException(
@@ -483,7 +497,7 @@ class ExpressionParserMixin(ParserMixinBase):
             self._consume_operator(")")
             return builtins.build_type_of(cast(astx.Expr, value_expr))
 
-        if id_name in {"datetime", "timestamp"}:
+        if id_name in {"date", "time", "datetime", "timestamp"}:
             if template_args is not None:
                 raise ParserException(
                     f"Builtin '{id_name}' does not accept template arguments."
@@ -496,6 +510,10 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             if id_name == "datetime":
                 return astx.LiteralDateTime(arg.value, loc=id_loc)
+            if id_name == "date":
+                return astx.LiteralDate(arg.value, loc=id_loc)
+            if id_name == "time":
+                return astx.LiteralTime(arg.value, loc=id_loc)
             return astx.LiteralTimestamp(arg.value, loc=id_loc)
 
         args, keywords = self.parse_call_arguments(

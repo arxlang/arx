@@ -64,6 +64,7 @@ def prepare_module(module: astx.Module, origin: str) -> ParsedModule:
         MODULE_NAME,
         origin,
         native_bindings=tuple(bindings),
+        lazy_declarations=True,
         native_record_batch_class=next(
             (
                 node

@@ -146,23 +146,26 @@ Current tensor rules in this phase:
 - current lowering is read-only and is focused on literal/default-initialized
   shaped tensors
 
-Current DataFrame rules in this phase:
+Current DataFrame rules:
 
-- column types are fixed-width numeric types (`i8`, `i16`, `i32`, `i64`, `f32`,
-  `f64`) or `bool`
-- string, nullable, nested, temporal, and user-defined columns are not part of
-  the MVP yet
+- static columns support signed/unsigned numeric types, Boolean, strings, date32
+  (`date`), time64 microseconds (`time`) and timezone-naive timestamp
+  microseconds (`timestamp`/`datetime`); nullable columns use `T | none`
 - static-schema values use `dataframe[name: T, ...]` annotations and the
   column-oriented `dataframe({...})` constructor
-- constructor columns must be list literals, use declared column names, and have
-  equal row counts
-- columns can be accessed as `rows.score` or `rows["score"]`
-- `rows.nrows()` and `rows.ncols()` return row and column counts as `i64`
-- column access and metadata methods currently work on DataFrame identifiers and
-  literals whose schema is known while parsing, not on arbitrary
-  DataFrame-returning expressions
-- `dataframe[...]` is accepted only in function and extern parameter annotations
-  for now; column access on runtime-schema parameters is not available yet
+- constructor columns must be equal-length list literals matching the schema;
+  temporal values use literal constructors such as `date("2026-01-01")`
+- statically known columns can be accessed as `rows.score` or `rows["score"]`
+- `rows.nrows()` and `rows.ncols()` return counts as `i64`
+- runtime-schema `dataframe[...]` supports locals, aliases, parameters and
+  returns, preserving RecordBatch-supported Arrow types/metadata through
+  RecordBatch casts
+- runtime schemas do not permit unchecked static column access or narrowing;
+  convert via RecordBatch for an exact checked static cast
+- general nullable scalar/Series arithmetic is not implemented
+
+See [Parquet/DataFrame conversion](parquet.md#dataframe-conversion) for the
+runtime-schema and static-schema contracts.
 
 ```arx
 fn dataframe_demo() -> i32:
@@ -216,3 +219,13 @@ returned. See [Text File I/O](file-io.md) for its methods and limitations.
 - [Collections and Apache Arrow](collections.md) for runtime storage and current
   collection limits
 - [Functions](functions.md) for function signatures and returns
+
+### Nullable scalars and parameterized columns
+
+`nullable[T]` pairs a numeric/Boolean scalar with explicit validity. Use
+`is_null` to test it and `fill_null` to obtain a non-nullable value. Nullable
+Series use `series[T | none]`; indexing preserves validity. Rich static
+DataFrame schemas also accept decimal, temporal-unit/timezone, binary, list,
+struct, map and dictionary parameters. See
+[nullable expressions and column schemas](collections.md#nullable-scalars-and-series-expressions)
+for the exact supported operations and restrictions.

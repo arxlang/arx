@@ -60,8 +60,11 @@ void irx_rb_api_reader_csv_as(IrxRbApiReader *box, const char *path, IrxRbApiSch
 void irx_rb_api_writer_csv(IrxRbApiWriter *box, const char *path,
                            const char *delimiter, int32_t header);
 struct irx_arrow_table_handle *irx_rb_api_batch_to_table(IrxRbApiBatch *box, IrxRbApiSchema *schema);
+struct irx_arrow_table_handle *irx_rb_api_batch_to_dynamic_table(IrxRbApiBatch *box);
+void irx_rb_api_table_to_dynamic_batch(struct irx_arrow_table_handle *table, IrxRbApiBatch *out);
 void irx_rb_api_table_to_batch(struct irx_arrow_table_handle *table, IrxRbApiBatch *out);
 IrxRbApiSchema *irx_rb_api_schema_new(void);
+IrxRbApiSchema *irx_rb_api_schema_ipc(const uint8_t *data, int64_t size);
 IrxRbApiBatch *irx_rb_api_batch_new(void);
 IrxRbApiReader *irx_rb_api_reader_new(void);
 IrxRbApiBuilder *irx_rb_api_builder_new(IrxRbApiSchema *schema);

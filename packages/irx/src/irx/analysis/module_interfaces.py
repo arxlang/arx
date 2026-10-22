@@ -58,6 +58,8 @@ class ParsedModule:
         type: tuple[NativeBinding, Ellipsis]
       native_record_batch_class:
         type: astx.ClassDefStmt | None
+      lazy_declarations:
+        type: bool
     """
 
     key: ModuleKey
@@ -68,6 +70,7 @@ class ParsedModule:
     native_features: tuple[NativeFeature, ...] = ()
     native_bindings: tuple[NativeBinding, ...] = ()
     native_record_batch_class: astx.ClassDefStmt | None = None
+    lazy_declarations: bool = False
 
     def __post_init__(self) -> None:
         """

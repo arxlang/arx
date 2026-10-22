@@ -21,6 +21,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.typecheck import typechecked
 
 
@@ -119,6 +120,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             type_,
             (
                 astx.StructType,
+                astx.NullableType,
                 astx.BufferViewType,
                 astx.TensorType,
                 astx.DataFrameType,
@@ -595,6 +597,8 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SubscriptExpr
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         if isinstance(self._resolved_ast_type(node.value), astx.ListType):
             cast(Any, self)._lower_list_subscript(
                 base=node.value,

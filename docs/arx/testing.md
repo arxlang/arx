@@ -74,3 +74,25 @@ protocol and converted into test results.
 
 Use `--keep-artifacts` when inspecting generated wrappers or compiler output for
 a failing test.
+
+## Arrow and Parquet CI coverage
+
+CI collects the complete package suites and compiled-language tests on Python
+3.10–3.14. Native prerequisites are checked explicitly in Arx/IRx jobs so
+missing compilers or expected codecs cannot silently omit those integration
+paths. Installed-wheel smoke tests run in clean environments on Python 3.10 and
+3.14, including the nullable Series native header and compiled kernel calls.
+
+A separate Linux job runs `makim irx.test-sanitizers`: registered Arrow and
+Parquet runtime artifacts are compiled with AddressSanitizer and UBSan. Its
+standalone harness exercises ownership/release, nullable scalar and Series
+outputs, invalid indices, overflow, and durable atomic Parquet round trips. Leak
+detection is enabled in CI. Third-party Arrow libraries are not rebuilt with
+instrumentation. Restricted local environments may run
+`python scripts/test_native_sanitizers.py --no-leaks`; that is **not** evidence
+of a passing leak check.
+
+Live cloud-provider compatibility requires provisioned services and credentials
+and is not covered by these jobs. Local URI and unsupported transaction/error
+paths remain in the regular suites. No finite test suite proves every possible
+input or external-provider behavior.

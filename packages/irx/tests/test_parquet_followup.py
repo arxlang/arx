@@ -552,7 +552,7 @@ def test_predicate_runtime_validation() -> None:
 def test_unregistered_extension_is_not_silently_erased(tmp_path: Path) -> None:
     """
     title: >-
-      Unknown native extension metadata must not be treated as plain storage.
+      Unknown extensions retain their opaque storage and extension metadata.
     parameters:
       tmp_path:
         type: Path
@@ -570,11 +570,10 @@ def test_unregistered_extension_is_not_silently_erased(tmp_path: Path) -> None:
         ]
     )
     batch = pa.record_batch([pa.array([1], type=pa.int32())], schema=schema)
-    path = tmp_path / "unchanged"
-    path.write_bytes(b"sentinel")
-    with pytest.raises(RuntimeError, match="unregistered Arrow extension"):
-        write_batch(path, batch)
-    assert path.read_bytes() == b"sentinel"
+    path = tmp_path / "opaque.parquet"
+    write_batch(path, batch)
+    result = pa.Table.from_batches(read_batches(path))
+    assert result.equals(pa.Table.from_batches([batch]), check_metadata=True)
 
 
 def test_arrow_snapshots_validate_and_outlive_native_owners() -> None:

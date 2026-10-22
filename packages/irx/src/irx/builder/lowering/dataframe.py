@@ -372,6 +372,9 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             9: "f64",
             10: "bool",
             11: "utf8",
+            13: "date",
+            17: "timestamp",
+            21: "time",
         }
         for index, (column, type_id) in enumerate(
             zip(node.type_.columns, ids)
@@ -386,18 +389,38 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                         [owner, column_index],
                     )
                     continue
-                self.visit_child(value_node)
-                value = safe_pop(self.result_stack)
-                if value is None:
-                    raise_lowering_internal_error(
-                        "DataFrame literal value did not lower",
-                        node=value_node,
+                if isinstance(
+                    column.type_,
+                    (astx.Date, astx.Time, astx.Timestamp, astx.DateTime),
+                ):
+                    literal_info = cast(
+                        SemanticInfo | None,
+                        getattr(value_node, "semantic", None),
                     )
-                value = self._cast_ast_value(
-                    value,
-                    source_type=self._resolved_ast_type(value_node),
-                    target_type=column.type_,
-                )
+                    physical = require_semantic_metadata(
+                        None
+                        if literal_info is None
+                        else literal_info.extras.get(
+                            "dataframe_temporal_value"
+                        ),
+                        node=value_node,
+                        metadata="dataframe_temporal_value",
+                        context="temporal DataFrame literal",
+                    )
+                    value = ir.Constant(ir.IntType(64), physical)
+                else:
+                    self.visit_child(value_node)
+                    value = safe_pop(self.result_stack)
+                    if value is None:
+                        raise_lowering_internal_error(
+                            "DataFrame literal value did not lower",
+                            node=value_node,
+                        )
+                    value = self._cast_ast_value(
+                        value,
+                        source_type=self._resolved_ast_type(value_node),
+                        target_type=column.type_,
+                    )
                 if isinstance(column.type_, astx.Boolean):
                     value = builder.zext(value, ir.IntType(32))
                 append = self.require_runtime_symbol(
@@ -450,7 +473,16 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
 
         if any(
             c.nullable
-            or isinstance(c.type_, astx.String)
+            or isinstance(
+                c.type_,
+                (
+                    astx.String,
+                    astx.Date,
+                    astx.Time,
+                    astx.Timestamp,
+                    astx.DateTime,
+                ),
+            )
             or is_unsigned_type(c.type_)
             for c in node.type_.columns
         ):

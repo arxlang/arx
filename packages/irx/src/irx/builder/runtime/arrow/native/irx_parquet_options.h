@@ -16,6 +16,8 @@ struct IrxParquetOptions {
     std::optional<int> compression_level;
     bool use_threads{false}, pre_buffer{false}, dataset{false}, hive{false};
     bool unify{false}, normalize{false}, atomic{false}, append{false};
+    bool durable{false};
+    bool reconstruct{false};
     std::string compression{"snappy"};
     std::vector<std::string> columns, partition_columns;
     std::vector<int> row_groups;

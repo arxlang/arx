@@ -12,10 +12,8 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 
-from irx.builder.runtime.record_batch import (
-    _SIGNATURES,
-    ensure_record_batch_shared_library,
-)
+from irx.builder.runtime.parquet import ensure_parquet_shared_library
+from irx.builder.runtime.record_batch import _SIGNATURES
 from pyarrow.cffi import ffi
 
 IRX_ERR_TYPE = -4
@@ -28,7 +26,7 @@ def native() -> ctypes.CDLL:
     returns:
       type: ctypes.CDLL
     """
-    library = ctypes.CDLL(str(ensure_record_batch_shared_library()))
+    library = ctypes.CDLL(str(ensure_parquet_shared_library()))
     types = {
         "p": ctypes.c_void_p,
         "v": None,
