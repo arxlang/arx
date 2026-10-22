@@ -130,6 +130,14 @@ class VariablesLLVM:
             return self.UINT128_TYPE
         if type_name == "nonetype":
             return self.VOID_TYPE
+        if type_name == "date":
+            return self.INT32_TYPE
+        if type_name == "time":
+            return self.TIME_TYPE
+        if type_name == "timestamp":
+            return self.TIMESTAMP_TYPE
+        if type_name == "datetime":
+            return self.DATETIME_TYPE
 
         raise Exception(f"[EE]: Type name {type_name} not valid.")
 

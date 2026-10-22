@@ -6,18 +6,40 @@ title: Temporal literal visitor mixins for llvmliteir.
 
 from datetime import datetime
 from datetime import time as time_value
+from typing import cast
 
 import astx
 
 from llvmlite import ir
 
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder.core import VisitorCore
+from irx.builder.diagnostics import require_semantic_metadata
 from irx.builder.protocols import VisitorMixinBase
 from irx.typecheck import typechecked
 
 
 @typechecked
 class TemporalVisitorMixin(VisitorMixinBase):
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.LiteralDate) -> None:
+        """
+        title: Lower a semantically validated date as epoch days.
+        parameters:
+          node:
+            type: astx.LiteralDate
+        """
+        info = cast(SemanticInfo | None, getattr(node, "semantic", None))
+        days = require_semantic_metadata(
+            None
+            if info is None
+            else info.extras.get("dataframe_temporal_value"),
+            node=node,
+            metadata="dataframe_temporal_value",
+            context="date literal",
+        )
+        self.result_stack.append(ir.Constant(ir.IntType(32), days))
+
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.LiteralTime) -> None:
         """

@@ -21,8 +21,10 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.nullable import nullable_error, scalar_type, set_operation
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, OwnershipTransferKind
+from irx.analysis.types import same_type
 from irx.analysis.validation import validate_assignment
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
@@ -43,6 +45,68 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression DataFrame visitors.
     """
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.NullCheck) -> None:
+        """
+        title: Resolve a scalar validity test or an owned Series null mask.
+        parameters:
+          node:
+            type: astx.NullCheck
+        """
+        self.visit(node.value)
+        source = self._expr_type(node.value)
+        if not isinstance(source, (astx.NullableType, astx.SeriesType)):
+            nullable_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "is_null requires a nullable scalar or Series",
+            )
+            return
+        result = (
+            astx.SeriesType(astx.Boolean())
+            if isinstance(source, astx.SeriesType)
+            else astx.Boolean()
+        )
+        set_operation(
+            cast(SemanticAnalyzerCore, self),
+            node,
+            "is_null",
+            scalar_type(source),
+            result,
+        )
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.NullFill) -> None:
+        """
+        title: Resolve eager same-type scalar null replacement.
+        parameters:
+          node:
+            type: astx.NullFill
+        """
+        self.visit(node.value)
+        self.visit(node.replacement)
+        source = self._expr_type(node.value)
+        inner = scalar_type(source)
+        if not isinstance(
+            source, (astx.NullableType, astx.SeriesType)
+        ) or not same_type(inner, self._expr_type(node.replacement)):
+            nullable_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "fill_null requires nullable/Series input and a "
+                "matching non-null scalar replacement",
+            )
+            return
+        assert inner is not None
+        result = (
+            astx.SeriesType(inner)
+            if isinstance(source, astx.SeriesType)
+            else inner
+        )
+        set_operation(
+            cast(SemanticAnalyzerCore, self), node, "coalesce", inner, result
+        )
 
     def _dataframe_schema(
         self,
@@ -150,6 +214,16 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             type: astx.DataFrameLiteral
         """
         schema = schema_from_type(node.type_)
+        if schema is not None and any(
+            isinstance(c.type_, astx.ColumnType) for c in schema.columns
+        ):
+            nullable_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "Parameterized DataFrame columns require a checked "
+                "RecordBatch conversion, not a literal",
+            )
+            return
         if schema is None:
             self.context.diagnostics.add(
                 "dataframe literals require an explicit static DataFrame type",
@@ -176,16 +250,10 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             for column in schema.columns:
-                if not dataframe_column_type_is_supported(
-                    column.type_
-                ) or isinstance(
-                    column.type_,
-                    (astx.Date, astx.Time, astx.Timestamp, astx.DateTime),
-                ):
+                if not dataframe_column_type_is_supported(column.type_):
                     self.context.diagnostics.add(
                         "dataframe columns currently support only "
-                        "numeric, bool and string literal values; temporal "
-                        "columns require RecordBatch conversions",
+                        "numeric, bool, string and temporal literal values",
                         node=node,
                         code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                     )
@@ -220,6 +288,24 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                         value, astx.LiteralNone
                     ):
                         continue
+                    if isinstance(
+                        declared_column.type_,
+                        (astx.Date, astx.Time, astx.Timestamp, astx.DateTime),
+                    ) and not isinstance(
+                        value,
+                        (
+                            astx.LiteralDate,
+                            astx.LiteralTime,
+                            astx.LiteralTimestamp,
+                            astx.LiteralDateTime,
+                        ),
+                    ):
+                        self.context.diagnostics.add(
+                            "temporal DataFrame values require literal "
+                            "constructors or a RecordBatch conversion",
+                            node=value,
+                            code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                        )
                     validate_assignment(
                         self.context.diagnostics,
                         target_name=(

@@ -56,6 +56,7 @@ PACKAGES = (
 
 REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_arrow_runtime.cc",
+    "irx/builder/runtime/arrow/native/irx_arrow_series.h",
     "irx/builder/runtime/arrow/native/irx_arrow_c_abi.h",
     "irx/builder/runtime/arrow/native/irx_record_batch.cpp",
     "irx/builder/runtime/arrow/native/irx_record_batch.h",
@@ -64,6 +65,8 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_batch_writer.h",
     "irx/builder/runtime/arrow/native/irx_parquet_io.h",
     "irx/builder/runtime/arrow/native/irx_parquet_options.h",
+    "irx/builder/runtime/arrow/native/irx_parquet_commit.h",
+    "irx/builder/runtime/parquet.py",
     "irx/builder/runtime/arrow/native/irx_parquet_bridge.cc",
     "irx/builder/runtime/arrow/native/irx_parquet_api.cc",
     "irx/builder/runtime/arrow/native/irx_record_batch_internal.h",
@@ -259,6 +262,17 @@ fn main() -> i32:
   return 0
 """
 
+NULLABLE_MODULE = """```
+title: Installed wheel nullable Series smoke
+```
+fn main() -> i32:
+  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})
+  var values: series[i32 | none] = frame.x + frame.x
+  assert is_null(values[1])
+  assert fill_null(values[0], 0) == 2
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
 from pathlib import Path
 from importlib import metadata
@@ -299,6 +313,7 @@ for source_name in (
     "native_smoke.x",
     "csv_smoke.x",
     "parquet_smoke.x",
+    "nullable_smoke.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -633,6 +648,7 @@ def run_smoke(
             "native_smoke.x": NATIVE_MODULE,
             "csv_smoke.x": CSV_MODULE,
             "parquet_smoke.x": PARQUET_MODULE,
+            "nullable_smoke.x": NULLABLE_MODULE,
         }
         (work_dir / ".arxproject.toml").write_text(
             '[project]\nname="wheel-consumer"\nversion="0"\n'

@@ -6,6 +6,7 @@ title: >-
 import subprocess
 
 from datetime import date, datetime, time
+from decimal import Decimal
 from pathlib import Path
 
 import pyarrow as pa
@@ -144,6 +145,46 @@ fn main() -> i32:
     }
 
 
+def test_compiled_temporal_literals(tmp_path: Path) -> None:
+    """
+    title: Resolve nullable calendar literals to exact Arrow epoch units.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = """
+import (Parquet, RecordBatch) from stdlib.arrow
+type Frame = dataframe[day:date | none, clock:time | none, ts:timestamp | none]
+fn main() -> i32:
+  var frame: Frame = dataframe({
+    day: [date("1969-12-31"), none],
+    clock: [time("01:02:03"), none],
+    ts: [timestamp("1969-12-31T23:59:59"), none],
+  })
+  var batch: RecordBatch = cast(frame, RecordBatch)
+  var target: Parquet = Parquet()
+  target.open_write("temporal.parquet", batch.schema())
+  target.write(batch)
+  target.close()
+  return 0
+"""
+    binary = tmp_path / "temporal"
+    compile_program(source, binary)
+    result = subprocess.run(
+        [str(binary)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert pq.read_table(tmp_path / "temporal.parquet").to_pydict() == {
+        "day": [date(1969, 12, 31), None],
+        "clock": [time(1, 2, 3), None],
+        "ts": [datetime(1969, 12, 31, 23, 59, 59), None],
+    }
+
+
 def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
     """
     title: >-
@@ -155,6 +196,8 @@ def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
     """
     source = """
 import (Parquet, ParquetOptions, RecordBatch) from stdlib.arrow
+fn keep_dynamic(frame: dataframe[...]) -> dataframe[...]:
+  return frame
 fn main() -> i32:
   var reader: Parquet = Parquet()
   var writer: Parquet = Parquet()
@@ -164,7 +207,10 @@ fn main() -> i32:
   writer.open_write_options("encrypted.parquet", reader.schema(), options)
   while reader.next():
     var batch: RecordBatch = reader.batch()
-    writer.write(batch)
+    var frame: dataframe[...] = cast(batch, dataframe[...])
+    batch.close()
+    var saved: dataframe[...] = keep_dynamic(frame)
+    writer.write(cast(saved, RecordBatch))
   writer.close()
   reader.close()
   return 0
@@ -174,9 +220,16 @@ fn main() -> i32:
             pa.array([[b"a", None], None, []], type=pa.list_(pa.binary())),
             pa.array([b"0" * 16, None, b"1" * 16], type=pa.uuid()),
             pa.array(['{"key":1}', None, "[]"], type=pa.json_()),
+            pa.array(
+                [Decimal("1.23"), None, Decimal("4.56")],
+                type=pa.decimal128(10, 2),
+            ),
+            pa.array(
+                [1, None, 123456789], type=pa.timestamp("ns", "Europe/London")
+            ),
         ],
-        names=["items", "uuid", "json"],
-    )
+        names=["items", "uuid", "json", "amount", "instant"],
+    ).replace_schema_metadata({b"application": b"retained"})
     # Keep the original item name, not Parquet's default rename.
     pq.write_table(
         pa.Table.from_batches([batch]),

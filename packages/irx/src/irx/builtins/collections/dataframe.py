@@ -16,6 +16,7 @@ from public import public
 from irx.builtins.collections.array_primitives import (
     ARRAY_PRIMITIVE_TYPE_SPECS,
 )
+from irx.builtins.collections.column_types import column_arrow_type
 from irx.builtins.collections.tensor import tensor_primitive_type_name
 from irx.typecheck import typechecked
 
@@ -191,6 +192,12 @@ def dataframe_column_type_is_supported(type_: astx.DataType | None) -> bool:
     returns:
       type: bool
     """
+    if isinstance(type_, astx.ColumnType):
+        try:
+            column_arrow_type(type_)
+        except (ValueError, TypeError):
+            return False
+        return True
     return dataframe_record_batch_type_id(type_) is not None
 
 

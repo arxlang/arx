@@ -48,6 +48,7 @@ from irx.builder.diagnostics import (
     require_lowered_value,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.errors import (
     RUNTIME_FAILURE_FEATURE_NAME,
@@ -525,6 +526,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.BinaryOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         specialized = self._resolved_binary_variant(node)
         if specialized is node:
             raise Exception(f"Binary op {node.op_code} not implemented yet.")
@@ -657,6 +660,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: AddBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_add(node, llvm_lhs, llvm_rhs)
@@ -690,6 +695,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: SubBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
@@ -715,6 +722,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: MulBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_mul(node, llvm_lhs, llvm_rhs)
@@ -737,6 +746,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: DivBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_div(
@@ -811,6 +822,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LogicalAndBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         self._lower_short_circuit_boolean(
             node,
             short_circuit_value=False,
@@ -825,6 +838,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LogicalOrBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         self._lower_short_circuit_boolean(
             node,
             short_circuit_value=True,
@@ -839,6 +854,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LtBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -859,6 +876,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: GtBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -879,6 +898,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LeBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -899,6 +920,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: GeBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
             raise Exception(f"Vector binop {node.op_code} not implemented.")
@@ -919,6 +942,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: EqBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
@@ -949,6 +974,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: NeBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
@@ -979,6 +1006,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: BitOrBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,
             unify_numeric=False,
@@ -995,6 +1024,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: BitAndBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,
             unify_numeric=False,

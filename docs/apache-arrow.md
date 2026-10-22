@@ -29,13 +29,13 @@ locations, and linker metadata used by native builds.
 
 ## Implemented layers
 
-| Layer               | Native representation                            | Current capability                                                                      |
-| ------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| Array runtime       | Arrow arrays behind opaque `irx_arrow_*` handles | Build, inspect, import/export, null metadata, readonly buffer views                     |
-| Tensor runtime      | `arrow::Tensor`                                  | Fixed-width numeric construction, shape/stride metadata, indexing, shallow views        |
-| DataFrame runtime   | `arrow::Table`                                   | Named numeric/Boolean/string/nullable columns and checked temporal conversion           |
-| Series runtime      | `arrow::ChunkedArray`                            | Typed column views selected from DataFrames                                             |
-| RecordBatch runtime | `arrow::RecordBatch` and Arrow IPC               | Schemas, builders, nullable values, IPC/CSV streams, Parquet files, PyArrow round trips |
+| Layer               | Native representation                            | Current capability                                                                           |
+| ------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Array runtime       | Arrow arrays behind opaque `irx_arrow_*` handles | Build, inspect, import/export, null metadata, readonly buffer views                          |
+| Tensor runtime      | `arrow::Tensor`                                  | Fixed-width numeric construction, shape/stride metadata, indexing, shallow views             |
+| DataFrame runtime   | `arrow::Table`                                   | Static nullable/temporal columns; runtime schemas preserve RecordBatch-supported Arrow types |
+| Series runtime      | `arrow::ChunkedArray`                            | Typed column views selected from DataFrames                                                  |
+| RecordBatch runtime | `arrow::RecordBatch` and Arrow IPC               | Schemas, builders, nullable values, IPC/CSV streams, Parquet files, PyArrow round trips      |
 
 ## Arx tensors and DataFrames
 
@@ -65,13 +65,14 @@ Current tensor constraints:
 
 Current DataFrame constraints:
 
-- columns: fixed-width numeric types and `bool`
+- static columns: numeric, Boolean, string and temporal types; nullable
+  `T | none`
 - constructor input: equal-length list-literal columns matching a static schema
 - access: `frame.name` or `frame["name"]` when the schema is statically known
 - metadata: `nrows()` and `ncols()`
-- string, nullable, nested, and temporal columns are not yet exposed by the Arx
-  DataFrame syntax, even though the lower-level RecordBatch API supports more
-  Arrow types
+- runtime-schema `dataframe[...]` locals, parameters and returns preserve
+  RecordBatch-supported Arrow types/metadata through checked RecordBatch
+  conversion; they do not provide unchecked static column access
 
 ## Array interoperability
 
@@ -337,7 +338,7 @@ part of this transport.
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | Standalone Arx ↔ PyArrow IPC files and streams                | Implemented, multiple/empty batches                                                     |
 | Nullable numeric/Boolean, UTF-8 and temporal batches           | Runtime-schema API; checked typed methods                                               |
-| Full field/schema metadata and timestamp timezone preservation | IPC and C sharing; not projected into DataFrames                                        |
+| Full field/schema metadata and timestamp timezone preservation | IPC, C sharing and runtime-schema DataFrames; static casts use declared metadata        |
 | Zero-column input with nonzero rows                            | Preserved                                                                               |
 | C Data/C Stream, both directions                               | Standard structs; explicit ownership transfer                                           |
 | TCP, both directions                                           | POSIX blocking clients; trusted numeric-address peers                                   |
@@ -361,12 +362,13 @@ is not sanitizer-instrumented by this command.
 `CSV` in `stdlib.arrow` and Python `irx.record_batch` reuses Arrow C++ streaming
 readers and writers. The old Arx `CSVReader`/`CSVWriter` classes are removed;
 Python generic stream factories remain supported. Both
-`cast(batch, dataframe[...])` and `cast(frame, RecordBatch)` are supported for
-exact supported scalar schemas, including nullable columns. Conversion results
-own their references independently; DataFrame-to-RecordBatch export combines
-**all** chunks and may allocate. See [CSV files and DataFrames](arx/csv.md) for
-schemas, null rules, lifetime, streaming failure semantics and the intentionally
-restricted DataFrame subset.
+`cast(batch, dataframe[name:T, ...])` and `cast(frame, RecordBatch)` support
+exact static scalar schemas, including nullable columns. Literal-ellipsis
+`dataframe[...]` preserves runtime schemas with rich types and metadata.
+Conversion results own their references independently; DataFrame-to-RecordBatch
+export combines **all** chunks and may allocate. See
+[CSV files and DataFrames](arx/csv.md) for schemas, null rules, lifetime,
+streaming failure semantics and the intentionally restricted DataFrame subset.
 
 ## Parquet and unified file owners
 
@@ -381,15 +383,17 @@ unsupported types and implicit temporal coercion are rejected. See
 The `record_batch` runtime links `libarrow`; the dependent `parquet` feature
 adds the Parquet/Dataset/Compute/Acero libraries and format adapters. Use the
 registered feature artifacts and linker flags for native builds. The Python
-ctypes build bundles both; Arx still lowers all `stdlib.arrow` declarations, so
-that import currently activates both features. Do not mix system Arrow with
-PyArrow libraries or assume an unversioned `-lparquet` symlink exists.
+ctypes backend loads Parquet as a separate on-demand plugin. Arx analyzes all
+`stdlib.arrow` declarations but lowers only resolved reachable declarations;
+CSV-only programs do not activate Parquet. Do not mix system Arrow with PyArrow
+libraries or assume an unversioned `-lparquet` symlink exists.
 
 ### Extended data-file support
 
 [Parquet options](arx/parquet.md) add projection, row-group selection, predicate
 pushdown, Hive datasets, checked temporal normalization, codecs, local atomic
-replacement/rewrite append and single-file encryption. Rich recursive schemas
-cross the existing opaque native handles and Arrow C Data boundary. The unified
-`CSV` replaces the removed `CSVReader`/`CSVWriter` classes; see the
+replacement/rewrite append, encrypted snapshot datasets, nullable write-schema
+evolution, fsync durability and cooperating-writer exclusion. Rich recursive
+schemas cross the existing opaque native handles and Arrow C Data boundary. The
+unified `CSV` replaces the removed `CSVReader`/`CSVWriter` classes; see the
 [migration notes](arx/csv.md#migrating-the-split-api).

@@ -746,7 +746,8 @@ class VisitorCore(BuilderVisitor):
         }
         self._set_entry_function_from_module(root.ast)
         self._translate_modules(
-            [parsed_module.ast for parsed_module in ordered_modules]
+            [parsed_module.ast for parsed_module in ordered_modules],
+            session.lowering_declarations,
         )
         return str(self._llvm.module)
 
@@ -883,17 +884,37 @@ class VisitorCore(BuilderVisitor):
             return self._namespace_value_for_type(resolved_type)
         return None
 
-    def _translate_modules(self, modules: list[astx.Module]) -> None:
+    def _translate_modules(
+        self,
+        modules: list[astx.Module],
+        declarations: frozenset[int] | None = None,
+    ) -> None:
         """
         title: Translate a list of already-analyzed modules.
         parameters:
           modules:
             type: list[astx.Module]
+          declarations:
+            type: frozenset[int] | None
         """
+        module_nodes = [
+            (
+                module,
+                [
+                    node
+                    for node in [
+                        *module.nodes,
+                        *astx.generated_template_nodes(module),
+                    ]
+                    if declarations is None or id(node) in declarations
+                ],
+            )
+            for module in modules
+        ]
         # Declare pointer identities before any layout asks for a class field
         # type; acyclic reference fields can point to later declarations.
-        for module in modules:
-            for node in module.nodes:
+        for module, nodes in module_nodes:
+            for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
                     key = semantic_class_key(node, node.name)
                     type_ = self._llvm.module.context.get_identified_type(
@@ -902,35 +923,31 @@ class VisitorCore(BuilderVisitor):
                     self.struct_types[key] = type_
                     self.llvm_structs_by_qualified_name[key] = type_
 
-        for module in modules:
+        for module, nodes in module_nodes:
             self._current_module_display_name = self._module_display_names.get(
                 id(module),
                 getattr(module, "name", "") or "<module>",
             )
-            for node in module.nodes:
+            for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
                     cast(VisitorProtocol, self).declare_class(node)
                 elif isinstance(node, astx.StructDefStmt):
                     self.visit(node)
 
-        for module in modules:
+        for module, nodes in module_nodes:
             self._current_module_display_name = self._module_display_names.get(
                 id(module), getattr(module, "name", "") or "<module>"
             )
-            for node in module.nodes:
+            for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
                     self.visit(node)
 
-        for module in modules:
+        for module, nodes in module_nodes:
             self._current_module_display_name = self._module_display_names.get(
                 id(module),
                 getattr(module, "name", "") or "<module>",
             )
-            function_nodes = [
-                *module.nodes,
-                *astx.generated_template_nodes(module),
-            ]
-            for node in function_nodes:
+            for node in nodes:
                 if isinstance(node, astx.FunctionPrototype):
                     if astx.is_template_node(
                         node
@@ -944,16 +961,12 @@ class VisitorCore(BuilderVisitor):
                         continue
                     self.visit(node.prototype)
 
-        for module in modules:
+        for module, nodes in module_nodes:
             self._current_module_display_name = self._module_display_names.get(
                 id(module),
                 getattr(module, "name", "") or "<module>",
             )
-            function_nodes = [
-                *module.nodes,
-                *astx.generated_template_nodes(module),
-            ]
-            for node in function_nodes:
+            for node in nodes:
                 if isinstance(node, astx.FunctionDef):
                     if astx.is_template_node(
                         node.prototype
@@ -1343,6 +1356,13 @@ class VisitorCore(BuilderVisitor):
         """
         if type_ is None:
             return None
+        if isinstance(type_, astx.NullableType):
+            inner = self._llvm_type_for_ast_type(type_.value_type)
+            return (
+                None
+                if inner is None
+                else ir.LiteralStructType([ir.IntType(1), inner])
+            )
         if isinstance(type_, astx.UnionType):
             storage_type = self._union_storage_ast_type(type_)
             if storage_type is None:
@@ -1780,6 +1800,16 @@ class VisitorCore(BuilderVisitor):
         if source_type is None or target_type is None:
             return value
 
+        if isinstance(target_type, astx.NullableType):
+            if isinstance(source_type, astx.NullableType):
+                return value
+            llvm_type = self._llvm_type_for_ast_type(target_type)
+            if llvm_type is None:
+                raise TypeError("missing nullable storage type")
+            result = self._llvm.ir_builder.insert_value(
+                ir.Constant(llvm_type, None), ir.Constant(ir.IntType(1), 1), 0
+            )
+            return self._llvm.ir_builder.insert_value(result, value, 1)
         if isinstance(source_type, astx.UnionType):
             source_type = self._union_storage_ast_type(source_type)
         if isinstance(target_type, astx.UnionType):

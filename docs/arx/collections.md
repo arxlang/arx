@@ -78,14 +78,15 @@ Rules:
 
 - columns support signed/unsigned numeric, Boolean and string values
 - nullable columns use `T | none`; date/time/timestamp columns can be populated
-  through checked RecordBatch conversions
+  through literal constructors or checked RecordBatch conversions
 - the constructor accepts list-literal columns with equal row counts; it does
   not add implicit signed-to-unsigned coercion
 - names and types must match the declared static schema
 - statically known columns use `rows.name` or `rows["name"]`
 - `nrows()` and `ncols()` return `i64`
-- `dataframe[...]` is accepted as a runtime-schema parameter type, but its
-  columns cannot yet be accessed by name
+- `dataframe[...]` supports runtime-schema locals, parameters and returns,
+  preserving rich Arrow types/metadata through RecordBatch casts; its columns
+  cannot be accessed statically by name or silently narrowed
 
 Use `Schema`, `BatchBuilder`, `RecordBatch`, `CSV` and `Parquet` from
 `stdlib.arrow` for file I/O and runtime Arrow schemas. Explicit conversions
@@ -111,3 +112,75 @@ leak into LLVM structs or Arx syntax.
 
 See [Native Apache Arrow Support](../apache-arrow.md) for arrays, Arrow C Data,
 RecordBatch IPC, and current interoperability details.
+
+## Nullable scalars and Series expressions
+
+`nullable[T]` stores a fixed-width numeric or Boolean scalar plus a validity
+bit. A nullable column is spelled `series[T | none]`. Indexing a nullable column
+returns `nullable[T]`; indexing a non-nullable column returns `T`. Indices are
+zero-based; negative or out-of-range indices fail at runtime.
+
+````arx
+```
+title: Nullable column expressions
+```
+fn main() -> i32:
+  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
+  var doubled: series[i32 | none] = frame.x + frame.x
+  var missing: nullable[i32] = doubled[1]
+  assert is_null(missing)
+  assert fill_null(doubled[2], 0) == 6
+  var filled: series[i32] = fill_null(doubled, 7)
+  assert filled[1] == 7
+  var empty: nullable[i32] = cast(none, nullable[i32])
+  assert is_null(empty)
+  return 0
+````
+
+Supported operators are `+`, `-`, `*`, `/`, `==`, `!=`, `<`, `<=`, `>` and `>=`.
+Both operands must have exactly matching scalar types; cast scalars explicitly
+when necessary. Series/scalar operations broadcast the scalar. Series/Series
+operations require equal lengths. Integer arithmetic is checked: overflow and
+division by zero fail instead of wrapping. Null operands produce null outputs,
+including comparisons. Boolean `&&`/`and` and `||`/`or` propagate nulls
+strictly, not with Kleene semantics. These operations are eager, not
+short-circuiting.
+
+`is_null` returns `bool` for a nullable scalar or a non-nullable Boolean Series
+mask. `fill_null(value, replacement)` eagerly evaluates a matching non-null
+scalar replacement and returns a non-nullable scalar or Series. Nullable scalars
+cannot implicitly become non-nullable values or conditions. Nullable scalar
+globals are not supported. Direct `none` assignment is not supported; use the
+explicit null construction above.
+
+These scalar operations currently cover `i8`–`i64`, `u8`–`u64`, `f32`, `f64` and
+`bool`. String, temporal, decimal and nested Series retain their data and schema
+but cannot yet be indexed into language scalars or used in these operators.
+Unary operations, slicing, mutation and reductions are rejected. Returned Series
+own independent references; temporary columns and aliases are released by the
+normal scope-lifetime machinery.
+
+## Parameterized static DataFrame schemas
+
+Checked RecordBatch casts additionally accept:
+
+- `decimal128[precision, scale]` and `decimal256[precision, scale]`.
+- `timestamp["unit"]`, `timestamp["unit", "timezone"]`, and `time["unit"]`, with
+  units `s`, `ms`, `us` or `ns`.
+- `binary`, `binary[positive_size]`, `large_binary`, and `large_string`.
+- `arrow_list[T]`, `large_list[T]`, and `fixed_list[T, positive_size]`.
+- `dictionary[index_type, value_type]` (unordered).
+- `arrow_map[key_type, value_type]` and `arrow_struct[name:T, ...]`.
+
+For example,
+`dataframe[amount:decimal128[12, 3] | none, items:arrow_list[nullable[i32]] | none]`
+declares nullable decimal and list columns. Nested children are non-nullable
+unless wrapped in `nullable[T]`; this wrapper models child nullability even for
+types that cannot be language scalars. Map keys cannot be nullable.
+
+Rich schemas work in aliases, parameters, returns and checked RecordBatch casts.
+Casts check names, order, exact physical parameters and nested nullability;
+non-nullable top-level columns also check actual batch null counts. They do not
+rescale decimals, change time units, or decode dictionaries implicitly. Input
+schema and field metadata are preserved. Rich column literals and standalone
+rich scalar variables are not supported; use RecordBatch/Arrow construction.

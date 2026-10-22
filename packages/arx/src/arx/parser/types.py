@@ -12,6 +12,8 @@ from typing import cast
 
 import astx
 
+from irx.builtins.collections.column_types import column_arrow_type
+
 from arx import builtins
 from arx.dataframe import (
     dataframe_type,
@@ -63,8 +65,24 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
     "time": astx.Time(),
 }
 
-_BUILTIN_TYPE_NAMES = frozenset(_BUILTIN_TYPE_MAP) | frozenset(
-    {"dataframe", "list", "series", "tensor"}
+COLUMN_TYPE_NAMES = {
+    "decimal128",
+    "decimal256",
+    "arrow_list",
+    "large_list",
+    "fixed_list",
+    "dictionary",
+    "binary",
+    "large_binary",
+    "large_string",
+    "arrow_struct",
+    "arrow_map",
+}
+
+_BUILTIN_TYPE_NAMES = (
+    frozenset(_BUILTIN_TYPE_MAP)
+    | frozenset(COLUMN_TYPE_NAMES)
+    | frozenset({"dataframe", "list", "series", "tensor", "nullable"})
 )
 
 
@@ -170,7 +188,7 @@ class TypeParserMixin(ParserMixinBase):
           type_context:
             type: TypeUseContext
         """
-        if type_context.allows_runtime_layout:
+        if type_context.allows_runtime_layout or type_name == "dataframe":
             return
         raise ParserException(
             f"Runtime-layout {type_name} types using '...' are only "
@@ -265,7 +283,10 @@ class TypeParserMixin(ParserMixinBase):
             self.tokens.get_next_token()  # eat none
             type_: astx.DataType = astx.NoneType()
         else:
-            if self.tokens.cur_tok.kind != TokenKind.identifier:
+            if self.tokens.cur_tok.kind not in {
+                TokenKind.identifier,
+                TokenKind.binary_op,
+            }:
                 raise ParserException("Parser: Expected a type name")
 
             type_name = cast(str, self.tokens.cur_tok.value)
@@ -273,7 +294,73 @@ class TypeParserMixin(ParserMixinBase):
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)
 
-            if type_name == "list":
+            if type_name in COLUMN_TYPE_NAMES or (
+                type_name in {"timestamp", "time"}
+                and self._peek_token().value == "["
+            ):
+                self.tokens.get_next_token()
+                arguments: list[astx.DataType | int | str] = []
+                if self._is_operator("["):
+                    self._consume_operator("[")
+                    while not self._is_operator("]"):
+                        token = self.tokens.cur_tok
+                        if type_name == "arrow_struct":
+                            if token.kind != TokenKind.identifier:
+                                raise ParserException(
+                                    "Struct column fields require names"
+                                )
+                            arguments.append(cast(str, token.value))
+                            self.tokens.get_next_token()
+                            self._consume_operator(":")
+                            arguments.append(
+                                self.parse_type(
+                                    type_context=TypeUseContext.NESTED
+                                )
+                            )
+                        elif token.kind == TokenKind.string_literal:
+                            arguments.append(cast(str, token.value))
+                            self.tokens.get_next_token()
+                        elif (
+                            token.kind == TokenKind.int_literal
+                            or self._is_operator("-")
+                        ):
+                            sign = 1
+                            if self._is_operator("-"):
+                                sign = -1
+                                self._consume_operator("-")
+                            if (
+                                cast(TokenKind, self.tokens.cur_tok.kind)
+                                != TokenKind.int_literal
+                            ):
+                                raise ParserException(
+                                    "Expected an integer column parameter"
+                                )
+                            arguments.append(
+                                sign * cast(int, self.tokens.cur_tok.value)
+                            )
+                            self.tokens.get_next_token()
+                        else:
+                            arguments.append(
+                                self.parse_type(
+                                    type_context=TypeUseContext.NESTED
+                                )
+                            )
+                        if not self._is_operator(","):
+                            break
+                        self._consume_operator(",")
+                    self._consume_operator("]")
+                type_ = astx.ColumnType(type_name, tuple(arguments))
+                try:
+                    column_arrow_type(type_)
+                except (ValueError, TypeError) as error:
+                    raise ParserException(str(error)) from error
+            elif type_name == "nullable":
+                self.tokens.get_next_token()
+                self._consume_operator("[")
+                inner = self.parse_type(type_context=TypeUseContext.NESTED)
+                self._consume_operator("]")
+                type_ = astx.NullableType(inner)
+            elif type_name == "list":
                 self.tokens.get_next_token()  # eat list
                 self._consume_operator("[")
                 elem_type = self.parse_type(
@@ -355,7 +442,7 @@ class TypeParserMixin(ParserMixinBase):
                 self._consume_operator("[")
                 elem_type = self.parse_type(
                     allow_template_vars=allow_template_vars,
-                    allow_union=allow_union,
+                    allow_union=True,
                     type_context=TypeUseContext.NESTED,
                 )
                 if self._is_operator(","):

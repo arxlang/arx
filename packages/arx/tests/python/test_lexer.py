@@ -691,3 +691,17 @@ def test_unsigned_type_aliases_are_identifiers(name: str) -> None:
     """
     ArxIO.string_to_buffer(name)
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
+
+
+@pytest.mark.parametrize(
+    "name", ["nullable", "decimal128", "arrow_list", "is_null", "fill_null"]
+)
+def test_nullable_surface_names_remain_identifiers(name: str) -> None:
+    """
+    title: Column and null builtins use identifiers, not new lexer keywords.
+    parameters:
+      name:
+        type: str
+    """
+    ArxIO.string_to_buffer(name)
+    assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)

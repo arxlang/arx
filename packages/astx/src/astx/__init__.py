@@ -223,6 +223,7 @@ from astx.modules import (
     NamespaceKind,
     NamespaceType,
 )
+from astx.nullable import ColumnType, NullableType, NullCheck, NullFill
 from astx.operators import (
     AssignmentExpr,
     AugAssign,
@@ -401,6 +402,7 @@ __all__ = [
     "CollectionIsEmpty",
     "CollectionLength",
     "CollectionType",
+    "ColumnType",
     "CompareOp",
     "Complex",
     "Complex32",
@@ -526,6 +528,9 @@ __all__ = [
     "NoneType",
     "NorOp",
     "NotOp",
+    "NullCheck",
+    "NullFill",
+    "NullableType",
     "Number",
     "OpaqueHandleType",
     "OperatorType",

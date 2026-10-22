@@ -488,6 +488,7 @@ def test_missing_optional_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
         type: pytest.MonkeyPatch
     """
     monkeypatch.setattr(rb, "_get_lib", object)
+    monkeypatch.setenv(rb.IRX_RECORD_BATCH_LIBRARY_ENV, "legacy-override")
     with Parquet() as file:
         with pytest.raises(
             RuntimeError, match="lacks Parquet support; rebuild"

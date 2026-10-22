@@ -15,6 +15,7 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
+from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
 
 
@@ -317,6 +318,10 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
     assert "record_batch" in (
         builder.translator.runtime_features.active_feature_names()
     )
+    assert "parquet" not in (
+        builder.translator.runtime_features.active_feature_names()
+    )
+    assert "irx_rb_api_parquet" not in ir
 
 
 def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
@@ -342,3 +347,97 @@ def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
     assert "parquet" not in (
         builder.translator.runtime_features.active_feature_names()
     )
+
+
+def test_temporal_dataframe_translate_uses_semantic_epoch_values() -> None:
+    """
+    title: Temporal DataFrame literals lower to verified checked ABI calls.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n"
+        "  var frame: dataframe[day:date, clock:time] = "
+        'dataframe({day: [date("1969-12-31")], clock: [time("01:02:03")]})\n'
+        "  return cast(frame.nrows(), i32)\n"
+    )
+    module = Parser().parse(Lexer().lex(), "temporal_translate")
+    text = ArxBuilder().translate_modules(
+        ParsedModule("temporal_translate", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(text).verify()
+    assert "irx_rb_api_append_date" in text
+    assert "irx_rb_api_append_time" in text
+
+
+@pytest.mark.parametrize(
+    "expression", ["frame", "cast(frame, dataframe[id:i64])"]
+)
+def test_dynamic_dataframe_cannot_silently_narrow(expression: str) -> None:
+    """
+    title: Runtime schemas cannot satisfy static contracts without checking.
+    parameters:
+      expression:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "fn narrow(frame: dataframe[...]) -> dataframe[id:i64]:\n"
+        f"  return {expression}\n"
+    )
+    module = Parser().parse(Lexer().lex(), "unsafe_narrow")
+    with pytest.raises(SemanticError):
+        ArxBuilder().translate_modules(
+            ParsedModule("unsafe_narrow", module), FileImportResolver(())
+        )
+
+
+def test_nullable_series_translate_verifies() -> None:
+    """
+    title: Nullable kernels consume semantic plans and produce valid LLVM.
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n"
+        "  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
+        "  var value: nullable[i32] = frame.x[0] + frame.x[1]\n"
+        "  assert is_null(value)\n"
+        "  return fill_null(value, 0)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_arrow_column_compute" in text
+    assert "irx_arrow_series_index" in text
+    assert "column_valid" in text
+
+
+@pytest.mark.parametrize(
+    "body,message",
+    [
+        (
+            "var bad: nullable[str] = cast(none, nullable[str])",
+            "nullable scalars",
+        ),
+        ("var bad: i32 = frame.x[0]", "cannot assign"),
+        ("var bad: nullable[i32] = frame.x[0] + 1.5", "matching scalar types"),
+        ("var bad: nullable[i32] = frame.x[-1.0]", "integer representable"),
+        ("var bad: nullable[i32] = -frame.x[0]", "Use binary arithmetic"),
+        ("var bad: bool = is_null(1)", "is_null requires"),
+        ("var bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
+        ("if frame.x[0]:\n    return 1", "condition must be Boolean"),
+        ("var bad: series[i32] = frame.x", "cannot assign"),
+        ("var bad: series[bool] = frame.x && frame.x", "require bool"),
+    ],
+)
+def test_nullable_semantic_errors(body: str, message: str) -> None:
+    """
+    title: Unsupported operations fail in semantics, not during LLVM emission.
+    parameters:
+      body:
+        type: str
+      message:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "fn main() -> i32:\n"
+        "  var frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
+        f"  {body}\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))

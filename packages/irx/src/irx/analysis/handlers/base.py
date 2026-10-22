@@ -1614,7 +1614,11 @@ class SemanticAnalyzerCore(BaseVisitor):
         from irx.analysis.class_lifecycle import (  # noqa: PLC0415
             contains_class,
         )
+        from irx.analysis.nullable import (  # noqa: PLC0415
+            validate_column_declaration,
+        )
 
+        validate_column_declaration(self, type_, node)
         if not isinstance(
             type_, astx.DataFrameType | astx.SeriesType
         ) and contains_arrow(type_):

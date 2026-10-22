@@ -1435,6 +1435,21 @@ int irx_rb_schema_export(const IrxRbSchema *schema, ArrowSchema *out) {
     auto status = arrow::ExportSchema(*schema->schema, out);
     return status.ok() ? IRX_OK : set_err(status);
 }
+int irx_rb_schema_from_ipc(const uint8_t *data, int64_t size, IrxRbSchema **out) {
+    GUARD(out); *out = nullptr; GUARD(data);
+    if (size <= 0) return set_err("schema IPC length must be positive");
+    try {
+        arrow::io::BufferReader reader(std::make_shared<arrow::Buffer>(data, size));
+        arrow::ipc::DictionaryMemo memo;
+        auto parsed = arrow::ipc::ReadSchema(&reader, &memo);
+        if (!parsed.ok()) return set_err(parsed.status());
+        auto result = std::make_unique<IrxRbSchema>();
+        int status = populate_schema(*parsed, result.get());
+        if (status != IRX_OK) return status;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) { return set_err(error.what()); }
+}
 int irx_rb_schema_import(ArrowSchema *schema, IrxRbSchema **out) {
     GUARD(out); *out = nullptr; GUARD(schema);
     if (!schema->release) return set_err("schema already released", IRX_ERR_ARROW);
@@ -1672,15 +1687,55 @@ class CsvReader final : public arrow::RecordBatchReader {
     std::shared_ptr<arrow::Schema> schema_;
 };
 
+// Validate only logically reachable children: a null parent masks its storage.
+// Arrow's structural ValidateFull does not enforce field nullability.
+arrow::Status dataframe_scalar_nullability(const arrow::Field &field,
+                                           const arrow::Scalar &scalar,
+                                           const std::string &path) {
+    if (!scalar.is_valid)
+        return field.nullable() ? arrow::Status::OK()
+            : arrow::Status::Invalid("non-nullable DataFrame field '", path, "' contains null values");
+    if (scalar.type->id() == arrow::Type::DICTIONARY) {
+        const auto &value = static_cast<const arrow::DictionaryScalar &>(scalar);
+        ARROW_ASSIGN_OR_RAISE(auto decoded, value.GetEncodedValue());
+        return dataframe_scalar_nullability(*field.WithType(decoded->type), *decoded, path);
+    }
+    if (scalar.type->id() == arrow::Type::STRUCT) {
+        const auto &value = static_cast<const arrow::StructScalar &>(scalar);
+        for (int i = 0; i < scalar.type->num_fields(); ++i) {
+            const auto &child = *scalar.type->field(i);
+            ARROW_RETURN_NOT_OK(dataframe_scalar_nullability(child, *value.value[i], path + "." + child.name()));
+        }
+    } else if (scalar.type->id() == arrow::Type::LIST ||
+               scalar.type->id() == arrow::Type::LARGE_LIST ||
+               scalar.type->id() == arrow::Type::FIXED_SIZE_LIST ||
+               scalar.type->id() == arrow::Type::MAP) {
+        const auto &value = static_cast<const arrow::BaseListScalar &>(scalar);
+        const auto &child = *scalar.type->field(0);
+        for (int64_t i = 0; i < value.value->length(); ++i) {
+            ARROW_ASSIGN_OR_RAISE(auto element, value.value->GetScalar(i));
+            ARROW_RETURN_NOT_OK(dataframe_scalar_nullability(child, *element, path + "." + child.name()));
+        }
+    }
+    return arrow::Status::OK();
+}
+
+arrow::Status dataframe_column_nullability(const arrow::Field &field,
+                                            const arrow::Array &array) {
+    if (!field.nullable() && array.null_count())
+        return arrow::Status::Invalid("DataFrame field '", field.name(), "' contains null values");
+    if (field.type()->num_fields() == 0 && field.type()->id() != arrow::Type::DICTIONARY) return arrow::Status::OK();
+    for (int64_t i = 0; i < array.length(); ++i) {
+        ARROW_ASSIGN_OR_RAISE(auto value, array.GetScalar(i));
+        ARROW_RETURN_NOT_OK(dataframe_scalar_nullability(field, *value, field.name()));
+    }
+    return arrow::Status::OK();
+}
+
 arrow::Status dataframe_schema(const arrow::Schema &schema) {
     if (!schema.num_fields()) return arrow::Status::Invalid("DataFrame requires a nonempty static schema");
     std::unordered_set<std::string> names;
     for (const auto &field : schema.fields()) {
-        auto type = field->type()->id();
-        auto kind = col_type_from_arrow(*field->type());
-        if (kind < IRX_COL_INT8 || kind > IRX_COL_TIME64_NS)
-            return arrow::Status::TypeError("Cannot convert column '", field->name(),
-                "' (", field->type()->ToString(), ") to DataFrame: requires numeric, bool, string or temporal storage");
         if (field->name().empty() || field->name().find('\0') != std::string::npos ||
             !arrow::util::ValidateUTF8(field->name()) || !names.insert(field->name()).second)
             return arrow::Status::Invalid("DataFrame requires unique nonempty column names");
@@ -1778,6 +1833,42 @@ int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
     }
 }
 
+int irx_rb_batch_to_dynamic_table(const IrxRbBatch *batch, irx_arrow_table_handle **out) {
+    GUARD(out); *out = nullptr; GUARD(batch);
+    ArrowArray array{};
+    ArrowSchema schema{};
+    struct Release {
+        ArrowArray &a; ArrowSchema &s;
+        ~Release() { if (a.release) a.release(&a); if (s.release) s.release(&s); }
+    } release{array, schema};
+    try {
+        auto status = batch->batch->ValidateFull();
+        if (!status.ok()) return set_err(status);
+        for (int i = 0; i < batch->batch->num_columns(); ++i)
+            if (!batch->batch->schema()->field(i)->nullable() && batch->batch->column(i)->null_count())
+                return set_err("non-nullable DataFrame column contains nulls", IRX_ERR_TYPE);
+        int rc = irx_rb_batch_export(batch, &array, &schema);
+        if (rc != IRX_OK) return rc;
+        return irx_arrow_table_import_batch(&array, &schema, out) == 0
+            ? IRX_OK : set_err(irx_arrow_last_error());
+    } catch (const std::exception &error) { return set_err(error.what()); }
+}
+
+int irx_rb_table_to_dynamic_batch(const irx_arrow_table_handle *table, IrxRbBatch **out) {
+    GUARD(out); *out = nullptr; GUARD(table);
+    ArrowArray array{};
+    ArrowSchema schema{};
+    struct Release {
+        ArrowArray &a; ArrowSchema &s;
+        ~Release() { if (a.release) a.release(&a); if (s.release) s.release(&s); }
+    } release{array, schema};
+    try {
+        if (irx_arrow_table_export_batch(table, &array, &schema) != 0)
+            return set_err(irx_arrow_last_error());
+        return irx_rb_batch_import(&array, &schema, out);
+    } catch (const std::exception &error) { return set_err(error.what()); }
+}
+
 int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
                          irx_arrow_table_handle **out) {
     GUARD(out); *out = nullptr; GUARD(batch); GUARD(expected);
@@ -1802,11 +1893,14 @@ int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
                 return set_err("Cannot convert column '" + actual->name() + "' (" +
                     actual->type()->ToString() + "): expected '" + field->name() + "' (" +
                     field->type()->ToString() + "); use a matching DataFrame schema or explicitly convert the input before casting", IRX_ERR_TYPE);
-            if (!field->nullable() && batch->batch->column(i)->null_count())
-                return set_err("Cannot convert column '" + field->name() +
-                    "' to DataFrame: the current batch contains null values; keep it as a RecordBatch", IRX_ERR_TYPE);
+            status = dataframe_column_nullability(*field, *batch->batch->column(i));
+            if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
         }
-        auto converted = arrow::RecordBatch::Make(expected->schema, batch->batch->num_rows(), batch->batch->columns());
+        std::vector<std::shared_ptr<arrow::Field>> fields;
+        for (int i = 0; i < expected->schema->num_fields(); ++i)
+            fields.push_back(batch->batch->schema()->field(i)->WithNullable(expected->schema->field(i)->nullable()));
+        auto target = arrow::schema(fields, batch->batch->schema()->metadata());
+        auto converted = arrow::RecordBatch::Make(target, batch->batch->num_rows(), batch->batch->columns());
         status = converted->ValidateFull();
         if (!status.ok()) return set_err(status);
         status = arrow::ExportRecordBatch(*converted, &array, &schema);

@@ -20,6 +20,7 @@ from irx.analysis.resolved_nodes import (
     SemanticClass,
     SemanticSymbol,
 )
+from irx.builtins.collections.column_types import dataframe_schema_ipc
 from irx.builtins.collections.dataframe import (
     DATAFRAME_SCHEMA_EXTRA,
     dataframe_record_batch_type_id,
@@ -46,13 +47,16 @@ class ArrowConversion:
       handle_index:
         type: int
       columns:
-        type: tuple[tuple[str, int, bool], Ellipsis]
+        type: tuple[tuple[str, int, bool], Ellipsis] | None
+      schema_ipc:
+        type: bytes | None
     """
 
     to_dataframe: bool
     class_: SemanticClass
     handle_index: int
-    columns: tuple[tuple[str, int, bool], ...]
+    columns: tuple[tuple[str, int, bool], ...] | None
+    schema_ipc: bytes | None = None
 
 
 @private
@@ -236,22 +240,24 @@ def resolve_arrow_cast(
         )
         return True
     columns = dataframe.columns
-    if not columns or any(
-        dataframe_record_batch_type_id(c.type_) is None for c in columns
-    ):
-        analyzer.context.diagnostics.add(
-            "DataFrame conversion requires a static nonempty schema of "
-            "numeric, bool, string or temporal columns; "
-            "keep other data as a RecordBatch",
-            node=node,
-            code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-        )
-        return True
+    serialized: bytes | None = None
+    if columns is not None:
+        try:
+            serialized = dataframe_schema_ipc(dataframe)
+        except (ValueError, TypeError) as error:
+            analyzer.context.diagnostics.add(
+                str(error),
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return True
     analyzer._semantic(node).extras[ARROW_CONVERSION] = ArrowConversion(
         to_dataframe,
         class_,
         fields[0].storage_index,
-        tuple(
+        None
+        if columns is None
+        else tuple(
             (
                 c.name,
                 int(dataframe_record_batch_type_id(c.type_) or 0),
@@ -259,6 +265,10 @@ def resolve_arrow_cast(
             )
             for c in columns
         ),
+        serialized
+        if columns is not None
+        and any(isinstance(c.type_, astx.ColumnType) for c in columns)
+        else None,
     )
     analyzer._set_type(node, target)
     if to_dataframe:

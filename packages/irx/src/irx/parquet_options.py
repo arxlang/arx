@@ -70,8 +70,10 @@ class ParquetOptions:
     summary: >-
       Empty columns/row_groups select all. Dataset evolution unions same-typed
       fields only. Atomic replacement and rewrite append are POSIX-local
-      operations, not concurrent-writer transactions. Raw AES keys are excluded
-      from repr; callers own key distribution and lifetime.
+      operations with advisory writer exclusion and optional fsync durability.
+      Reconstruct preserves supported logical types over explicit physical
+      storage for single files. Raw AES keys are excluded from repr; callers
+      own key distribution and lifetime.
     attributes:
       batch_size:
         type: int
@@ -105,6 +107,10 @@ class ParquetOptions:
         type: bool
       atomic:
         type: bool
+      durable:
+        type: bool
+      reconstruct:
+        type: bool
       append:
         type: bool
       encryption_key:
@@ -127,6 +133,8 @@ class ParquetOptions:
     unify: bool = False
     normalize: bool = False
     atomic: bool = False
+    durable: bool = False
+    reconstruct: bool = False
     append: bool = False
     encryption_key: bytes | None = field(default=None, repr=False)
 
@@ -210,11 +218,16 @@ class ParquetOptions:
                 "unify",
                 "normalize",
                 "atomic",
+                "durable",
+                "reconstruct",
                 "append",
             ):
                 value = getattr(self, name)
                 if type(value) is not bool:
                     raise TypeError(f"{name} must be bool")
+                # Older explicit ABI overrides need not know unused new flags.
+                if name in ("durable", "reconstruct") and not value:
+                    continue
                 _check(
                     lib.irx_parquet_options_int(
                         handle, name.encode(), int(value)

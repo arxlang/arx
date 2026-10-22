@@ -71,15 +71,21 @@ references: aliases, parameters, returned values and local replacements retain
 what they need; normal exits, loop exits and returns release local ownership.
 The input need not remain open. No Arrow C++ layout is exposed in LLVM.
 
-Conversion requires a nonempty static schema with exact names, order and
+Static conversion requires a nonempty schema with exact names, order and
 physical types. Supported columns are signed/unsigned integers, `f32`, `f64`,
 `bool`, `str`, `date` (date32), `time` (time64 microseconds), and
 `timestamp`/`datetime` (timezone-naive timestamp microseconds). Declare nullable
 columns as `T | none`, for example `dataframe[id:u64 | none, name:str | none]`.
 Non-nullable targets still reject actual nulls. There is no implicit narrowing,
 reordering, temporal conversion or null filling. Output should use the converted
-batch's schema; static DataFrames do not preserve arbitrary input metadata.
-Other temporal units/timezones and rich nested types remain RecordBatch data.
+batch's schema; static conversions preserve input schema and field metadata.
+Runtime-schema `dataframe[...]` casts preserve RecordBatch-supported Arrow
+columns and metadata, including other units/timezones and nested types, without
+static column access. Parameterized static annotations also preserve rich column
+types through checked casts; see [collections](collections.md). CSV still cannot
+encode every Arrow type: use Parquet or IPC when its text schema is
+insufficient. CSV-only programs and Python sessions do not load the optional
+Parquet runtime.
 
 Fixed-row-count conversion targets, owned globals, aggregate fields/containers,
 generators and general public FFI passing of DataFrames/Series are not

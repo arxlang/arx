@@ -315,6 +315,26 @@ def csv_strings(
 
 
 @private
+@lru_cache(maxsize=1)
+@typechecked
+def load_parquet_plugin() -> ctypes.CDLL:
+    """
+    title: Load optional Parquet symbols while sharing the base handle owner.
+    returns:
+      type: ctypes.CDLL
+    """
+    from irx.builder.runtime.parquet import (  # noqa: PLC0415
+        ensure_parquet_shared_library,
+    )
+
+    # Initialize and retain the base library first. All plugin handles use it.
+    _get_lib()
+    lib = ctypes.CDLL(str(ensure_parquet_shared_library()))
+    _configure_lib(lib)
+    return lib
+
+
+@private
 @typechecked
 def parquet_library() -> ctypes.CDLL:
     """
@@ -322,7 +342,11 @@ def parquet_library() -> ctypes.CDLL:
     returns:
       type: ctypes.CDLL
     """
-    lib = _get_lib()
+    lib = (
+        _get_lib()
+        if os.environ.get(IRX_RECORD_BATCH_LIBRARY_ENV)
+        else load_parquet_plugin()
+    )
     try:
         reader = lib.irx_rb_parquet_reader_open
         writer = lib.irx_rb_parquet_writer_open

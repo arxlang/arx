@@ -12,6 +12,7 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date, datetime, time
 from typing import cast
 
 import astx
@@ -28,6 +29,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.nullable import resolve_column_index
 from irx.analysis.ownership import (
     list_resource_ownership,
     string_resource_ownership,
@@ -184,16 +186,48 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         try:
             literal_value = cast(str, getattr(node, "value"))
             parsed_value: object
-            if isinstance(node, astx.LiteralTime):
+            if isinstance(node, astx.LiteralDate):
+                if (
+                    len(literal_value) != len("YYYY-MM-DD")
+                    or literal_value[4::3] != "--"
+                ):
+                    raise ValueError("date literals require YYYY-MM-DD")
+                parsed_value = date.fromisoformat(literal_value)
+            elif isinstance(node, astx.LiteralTime):
                 parsed_value = validate_literal_time(literal_value)
             elif isinstance(node, astx.LiteralTimestamp):
                 parsed_value = validate_literal_timestamp(literal_value)
             else:
                 parsed_value = validate_literal_datetime(literal_value)
             self._semantic(node).extras["parsed_value"] = parsed_value
+            # Resolve Arrow's epoch representation here, not in lowering.
+            if isinstance(parsed_value, datetime):
+                delta = parsed_value - datetime(1970, 1, 1)
+                physical = (delta.days * 86400 + delta.seconds) * 1000000
+                physical += delta.microseconds
+            elif isinstance(parsed_value, time):
+                physical = (
+                    parsed_value.hour * 3600
+                    + parsed_value.minute * 60
+                    + parsed_value.second
+                ) * 1000000 + parsed_value.microsecond
+            else:
+                assert isinstance(parsed_value, date)
+                physical = (parsed_value - date(1970, 1, 1)).days
+            self._semantic(node).extras["dataframe_temporal_value"] = physical
         except ValueError as exc:
             self.context.diagnostics.add(str(exc), node=node)
         self._set_type(node, getattr(node, "type_", None))
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.LiteralDate) -> None:
+        """
+        title: Validate calendar dates and resolve their epoch representation.
+        parameters:
+          node:
+            type: astx.LiteralDate
+        """
+        self._visit_temporal_literal(node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.LiteralTime) -> None:
@@ -998,6 +1032,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         if not isinstance(node.index, astx.LiteralNone):
             self.visit(node.index)
         value_type = self._expr_type(node.value)
+        if resolve_column_index(cast(SemanticAnalyzerCore, self), node):
+            return
         if isinstance(value_type, astx.ListType):
             if isinstance(node.index, astx.LiteralNone):
                 self.context.diagnostics.add(

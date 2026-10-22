@@ -97,6 +97,8 @@ class CompilationSession:
         type: dict[str, NativeFeature]
       native_bindings:
         type: dict[int, tuple[str, Ellipsis]]
+      lowering_declarations:
+        type: frozenset[int] | None
       _resolution_cache:
         type: dict[tuple[ModuleKey, str], ParsedModule | None]
       _probe_cache:
@@ -114,6 +116,7 @@ class CompilationSession:
     )
     native_features: dict[str, NativeFeature] = field(default_factory=dict)
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
+    lowering_declarations: frozenset[int] | None = None
     _resolution_cache: dict[tuple[ModuleKey, str], ParsedModule | None] = (
         field(default_factory=dict)
     )

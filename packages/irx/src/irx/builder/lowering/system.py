@@ -39,6 +39,17 @@ class SystemVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.Cast
         """
+        if isinstance(node.target_type, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            storage = require_semantic_metadata(
+                self._llvm_type_for_ast_type(node.target_type),
+                node=node,
+                metadata="nullable type",
+                context="null construction",
+            )
+            self.result_stack.append(ir.Constant(storage, None))
+            return
         self.visit_child(node.value)
         value = safe_pop(self.result_stack)
         if value is None:
@@ -221,26 +232,63 @@ class SystemVisitorMixin(ClassVisitorMixin):
         if plan.to_dataframe:
             self.class_operation(node.value, "require", value)
             box = builder.load(builder.gep(value, [zero, index]))
-            create = self.require_runtime_symbol(
-                "record_batch", "irx_rb_api_schema_new"
-            )
-            schema = builder.call(create, [])
-            add = self.require_runtime_symbol(
-                "record_batch", "irx_rb_api_schema_add"
-            )
-            for name, type_id, nullable in plan.columns:
-                pointer = cast(
-                    ControlFlowVisitorMixin, self
-                )._constant_c_string_pointer(name, name_hint="dataframe_field")
-                builder.call(
-                    add,
+            if plan.columns is None:
+                convert = self.require_runtime_symbol(
+                    "record_batch", "irx_rb_api_batch_to_dynamic_table"
+                )
+                table = builder.call(convert, [box])
+                self.arrow_temporary(node, table)
+                self.result_stack.append(table)
+                return
+            if plan.schema_ipc is not None:
+                payload = ir.Constant(
+                    ir.ArrayType(ir.IntType(8), len(plan.schema_ipc)),
+                    bytearray(plan.schema_ipc),
+                )
+                global_value = ir.GlobalVariable(
+                    self._llvm.module,
+                    payload.type,
+                    self._llvm.module.get_unique_name("dataframe_schema_ipc"),
+                )
+                global_value.linkage = "internal"
+                global_value.global_constant = True
+                global_value.initializer = payload
+                pointer = builder.gep(
+                    global_value, [zero, zero], inbounds=True
+                )
+                create = self.require_runtime_symbol(
+                    "record_batch", "irx_rb_api_schema_ipc"
+                )
+                schema = builder.call(
+                    create,
                     [
-                        schema,
                         pointer,
-                        ir.Constant(ir.IntType(32), type_id),
-                        ir.Constant(ir.IntType(32), int(nullable)),
+                        ir.Constant(ir.IntType(64), len(plan.schema_ipc)),
                     ],
                 )
+            else:
+                create = self.require_runtime_symbol(
+                    "record_batch", "irx_rb_api_schema_new"
+                )
+                schema = builder.call(create, [])
+                add = self.require_runtime_symbol(
+                    "record_batch", "irx_rb_api_schema_add"
+                )
+                for name, type_id, nullable in plan.columns:
+                    pointer = cast(
+                        ControlFlowVisitorMixin, self
+                    )._constant_c_string_pointer(
+                        name, name_hint="dataframe_field"
+                    )
+                    builder.call(
+                        add,
+                        [
+                            schema,
+                            pointer,
+                            ir.Constant(ir.IntType(32), type_id),
+                            ir.Constant(ir.IntType(32), int(nullable)),
+                        ],
+                    )
             convert = self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_to_table"
             )
@@ -264,6 +312,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
         instance = self.result_stack[-1]
         box = builder.load(builder.gep(instance, [zero, index]))
         convert = self.require_runtime_symbol(
-            "record_batch", "irx_rb_api_table_to_batch"
+            "record_batch",
+            "irx_rb_api_table_to_dynamic_batch"
+            if plan.columns is None
+            else "irx_rb_api_table_to_batch",
         )
         builder.call(convert, [value, box])

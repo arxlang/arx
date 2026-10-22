@@ -101,6 +101,12 @@ int irx_rb_parquet_writer_open(const IrxRbSchema *schema, const char *path,
                                IrxRbStreamWriter **out);
 
 struct irx_arrow_table_handle;
+/* Runtime-schema conversions borrow their inputs and return independent owners.
+ * On IRX_OK, release *out with irx_arrow_table_release or irx_rb_batch_release,
+ * respectively. On error a valid out slot is reset to NULL. Complete supported
+ * Arrow schemas/metadata are preserved; table export may combine chunks/copy. */
+int irx_rb_batch_to_dynamic_table(const IrxRbBatch *batch, struct irx_arrow_table_handle **out);
+int irx_rb_table_to_dynamic_batch(const struct irx_arrow_table_handle *table, IrxRbBatch **out);
 /* Results own independent references. Neither operation consumes its input. */
 int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
                          struct irx_arrow_table_handle **out);
@@ -268,6 +274,9 @@ int irx_rb_schema_equal(const IrxRbSchema *, const IrxRbSchema *);
  * The caller owns the outer C structs. Never call a null release callback.
  * reader_export transfers iteration to the C stream, leaving an EOF reader. */
 int irx_rb_schema_export(const IrxRbSchema *, struct ArrowSchema *);
+/* Borrow IPC bytes only during the call; return an independently owned schema.
+ * Failure clears out; release a successful output once with schema_release. */
+int irx_rb_schema_from_ipc(const uint8_t *data, int64_t size, IrxRbSchema **out);
 int irx_rb_schema_import(struct ArrowSchema *, IrxRbSchema **);
 int irx_rb_batch_export(const IrxRbBatch *, struct ArrowArray *, struct ArrowSchema *);
 int irx_rb_batch_import(struct ArrowArray *, struct ArrowSchema *, IrxRbBatch **);

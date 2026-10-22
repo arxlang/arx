@@ -23,7 +23,6 @@ from irx.builder.lowering import (
     BufferVisitorMixin,
     CollectionVisitorMixin,
     ControlFlowVisitorMixin,
-    DataFrameVisitorMixin,
     FunctionVisitorMixin,
     GeneratorVisitorMixin,
     ListVisitorMixin,
@@ -35,6 +34,7 @@ from irx.builder.lowering import (
     UnaryOpVisitorMixin,
     VariableVisitorMixin,
 )
+from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.runtime.linking import link_executable
 from irx.typecheck import typechecked
 
@@ -52,7 +52,7 @@ class Visitor(
     GeneratorVisitorMixin,
     FunctionVisitorMixin,
     TemporalVisitorMixin,
-    DataFrameVisitorMixin,
+    NullableVisitorMixin,
     TensorVisitorMixin,
     ArrayVisitorMixin,
     BufferVisitorMixin,

@@ -32,6 +32,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.normalization import normalize_flags, normalize_operator
+from irx.analysis.nullable import nullable_error, resolve_column_binary
 from irx.analysis.ownership import (
     resource_ownership,
     string_resource_ownership,
@@ -74,6 +75,21 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             self._set_type(node, None)
             return
         operand_type = self._expr_type(node.operand)
+        if isinstance(operand_type, (astx.SeriesType, astx.NullableType)):
+            nullable_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "Use binary arithmetic, is_null or fill_null for "
+                "nullable/Series values",
+            )
+            return
+        if node.op_code in {"+", "-"} and not is_numeric_type(operand_type):
+            self.context.diagnostics.add(
+                "unary sign requires a numeric operand",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
         if (
             node.op_code == "!"
             and operand_type is not None
@@ -142,6 +158,8 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
+            return
+        if resolve_column_binary(cast(SemanticAnalyzerCore, self), node):
             return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)
         self._set_flags(node, flags)
@@ -294,6 +312,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         self._semantic(node).resource_ownership = None
         self.visit(node.value)
+        if isinstance(node.target_type, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            self._resolve_declared_type(node.target_type, node=node)
+            self._set_type(node, node.target_type)
+            return
         if not self._require_value_expression(
             node.value,
             context="Cast",

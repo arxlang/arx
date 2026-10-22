@@ -31,7 +31,7 @@ jobs:
           pr_sha: ${{ github.event.pull_request.head.sha }}
 
   package-tests:
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -79,6 +79,10 @@ jobs:
           poetry check
           poetry install
 
+      - name: Require native integration prerequisites
+        if: matrix.project == 'arx' || matrix.project == 'irx'
+        run: python scripts/check_native_test_environment.py
+
       - name: Run package unit tests
         run: makim ${{ matrix.project }}.unittests
 
@@ -124,6 +128,9 @@ jobs:
           poetry check
           poetry install
 
+      - name: Require native integration prerequisites
+        run: python scripts/check_native_test_environment.py
+
       - name: Run compiled Arx tests
         run: makim arx.test-compiled
 
@@ -140,6 +147,10 @@ jobs:
         run: makim aix.check-syntax
 
   wheel-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.10", "3.14"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -148,7 +159,7 @@ jobs:
         shell: bash -l {0}
 
     concurrency:
-      group: ci-wheel-smoke-${{ github.ref }}
+      group: ci-wheel-smoke-${{ matrix.python_version }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
@@ -162,7 +173,7 @@ jobs:
           activate-environment: arx
           auto-update-conda: true
           conda-solver: libmamba
-          python-version: "3.10"
+          python-version: ${{ matrix.python_version }}
 
       - name: Install dependencies
         run: |
@@ -211,3 +222,35 @@ jobs:
       - name: Setup tmate session
         if: "${{ failure() && (contains(github.event.pull_request.labels.*.name, 'ci:enable-debugging')) }}"
         uses: mxschmitt/action-tmate@v3
+
+  native-sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: ci-native-sanitizers-${{ github.ref }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: "latest"
+          environment-file: conda/dev.yaml
+          channels: conda-forge,nodefaults
+          activate-environment: arx
+          auto-update-conda: true
+          conda-solver: libmamba
+          python-version: "3.14"
+      - name: Install dependencies
+        run: poetry install
+      - name: Install system sanitizer toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Check native prerequisites
+        run: python scripts/check_native_test_environment.py
+      - name: Exercise native ownership, kernels and Parquet with sanitizers
+        env:
+          SANITIZER_CC: /usr/bin/clang
+          SANITIZER_CXX: /usr/bin/clang++
+        run: makim irx.test-sanitizers

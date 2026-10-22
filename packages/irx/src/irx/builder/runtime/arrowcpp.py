@@ -52,7 +52,7 @@ def arrowcpp_linker_flags() -> tuple[str, ...]:
     """
     library = _find_pyarrow_library("arrow")
     library_dir = library.parent
-    flags = [str(library)]
+    flags = [str(_find_pyarrow_library("arrow_compute")), str(library)]
 
     if sys.platform != "win32":
         flags.append(f"-Wl,-rpath,{library_dir}")

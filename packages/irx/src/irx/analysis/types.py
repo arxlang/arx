@@ -19,7 +19,7 @@ INT_TYPES = (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
 UINT_TYPES = (astx.UInt8, astx.UInt16, astx.UInt32, astx.UInt64, astx.UInt128)
 FLOAT_TYPES = (astx.Float16, astx.Float32, astx.Float64)
 STRING_TYPES = (astx.String, astx.UTF8String, astx.UTF8Char)
-TEMPORAL_TYPES = (astx.Time, astx.Timestamp, astx.DateTime)
+TEMPORAL_TYPES = (astx.Date, astx.Time, astx.Timestamp, astx.DateTime)
 BIT_WIDTH_8 = 8
 BIT_WIDTH_16 = 16
 BIT_WIDTH_32 = 32
@@ -232,6 +232,18 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             setattr(cloned, "alias_name", alias_name)
         return cloned
 
+    if isinstance(type_, astx.NullableType):
+        return with_alias(astx.NullableType(clone_type(type_.value_type)))
+    if isinstance(type_, astx.ColumnType):
+        return with_alias(
+            astx.ColumnType(
+                type_.column_kind,
+                tuple(
+                    clone_type(a) if isinstance(a, astx.DataType) else a
+                    for a in type_.arguments
+                ),
+            )
+        )
     if isinstance(type_, astx.UnionType):
         return astx.UnionType(
             tuple(clone_type(member) for member in type_.members),
@@ -378,6 +390,8 @@ def display_type_name(type_: astx.DataType | None) -> str:
     alias_name = getattr(type_, "alias_name", None)
     if isinstance(alias_name, str):
         return alias_name
+    if isinstance(type_, (astx.NullableType, astx.ColumnType)):
+        return str(type_)
     if isinstance(type_, astx.UnionType):
         if type_.alias_name is not None:
             return type_.alias_name
@@ -483,6 +497,22 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     """
     if lhs is None or rhs is None:
         return False
+    if isinstance(lhs, astx.NullableType) and isinstance(
+        rhs, astx.NullableType
+    ):
+        return same_type(lhs.value_type, rhs.value_type)
+    if isinstance(lhs, astx.ColumnType) and isinstance(rhs, astx.ColumnType):
+        return (
+            lhs.column_kind == rhs.column_kind
+            and len(lhs.arguments) == len(rhs.arguments)
+            and all(
+                same_type(a, b)
+                if isinstance(a, astx.DataType)
+                and isinstance(b, astx.DataType)
+                else type(a) is type(b) and a == b
+                for a, b in zip(lhs.arguments, rhs.arguments)
+            )
+        )
     if isinstance(lhs, astx.UnionType) and isinstance(rhs, astx.UnionType):
         if len(lhs.members) != len(rhs.members):
             return False
@@ -614,7 +644,7 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
         if not _same_optional_size(lhs.row_count, rhs.row_count):
             return False
         if lhs.columns is None or rhs.columns is None:
-            return True
+            return lhs.columns is None and rhs.columns is None
         if len(lhs.columns) != len(rhs.columns):
             return False
         return all(
@@ -1010,6 +1040,10 @@ def is_explicitly_castable(
     """
     if source is None or target is None:
         return True
+    if isinstance(source, astx.NoneType) and isinstance(
+        target, astx.NullableType
+    ):
+        return True
     if is_assignable(target, source):
         return True
     if (is_numeric_type(source) or is_boolean_type(source)) and (
@@ -1043,6 +1077,13 @@ def is_assignable(
     """
     if target is None or value is None:
         return True
+    if isinstance(target, astx.NullableType):
+        return same_type(
+            target.value_type,
+            value.value_type
+            if isinstance(value, astx.NullableType)
+            else value,
+        )
     if not _metadata_assignment_compatible(target, value):
         return False
     if isinstance(target, astx.UnionType) and isinstance(
@@ -1145,8 +1186,10 @@ def is_assignable(
     ):
         if not _target_accepts_known_size(target.row_count, value.row_count):
             return False
-        if target.columns is None or value.columns is None:
+        if target.columns is None:
             return True
+        if value.columns is None:
+            return False
         if len(target.columns) != len(value.columns):
             return False
         return all(
