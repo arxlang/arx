@@ -27,9 +27,8 @@ signed 32-bit **byte** count, unlike Parquet's row-based `batch_size`.
 
 ### Migrating the split API
 
-`CSVReader` and `CSVWriter` remain supported compatibility classes, with their
-existing constructors, `open_file`/`open_file_as` methods and handle accessors.
-For new code, use `CSV`:
+`CSVReader` and `CSVWriter` have been removed from `stdlib.arrow`. This is a
+breaking source-API change; use the unified `CSV` owner:
 
 - `CSVReader().open_file(...)` becomes `CSV().open_read(...)`.
 - `reader.open_file_as(...)` becomes `file.open_read_as(...)`.
@@ -72,21 +71,19 @@ references: aliases, parameters, returned values and local replacements retain
 what they need; normal exits, loop exits and returns release local ownership.
 The input need not remain open. No Arrow C++ layout is exposed in LLVM.
 
-Conversion requires a nonempty static schema of **`i8`, `i16`, `i32`, `i64`,
-`f32`, `f64`, or `bool`**, with exact column names, order and physical types.
-Every batch must have **zero actual null values**. A nullable Arrow field is
-accepted when this batch has no nulls; the resulting DataFrame is non-nullable.
-There is no implicit narrowing, reordering, null filling or pointer cast.
-Initialize an output CSV writer from the converted batch's schema or a matching
-non-nullable explicit schema, not the original inferred nullable schema.
+Conversion requires a nonempty static schema with exact names, order and
+physical types. Supported columns are signed/unsigned integers, `f32`, `f64`,
+`bool`, `str`, `date` (date32), `time` (time64 microseconds), and
+`timestamp`/`datetime` (timezone-naive timestamp microseconds). Declare nullable
+columns as `T | none`, for example `dataframe[id:u64 | none, name:str | none]`.
+Non-nullable targets still reject actual nulls. There is no implicit narrowing,
+reordering, temporal conversion or null filling. Output should use the converted
+batch's schema; static DataFrames do not preserve arbitrary input metadata.
+Other temporal units/timezones and rich nested types remain RecordBatch data.
 
-Strings, unsigned values, temporals and nullable columns can remain in a
-RecordBatch. Conversion errors name the offending column and suggest keeping
-that representation or using a matching explicit CSV schema. Nullable/string/
-temporal DataFrames are follow-up work. Fixed-row-count conversion targets,
-owned globals, aggregate fields/containers, generators and general public FFI
-passing of DataFrames/Series are not supported. Arrow locals require
-initializers.
+Fixed-row-count conversion targets, owned globals, aggregate fields/containers,
+generators and general public FFI passing of DataFrames/Series are not
+supported. Arrow locals require initializers.
 
 See [`examples/arrow/csv_roundtrip.x`](../../examples/arrow/csv_roundtrip.x) for
 CSV writing, explicit schemas and processing **every** batch. Run it from the
@@ -140,4 +137,4 @@ rebuild/unset message instead of silently changing implementation.
 
 The lower-level `RecordBatchStreamReader.open_csv` and
 `RecordBatchStreamWriter.open_csv` factories remain compatible. Python
-`schema()` returns an independent flat-schema snapshot; release it explicitly.
+`schema()` returns an independent schema snapshot; release it explicitly.

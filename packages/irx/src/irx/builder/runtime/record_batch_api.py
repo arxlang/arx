@@ -102,3 +102,34 @@ ARROW_API_SIGNATURES.update(
         "irx_rb_api_csv_open_write": ("v", ("p", "p", "p", "p", "i32")),
     }
 )
+
+ARROW_API_SIGNATURES.update(
+    {
+        "irx_rb_api_options_new": ("p", ()),
+        "irx_rb_api_options_destroy": ("v", ("p",)),
+        "irx_rb_api_options_int": ("v", ("p", "p", "i64")),
+        "irx_rb_api_options_text": ("v", ("p", "p", "p")),
+        "irx_rb_api_options_filter": ("v", ("p", "p", "p", "p", "p")),
+        "irx_rb_api_parquet_read_options": ("v", ("p", "p", "p")),
+        "irx_rb_api_parquet_write_options": ("v", ("p", "p", "p", "p")),
+        "irx_rb_api_append_u8": ("v", ("p", "i32", "i8")),
+        "irx_rb_api_get_u8": ("i8", ("p", "i32", "i64")),
+        "irx_rb_api_append_u16": ("v", ("p", "i32", "i16")),
+        "irx_rb_api_get_u16": ("i16", ("p", "i32", "i64")),
+        "irx_rb_api_append_u32": ("v", ("p", "i32", "i32")),
+        "irx_rb_api_get_u32": ("i32", ("p", "i32", "i64")),
+        "irx_rb_api_append_u64": ("v", ("p", "i32", "i64")),
+        "irx_rb_api_get_u64": ("i64", ("p", "i32", "i64")),
+    }
+)
+
+# Opening/configuration activates the optional format implementation. Shared
+# lifetime operations remain in the base RecordBatch runtime.
+PARQUET_API_SYMBOLS = frozenset(
+    name
+    for name in ARROW_API_SIGNATURES
+    if name.startswith("irx_rb_api_options_")
+    or name.startswith("irx_rb_api_parquet_open_")
+    or name
+    in {"irx_rb_api_parquet_read_options", "irx_rb_api_parquet_write_options"}
+)

@@ -194,7 +194,8 @@
     },
     "dataframe_constructor": {
       "form": "dataframe({name: [literal, ...], ...})",
-      "column_access": ["value.name", "value[\"name\"]"]
+      "column_access": ["value.name", "value[\"name\"]"],
+      "nullable_column_type": "dataframe[name: type | none]"
     }
   },
 
@@ -211,6 +212,10 @@
       "i16",
       "i32",
       "i64",
+      "u8",
+      "u16",
+      "u32",
+      "u64",
       "int8",
       "int16",
       "int32",

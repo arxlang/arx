@@ -2,11 +2,12 @@
 
 #include "irx_record_batch.h"
 #include "irx_arrow_runtime.h"
-#include "irx_parquet_io.h"
+#include "irx_record_batch_internal.h"
 
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
 #include <arrow/csv/api.h>
+#include <arrow/extension_type.h>
 #include "irx_arrow_transport.h"
 #include <arrow/io/api.h>
 #include <arrow/ipc/api.h>
@@ -15,6 +16,7 @@
 #include <arrow/type.h>
 #include <arrow/util/utf8.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -80,6 +82,17 @@ static std::shared_ptr<arrow::DataType> arrow_type(IrxColumnType t) {
 
 static IrxColumnType col_type_from_arrow(const arrow::DataType &dt) {
     switch (dt.id()) {
+    case arrow::Type::BINARY: return IRX_COL_BINARY;
+    case arrow::Type::LARGE_BINARY: return IRX_COL_LARGE_BINARY;
+    case arrow::Type::FIXED_SIZE_BINARY: return IRX_COL_FIXED_BINARY;
+    case arrow::Type::DECIMAL128: return IRX_COL_DECIMAL128;
+    case arrow::Type::DECIMAL256: return IRX_COL_DECIMAL256;
+    case arrow::Type::LARGE_LIST: return IRX_COL_LARGE_LIST;
+    case arrow::Type::FIXED_SIZE_LIST: return IRX_COL_FIXED_LIST;
+    case arrow::Type::MAP: return IRX_COL_MAP;
+    case arrow::Type::DICTIONARY: return IRX_COL_DICTIONARY;
+    case arrow::Type::EXTENSION: return IRX_COL_EXTENSION;
+    case arrow::Type::NA: return IRX_COL_NULL;
     case arrow::Type::INT8:    return IRX_COL_INT8;
     case arrow::Type::INT16:   return IRX_COL_INT16;
     case arrow::Type::INT32:   return IRX_COL_INT32;
@@ -196,6 +209,21 @@ static bool build_desc(const arrow::DataType &dt, ColDesc &out) {
     auto ct = col_type_from_arrow(dt);
     if (static_cast<int>(ct) < 0) return false;
     out.type = ct;
+    for (const auto &field : dt.fields()) {
+        out.children.emplace_back();
+        out.children.back().name = field->name();
+        if (!build_desc(*field->type(), out.children.back())) return false;
+    }
+    if (dt.id() == arrow::Type::DICTIONARY) {
+        out.children.emplace_back();
+        return build_desc(*static_cast<const arrow::DictionaryType &>(dt).value_type(),
+                          out.children.back());
+    }
+    if (dt.id() == arrow::Type::EXTENSION) {
+        out.children.emplace_back();
+        return build_desc(*static_cast<const arrow::ExtensionType &>(dt).storage_type(),
+                          out.children.back());
+    }
     return true;
 }
 
@@ -1166,10 +1194,13 @@ int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
     try {
         GUARD(w); GUARD(batch);
         if (w->closed) return set_err("writer already closed", IRX_ERR_IO);
-        if (!w->schema->Equals(*batch->batch->schema(), true))
-            return set_err("batch schema mismatch (including metadata/nullability)", IRX_ERR_TYPE);
+        if (!w->schema->Equals(*batch->batch->schema(), true)) {
+            auto error = arrow::Status::TypeError("batch schema mismatch (including metadata/nullability)");
+            w->writer->Invalidate(error);
+            return set_err(error, IRX_ERR_TYPE);
+        }
         auto validation = batch->batch->ValidateFull();
-        if (!validation.ok()) return set_err(validation);
+        if (!validation.ok()) { w->writer->Invalidate(validation); return set_err(validation); }
         if (w->csv) {
             for (int i = 0; i < batch->batch->num_columns(); ++i) {
                 if (!w->schema->field(i)->nullable() && batch->batch->column(i)->null_count())
@@ -1178,7 +1209,7 @@ int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
             }
         }
         auto st = w->writer->WriteRecordBatch(*batch->batch);
-        if (!st.ok()) return set_err(st);
+        if (!st.ok()) { w->writer->Invalidate(st); return set_err(st); }
         return IRX_OK;
     } catch (const std::exception &error) {
         return set_err(error.what());
@@ -1223,7 +1254,7 @@ int irx_rb_stream_writer_buffer_data(const IrxRbStreamWriter *w,
 void irx_rb_stream_writer_release(IrxRbStreamWriter *w) {
     if (!w) return;
     if (!w->closed && w->writer) {
-        (void)w->writer->Close();
+        w->writer->Abandon();
     }
     delete w;
 }
@@ -1383,6 +1414,14 @@ static int check_c_fields(const arrow::FieldVector &fields) {
                 return set_err("embedded NUL in timezone cannot cross C Data", IRX_ERR_TYPE);
         }
         int status = check_c_fields(field->type()->fields());
+        if (status != IRX_OK) return status;
+        if (field->type()->id() == arrow::Type::DICTIONARY) {
+            const auto &type = static_cast<const arrow::DictionaryType &>(*field->type());
+            status = check_c_fields({field->WithType(type.value_type())});
+        } else if (field->type()->id() == arrow::Type::EXTENSION) {
+            const auto &type = static_cast<const arrow::ExtensionType &>(*field->type());
+            status = check_c_fields({field->WithType(type.storage_type())});
+        }
         if (status != IRX_OK) return status;
     }
     return IRX_OK;
@@ -1638,13 +1677,10 @@ arrow::Status dataframe_schema(const arrow::Schema &schema) {
     std::unordered_set<std::string> names;
     for (const auto &field : schema.fields()) {
         auto type = field->type()->id();
-        if (type != arrow::Type::INT8 && type != arrow::Type::INT16 &&
-            type != arrow::Type::INT32 && type != arrow::Type::INT64 &&
-            type != arrow::Type::FLOAT && type != arrow::Type::DOUBLE &&
-            type != arrow::Type::BOOL)
+        auto kind = col_type_from_arrow(*field->type());
+        if (kind < IRX_COL_INT8 || kind > IRX_COL_TIME64_NS)
             return arrow::Status::TypeError("Cannot convert column '", field->name(),
-                "' (", field->type()->ToString(), ") to DataFrame: only non-null signed integers, "
-                "f32, f64 and bool are supported; keep this data as a RecordBatch");
+                "' (", field->type()->ToString(), ") to DataFrame: requires numeric, bool, string or temporal storage");
         if (field->name().empty() || field->name().find('\0') != std::string::npos ||
             !arrow::util::ValidateUTF8(field->name()) || !names.insert(field->name()).second)
             return arrow::Status::Invalid("DataFrame requires unique nonempty column names");
@@ -1762,12 +1798,11 @@ int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
         for (int i = 0; i < batch->batch->num_columns(); ++i) {
             auto actual = batch->batch->schema()->field(i);
             auto field = expected->schema->field(i);
-            if (field->nullable()) return set_err("nullable DataFrame targets are unsupported", IRX_ERR_TYPE);
             if (actual->name() != field->name() || !actual->type()->Equals(field->type()))
                 return set_err("Cannot convert column '" + actual->name() + "' (" +
                     actual->type()->ToString() + "): expected '" + field->name() + "' (" +
                     field->type()->ToString() + "); use a matching DataFrame schema or explicitly convert the input before casting", IRX_ERR_TYPE);
-            if (batch->batch->column(i)->null_count())
+            if (!field->nullable() && batch->batch->column(i)->null_count())
                 return set_err("Cannot convert column '" + field->name() +
                     "' to DataFrame: the current batch contains null values; keep it as a RecordBatch", IRX_ERR_TYPE);
         }
@@ -1799,7 +1834,7 @@ int irx_rb_table_to_batch(const irx_arrow_table_handle *table, IrxRbBatch **out)
         auto status = dataframe_schema(*(*imported)->schema());
         if (!status.ok()) return set_err(status, IRX_ERR_TYPE);
         for (int i = 0; i < (*imported)->num_columns(); ++i) {
-            if ((*imported)->column(i)->null_count())
+            if (!(*imported)->schema()->field(i)->nullable() && (*imported)->column(i)->null_count())
                 return set_err("DataFrame column '" + (*imported)->schema()->field(i)->name() + "' contains null values", IRX_ERR_TYPE);
         }
         auto result = std::make_unique<IrxRbBatch>();
@@ -1816,38 +1851,24 @@ int irx_rb_table_to_batch(const irx_arrow_table_handle *table, IrxRbBatch **out)
     }
 }
 
-// Parquet uses the existing owned handles; its adapters own all file state.
-int irx_rb_parquet_reader_open(const char *path, const IrxRbSchema *expected,
-                               int64_t batch_size, IrxRbStreamReader **out) {
-    GUARD(out); *out = nullptr; GUARD(path);
-    try {
-        auto reader = irx::parquet_reader(path, expected ? expected->schema : nullptr, batch_size);
-        if (!reader.ok()) return set_err(reader.status());
-        auto result = std::make_unique<IrxRbStreamReader>();
-        result->reader = *reader;
-        int rc = populate_schema(result->reader->schema(), &result->schema_handle);
-        if (rc != IRX_OK) return rc;
-        result->schema_handle.reader_owned = true;
-        *out = result.release();
-        return IRX_OK;
-    } catch (const std::exception &error) {
-        return set_err(std::string("Parquet reader '") + path + "': " + error.what());
-    }
+namespace irx {
+int record_batch_error(const std::string &message, int code) { return set_err(message, code); }
+const std::shared_ptr<arrow::Schema> &record_batch_schema(const IrxRbSchema *schema) { return schema->schema; }
+int own_reader(std::shared_ptr<arrow::RecordBatchReader> reader, IrxRbStreamReader **out) {
+    auto result = std::make_unique<IrxRbStreamReader>();
+    result->reader = std::move(reader);
+    int rc = populate_schema(result->reader->schema(), &result->schema_handle);
+    if (rc != IRX_OK) return rc;
+    result->schema_handle.reader_owned = true;
+    *out = result.release();
+    return IRX_OK;
 }
-
-int irx_rb_parquet_writer_open(const IrxRbSchema *schema, const char *path,
-                               const char *compression, int64_t row_group_size,
-                               IrxRbStreamWriter **out) {
-    GUARD(out); *out = nullptr; GUARD(schema); GUARD(path); GUARD(compression);
-    try {
-        auto writer = irx::parquet_writer(path, schema->schema, compression, row_group_size);
-        if (!writer.ok()) return set_err(writer.status());
-        auto result = std::make_unique<IrxRbStreamWriter>();
-        result->writer = *writer;
-        result->schema = schema->schema;
-        *out = result.release();
-        return IRX_OK;
-    } catch (const std::exception &error) {
-        return set_err(std::string("Parquet writer '") + path + "': " + error.what());
-    }
+int own_writer(std::shared_ptr<arrow::Schema> schema, std::shared_ptr<BatchWriter> writer,
+               IrxRbStreamWriter **out) {
+    auto result = std::make_unique<IrxRbStreamWriter>();
+    result->writer = std::move(writer);
+    result->schema = std::move(schema);
+    *out = result.release();
+    return IRX_OK;
+}
 }

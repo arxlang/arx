@@ -145,23 +145,34 @@ def test_dataframe_name_tracking_respects_inner_scope_shadowing() -> None:
     assert not isinstance(result.value, astx.DataFrameRowCount)
 
 
-def test_dataframe_mvp_rejects_string_columns() -> None:
+def test_dataframe_string_and_nullable_columns() -> None:
     """
-    title: MVP DataFrame and Series types reject non fixed-width columns.
+    title: DataFrame annotations model strings and nullable columns directly.
     """
-    with pytest.raises(ParserException, match="fixed-width numeric and bool"):
-        _parse_module(
-            """
-            fn bad() -> none:
-              var rows: dataframe[name: str] = dataframe({name: ["Ada"]})
-              return none
-            """
-        )
+    tree = _parse_module(
+        """
+        fn good() -> none:
+          var rows: dataframe[name:str | none] = dataframe({name: [none]})
+          return none
+        """
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    rows = function.body.nodes[0]
+    assert isinstance(rows, astx.VariableDeclaration)
+    assert isinstance(rows.type_, astx.DataFrameType)
+    assert rows.type_.columns is not None
+    assert rows.type_.columns[0].nullable
+    assert isinstance(rows.type_.columns[0].type_, astx.String)
+    _parse_module("fn good(value: series[str]) -> none:\n  return none")
 
-    with pytest.raises(ParserException, match="fixed-width numeric and bool"):
+
+def test_dataframe_invalid_nullable_union() -> None:
+    """
+    title: >-
+      Reject arbitrary unions rather than pretending they are nullable fields.
+    """
+    with pytest.raises(ParserException, match=r"type \| none"):
         _parse_module(
-            """
-            fn bad(value: series[str]) -> none:
-              return none
-            """
+            "fn bad(value: dataframe[x:i64 | str]) -> none:\n  return none"
         )

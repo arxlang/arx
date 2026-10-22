@@ -206,9 +206,11 @@ def test_reject_temporal_normalization_before_truncation(
         pa.null(),
     ],
 )
-def test_unsupported_read_schema(tmp_path: Path, type_: pa.DataType) -> None:
+def test_newly_supported_read_schema(
+    tmp_path: Path, type_: pa.DataType
+) -> None:
     """
-    title: Reject unsupported decoded columns during open with field context.
+    title: Read former exclusions through the owned recursive schema interface.
     parameters:
       tmp_path:
         type: Path
@@ -220,11 +222,14 @@ def test_unsupported_read_schema(tmp_path: Path, type_: pa.DataType) -> None:
         pa.table([pa.array([None], type=type_)], names=["bad"]), path
     )
     with Parquet() as file:
-        with pytest.raises(
-            RuntimeError, match="Unsupported Parquet column 'bad'"
-        ):
-            file.open_read(path)
-        assert file.mode == "closed"
+        file.open_read(path)
+        schema = file.schema()
+        assert schema.to_arrow().field("bad").type == type_
+        schema.release()
+        batch = file.next_batch()
+        assert batch is not None
+        assert batch.to_arrow().num_rows == 1
+        batch.release()
 
 
 @pytest.mark.parametrize("value", [0, -1, True, 2**63, "10", 1.5, None])
@@ -467,7 +472,7 @@ def test_invalid_paths_options_and_corruption(tmp_path: Path) -> None:
         path.write_bytes(b"not parquet")
         with pytest.raises(RuntimeError):
             file.open_read(path)
-        for codec in ["gzip", "", "snappy\0junk"]:
+        for codec in ["unknown", "", "snappy\0junk"]:
             with pytest.raises(ValueError, match="compression"):
                 file.open_write(path, schema, compression=codec)
         assert path.read_bytes() == b"not parquet"

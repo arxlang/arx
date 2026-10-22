@@ -13,6 +13,8 @@ class BatchWriter {
     virtual ~BatchWriter() = default;
     virtual arrow::Status WriteRecordBatch(const arrow::RecordBatch &batch) = 0;
     virtual arrow::Status Close() = 0;
+    virtual void Abandon() { (void)Close(); }
+    virtual void Invalidate(const arrow::Status &) {}
 };
 
 class IpcBatchWriter final : public BatchWriter {

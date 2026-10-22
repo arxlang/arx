@@ -149,6 +149,39 @@ def dataframe_type_id(type_: astx.DataType | None) -> int | None:
 
 @public
 @typechecked
+def dataframe_record_batch_type_id(type_: astx.DataType | None) -> int | None:
+    """
+    title: Resolve a DataFrame scalar to its RecordBatch physical storage id.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: int | None
+    """
+    supported: dict[type[astx.DataType], int] = {
+        astx.Int8: 0,
+        astx.Int16: 1,
+        astx.Int32: 2,
+        astx.Int64: 3,
+        astx.UInt8: 4,
+        astx.UInt16: 5,
+        astx.UInt32: 6,
+        astx.UInt64: 7,
+        astx.Float32: 8,
+        astx.Float64: 9,
+        astx.Boolean: 10,
+        astx.String: 11,
+        astx.UTF8String: 11,
+        astx.Date: 13,
+        astx.Timestamp: 17,
+        astx.DateTime: 17,
+        astx.Time: 21,
+    }
+    return supported.get(type(type_)) if type_ is not None else None
+
+
+@public
+@typechecked
 def dataframe_column_type_is_supported(type_: astx.DataType | None) -> bool:
     """
     title: Return whether one type is supported for MVP DataFrame columns.
@@ -158,7 +191,7 @@ def dataframe_column_type_is_supported(type_: astx.DataType | None) -> bool:
     returns:
       type: bool
     """
-    return dataframe_type_id(type_) is not None
+    return dataframe_record_batch_type_id(type_) is not None
 
 
 __all__ = [
@@ -170,6 +203,7 @@ __all__ = [
     "DataFrameSchemaColumn",
     "dataframe_column_type_is_supported",
     "dataframe_primitive_type_name",
+    "dataframe_record_batch_type_id",
     "dataframe_type_id",
     "schema_from_type",
 ]

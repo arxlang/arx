@@ -76,23 +76,24 @@ fn main() -> i32:
 
 Rules:
 
-- columns are fixed-width numeric or Boolean
-- the constructor accepts list-literal columns with equal row counts
+- columns support signed/unsigned numeric, Boolean and string values
+- nullable columns use `T | none`; date/time/timestamp columns can be populated
+  through checked RecordBatch conversions
+- the constructor accepts list-literal columns with equal row counts; it does
+  not add implicit signed-to-unsigned coercion
 - names and types must match the declared static schema
 - statically known columns use `rows.name` or `rows["name"]`
 - `nrows()` and `ncols()` return `i64`
 - `dataframe[...]` is accepted as a runtime-schema parameter type, but its
   columns cannot yet be accessed by name
 
-For nullable, UTF-8, date, timestamp and time columns, import `Schema`,
-`BatchBuilder`, `RecordBatch`, `IPCReader` and `IPCWriter` from `stdlib.arrow`.
-These ordinary classes retain runtime Arrow schemas without weakening static
-DataFrame types. Conversion is explicit: `cast(batch, dataframe[id: i64])` and
-`cast(frame, RecordBatch)` validate exact types and reject actual nulls. `CSV`
-and `Parquet` use the same batch API with explicit read/write sessions. See
-[CSV files and DataFrames](csv.md) and
-[Parquet files and DataFrames](parquet.md) for format-specific restrictions and
-examples. Legacy `CSVReader`/`CSVWriter` remain available for compatibility.
+Use `Schema`, `BatchBuilder`, `RecordBatch`, `CSV` and `Parquet` from
+`stdlib.arrow` for file I/O and runtime Arrow schemas. Explicit conversions
+`cast(batch, dataframe[id:i64])` and `cast(frame, RecordBatch)` validate
+physical types and the declared nullability. `CSV` and `Parquet` expose unified
+read/write sessions; `CSVReader` and `CSVWriter` have been removed. See
+[CSV](csv.md) and [Parquet](parquet.md) for supported types, nullable examples
+and advanced options.
 
 `IPCReader.next()` advances one batch; `batch()` and `schema()` return
 independent snapshots. `open_file` selects IPC file format, `open_stream`

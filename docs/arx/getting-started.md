@@ -158,5 +158,9 @@ containers/globals/generator captures are deliberately excluded. See
 For CSV, use the unified native `CSV` class from `stdlib.arrow`. For Parquet,
 use [`Parquet`](parquet.md) with the same explicit read/write session model.
 [CSV files and DataFrames](csv.md) shows streaming every batch and checked
-conversion into a static numeric/Boolean DataFrame. Unsupported DataFrame types
+conversion into an exact static-schema DataFrame. Unsupported DataFrame types
 can remain in RecordBatches; strings and nulls are not silently discarded.
+
+For nullable data-file columns, use `dataframe[name:str | none]` and the unified
+`CSV`/`Parquet` APIs. See [Parquet configuration](parquet.md) for native scans,
+partitioned datasets and safe-write options, including their current limits.

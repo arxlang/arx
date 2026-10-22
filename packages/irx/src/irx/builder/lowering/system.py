@@ -228,7 +228,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
             add = self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_schema_add"
             )
-            for name, type_id in plan.columns:
+            for name, type_id, nullable in plan.columns:
                 pointer = cast(
                     ControlFlowVisitorMixin, self
                 )._constant_c_string_pointer(name, name_hint="dataframe_field")
@@ -238,7 +238,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
                         schema,
                         pointer,
                         ir.Constant(ir.IntType(32), type_id),
-                        zero,
+                        ir.Constant(ir.IntType(32), int(nullable)),
                     ],
                 )
             convert = self.require_runtime_symbol(

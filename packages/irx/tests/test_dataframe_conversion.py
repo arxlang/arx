@@ -105,12 +105,12 @@ def test_native_conversion_owns_buffers(
             pa.int64(),
             "null values",
         ),
-        (pa.array(["text"]), "value", pa.int64(), "keep this data"),
+        (pa.array(["text"]), "value", pa.int64(), "expected"),
         (
             pa.array([1], type=pa.uint64()),
             "value",
             pa.int64(),
-            "keep this data",
+            "expected",
         ),
         (pa.array([1], type=pa.int64()), "value", pa.int32(), "expected"),
         (pa.array([1], type=pa.int64()), "other", pa.int64(), "expected"),
@@ -118,7 +118,7 @@ def test_native_conversion_owns_buffers(
             pa.array([0], type=pa.timestamp("ns")),
             "value",
             pa.int64(),
-            "keep this data",
+            "expected",
         ),
     ],
 )

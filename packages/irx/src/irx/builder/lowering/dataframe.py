@@ -12,8 +12,13 @@ import astx
 
 from llvmlite import ir
 
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import is_float_type, is_unsigned_type
 from irx.builder.core import VisitorCore
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.assertions.feature import (
@@ -301,6 +306,137 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         self.arrow_temporary(node, column_handle)
         self.result_stack.append(column_handle)
 
+    def lower_extended_dataframe_literal(
+        self, node: astx.DataFrameLiteral
+    ) -> None:
+        """
+        title: >-
+          Build nullable/string/unsigned literals through the RecordBatch ABI.
+        parameters:
+          node:
+            type: astx.DataFrameLiteral
+        """
+        info = cast(SemanticInfo | None, getattr(node, "semantic", None))
+        ids = cast(
+            tuple[int, ...],
+            require_semantic_metadata(
+                None
+                if info is None
+                else info.extras.get("dataframe_storage_ids"),
+                node=node,
+                metadata="dataframe_storage_ids",
+                context="DataFrame literal",
+            ),
+        )
+        assert node.type_.columns is not None
+        builder = self._llvm.ir_builder
+        schema = builder.call(
+            self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_new"
+            ),
+            [],
+        )
+        add = self.require_runtime_symbol(
+            "record_batch", "irx_rb_api_schema_add"
+        )
+        for column, type_id in zip(node.type_.columns, ids):
+            name = cast(Any, self)._constant_c_string_pointer(
+                column.name, name_hint="dataframe_field"
+            )
+            builder.call(
+                add,
+                [
+                    schema,
+                    name,
+                    ir.Constant(ir.IntType(32), type_id),
+                    ir.Constant(ir.IntType(32), int(column.nullable)),
+                ],
+            )
+        owner = builder.call(
+            self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_builder_new"
+            ),
+            [schema],
+        )
+        values = {column.name: column.values for column in node.columns}
+        append_names = {
+            0: "i8",
+            1: "i16",
+            2: "i32",
+            3: "i64",
+            4: "u8",
+            5: "u16",
+            6: "u32",
+            7: "u64",
+            8: "f32",
+            9: "f64",
+            10: "bool",
+            11: "utf8",
+        }
+        for index, (column, type_id) in enumerate(
+            zip(node.type_.columns, ids)
+        ):
+            column_index = ir.Constant(ir.IntType(32), index)
+            for value_node in values[column.name]:
+                if isinstance(value_node, astx.LiteralNone):
+                    builder.call(
+                        self.require_runtime_symbol(
+                            "record_batch", "irx_rb_api_append_null"
+                        ),
+                        [owner, column_index],
+                    )
+                    continue
+                self.visit_child(value_node)
+                value = safe_pop(self.result_stack)
+                if value is None:
+                    raise_lowering_internal_error(
+                        "DataFrame literal value did not lower",
+                        node=value_node,
+                    )
+                value = self._cast_ast_value(
+                    value,
+                    source_type=self._resolved_ast_type(value_node),
+                    target_type=column.type_,
+                )
+                if isinstance(column.type_, astx.Boolean):
+                    value = builder.zext(value, ir.IntType(32))
+                append = self.require_runtime_symbol(
+                    "record_batch",
+                    "irx_rb_api_append_" + append_names[type_id],
+                )
+                builder.call(append, [owner, column_index, value])
+        batch = builder.call(
+            self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_batch_new"
+            ),
+            [],
+        )
+        builder.call(
+            self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_builder_finish"
+            ),
+            [owner, batch],
+        )
+        table = builder.call(
+            self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_batch_to_table"
+            ),
+            [batch, schema],
+        )
+        for kind, handle in (
+            ("builder", owner),
+            ("batch", batch),
+            ("schema", schema),
+        ):
+            builder.call(
+                self.require_runtime_symbol(
+                    "record_batch", "irx_rb_api_" + kind + "_destroy"
+                ),
+                [handle],
+            )
+        self.arrow_temporary(node, table)
+        self.result_stack.append(table)
+
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.DataFrameLiteral) -> None:
         """
@@ -311,6 +447,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         if node.type_.columns is None:
             raise Exception("dataframe literal lowering requires a schema")
+
+        if any(
+            c.nullable
+            or isinstance(c.type_, astx.String)
+            or is_unsigned_type(c.type_)
+            for c in node.type_.columns
+        ):
+            self.lower_extended_dataframe_literal(node)
+            return
 
         literal_by_name = {column.name: column for column in node.columns}
         release_array = self.require_runtime_symbol(

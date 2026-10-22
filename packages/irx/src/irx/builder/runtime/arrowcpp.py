@@ -68,7 +68,13 @@ def parquet_linker_flags() -> tuple[str, ...]:
       type: tuple[str, Ellipsis]
     """
     library = _find_pyarrow_library("parquet")
-    flags = (str(library), *arrowcpp_linker_flags())
+    flags = (
+        str(_find_pyarrow_library("arrow_dataset")),
+        str(_find_pyarrow_library("arrow_acero")),
+        str(_find_pyarrow_library("arrow_compute")),
+        str(library),
+        *arrowcpp_linker_flags(),
+    )
     if sys.platform != "win32":
         flags += (f"-Wl,-rpath,{library.parent}",)
     return tuple(dict.fromkeys(flags))

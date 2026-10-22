@@ -425,3 +425,42 @@ def test_link_failure_surfaces_link_phase_diagnostic(
     assert "link failed while producing 'demo'" in formatted
     assert "command:" in formatted
     assert "stderr: undefined reference to `sqrt'" in formatted
+
+
+def test_optional_feature_dependencies_and_availability() -> None:
+    """
+    title: >-
+      Resolve dependencies atomically and fail only when unavailable work
+      activates.
+    """
+    registry = RuntimeFeatureRegistry()
+    registry.register(RuntimeFeature("base"))
+    registry.register(RuntimeFeature("format", dependencies=("base",)))
+    registry.register(
+        RuntimeFeature(
+            "missing",
+            dependencies=("base",),
+            unavailable_reason="install matching native libraries",
+        )
+    )
+    state = RuntimeFeatureState(Visitor(), registry)
+    with pytest.raises(RuntimeFeatureError, match="unavailable") as error:
+        state.activate("missing")
+    assert error.value.diagnostic.code == "R003"
+    assert state.active_feature_names() == ()
+    state.activate("format")
+    assert state.active_feature_names() == ("base", "format")
+
+
+def test_runtime_dependency_cycles_fail_without_activation() -> None:
+    """
+    title: >-
+      Detect cycles instead of recurring forever or activating partial graphs.
+    """
+    registry = RuntimeFeatureRegistry()
+    registry.register(RuntimeFeature("one", dependencies=("two",)))
+    registry.register(RuntimeFeature("two", dependencies=("one",)))
+    state = RuntimeFeatureState(Visitor(), registry)
+    with pytest.raises(RuntimeFeatureError, match="cycle"):
+        state.activate("one")
+    assert state.active_feature_names() == ()

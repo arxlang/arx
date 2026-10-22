@@ -30,6 +30,14 @@ extern irx_rb_api_batch_rows(box: ArrowBatchHandle) -> i64
 extern irx_rb_api_batch_columns(box: ArrowBatchHandle) -> i32
 extern irx_rb_api_batch_schema(box: ArrowBatchHandle, out: ArrowSchemaHandle) -> none
 extern irx_rb_api_batch_null(box: ArrowBatchHandle, col: i32, row: i64) -> i32
+extern irx_rb_api_append_u8(box: ArrowBuilderHandle, col: i32, value: u8) -> none
+extern irx_rb_api_get_u8(box: ArrowBatchHandle, col: i32, row: i64) -> u8
+extern irx_rb_api_append_u16(box: ArrowBuilderHandle, col: i32, value: u16) -> none
+extern irx_rb_api_get_u16(box: ArrowBatchHandle, col: i32, row: i64) -> u16
+extern irx_rb_api_append_u32(box: ArrowBuilderHandle, col: i32, value: u32) -> none
+extern irx_rb_api_get_u32(box: ArrowBatchHandle, col: i32, row: i64) -> u32
+extern irx_rb_api_append_u64(box: ArrowBuilderHandle, col: i32, value: u64) -> none
+extern irx_rb_api_get_u64(box: ArrowBatchHandle, col: i32, row: i64) -> u64
 extern irx_rb_api_append_i8(box: ArrowBuilderHandle, col: i32, value: i8) -> none
 extern irx_rb_api_get_i8(box: ArrowBatchHandle, col: i32, row: i64) -> i8
 extern irx_rb_api_append_i16(box: ArrowBuilderHandle, col: i32, value: i16) -> none
@@ -227,6 +235,30 @@ class RecordBatch:
     ```
     return irx_rb_api_batch_null(self.handle, col, row) != 0
 
+  fn get_u8(self, col: i32, row: i64) -> u8:
+    ```
+    title: Read an unsigned 8-bit value; reject null slots.
+    ```
+    return irx_rb_api_get_u8(self.handle, col, row)
+
+  fn get_u16(self, col: i32, row: i64) -> u16:
+    ```
+    title: Read an unsigned 16-bit value; reject null slots.
+    ```
+    return irx_rb_api_get_u16(self.handle, col, row)
+
+  fn get_u32(self, col: i32, row: i64) -> u32:
+    ```
+    title: Read an unsigned 32-bit value; reject null slots.
+    ```
+    return irx_rb_api_get_u32(self.handle, col, row)
+
+  fn get_u64(self, col: i32, row: i64) -> u64:
+    ```
+    title: Read an unsigned 64-bit value; reject null slots.
+    ```
+    return irx_rb_api_get_u64(self.handle, col, row)
+
   fn get_i8(self, col: i32, row: i64) -> i8:
     ```
     title: get_i8
@@ -365,6 +397,34 @@ class BatchBuilder:
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
+
+  fn append_u8(self, col: i32, value: u8) -> none:
+    ```
+    title: Append an unsigned 8-bit value without signed narrowing.
+    ```
+    irx_rb_api_append_u8(self.handle, col, value)
+    return none
+
+  fn append_u16(self, col: i32, value: u16) -> none:
+    ```
+    title: Append an unsigned 16-bit value without signed narrowing.
+    ```
+    irx_rb_api_append_u16(self.handle, col, value)
+    return none
+
+  fn append_u32(self, col: i32, value: u32) -> none:
+    ```
+    title: Append an unsigned 32-bit value without signed narrowing.
+    ```
+    irx_rb_api_append_u32(self.handle, col, value)
+    return none
+
+  fn append_u64(self, col: i32, value: u64) -> none:
+    ```
+    title: Append an unsigned 64-bit value without signed narrowing.
+    ```
+    irx_rb_api_append_u64(self.handle, col, value)
+    return none
 
   fn append_i8(self, col: i32, value: i8) -> none:
     ```
@@ -645,141 +705,6 @@ class IPCWriter:
     return none
 
 
-class CSVReader:
-  ```
-  title: CSVReader
-  summary: Scoped owner of a native Arrow reader.
-  ```
-  @[private]
-  handle: ArrowReaderHandle
-
-  fn __init__(self) -> none:
-    ```
-    title: __init__
-    summary: Creates one native owner.
-    ```
-    self.handle = irx_rb_api_reader_new()
-    return none
-
-  fn __del__(self) -> none:
-    ```
-    title: __del__
-    summary: Releases the native box at the last class reference.
-    ```
-    irx_rb_api_reader_destroy(self.handle)
-    return none
-
-  fn close(self) -> none:
-    ```
-    title: close
-    summary: Releases native resources idempotently; aliases observe closure.
-    ```
-    irx_rb_api_reader_close(self.handle)
-    return none
-
-  fn native_handle(self) -> ArrowReaderHandle:
-    ```
-    title: native_handle
-    summary: Borrows the opaque handle for trusted native integrations only.
-    ```
-    return self.handle
-
-  fn open_file(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
-    ```
-    title: open_file
-    summary: Streams UTF-8 CSV with first-block inference and a frozen schema.
-    ```
-    irx_rb_api_reader_csv(self.handle, path, delimiter, cast(header, i32), block_size)
-    return none
-
-  fn open_file_as(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
-    ```
-    title: open_file_as
-    summary: Streams CSV with exact column order and explicit physical types.
-    ```
-    irx_rb_api_reader_csv_as(self.handle, path, schema.native_handle(), delimiter, cast(header, i32), block_size)
-    return none
-
-  fn next(self) -> bool:
-    ```
-    title: next
-    summary: Advances one batch; false means an orderly end, not an empty batch.
-    ```
-    return irx_rb_api_reader_next(self.handle) == 0
-
-  fn batch(self) -> RecordBatch:
-    ```
-    title: batch
-    summary: Returns an independently owned snapshot.
-    ```
-    var result: RecordBatch = RecordBatch()
-    irx_rb_api_reader_batch(self.handle, result.native_handle())
-    return result
-
-  fn schema(self) -> Schema:
-    ```
-    title: schema
-    summary: Returns an independently owned snapshot.
-    ```
-    var result: Schema = Schema()
-    irx_rb_api_reader_schema(self.handle, result.native_handle())
-    return result
-
-class CSVWriter:
-  ```
-  title: CSVWriter
-  summary: Scoped owner of a native Arrow writer.
-  ```
-  @[private]
-  handle: ArrowWriterHandle
-
-  fn __init__(self, schema: Schema) -> none:
-    ```
-    title: __init__
-    summary: Creates one native owner.
-    ```
-    self.handle = irx_rb_api_writer_new(schema.native_handle())
-    return none
-
-  fn __del__(self) -> none:
-    ```
-    title: __del__
-    summary: Releases the native box at the last class reference.
-    ```
-    irx_rb_api_writer_destroy(self.handle)
-    return none
-
-  fn close(self) -> none:
-    ```
-    title: close
-    summary: Releases native resources idempotently; aliases observe closure.
-    ```
-    irx_rb_api_writer_close(self.handle)
-    return none
-
-  fn native_handle(self) -> ArrowWriterHandle:
-    ```
-    title: native_handle
-    summary: Borrows the opaque handle for trusted native integrations only.
-    ```
-    return self.handle
-
-  fn open_file(self, path: str, delimiter: str = ",", header: bool = true) -> none:
-    ```
-    title: open_file
-    summary: Creates or truncates CSV after validating the schema and options.
-    ```
-    irx_rb_api_writer_csv(self.handle, path, delimiter, cast(header, i32))
-    return none
-
-  fn write(self, batch: RecordBatch) -> none:
-    ```
-    title: write
-    summary: Writes one batch with exact schema validation.
-    ```
-    irx_rb_api_writer_write(self.handle, batch.native_handle())
-    return none
-
 extern irx_rb_api_parquet_new() -> ArrowParquetHandle
 extern irx_rb_api_parquet_destroy(box: ArrowParquetHandle) -> none
 extern irx_rb_api_parquet_close(box: ArrowParquetHandle) -> none
@@ -800,6 +725,72 @@ extern irx_rb_api_csv_write(box: ArrowCsvHandle, batch: ArrowBatchHandle) -> non
 extern irx_rb_api_csv_open_read(box: ArrowCsvHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
 extern irx_rb_api_csv_open_read_as(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
 extern irx_rb_api_csv_open_write(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
+
+extern irx_rb_api_options_new() -> ArrowOptionsHandle
+extern irx_rb_api_options_destroy(box: ArrowOptionsHandle) -> none
+extern irx_rb_api_options_int(box: ArrowOptionsHandle, name: str, value: i64) -> none
+extern irx_rb_api_options_text(box: ArrowOptionsHandle, name: str, value: str) -> none
+extern irx_rb_api_options_filter(box: ArrowOptionsHandle, column: str, operation: str, value: str, type: str) -> none
+extern irx_rb_api_parquet_read_options(box: ArrowParquetHandle, path: str, options: ArrowOptionsHandle) -> none
+extern irx_rb_api_parquet_write_options(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, options: ArrowOptionsHandle) -> none
+
+class ParquetOptions:
+  ```
+  title: ParquetOptions
+  summary: Checked configuration copied at open; aliases share this builder.
+  ```
+  @[private]
+  handle: ArrowOptionsHandle
+
+  fn __init__(self) -> none:
+    ```
+    title: Initialize native options with conservative defaults.
+    ```
+    self.handle = irx_rb_api_options_new()
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: Release the native options owner.
+    ```
+    irx_rb_api_options_destroy(self.handle)
+    return none
+
+  fn native_handle(self) -> ArrowOptionsHandle:
+    ```
+    title: Borrow options for trusted native calls.
+    ```
+    return self.handle
+
+  fn set_int(self, name: str, value: i64) -> none:
+    ```
+    title: Set a checked size, flag, compression level or row_group index.
+    ```
+    irx_rb_api_options_int(self.handle, name, value)
+    return none
+
+  fn set_text(self, name: str, value: str) -> none:
+    ```
+    title: Set compression or add a projected column.
+    ```
+    irx_rb_api_options_text(self.handle, name, value)
+    return none
+
+  fn encryption_key_hex(self, key: str) -> none:
+    ```
+    title: Configure a caller-supplied AES footer key without logging key bytes.
+    summary: Use runtime-provided secrets, not keys committed in source code.
+    ```
+    irx_rb_api_options_text(self.handle, "encryption_key_hex", key)
+    return none
+
+  fn where(self, column: str, operation: str, value: str = "", type: str = "string") -> none:
+    ```
+    title: Add an AND predicate with checked literal parsing.
+    summary: Operations are eq, ne, lt, le, gt, ge, is_null and is_valid.
+    ```
+    irx_rb_api_options_filter(self.handle, column, operation, value, type)
+    return none
 
 class Parquet:
   ```
@@ -889,6 +880,21 @@ class Parquet:
     ```
     irx_rb_api_parquet_write(self.handle, batch.native_handle())
     return none
+
+  fn open_read_options(self, path: str, options: ParquetOptions) -> none:
+    ```
+    title: Open a configured file or dataset scan.
+    ```
+    irx_rb_api_parquet_read_options(self.handle, path, options.native_handle())
+    return none
+
+  fn open_write_options(self, path: str, schema: Schema, options: ParquetOptions) -> none:
+    ```
+    title: Open configured output with checked normalization and commit policy.
+    ```
+    irx_rb_api_parquet_write_options(self.handle, path, schema.native_handle(), options.native_handle())
+    return none
+
 
 class CSV:
   ```

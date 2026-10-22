@@ -37,6 +37,22 @@ void irx_rb_api_csv_write(IrxRbApiCsv *box, IrxRbApiBatch *batch);
 void irx_rb_api_csv_open_read(IrxRbApiCsv *box, const char *path, const char *delimiter, int32_t header, int32_t block_size);
 void irx_rb_api_csv_open_read_as(IrxRbApiCsv *box, const char *path, IrxRbApiSchema *schema, const char *delimiter, int32_t header, int32_t block_size);
 void irx_rb_api_csv_open_write(IrxRbApiCsv *box, const char *path, IrxRbApiSchema *schema, const char *delimiter, int32_t header);
+typedef struct IrxRbApiOptions IrxRbApiOptions;
+IrxRbApiOptions *irx_rb_api_options_new(void);
+void irx_rb_api_options_destroy(IrxRbApiOptions *);
+void irx_rb_api_options_int(IrxRbApiOptions *, const char *, int64_t);
+void irx_rb_api_options_text(IrxRbApiOptions *, const char *, const char *);
+void irx_rb_api_options_filter(IrxRbApiOptions *, const char *, const char *, const char *, const char *);
+void irx_rb_api_parquet_read_options(IrxRbApiParquet *, const char *, IrxRbApiOptions *);
+void irx_rb_api_parquet_write_options(IrxRbApiParquet *, const char *, IrxRbApiSchema *, IrxRbApiOptions *);
+void irx_rb_api_append_u8(IrxRbApiBuilder *, int32_t, uint8_t);
+uint8_t irx_rb_api_get_u8(IrxRbApiBatch *, int32_t, int64_t);
+void irx_rb_api_append_u16(IrxRbApiBuilder *, int32_t, uint16_t);
+uint16_t irx_rb_api_get_u16(IrxRbApiBatch *, int32_t, int64_t);
+void irx_rb_api_append_u32(IrxRbApiBuilder *, int32_t, uint32_t);
+uint32_t irx_rb_api_get_u32(IrxRbApiBatch *, int32_t, int64_t);
+void irx_rb_api_append_u64(IrxRbApiBuilder *, int32_t, uint64_t);
+uint64_t irx_rb_api_get_u64(IrxRbApiBatch *, int32_t, int64_t);
 void irx_rb_api_reader_csv(IrxRbApiReader *box, const char *path,
                            const char *delimiter, int32_t header, int32_t block_size);
 void irx_rb_api_reader_csv_as(IrxRbApiReader *box, const char *path, IrxRbApiSchema *schema,

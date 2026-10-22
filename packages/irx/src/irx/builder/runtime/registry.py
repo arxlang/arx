@@ -25,6 +25,7 @@ from irx.builder.runtime.features import NativeArtifact, RuntimeFeature
 from irx.builder.runtime.file import build_file_runtime_feature
 from irx.builder.runtime.list.feature import build_list_runtime_feature
 from irx.builder.runtime.record_batch import (
+    build_parquet_runtime_feature,
     build_record_batch_runtime_feature,
 )
 from irx.builder.runtime.tensor.feature import build_tensor_runtime_feature
@@ -182,8 +183,45 @@ class RuntimeFeatureState:
           feature_name:
             type: str
         """
-        self._registry.get(feature_name)
-        self._active_features.add(feature_name)
+        features = self.dependency_order(feature_name, frozenset())
+        self._active_features.update(feature.name for feature in features)
+
+    def dependency_order(
+        self, name: str, visiting: frozenset[str]
+    ) -> tuple[RuntimeFeature, ...]:
+        """
+        title: Validate a feature dependency graph before activating any nodes.
+        parameters:
+          name:
+            type: str
+          visiting:
+            type: frozenset[str]
+        returns:
+          type: tuple[RuntimeFeature, Ellipsis]
+        """
+        if name in visiting:
+            raise RuntimeFeatureError(
+                Diagnostic(
+                    message=f"runtime feature dependency cycle at '{name}'",
+                    code=DiagnosticCodes.RUNTIME_FEATURE_DEPENDENCY_CYCLE,
+                    phase="runtime",
+                )
+            )
+        feature = self._registry.get(name)
+        if feature.unavailable_reason is not None:
+            raise RuntimeFeatureError(
+                Diagnostic(
+                    message=f"runtime feature '{name}' is unavailable",
+                    code=DiagnosticCodes.RUNTIME_FEATURE_UNAVAILABLE,
+                    phase="runtime",
+                    notes=(feature.unavailable_reason,),
+                )
+            )
+        result: list[RuntimeFeature] = []
+        for dependency in feature.dependencies:
+            result.extend(self.dependency_order(dependency, visiting | {name}))
+        result.append(feature)
+        return tuple(result)
 
     def is_active(self, feature_name: str) -> bool:
         """
@@ -340,4 +378,5 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_tensor_runtime_feature())
     registry.register(build_list_runtime_feature())
     registry.register(build_record_batch_runtime_feature())
+    registry.register(build_parquet_runtime_feature())
     return registry
