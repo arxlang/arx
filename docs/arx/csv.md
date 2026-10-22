@@ -1,146 +1,162 @@
 # CSV files and DataFrames
 
-`stdlib.arrow` provides native Arrow CSV streaming. There is no Python
-subprocess, custom CSV parser, or whole-file load hidden behind these APIs. A
-C++ toolchain is required, as for the existing Arrow APIs.
+Import CSV operations from **`stdlib.csv`**. Shared Arrow schemas, batches and
+IPC remain in `stdlib.arrow`; CSV is backed by Arrow C++, not a Python process
+or a second parser. The native Arrow libraries and a C++ toolchain are required.
 
-## Arx API
-
-- `CSV().open_read(path, delimiter=",", header=true, block_size=1048576)` infers
-  a schema from the first block and freezes it for subsequent batches.
-- `reader.open_read_as(path, schema, delimiter=",", header=true, block_size=1048576)`
-  uses an explicit `Schema`. Names, order, count, physical types and
-  non-nullable fields are checked; no columns are silently dropped.
-- `reader.next()` advances one batch. `false` means EOF, not an empty batch.
-  `reader.batch()` and `reader.schema()` return independent snapshots.
-- `CSV().open_write(path, schema, delimiter=",", header=true)` creates or
-  truncates a file after validating options/schema. `write(batch)` requires an
-  exact schema, including nullability and metadata. `close()` reports final
-  write errors. Successful close is idempotent; close before reopening.
-
-`CSV()` starts closed and has one active read or write session, like
-[`Parquet`](parquet.md). `schema()` works in either open mode. Wrong-mode or
-closed data access is an error; aliases observe the same state. Read/write
-failures invalidate the session, and cleanup does not hide the original error.
-Use two instances and distinct paths for copying. `block_size` is a positive
-signed 32-bit **byte** count, unlike Parquet's row-based `batch_size`.
-
-### Migrating the split API
-
-`CSVReader` and `CSVWriter` have been removed from `stdlib.arrow`. This is a
-breaking source-API change; use the unified `CSV` owner:
-
-- `CSVReader().open_file(...)` becomes `CSV().open_read(...)`.
-- `reader.open_file_as(...)` becomes `file.open_read_as(...)`.
-- `CSVWriter(schema)` becomes `CSV()`, and `writer.open_file(path, ...)` becomes
-  `file.open_write(path, schema, ...)`.
-
-Existing CSV parsing and scalar-type support are unchanged. In particular, CSV
-explicit schemas control text parsing, whereas Parquet expected schemas only
-assert the types already encoded in the file.
-
-CSV RecordBatches support signed/unsigned integer widths, `f32`, `f64`, Boolean,
-UTF-8/large UTF-8, dates, timestamps and time units. Nested and other
-unsupported Arrow types produce errors. CSV itself does not encode schema
-metadata: use an explicit schema to preserve widths and temporal units on a
-roundtrip.
-
-## Checked DataFrame conversion
+## Read and write a DataFrame
 
 ````arx
 ```
-title: CSV batch conversion
+title: Copy a CSV file
 ```
-import (CSV, RecordBatch) from stdlib.arrow
+import (read_csv, write_csv) from stdlib.csv
 
 fn main() -> i32:
-  var reader: CSV = CSV()
-  reader.open_read("input.csv")
-  while reader.next():
-    var batch: RecordBatch = reader.batch()
-    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
-    batch.close()
-    var copy: RecordBatch = cast(frame, RecordBatch)
-    print(copy.nrows())
-  reader.close()
+  ```
+  title: Read every row and finalize the output
+  ```
+  var frame: dataframe[...] = read_csv("input.csv")
+  write_csv(frame, "output.csv")
   return 0
 ````
 
-Both conversions produce independent owners. DataFrames and Series are scoped
-references: aliases, parameters, returned values and local replacements retain
-what they need; normal exits, loop exits and returns release local ownership.
-The input need not remain open. No Arrow C++ layout is exposed in LLVM.
+These eager functions close their internal session before returning. Reads
+return an independent, chunked DataFrame; writes borrow the frame without
+consuming or mutating it. Temporary inputs such as
+`write_csv(read_csv("input.csv"), "output.csv")` are supported. The result must
+fit in memory: `block_size` controls parsing blocks, not total memory. Writers
+return `none` only after checked finalization. There are no DataFrame `.to_*`
+methods or `to_*` aliases. Never copy a file onto itself using streaming
+sessions.
 
-Static conversion requires a nonempty schema with exact names, order and
-physical types. Supported columns are signed/unsigned integers, `f32`, `f64`,
-`bool`, `str`, `date` (date32), `time` (time64 microseconds), and
-`timestamp`/`datetime` (timezone-naive timestamp microseconds). Declare nullable
-columns as `T | none`, for example `dataframe[id:u64 | none, name:str | none]`.
-Non-nullable targets still reject actual nulls. There is no implicit narrowing,
-reordering, temporal conversion or null filling. Output should use the converted
-batch's schema; static conversions preserve input schema and field metadata.
-Runtime-schema `dataframe[...]` casts preserve RecordBatch-supported Arrow
-columns and metadata, including other units/timezones and nested types, without
-static column access. Parameterized static annotations also preserve rich column
-types through checked casts; see [collections](collections.md). CSV still cannot
-encode every Arrow type: use Parquet or IPC when its text schema is
-insufficient. CSV-only programs and Python sessions do not load the optional
-Parquet runtime.
+### Parameters
 
-Fixed-row-count conversion targets, owned globals, aggregate fields/containers,
-generators and general public FFI passing of DataFrames/Series are not
-supported. Arrow locals require initializers.
+| `read_csv(path, ...)` option   | Default / behavior                                                     |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `schema`                       | Omitted: infer from the first block, then freeze types                 |
+| `columns`                      | Omitted: all columns; nonempty unique literal list, in requested order |
+| `names`                        | Full headerless name list; requires `header=false` and no `schema`     |
+| `delimiter`                    | `","`; one supported ASCII byte, including tab                         |
+| `header`                       | `true`; otherwise schema names, explicit names, or `f0`, `f1`, …       |
+| `quotechar`, `doublequote`     | `"\""`, `true`                                                         |
+| `escapechar`                   | `""` disables escaping; otherwise one supported ASCII byte             |
+| `skiprows`, `skip_blank_lines` | `0`, `false`                                                           |
+| `null_values`                  | `[""]`; replaces token recognition, `[]` disables it                   |
+| `block_size`                   | `1048576` bytes; positive signed 32-bit count                          |
 
-See [`examples/arrow/csv_roundtrip.x`](../../examples/arrow/csv_roundtrip.x) for
-CSV writing, explicit schemas and processing **every** batch. Run it from the
-repository root with
-`arx examples/arrow/csv_roundtrip.x --output-file csv-roundtrip`, then
-`./csv-roundtrip`. It reads the bundled `examples/arrow/input.csv` and creates
-`output.csv`; never use the same file for input and output.
+| `write_csv(frame, path, ...)` option | Default / behavior                       |
+| ------------------------------------ | ---------------------------------------- |
+| `delimiter`, `header`                | `","`, `true`                            |
+| `lineterminator`                     | `"\n"`; also accepts `"\r\n"`            |
+| `na_rep`                             | `""`; validated before opening output    |
+| `quoting`                            | `"needed"`; also `"all_valid"`, `"none"` |
+
+Arx name/column/token arguments are literal lists, not arbitrary iterable
+objects. Unknown options and unsupported types fail explicitly. Delimiter, quote
+and escape bytes must not conflict; NUL, CR and LF are not valid dialect
+characters. Output quoting uses Arrow's fixed double-quote convention; this is
+not a complete Python `csv` dialect engine.
+
+CSV projection happens **after full input validation and conversion**. A bad
+unselected field still fails. Explicit schemas check header names/order/count
+and nullability; they control parsing rather than merely asserting types.
+
+## Checked DataFrame conversion
+
+```arx
+import Schema from stdlib.arrow
+import read_csv from stdlib.csv
+
+# Inside a function:
+var schema: Schema = Schema()
+schema.add("id", "int64", nullable=false)
+var loaded: dataframe[...] = read_csv("ids.csv", schema=schema)
+var ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
+```
+
+`Schema.add` accepts validated scalar type names, not numeric IDs. See the
+[Arrow schema API](../apache-arrow.md) for accepted names. Runtime schemas do
+not infer compile-time column types. A direct DataFrame cast checks exact names,
+order, physical types and every chunk's reachable nullability, without coercion
+or null filling. It preserves schema/field metadata and independent ownership.
+Use `T | none` for nullable columns. Fixed-row-count casts, owned globals,
+generator locals, aggregate-owned fields and arbitrary DataFrame FFI remain
+unsupported. See [collections](collections.md) for rich static column types.
+
+CSV supports integer widths, floating point, Boolean, UTF-8/large UTF-8, dates,
+timestamps and time units. Nested/other unsupported types fail; use Parquet or
+IPC for those. CSV does not encode type/schema metadata. Supply an explicit
+schema to preserve widths and temporal units on a roundtrip.
+
+## Explicit streaming
+
+```arx
+import CSV from stdlib.csv
+
+# Inside a function:
+var source: CSV = CSV()
+source.open_read("large.csv")
+while source.next():
+  var chunk: dataframe[...] = source.frame()
+  print(chunk.nrows())
+source.close()
+```
+
+`CSV()` starts closed and has one read or write mode.
+`open_read_as(path, schema, ...)` supplies an explicit schema;
+`open_write(path, schema, ...)` configures output. These session factories
+expose delimiter/header and read block size. The additional dialect controls
+above belong to the eager functions.
+
+`next()` advances; false means EOF, not an empty batch. `frame()` snapshots the
+current batch without advancing and survives reader closure. It fails before a
+successful `next()` or after EOF. `write(frame)` and `write(batch)` require an
+exact schema. `batch()` and `schema()` remain available for Arrow
+interoperability. Call writer `close()` explicitly to observe finalization
+errors; automatic cleanup alone is not proof of success. Wrong-mode access
+fails, aliases share session state, and failed sessions cannot be reused.
+
+The [streaming roundtrip example](../../examples/arrow/csv_roundtrip.x)
+processes every batch. The
+[table example](../../examples/arrow/csv_parquet_tables.x) converts CSV to
+Parquet using only the module-level functions.
 
 ## Text and failure contract
 
-- UTF-8, LF output records; quoted multiline fields and doubled quotes work.
-- Delimiters are exactly one ASCII byte, excluding NUL, double quote, CR and LF.
-  Tab is supported. Reader block size must be a positive signed 32-bit integer;
-  very large records may require increasing it.
-- Only **unquoted empty fields** are null. Quoted `""` is an empty string; `NA`
-  and `NULL` are literal strings. Blank one-column rows are null rows, not
-  skipped records. Malformed multi-column widths fail.
-- Headers must be nonempty and unique. Headerless typed reads use schema names;
-  inferred headerless names are `f0`, `f1`, etc. Typed header-only input
-  succeeds; completely empty files fail. Inferred null/binary columns require an
-  explicit supported schema or corrected input.
-- No remote URLs, compression, append, encoding detection or malformed-row
-  skipping. A later batch can fail after earlier batches have been written.
-  Output is **partial on failure**, not transactional.
-- Compiled failures use `ARX-RUNTIME-ARROW-001`; they are not catchable Arx
-  exceptions. CSV row numbers are not fabricated as Arx source locations.
+- UTF-8 and quoted multiline fields are supported. By default only unquoted
+  empty fields are null. Quoted `""` remains an empty string; `NA` and `NULL`
+  remain text unless configured in `null_values`.
+- Custom `na_rep` requires matching read `null_values`. Non-null unquoted data
+  equal to a null marker is ambiguous; a lossless roundtrip is not guaranteed.
+- Blank one-column rows remain null rows unless explicitly skipped. Malformed
+  record widths fail; `skiprows` does not enable malformed-row skipping.
+- Headers must be nonempty and unique. Typed header-only input succeeds;
+  completely empty files fail. Inferred null/binary columns need an explicit
+  supported schema or corrected input.
+- CSV has no remote URLs, compression/encoding discovery, append or atomic
+  writes. Validation precedes truncation, but later data/I/O failures can leave
+  partial output. A failed eager read never returns a partial table.
+- Compiled failures use `ARX-RUNTIME-ARROW-001`, not catchable Arx exceptions.
+  CSV row positions are not invented as Arx source locations.
 
-## Python API
+## Python integration
 
 ```python
-from irx.record_batch import (
-    IrxColumnType, RecordBatchSchema,
-    CSV,
-)
+from irx.table_io import read_csv, write_csv
 
-schema = RecordBatchSchema().add_field("id", IrxColumnType.INT64, False)
-with CSV() as reader, CSV() as writer:
-    reader.open_read("input.csv", schema=schema)
-    writer.open_write("output.csv", schema)
-    for batch in reader:
-        writer.write_batch(batch)
-schema.release()
+frame = read_csv("input.tsv", delimiter="\t", columns=["id", "name"])
+write_csv(frame, "output.csv")
 ```
 
-The opening methods accept the same delimiter/header options and reading accepts
-`block_size`. Omit `schema` to infer. Existing Python iterator ownership
-applies: iteration releases each yielded batch when advancing; use
-`next_batch()` and explicit `release()` when a batch must outlive advancement or
-reader closure. An old native-library override without CSV symbols reports a
-rebuild/unset message instead of silently changing implementation.
+These functions return/accept `pyarrow.Table`, accept string or `PathLike`
+paths, and use IRx native sessions/C Stream interchange, not Python format
+engines. Use `pyarrow.Schema` for `schema`. Selectors accept checked sequences.
+Imports do not compile native code; CSV-only use does not load Parquet, Dataset
+or Acero. Stale native-library overrides produce a rebuild/unset error.
 
-The lower-level `RecordBatchStreamReader.open_csv` and
-`RecordBatchStreamWriter.open_csv` factories remain compatible. Python
-`schema()` returns an independent schema snapshot; release it explicitly.
+For streaming, `irx.record_batch.CSV` and the lower-level
+`RecordBatchStreamReader.open_csv` / `RecordBatchStreamWriter.open_csv` remain
+available. Iteration releases its batch on advancement; `batch.to_arrow()`
+exports independent Arrow references. Release manually retained batch/schema
+snapshots explicitly.

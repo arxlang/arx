@@ -302,7 +302,7 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
         "import (Schema, BatchBuilder) from stdlib.arrow\n"
         "fn main() -> i32:\n"
         "  var schema: Schema = Schema()\n"
-        '  schema.add("id", 3)\n'
+        '  schema.add("id", "int64")\n'
         "  var builder: BatchBuilder = BatchBuilder(schema)\n"
         "  builder.append_i64(0, 42)\n"
         "  return cast(builder.finish().nrows(), i32)\n"
@@ -368,19 +368,13 @@ def test_temporal_dataframe_translate_uses_semantic_epoch_values() -> None:
     assert "irx_rb_api_append_time" in text
 
 
-@pytest.mark.parametrize(
-    "expression", ["frame", "cast(frame, dataframe[id:i64])"]
-)
-def test_dynamic_dataframe_cannot_silently_narrow(expression: str) -> None:
+def test_dynamic_dataframe_cannot_silently_narrow() -> None:
     """
     title: Runtime schemas cannot satisfy static contracts without checking.
-    parameters:
-      expression:
-        type: str
     """
     ArxIO.string_to_buffer(
         "fn narrow(frame: dataframe[...]) -> dataframe[id:i64]:\n"
-        f"  return {expression}\n"
+        "  return frame\n"
     )
     module = Parser().parse(Lexer().lex(), "unsafe_narrow")
     with pytest.raises(SemanticError):
@@ -447,3 +441,61 @@ def test_nullable_semantic_errors(body: str, message: str) -> None:
     )
     with pytest.raises(SemanticError, match=message):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize("namespace", [False, True])
+def test_table_io_translate_uses_resolved_calls(namespace: bool) -> None:
+    """
+    title: CSV-only imported calls and direct casts emit verified native IR.
+    parameters:
+      namespace:
+        type: bool
+    """
+    imports = (
+        "import stdlib.csv as csv\n"
+        if namespace
+        else "import (read_csv, write_csv) from stdlib.csv\n"
+    )
+    prefix = "csv." if namespace else ""
+    ArxIO.string_to_buffer(
+        imports + "fn main() -> i32:\n"
+        f'  var source: dataframe[...] = {prefix}read_csv("in.csv")\n'
+        "  var frame: dataframe[id:i64] = cast(source, dataframe[id:i64])\n"
+        f'  {prefix}write_csv(frame=frame, path="out.csv")\n'
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "table_io")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("table_io", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(text).verify()
+    assert "irx_rb_api_read_csv" in text
+    assert "irx_rb_api_table_cast" in text
+    assert "irx_rb_api_write_csv" in text
+    assert (
+        "parquet"
+        not in builder.translator.runtime_features.active_feature_names()
+    )
+
+
+def test_table_io_names_do_not_grant_capabilities() -> None:
+    """
+    title: Equally named user functions remain ordinary scalar functions.
+    """
+    ArxIO.string_to_buffer(
+        "fn read_csv(path: i32) -> i32:\n  return path + 1\n"
+        "fn write_parquet(frame: i32) -> i32:\n  return frame + 1\n"
+        "fn main() -> i32:\n  return write_parquet(read_csv(0))\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert (
+        "record_batch"
+        not in builder.translator.runtime_features.active_feature_names()
+    )
+    assert (
+        "parquet"
+        not in builder.translator.runtime_features.active_feature_names()
+    )

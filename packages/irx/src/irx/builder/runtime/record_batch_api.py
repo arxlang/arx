@@ -112,7 +112,6 @@ ARROW_API_SIGNATURES.update(
         "irx_rb_api_options_destroy": ("v", ("p",)),
         "irx_rb_api_options_int": ("v", ("p", "p", "i64")),
         "irx_rb_api_options_text": ("v", ("p", "p", "p")),
-        "irx_rb_api_options_filter": ("v", ("p", "p", "p", "p", "p")),
         "irx_rb_api_parquet_read_options": ("v", ("p", "p", "p")),
         "irx_rb_api_parquet_write_options": ("v", ("p", "p", "p", "p")),
         "irx_rb_api_append_u8": ("v", ("p", "i32", "i8")),
@@ -126,6 +125,34 @@ ARROW_API_SIGNATURES.update(
     }
 )
 
+ARROW_API_SIGNATURES.update(
+    {
+        "irx_rb_api_schema_add_name": ("v", ("p", "p", "p", "i32")),
+        "irx_rb_api_table_cast": ("p", ("p", "p")),
+        "irx_rb_api_csv_options_new": ("p", ()),
+        "irx_rb_api_csv_options_destroy": ("v", ("p",)),
+        "irx_rb_api_csv_options_int": ("v", ("p", "p", "i64")),
+        "irx_rb_api_csv_options_text": ("v", ("p", "p", "p")),
+        "irx_rb_api_csv_options_clear": ("v", ("p", "p")),
+        "irx_rb_api_read_csv": ("p", ("p", "p", "p")),
+        "irx_rb_api_write_csv": ("v", ("p", "p", "p")),
+        "irx_rb_api_read_parquet": ("p", ("p", "p", "p", "i32")),
+        "irx_rb_api_write_parquet": ("v", ("p", "p", "p", "i32")),
+        "irx_rb_api_options_copy": ("p", ("p",)),
+        "irx_rb_api_options_clear": ("v", ("p", "p")),
+        "irx_rb_api_options_filters": ("v", ("p", "p")),
+        "irx_rb_api_filter_i64": ("v", ("p", "p", "p", "p", "i64")),
+        "irx_rb_api_filter_f64": ("v", ("p", "p", "p", "p", "f64")),
+        "irx_rb_api_filter_bool": ("v", ("p", "p", "p", "p", "i32")),
+        "irx_rb_api_filter_text": ("v", ("p", "p", "p", "p", "p")),
+        "irx_rb_api_filter_null": ("v", ("p", "p", "p", "p")),
+        "irx_rb_api_csv_frame": ("p", ("p",)),
+        "irx_rb_api_parquet_frame": ("p", ("p",)),
+        "irx_rb_api_csv_write_frame": ("v", ("p", "p")),
+        "irx_rb_api_parquet_write_frame": ("v", ("p", "p")),
+    }
+)
+
 # Opening/configuration activates the optional format implementation. Shared
 # lifetime operations remain in the base RecordBatch runtime.
 PARQUET_API_SYMBOLS = frozenset(
@@ -133,6 +160,8 @@ PARQUET_API_SYMBOLS = frozenset(
     for name in ARROW_API_SIGNATURES
     if name.startswith("irx_rb_api_options_")
     or name.startswith("irx_rb_api_parquet_open_")
+    or name.startswith("irx_rb_api_filter_")
+    or name in {"irx_rb_api_read_parquet", "irx_rb_api_write_parquet"}
     or name
     in {"irx_rb_api_parquet_read_options", "irx_rb_api_parquet_write_options"}
 )

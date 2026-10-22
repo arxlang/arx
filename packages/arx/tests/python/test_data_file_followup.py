@@ -36,7 +36,8 @@ def test_compiled_nullable_file_conversion(tmp_path: Path) -> None:
         type: Path
     """
     source = f"""
-import (Parquet, ParquetOptions, RecordBatch, Schema) from stdlib.arrow
+import (Parquet, ParquetOptions, where) from stdlib.parquet
+import (RecordBatch, Schema) from stdlib.arrow
 
 fn keep(frame: {FRAME}) -> {FRAME}:
   return frame
@@ -48,11 +49,11 @@ fn main() -> i32:
   options.set_int("atomic", 1)
   source.open_read("input.parquet", batch_size=2)
   var schema: Schema = Schema()
-  schema.add("id", 7, true)
-  schema.add("label", 11, true)
-  schema.add("day", 13, true)
-  schema.add("clock", 21, true)
-  schema.add("stamp", 17, true)
+  schema.add("id", "uint64", true)
+  schema.add("label", "utf8", true)
+  schema.add("day", "date32[day]", true)
+  schema.add("clock", "time64[us]", true)
+  schema.add("stamp", "timestamp[us]", true)
   target.open_write_options("output.parquet", schema, options)
   while source.next():
     var batch: RecordBatch = source.batch()
@@ -106,7 +107,8 @@ def test_compiled_nullable_literal_and_filter(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, ParquetOptions, RecordBatch) from stdlib.arrow
+import (Parquet, ParquetOptions, where) from stdlib.parquet
+import RecordBatch from stdlib.arrow
 type Frame = dataframe[id:i64 | none, label:str | none]
 fn main() -> i32:
   var frame: Frame = dataframe({id: [1, none, 3], label: ["a", none, "c"]})
@@ -118,7 +120,7 @@ fn main() -> i32:
   var source: Parquet = Parquet()
   var options: ParquetOptions = ParquetOptions()
   options.set_text("column", "label")
-  options.where("id", "gt", "1", "int64")
+  options.set_filters(where("id", ">", 1))
   source.open_read_options("literal.parquet", options)
   var rows: i64 = 0
   while source.next():
@@ -153,7 +155,8 @@ def test_compiled_temporal_literals(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, RecordBatch) from stdlib.arrow
+import Parquet from stdlib.parquet
+import RecordBatch from stdlib.arrow
 type Frame = dataframe[day:date | none, clock:time | none, ts:timestamp | none]
 fn main() -> i32:
   var frame: Frame = dataframe({
@@ -195,7 +198,8 @@ def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, ParquetOptions, RecordBatch) from stdlib.arrow
+import (Parquet, ParquetOptions, where) from stdlib.parquet
+import RecordBatch from stdlib.arrow
 fn keep_dynamic(frame: dataframe[...]) -> dataframe[...]:
   return frame
 fn main() -> i32:

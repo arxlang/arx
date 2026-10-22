@@ -23,7 +23,7 @@ from irx.analysis.resolved_nodes import (
     SemanticClassStaticStorage,
     SemanticFunction,
 )
-from irx.analysis.types import display_type_name, same_type
+from irx.analysis.types import display_type_name, is_assignable, same_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -464,10 +464,22 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             return False
         if exact and len(slots) != len(function.signature.parameters):
             return False
-        return all(
-            same_type(function.signature.parameters[slot].type_, type_)
-            for slot, type_ in zip(slots, arg_types)
-        )
+        for slot, type_ in zip(slots, arg_types):
+            target = function.signature.parameters[slot].type_
+            if same_type(target, type_):
+                continue
+            # Erasing a table's static schema changes no runtime data. Keep
+            # exact overloads preferred, and never narrow a runtime schema.
+            if (
+                not exact
+                and isinstance(target, astx.DataFrameType)
+                and target.columns is None
+                and isinstance(type_, astx.DataFrameType)
+                and is_assignable(target, type_)
+            ):
+                continue
+            return False
+        return True
 
     def _resolve_method_overload(
         self,

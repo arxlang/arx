@@ -232,7 +232,7 @@ def test_newly_supported_read_schema(
         batch.release()
 
 
-@pytest.mark.parametrize("value", [0, -1, True, 2**63, "10", 1.5, None])
+@pytest.mark.parametrize("value", [0, -1, True, 2**63, "10", 1.5])
 def test_invalid_sizes(tmp_path: Path, value: object) -> None:
     """
     title: >-

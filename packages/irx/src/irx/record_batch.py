@@ -8,6 +8,7 @@ import ctypes
 import os
 
 from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import replace
 from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
@@ -2087,8 +2088,8 @@ class RecordBatchStreamWriter:
         schema: RecordBatchSchema,
         path: str | os.PathLike[str],
         *,
-        compression: str = "snappy",
-        row_group_size: int = 1048576,
+        compression: str | None = None,
+        row_group_size: int | None = None,
         options: ParquetOptions | None = None,
     ) -> "RecordBatchStreamWriter":
         """
@@ -2101,17 +2102,22 @@ class RecordBatchStreamWriter:
           path:
             type: str | os.PathLike[str]
           compression:
-            type: str
+            type: str | None
           row_group_size:
-            type: int
+            type: int | None
           options:
             type: ParquetOptions | None
         returns:
           type: RecordBatchStreamWriter
         """
         path_bytes = parquet_path(path)
-        parquet_size(row_group_size, "row_group_size")
-        if compression not in (
+        effective = options or ParquetOptions()
+        if compression is not None:
+            effective = replace(effective, compression=compression)
+        if row_group_size is not None:
+            effective = replace(effective, row_group_size=row_group_size)
+        parquet_size(effective.row_group_size, "row_group_size")
+        if effective.compression not in (
             "snappy",
             "uncompressed",
             "zstd",
@@ -2125,48 +2131,24 @@ class RecordBatchStreamWriter:
             )
         lib = parquet_library()
         handle = ctypes.c_void_p()
-        if options is None:
+        function = lib.irx_rb_parquet_writer_open_options
+        function.restype = ctypes.c_int
+        function.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        with effective.native(lib) as native_options:
             _check(
-                lib.irx_rb_parquet_writer_open(
+                function(
                     schema._raw(),
                     path_bytes,
-                    compression.encode(),
-                    row_group_size,
+                    native_options,
                     ctypes.byref(handle),
                 ),
                 lib,
             )
-        else:
-            if (
-                compression != "snappy"
-                or row_group_size != PARQUET_ROW_GROUP_SIZE
-            ):
-                raise ValueError(
-                    "Set writer settings in options, not both places"
-                )
-            try:
-                function = lib.irx_rb_parquet_writer_open_options
-            except AttributeError as error:
-                raise RuntimeError(
-                    "Native library lacks Parquet options; rebuild it"
-                ) from error
-            function.restype = ctypes.c_int
-            function.argtypes = [
-                ctypes.c_void_p,
-                ctypes.c_char_p,
-                ctypes.c_void_p,
-                ctypes.POINTER(ctypes.c_void_p),
-            ]
-            with options.native(lib) as native_options:
-                _check(
-                    function(
-                        schema._raw(),
-                        path_bytes,
-                        native_options,
-                        ctypes.byref(handle),
-                    ),
-                    lib,
-                )
         return cls(handle, lib)
 
     @classmethod
@@ -2388,7 +2370,7 @@ class RecordBatchStreamReader:
         path: str | os.PathLike[str],
         *,
         schema: RecordBatchSchema | None = None,
-        batch_size: int = 65536,
+        batch_size: int | None = None,
         options: ParquetOptions | None = None,
     ) -> "RecordBatchStreamReader":
         """
@@ -2400,52 +2382,37 @@ class RecordBatchStreamReader:
           schema:
             type: RecordBatchSchema | None
           batch_size:
-            type: int
+            type: int | None
           options:
             type: ParquetOptions | None
         returns:
           type: RecordBatchStreamReader
         """
         path_bytes = parquet_path(path)
-        parquet_size(batch_size, "batch_size")
+        effective = options or ParquetOptions()
+        if batch_size is not None:
+            effective = replace(effective, batch_size=batch_size)
+        parquet_size(effective.batch_size, "batch_size")
         lib = parquet_library()
         handle = ctypes.c_void_p()
-        if options is None:
+        function = lib.irx_rb_parquet_reader_open_options
+        function.restype = ctypes.c_int
+        function.argtypes = [
+            ctypes.c_char_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_void_p),
+        ]
+        with effective.native(lib) as native_options:
             _check(
-                lib.irx_rb_parquet_reader_open(
+                function(
                     path_bytes,
-                    schema._raw() if schema is not None else None,
-                    batch_size,
+                    schema._raw() if schema else None,
+                    native_options,
                     ctypes.byref(handle),
                 ),
                 lib,
             )
-        else:
-            if batch_size != PARQUET_BATCH_SIZE:
-                raise ValueError("Set batch_size in options, not both places")
-            try:
-                function = lib.irx_rb_parquet_reader_open_options
-            except AttributeError as error:
-                raise RuntimeError(
-                    "Native library lacks Parquet options; rebuild it"
-                ) from error
-            function.restype = ctypes.c_int
-            function.argtypes = [
-                ctypes.c_char_p,
-                ctypes.c_void_p,
-                ctypes.c_void_p,
-                ctypes.POINTER(ctypes.c_void_p),
-            ]
-            with options.native(lib) as native_options:
-                _check(
-                    function(
-                        path_bytes,
-                        schema._raw() if schema is not None else None,
-                        native_options,
-                        ctypes.byref(handle),
-                    ),
-                    lib,
-                )
         return cls(handle, lib)
 
     def schema(self) -> RecordBatchSchema:
@@ -2824,7 +2791,7 @@ class Parquet(FileSession):
         path: str | os.PathLike[str],
         *,
         schema: RecordBatchSchema | None = None,
-        batch_size: int = 65536,
+        batch_size: int | None = None,
         options: ParquetOptions | None = None,
     ) -> None:
         """
@@ -2836,7 +2803,7 @@ class Parquet(FileSession):
           schema:
             type: RecordBatchSchema | None
           batch_size:
-            type: int
+            type: int | None
           options:
             type: ParquetOptions | None
         """
@@ -2851,8 +2818,8 @@ class Parquet(FileSession):
         path: str | os.PathLike[str],
         schema: RecordBatchSchema,
         *,
-        compression: str = "snappy",
-        row_group_size: int = 1048576,
+        compression: str | None = None,
+        row_group_size: int | None = None,
         options: ParquetOptions | None = None,
     ) -> None:
         """
@@ -2863,9 +2830,9 @@ class Parquet(FileSession):
           schema:
             type: RecordBatchSchema
           compression:
-            type: str
+            type: str | None
           row_group_size:
-            type: int
+            type: int | None
           options:
             type: ParquetOptions | None
         """

@@ -1837,6 +1837,44 @@ const char* irx_arrow_last_error(void) {
   return last_error;
 }
 
+int irx_arrow_table_import_stream(ArrowArrayStream* stream,
+                                  irx_arrow_table_handle** out_table) {
+  clear_error();
+  if (!out_table) return set_error(EINVAL, "out_table must not be NULL");
+  *out_table = nullptr;
+  if (!stream || !stream->release) return set_error(EINVAL, "stream is released");
+  try {
+    auto reader = arrow::ImportRecordBatchReader(stream);
+    if (!reader.ok()) return set_error(EINVAL, "%s", reader.status().ToString().c_str());
+    auto table = arrow::Table::FromRecordBatchReader(reader->get());
+    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    auto status = (*table)->ValidateFull();
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    auto result = std::make_unique<irx_arrow_table_handle>();
+    result->refcount = kInitialRefcount;
+    result->table = *table;
+    *out_table = result.release();
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_import_stream", error);
+  }
+}
+
+int irx_arrow_table_export_stream(const irx_arrow_table_handle* table,
+                                  ArrowArrayStream* stream) {
+  clear_error();
+  if (!table || !table->table || !stream || stream->release)
+    return set_error(EINVAL, "table and released stream output are required");
+  try {
+    auto reader = std::make_shared<arrow::TableBatchReader>(table->table);
+    auto status = arrow::ExportRecordBatchReader(reader, stream);
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_export_stream", error);
+  }
+}
+
 int irx_arrow_table_import_batch(ArrowArray* array, ArrowSchema* schema,
                                  irx_arrow_table_handle** out_table) {
   clear_error();

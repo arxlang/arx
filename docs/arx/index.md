@@ -63,6 +63,8 @@ The current frontend supports:
 - restricted native UTF-8 text files with builtin `File` and its `open` adapter
 - fixed-shape numeric tensors and runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
+- dedicated CSV/Parquet modules with module-level DataFrame read/write
+  functions, typed filters and explicit streaming
 - runtime-schema RecordBatches, CSV, Parquet, IPC and C Data/C Stream via
   `stdlib.arrow`
 - checked conversion between RecordBatches and non-null numeric/Boolean

@@ -88,13 +88,20 @@ Rules:
   preserving rich Arrow types/metadata through RecordBatch casts; its columns
   cannot be accessed statically by name or silently narrowed
 
-Use `Schema`, `BatchBuilder`, `RecordBatch`, `CSV` and `Parquet` from
-`stdlib.arrow` for file I/O and runtime Arrow schemas. Explicit conversions
-`cast(batch, dataframe[id:i64])` and `cast(frame, RecordBatch)` validate
-physical types and the declared nullability. `CSV` and `Parquet` expose unified
-read/write sessions; `CSVReader` and `CSVWriter` have been removed. See
-[CSV](csv.md) and [Parquet](parquet.md) for supported types, nullable examples
-and advanced options.
+Use `read_csv` / `write_csv` from `stdlib.csv` and `read_parquet` /
+`write_parquet` from `stdlib.parquet` for file I/O. Reads return independently
+owned runtime-schema frames; writes borrow frames and check finalization. No
+format-specific DataFrame methods or `to_*` aliases are added. `CSV` and
+`Parquet` in those modules support explicit streaming via `frame()` and
+`write(frame)`.
+
+`Schema`, `BatchBuilder`, `RecordBatch` and IPC remain in `stdlib.arrow`.
+`Schema.add("id", "int64", nullable=false)` uses scalar names, not native IDs.
+`cast(frame, dataframe[id:i64])` checks an existing frame directly, including
+all chunks and reachable nested nullability, without coercion or metadata loss.
+`cast(batch, dataframe[id:i64])` and `cast(frame, RecordBatch)` remain available
+for interop. See [CSV](csv.md) and [Parquet](parquet.md) for parameter
+contracts, nullable examples and advanced options.
 
 `IPCReader.next()` advances one batch; `batch()` and `schema()` return
 independent snapshots. `open_file` selects IPC file format, `open_stream`

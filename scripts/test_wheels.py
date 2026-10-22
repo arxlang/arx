@@ -54,6 +54,13 @@ PACKAGES = (
     PackageArtifact("arxjit", "arxjit", "arxjit"),
 )
 
+REQUIRED_ARX_STDLIB_ASSETS = (
+    "arx/builtins/files.x",
+    "arx/stdlib/arrow.x",
+    "arx/stdlib/csv.x",
+    "arx/stdlib/parquet.x",
+)
+
 REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_arrow_runtime.cc",
     "irx/builder/runtime/arrow/native/irx_arrow_series.h",
@@ -72,6 +79,7 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_record_batch_internal.h",
     "irx/builder/runtime/arrow/native/irx_record_batch_api_internal.h",
     "irx/parquet_options.py",
+    "irx/table_io.py",
     "irx/builder/runtime/arrow/native/irx_parquet_io.cc",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
@@ -215,14 +223,15 @@ CSV_MODULE = """```
 title: Stream CSV through checked DataFrame conversions
 summary: Run from the repository root; input and output must be distinct files.
 ```
-import (Schema, RecordBatch, CSV) from stdlib.arrow
+import (Schema, RecordBatch) from stdlib.arrow
+import CSV from stdlib.csv
 
 fn main() -> i32:
   ```
   title: Convert every CSV batch without discarding rows
   ```
   var schema: Schema = Schema()
-  schema.add("id", 3, false)
+  schema.add("id", "int64", false)
   var reader: CSV = CSV()
   reader.open_read_as("input.csv", schema)
   var writer: CSV = CSV()
@@ -240,7 +249,8 @@ fn main() -> i32:
 PARQUET_MODULE = """```
 title: Installed Parquet interoperability and DataFrame smoke
 ```
-import (Parquet, RecordBatch, Schema) from stdlib.arrow
+import Parquet from stdlib.parquet
+import (RecordBatch, Schema) from stdlib.arrow
 
 fn main() -> i32:
   ```
@@ -249,7 +259,7 @@ fn main() -> i32:
   var reader: Parquet = Parquet()
   reader.open_read("python.parquet", batch_size=1)
   var schema: Schema = Schema()
-  schema.add("id", 3, false)
+  schema.add("id", "int64", false)
   var writer: Parquet = Parquet()
   writer.open_write("compiled.parquet", schema, row_group_size=2)
   while reader.next():
@@ -282,6 +292,37 @@ fn main() -> i32:
   return 0
 """
 
+TABLE_IO_MODULE = """```
+title: Installed format modules and table I/O
+```
+import (read_csv, write_csv, CSV) from stdlib.csv
+import Schema from stdlib.arrow
+import (read_parquet, write_parquet, where, ParquetOptions) from stdlib.parquet
+
+fn main() -> i32:
+  ```
+  title: Read chunked data and filter through canonical imports
+  ```
+  var frame: dataframe[...] = read_csv("input.csv")
+  write_parquet(\
+    frame, "tables.parquet",\
+    options=ParquetOptions(atomic=true), row_group_size=1\
+  )
+  var result: dataframe[...] = read_parquet(\
+    "tables.parquet", filters=where("id", ">", 1)\
+  )
+  var typed: dataframe[id:i64] = cast(result, dataframe[id:i64])
+  assert typed.nrows() == 2
+  write_csv(typed, "tables.csv")
+  var schema: Schema = Schema()
+  schema.add("id", "int64")
+  var sink: CSV = CSV()
+  sink.open_write("tables-stream.csv", schema)
+  sink.write(typed)
+  sink.close()
+  return 0
+"""
+
 SMOKE_DRIVER = r"""
 from pathlib import Path
 from importlib import metadata
@@ -295,6 +336,9 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from arxpy import Compiler
+from irx.table_io import (
+    read_csv, write_csv, read_parquet, write_parquet, where,
+)
 from irx.record_batch import (
     CSV,
     Parquet,
@@ -323,7 +367,9 @@ for source_name in (
     "csv_smoke.x",
     "parquet_smoke.x",
     "nullable_smoke.x",
+    "table_io_smoke.x",
 ):
+    print(f"Compiling {source_name}", flush=True)
     artifact = compiler.compile_file(
         root / source_name,
         output=root / source_name.removesuffix(".x"),
@@ -400,6 +446,17 @@ with Parquet() as source:
     if copied is None or not copied.to_arrow().equals(rich.slice(0, 1)):
         raise RuntimeError("Rich Parquet wheel smoke returned wrong data")
     copied.release()
+table = read_csv(root / "tables.csv")
+if not read_csv(root / "tables-stream.csv").equals(table):
+    raise RuntimeError("Streaming table I/O wheel smoke returned wrong data")
+if table.column("id").to_pylist() != [2, 3]:
+    raise RuntimeError("Compiled table I/O wheel smoke returned wrong data")
+write_parquet(table, root / "python-tables.parquet", row_group_size=1)
+selected = read_parquet(root / "python-tables.parquet",
+                        filters=where("id", "==", 3))
+write_csv(selected, root / "python-tables.csv")
+if read_csv(root / "python-tables.csv").column("id").to_pylist() != [3]:
+    raise RuntimeError("Python table I/O wheel smoke returned wrong data")
 print("wheel smoke passed")
 """
 
@@ -472,8 +529,9 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                 raise RuntimeError(f"{wheel} is missing {typed_marker}")
 
             if package.directory == "arx":
-                if "arx/builtins/files.x" not in names:
-                    raise RuntimeError(f"{wheel} is missing the File builtin")
+                missing = set(REQUIRED_ARX_STDLIB_ASSETS).difference(names)
+                if missing:
+                    raise RuntimeError(f"{wheel} is missing stdlib: {missing}")
 
             if package.directory == "irx":
                 missing = [
@@ -487,11 +545,13 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                     )
 
         with tarfile.open(sdist, "r:gz") as archive:
-            if package.directory == "arx" and not any(
-                name.endswith("/src/arx/builtins/files.x")
-                for name in archive.getnames()
-            ):
-                raise RuntimeError(f"{sdist} is missing the File builtin")
+            if package.directory == "arx":
+                for asset in REQUIRED_ARX_STDLIB_ASSETS:
+                    if not any(
+                        name.endswith("/src/" + asset)
+                        for name in archive.getnames()
+                    ):
+                        raise RuntimeError(f"{sdist} is missing {asset}")
             license_members = [
                 member
                 for member in archive.getmembers()
@@ -658,6 +718,7 @@ def run_smoke(
             "csv_smoke.x": CSV_MODULE,
             "parquet_smoke.x": PARQUET_MODULE,
             "nullable_smoke.x": NULLABLE_MODULE,
+            "table_io_smoke.x": TABLE_IO_MODULE,
         }
         (work_dir / ".arxproject.toml").write_text(
             '[project]\nname="wheel-consumer"\nversion="0"\n'

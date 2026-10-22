@@ -303,3 +303,17 @@ generation.
 keywords. See the [Arrow API and examples](../apache-arrow.md). Native bindings
 are supplied only for the bundled reserved module; a user module cannot gain
 these bindings merely by declaring matching handle type names.
+
+## Tabular standard-library modules
+
+- `stdlib.csv`: `read_csv`, `write_csv`, and the unified streaming `CSV` owner.
+- `stdlib.parquet`: `read_parquet`, `write_parquet`, `Parquet`,
+  `ParquetOptions`, `ParquetFilter`, and `where`.
+- `stdlib.arrow`: canonical shared `Schema`, `RecordBatch`, `BatchBuilder`, IPC
+  and Arrow interoperability.
+
+Format classes are not exported from `stdlib.arrow`. Import shared types from
+that canonical module rather than through a format module. Namespace-qualified
+calls and explicit aliases work normally. Format functions are not global
+builtins, and equally named user functions receive no native privileges.
+CSV/shared Arrow do not activate the optional Parquet feature.

@@ -829,14 +829,16 @@ class FileImportResolver:
         module_ast = Parser().parse(
             Lexer().lex(),
             resolved_specifier,
-            builtin_types=arrow_stdlib.type_bindings()
-            if resolved_specifier == arrow_stdlib.MODULE_NAME
+            builtin_types=arrow_stdlib.type_bindings(resolved_specifier)
+            if resolved_specifier in arrow_stdlib.MODULE_NAMES
             else None,
         )
         module_ast = inject_ambient_builtin_imports(module_ast)
         parsed_module = (
-            arrow_stdlib.prepare_module(module_ast, str(module_file))
-            if resolved_specifier == arrow_stdlib.MODULE_NAME
+            arrow_stdlib.prepare_module(
+                module_ast, str(module_file), resolved_specifier
+            )
+            if resolved_specifier in arrow_stdlib.MODULE_NAMES
             else self.prepare_module(
                 module_ast, resolved_specifier, str(module_file)
             )

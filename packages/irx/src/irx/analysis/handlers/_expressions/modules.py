@@ -45,6 +45,7 @@ from irx.analysis.resolved_nodes import (
     SemanticBinding,
     SemanticModule,
 )
+from irx.analysis.table_io import resolve_table_io
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
@@ -349,6 +350,10 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if binding.class_ is not None:
             self.resolve_class_construction(node, binding.class_)
             return
+        if binding.function is not None and resolve_table_io(
+            cast(SemanticAnalyzerCore, self), node, binding.function
+        ):
+            return
         for argument in call_evaluations(node):
             self.visit(argument)
             arg_types.append(self._expr_type(argument))
@@ -566,6 +571,10 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             self.resolve_class_construction(node, binding.class_)
             return
         if binding is not None and binding.function is not None:
+            if resolve_table_io(
+                cast(SemanticAnalyzerCore, self), node, binding.function
+            ):
+                return
             contextualize_null_arguments(node, binding.function)
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):

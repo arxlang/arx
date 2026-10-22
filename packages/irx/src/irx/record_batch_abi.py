@@ -21,6 +21,22 @@ IRX_RECORD_BATCH_LIBRARY_ENV = "IRX_RECORD_BATCH_LIBRARY"
 
 @private
 @typechecked
+class ArrowArrayStream(ctypes.Structure):
+    """
+    title: Caller-owned Arrow C Stream ABI storage with opaque callbacks.
+    """
+
+    _fields_ = [
+        ("get_schema", ctypes.c_void_p),
+        ("get_next", ctypes.c_void_p),
+        ("get_last_error", ctypes.c_void_p),
+        ("release", ctypes.c_void_p),
+        ("private_data", ctypes.c_void_p),
+    ]
+
+
+@private
+@typechecked
 class ArrowSchema(ctypes.Structure):
     """
     title: Caller-owned Arrow C Data schema storage, not an Arrow C++ layout.

@@ -21,7 +21,7 @@ from irx.analysis.module_interfaces import (
 )
 from irx.analysis.resolved_nodes import SemanticBinding
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
-from irx.native import NativeFeature
+from irx.native import NativeFeature, TableIOOperation
 from irx.typecheck import typechecked
 
 _IMPORTABLE_BINDING_KINDS = frozenset({"function", "struct", "class"})
@@ -97,6 +97,8 @@ class CompilationSession:
         type: dict[str, NativeFeature]
       native_bindings:
         type: dict[int, tuple[str, Ellipsis]]
+      native_table_io:
+        type: dict[int, TableIOOperation]
       lowering_declarations:
         type: frozenset[int] | None
       _resolution_cache:
@@ -116,6 +118,7 @@ class CompilationSession:
     )
     native_features: dict[str, NativeFeature] = field(default_factory=dict)
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
+    native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     lowering_declarations: frozenset[int] | None = None
     _resolution_cache: dict[tuple[ModuleKey, str], ParsedModule | None] = (
         field(default_factory=dict)
@@ -203,6 +206,10 @@ class CompilationSession:
             self.native_features[feature.name] = feature
         for binding in module.native_bindings:
             self.native_bindings[id(binding.declaration)] = binding.features
+            if binding.table_io is not None:
+                self.native_table_io[id(binding.declaration)] = (
+                    binding.table_io
+                )
 
     def module(self, module_key: ModuleKey) -> ParsedModule:
         """

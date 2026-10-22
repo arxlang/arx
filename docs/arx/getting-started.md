@@ -155,16 +155,24 @@ containers/globals/generator captures are deliberately excluded. See
 
 ## Load tabular data
 
-For CSV, use the unified native `CSV` class from `stdlib.arrow`. For Parquet,
-use [`Parquet`](parquet.md) with the same explicit read/write session model.
-[CSV files and DataFrames](csv.md) shows streaming every batch and checked
-conversion into an exact static-schema DataFrame. Rich Arrow types can remain in
-RecordBatches or be preserved by runtime-schema `dataframe[...]` locals and
-returns; strings and nulls are not silently discarded.
+Import `read_csv` / `write_csv` from `stdlib.csv`, and `read_parquet` /
+`write_parquet` from `stdlib.parquet`. Inside a function:
 
-For nullable data-file columns, use `dataframe[name:str | none]` and the unified
-`CSV`/`Parquet` APIs. See [Parquet configuration](parquet.md) for native scans,
-partitioned datasets and safe-write options, including their current limits.
+```arx
+var frame: dataframe[...] = read_csv("input.csv")
+write_parquet(frame, "output.parquet", compression="zstd")
+```
+
+These eager operations handle every batch and close their internal sessions. For
+bounded processing, the format modules also provide unified `CSV` and `Parquet`
+owners with `next()`, `frame()` and `write(frame)`. Shared schemas, batches and
+IPC live in `stdlib.arrow`. See [CSV](csv.md) and [Parquet](parquet.md) for
+imports, parameters and safety limits, or run the
+[complete table example](../../examples/arrow/csv_parquet_tables.x).
+
+Use `cast(frame, dataframe[name:str | none])` to assert an exact static schema;
+runtime schemas do not infer static column types. No strings or nulls are
+silently discarded.
 
 For nullable tabular data, start with `dataframe[x:i32 | none]`, access
 `frame.x` as a Series, and use `fill_null(frame.x[0], 0)` for a non-nullable

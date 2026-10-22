@@ -39,6 +39,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.table_io import lower_table_io
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
 from irx.diagnostics import DiagnosticCodes
@@ -631,6 +632,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FunctionCall
         """
+        if lower_table_io(self, node):
+            return
         semantic = getattr(node, "semantic", None)
         if (
             isinstance(semantic, SemanticInfo)
@@ -666,6 +669,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.MethodCall
         """
+        if lower_table_io(self, node):
+            return
         semantic = getattr(node, "semantic", None)
         if (
             isinstance(semantic, SemanticInfo)
@@ -969,6 +974,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             node,
             label="function prototype",
         )
+        if function.signature.metadata.get("table_io") is not None:
+            return
         fn = self._declare_semantic_function(function)
         self.result_stack.append(fn)
 

@@ -14,7 +14,7 @@ import astx
 
 from public import private, public
 
-from irx.native import NativeBinding, NativeFeature
+from irx.native import NativeBinding, NativeFeature, TableIOOperation
 from irx.typecheck import typechecked
 
 ModuleKey: TypeAlias = str
@@ -60,6 +60,8 @@ class ParsedModule:
         type: astx.ClassDefStmt | None
       lazy_declarations:
         type: bool
+      native_arrow_classes:
+        type: tuple[astx.ClassDefStmt, Ellipsis]
     """
 
     key: ModuleKey
@@ -71,12 +73,18 @@ class ParsedModule:
     native_bindings: tuple[NativeBinding, ...] = ()
     native_record_batch_class: astx.ClassDefStmt | None = None
     lazy_declarations: bool = False
+    native_arrow_classes: tuple[astx.ClassDefStmt, ...] = ()
 
     def __post_init__(self) -> None:
         """
         title: Validate an explicit host capability against its parsed module.
         """
         validate_file_registration(self.native_file_class, self.ast)
+        for declaration in self.native_arrow_classes:
+            if not any(node is declaration for node in self.ast.nodes):
+                raise ValueError(
+                    "native Arrow class must belong to its module"
+                )
         if self.native_record_batch_class is not None and not any(
             node is self.native_record_batch_class for node in self.ast.nodes
         ):
@@ -116,6 +124,73 @@ def validate_native_registration(
         if id(declaration) in declarations:
             raise ValueError("duplicate native extern binding")
         declarations.add(id(declaration))
+        if binding.table_io is not None:
+            validate_table_io_registration(declaration, binding.table_io)
+
+
+@private
+@typechecked
+def validate_table_io_registration(
+    declaration: astx.FunctionPrototype, operation: TableIOOperation
+) -> None:
+    """
+    title: >-
+      Reject malformed trusted prototypes before relaxing the FFI boundary.
+    parameters:
+      declaration:
+        type: astx.FunctionPrototype
+      operation:
+        type: TableIOOperation
+    """
+    handle = astx.OpaqueHandleType(
+        "IrxRbApiCsv" if operation.startswith("csv_") else "IrxRbApiParquet"
+    )
+    frame = astx.DataFrameType()
+    specs = {
+        "read_csv": (("path", astx.String()),),
+        "read_parquet": (("path", astx.String()),),
+        "write_csv": (("frame", frame), ("path", astx.String())),
+        "write_parquet": (("frame", frame), ("path", astx.String())),
+        "where": (("column", astx.String()), ("operation", astx.String())),
+        "csv_frame": (("box", handle),),
+        "parquet_frame": (("box", handle),),
+        "csv_write_frame": (("box", handle), ("frame", frame)),
+        "parquet_write_frame": (("box", handle), ("frame", frame)),
+    }
+    expected = specs[operation]
+    args = declaration.args.nodes
+    if len(args) != len(expected):
+        raise ValueError("invalid table I/O capability parameters")
+    for argument, (name, type_) in zip(args, expected):
+        if argument.name != name or not isinstance(
+            argument.type_, type(type_)
+        ):
+            raise ValueError(
+                "invalid table I/O capability parameter type/name"
+            )
+        if isinstance(type_, astx.OpaqueHandleType) and (
+            not isinstance(argument.type_, astx.OpaqueHandleType)
+            or argument.type_.handle_name != type_.handle_name
+        ):
+            raise ValueError("invalid table I/O capability handle")
+        if isinstance(argument.type_, astx.DataFrameType) and (
+            argument.type_.columns is not None
+            or argument.type_.row_count is not None
+        ):
+            raise ValueError("table I/O capability requires a runtime schema")
+    result = declaration.return_type
+    if operation == "where":
+        valid = isinstance(result, astx.ClassType)
+    elif "write" in operation:
+        valid = isinstance(result, astx.NoneType)
+    else:
+        valid = (
+            isinstance(result, astx.DataFrameType)
+            and result.columns is None
+            and result.row_count is None
+        )
+    if not valid:
+        raise ValueError("invalid table I/O capability result")
 
 
 @private

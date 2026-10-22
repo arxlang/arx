@@ -1,6 +1,6 @@
 ```
 title: Apache Arrow interoperability
-summary: RecordBatches, CSV and Parquet files, IPC, TCP and C Data.
+summary: RecordBatches, schemas, IPC, TCP and C Data interoperability.
 ```
 
 extern irx_rb_api_schema_new() -> ArrowSchemaHandle
@@ -18,7 +18,7 @@ extern irx_rb_api_reader_destroy(box: ArrowReaderHandle) -> none
 extern irx_rb_api_reader_close(box: ArrowReaderHandle) -> none
 extern irx_rb_api_writer_destroy(box: ArrowWriterHandle) -> none
 extern irx_rb_api_writer_close(box: ArrowWriterHandle) -> none
-extern irx_rb_api_schema_add(box: ArrowSchemaHandle, name: str, type: i32, nullable: i32) -> none
+extern irx_rb_api_schema_add_name(box: ArrowSchemaHandle, name: str, type: str, nullable: i32) -> none
 extern irx_rb_api_schema_count(box: ArrowSchemaHandle) -> i32
 extern irx_rb_api_schema_name(box: ArrowSchemaHandle, col: i32) -> str
 extern irx_rb_api_schema_type(box: ArrowSchemaHandle, col: i32) -> i32
@@ -115,12 +115,12 @@ class Schema:
     ```
     return self.handle
 
-  fn add(self, name: str, type_id: i32, nullable: bool = false) -> none:
+  fn add(self, name: str, type_name: str, nullable: bool = false) -> none:
     ```
     title: add
-    summary: Adds a field using the IrxColumnType identifier.
+    summary: Adds a field using a checked Arrow scalar type name.
     ```
-    irx_rb_api_schema_add(self.handle, name, type_id, cast(nullable, i32))
+    irx_rb_api_schema_add_name(self.handle, name, type_name, cast(nullable, i32))
     return none
 
   fn nfields(self) -> i32:
@@ -702,285 +702,4 @@ class IPCWriter:
     summary: Writes one batch with exact schema validation.
     ```
     irx_rb_api_writer_write(self.handle, batch.native_handle())
-    return none
-
-
-extern irx_rb_api_parquet_new() -> ArrowParquetHandle
-extern irx_rb_api_parquet_destroy(box: ArrowParquetHandle) -> none
-extern irx_rb_api_parquet_close(box: ArrowParquetHandle) -> none
-extern irx_rb_api_parquet_next(box: ArrowParquetHandle) -> i32
-extern irx_rb_api_parquet_batch(box: ArrowParquetHandle, out: ArrowBatchHandle) -> none
-extern irx_rb_api_parquet_schema(box: ArrowParquetHandle, out: ArrowSchemaHandle) -> none
-extern irx_rb_api_parquet_write(box: ArrowParquetHandle, batch: ArrowBatchHandle) -> none
-extern irx_rb_api_parquet_open_read(box: ArrowParquetHandle, path: str, batch_size: i64) -> none
-extern irx_rb_api_parquet_open_read_as(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, batch_size: i64) -> none
-extern irx_rb_api_parquet_open_write(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, compression: str, row_group_size: i64) -> none
-extern irx_rb_api_csv_new() -> ArrowCsvHandle
-extern irx_rb_api_csv_destroy(box: ArrowCsvHandle) -> none
-extern irx_rb_api_csv_close(box: ArrowCsvHandle) -> none
-extern irx_rb_api_csv_next(box: ArrowCsvHandle) -> i32
-extern irx_rb_api_csv_batch(box: ArrowCsvHandle, out: ArrowBatchHandle) -> none
-extern irx_rb_api_csv_schema(box: ArrowCsvHandle, out: ArrowSchemaHandle) -> none
-extern irx_rb_api_csv_write(box: ArrowCsvHandle, batch: ArrowBatchHandle) -> none
-extern irx_rb_api_csv_open_read(box: ArrowCsvHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
-extern irx_rb_api_csv_open_read_as(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
-extern irx_rb_api_csv_open_write(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
-
-extern irx_rb_api_options_new() -> ArrowOptionsHandle
-extern irx_rb_api_options_destroy(box: ArrowOptionsHandle) -> none
-extern irx_rb_api_options_int(box: ArrowOptionsHandle, name: str, value: i64) -> none
-extern irx_rb_api_options_text(box: ArrowOptionsHandle, name: str, value: str) -> none
-extern irx_rb_api_options_filter(box: ArrowOptionsHandle, column: str, operation: str, value: str, type: str) -> none
-extern irx_rb_api_parquet_read_options(box: ArrowParquetHandle, path: str, options: ArrowOptionsHandle) -> none
-extern irx_rb_api_parquet_write_options(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, options: ArrowOptionsHandle) -> none
-
-class ParquetOptions:
-  ```
-  title: ParquetOptions
-  summary: Checked configuration copied at open; aliases share this builder.
-  ```
-  @[private]
-  handle: ArrowOptionsHandle
-
-  fn __init__(self) -> none:
-    ```
-    title: Initialize native options with conservative defaults.
-    ```
-    self.handle = irx_rb_api_options_new()
-    return none
-
-  fn __del__(self) -> none:
-    ```
-    title: Release the native options owner.
-    ```
-    irx_rb_api_options_destroy(self.handle)
-    return none
-
-  fn native_handle(self) -> ArrowOptionsHandle:
-    ```
-    title: Borrow options for trusted native calls.
-    ```
-    return self.handle
-
-  fn set_int(self, name: str, value: i64) -> none:
-    ```
-    title: Set a checked size, flag, compression level or row_group index.
-    ```
-    irx_rb_api_options_int(self.handle, name, value)
-    return none
-
-  fn set_text(self, name: str, value: str) -> none:
-    ```
-    title: Set compression or add a projected column.
-    ```
-    irx_rb_api_options_text(self.handle, name, value)
-    return none
-
-  fn encryption_key_hex(self, key: str) -> none:
-    ```
-    title: Configure a caller-supplied AES footer key without logging key bytes.
-    summary: Use runtime-provided secrets, not keys committed in source code.
-    ```
-    irx_rb_api_options_text(self.handle, "encryption_key_hex", key)
-    return none
-
-  fn where(self, column: str, operation: str, value: str = "", type: str = "string") -> none:
-    ```
-    title: Add an AND predicate with checked literal parsing.
-    summary: Operations are eq, ne, lt, le, gt, ge, is_null and is_valid.
-    ```
-    irx_rb_api_options_filter(self.handle, column, operation, value, type)
-    return none
-
-class Parquet:
-  ```
-  title: Parquet
-  summary: Scoped file owner with explicit read or write mode.
-  ```
-  @[private]
-  handle: ArrowParquetHandle
-
-  fn __init__(self) -> none:
-    ```
-    title: __init__
-    summary: Creates a closed file owner.
-    ```
-    self.handle = irx_rb_api_parquet_new()
-    return none
-
-  fn __del__(self) -> none:
-    ```
-    title: __del__
-    summary: Releases the session at the last class reference.
-    ```
-    irx_rb_api_parquet_destroy(self.handle)
-    return none
-
-  fn close(self) -> none:
-    ```
-    title: close
-    summary: Closes the active session and checks finalization errors.
-    ```
-    irx_rb_api_parquet_close(self.handle)
-    return none
-
-  fn open_read(self, path: str, batch_size: i64 = 65536) -> none:
-    ```
-    title: open_read
-    summary: Opens a closed owner for reading with the file schema.
-    ```
-    irx_rb_api_parquet_open_read(self.handle, path, batch_size)
-    return none
-
-  fn open_read_as(self, path: str, schema: Schema, batch_size: i64 = 65536) -> none:
-    ```
-    title: open_read_as
-    summary: Opens with an exact expected schema.
-    ```
-    irx_rb_api_parquet_open_read_as(self.handle, path, schema.native_handle(), batch_size)
-    return none
-
-  fn open_write(self, path: str, schema: Schema, compression: str = "snappy", row_group_size: i64 = 1048576) -> none:
-    ```
-    title: open_write
-    summary: Validates options and schema before creating or truncating output.
-    ```
-    irx_rb_api_parquet_open_write(self.handle, path, schema.native_handle(), compression, row_group_size)
-    return none
-
-  fn next(self) -> bool:
-    ```
-    title: next
-    summary: Advances in read mode; false means EOF, not an empty batch.
-    ```
-    return irx_rb_api_parquet_next(self.handle) == 0
-
-  fn batch(self) -> RecordBatch:
-    ```
-    title: batch
-    summary: Returns an independently owned current batch in read mode.
-    ```
-    var result: RecordBatch = RecordBatch()
-    irx_rb_api_parquet_batch(self.handle, result.native_handle())
-    return result
-
-  fn schema(self) -> Schema:
-    ```
-    title: schema
-    summary: Returns an independent schema in either open mode.
-    ```
-    var result: Schema = Schema()
-    irx_rb_api_parquet_schema(self.handle, result.native_handle())
-    return result
-
-  fn write(self, batch: RecordBatch) -> none:
-    ```
-    title: write
-    summary: Writes an exact-schema batch in write mode.
-    ```
-    irx_rb_api_parquet_write(self.handle, batch.native_handle())
-    return none
-
-  fn open_read_options(self, path: str, options: ParquetOptions) -> none:
-    ```
-    title: Open a configured file or dataset scan.
-    ```
-    irx_rb_api_parquet_read_options(self.handle, path, options.native_handle())
-    return none
-
-  fn open_write_options(self, path: str, schema: Schema, options: ParquetOptions) -> none:
-    ```
-    title: Open configured output with checked normalization and commit policy.
-    ```
-    irx_rb_api_parquet_write_options(self.handle, path, schema.native_handle(), options.native_handle())
-    return none
-
-
-class CSV:
-  ```
-  title: CSV
-  summary: Scoped file owner with explicit read or write mode.
-  ```
-  @[private]
-  handle: ArrowCsvHandle
-
-  fn __init__(self) -> none:
-    ```
-    title: __init__
-    summary: Creates a closed file owner.
-    ```
-    self.handle = irx_rb_api_csv_new()
-    return none
-
-  fn __del__(self) -> none:
-    ```
-    title: __del__
-    summary: Releases the session at the last class reference.
-    ```
-    irx_rb_api_csv_destroy(self.handle)
-    return none
-
-  fn close(self) -> none:
-    ```
-    title: close
-    summary: Closes the active session and checks finalization errors.
-    ```
-    irx_rb_api_csv_close(self.handle)
-    return none
-
-  fn open_read(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
-    ```
-    title: open_read
-    summary: Opens a closed owner for reading with the file schema.
-    ```
-    irx_rb_api_csv_open_read(self.handle, path, delimiter, cast(header, i32), block_size)
-    return none
-
-  fn open_read_as(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
-    ```
-    title: open_read_as
-    summary: Parses text using explicit physical column types.
-    ```
-    irx_rb_api_csv_open_read_as(self.handle, path, schema.native_handle(), delimiter, cast(header, i32), block_size)
-    return none
-
-  fn open_write(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true) -> none:
-    ```
-    title: open_write
-    summary: Validates options and schema before creating or truncating output.
-    ```
-    irx_rb_api_csv_open_write(self.handle, path, schema.native_handle(), delimiter, cast(header, i32))
-    return none
-
-  fn next(self) -> bool:
-    ```
-    title: next
-    summary: Advances in read mode; false means EOF, not an empty batch.
-    ```
-    return irx_rb_api_csv_next(self.handle) == 0
-
-  fn batch(self) -> RecordBatch:
-    ```
-    title: batch
-    summary: Returns an independently owned current batch in read mode.
-    ```
-    var result: RecordBatch = RecordBatch()
-    irx_rb_api_csv_batch(self.handle, result.native_handle())
-    return result
-
-  fn schema(self) -> Schema:
-    ```
-    title: schema
-    summary: Returns an independent schema in either open mode.
-    ```
-    var result: Schema = Schema()
-    irx_rb_api_csv_schema(self.handle, result.native_handle())
-    return result
-
-  fn write(self, batch: RecordBatch) -> none:
-    ```
-    title: write
-    summary: Writes an exact-schema batch in write mode.
-    ```
-    irx_rb_api_csv_write(self.handle, batch.native_handle())
     return none

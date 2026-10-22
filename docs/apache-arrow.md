@@ -186,9 +186,9 @@ import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
 fn main() -> i32:
   var schema: Schema = Schema()
-  schema.add("id", 3)
-  schema.add("score", 9)
-  schema.add("active", 10)
+  schema.add("id", "int64")
+  schema.add("score", "float64")
+  schema.add("active", "bool")
   var builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_f64(1, 1.5)
@@ -201,23 +201,22 @@ fn main() -> i32:
   return 0
 ````
 
-`Schema.add(name, type_id, nullable=false)` uses the stable `IrxColumnType` IDs:
+`Schema.add(name, type_name, nullable=false)` accepts validated scalar names:
 
-| IDs   | Arrow types                          | Arx append/get suffix                             |
-| ----- | ------------------------------------ | ------------------------------------------------- |
-| 0–3   | int8, int16, int32, int64            | `i8`, `i16`, `i32`, `i64`                         |
-| 4–7   | uint8, uint16, uint32, uint64        | Preserve/forward; no unsigned Arx scalar accessor |
-| 8–10  | float32, float64, Boolean            | `f32`, `f64`, `bool`                              |
-| 11–12 | UTF-8, large UTF-8                   | `utf8`                                            |
-| 13–14 | date32 (days), date64 (milliseconds) | `date` (`i64` count)                              |
-| 15–18 | timestamp s, ms, us, ns              | `timestamp` (`i64` count)                         |
-| 19–22 | time32 s/ms, time64 us/ns            | `time` (`i64` count)                              |
+| Arrow scalar names                                                | Arx append/get suffix                       |
+| ----------------------------------------------------------------- | ------------------------------------------- |
+| `int8`, `int16`, `int32`, `int64`                                 | `i8`, `i16`, `i32`, `i64`                   |
+| `uint8`, `uint16`, `uint32`, `uint64`                             | Preserve/forward; no unsigned scalar getter |
+| `float32`, `float64`, `bool`                                      | `f32`, `f64`, `bool`                        |
+| `utf8`, `large_utf8` (also `string`, `large_string`)              | `utf8`                                      |
+| `date32[day]`, `date64[ms]`                                       | `date` (`i64` count)                        |
+| `timestamp[s]`, `timestamp[ms]`, `timestamp[us]`, `timestamp[ns]` | `timestamp` (`i64` count)                   |
+| `time32[s]`, `time32[ms]`, `time64[us]`, `time64[ns]`             | `time` (`i64` count)                        |
 
-Types, units, timezones, field nullability and schema/field metadata are
-retained on imported batches, schema snapshots and IPC/C exports. Imported
-supported list/struct layouts can be forwarded intact, but the Arx scalar
-methods do not provide nested traversal or construction. IDs 23/24 are
-inspection results, not primitive arguments to `Schema.add`.
+Numeric native IDs are not arguments to `Schema.add`; complex schemas are
+imported from Arrow or read from Parquet. Types, units, timezones, nullability
+and metadata survive snapshots and IPC/C exports. Scalar builders/getters do not
+provide recursive construction or traversal.
 
 | Class                  | Operations                                                                                                     |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -359,9 +358,8 @@ is not sanitizer-instrumented by this command.
 
 ## CSV streaming and checked conversion
 
-`CSV` in `stdlib.arrow` and Python `irx.record_batch` reuses Arrow C++ streaming
-readers and writers. The old Arx `CSVReader`/`CSVWriter` classes are removed;
-Python generic stream factories remain supported. Both
+`CSV` in `stdlib.csv` and Python `irx.record_batch` reuses Arrow C++ streaming
+readers and writers. Python generic stream factories remain supported. Both
 `cast(batch, dataframe[name:T, ...])` and `cast(frame, RecordBatch)` support
 exact static scalar schemas, including nullable columns. Literal-ellipsis
 `dataframe[...]` preserves runtime schemas with rich types and metadata.
@@ -397,3 +395,19 @@ evolution, fsync durability and cooperating-writer exclusion. Rich recursive
 schemas cross the existing opaque native handles and Arrow C Data boundary. The
 unified `CSV` replaces the removed `CSVReader`/`CSVWriter` classes; see the
 [migration notes](arx/csv.md#migrating-the-split-api).
+
+## Dedicated file-format APIs and table interchange
+
+`stdlib.csv` owns CSV and `stdlib.parquet` owns Parquet. Their paired `read_*` /
+`write_*` functions operate on DataFrames; their unified session classes support
+explicit streaming. Shared Arrow/IPC classes stay here, with no format
+re-exports or DataFrame `.to_*` methods. See the [CSV](arx/csv.md) and
+[Parquet](arx/parquet.md) guides.
+
+The matching `irx.table_io` Python helpers operate on `pyarrow.Table` through
+the native C Stream bridge, not Python CSV/Parquet engines. Whole-file reads
+drain validated batches into a chunked table, preserving empty schemas. Writes
+iterate `TableBatchReader`; neither path uses `CombineChunksToBatch()`. Direct
+checked table casts validate every chunk and retain metadata/buffers. The older
+explicit conversion of a whole table to one RecordBatch may still combine
+chunks; it is not used by these convenience functions.

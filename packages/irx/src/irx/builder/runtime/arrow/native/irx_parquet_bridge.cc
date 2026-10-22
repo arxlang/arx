@@ -2,7 +2,9 @@
 #include "irx_record_batch_internal.h"
 #include "irx_parquet_io.h"
 #include <arrow/util/utf8.h>
+#include <arrow/filesystem/api.h>
 #include <algorithm>
+#include <filesystem>
 #include <string_view>
 namespace {
 int set_err(const std::string &message, int code = IRX_ERR_ARROW) {
@@ -145,5 +147,47 @@ int irx_parquet_options_filter(IrxParquetOptions *o, const char *column,
             return set_err("predicate column must be nonempty UTF-8");
         o->predicates.push_back({column, operation, value, type});
         return IRX_OK;
+    } catch (const std::exception &error) { return set_err(error.what()); }
+}
+
+int irx_rb_parquet_read_table(const char *path, const IrxRbSchema *expected,
+                              const IrxParquetOptions *options, int auto_detect,
+                              irx_arrow_table_handle **out) {
+    GUARD(out); *out = nullptr; GUARD(path); GUARD(options);
+    try {
+        IrxParquetOptions effective = *options;
+        if (auto_detect) {
+            std::string resolved;
+            auto fs = arrow::fs::FileSystemFromUriOrPath(
+                std::string_view(path).find("://") == std::string_view::npos
+                    ? std::filesystem::absolute(path).string() : std::string(path), &resolved);
+            if (!fs.ok()) return set_err(fs.status());
+            auto info = (*fs)->GetFileInfo(resolved);
+            if (!info.ok()) return set_err(info.status());
+            effective.dataset = effective.hive = info->IsDirectory();
+        }
+        IrxRbStreamReader *raw = nullptr;
+        int rc = irx_rb_parquet_reader_open_options(path, expected, &effective, &raw);
+        std::unique_ptr<IrxRbStreamReader, decltype(&irx_rb_stream_reader_close)> reader(raw, irx_rb_stream_reader_close);
+        if (rc != IRX_OK) return rc;
+        return irx_rb_reader_read_table(reader.get(), out);
+    } catch (const std::exception &error) { return set_err(error.what()); }
+}
+int irx_rb_parquet_write_table(const irx_arrow_table_handle *table, const char *path,
+                               const IrxParquetOptions *options, int auto_dataset) {
+    GUARD(table); GUARD(path); GUARD(options);
+    try {
+        IrxParquetOptions effective = *options;
+        if (auto_dataset && !effective.partition_columns.empty()) effective.dataset = effective.hive = true;
+        IrxRbSchema *raw_schema = nullptr;
+        int rc = irx_rb_table_schema(table, &raw_schema);
+        std::unique_ptr<IrxRbSchema, decltype(&irx_rb_schema_release)> schema(raw_schema, irx_rb_schema_release);
+        if (rc != IRX_OK) return rc;
+        IrxRbStreamWriter *raw = nullptr;
+        rc = irx_rb_parquet_writer_open_options(schema.get(), path, &effective, &raw);
+        std::unique_ptr<IrxRbStreamWriter, decltype(&irx_rb_stream_writer_release)> writer(raw, irx_rb_stream_writer_release);
+        if (rc != IRX_OK) return rc;
+        rc = irx_rb_writer_write_table(writer.get(), table);
+        return rc == IRX_OK ? irx_rb_stream_writer_close(writer.get()) : rc;
     } catch (const std::exception &error) { return set_err(error.what()); }
 }

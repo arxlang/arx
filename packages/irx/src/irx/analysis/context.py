@@ -21,6 +21,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.scopes import ScopeStack
 from irx.diagnostics import DiagnosticBag
+from irx.native import TableIOOperation
 from irx.typecheck import typechecked
 
 
@@ -56,6 +57,8 @@ class SemanticContext:
         type: tuple[str, Ellipsis]
       native_bindings:
         type: dict[int, tuple[str, Ellipsis]]
+      native_table_io:
+        type: dict[int, TableIOOperation]
       _symbol_counter:
         type: int
       _method_slot_counter:
@@ -79,6 +82,7 @@ class SemanticContext:
     loop_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
+    native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
 

@@ -10,7 +10,11 @@ import astx
 
 from llvmlite import ir
 
-from irx.analysis.arrow_conversion import ARROW_CONVERSION, ArrowConversion
+from irx.analysis.arrow_conversion import (
+    ARROW_CONVERSION,
+    ArrowConversion,
+    ArrowTableCast,
+)
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import (
     display_type_name,
@@ -62,6 +66,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
             context="cast",
         )
         plan = semantic.extras.get(ARROW_CONVERSION)
+        if isinstance(plan, ArrowTableCast):
+            self.lower_table_cast(node, value, plan)
+            return
         if isinstance(plan, ArrowConversion):
             self.lower_arrow_cast(node, value, plan)
             return
@@ -72,7 +79,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
             and isinstance(target_type, astx.DataFrameType)
         ) or (
             isinstance(source_type, astx.DataFrameType)
-            and isinstance(target_type, astx.ClassType)
+            and isinstance(target_type, (astx.ClassType, astx.DataFrameType))
         ):
             raise_lowering_internal_error(
                 "Arrow cast is missing its conversion plan", node=node
@@ -211,6 +218,55 @@ class SystemVisitorMixin(ClassVisitorMixin):
             name_hint="type_name",
         )
         self.result_stack.append(pointer)
+
+    def lower_table_cast(
+        self, node: astx.Cast, value: ir.Value, plan: ArrowTableCast
+    ) -> None:
+        """
+        title: Check every table chunk while preserving independent ownership.
+        parameters:
+          node:
+            type: astx.Cast
+          value:
+            type: ir.Value
+          plan:
+            type: ArrowTableCast
+        """
+        builder = self._llvm.ir_builder
+        if plan.schema_ipc is None:
+            self.class_operation(node.value, "retain", value)
+            result = value
+        else:
+            data = plan.schema_ipc
+            payload = ir.Constant(
+                ir.ArrayType(ir.IntType(8), len(data)), bytearray(data)
+            )
+            global_value = ir.GlobalVariable(
+                self._llvm.module,
+                payload.type,
+                self._llvm.module.get_unique_name("table_cast_schema"),
+            )
+            global_value.linkage = "internal"
+            global_value.global_constant = True
+            global_value.initializer = payload
+            zero = ir.Constant(ir.IntType(32), 0)
+            pointer = builder.gep(global_value, [zero, zero], inbounds=True)
+            create = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_ipc"
+            )
+            schema = builder.call(
+                create, [pointer, ir.Constant(ir.IntType(64), len(data))]
+            )
+            convert = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_table_cast"
+            )
+            result = builder.call(convert, [value, schema])
+            destroy = self.require_runtime_symbol(
+                "record_batch", "irx_rb_api_schema_destroy"
+            )
+            builder.call(destroy, [schema])
+        self.arrow_temporary(node, result)
+        self.result_stack.append(result)
 
     def lower_arrow_cast(
         self, node: astx.Cast, value: ir.Value, plan: ArrowConversion
