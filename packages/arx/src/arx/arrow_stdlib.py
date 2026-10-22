@@ -21,7 +21,15 @@ def type_bindings() -> dict[str, astx.DataType]:
     """
     return {
         f"Arrow{kind}Handle": astx.OpaqueHandleType(f"IrxRbApi{kind}")
-        for kind in ("Schema", "Batch", "Builder", "Reader", "Writer")
+        for kind in (
+            "Schema",
+            "Batch",
+            "Builder",
+            "Reader",
+            "Writer",
+            "Parquet",
+            "Csv",
+        )
     }
 
 

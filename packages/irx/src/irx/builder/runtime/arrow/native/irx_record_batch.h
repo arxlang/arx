@@ -65,6 +65,15 @@ int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
                           const char *delimiter, int header,
                           IrxRbStreamWriter **out);
 
+/* Additive Parquet factories. Expected schema is an exact assertion or NULL.
+ * Successful handles own references; output slots are NULL on failure. Close
+ * the writer explicitly to observe footer finalization errors. */
+int irx_rb_parquet_reader_open(const char *path, const IrxRbSchema *expected,
+                               int64_t batch_size, IrxRbStreamReader **out);
+int irx_rb_parquet_writer_open(const IrxRbSchema *schema, const char *path,
+                               const char *compression, int64_t row_group_size,
+                               IrxRbStreamWriter **out);
+
 struct irx_arrow_table_handle;
 /* Results own independent references. Neither operation consumes its input. */
 int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,

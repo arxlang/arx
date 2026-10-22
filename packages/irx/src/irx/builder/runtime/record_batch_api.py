@@ -73,3 +73,32 @@ ARROW_API_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_api_batch_import": ("v", ("p", "i64", "i64")),
     "irx_rb_api_reader_import": ("v", ("p", "i64")),
 }
+
+# Unified format facade symbols use the same registered RecordBatch feature.
+ARROW_API_SIGNATURES.update(
+    {
+        "irx_rb_api_parquet_new": ("p", ()),
+        "irx_rb_api_parquet_destroy": ("v", ("p",)),
+        "irx_rb_api_parquet_close": ("v", ("p",)),
+        "irx_rb_api_parquet_next": ("i32", ("p",)),
+        "irx_rb_api_parquet_batch": ("v", ("p", "p")),
+        "irx_rb_api_parquet_schema": ("v", ("p", "p")),
+        "irx_rb_api_parquet_write": ("v", ("p", "p")),
+        "irx_rb_api_parquet_open_read": ("v", ("p", "p", "i64")),
+        "irx_rb_api_parquet_open_read_as": ("v", ("p", "p", "p", "i64")),
+        "irx_rb_api_parquet_open_write": ("v", ("p", "p", "p", "p", "i64")),
+        "irx_rb_api_csv_new": ("p", ()),
+        "irx_rb_api_csv_destroy": ("v", ("p",)),
+        "irx_rb_api_csv_close": ("v", ("p",)),
+        "irx_rb_api_csv_next": ("i32", ("p",)),
+        "irx_rb_api_csv_batch": ("v", ("p", "p")),
+        "irx_rb_api_csv_schema": ("v", ("p", "p")),
+        "irx_rb_api_csv_write": ("v", ("p", "p")),
+        "irx_rb_api_csv_open_read": ("v", ("p", "p", "p", "i32", "i32")),
+        "irx_rb_api_csv_open_read_as": (
+            "v",
+            ("p", "p", "p", "p", "i32", "i32"),
+        ),
+        "irx_rb_api_csv_open_write": ("v", ("p", "p", "p", "p", "i32")),
+    }
+)

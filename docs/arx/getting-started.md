@@ -155,7 +155,8 @@ containers/globals/generator captures are deliberately excluded. See
 
 ## Load tabular data
 
-For CSV, use the native `CSVReader` and `CSVWriter` from `stdlib.arrow`.
+For CSV, use the unified native `CSV` class from `stdlib.arrow`. For Parquet,
+use [`Parquet`](parquet.md) with the same explicit read/write session model.
 [CSV files and DataFrames](csv.md) shows streaming every batch and checked
 conversion into a static numeric/Boolean DataFrame. Unsupported DataFrame types
 can remain in RecordBatches; strings and nulls are not silently discarded.

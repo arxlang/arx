@@ -51,19 +51,33 @@ fn main() -> i32:
 """
 
 
-@pytest.fixture(scope="module")
-def pipeline(tmp_path_factory: pytest.TempPathFactory) -> Path:
+@pytest.fixture(scope="module", params=["legacy", "unified"])
+def pipeline(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Path:
     """
     title: >-
       Compile once through parsing, analysis, LLVM verification and linking.
     parameters:
+      request:
+        type: pytest.FixtureRequest
       tmp_path_factory:
         type: pytest.TempPathFactory
     returns:
       type: Path
     """
     binary = tmp_path_factory.mktemp("csv-pipeline") / "csv"
-    compile_program(PIPELINE, binary)
+    source = PIPELINE
+    if request.param == "unified":
+        source = source.replace("CSVReader, CSVWriter", "CSV")
+        source = source.replace("CSVReader", "CSV").replace("CSVWriter", "CSV")
+        source = source.replace("CSV(schema)", "CSV()")
+        source = source.replace("reader.open_file(", "reader.open_read(")
+        source = source.replace(
+            'writer.open_file("output.csv")',
+            'writer.open_write("output.csv", schema)',
+        )
+    compile_program(source, binary)
     return binary
 
 

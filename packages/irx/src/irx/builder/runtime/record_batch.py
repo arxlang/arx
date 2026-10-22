@@ -23,8 +23,8 @@ from llvmlite import ir
 from irx.builder.runtime.arrowcpp import (
     arrowcpp_compile_flags,
     arrowcpp_include_dirs,
-    arrowcpp_linker_flags,
     arrowcpp_runtime_metadata,
+    parquet_linker_flags,
 )
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
@@ -72,6 +72,8 @@ def _native_source() -> Path:
 # how the ``array`` feature declares its symbols.
 
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "irx_rb_parquet_reader_open": ("i32", ("p", "p", "i64", "p")),
+    "irx_rb_parquet_writer_open": ("i32", ("p", "p", "p", "i64", "p")),
     "irx_rb_csv_reader_open": ("i32", ("p", "p", "p", "i32", "i32", "p")),
     "irx_rb_csv_writer_open": ("i32", ("p", "p", "p", "i32", "p")),
     "irx_rb_batch_to_table": ("i32", ("p", "p", "p")),
@@ -279,6 +281,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
             native_dir / "irx_arrow_runtime.cc",
             native_dir / "irx_arrow_transport.cc",
             native_dir / "irx_record_batch_api.cc",
+            native_dir / "irx_parquet_io.cc",
         )
     )
 
@@ -301,7 +304,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         name="record_batch",
         symbols=symbols,
         artifacts=artifacts,
-        linker_flags=arrowcpp_linker_flags(),
+        linker_flags=parquet_linker_flags(),
         metadata={
             "canonical_name": "record_batch",
             "depends_on": ("array",),
@@ -313,6 +316,7 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
                 "stream_reader": "IrxRbStreamReader",
             },
             **arrowcpp_runtime_metadata(),
+            "parquet_libraries": parquet_linker_flags(),
         },
     )
 
