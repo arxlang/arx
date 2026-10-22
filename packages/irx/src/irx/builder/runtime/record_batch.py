@@ -23,6 +23,7 @@ from llvmlite import ir
 from irx.builder.runtime.arrowcpp import (
     arrowcpp_compile_flags,
     arrowcpp_include_dirs,
+    arrowcpp_linker_flags,
     arrowcpp_runtime_metadata,
     parquet_linker_flags,
 )
@@ -33,7 +34,10 @@ from irx.builder.runtime.features import (
     declare_external_function,
 )
 from irx.builder.runtime.linking import compile_native_artifacts
-from irx.builder.runtime.record_batch_api import ARROW_API_SIGNATURES
+from irx.builder.runtime.record_batch_api import (
+    ARROW_API_SIGNATURES,
+    PARQUET_API_SYMBOLS,
+)
 from irx.record_batch_abi import record_batch_library_path
 from irx.typecheck import typechecked
 
@@ -72,6 +76,14 @@ def _native_source() -> Path:
 # how the ``array`` feature declares its symbols.
 
 _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "irx_rb_parquet_reader_open_options": ("i32", ("p", "p", "p", "p")),
+    "irx_rb_parquet_writer_open_options": ("i32", ("p", "p", "p", "p")),
+    "irx_parquet_options_new": ("p", ()),
+    "irx_parquet_options_release": ("v", ("p",)),
+    "irx_parquet_options_int": ("i32", ("p", "p", "i64")),
+    "irx_parquet_options_text": ("i32", ("p", "p", "p")),
+    "irx_parquet_options_key": ("i32", ("p", "p", "i64")),
+    "irx_parquet_options_filter": ("i32", ("p", "p", "p", "p", "p")),
     "irx_rb_parquet_reader_open": ("i32", ("p", "p", "i64", "p")),
     "irx_rb_parquet_writer_open": ("i32", ("p", "p", "p", "i64", "p")),
     "irx_rb_csv_reader_open": ("i32", ("p", "p", "p", "i32", "i32", "p")),
@@ -182,7 +194,14 @@ _SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_stream_reader_close": ("v", ("p",)),
 }
 
-RECORD_BATCH_SYMBOLS: frozenset[str] = frozenset(_SIGNATURES)
+PARQUET_SYMBOLS: frozenset[str] = frozenset(
+    name
+    for name in _SIGNATURES
+    if name.startswith("irx_rb_parquet_")
+    or name.startswith("irx_parquet_options_")
+    or name in PARQUET_API_SYMBOLS
+)
+RECORD_BATCH_SYMBOLS: frozenset[str] = frozenset(_SIGNATURES) - PARQUET_SYMBOLS
 
 
 @typechecked
@@ -281,7 +300,6 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
             native_dir / "irx_arrow_runtime.cc",
             native_dir / "irx_arrow_transport.cc",
             native_dir / "irx_record_batch_api.cc",
-            native_dir / "irx_parquet_io.cc",
         )
     )
 
@@ -298,13 +316,14 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
     symbols = {
         name: ExternalSymbolSpec(name, _make_declarer(name, ret, args))
         for name, (ret, args) in _SIGNATURES.items()
+        if name in RECORD_BATCH_SYMBOLS
     }
 
     return RuntimeFeature(
         name="record_batch",
         symbols=symbols,
         artifacts=artifacts,
-        linker_flags=parquet_linker_flags(),
+        linker_flags=arrowcpp_linker_flags(),
         metadata={
             "canonical_name": "record_batch",
             "depends_on": ("array",),
@@ -316,8 +335,70 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
                 "stream_reader": "IrxRbStreamReader",
             },
             **arrowcpp_runtime_metadata(),
-            "parquet_libraries": parquet_linker_flags(),
         },
+    )
+
+
+@typechecked
+def build_parquet_runtime_feature() -> RuntimeFeature:
+    """
+    title: Register optional Parquet, Dataset and compute dependencies.
+    returns:
+      type: RuntimeFeature
+    """
+    native_dir = _native_source_dir()
+    artifacts = tuple(
+        NativeArtifact(
+            kind="cxx_source",
+            path=native_dir / name,
+            include_dirs=(native_dir, *arrowcpp_include_dirs()),
+            compile_flags=arrowcpp_compile_flags(),
+        )
+        for name in (
+            "irx_parquet_io.cc",
+            "irx_parquet_bridge.cc",
+            "irx_parquet_api.cc",
+        )
+    )
+    unavailable: str | None = None
+    try:
+        linker_flags = parquet_linker_flags()
+    except RuntimeError as error:
+        # Keep the registered symbol contract available to analysis. Only
+        # activation of Parquet should fail on an Arrow-only installation.
+        unavailable = str(error)
+        linker_flags = ()
+    return RuntimeFeature(
+        name="parquet",
+        symbols={
+            name: ExternalSymbolSpec(name, _make_declarer(name, ret, args))
+            for name, (ret, args) in _SIGNATURES.items()
+            if name in PARQUET_SYMBOLS
+        },
+        artifacts=artifacts,
+        linker_flags=linker_flags,
+        dependencies=("record_batch",),
+        unavailable_reason=unavailable,
+        metadata={"canonical_name": "parquet"},
+    )
+
+
+@typechecked
+def shared_record_batch_runtime_feature() -> RuntimeFeature:
+    """
+    title: >-
+      Build the ctypes library from independently registered native features.
+    returns:
+      type: RuntimeFeature
+    """
+    base = build_record_batch_runtime_feature()
+    parquet = build_parquet_runtime_feature()
+    if parquet.unavailable_reason is not None:
+        raise RuntimeError(parquet.unavailable_reason)
+    return replace(
+        base,
+        artifacts=(*base.artifacts, *parquet.artifacts),
+        linker_flags=parquet.linker_flags,
     )
 
 
@@ -374,7 +455,7 @@ def record_batch_build_fingerprint(cxx_binary: str = "c++") -> str:
     except (OSError, subprocess.SubprocessError) as err:
         compiler_version = f"unavailable: {type(err).__name__}: {err}"
 
-    feature = build_record_batch_runtime_feature()
+    feature = shared_record_batch_runtime_feature()
     build_metadata = {
         "compiler": compiler,
         "compiler_version": compiler_version,
@@ -499,7 +580,7 @@ def build_record_batch_shared_library(
     work_dir.mkdir(parents=True, exist_ok=True)
     fingerprint = record_batch_build_fingerprint(cxx_binary)
 
-    feature = build_record_batch_runtime_feature()
+    feature = shared_record_batch_runtime_feature()
     # Shared objects must be position-independent.
     pic_artifacts = tuple(
         replace(a, compile_flags=(*a.compile_flags, "-fPIC"))

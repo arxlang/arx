@@ -22,6 +22,7 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.builtins.collections.dataframe import (
     DATAFRAME_SCHEMA_EXTRA,
+    dataframe_record_batch_type_id,
     schema_from_type,
 )
 from irx.diagnostics import DiagnosticCodes
@@ -45,13 +46,13 @@ class ArrowConversion:
       handle_index:
         type: int
       columns:
-        type: tuple[tuple[str, int], Ellipsis]
+        type: tuple[tuple[str, int, bool], Ellipsis]
     """
 
     to_dataframe: bool
     class_: SemanticClass
     handle_index: int
-    columns: tuple[tuple[str, int], ...]
+    columns: tuple[tuple[str, int, bool], ...]
 
 
 @private
@@ -205,15 +206,6 @@ def resolve_arrow_cast(
         )
         return True
     assert initialization is not None
-    supported: dict[type[astx.DataType], int] = {
-        astx.Int8: 0,
-        astx.Int16: 1,
-        astx.Int32: 2,
-        astx.Int64: 3,
-        astx.Float32: 8,
-        astx.Float64: 9,
-        astx.Boolean: 10,
-    }
     function = analyzer.context.current_function
     if (
         function is None
@@ -245,11 +237,11 @@ def resolve_arrow_cast(
         return True
     columns = dataframe.columns
     if not columns or any(
-        c.nullable or type(c.type_) not in supported for c in columns
+        dataframe_record_batch_type_id(c.type_) is None for c in columns
     ):
         analyzer.context.diagnostics.add(
             "DataFrame conversion requires a static nonempty schema of "
-            "non-null signed integers, f32, f64 or bool; "
+            "numeric, bool, string or temporal columns; "
             "keep other data as a RecordBatch",
             node=node,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -259,7 +251,14 @@ def resolve_arrow_cast(
         to_dataframe,
         class_,
         fields[0].storage_index,
-        tuple((c.name, supported[type(c.type_)]) for c in columns),
+        tuple(
+            (
+                c.name,
+                int(dataframe_record_batch_type_id(c.type_) or 0),
+                c.nullable,
+            )
+            for c in columns
+        ),
     )
     analyzer._set_type(node, target)
     if to_dataframe:

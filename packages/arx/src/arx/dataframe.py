@@ -75,14 +75,10 @@ def dataframe_type(
         if column.name in seen:
             raise ValueError(f"duplicate dataframe column '{column.name}'")
         seen.add(column.name)
-        if column.nullable:
-            raise ValueError(
-                "nullable dataframe columns are not supported yet"
-            )
         if not dataframe_column_type_is_supported(column.type_):
             raise ValueError(
-                "dataframe columns currently support only fixed-width "
-                "numeric and bool types"
+                "dataframe columns support numeric, bool, string and "
+                "date/time/timestamp types"
             )
     return astx.DataFrameType(columns)
 
@@ -107,8 +103,8 @@ def series_type(element_type: astx.DataType) -> astx.SeriesType:
     """
     if not dataframe_column_type_is_supported(element_type):
         raise ValueError(
-            "series element types currently support only fixed-width "
-            "numeric and bool types"
+            "series element types support numeric, bool, string and "
+            "date/time/timestamp types"
         )
     return astx.SeriesType(element_type)
 

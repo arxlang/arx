@@ -290,7 +290,9 @@ def test_unsupported_import_releases_adopted_buffers(
       native:
         type: ctypes.CDLL
     """
-    batch = pa.record_batch([pa.array([b"bytes"])], names=["binary"])
+    batch = pa.record_batch(
+        [pa.array([1], type=pa.duration("us"))], names=["duration"]
+    )
     array = ffi.new("struct ArrowArray *")
     schema = ffi.new("struct ArrowSchema *")
     batch._export_to_c(address(array), address(schema))

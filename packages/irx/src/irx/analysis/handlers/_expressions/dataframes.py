@@ -31,6 +31,7 @@ from irx.builtins.collections.dataframe import (
     SERIES_NULLABLE_EXTRA,
     DataFrameSchema,
     dataframe_column_type_is_supported,
+    dataframe_record_batch_type_id,
     schema_from_type,
 )
 from irx.diagnostics import DiagnosticCodes
@@ -175,10 +176,16 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             for column in schema.columns:
-                if not dataframe_column_type_is_supported(column.type_):
+                if not dataframe_column_type_is_supported(
+                    column.type_
+                ) or isinstance(
+                    column.type_,
+                    (astx.Date, astx.Time, astx.Timestamp, astx.DateTime),
+                ):
                     self.context.diagnostics.add(
                         "dataframe columns currently support only "
-                        "fixed-width numeric and bool types",
+                        "numeric, bool and string literal values; temporal "
+                        "columns require RecordBatch conversions",
                         node=node,
                         code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                     )
@@ -209,6 +216,10 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             for value in literal_column.values:
                 self.visit(value)
                 if declared_column is not None:
+                    if declared_column.nullable and isinstance(
+                        value, astx.LiteralNone
+                    ):
+                        continue
                     validate_assignment(
                         self.context.diagnostics,
                         target_name=(
@@ -219,6 +230,10 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                         node=value,
                     )
 
+        if schema is not None:
+            self._semantic(node).extras["dataframe_storage_ids"] = tuple(
+                dataframe_record_batch_type_id(c.type_) for c in schema.columns
+            )
         self._set_dataframe_schema(node, schema)
         self._set_type(node, node.type_)
         function = self.context.current_function

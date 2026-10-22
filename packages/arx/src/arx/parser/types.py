@@ -36,6 +36,10 @@ _BUILTIN_TYPE_MAP: dict[str, astx.DataType] = {
     "i16": astx.Int16(),
     "i32": astx.Int32(),
     "i64": astx.Int64(),
+    "u8": astx.UInt8(),
+    "u16": astx.UInt16(),
+    "u32": astx.UInt32(),
+    "u64": astx.UInt64(),
     "int8": astx.Int8(),
     "int16": astx.Int16(),
     "int32": astx.Int32(),
@@ -386,11 +390,31 @@ class TypeParserMixin(ParserMixinBase):
                         self._consume_operator(":")
                         column_type = self.parse_type(
                             allow_template_vars=allow_template_vars,
-                            allow_union=allow_union,
+                            allow_union=True,
                             type_context=TypeUseContext.NESTED,
                         )
+                        nullable = False
+                        if isinstance(column_type, astx.UnionType):
+                            nullable_members = column_type.members
+                            non_null_types = [
+                                t
+                                for t in nullable_members
+                                if not isinstance(t, astx.NoneType)
+                            ]
+                            if (
+                                len(nullable_members) != 2
+                                or len(non_null_types) != 1
+                            ):
+                                raise ParserException(
+                                    "DataFrame nullability requires "
+                                    "type | none."
+                                )
+                            column_type = non_null_types[0]
+                            nullable = True
                         columns.append(
-                            astx.DataFrameColumn(column_name, column_type)
+                            astx.DataFrameColumn(
+                                column_name, column_type, nullable=nullable
+                            )
                         )
                         if not self._is_operator(","):
                             break

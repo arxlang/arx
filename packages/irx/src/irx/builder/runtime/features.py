@@ -53,6 +53,10 @@ class RuntimeFeature:
         type: tuple[str, Ellipsis]
       metadata:
         type: Mapping[str, object]
+      dependencies:
+        type: tuple[str, Ellipsis]
+      unavailable_reason:
+        type: str | None
     """
 
     name: str
@@ -60,6 +64,8 @@ class RuntimeFeature:
     artifacts: tuple[NativeArtifact, ...] = ()
     linker_flags: tuple[str, ...] = ()
     metadata: Mapping[str, object] = field(default_factory=dict)
+    dependencies: tuple[str, ...] = ()
+    unavailable_reason: str | None = None
 
 
 @typechecked

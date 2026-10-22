@@ -317,3 +317,28 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
     assert "record_batch" in (
         builder.translator.runtime_features.active_feature_names()
     )
+
+
+def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
+    """
+    title: >-
+      Nullable literals produce verified LLVM without a Parquet dependency.
+    """
+    ArxIO.string_to_buffer(
+        "type Frame = dataframe[id:i64 | none, label:str | none]\n"
+        "fn main() -> i32:\n"
+        '  var frame: Frame = dataframe({id: [1, none], label: ["a", none]})\n'
+        "  return cast(frame.nrows(), i32)\n"
+    )
+    module = Parser().parse(Lexer().lex(), "nullable_translate")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("nullable_translate", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(text).verify()
+    assert "irx_rb_api_append_i64" in text
+    assert "irx_rb_api_append_null" in text
+    assert "irx_rb_api_append_utf8" in text
+    assert "parquet" not in (
+        builder.translator.runtime_features.active_feature_names()
+    )

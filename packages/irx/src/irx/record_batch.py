@@ -14,11 +14,16 @@ from functools import lru_cache
 from types import TracebackType
 from typing import Any, Literal, Optional, TypeVar
 
+import pyarrow as pa
+
 from public import private, public
 
+from irx.parquet_options import ParquetOptions, ParquetPredicate
 from irx.record_batch_abi import (
     IRX_RECORD_BATCH_LIBRARY_ENV,
     RECORD_BATCH_ABI_VERSION,
+    ArrowArray,
+    ArrowSchema,
     record_batch_library_path,
 )
 from irx.typecheck import skip_unused, typechecked
@@ -30,6 +35,8 @@ __all__ = [
     "IRX_RECORD_BATCH_LIBRARY_ENV",
     "RECORD_BATCH_ABI_VERSION",
     "IrxColumnType",
+    "ParquetOptions",
+    "ParquetPredicate",
     "RecordBatch",
     "RecordBatchBuilder",
     "RecordBatchSchema",
@@ -41,6 +48,8 @@ __all__ = [
 ]
 
 CSV_MAX_BLOCK_SIZE = (1 << 31) - 1
+PARQUET_BATCH_SIZE = 65536
+PARQUET_ROW_GROUP_SIZE = 1048576
 
 # Load the native shared library
 
@@ -514,6 +523,17 @@ class IrxColumnType(IntEnum):
     TIME64_NS = 22
     LIST = 23
     STRUCT = 24
+    BINARY = 25
+    LARGE_BINARY = 26
+    FIXED_BINARY = 27
+    DECIMAL128 = 28
+    DECIMAL256 = 29
+    LARGE_LIST = 30
+    FIXED_LIST = 31
+    MAP = 32
+    DICTIONARY = 33
+    EXTENSION = 34
+    NULL = 35
 
 
 # Fixed-width element types supported inside a list column, mapped to the
@@ -792,7 +812,7 @@ class RecordBatchSchema:
 
     def clone(self) -> "RecordBatchSchema":
         """
-        title: Clone a flat schema including metadata and temporal parameters.
+        title: Clone a recursive schema including metadata and type parameters.
         returns:
           type: RecordBatchSchema
         """
@@ -812,6 +832,48 @@ class RecordBatchSchema:
         """
         self.release()
 
+    @classmethod
+    def from_arrow(cls, schema: pa.Schema) -> RecordBatchSchema:
+        """
+        title: Import a recursive PyArrow schema through the Arrow C Data ABI.
+        parameters:
+          schema:
+            type: pa.Schema
+        returns:
+          type: RecordBatchSchema
+        """
+        for field in schema:
+            validate_c_data_field(field)
+        lib = c_data_library()
+        exported = ArrowSchema()
+        address = ctypes.addressof(exported)
+        handle = ctypes.c_void_p()
+        try:
+            schema._export_to_c(address)
+            _check(
+                lib.irx_rb_schema_import(address, ctypes.byref(handle)), lib
+            )
+            return clone_schema(handle, lib)
+        finally:
+            lib.irx_rb_c_schema_release(address)
+            if handle.value:
+                lib.irx_rb_schema_release(handle)
+
+    def to_arrow(self) -> pa.Schema:
+        """
+        title: Export an independently owned recursive PyArrow schema.
+        returns:
+          type: pa.Schema
+        """
+        lib = c_data_library()
+        exported = ArrowSchema()
+        address = ctypes.addressof(exported)
+        try:
+            _check(lib.irx_rb_schema_export(self._raw(), address), lib)
+            return pa.Schema._import_from_c(address)
+        finally:
+            lib.irx_rb_c_schema_release(address)
+
     def _raw(self) -> ctypes.c_void_p:
         """
         title: Return the underlying native handle.
@@ -825,11 +887,68 @@ class RecordBatchSchema:
 
 @private
 @typechecked
+def validate_c_data_field(field: pa.Field) -> None:
+    """
+    title: Reject names and timezones that C Data would silently truncate.
+    parameters:
+      field:
+        type: pa.Field
+    """
+    if "\0" in field.name:
+        raise ValueError(
+            f"Field {field.name!r} contains NUL and cannot cross Arrow C Data"
+        )
+    data_type = field.type
+    if (
+        isinstance(data_type, pa.TimestampType)
+        and data_type.tz is not None
+        and "\0" in data_type.tz
+    ):
+        raise ValueError(
+            f"Field {field.name!r} has a NUL timezone that cannot cross C Data"
+        )
+    if isinstance(data_type, pa.DictionaryType):
+        validate_c_data_field(field.with_type(data_type.value_type))
+    if isinstance(data_type, pa.BaseExtensionType):
+        validate_c_data_field(field.with_type(data_type.storage_type))
+    for index in range(data_type.num_fields):
+        validate_c_data_field(data_type.field(index))
+
+
+@private
+@typechecked
+def c_data_library() -> ctypes.CDLL:
+    """
+    title: Bind additive Arrow C Data interoperability symbols lazily.
+    returns:
+      type: ctypes.CDLL
+    """
+    lib = _get_lib()
+    pointer = ctypes.c_void_p
+    for name, arguments in {
+        "schema_import": [pointer, ctypes.POINTER(pointer)],
+        "schema_export": [pointer, pointer],
+        "batch_import": [pointer, pointer, ctypes.POINTER(pointer)],
+        "batch_export": [pointer, pointer, pointer],
+    }.items():
+        function = getattr(lib, "irx_rb_" + name)
+        function.restype = ctypes.c_int
+        function.argtypes = arguments
+    for name in ("array", "schema"):
+        function = getattr(lib, "irx_rb_c_" + name + "_release")
+        function.restype = None
+        function.argtypes = [pointer]
+    return lib
+
+
+@private
+@typechecked
 def clone_schema(
     handle: ctypes.c_void_p, lib: ctypes.CDLL
 ) -> RecordBatchSchema:
     """
-    title: Adopt an owned flat schema clone without reconstructing its fields.
+    title: >-
+      Adopt an owned schema clone without reconstructing its recursive fields.
     parameters:
       handle:
         type: ctypes.c_void_p
@@ -876,12 +995,6 @@ def clone_schema(
                 lib,
             )
             column_type = IrxColumnType(kind.value)
-            if column_type in (IrxColumnType.LIST, IrxColumnType.STRUCT):
-                raise ValueError(
-                    "Python schema snapshots support flat fields only: "
-                    f"column {(name.value or b'').decode()!r} "
-                    f"has type {column_type.name}"
-                )
             types.append(column_type)
         result = object.__new__(RecordBatchSchema)
         result._handle = result_handle
@@ -1367,6 +1480,62 @@ class RecordBatch:
         self._handle = handle
         self._lib = lib
         self._released = False
+
+    @classmethod
+    def from_arrow(cls, batch: pa.RecordBatch) -> RecordBatch:
+        """
+        title: Import a PyArrow batch, retaining independent native buffers.
+        parameters:
+          batch:
+            type: pa.RecordBatch
+        returns:
+          type: RecordBatch
+        """
+        for field in batch.schema:
+            validate_c_data_field(field)
+        lib = c_data_library()
+        array = ArrowArray()
+        schema = ArrowSchema()
+        array_address = ctypes.addressof(array)
+        schema_address = ctypes.addressof(schema)
+        handle = ctypes.c_void_p()
+        try:
+            batch._export_to_c(array_address, schema_address)
+            _check(
+                lib.irx_rb_batch_import(
+                    array_address, schema_address, ctypes.byref(handle)
+                ),
+                lib,
+            )
+            return cls(handle, lib)
+        finally:
+            lib.irx_rb_c_array_release(array_address)
+            lib.irx_rb_c_schema_release(schema_address)
+
+    def to_arrow(self) -> pa.RecordBatch:
+        """
+        title: Export independent PyArrow buffers, including nested values.
+        returns:
+          type: pa.RecordBatch
+        """
+        if self._released:
+            raise RuntimeError("RecordBatch is released")
+        lib = c_data_library()
+        array = ArrowArray()
+        schema = ArrowSchema()
+        array_address = ctypes.addressof(array)
+        schema_address = ctypes.addressof(schema)
+        try:
+            _check(
+                lib.irx_rb_batch_export(
+                    self._handle, array_address, schema_address
+                ),
+                lib,
+            )
+            return pa.RecordBatch._import_from_c(array_address, schema_address)
+        finally:
+            lib.irx_rb_c_array_release(array_address)
+            lib.irx_rb_c_schema_release(schema_address)
 
     @property
     def num_rows(self) -> int:
@@ -1896,6 +2065,7 @@ class RecordBatchStreamWriter:
         *,
         compression: str = "snappy",
         row_group_size: int = 1048576,
+        options: ParquetOptions | None = None,
     ) -> "RecordBatchStreamWriter":
         """
         title: Create Parquet output with buffered row groups and exact types.
@@ -1910,27 +2080,69 @@ class RecordBatchStreamWriter:
             type: str
           row_group_size:
             type: int
+          options:
+            type: ParquetOptions | None
         returns:
           type: RecordBatchStreamWriter
         """
         path_bytes = parquet_path(path)
         parquet_size(row_group_size, "row_group_size")
-        if compression not in ("snappy", "uncompressed", "zstd"):
+        if compression not in (
+            "snappy",
+            "uncompressed",
+            "zstd",
+            "gzip",
+            "brotli",
+            "lz4",
+        ):
             raise ValueError(
-                "Parquet compression must be snappy, uncompressed or zstd"
+                "Unsupported Parquet compression; use snappy, uncompressed, "
+                "zstd, gzip, brotli or lz4"
             )
         lib = parquet_library()
         handle = ctypes.c_void_p()
-        _check(
-            lib.irx_rb_parquet_writer_open(
-                schema._raw(),
-                path_bytes,
-                compression.encode("ascii"),
-                row_group_size,
-                ctypes.byref(handle),
-            ),
-            lib,
-        )
+        if options is None:
+            _check(
+                lib.irx_rb_parquet_writer_open(
+                    schema._raw(),
+                    path_bytes,
+                    compression.encode(),
+                    row_group_size,
+                    ctypes.byref(handle),
+                ),
+                lib,
+            )
+        else:
+            if (
+                compression != "snappy"
+                or row_group_size != PARQUET_ROW_GROUP_SIZE
+            ):
+                raise ValueError(
+                    "Set writer settings in options, not both places"
+                )
+            try:
+                function = lib.irx_rb_parquet_writer_open_options
+            except AttributeError as error:
+                raise RuntimeError(
+                    "Native library lacks Parquet options; rebuild it"
+                ) from error
+            function.restype = ctypes.c_int
+            function.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_char_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_void_p),
+            ]
+            with options.native(lib) as native_options:
+                _check(
+                    function(
+                        schema._raw(),
+                        path_bytes,
+                        native_options,
+                        ctypes.byref(handle),
+                    ),
+                    lib,
+                )
         return cls(handle, lib)
 
     @classmethod
@@ -2092,16 +2304,26 @@ class RecordBatchStreamWriter:
         """
         return self
 
-    def __exit__(self, *_exc: object) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         """
-        title: Close and release the writer from a context manager.
+        title: Finalize successful contexts and abandon exceptional writes.
         parameters:
-          _exc:
-            type: object
-            variadic: positional
+          exc_type:
+            type: type[BaseException] | None
+          exc_value:
+            type: BaseException | None
+          traceback:
+            type: TracebackType | None
         """
+        skip_unused(exc_value, traceback)
         try:
-            self.close()
+            if exc_type is None:
+                self.close()
         finally:
             self.release()
 
@@ -2143,9 +2365,11 @@ class RecordBatchStreamReader:
         *,
         schema: RecordBatchSchema | None = None,
         batch_size: int = 65536,
+        options: ParquetOptions | None = None,
     ) -> "RecordBatchStreamReader":
         """
-        title: Stream all Parquet row groups, optionally asserting the schema.
+        title: >-
+          Stream configured Parquet batches, optionally asserting the schema.
         parameters:
           path:
             type: str | os.PathLike[str]
@@ -2153,6 +2377,8 @@ class RecordBatchStreamReader:
             type: RecordBatchSchema | None
           batch_size:
             type: int
+          options:
+            type: ParquetOptions | None
         returns:
           type: RecordBatchStreamReader
         """
@@ -2160,20 +2386,47 @@ class RecordBatchStreamReader:
         parquet_size(batch_size, "batch_size")
         lib = parquet_library()
         handle = ctypes.c_void_p()
-        _check(
-            lib.irx_rb_parquet_reader_open(
-                path_bytes,
-                schema._raw() if schema is not None else None,
-                batch_size,
-                ctypes.byref(handle),
-            ),
-            lib,
-        )
+        if options is None:
+            _check(
+                lib.irx_rb_parquet_reader_open(
+                    path_bytes,
+                    schema._raw() if schema is not None else None,
+                    batch_size,
+                    ctypes.byref(handle),
+                ),
+                lib,
+            )
+        else:
+            if batch_size != PARQUET_BATCH_SIZE:
+                raise ValueError("Set batch_size in options, not both places")
+            try:
+                function = lib.irx_rb_parquet_reader_open_options
+            except AttributeError as error:
+                raise RuntimeError(
+                    "Native library lacks Parquet options; rebuild it"
+                ) from error
+            function.restype = ctypes.c_int
+            function.argtypes = [
+                ctypes.c_char_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_void_p),
+            ]
+            with options.native(lib) as native_options:
+                _check(
+                    function(
+                        path_bytes,
+                        schema._raw() if schema is not None else None,
+                        native_options,
+                        ctypes.byref(handle),
+                    ),
+                    lib,
+                )
         return cls(handle, lib)
 
     def schema(self) -> RecordBatchSchema:
         """
-        title: Return an independent flat schema snapshot before or after EOF.
+        title: Return an independent schema snapshot before or after EOF.
         returns:
           type: RecordBatchSchema
         """
@@ -2416,7 +2669,7 @@ class FileSession:
 
     def schema(self) -> RecordBatchSchema:
         """
-        title: Return an owned flat schema snapshot in either open mode.
+        title: Return an owned schema snapshot in either open mode.
         returns:
           type: RecordBatchSchema
         """
@@ -2525,7 +2778,7 @@ class FileSession:
 @typechecked
 class Parquet(FileSession):
     """
-    title: A local Parquet file with explicit read or write sessions.
+    title: A Parquet file or dataset with explicit read or write sessions.
     summary: >-
       Flat supported schemas only; no implicit temporal coercion. Close
       explicitly to check footer errors. Output is partial on failure.
@@ -2548,6 +2801,7 @@ class Parquet(FileSession):
         *,
         schema: RecordBatchSchema | None = None,
         batch_size: int = 65536,
+        options: ParquetOptions | None = None,
     ) -> None:
         """
         title: >-
@@ -2559,10 +2813,12 @@ class Parquet(FileSession):
             type: RecordBatchSchema | None
           batch_size:
             type: int
+          options:
+            type: ParquetOptions | None
         """
         self.require("closed", "open_read")
         self.reader = RecordBatchStreamReader.open_parquet(
-            path, schema=schema, batch_size=batch_size
+            path, schema=schema, batch_size=batch_size, options=options
         )
         self.mode = "read"
 
@@ -2573,6 +2829,7 @@ class Parquet(FileSession):
         *,
         compression: str = "snappy",
         row_group_size: int = 1048576,
+        options: ParquetOptions | None = None,
     ) -> None:
         """
         title: Open a writer after validation, retaining an independent schema.
@@ -2585,6 +2842,8 @@ class Parquet(FileSession):
             type: str
           row_group_size:
             type: int
+          options:
+            type: ParquetOptions | None
         """
         self.require("closed", "open_write")
         snapshot = schema.clone()
@@ -2594,6 +2853,7 @@ class Parquet(FileSession):
                 path,
                 compression=compression,
                 row_group_size=row_group_size,
+                options=options,
             )
         except BaseException:
             snapshot.release()

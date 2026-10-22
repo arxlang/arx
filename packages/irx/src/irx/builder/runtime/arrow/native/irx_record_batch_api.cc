@@ -1,6 +1,6 @@
 // Copyright IRx contributors.
 // Checked value-returning facade for languages without C out-parameters.
-#include "irx_record_batch_api.h"
+#include "irx_record_batch_api_internal.h"
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -476,8 +476,14 @@ struct FileSession {
         }
     }
     void check(int status) {
-        if (status < 0) mode = FileMode::Failed;
-        checked(status);
+        if (status >= 0) return;
+        std::string message = irx_record_batch_errmsg();
+        mode = FileMode::Failed;
+        reader.current.reset();
+        reader.reset();
+        writer.reset();
+        writer.schema.reset();
+        fail(message.c_str());
     }
     int32_t next() {
         require(FileMode::Read, "next");
@@ -548,40 +554,6 @@ void irx_rb_api_parquet_write(IrxRbApiParquet *box, IrxRbApiBatch *batch) {
     try { box->write(batch); } catch (const std::exception &error) { fail(error.what()); }
 }
 
-void irx_rb_api_parquet_open_read(IrxRbApiParquet *box, const char *path, int64_t batch_size) {
-    try {
-        box->require(FileMode::Closed, "open_read");
-        IrxRbStreamReader *reader = nullptr;
-        checked(irx_rb_parquet_reader_open(path, nullptr, batch_size, &reader));
-        box->reader.reset(reader);
-        box->mode = FileMode::Read;
-    } catch (const std::exception &error) { fail(error.what()); }
-}
-
-void irx_rb_api_parquet_open_read_as(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema, int64_t batch_size) {
-    try {
-        box->require(FileMode::Closed, "open_read_as");
-        IrxRbStreamReader *reader = nullptr;
-        checked(irx_rb_parquet_reader_open(path, schema->get(), batch_size, &reader));
-        box->reader.reset(reader);
-        box->mode = FileMode::Read;
-    } catch (const std::exception &error) { fail(error.what()); }
-}
-
-void irx_rb_api_parquet_open_write(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema, const char *compression, int64_t row_group_size) {
-    try {
-        box->require(FileMode::Closed, "open_write");
-        Box<IrxRbSchema, irx_rb_schema_release> copy;
-        checked(irx_rb_schema_clone(schema->get(), &copy.value));
-        IrxRbStreamWriter *writer = nullptr;
-        checked(irx_rb_parquet_writer_open(copy.get(), path, compression, row_group_size, &writer));
-        box->writer.reset(writer);
-        box->writer.schema.reset(copy.value);
-        copy.value = nullptr;
-        box->mode = FileMode::Write;
-    } catch (const std::exception &error) { fail(error.what()); }
-}
-
 IrxRbApiCsv *irx_rb_api_csv_new(void) {
     try { return new IrxRbApiCsv(); } catch (const std::exception &error) { fail(error.what()); }
 }
@@ -642,4 +614,71 @@ void irx_rb_api_csv_open_write(IrxRbApiCsv *box, const char *path, IrxRbApiSchem
         copy.value = nullptr;
         box->mode = FileMode::Write;
     } catch (const std::exception &error) { fail(error.what()); }
+}
+
+void irx_rb_api_append_u8(IrxRbApiBuilder *box, int32_t col, uint8_t value) {
+    checked(irx_rb_builder_append_uint8(box->get(), col, value));
+}
+uint8_t irx_rb_api_get_u8(IrxRbApiBatch *box, int32_t col, int64_t row) {
+    require_value(box, col, row);
+    uint8_t result;
+    checked(irx_rb_batch_get_uint8(box->get(), col, row, &result));
+    return result;
+}
+
+void irx_rb_api_append_u16(IrxRbApiBuilder *box, int32_t col, uint16_t value) {
+    checked(irx_rb_builder_append_uint16(box->get(), col, value));
+}
+uint16_t irx_rb_api_get_u16(IrxRbApiBatch *box, int32_t col, int64_t row) {
+    require_value(box, col, row);
+    uint16_t result;
+    checked(irx_rb_batch_get_uint16(box->get(), col, row, &result));
+    return result;
+}
+
+void irx_rb_api_append_u32(IrxRbApiBuilder *box, int32_t col, uint32_t value) {
+    checked(irx_rb_builder_append_uint32(box->get(), col, value));
+}
+uint32_t irx_rb_api_get_u32(IrxRbApiBatch *box, int32_t col, int64_t row) {
+    require_value(box, col, row);
+    uint32_t result;
+    checked(irx_rb_batch_get_uint32(box->get(), col, row, &result));
+    return result;
+}
+
+void irx_rb_api_append_u64(IrxRbApiBuilder *box, int32_t col, uint64_t value) {
+    checked(irx_rb_builder_append_uint64(box->get(), col, value));
+}
+uint64_t irx_rb_api_get_u64(IrxRbApiBatch *box, int32_t col, int64_t row) {
+    require_value(box, col, row);
+    uint64_t result;
+    checked(irx_rb_batch_get_uint64(box->get(), col, row, &result));
+    return result;
+}
+
+namespace irx {
+void api_open_read(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema,
+                   const IrxParquetOptions *options, ReaderFactory factory) {
+    try {
+        box->require(FileMode::Closed, "open_read");
+        IrxRbStreamReader *reader = nullptr;
+        checked(factory(path, schema ? schema->get() : nullptr, options, &reader));
+        box->reader.reset(reader);
+        box->mode = FileMode::Read;
+    } catch (const std::exception &error) { fail(error.what()); }
+}
+void api_open_write(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema,
+                    const IrxParquetOptions *options, WriterFactory factory) {
+    try {
+        box->require(FileMode::Closed, "open_write");
+        Box<IrxRbSchema, irx_rb_schema_release> copy;
+        checked(irx_rb_schema_clone(schema->get(), &copy.value));
+        IrxRbStreamWriter *writer = nullptr;
+        checked(factory(copy.get(), path, options, &writer));
+        box->writer.reset(writer);
+        box->writer.schema.reset(copy.value);
+        copy.value = nullptr;
+        box->mode = FileMode::Write;
+    } catch (const std::exception &error) { fail(error.what()); }
+}
 }

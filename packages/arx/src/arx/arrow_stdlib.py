@@ -8,6 +8,7 @@ summary: >-
 import astx
 
 from irx.analysis.module_interfaces import ParsedModule
+from irx.builder.runtime.record_batch_api import PARQUET_API_SYMBOLS
 from irx.native import NativeBinding
 
 MODULE_NAME = "stdlib.arrow"
@@ -28,6 +29,7 @@ def type_bindings() -> dict[str, astx.DataType]:
             "Reader",
             "Writer",
             "Parquet",
+            "Options",
             "Csv",
         )
     }
@@ -52,7 +54,10 @@ def prepare_module(module: astx.Module, origin: str) -> ParsedModule:
             continue
         if isinstance(node.return_type, astx.String):
             setattr(node, "ffi_return_ownership", "owned")
-        bindings.append(NativeBinding(node, ("record_batch",)))
+        feature = (
+            "parquet" if node.name in PARQUET_API_SYMBOLS else "record_batch"
+        )
+        bindings.append(NativeBinding(node, (feature,)))
     return ParsedModule(
         MODULE_NAME,
         module,

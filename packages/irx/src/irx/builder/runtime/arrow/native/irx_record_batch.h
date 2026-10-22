@@ -46,6 +46,17 @@ typedef enum IrxColumnType {
     IRX_COL_TIME64_NS    = 22,
     IRX_COL_LIST         = 23,
     IRX_COL_STRUCT       = 24,
+    IRX_COL_BINARY       = 25,
+    IRX_COL_LARGE_BINARY = 26,
+    IRX_COL_FIXED_BINARY = 27,
+    IRX_COL_DECIMAL128   = 28,
+    IRX_COL_DECIMAL256   = 29,
+    IRX_COL_LARGE_LIST   = 30,
+    IRX_COL_FIXED_LIST   = 31,
+    IRX_COL_MAP          = 32,
+    IRX_COL_DICTIONARY   = 33,
+    IRX_COL_EXTENSION    = 34,
+    IRX_COL_NULL         = 35,
 } IrxColumnType;
 
 typedef struct IrxRbType_         IrxRbType;
@@ -54,6 +65,21 @@ typedef struct IrxRbBuilder_      IrxRbBuilder;
 typedef struct IrxRbBatch_        IrxRbBatch;
 typedef struct IrxRbStreamWriter_ IrxRbStreamWriter;
 typedef struct IrxRbStreamReader_ IrxRbStreamReader;
+
+/* Options are independent owners, copied at open; setters validate before mutation.
+ * Encryption keys are raw 16/24/32-byte AES keys, never textual diagnostics. */
+typedef struct IrxParquetOptions IrxParquetOptions;
+IrxParquetOptions *irx_parquet_options_new(void);
+void irx_parquet_options_release(IrxParquetOptions *);
+int irx_parquet_options_int(IrxParquetOptions *, const char *name, int64_t value);
+int irx_parquet_options_text(IrxParquetOptions *, const char *name, const char *value);
+int irx_parquet_options_key(IrxParquetOptions *, const uint8_t *, int64_t size);
+int irx_parquet_options_filter(IrxParquetOptions *, const char *column,
+    const char *operation, const char *value, const char *type);
+int irx_rb_parquet_reader_open_options(const char *, const IrxRbSchema *,
+    const IrxParquetOptions *, IrxRbStreamReader **);
+int irx_rb_parquet_writer_open_options(const IrxRbSchema *, const char *,
+    const IrxParquetOptions *, IrxRbStreamWriter **);
 
 /* CSV uses the same owned readers/writers as IPC. A null read schema enables
  * first-block inference. Outputs are null on failure; schema is borrowed only

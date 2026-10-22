@@ -63,6 +63,12 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_record_batch_api.h",
     "irx/builder/runtime/arrow/native/irx_batch_writer.h",
     "irx/builder/runtime/arrow/native/irx_parquet_io.h",
+    "irx/builder/runtime/arrow/native/irx_parquet_options.h",
+    "irx/builder/runtime/arrow/native/irx_parquet_bridge.cc",
+    "irx/builder/runtime/arrow/native/irx_parquet_api.cc",
+    "irx/builder/runtime/arrow/native/irx_record_batch_internal.h",
+    "irx/builder/runtime/arrow/native/irx_record_batch_api_internal.h",
+    "irx/parquet_options.py",
     "irx/builder/runtime/arrow/native/irx_parquet_io.cc",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
@@ -269,6 +275,9 @@ from arxpy import Compiler
 from irx.record_batch import (
     CSV,
     Parquet,
+    ParquetOptions,
+    ParquetPredicate,
+    RecordBatch,
     IrxColumnType,
     RecordBatchBuilder,
     RecordBatchSchema,
@@ -346,6 +355,27 @@ batch.release()
 builder.release()
 writer.release()
 schema.release()
+rich = pa.record_batch(
+    [pa.array([[b"a", None], None], type=pa.list_(pa.binary()))],
+    names=["items"],
+)
+rich_schema = RecordBatchSchema.from_arrow(rich.schema)
+rich_batch = RecordBatch.from_arrow(rich)
+with Parquet() as target:
+    target.open_write(root / "rich.parquet", rich_schema,
+                      options=ParquetOptions(atomic=True))
+    target.write_batch(rich_batch)
+rich_batch.release()
+rich_schema.release()
+with Parquet() as source:
+    source.open_read(root / "rich.parquet", options=ParquetOptions(
+        columns=("items",),
+        predicates=(ParquetPredicate("items", "is_valid"),),
+    ))
+    copied = source.next_batch()
+    if copied is None or not copied.to_arrow().equals(rich.slice(0, 1)):
+        raise RuntimeError("Rich Parquet wheel smoke returned wrong data")
+    copied.release()
 print("wheel smoke passed")
 """
 

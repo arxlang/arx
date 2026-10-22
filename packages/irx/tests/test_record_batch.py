@@ -527,15 +527,16 @@ class TestSchema:
         assert s.num_fields == EXPECTED_FIELD_COUNT
         s.release()
 
-    def test_all_types(self):
+    def test_all_types(self) -> None:
         """
         title: Ensure every supported scalar column type can be registered.
         """
         s = RecordBatchSchema()
-        # LIST and STRUCT are nested types registered via their own add_*
-        # helpers, not add_field.
-        nested_types = {IrxColumnType.LIST, IrxColumnType.STRUCT}
-        scalar_types = [ct for ct in IrxColumnType if ct not in nested_types]
+        # The primitive add_field API stops at temporal scalars. Nested
+        # helpers and from_arrow import complete rich/parameterized schemas.
+        scalar_types = [
+            ct for ct in IrxColumnType if ct <= IrxColumnType.TIME64_NS
+        ]
         for ct in scalar_types:
             s.add_field(ct.name.lower(), ct)
         assert s.num_fields == len(scalar_types)

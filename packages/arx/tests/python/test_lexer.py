@@ -679,3 +679,15 @@ def test_lexer_none_is_none_literal() -> None:
     tok = lexer.get_token()
     assert tok.kind == TokenKind.none_literal
     assert tok.value is None
+
+
+@pytest.mark.parametrize("name", ["u8", "u16", "u32", "u64"])
+def test_unsigned_type_aliases_are_identifiers(name: str) -> None:
+    """
+    title: Unsigned type aliases preserve the identifier-based type grammar.
+    parameters:
+      name:
+        type: str
+    """
+    ArxIO.string_to_buffer(name)
+    assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
