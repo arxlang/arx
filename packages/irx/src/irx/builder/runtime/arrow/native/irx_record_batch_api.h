@@ -15,6 +15,28 @@ typedef struct IrxRbApiBatch IrxRbApiBatch;
 typedef struct IrxRbApiBuilder IrxRbApiBuilder;
 typedef struct IrxRbApiReader IrxRbApiReader;
 typedef struct IrxRbApiWriter IrxRbApiWriter;
+typedef struct IrxRbApiParquet IrxRbApiParquet;
+IrxRbApiParquet *irx_rb_api_parquet_new(void);
+void irx_rb_api_parquet_destroy(IrxRbApiParquet *box);
+void irx_rb_api_parquet_close(IrxRbApiParquet *box);
+int32_t irx_rb_api_parquet_next(IrxRbApiParquet *box);
+void irx_rb_api_parquet_batch(IrxRbApiParquet *box, IrxRbApiBatch *out);
+void irx_rb_api_parquet_schema(IrxRbApiParquet *box, IrxRbApiSchema *out);
+void irx_rb_api_parquet_write(IrxRbApiParquet *box, IrxRbApiBatch *batch);
+void irx_rb_api_parquet_open_read(IrxRbApiParquet *box, const char *path, int64_t batch_size);
+void irx_rb_api_parquet_open_read_as(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema, int64_t batch_size);
+void irx_rb_api_parquet_open_write(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *schema, const char *compression, int64_t row_group_size);
+typedef struct IrxRbApiCsv IrxRbApiCsv;
+IrxRbApiCsv *irx_rb_api_csv_new(void);
+void irx_rb_api_csv_destroy(IrxRbApiCsv *box);
+void irx_rb_api_csv_close(IrxRbApiCsv *box);
+int32_t irx_rb_api_csv_next(IrxRbApiCsv *box);
+void irx_rb_api_csv_batch(IrxRbApiCsv *box, IrxRbApiBatch *out);
+void irx_rb_api_csv_schema(IrxRbApiCsv *box, IrxRbApiSchema *out);
+void irx_rb_api_csv_write(IrxRbApiCsv *box, IrxRbApiBatch *batch);
+void irx_rb_api_csv_open_read(IrxRbApiCsv *box, const char *path, const char *delimiter, int32_t header, int32_t block_size);
+void irx_rb_api_csv_open_read_as(IrxRbApiCsv *box, const char *path, IrxRbApiSchema *schema, const char *delimiter, int32_t header, int32_t block_size);
+void irx_rb_api_csv_open_write(IrxRbApiCsv *box, const char *path, IrxRbApiSchema *schema, const char *delimiter, int32_t header);
 void irx_rb_api_reader_csv(IrxRbApiReader *box, const char *path,
                            const char *delimiter, int32_t header, int32_t block_size);
 void irx_rb_api_reader_csv_as(IrxRbApiReader *box, const char *path, IrxRbApiSchema *schema,

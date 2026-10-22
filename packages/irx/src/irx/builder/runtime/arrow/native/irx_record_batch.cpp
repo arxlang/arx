@@ -2,6 +2,7 @@
 
 #include "irx_record_batch.h"
 #include "irx_arrow_runtime.h"
+#include "irx_parquet_io.h"
 
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
@@ -236,7 +237,7 @@ struct IrxRbBatch_ {
 
 struct IrxRbStreamWriter_ {
     std::shared_ptr<arrow::io::OutputStream>   sink;
-    std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
+    std::shared_ptr<irx::BatchWriter> writer;
     std::shared_ptr<arrow::Schema> schema;
     /* For buffer-based writers. */
     std::shared_ptr<arrow::io::BufferOutputStream> buf_sink;
@@ -1134,7 +1135,7 @@ int irx_rb_stream_writer_open_file(const IrxRbSchema   *schema,
 
     auto *w = new IrxRbStreamWriter_();
     w->sink   = sink;
-    w->writer = *writer_result;
+    w->writer = std::make_shared<irx::IpcBatchWriter>(*writer_result);
     w->schema = schema->schema;
     *out = w;
     return IRX_OK;
@@ -1154,7 +1155,7 @@ int irx_rb_stream_writer_open_buffer(const IrxRbSchema   *schema,
     auto *w = new IrxRbStreamWriter_();
     w->buf_sink = buf_sink;
     w->sink     = buf_sink;
-    w->writer   = *writer_result;
+    w->writer   = std::make_shared<irx::IpcBatchWriter>(*writer_result);
     w->schema = schema->schema;
     *out = w;
     return IRX_OK;
@@ -1162,39 +1163,47 @@ int irx_rb_stream_writer_open_buffer(const IrxRbSchema   *schema,
 
 int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
                                       const IrxRbBatch  *batch) {
-    GUARD(w); GUARD(batch);
-    if (w->closed) return set_err("writer already closed", IRX_ERR_IO);
-    if (!w->schema->Equals(*batch->batch->schema(), true))
-        return set_err("batch schema mismatch (including metadata/nullability)", IRX_ERR_TYPE);
-    auto validation = batch->batch->ValidateFull();
-    if (!validation.ok()) return set_err(validation);
-    if (w->csv) {
-        for (int i = 0; i < batch->batch->num_columns(); ++i) {
-            if (!w->schema->field(i)->nullable() && batch->batch->column(i)->null_count())
-                return set_err("CSV column '" + w->schema->field(i)->name() +
-                               "' contains nulls but is not nullable", IRX_ERR_TYPE);
+    try {
+        GUARD(w); GUARD(batch);
+        if (w->closed) return set_err("writer already closed", IRX_ERR_IO);
+        if (!w->schema->Equals(*batch->batch->schema(), true))
+            return set_err("batch schema mismatch (including metadata/nullability)", IRX_ERR_TYPE);
+        auto validation = batch->batch->ValidateFull();
+        if (!validation.ok()) return set_err(validation);
+        if (w->csv) {
+            for (int i = 0; i < batch->batch->num_columns(); ++i) {
+                if (!w->schema->field(i)->nullable() && batch->batch->column(i)->null_count())
+                    return set_err("CSV column '" + w->schema->field(i)->name() +
+                                   "' contains nulls but is not nullable", IRX_ERR_TYPE);
+            }
         }
+        auto st = w->writer->WriteRecordBatch(*batch->batch);
+        if (!st.ok()) return set_err(st);
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(error.what());
     }
-    auto st = w->writer->WriteRecordBatch(*batch->batch);
-    if (!st.ok()) return set_err(st);
-    return IRX_OK;
 }
 
 int irx_rb_stream_writer_close(IrxRbStreamWriter *w) {
-    GUARD(w);
-    if (w->closed) return IRX_OK;
-    auto st = w->writer->Close();
-    if (!st.ok()) return set_err(st);
-    if (w->buf_sink) {
-        auto buf_result = w->buf_sink->Finish();
-        if (!buf_result.ok()) return set_err(buf_result.status(), IRX_ERR_IO);
-        w->finished_buf = *buf_result;
-    } else {
-        auto st2 = w->sink->Close();
-        if (!st2.ok()) return set_err(st2, IRX_ERR_IO);
+    try {
+        GUARD(w);
+        if (w->closed) return IRX_OK;
+        auto st = w->writer->Close();
+        if (!st.ok()) return set_err(st);
+        if (w->buf_sink) {
+            auto buf_result = w->buf_sink->Finish();
+            if (!buf_result.ok()) return set_err(buf_result.status(), IRX_ERR_IO);
+            w->finished_buf = *buf_result;
+        } else if (w->sink) {
+            auto st2 = w->sink->Close();
+            if (!st2.ok()) return set_err(st2, IRX_ERR_IO);
+        }
+        w->closed = true;
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(error.what());
     }
-    w->closed = true;
-    return IRX_OK;
 }
 
 int irx_rb_stream_writer_buffer_data(const IrxRbStreamWriter *w,
@@ -1299,26 +1308,30 @@ int irx_rb_stream_reader_open_buffer(const uint8_t      *data,
 
 int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
                                      IrxRbBatch       **batch) {
-    GUARD(r); GUARD(batch);
-    *batch = nullptr;
-    if (r->eof) return IRX_EOF;
-    std::shared_ptr<arrow::RecordBatch> rb;
-    auto st = r->reader->ReadNext(&rb);
-    if (!st.ok()) return set_err(st);
-    if (!rb) {
-        r->eof = true;
-        return IRX_EOF;
+    try {
+        GUARD(batch); *batch = nullptr; GUARD(r);
+        if (!r->reader) return set_err("reader already transferred", IRX_ERR_IO);
+        if (r->eof) return IRX_EOF;
+        std::shared_ptr<arrow::RecordBatch> rb;
+        auto st = r->reader->ReadNext(&rb);
+        if (!st.ok()) return set_err(st);
+        if (!rb) {
+            r->eof = true;
+            return IRX_EOF;
+        }
+        auto validation = rb->ValidateFull();
+        if (!validation.ok()) return set_err(validation);
+        if (!r->schema_handle.schema->Equals(*rb->schema(), true))
+            return set_err("batch schema mismatch", IRX_ERR_TYPE);
+        auto b = std::make_unique<IrxRbBatch>();
+        b->batch          = std::move(rb);
+        b->col_types      = r->schema_handle.col_types;
+        b->col_descs      = r->schema_handle.col_descs;
+        *batch = b.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(error.what());
     }
-    auto validation = rb->ValidateFull();
-    if (!validation.ok()) return set_err(validation);
-    if (!r->schema_handle.schema->Equals(*rb->schema(), true))
-        return set_err("batch schema mismatch", IRX_ERR_TYPE);
-    auto *b = new IrxRbBatch_();
-    b->batch          = std::move(rb);
-    b->col_types      = r->schema_handle.col_types;
-    b->col_descs      = r->schema_handle.col_descs;
-    *batch = b;
-    return IRX_OK;
 }
 
 const IrxRbSchema *irx_rb_stream_reader_schema(const IrxRbStreamReader *r) {
@@ -1507,7 +1520,7 @@ static int open_writer(const IrxRbSchema *schema,
     if (!result.ok()) return set_err(result.status());
     auto w = std::make_unique<IrxRbStreamWriter>();
     w->sink = std::move(sink);
-    w->writer = *result;
+    w->writer = std::make_shared<irx::IpcBatchWriter>(*result);
     w->schema = schema->schema;
     *out = w.release();
     return IRX_OK;
@@ -1719,7 +1732,7 @@ int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
         if (!writer.ok()) return set_err(writer.status());
         auto result = std::make_unique<IrxRbStreamWriter>();
         result->sink = *sink;
-        result->writer = *writer;
+        result->writer = std::make_shared<irx::IpcBatchWriter>(*writer);
         result->schema = schema->schema;
         result->csv = true;
         *out = result.release();
@@ -1753,7 +1766,7 @@ int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
             if (actual->name() != field->name() || !actual->type()->Equals(field->type()))
                 return set_err("Cannot convert column '" + actual->name() + "' (" +
                     actual->type()->ToString() + "): expected '" + field->name() + "' (" +
-                    field->type()->ToString() + "); use a matching explicit CSV schema", IRX_ERR_TYPE);
+                    field->type()->ToString() + "); use a matching DataFrame schema or explicitly convert the input before casting", IRX_ERR_TYPE);
             if (batch->batch->column(i)->null_count())
                 return set_err("Cannot convert column '" + field->name() +
                     "' to DataFrame: the current batch contains null values; keep it as a RecordBatch", IRX_ERR_TYPE);
@@ -1800,5 +1813,41 @@ int irx_rb_table_to_batch(const irx_arrow_table_handle *table, IrxRbBatch **out)
         return IRX_OK;
     } catch (const std::exception &error) {
         return set_err(std::string("RecordBatch conversion: ") + error.what());
+    }
+}
+
+// Parquet uses the existing owned handles; its adapters own all file state.
+int irx_rb_parquet_reader_open(const char *path, const IrxRbSchema *expected,
+                               int64_t batch_size, IrxRbStreamReader **out) {
+    GUARD(out); *out = nullptr; GUARD(path);
+    try {
+        auto reader = irx::parquet_reader(path, expected ? expected->schema : nullptr, batch_size);
+        if (!reader.ok()) return set_err(reader.status());
+        auto result = std::make_unique<IrxRbStreamReader>();
+        result->reader = *reader;
+        int rc = populate_schema(result->reader->schema(), &result->schema_handle);
+        if (rc != IRX_OK) return rc;
+        result->schema_handle.reader_owned = true;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(std::string("Parquet reader '") + path + "': " + error.what());
+    }
+}
+
+int irx_rb_parquet_writer_open(const IrxRbSchema *schema, const char *path,
+                               const char *compression, int64_t row_group_size,
+                               IrxRbStreamWriter **out) {
+    GUARD(out); *out = nullptr; GUARD(schema); GUARD(path); GUARD(compression);
+    try {
+        auto writer = irx::parquet_writer(path, schema->schema, compression, row_group_size);
+        if (!writer.ok()) return set_err(writer.status());
+        auto result = std::make_unique<IrxRbStreamWriter>();
+        result->writer = *writer;
+        result->schema = schema->schema;
+        *out = result.release();
+        return IRX_OK;
+    } catch (const std::exception &error) {
+        return set_err(std::string("Parquet writer '") + path + "': " + error.what());
     }
 }

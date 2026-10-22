@@ -22,19 +22,19 @@ available to the final link. Inactive features contribute nothing.
 
 Registered features:
 
-| Feature        | Responsibility                                       |
-| -------------- | ---------------------------------------------------- |
-| `libc`         | `puts`, checked allocation, formatting, and `free`   |
-| `file`         | Checked single-owner POSIX UTF-8 text files          |
-| `libm`         | math symbols and the platform math linker flag       |
-| `assertions`   | fatal assertion helper and machine-readable reports  |
-| `errors`       | fatal checked-runtime diagnostics and stable records |
-| `buffer`       | buffer-owner and view lifetime helpers               |
-| `list`         | minimal dynamic list creation, growth, and indexing  |
-| `array`        | one-dimensional Apache Arrow array runtime           |
-| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime       |
-| `dataframe`    | Arrow Table and ChunkedArray runtime                 |
-| `record_batch` | Arrow RecordBatch and IPC streaming bridge           |
+| Feature        | Responsibility                                         |
+| -------------- | ------------------------------------------------------ |
+| `libc`         | `puts`, checked allocation, formatting, and `free`     |
+| `file`         | Checked single-owner POSIX UTF-8 text files            |
+| `libm`         | math symbols and the platform math linker flag         |
+| `assertions`   | fatal assertion helper and machine-readable reports    |
+| `errors`       | fatal checked-runtime diagnostics and stable records   |
+| `buffer`       | buffer-owner and view lifetime helpers                 |
+| `list`         | minimal dynamic list creation, growth, and indexing    |
+| `array`        | one-dimensional Apache Arrow array runtime             |
+| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime         |
+| `dataframe`    | Arrow Table and ChunkedArray runtime                   |
+| `record_batch` | Arrow RecordBatch, IPC/CSV streaming and Parquet files |
 
 The runtime layer is independent of Arx imports. Importing a source module and
 activating a native feature are different compiler operations.
@@ -234,3 +234,18 @@ holds counts/progress and a generated concrete drop callback. Final release
 consumes both allocations even if a native field release fails. Counts are
 non-atomic and no public external ownership ABI is promised. See
 [Class Model](class-model.md) for the supported acyclic subset.
+
+### Parquet linkage
+
+The registered `record_batch` feature includes Parquet adapters and links
+PyArrow's matching versioned `libparquet` and `libarrow`, for both standalone
+Python libraries and compiled Arx programs. CSV/IPC RecordBatch users also gain
+this native link dependency. Array/tensor linker flags are unchanged. Built-in
+feature definitions are constructed eagerly, so missing Parquet libraries can be
+reported at registry creation rather than first file access.
+
+The `CSV` and `Parquet` facades use distinct nominal opaque handles and a shared
+checked session lifecycle; raw reader/writer ABI entrypoints remain additive and
+compatible. New sources, headers and library flags participate in native-cache
+fingerprinting and wheel asset audits. See [Parquet I/O](../arx/parquet.md) for
+type and DataFrame restrictions.

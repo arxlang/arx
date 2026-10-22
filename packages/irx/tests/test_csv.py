@@ -252,3 +252,55 @@ def test_headerless_inference_and_schema_snapshot(tmp_path: Path) -> None:
         assert batch is not None
         assert batch.num_rows == expected_rows
         batch.release()
+
+
+@pytest.mark.parametrize("header", [True, False])
+def test_unified_csv_preserves_existing_bytes(
+    tmp_path: Path, header: bool
+) -> None:
+    """
+    title: The unified owner preserves quoting, nulls and headerless CSV bytes.
+    parameters:
+      tmp_path:
+        type: Path
+      header:
+        type: bool
+    """
+    from irx.record_batch import CSV  # noqa: PLC0415
+
+    schema = RecordBatchSchema().add_field("id", IrxColumnType.INT64, False)
+    schema.add_field("text", IrxColumnType.UTF8)
+    builder = RecordBatchBuilder(schema)
+    for index, value in enumerate(["", None, 'λ;\n"quoted"']):
+        builder.append_int64(0, index)
+        if value is None:
+            builder.append_null(1)
+        else:
+            builder.append_string(1, value)
+    batch = builder.finish()
+    old = tmp_path / "legacy.csv"
+    new = tmp_path / "unified.csv"
+    with RecordBatchStreamWriter.open_csv(
+        schema, old, delimiter=";", header=header
+    ) as writer:
+        writer.write_batch(batch)
+    with CSV() as file:
+        file.open_write(new, schema, delimiter=";", header=header)
+        file.write_batch(batch)
+        file.close()
+        assert new.read_bytes() == old.read_bytes()
+        file.open_read(
+            new, schema=schema, delimiter=";", header=header, block_size=32
+        )
+        snapshot = file.schema()
+        snapshot.release()
+        values: list[str | None] = []
+        for read in file:
+            for row in range(read.num_rows):
+                values.append(
+                    None if read.is_null(1, row) else read.get_string(1, row)
+                )
+        assert values == ["", None, 'λ;\n"quoted"']
+    batch.release()
+    builder.release()
+    schema.release()

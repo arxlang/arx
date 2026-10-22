@@ -11,14 +11,34 @@ from collections.abc import Iterator, Mapping, Sequence
 from datetime import date, datetime, time, timezone
 from enum import IntEnum
 from functools import lru_cache
-from typing import Any, Optional
+from types import TracebackType
+from typing import Any, Literal, Optional, TypeVar
+
+from public import private, public
 
 from irx.record_batch_abi import (
     IRX_RECORD_BATCH_LIBRARY_ENV,
     RECORD_BATCH_ABI_VERSION,
     record_batch_library_path,
 )
-from irx.typecheck import typechecked
+from irx.typecheck import skip_unused, typechecked
+
+__all__ = [
+    "CSV_MAX_BLOCK_SIZE",
+    "IRX_EOF",
+    "IRX_OK",
+    "IRX_RECORD_BATCH_LIBRARY_ENV",
+    "RECORD_BATCH_ABI_VERSION",
+    "IrxColumnType",
+    "RecordBatch",
+    "RecordBatchBuilder",
+    "RecordBatchSchema",
+    "RecordBatchStreamReader",
+    "RecordBatchStreamWriter",
+    "csv_library",
+    "csv_strings",
+    "record_batch_library_path",
+]
 
 CSV_MAX_BLOCK_SIZE = (1 << 31) - 1
 
@@ -285,6 +305,76 @@ def csv_strings(
     return os.fsencode(path_string), delimiter.encode("ascii")
 
 
+@private
+@typechecked
+def parquet_library() -> ctypes.CDLL:
+    """
+    title: Lazily bind additive Parquet symbols without breaking old overrides.
+    returns:
+      type: ctypes.CDLL
+    """
+    lib = _get_lib()
+    try:
+        reader = lib.irx_rb_parquet_reader_open
+        writer = lib.irx_rb_parquet_writer_open
+    except AttributeError as error:
+        raise RuntimeError(
+            "Native RecordBatch library lacks Parquet support; rebuild it or "
+            f"unset {IRX_RECORD_BATCH_LIBRARY_ENV}"
+        ) from error
+    pointer = ctypes.c_void_p
+    reader.restype = ctypes.c_int
+    reader.argtypes = [
+        ctypes.c_char_p,
+        pointer,
+        ctypes.c_int64,
+        ctypes.POINTER(pointer),
+    ]
+    writer.restype = ctypes.c_int
+    writer.argtypes = [
+        pointer,
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_int64,
+        ctypes.POINTER(pointer),
+    ]
+    return lib
+
+
+@private
+@typechecked
+def parquet_path(path: str | os.PathLike[str]) -> bytes:
+    """
+    title: Validate a filesystem path before crossing the Parquet C ABI.
+    parameters:
+      path:
+        type: str | os.PathLike[str]
+    returns:
+      type: bytes
+    """
+    value = os.fsencode(path)
+    if b"\0" in value:
+        raise ValueError("Parquet path must not contain NUL")
+    return value
+
+
+@private
+@typechecked
+def parquet_size(value: int, option: str) -> None:
+    """
+    title: Reject bool and integers that ctypes would truncate.
+    parameters:
+      value:
+        type: int
+      option:
+        type: str
+    """
+    if isinstance(value, bool) or not 0 < value < (1 << 63):
+        raise ValueError(
+            f"Parquet {option} must be a positive signed 64-bit integer"
+        )
+
+
 # Error helpers
 
 IRX_OK = 0
@@ -386,7 +476,8 @@ def _check(rc: int, lib: ctypes.CDLL) -> None:
     """
     if rc < 0:
         msg = lib.irx_record_batch_errmsg()
-        raise RuntimeError(f"IRx RecordBatch error ({rc}): {msg.decode()}")
+        message = msg.decode(errors="replace")
+        raise RuntimeError(f"IRx RecordBatch error ({rc}): {message}")
 
 
 # Public enum
@@ -699,6 +790,14 @@ class RecordBatchSchema:
         """
         return int(self._lib.irx_rb_schema_num_fields(self._handle))
 
+    def clone(self) -> "RecordBatchSchema":
+        """
+        title: Clone a flat schema including metadata and temporal parameters.
+        returns:
+          type: RecordBatchSchema
+        """
+        return clone_schema(self._raw(), self._lib)
+
     def release(self) -> None:
         """
         title: Release the underlying schema handle.
@@ -722,6 +821,79 @@ class RecordBatchSchema:
         if self._released:
             raise RuntimeError("RecordBatch schema is released")
         return self._handle
+
+
+@private
+@typechecked
+def clone_schema(
+    handle: ctypes.c_void_p, lib: ctypes.CDLL
+) -> RecordBatchSchema:
+    """
+    title: Adopt an owned flat schema clone without reconstructing its fields.
+    parameters:
+      handle:
+        type: ctypes.c_void_p
+      lib:
+        type: ctypes.CDLL
+    returns:
+      type: RecordBatchSchema
+    """
+    try:
+        clone = lib.irx_rb_schema_clone
+        field = lib.irx_rb_schema_field
+    except AttributeError as error:
+        raise RuntimeError(
+            "Native RecordBatch library lacks schema snapshots; rebuild it or "
+            f"unset {IRX_RECORD_BATCH_LIBRARY_ENV}"
+        ) from error
+    pointer = ctypes.c_void_p
+    clone.restype = ctypes.c_int
+    clone.argtypes = [pointer, ctypes.POINTER(pointer)]
+    field.restype = ctypes.c_int
+    field.argtypes = [
+        pointer,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_char_p),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    result_handle = pointer()
+    _check(clone(handle, ctypes.byref(result_handle)), lib)
+    try:
+        types: list[IrxColumnType] = []
+        for index in range(lib.irx_rb_schema_num_fields(result_handle)):
+            name = ctypes.c_char_p()
+            kind = ctypes.c_int()
+            nullable = ctypes.c_int()
+            _check(
+                field(
+                    result_handle,
+                    index,
+                    ctypes.byref(name),
+                    ctypes.byref(kind),
+                    ctypes.byref(nullable),
+                ),
+                lib,
+            )
+            column_type = IrxColumnType(kind.value)
+            if column_type in (IrxColumnType.LIST, IrxColumnType.STRUCT):
+                raise ValueError(
+                    "Python schema snapshots support flat fields only: "
+                    f"column {(name.value or b'').decode()!r} "
+                    f"has type {column_type.name}"
+                )
+            types.append(column_type)
+        result = object.__new__(RecordBatchSchema)
+        result._handle = result_handle
+        result._lib = lib
+        result._col_types = types
+        result._elem_types = [None] * len(types)
+        result._struct_fields = [None] * len(types)
+        result._released = False
+        return result
+    except BaseException:
+        lib.irx_rb_schema_release(result_handle)
+        raise
 
 
 # RecordBatchBuilder
@@ -1717,6 +1889,51 @@ class RecordBatchStreamWriter:
         self._released = False
 
     @classmethod
+    def open_parquet(
+        cls,
+        schema: RecordBatchSchema,
+        path: str | os.PathLike[str],
+        *,
+        compression: str = "snappy",
+        row_group_size: int = 1048576,
+    ) -> "RecordBatchStreamWriter":
+        """
+        title: Create Parquet output with buffered row groups and exact types.
+        summary: >-
+          Explicit close checks footer finalization; output is not atomic.
+        parameters:
+          schema:
+            type: RecordBatchSchema
+          path:
+            type: str | os.PathLike[str]
+          compression:
+            type: str
+          row_group_size:
+            type: int
+        returns:
+          type: RecordBatchStreamWriter
+        """
+        path_bytes = parquet_path(path)
+        parquet_size(row_group_size, "row_group_size")
+        if compression not in ("snappy", "uncompressed", "zstd"):
+            raise ValueError(
+                "Parquet compression must be snappy, uncompressed or zstd"
+            )
+        lib = parquet_library()
+        handle = ctypes.c_void_p()
+        _check(
+            lib.irx_rb_parquet_writer_open(
+                schema._raw(),
+                path_bytes,
+                compression.encode("ascii"),
+                row_group_size,
+                ctypes.byref(handle),
+            ),
+            lib,
+        )
+        return cls(handle, lib)
+
+    @classmethod
     def open_csv(
         cls,
         schema: RecordBatchSchema,
@@ -1920,6 +2137,52 @@ class RecordBatchStreamReader:
         self._closed = False
 
     @classmethod
+    def open_parquet(
+        cls,
+        path: str | os.PathLike[str],
+        *,
+        schema: RecordBatchSchema | None = None,
+        batch_size: int = 65536,
+    ) -> "RecordBatchStreamReader":
+        """
+        title: Stream all Parquet row groups, optionally asserting the schema.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema | None
+          batch_size:
+            type: int
+        returns:
+          type: RecordBatchStreamReader
+        """
+        path_bytes = parquet_path(path)
+        parquet_size(batch_size, "batch_size")
+        lib = parquet_library()
+        handle = ctypes.c_void_p()
+        _check(
+            lib.irx_rb_parquet_reader_open(
+                path_bytes,
+                schema._raw() if schema is not None else None,
+                batch_size,
+                ctypes.byref(handle),
+            ),
+            lib,
+        )
+        return cls(handle, lib)
+
+    def schema(self) -> RecordBatchSchema:
+        """
+        title: Return an independent flat schema snapshot before or after EOF.
+        returns:
+          type: RecordBatchSchema
+        """
+        if self._closed:
+            raise RuntimeError("RecordBatch reader is closed")
+        handle = self._lib.irx_rb_stream_reader_schema(self._handle)
+        return clone_schema(ctypes.c_void_p(handle), self._lib)
+
+    @classmethod
     def open_csv(
         cls,
         path: str | os.PathLike[str],
@@ -2074,3 +2337,357 @@ class RecordBatchStreamReader:
             variadic: positional
         """
         self.close()
+
+
+FileType = TypeVar("FileType", bound="FileSession")
+
+
+@private
+@typechecked
+class FileSession:
+    """
+    title: Private shared lifetime and mode checks for format-level APIs.
+    attributes:
+      mode:
+        type: Literal[closed, read, write, failed]
+      reader:
+        type: RecordBatchStreamReader | None
+      writer:
+        type: RecordBatchStreamWriter | None
+      write_schema:
+        type: RecordBatchSchema | None
+      failure:
+        type: str | None
+    """
+
+    def __init__(self) -> None:
+        """
+        title: Create a closed session without loading the native library.
+        """
+        self.mode: Literal["closed", "read", "write", "failed"] = "closed"
+        self.reader: RecordBatchStreamReader | None = None
+        self.writer: RecordBatchStreamWriter | None = None
+        self.write_schema: RecordBatchSchema | None = None
+        self.failure: str | None = None
+
+    def require(self, mode: str, operation: str) -> None:
+        """
+        title: Reject wrong-mode calls before touching files or native handles.
+        parameters:
+          mode:
+            type: str
+          operation:
+            type: str
+        """
+        if self.mode != mode:
+            raise RuntimeError(
+                f"{operation} requires {mode} mode; "
+                f"current mode is {self.mode}"
+            )
+
+    def next_batch(self) -> RecordBatch | None:
+        """
+        title: Read an independently owned batch or return None at EOF.
+        returns:
+          type: RecordBatch | None
+        """
+        self.require("read", "next_batch")
+        assert self.reader is not None
+        try:
+            return self.reader.next_batch()
+        except Exception as error:
+            self.failed(error)
+            raise
+
+    def write_batch(self, batch: RecordBatch) -> None:
+        """
+        title: Write an exact-schema batch in write mode.
+        parameters:
+          batch:
+            type: RecordBatch
+        """
+        self.require("write", "write_batch")
+        assert self.writer is not None
+        try:
+            self.writer.write_batch(batch)
+        except Exception as error:
+            self.failed(error)
+            raise
+
+    def schema(self) -> RecordBatchSchema:
+        """
+        title: Return an owned flat schema snapshot in either open mode.
+        returns:
+          type: RecordBatchSchema
+        """
+        if self.mode == "read":
+            assert self.reader is not None
+            return self.reader.schema()
+        self.require("write", "schema (read or write)")
+        assert self.write_schema is not None
+        return self.write_schema.clone()
+
+    def failed(self, error: Exception) -> None:
+        """
+        title: Invalidate a failed session and retain its error for close.
+        parameters:
+          error:
+            type: Exception
+        """
+        self.mode = "failed"
+        self.failure = str(error)
+        self.release_resources()
+
+    def release_resources(self) -> None:
+        """
+        title: Release references without retrying checked finalization.
+        """
+        if self.reader is not None:
+            self.reader.close()
+            self.reader = None
+        if self.writer is not None:
+            self.writer.release()
+            self.writer = None
+        if self.write_schema is not None:
+            self.write_schema.release()
+            self.write_schema = None
+
+    def close(self) -> None:
+        """
+        title: >-
+          Check finalization once, preserving failures and successful reuse.
+        """
+        if self.mode == "failed":
+            raise RuntimeError(f"File session failed: {self.failure}")
+        try:
+            if self.writer is not None:
+                self.writer.close()
+        except Exception as error:
+            self.failed(error)
+            raise
+        finally:
+            self.release_resources()
+        self.mode = "closed"
+
+    def __iter__(self) -> Iterator[RecordBatch]:
+        """
+        title: Iterate in read mode, releasing each batch when advancing.
+        returns:
+          type: Iterator[RecordBatch]
+        """
+        self.require("read", "iteration")
+        while (batch := self.next_batch()) is not None:
+            try:
+                yield batch
+            finally:
+                batch.release()
+
+    def __enter__(self: FileType) -> FileType:
+        """
+        title: Enter a context without implicitly opening a file.
+        returns:
+          type: FileType
+        """
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """
+        title: Check normal finalization without masking an active exception.
+        parameters:
+          exc_type:
+            type: type[BaseException] | None
+          exc_value:
+            type: BaseException | None
+          traceback:
+            type: TracebackType | None
+        """
+        skip_unused(exc_value, traceback)
+        if exc_type is None:
+            self.close()
+        else:
+            self.release_resources()
+            if self.mode != "failed":
+                self.mode = "closed"
+
+    def __del__(self) -> None:
+        """
+        title: Release abandoned sessions without promising successful writes.
+        """
+        self.release_resources()
+
+
+@public
+@typechecked
+class Parquet(FileSession):
+    """
+    title: A local Parquet file with explicit read or write sessions.
+    summary: >-
+      Flat supported schemas only; no implicit temporal coercion. Close
+      explicitly to check footer errors. Output is partial on failure.
+    attributes:
+      mode:
+        type: Literal[closed, read, write, failed]
+      reader:
+        type: RecordBatchStreamReader | None
+      writer:
+        type: RecordBatchStreamWriter | None
+      write_schema:
+        type: RecordBatchSchema | None
+      failure:
+        type: str | None
+    """
+
+    def open_read(
+        self,
+        path: str | os.PathLike[str],
+        *,
+        schema: RecordBatchSchema | None = None,
+        batch_size: int = 65536,
+    ) -> None:
+        """
+        title: >-
+          Open for batched reading with an optional exact schema assertion.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema | None
+          batch_size:
+            type: int
+        """
+        self.require("closed", "open_read")
+        self.reader = RecordBatchStreamReader.open_parquet(
+            path, schema=schema, batch_size=batch_size
+        )
+        self.mode = "read"
+
+    def open_write(
+        self,
+        path: str | os.PathLike[str],
+        schema: RecordBatchSchema,
+        *,
+        compression: str = "snappy",
+        row_group_size: int = 1048576,
+    ) -> None:
+        """
+        title: Open a writer after validation, retaining an independent schema.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema
+          compression:
+            type: str
+          row_group_size:
+            type: int
+        """
+        self.require("closed", "open_write")
+        snapshot = schema.clone()
+        try:
+            self.writer = RecordBatchStreamWriter.open_parquet(
+                snapshot,
+                path,
+                compression=compression,
+                row_group_size=row_group_size,
+            )
+        except BaseException:
+            snapshot.release()
+            raise
+        self.write_schema = snapshot
+        self.mode = "write"
+
+
+@public
+@typechecked
+class CSV(FileSession):
+    """
+    title: A local CSV file with the same session API as Parquet.
+    summary: >-
+      Preserve existing Arrow CSV quoting, null and first-block inference
+      rules. Explicit schemas control parsing, unlike Parquet assertions.
+    attributes:
+      mode:
+        type: Literal[closed, read, write, failed]
+      reader:
+        type: RecordBatchStreamReader | None
+      writer:
+        type: RecordBatchStreamWriter | None
+      write_schema:
+        type: RecordBatchSchema | None
+      failure:
+        type: str | None
+    """
+
+    def open_read(
+        self,
+        path: str | os.PathLike[str],
+        *,
+        schema: RecordBatchSchema | None = None,
+        delimiter: str = ",",
+        header: bool = True,
+        block_size: int = 1048576,
+    ) -> None:
+        """
+        title: Open CSV using inferred or explicit physical column types.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema | None
+          delimiter:
+            type: str
+          header:
+            type: bool
+          block_size:
+            type: int
+        """
+        self.require("closed", "open_read")
+        self.reader = RecordBatchStreamReader.open_csv(
+            path,
+            schema=schema,
+            delimiter=delimiter,
+            header=header,
+            block_size=block_size,
+        )
+        self.mode = "read"
+
+    def open_write(
+        self,
+        path: str | os.PathLike[str],
+        schema: RecordBatchSchema,
+        *,
+        delimiter: str = ",",
+        header: bool = True,
+    ) -> None:
+        """
+        title: >-
+          Open CSV output without changing the established format contract.
+        parameters:
+          path:
+            type: str | os.PathLike[str]
+          schema:
+            type: RecordBatchSchema
+          delimiter:
+            type: str
+          header:
+            type: bool
+        """
+        self.require("closed", "open_write")
+        snapshot = schema.clone()
+        try:
+            self.writer = RecordBatchStreamWriter.open_csv(
+                snapshot,
+                path,
+                delimiter=delimiter,
+                header=header,
+            )
+        except BaseException:
+            snapshot.release()
+            raise
+        self.write_schema = snapshot
+        self.mode = "write"

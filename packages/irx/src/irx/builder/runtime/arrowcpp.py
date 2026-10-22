@@ -61,6 +61,20 @@ def arrowcpp_linker_flags() -> tuple[str, ...]:
 
 
 @typechecked
+def parquet_linker_flags() -> tuple[str, ...]:
+    """
+    title: Link RecordBatch artifacts to PyArrow's matching Parquet library.
+    returns:
+      type: tuple[str, Ellipsis]
+    """
+    library = _find_pyarrow_library("parquet")
+    flags = (str(library), *arrowcpp_linker_flags())
+    if sys.platform != "win32":
+        flags += (f"-Wl,-rpath,{library.parent}",)
+    return tuple(dict.fromkeys(flags))
+
+
+@typechecked
 def arrowcpp_runtime_metadata() -> dict[str, object]:
     """
     title: Return Arrow C++ runtime implementation metadata.
@@ -157,4 +171,5 @@ __all__ = [
     "arrowcpp_include_dirs",
     "arrowcpp_linker_flags",
     "arrowcpp_runtime_metadata",
+    "parquet_linker_flags",
 ]

@@ -61,6 +61,9 @@ REQUIRED_IRX_NATIVE_ASSETS = (
     "irx/builder/runtime/arrow/native/irx_record_batch.h",
     "irx/builder/runtime/arrow/native/irx_record_batch_api.cc",
     "irx/builder/runtime/arrow/native/irx_record_batch_api.h",
+    "irx/builder/runtime/arrow/native/irx_batch_writer.h",
+    "irx/builder/runtime/arrow/native/irx_parquet_io.h",
+    "irx/builder/runtime/arrow/native/irx_parquet_io.cc",
     "irx/builder/runtime/list/native/irx_list_runtime.c",
     "irx/builder/runtime/list/native/irx_list_runtime.h",
     "irx/builder/runtime/errors/native/irx_error_runtime.c",
@@ -203,7 +206,7 @@ CSV_MODULE = """```
 title: Stream CSV through checked DataFrame conversions
 summary: Run from the repository root; input and output must be distinct files.
 ```
-import (Schema, RecordBatch, CSVReader, CSVWriter) from stdlib.arrow
+import (Schema, RecordBatch, CSV) from stdlib.arrow
 
 fn main() -> i32:
   ```
@@ -211,15 +214,40 @@ fn main() -> i32:
   ```
   var schema: Schema = Schema()
   schema.add("id", 3, false)
-  var reader: CSVReader = CSVReader()
-  reader.open_file_as("input.csv", schema)
-  var writer: CSVWriter = CSVWriter(schema)
-  writer.open_file("compiled.csv")
+  var reader: CSV = CSV()
+  reader.open_read_as("input.csv", schema)
+  var writer: CSV = CSV()
+  writer.open_write("compiled.csv", schema)
   while reader.next():
     var batch: RecordBatch = reader.batch()
     var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
     var output: RecordBatch = cast(frame, RecordBatch)
     writer.write(output)
+  writer.close()
+  reader.close()
+  return 0
+"""
+
+PARQUET_MODULE = """```
+title: Installed Parquet interoperability and DataFrame smoke
+```
+import (Parquet, RecordBatch, Schema) from stdlib.arrow
+
+fn main() -> i32:
+  ```
+  title: Convert all Python-produced Parquet batches in compiled Arx
+  ```
+  var reader: Parquet = Parquet()
+  reader.open_read("python.parquet", batch_size=1)
+  var schema: Schema = Schema()
+  schema.add("id", 3, false)
+  var writer: Parquet = Parquet()
+  writer.open_write("compiled.parquet", schema, row_group_size=2)
+  while reader.next():
+    var batch: RecordBatch = reader.batch()
+    var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
+    var copy: RecordBatch = cast(frame, RecordBatch)
+    writer.write(copy)
   writer.close()
   reader.close()
   return 0
@@ -235,9 +263,12 @@ import arxjit
 import astx
 import irx
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from arxpy import Compiler
 from irx.record_batch import (
+    CSV,
+    Parquet,
     IrxColumnType,
     RecordBatchBuilder,
     RecordBatchSchema,
@@ -247,6 +278,9 @@ from irx.record_batch import (
 
 root = Path.cwd()
 compiler = Compiler()
+pq.write_table(
+    pa.table({"id": [1, 2, 3]}), root / "python.parquet", row_group_size=1
+)
 for source_name in (
     "main.x",
     "class_smoke.x",
@@ -255,6 +289,7 @@ for source_name in (
     "file_smoke.x",
     "native_smoke.x",
     "csv_smoke.x",
+    "parquet_smoke.x",
 ):
     artifact = compiler.compile_file(
         root / source_name,
@@ -265,6 +300,9 @@ for source_name in (
         raise RuntimeError(
             f"{source_name} returned {result.exit_code}: {result.stderr}"
         )
+
+if pq.read_table(root / "compiled.parquet").to_pydict() != {"id": [1, 2, 3]}:
+    raise RuntimeError("Compiled Parquet wheel smoke returned wrong data")
 
 dependency = metadata.distribution("arx-native-fixture")
 expected = next(
@@ -297,6 +335,13 @@ with csv_reader as csv:
     if csv_batch is None or csv_batch.get_int32(0, 0) != 42:
         raise RuntimeError("CSV wheel smoke returned wrong data")
     csv_batch.release()
+with CSV() as source, Parquet() as target:
+    source.open_read(root / "python.csv", schema=schema)
+    target.open_write(root / "facade.parquet", schema)
+    for copied in source:
+        target.write_batch(copied)
+if pq.read_table(root / "facade.parquet").column("value").to_pylist() != [42]:
+    raise RuntimeError("Unified CSV/Parquet wheel smoke returned wrong data")
 batch.release()
 builder.release()
 writer.release()
@@ -557,6 +602,7 @@ def run_smoke(
             "file_smoke.x": FILE_MODULE,
             "native_smoke.x": NATIVE_MODULE,
             "csv_smoke.x": CSV_MODULE,
+            "parquet_smoke.x": PARQUET_MODULE,
         }
         (work_dir / ".arxproject.toml").write_text(
             '[project]\nname="wheel-consumer"\nversion="0"\n'

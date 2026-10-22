@@ -6,17 +6,39 @@ C++ toolchain is required, as for the existing Arrow APIs.
 
 ## Arx API
 
-- `CSVReader().open_file(path, delimiter=",", header=true, block_size=1048576)`
-  infers a schema from the first block and freezes it for subsequent batches.
-- `reader.open_file_as(path, schema, delimiter=",", header=true, block_size=1048576)`
+- `CSV().open_read(path, delimiter=",", header=true, block_size=1048576)` infers
+  a schema from the first block and freezes it for subsequent batches.
+- `reader.open_read_as(path, schema, delimiter=",", header=true, block_size=1048576)`
   uses an explicit `Schema`. Names, order, count, physical types and
   non-nullable fields are checked; no columns are silently dropped.
 - `reader.next()` advances one batch. `false` means EOF, not an empty batch.
   `reader.batch()` and `reader.schema()` return independent snapshots.
-- `CSVWriter(schema).open_file(path, delimiter=",", header=true)` creates or
+- `CSV().open_write(path, schema, delimiter=",", header=true)` creates or
   truncates a file after validating options/schema. `write(batch)` requires an
   exact schema, including nullability and metadata. `close()` reports final
-  write errors. Reader/writer close is idempotent; close before reopening.
+  write errors. Successful close is idempotent; close before reopening.
+
+`CSV()` starts closed and has one active read or write session, like
+[`Parquet`](parquet.md). `schema()` works in either open mode. Wrong-mode or
+closed data access is an error; aliases observe the same state. Read/write
+failures invalidate the session, and cleanup does not hide the original error.
+Use two instances and distinct paths for copying. `block_size` is a positive
+signed 32-bit **byte** count, unlike Parquet's row-based `batch_size`.
+
+### Migrating the split API
+
+`CSVReader` and `CSVWriter` remain supported compatibility classes, with their
+existing constructors, `open_file`/`open_file_as` methods and handle accessors.
+For new code, use `CSV`:
+
+- `CSVReader().open_file(...)` becomes `CSV().open_read(...)`.
+- `reader.open_file_as(...)` becomes `file.open_read_as(...)`.
+- `CSVWriter(schema)` becomes `CSV()`, and `writer.open_file(path, ...)` becomes
+  `file.open_write(path, schema, ...)`.
+
+Existing CSV parsing and scalar-type support are unchanged. In particular, CSV
+explicit schemas control text parsing, whereas Parquet expected schemas only
+assert the types already encoded in the file.
 
 CSV RecordBatches support signed/unsigned integer widths, `f32`, `f64`, Boolean,
 UTF-8/large UTF-8, dates, timestamps and time units. Nested and other
@@ -30,11 +52,11 @@ roundtrip.
 ```
 title: CSV batch conversion
 ```
-import (CSVReader, RecordBatch) from stdlib.arrow
+import (CSV, RecordBatch) from stdlib.arrow
 
 fn main() -> i32:
-  var reader: CSVReader = CSVReader()
-  reader.open_file("input.csv")
+  var reader: CSV = CSV()
+  reader.open_read("input.csv")
   while reader.next():
     var batch: RecordBatch = reader.batch()
     var frame: dataframe[id: i64] = cast(batch, dataframe[id: i64])
@@ -97,20 +119,25 @@ repository root with
 ```python
 from irx.record_batch import (
     IrxColumnType, RecordBatchSchema,
-    RecordBatchStreamReader, RecordBatchStreamWriter,
+    CSV,
 )
 
 schema = RecordBatchSchema().add_field("id", IrxColumnType.INT64, False)
-with RecordBatchStreamReader.open_csv("input.csv", schema=schema) as reader:
-    with RecordBatchStreamWriter.open_csv(schema, "output.csv") as writer:
-        for batch in reader:
-            writer.write_batch(batch)
+with CSV() as reader, CSV() as writer:
+    reader.open_read("input.csv", schema=schema)
+    writer.open_write("output.csv", schema)
+    for batch in reader:
+        writer.write_batch(batch)
 schema.release()
 ```
 
-The factories accept the same delimiter/header options and the reader accepts
+The opening methods accept the same delimiter/header options and reading accepts
 `block_size`. Omit `schema` to infer. Existing Python iterator ownership
 applies: iteration releases each yielded batch when advancing; use
 `next_batch()` and explicit `release()` when a batch must outlive advancement or
 reader closure. An old native-library override without CSV symbols reports a
 rebuild/unset message instead of silently changing implementation.
+
+The lower-level `RecordBatchStreamReader.open_csv` and
+`RecordBatchStreamWriter.open_csv` factories remain compatible. Python
+`schema()` returns an independent flat-schema snapshot; release it explicitly.

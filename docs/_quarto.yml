@@ -133,6 +133,8 @@ website:
               href: arx/collections.md
             - text: CSV and DataFrames
               href: arx/csv.md
+            - text: Parquet and DataFrames
+              href: arx/parquet.md
             - text: Control Flow
               href: arx/control-flow.md
             - text: Docstrings

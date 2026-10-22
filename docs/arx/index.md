@@ -42,6 +42,7 @@ Arx source
 - [Built-in types](built-in-types.md)
 - [Collections and Apache Arrow](collections.md)
 - [CSV files and DataFrame conversion](csv.md)
+- [Parquet files and DataFrame conversion](parquet.md)
 - [Control flow](control-flow.md)
 - [Douki docstrings](docstrings.md)
 
@@ -62,7 +63,8 @@ The current frontend supports:
 - restricted native UTF-8 text files with builtin `File` and its `open` adapter
 - fixed-shape numeric tensors and runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
-- runtime-schema RecordBatches, CSV, IPC and C Data/C Stream via `stdlib.arrow`
+- runtime-schema RecordBatches, CSV, Parquet, IPC and C Data/C Stream via
+  `stdlib.arrow`
 - checked conversion between RecordBatches and non-null numeric/Boolean
   DataFrames
 - assertions and the compiled `arx test` runner

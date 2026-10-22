@@ -1,6 +1,6 @@
 ```
 title: Apache Arrow interoperability
-summary: Runtime-schema RecordBatches, IPC files and streams, TCP and C Data.
+summary: RecordBatches, CSV and Parquet files, IPC, TCP and C Data.
 ```
 
 extern irx_rb_api_schema_new() -> ArrowSchemaHandle
@@ -778,4 +778,203 @@ class CSVWriter:
     summary: Writes one batch with exact schema validation.
     ```
     irx_rb_api_writer_write(self.handle, batch.native_handle())
+    return none
+
+extern irx_rb_api_parquet_new() -> ArrowParquetHandle
+extern irx_rb_api_parquet_destroy(box: ArrowParquetHandle) -> none
+extern irx_rb_api_parquet_close(box: ArrowParquetHandle) -> none
+extern irx_rb_api_parquet_next(box: ArrowParquetHandle) -> i32
+extern irx_rb_api_parquet_batch(box: ArrowParquetHandle, out: ArrowBatchHandle) -> none
+extern irx_rb_api_parquet_schema(box: ArrowParquetHandle, out: ArrowSchemaHandle) -> none
+extern irx_rb_api_parquet_write(box: ArrowParquetHandle, batch: ArrowBatchHandle) -> none
+extern irx_rb_api_parquet_open_read(box: ArrowParquetHandle, path: str, batch_size: i64) -> none
+extern irx_rb_api_parquet_open_read_as(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, batch_size: i64) -> none
+extern irx_rb_api_parquet_open_write(box: ArrowParquetHandle, path: str, schema: ArrowSchemaHandle, compression: str, row_group_size: i64) -> none
+extern irx_rb_api_csv_new() -> ArrowCsvHandle
+extern irx_rb_api_csv_destroy(box: ArrowCsvHandle) -> none
+extern irx_rb_api_csv_close(box: ArrowCsvHandle) -> none
+extern irx_rb_api_csv_next(box: ArrowCsvHandle) -> i32
+extern irx_rb_api_csv_batch(box: ArrowCsvHandle, out: ArrowBatchHandle) -> none
+extern irx_rb_api_csv_schema(box: ArrowCsvHandle, out: ArrowSchemaHandle) -> none
+extern irx_rb_api_csv_write(box: ArrowCsvHandle, batch: ArrowBatchHandle) -> none
+extern irx_rb_api_csv_open_read(box: ArrowCsvHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_csv_open_read_as(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_csv_open_write(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
+
+class Parquet:
+  ```
+  title: Parquet
+  summary: Scoped file owner with explicit read or write mode.
+  ```
+  @[private]
+  handle: ArrowParquetHandle
+
+  fn __init__(self) -> none:
+    ```
+    title: __init__
+    summary: Creates a closed file owner.
+    ```
+    self.handle = irx_rb_api_parquet_new()
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: __del__
+    summary: Releases the session at the last class reference.
+    ```
+    irx_rb_api_parquet_destroy(self.handle)
+    return none
+
+  fn close(self) -> none:
+    ```
+    title: close
+    summary: Closes the active session and checks finalization errors.
+    ```
+    irx_rb_api_parquet_close(self.handle)
+    return none
+
+  fn open_read(self, path: str, batch_size: i64 = 65536) -> none:
+    ```
+    title: open_read
+    summary: Opens a closed owner for reading with the file schema.
+    ```
+    irx_rb_api_parquet_open_read(self.handle, path, batch_size)
+    return none
+
+  fn open_read_as(self, path: str, schema: Schema, batch_size: i64 = 65536) -> none:
+    ```
+    title: open_read_as
+    summary: Opens with an exact expected schema.
+    ```
+    irx_rb_api_parquet_open_read_as(self.handle, path, schema.native_handle(), batch_size)
+    return none
+
+  fn open_write(self, path: str, schema: Schema, compression: str = "snappy", row_group_size: i64 = 1048576) -> none:
+    ```
+    title: open_write
+    summary: Validates options and schema before creating or truncating output.
+    ```
+    irx_rb_api_parquet_open_write(self.handle, path, schema.native_handle(), compression, row_group_size)
+    return none
+
+  fn next(self) -> bool:
+    ```
+    title: next
+    summary: Advances in read mode; false means EOF, not an empty batch.
+    ```
+    return irx_rb_api_parquet_next(self.handle) == 0
+
+  fn batch(self) -> RecordBatch:
+    ```
+    title: batch
+    summary: Returns an independently owned current batch in read mode.
+    ```
+    var result: RecordBatch = RecordBatch()
+    irx_rb_api_parquet_batch(self.handle, result.native_handle())
+    return result
+
+  fn schema(self) -> Schema:
+    ```
+    title: schema
+    summary: Returns an independent schema in either open mode.
+    ```
+    var result: Schema = Schema()
+    irx_rb_api_parquet_schema(self.handle, result.native_handle())
+    return result
+
+  fn write(self, batch: RecordBatch) -> none:
+    ```
+    title: write
+    summary: Writes an exact-schema batch in write mode.
+    ```
+    irx_rb_api_parquet_write(self.handle, batch.native_handle())
+    return none
+
+class CSV:
+  ```
+  title: CSV
+  summary: Scoped file owner with explicit read or write mode.
+  ```
+  @[private]
+  handle: ArrowCsvHandle
+
+  fn __init__(self) -> none:
+    ```
+    title: __init__
+    summary: Creates a closed file owner.
+    ```
+    self.handle = irx_rb_api_csv_new()
+    return none
+
+  fn __del__(self) -> none:
+    ```
+    title: __del__
+    summary: Releases the session at the last class reference.
+    ```
+    irx_rb_api_csv_destroy(self.handle)
+    return none
+
+  fn close(self) -> none:
+    ```
+    title: close
+    summary: Closes the active session and checks finalization errors.
+    ```
+    irx_rb_api_csv_close(self.handle)
+    return none
+
+  fn open_read(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+    ```
+    title: open_read
+    summary: Opens a closed owner for reading with the file schema.
+    ```
+    irx_rb_api_csv_open_read(self.handle, path, delimiter, cast(header, i32), block_size)
+    return none
+
+  fn open_read_as(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+    ```
+    title: open_read_as
+    summary: Parses text using explicit physical column types.
+    ```
+    irx_rb_api_csv_open_read_as(self.handle, path, schema.native_handle(), delimiter, cast(header, i32), block_size)
+    return none
+
+  fn open_write(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true) -> none:
+    ```
+    title: open_write
+    summary: Validates options and schema before creating or truncating output.
+    ```
+    irx_rb_api_csv_open_write(self.handle, path, schema.native_handle(), delimiter, cast(header, i32))
+    return none
+
+  fn next(self) -> bool:
+    ```
+    title: next
+    summary: Advances in read mode; false means EOF, not an empty batch.
+    ```
+    return irx_rb_api_csv_next(self.handle) == 0
+
+  fn batch(self) -> RecordBatch:
+    ```
+    title: batch
+    summary: Returns an independently owned current batch in read mode.
+    ```
+    var result: RecordBatch = RecordBatch()
+    irx_rb_api_csv_batch(self.handle, result.native_handle())
+    return result
+
+  fn schema(self) -> Schema:
+    ```
+    title: schema
+    summary: Returns an independent schema in either open mode.
+    ```
+    var result: Schema = Schema()
+    irx_rb_api_csv_schema(self.handle, result.native_handle())
+    return result
+
+  fn write(self, batch: RecordBatch) -> none:
+    ```
+    title: write
+    summary: Writes an exact-schema batch in write mode.
+    ```
+    irx_rb_api_csv_write(self.handle, batch.native_handle())
     return none
