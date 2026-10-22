@@ -132,33 +132,52 @@ fn main() -> i32:
   assert fill_null(doubled[2], 0) == 6
   var filled: series[i32] = fill_null(doubled, 7)
   assert filled[1] == 7
-  var empty: nullable[i32] = cast(none, nullable[i32])
+  var empty: nullable[i32] = none
   assert is_null(empty)
   return 0
 ````
 
 Supported operators are `+`, `-`, `*`, `/`, `==`, `!=`, `<`, `<=`, `>` and `>=`.
-Both operands must have exactly matching scalar types; cast scalars explicitly
-when necessary. Series/scalar operations broadcast the scalar. Series/Series
-operations require equal lengths. Integer arithmetic is checked: overflow and
-division by zero fail instead of wrapping. Null operands produce null outputs,
-including comparisons. Boolean `&&`/`and` and `||`/`or` propagate nulls
-strictly, not with Kleene semantics. These operations are eager, not
-short-circuiting.
+Numeric operands use IRx common-type promotion. Column casts are checked; values
+that cannot be represented by the promoted type fail explicitly. Series/scalar
+operations broadcast the scalar. Series/Series operations require equal lengths.
+Integer arithmetic is checked: overflow and division by zero fail instead of
+wrapping. Null operands produce null outputs, including comparisons. Boolean
+`&&`/`and` and `||`/`or` propagate nulls strictly, not with Kleene semantics.
+These operations are eager, not short-circuiting.
 
 `is_null` returns `bool` for a nullable scalar or a non-nullable Boolean Series
 mask. `fill_null(value, replacement)` eagerly evaluates a matching non-null
 scalar replacement and returns a non-nullable scalar or Series. Nullable scalars
 cannot implicitly become non-nullable values or conditions. Nullable scalar
-globals are not supported. Direct `none` assignment is not supported; use the
-explicit null construction above.
+globals support numeric/Boolean literal or `none` initializers. Direct `none` is
+accepted in nullable declarations, assignments, returns, and function
+arguments/defaults. It never implicitly fills a non-nullable value.
 
 These scalar operations currently cover `i8`–`i64`, `u8`–`u64`, `f32`, `f64` and
 `bool`. String, temporal, decimal and nested Series retain their data and schema
 but cannot yet be indexed into language scalars or used in these operators.
-Unary operations, slicing, mutation and reductions are rejected. Returned Series
-own independent references; temporary columns and aliases are released by the
-normal scope-lifetime machinery.
+Unary `+` and checked `-` support signed numeric values; Boolean `!`/`not`
+invert validity-preserving masks. Unsigned negation requires an explicit cast.
+`column[start:stop:step]` follows Python's bound clipping and negative-stride
+rules; omitted bounds are allowed and a zero step fails. Slicing, `is_null` and
+`series_count` also work on rich column storage.
+
+`series_sum`, `series_min`, `series_max`, `series_mean`, `series_any` and
+`series_all` skip nulls and return nullable scalars: empty/all-null input has a
+null result. `series_count` returns the non-null count as `i64`. Integer sums
+use checked `i64`/`u64` accumulators; floating sums and means return `f64`.
+Boolean reductions require Boolean columns.
+
+`column[index] = value` updates a mutable numeric/Boolean Series binding with
+bounds, type and nullability checks. Aliases of that handle observe updates; the
+originating DataFrame and previously computed/sliced Series do not. Construction
+completes before publication, so failed updates leave the old column intact.
+Concurrent access to a mutated handle is unsupported. Updates are statements,
+not value-producing assignment expressions.
+
+Returned Series own independent references; temporary columns and aliases are
+released by normal scope-lifetime cleanup.
 
 ## Parameterized static DataFrame schemas
 
@@ -182,5 +201,15 @@ Rich schemas work in aliases, parameters, returns and checked RecordBatch casts.
 Casts check names, order, exact physical parameters and nested nullability;
 non-nullable top-level columns also check actual batch null counts. They do not
 rescale decimals, change time units, or decode dictionaries implicitly. Input
-schema and field metadata are preserved. Rich column literals and standalone
-rich scalar variables are not supported; use RecordBatch/Arrow construction.
+schema and field metadata are preserved.
+
+Rich DataFrame literals use the declared schema rather than inference. Decimal
+cells use exact strings or integers (not binary floats); binary cells use UTF-8
+strings, with fixed widths checked in bytes. Parameterized temporal cells use
+integer storage units, without timezone conversion. Lists use nested lists;
+structs use positional lists matching declared field order; maps use lists of
+`[key, value]` pairs. Dictionaries encode literal values with checked index
+capacity. Nested nullability, widths, precision, scale and shape are validated
+during semantic analysis. Lowering embeds validated Arrow IPC bytes, not a
+Python interpreter or handwritten serialization format. Standalone rich scalar
+variables remain unsupported.

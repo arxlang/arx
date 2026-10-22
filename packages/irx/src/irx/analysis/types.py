@@ -1078,7 +1078,7 @@ def is_assignable(
     if target is None or value is None:
         return True
     if isinstance(target, astx.NullableType):
-        return same_type(
+        return is_assignable(
             target.value_type,
             value.value_type
             if isinstance(value, astx.NullableType)

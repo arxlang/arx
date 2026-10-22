@@ -171,3 +171,8 @@ For nullable tabular data, start with `dataframe[x:i32 | none]`, access
 scalar. [Collections](collections.md#nullable-scalars-and-series-expressions)
 documents checked arithmetic, null masks and rich static schemas for file
 conversions.
+
+Series can also be sliced (`frame.x[::-1]`) or reduced
+(`fill_null(series_sum(frame.x), cast(0, i64))`). See
+[Series operations](collections.md#nullable-scalars-and-series-expressions) for
+null, overflow, mutation and rich-literal contracts.

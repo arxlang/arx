@@ -17,7 +17,10 @@ from typing import cast
 import astx
 
 from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.call_arguments import call_evaluations
+from irx.analysis.call_arguments import (
+    call_evaluations,
+    contextualize_null_arguments,
+)
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
 from irx.analysis.ffi import ffi_returns_owned_string
 from irx.analysis.file_io import resolve_file_open
@@ -562,6 +565,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 return
             self.resolve_class_construction(node, binding.class_)
             return
+        if binding is not None and binding.function is not None:
+            contextualize_null_arguments(node, binding.function)
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
             self.visit(arg)

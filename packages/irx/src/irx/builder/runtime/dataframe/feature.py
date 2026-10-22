@@ -55,8 +55,21 @@ def build_dataframe_runtime_feature() -> RuntimeFeature:
     return RuntimeFeature(
         name="dataframe",
         symbols={
+            "irx_arrow_table_from_ipc": ExternalSymbolSpec(
+                "irx_arrow_table_from_ipc", declare_table_from_ipc
+            ),
+            "irx_arrow_series_set": ExternalSymbolSpec(
+                "irx_arrow_series_set", declare_series_set
+            ),
+            "irx_arrow_series_slice": ExternalSymbolSpec(
+                "irx_arrow_series_slice", declare_series_slice
+            ),
             "irx_arrow_series_index": ExternalSymbolSpec(
                 "irx_arrow_series_index", declare_series_index
+            ),
+            "irx_arrow_column_compute_promoted": ExternalSymbolSpec(
+                "irx_arrow_column_compute_promoted",
+                declare_column_compute_promoted,
             ),
             "irx_arrow_column_compute": ExternalSymbolSpec(
                 "irx_arrow_column_compute", declare_column_compute
@@ -401,5 +414,95 @@ def declare_column_compute(visitor: VisitorProtocol) -> ir.Function:
             column.as_pointer(),
             i64.as_pointer(),
             i32.as_pointer(),
+        ],
+    )
+
+
+@private
+@typechecked
+def declare_series_slice(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: >-
+      Declare a checked slice returning independently owned column storage.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    column = visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE
+    return _declare_function(
+        visitor,
+        "irx_arrow_series_slice",
+        ir.IntType(32),
+        [
+            column,
+            ir.IntType(64),
+            ir.IntType(64),
+            ir.IntType(64),
+            ir.IntType(32),
+            column.as_pointer(),
+        ],
+    )
+
+
+@private
+@typechecked
+def declare_column_compute_promoted(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare checked conversion to the semantic common operand type.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    original = declare_column_compute(visitor)
+    return declare_external_function(
+        visitor._llvm.module,
+        "irx_arrow_column_compute_promoted",
+        original.function_type,
+    )
+
+
+@private
+@typechecked
+def declare_series_set(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare checked copy-on-write Series element updates.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    i32, i64 = ir.IntType(32), ir.IntType(64)
+    return _declare_function(
+        visitor,
+        "irx_arrow_series_set",
+        i32,
+        [visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE, i64, i32, i64, i32, i32],
+    )
+
+
+@private
+@typechecked
+def declare_table_from_ipc(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare owned DataFrame construction from a checked IPC literal.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    return _declare_function(
+        visitor,
+        "irx_arrow_table_from_ipc",
+        ir.IntType(32),
+        [
+            ir.IntType(8).as_pointer(),
+            ir.IntType(64),
+            visitor._llvm.TABLE_HANDLE_TYPE.as_pointer(),
         ],
     )

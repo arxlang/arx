@@ -18,6 +18,8 @@
 #include <parquet/encryption/encryption.h>
 #include <parquet/properties.h>
 #include <algorithm>
+#include <cmath>
+#include <sstream>
 #include <filesystem>
 #include <numeric>
 #include <random>
@@ -27,11 +29,43 @@
 #endif
 
 namespace irx {
+// Only snapshot recursion passes an already validated physical schema. Public
+// callers always enter parquet_writer and cannot supply reserved metadata.
+static arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer_impl(
+    const char*, const std::shared_ptr<arrow::Schema>&, const char*, int64_t,
+    const IrxParquetOptions*, bool);
 namespace {
 using arrow::Status;
 namespace ds = arrow::dataset;
 namespace cp = arrow::compute;
 constexpr const char *logical_schema_key = "IRX:logical_schema:v1";
+
+// Arrow's generic Scalar::Parse does not parse decimals. Keep Hive escaping,
+// formatting and grouping, replacing only typed decimal key decoding.
+class TypedHivePartitioning final : public ds::HivePartitioning {
+ public:
+    using ds::HivePartitioning::HivePartitioning;
+    arrow::Result<cp::Expression> Parse(const std::string& path) const override {
+        std::istringstream segments(path);
+        std::string segment;
+        cp::Expression expression = cp::literal(true);
+        while (std::getline(segments, segment, '/')) {
+            ARROW_ASSIGN_OR_RAISE(auto key, ParseKey(segment, options()));
+            if (!key) continue;
+            auto field = schema()->GetFieldByName(key->name);
+            if (!field) continue;
+            cp::Expression predicate;
+            if (arrow::is_decimal(field->type()->id()) && key->value) {
+                ARROW_ASSIGN_OR_RAISE(auto scalar, cp::Cast(arrow::Datum(*key->value), field->type()));
+                predicate = cp::equal(cp::field_ref(key->name), cp::literal(scalar));
+            } else {
+                ARROW_ASSIGN_OR_RAISE(predicate, ConvertKey(*key));
+            }
+            expression = cp::and_(expression, predicate);
+        }
+        return expression;
+    }
+};
 
 arrow::Result<std::shared_ptr<arrow::DataType>> physical_type(
     const std::shared_ptr<arrow::DataType> &type, bool normalize,
@@ -380,7 +414,7 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> scan_reader(
             ARROW_ASSIGN_OR_RAISE(auto metadata, fs->GetFileInfo(path + "/_common_metadata"));
             if (metadata.type() == arrow::fs::FileType::File) {
                 ARROW_ASSIGN_OR_RAISE(recorded_schema, metadata_schema(fs, metadata.path(), o));
-                factory_options.partitioning = std::make_shared<ds::HivePartitioning>(recorded_schema);
+                factory_options.partitioning = std::make_shared<TypedHivePartitioning>(recorded_schema);
             } else factory_options.partitioning = ds::HivePartitioning::MakeFactory();
         }
         arrow::fs::FileSelector selector;
@@ -528,6 +562,18 @@ class DatasetWriter final : public BatchWriter {
         if (closed_) return Status::Invalid("Parquet dataset writer is closed");
         try {
             for (const auto &field : options_.partitioning->schema()->fields()) {
+                const auto column = batch.GetColumnByName(field->name());
+                if (!column) return failure_ = Status::Invalid("missing partition column: ", field->name());
+                if (arrow::is_floating(field->type()->id())) {
+                    for (int64_t row = 0; row < column->length(); ++row) {
+                        if (column->IsNull(row)) continue;
+                        const double value = column->type_id() == arrow::Type::FLOAT
+                            ? static_cast<const arrow::FloatArray&>(*column).Value(row)
+                            : static_cast<const arrow::DoubleArray&>(*column).Value(row);
+                        if (!std::isfinite(value) || (value == 0 && std::signbit(value)))
+                            return failure_ = Status::Invalid("floating Hive keys must be finite and cannot be negative zero: ", field->name());
+                    }
+                }
                 if (field->type()->id() != arrow::Type::STRING) continue;
                 const auto &values = static_cast<const arrow::StringArray &>(
                     *batch.GetColumnByName(field->name()));
@@ -715,14 +761,14 @@ arrow::Result<std::shared_ptr<BatchWriter>> snapshot_writer(
         metadata_options.dataset = metadata_options.hive = metadata_options.atomic = false;
         metadata_options.append = metadata_options.unify = metadata_options.durable = false;
         metadata_options.partition_columns.clear();
-        ARROW_ASSIGN_OR_RAISE(auto metadata, parquet_writer((generation / "_common_metadata").c_str(), output,
-            o.compression.c_str(), o.row_group_size, &metadata_options));
+        ARROW_ASSIGN_OR_RAISE(auto metadata, parquet_writer_impl((generation / "_common_metadata").c_str(), output,
+            o.compression.c_str(), o.row_group_size, &metadata_options, true));
         ARROW_RETURN_NOT_OK(metadata->Close());
     } else std::filesystem::remove(generation);
     auto inner_options = o;
     inner_options.atomic = inner_options.durable = inner_options.unify = false;
-    ARROW_ASSIGN_OR_RAISE(auto writer, parquet_writer(generation.c_str(), output,
-        o.compression.c_str(), o.row_group_size, &inner_options));
+    ARROW_ASSIGN_OR_RAISE(auto writer, parquet_writer_impl(generation.c_str(), output,
+        o.compression.c_str(), o.row_group_size, &inner_options, true));
     guard.transferred = true;
     return std::make_shared<SnapshotWriter>(writer, input, output, generation, destination, lease, o.durable);
 #endif
@@ -854,9 +900,9 @@ arrow::Result<std::shared_ptr<arrow::RecordBatchReader>> parquet_reader(
     return result;
 }
 
-arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
+static arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer_impl(
     const char *path, const std::shared_ptr<arrow::Schema> &schema,
-    const char *compression, int64_t row_group_size, const IrxParquetOptions *options) {
+    const char *compression, int64_t row_group_size, const IrxParquetOptions *options, bool prepared) {
     IrxParquetOptions o = options ? *options : IrxParquetOptions{};
     if (!o.columns.empty() || !o.predicates.empty() || !o.row_groups.empty() || o.pre_buffer)
         return Status::Invalid("read-only Parquet options supplied to a writer");
@@ -864,9 +910,8 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         return Status::Invalid("write-time unify requires an atomic dataset append");
     if (o.hive && !o.dataset) return Status::Invalid("hive requires dataset=true");
     if (o.durable && !o.atomic && !o.append) return Status::Invalid("durable requires atomic=true or append=true");
-    ARROW_ASSIGN_OR_RAISE(auto physical, physical_schema(schema, true, o.normalize, o.reconstruct, true));
-    if (o.reconstruct) {
-        if (o.dataset) return Status::NotImplemented("explicit schema reconstruction currently targets single files");
+    ARROW_ASSIGN_OR_RAISE(auto physical, physical_schema(schema, !prepared, o.normalize, o.reconstruct, true));
+    if (o.reconstruct && !prepared) {
         ARROW_RETURN_NOT_OK(cp::Initialize());
         ARROW_ASSIGN_OR_RAISE(auto logical, physical_schema(schema, true, o.normalize, true));
         ARROW_ASSIGN_OR_RAISE(auto encoded, arrow::ipc::SerializeSchema(*logical));
@@ -921,8 +966,10 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
                 field->type()->id() != arrow::Type::TIME32 &&
                 field->type()->id() != arrow::Type::TIME64 &&
                 field->type()->id() != arrow::Type::TIMESTAMP &&
-                !arrow::is_integer(field->type()->id()))
-                return Status::TypeError("partition columns must be strings, integers, Boolean, date32, time or timestamp");
+                !arrow::is_integer(field->type()->id()) &&
+                !arrow::is_floating(field->type()->id()) &&
+                !arrow::is_decimal(field->type()->id()))
+                return Status::TypeError("unsupported Hive partition column type");
             partition_fields.push_back(field);
         }
         std::shared_ptr<LocalWriteLease> lease;
@@ -956,7 +1003,7 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         write.file_write_options = write_options;
         write.filesystem = fs;
         write.base_dir = fs_path;
-        write.partitioning = std::make_shared<ds::HivePartitioning>(arrow::schema(partition_fields));
+        write.partitioning = std::make_shared<TypedHivePartitioning>(arrow::schema(partition_fields));
         write.max_rows_per_group = row_group_size;
         write.preserve_order = true;
         write.existing_data_behavior = ds::ExistingDataBehavior::kOverwriteOrIgnore;
@@ -1023,5 +1070,10 @@ arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
         ARROW_RETURN_NOT_OK(existing->Close());
     }
     return writer;
+}
+arrow::Result<std::shared_ptr<BatchWriter>> parquet_writer(
+    const char* path, const std::shared_ptr<arrow::Schema>& schema,
+    const char* compression, int64_t row_group_size, const IrxParquetOptions* options) {
+    return parquet_writer_impl(path, schema, compression, row_group_size, options, false);
 }
 } // namespace irx

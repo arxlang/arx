@@ -204,6 +204,8 @@ class TypeParserMixin(ParserMixinBase):
         returns:
           type: astx.Expr
         """
+        if isinstance(data_type, astx.NullableType):
+            return astx.Cast(astx.LiteralNone(), data_type)
         if isinstance(data_type, astx.Float16):
             return astx.LiteralFloat16(0.0)
         if isinstance(data_type, astx.Float32):

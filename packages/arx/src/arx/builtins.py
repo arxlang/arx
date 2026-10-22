@@ -114,6 +114,13 @@ def is_builtin(name: str) -> bool:
     return name in {
         "is_null",
         "fill_null",
+        "series_sum",
+        "series_min",
+        "series_max",
+        "series_mean",
+        "series_count",
+        "series_any",
+        "series_all",
         BUILTIN_CAST,
         BUILTIN_DATAFRAME,
         BUILTIN_ISINSTANCE,

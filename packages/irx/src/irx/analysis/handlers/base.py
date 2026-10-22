@@ -1819,6 +1819,12 @@ class SemanticAnalyzerCore(BaseVisitor):
                 self.context.scopes.declare(hidden_symbol)
             for index, argument in enumerate(visible_arguments):
                 if self._argument_has_default(argument):
+                    if isinstance(
+                        argument.type_, astx.NullableType
+                    ) and isinstance(argument.default, astx.LiteralNone):
+                        value = argument.default
+                        argument.default = astx.Cast(value, argument.type_)
+                        argument.default.loc = value.loc
                     self.visit(argument.default)
                     default_type = self._expr_type(argument.default)
                     if not is_assignable(argument.type_, default_type):

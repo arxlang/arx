@@ -415,9 +415,15 @@ def test_nullable_series_translate_verifies() -> None:
             "nullable scalars",
         ),
         ("var bad: i32 = frame.x[0]", "cannot assign"),
-        ("var bad: nullable[i32] = frame.x[0] + 1.5", "matching scalar types"),
+        (
+            "var bad: nullable[i32] = frame.x[0] + true",
+            "compatible scalar types",
+        ),
         ("var bad: nullable[i32] = frame.x[-1.0]", "integer representable"),
-        ("var bad: nullable[i32] = -frame.x[0]", "Use binary arithmetic"),
+        (
+            "var bad: nullable[i32] = ++frame.x[0]",
+            "unsupported nullable/Series unary",
+        ),
         ("var bad: bool = is_null(1)", "is_null requires"),
         ("var bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
         ("if frame.x[0]:\n    return 1", "condition must be Boolean"),

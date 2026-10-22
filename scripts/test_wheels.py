@@ -270,6 +270,15 @@ fn main() -> i32:
   var values: series[i32 | none] = frame.x + frame.x
   assert is_null(values[1])
   assert fill_null(values[0], 0) == 2
+  var reversed: series[i32 | none] = values[::-1]
+  assert is_null(reversed[0])
+  assert fill_null(series_sum(values), cast(0, i64)) == 2
+  values[1] = 4
+  assert fill_null(values[1], 0) == 4
+  var absent: nullable[i32] = none
+  assert is_null(absent)
+  var rich: dataframe[amount:decimal128[8,2]] = dataframe({amount:["1.25"]})
+  assert rich.nrows() == 1
   return 0
 """
 

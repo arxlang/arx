@@ -4,12 +4,15 @@
 title: Unary-operator visitor mixins for llvmliteir.
 """
 
+from typing import cast
+
 import astx
 
 from llvmlite import ir
 
 from irx.builder.core import VisitorCore, semantic_assignment_key
 from irx.builder.diagnostics import require_lowered_value
+from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_fp_type, is_int_type
@@ -26,6 +29,8 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: astx.UnaryOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         if node.op_code in {"+", "-"}:
             self.visit_child(node.operand)
             value = require_lowered_value(

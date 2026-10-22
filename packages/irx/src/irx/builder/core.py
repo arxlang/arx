@@ -54,7 +54,10 @@ from irx.analysis.types import (
     is_unsigned_type,
 )
 from irx.builder.base import BuilderVisitor
-from irx.builder.diagnostics import raise_lowering_internal_error
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
 from irx.builder.protocols import VisitorProtocol
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.errors import (
@@ -911,6 +914,46 @@ class VisitorCore(BuilderVisitor):
             )
             for module in modules
         ]
+        for _module, nodes in module_nodes:
+            for node in nodes:
+                if not isinstance(
+                    node,
+                    (astx.VariableDeclaration, astx.InlineVariableDeclaration),
+                ) or not isinstance(node.type_, astx.NullableType):
+                    continue
+                info = getattr(node, "semantic", None)
+                payload = require_semantic_metadata(
+                    None
+                    if info is None
+                    else info.extras.get("nullable_global"),
+                    node=node,
+                    metadata="nullable_global",
+                    context="nullable global",
+                )
+                type_ = require_semantic_metadata(
+                    self._llvm_type_for_ast_type(node.type_),
+                    node=node,
+                    metadata="LLVM type",
+                    context="nullable global",
+                )
+                key = semantic_symbol_key(node, node.name)
+                storage = ir.GlobalVariable(
+                    self._llvm.module, type_, name="nullable_global_" + key
+                )
+                storage.linkage = "internal"
+                storage.global_constant = (
+                    node.mutability is astx.MutabilityKind.constant
+                )
+                storage.initializer = ir.Constant(
+                    type_,
+                    [
+                        ir.Constant(ir.IntType(1), int(payload[0])),
+                        ir.Constant(type_.elements[1], payload[1]),
+                    ],
+                )
+                self.named_values[key] = storage
+                if storage.global_constant:
+                    self.const_vars.add(key)
         # Declare pointer identities before any layout asks for a class field
         # type; acyclic reference fields can point to later declarations.
         for module, nodes in module_nodes:
@@ -1801,13 +1844,21 @@ class VisitorCore(BuilderVisitor):
             return value
 
         if isinstance(target_type, astx.NullableType):
+            valid: ir.Value = ir.Constant(ir.IntType(1), 1)
             if isinstance(source_type, astx.NullableType):
-                return value
+                valid = self._llvm.ir_builder.extract_value(value, 0)
+                value = self._llvm.ir_builder.extract_value(value, 1)
+                source_type = source_type.value_type
+            value = self._cast_ast_value(
+                value,
+                source_type=source_type,
+                target_type=target_type.value_type,
+            )
             llvm_type = self._llvm_type_for_ast_type(target_type)
             if llvm_type is None:
                 raise TypeError("missing nullable storage type")
             result = self._llvm.ir_builder.insert_value(
-                ir.Constant(llvm_type, None), ir.Constant(ir.IntType(1), 1), 0
+                ir.Constant(llvm_type, None), valid, 0
             )
             return self._llvm.ir_builder.insert_value(result, value, 1)
         if isinstance(source_type, astx.UnionType):

@@ -271,3 +271,10 @@ still validates every declaration, while lowering retains referenced classes
 remain eager by default. CSV-only programs therefore do not activate Parquet.
 See [format contracts](../arx/parquet.md) for transactional datasets, durable
 local writes, reconstruction and runtime-schema DataFrames.
+
+Series runtime primitives also provide checked unary kernels, common-type
+promotion, null-skipping reductions, bounded slices and failure-atomic element
+updates. Slice results own independent handles; updates replace a handle's
+column without modifying the originating table. Rich literal construction copies
+validated IPC data into owned Arrow storage. These operations are registered
+with the existing DataFrame runtime feature and do not activate Parquet.

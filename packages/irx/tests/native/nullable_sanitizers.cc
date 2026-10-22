@@ -33,6 +33,17 @@ int main() {
     irx_arrow_chunked_array_handle* sum = nullptr;
     assert(irx_arrow_column_compute("add_checked", IRX_ARROW_TYPE_INT32,
         column, 0, 1, column, 0, 1, &sum, &bits, &valid) == 0);
+    irx_arrow_chunked_array_handle* slice = nullptr;
+    assert(irx_arrow_series_slice(column, 0, 0, -1, 0, &slice) == 0);
+    assert(irx_arrow_series_set(column, 1, IRX_ARROW_TYPE_INT32, 9, 1, 1) == 0);
+    assert(irx_arrow_series_index(slice, 0, IRX_ARROW_TYPE_INT32, &bits, &valid) == 0);
+    assert(valid == 0);
+    assert(irx_arrow_series_set(column, -1, IRX_ARROW_TYPE_INT32, 9, 1, 1) != 0);
+    irx_arrow_chunked_array_handle* reduced = nullptr;
+    assert(irx_arrow_column_compute("sum", IRX_ARROW_TYPE_INT32,
+        column, 0, 1, nullptr, 0, 0, &reduced, &bits, &valid) == 0);
+    assert(reduced == nullptr && bits == 14 && valid == 1);
+    irx_arrow_chunked_array_release(slice);
     irx_arrow_chunked_array_release(column);
     assert(irx_arrow_series_index(sum, 0, IRX_ARROW_TYPE_INT32, &bits, &valid) == 0);
     assert(bits == 10 && valid == 1);

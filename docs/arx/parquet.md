@@ -63,7 +63,7 @@ arguments such as `batch_size=`.
 | `compression_level`                | `set_int`                               | Codec-specific level, validated against the installed codec                                                                              |
 | `row_group_size`, `data_page_size` | `set_int`                               | Writer row-group row limit and page byte target                                                                                          |
 | `normalize`                        | `set_int`, flag                         | Explicit checked temporal normalization, described below                                                                                 |
-| `reconstruct`                      | `set_int`, flag                         | Single-file logical reconstruction for numeric dictionaries and nullable fixed-size lists                                                |
+| `reconstruct`                      | `set_int`, flag                         | File/dataset logical reconstruction for numeric dictionaries and nullable fixed-size lists                                               |
 | `atomic`, `durable`, `append`      | `set_int`, flags                        | Local atomic snapshots/rewrite append; optional fsync durability                                                                         |
 
 Python uses `columns`, `row_groups`, `partition_columns` tuples and a tuple of
@@ -107,7 +107,7 @@ Extension storage is never implicitly normalized.
 
 ### Explicit logical reconstruction
 
-`reconstruct=true` on a **single-file writer** supports numeric dictionaries
+`reconstruct=true` on a **file or dataset writer** supports numeric dictionaries
 (including decimals) and fixed-size lists with null parents. IRx writes ordinary
 value columns/variable lists plus the reserved `IRX:logical_schema:v1` IPC
 schema metadata. IRx readers validate that metadata against the physical schema
@@ -116,13 +116,17 @@ projected scans. Dictionary codebooks are rebuilt per batch; safe index casts
 reject capacity overflow. Ordered dictionary reconstruction is rejected because
 its codebook ordering cannot be preserved. Codes are not stable identifiers.
 
+Dataset common metadata carries the logical schema across fragments, including
+projection and atomic append. Reconstruction does not relax append schema
+checks; schema evolution that changes logical-schema metadata is rejected.
+
 Other readers see the documented physical types, not the reconstructed schema.
 Use IPC when arbitrary consumers must see the exact original Arrow types. Strict
 writes without this option still reject numeric dictionaries and null fixed-list
-parents. Dataset reconstruction, unions and list views are not supported; errors
-are explicit. Both internal schema metadata keys are reserved. The scalar
-`BatchBuilder`/getter API is not a recursive value API; use C Data imports and
-`RecordBatch.from_arrow` / `to_arrow` for rich values.
+parents. Unions and list views are not supported; errors are explicit. Both
+internal schema metadata keys are reserved. The scalar `BatchBuilder`/getter API
+is not a recursive value API; use C Data imports and `RecordBatch.from_arrow` /
+`to_arrow` for rich values.
 
 ## Datasets, evolution and filesystems
 
@@ -161,6 +165,11 @@ readers have closed. Never edit a published generation or its hardlinked files.
 External readers can follow the public symlink, but only IRx readers implement
 generation pinning. This is a local commit protocol, not an object-store table
 format or distributed transaction.
+
+Decimal128/256 and floating-point partition keys preserve their declared types.
+Decimal paths are parsed with checked Arrow decimal conversion rather than
+floating-point intermediates. Floating keys must be finite and cannot be
+negative zero: equality grouping cannot preserve those values exactly.
 
 Hive names cannot contain `/`, backslash, `=` or `%`. The string value
 `__HIVE_DEFAULT_PARTITION__` is reserved for nulls. Other strings are
