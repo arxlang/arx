@@ -3,6 +3,15 @@
 
 ## Unreleased
 
+### Integer helper safety
+
+- `range` now terminates without wrapping when a step crosses an i32 endpoint;
+  it still returns an eagerly allocated `list[i32]`.
+- `stdlib.math.abs` on the i32 minimum and `clamp` with reversed bounds now
+  fail checked assertions instead of returning incorrect values. These failures
+  remain fatal, not catchable exceptions. `square` retains wrapping i32
+  multiplication.
+
 ### Migration notes
 
 - CSV and Parquet operations live in `stdlib.csv` and `stdlib.parquet`;

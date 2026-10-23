@@ -12,7 +12,7 @@ import pytest
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
-from arx.main import FileImportResolver
+from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
@@ -213,6 +213,30 @@ def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     assert "irx_file_open" in result
     assert "irx_file_release" in result
     assert "ARX-RUNTIME-FILE-001" in result
+
+
+def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
+    """
+    title: >-
+      Range widens its counter but returns i32 values with checked helpers.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Integer helper translation\n```\n"
+        "import math from stdlib\n"
+        "fn main() -> i32:\n"
+        "  var values: list[i32] = range(2147483646, 2147483647, 2)\n"
+        "  return math.clamp(math.abs(values[0]), 0, math.square(46340))\n"
+    )
+    module = Parser().parse(Lexer().lex(), "integer_helpers")
+    root = ParsedModule(
+        "integer_helpers", inject_ambient_builtin_imports(module)
+    )
+    text = ArxBuilder().translate_modules(root, FileImportResolver(()))
+    llvm.parse_assembly(text).verify()
+    assert "add i64" in text
+    assert "trunc i64" in text
+    assert "abs() result is out of range for i32" in text
+    assert "clamp() lower bound must not exceed upper bound" in text
 
 
 def test_class_lifecycle_translate_verifies() -> None:

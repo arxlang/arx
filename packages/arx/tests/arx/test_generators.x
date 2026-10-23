@@ -55,3 +55,19 @@ fn test_range_supports_descending_step() -> none:
   assert third == 3, "range(5, 0, -1)[2] should be 3"
   assert fourth == 2, "range(5, 0, -1)[3] should be 2"
   assert fifth == 1, "range(5, 0, -1)[4] should be 1"
+
+fn test_range_empty_intervals() -> none:
+  ```
+  title: test_range_empty_intervals
+  summary: Equal endpoints and wrong-direction steps produce empty lists.
+  ```
+  var count: i32 = 0
+  for value in range(7, 7):
+    count = count + 1
+  for value in range(7, 7, 0 - 1):
+    count = count + 1
+  for value in range(3, 0):
+    count = count + 1
+  for value in range(0, 3, 0 - 1):
+    count = count + 1
+  assert count == 0
