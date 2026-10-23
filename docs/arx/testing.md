@@ -40,16 +40,8 @@ arx test -x
 arx test --keep-artifacts
 ```
 
-| Option                    | Purpose                                    |
-| ------------------------- | ------------------------------------------ |
-| `--list`                  | list discovered tests without running them |
-| `-k TEXT`                 | select tests containing `TEXT`             |
-| `-x`, `--fail-fast`       | stop after the first failing test          |
-| `--exclude GLOB`          | exclude matching paths; may be repeated    |
-| `--file-pattern GLOB`     | override the test file pattern             |
-| `--function-pattern GLOB` | override the function name pattern         |
-| `--keep-artifacts`        | retain generated wrappers and executables  |
-| `--link-mode MODE`        | use `auto`, `pie`, or `no-pie` linking     |
+Use `arx test --help` for discovery and execution options, including selection,
+exclusion, and artifact retention.
 
 ## Project configuration
 

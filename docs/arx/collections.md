@@ -24,9 +24,14 @@ fn sum_values() -> i32:
   return total
 ```
 
-The current dynamic-list runtime supports creation, append/growth, length, and
-indexed access. Produced storage is process-lifetime until explicit list release
-semantics are added.
+Dynamic lists are move-only: owned locals and non-transferred temporaries are
+released on ordinary lexical exits and replacement; returning an owned list
+moves it to the caller. Parameters borrow storage and cannot append or return
+that borrow. Literal-list views are non-owning and cannot escape into dynamic
+owners or call arguments. See the
+[enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract)
+for the ownership boundary. `range` currently materializes a list, not a lazy
+iterator.
 
 ## Tensors
 
@@ -95,13 +100,9 @@ format-specific DataFrame methods or `to_*` aliases are added. `CSVStream` and
 `ParquetStream` in those modules support explicit streaming via `frame()` and
 `write(frame)`.
 
-`Schema`, `BatchBuilder`, `RecordBatch` and IPC remain in `stdlib.arrow`.
-`Schema.add("id", "int64", nullable=false)` uses scalar names, not native IDs.
-`cast(frame, dataframe[id:i64])` checks an existing frame directly, including
-all chunks and reachable nested nullability, without coercion or metadata loss.
-`cast(batch, dataframe[id:i64])` and `cast(frame, RecordBatch)` remain available
-for interop. See [CSV](csv.md) and [Parquet](parquet.md) for parameter
-contracts, nullable examples and advanced options.
+`Schema`, `BatchBuilder`, `RecordBatch` and IPC remain in `stdlib.arrow`. File
+workflows and format-specific safety limits live in [CSV](csv.md) and
+[Parquet](parquet.md); exact casts follow the shared conversion contract below.
 
 `IPCReader.next()` advances one batch; `batch()` and `schema()` return
 independent snapshots. `open_file` selects IPC file format, `open_stream`
@@ -109,7 +110,22 @@ selects streaming format at a path, and `connect` exchanges IPC streaming bytes
 over TCP. Writers reject schema mismatches, including metadata and nullability.
 Check `is_null` before typed getters. Objects close on their last scoped
 reference; explicit `close()` is idempotent. See the
-[complete API and tested examples](../apache-arrow.md#compiled-arx-interoperability-stdlib.arrow).
+[interoperability workflow and ownership contract](../apache-arrow.md#compiled-arx-interoperability-stdlib.arrow).
+
+## Checked DataFrame conversion
+
+`cast(frame, dataframe[id:i64])` and `cast(batch, dataframe[id:i64])` assert
+exact names, order, physical types, and every chunk's reachable nullability.
+They do not project, coerce, fill nulls, or infer compile-time types. Metadata
+and independent ownership are preserved; `cast(frame, RecordBatch)` bridges back
+to batch APIs. Runtime-schema frames preserve rich Arrow data without permitting
+unchecked static column access.
+
+Fixed-row-count casts, owned globals, generator locals, aggregate-owned fields,
+and arbitrary DataFrame FFI are unsupported. See
+[parameterized schemas](#parameterized-static-dataframe-schemas) for nested
+nullability and exact physical parameters. File-format restrictions still apply
+independently of what an in-memory frame can hold.
 
 ## Runtime boundary
 
@@ -209,6 +225,11 @@ Casts check names, order, exact physical parameters and nested nullability;
 non-nullable top-level columns also check actual batch null counts. They do not
 rescale decimals, change time units, or decode dictionaries implicitly. Input
 schema and field metadata are preserved.
+
+Unparameterized `time` uses time64 microseconds; `timestamp`/`datetime` use
+timezone-naive timestamp microseconds. Their text literal constructors accept
+whole seconds without timezone or fractional components. Use parameterized
+storage or checked Arrow imports for other units or zones.
 
 Rich DataFrame literals use the declared schema rather than inference. Decimal
 cells use exact strings or integers (not binary floats); binary cells use UTF-8

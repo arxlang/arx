@@ -171,15 +171,9 @@ summary: Declares an external function signature.
 extern putchard(x: i32) -> i32
 ````
 
-## Builtin `open`
+## Native file construction
 
-`open` is a compiler-backed adapter to the builtin `File` constructor. Both
-support the same eight-argument restricted native text-file profile and return
-ordinary File class references, including through positional and keyword calls.
-Class constructors also accept keywords from their `__init__` parameters (see
-[Classes](classes.md)). Ordinary functions and methods also support keywords as
-described above; `File.write(text="hello")` uses its declared method parameter.
-The file creation profile retains its compile-time-only optional settings and
-checked construction path; it is not an ordinary source wrapper with arbitrary
-keyword forwarding. See [Text File I/O](file-io.md) for supported defaults,
-methods, and ownership rules.
+[`File` and `open`](file-io.md) share checked construction and return ordinary
+File references. Their restricted native settings are not arbitrary Python
+keyword forwarding. [Class constructors](classes.md) bind keywords through
+`__init__`; ordinary function/method binding follows the rules above.

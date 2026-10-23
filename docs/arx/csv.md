@@ -30,27 +30,18 @@ return `none` only after checked finalization. There are no DataFrame `.to_*`
 methods or `to_*` aliases. Never copy a file onto itself using streaming
 sessions.
 
-### Parameters
+### Parsing policy
 
-| `read_csv(path, ...)` option   | Default / behavior                                                     |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| `schema`                       | Omitted: infer from the first block, then freeze types                 |
-| `columns`                      | Omitted: all columns; nonempty unique literal list, in requested order |
-| `names`                        | Full headerless name list; requires `header=false` and no `schema`     |
-| `delimiter`                    | `","`; one supported ASCII byte, including tab                         |
-| `header`                       | `true`; otherwise schema names, explicit names, or `f0`, `f1`, …       |
-| `quotechar`, `doublequote`     | `"\""`, `true`                                                         |
-| `escapechar`                   | `""` disables escaping; otherwise one supported ASCII byte             |
-| `skiprows`, `skip_blank_lines` | `0`, `false`                                                           |
-| `null_values`                  | `[""]`; replaces token recognition, `[]` disables it                   |
-| `block_size`                   | `1048576` bytes; positive signed 32-bit count                          |
+An omitted schema is inferred from the first block, then frozen. For headerless
+input, supply a schema or explicit names; `names` requires `header=false` and no
+schema. Projections must be nonempty and unique and preserve requested order.
+`null_values` replaces token recognition; an empty list disables it. These
+choices affect interpretation, not just performance.
 
-| `write_csv(frame, path, ...)` option | Default / behavior                       |
-| ------------------------------------ | ---------------------------------------- |
-| `delimiter`, `header`                | `","`, `true`                            |
-| `lineterminator`                     | `"\n"`; also accepts `"\r\n"`            |
-| `na_rep`                             | `""`; validated before opening output    |
-| `quoting`                            | `"needed"`; also `"all_valid"`, `"none"` |
+The eager option schema lives in `irx.analysis.table_io`; defaults and
+validation are implemented by the native CSV options code. Python signatures are
+in the [generated table I/O reference](../api/irx/table_io.md). Stream
+declarations and contracts live in `packages/arx/src/arx/stdlib/csv.x`.
 
 Arx name/column/token arguments are literal lists, not arbitrary iterable
 objects. Unknown options and unsupported types fail explicitly. Delimiter, quote
@@ -75,14 +66,10 @@ var loaded: dataframe[...] = read_csv("ids.csv", schema=schema)
 var ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
 ```
 
-`Schema.add` accepts validated scalar type names, not numeric IDs. See the
-[Arrow schema API](../apache-arrow.md) for accepted names. Runtime schemas do
-not infer compile-time column types. A direct DataFrame cast checks exact names,
-order, physical types and every chunk's reachable nullability, without coercion
-or null filling. It preserves schema/field metadata and independent ownership.
-Use `T | none` for nullable columns. Fixed-row-count casts, owned globals,
-generator locals, aggregate-owned fields and arbitrary DataFrame FFI remain
-unsupported. See [collections](collections.md) for rich static column types.
+Runtime schemas do not infer compile-time column types. The cast above asserts
+an exact schema; it does not project or coerce data. See the shared
+[checked DataFrame conversion contract](collections.md#checked-dataframe-conversion)
+for nullability, chunk validation, metadata, and ownership restrictions.
 
 CSV supports integer widths, floating point, Boolean, UTF-8/large UTF-8, dates,
 timestamps and time units. Nested/other unsupported types fail; use Parquet or
@@ -92,9 +79,7 @@ schema to preserve widths and temporal units on a roundtrip.
 ## Explicit streaming
 
 Use `CSVStream` for incremental processing instead of loading the entire file
-into a DataFrame. It supports either read or write mode. The previous `CSV`
-class name is removed, without a compatibility alias; `read_csv` and `write_csv`
-are unchanged.
+into a DataFrame. It supports either read or write mode.
 
 ```arx
 import CSVStream from stdlib.csv
@@ -122,10 +107,11 @@ interoperability. Call writer `close()` explicitly to observe finalization
 errors; automatic cleanup alone is not proof of success. Wrong-mode access
 fails, aliases share session state, and failed sessions cannot be reused.
 
-The [streaming roundtrip example](../../examples/arrow/csv_roundtrip.x)
+The
+[streaming roundtrip example](https://github.com/arxlang/arx/blob/main/examples/arrow/csv_roundtrip.x)
 processes every batch. The
-[table example](../../examples/arrow/csv_parquet_tables.x) converts CSV to
-Parquet using only the module-level functions.
+[table example](https://github.com/arxlang/arx/blob/main/examples/arrow/csv_parquet_tables.x)
+converts CSV to Parquet using only the module-level functions.
 
 ## Text and failure contract
 

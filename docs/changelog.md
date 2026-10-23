@@ -1,6 +1,16 @@
 # Release Notes
 ---
 
+## Unreleased
+
+### Migration notes
+
+- CSV and Parquet operations live in `stdlib.csv` and `stdlib.parquet`;
+  `stdlib.arrow` retains shared schemas, batches, and IPC. Use `CSVStream` and
+  `ParquetStream` for explicit sessions instead of the removed `CSV` and
+  `Parquet` class names. No compatibility aliases are provided. Module-level
+  `read_csv`/`write_csv` and `read_parquet`/`write_parquet` remain the eager path.
+
 ## [1.24.1](https://github.com/arxlang/arx/compare/1.24.0...1.24.1) (2026-08-05)
 
 

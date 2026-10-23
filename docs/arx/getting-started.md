@@ -105,7 +105,10 @@ fn main() -> i32:
     score: [0.5, 0.8, 1.0],
   })
   var scores: series[f64] = rows.score
-  return cast(rows.nrows(), i32)
+  assert grid[1, 0] == 3
+  assert rows.nrows() == 3
+  assert scores[2] == 1.0
+  return 0
 ````
 
 The corresponding native runtime sources and linker inputs are included only
@@ -134,53 +137,17 @@ nullable values, C Data/C Stream ownership and network limitations.
 - [Compiled tests](testing.md)
 - [Apache Arrow runtime](../apache-arrow.md)
 
-For native text files, construct `File(path, mode="w")` or use its `open(...)`
-factory adapter. Both return shared class references; lowercase `file` remains
-valid in annotations. See [Text File I/O](file-io.md) and `examples/file-io.x`.
-Run the example in a scratch directory: it creates or truncates
-`file-io-example.txt` relative to the running program.
+## Workflow guides
 
-## Class Lifetimes
+- [Text files](file-io.md): shared references, checked UTF-8, and explicit
+  close. Run `examples/file-io.x` in a scratch directory; it creates or
+  truncates its output file.
+- [Classes](classes.md): identity, construction, and final-reference cleanup.
+- [CSV](csv.md) and [Parquet](parquet.md): eager DataFrames or explicit bounded
+  streams, exact schema checks, and safe output publication.
+- [Nullable collections](collections.md#nullable-scalars-and-series-expressions):
+  validity, checked arithmetic, and mutation ownership.
+- [Native packages](native-packages.md): explicit external C ABI dependencies.
 
-For external C ABI backends, see [Native Packages](native-packages.md). Native
-sources and libraries are explicit dependency metadata, not compiler builtins.
-
-Classes support `__init__(self, ...) -> none` and `__del__(self) -> none` hooks.
-`Counter(value=7)` binds constructor keywords. Ordinary functions and methods
-also accept names from their declarations (see [Functions](functions.md)). Class
-aliases share identity, and final reference release runs the destructor and
-releases owned string/file/class fields. Cycles and owned
-containers/globals/generator captures are deliberately excluded. See
-[Classes](classes.md) and `examples/class-lifecycle.x` for the complete slice.
-
-## Load tabular data
-
-Import `read_csv` / `write_csv` from `stdlib.csv`, and `read_parquet` /
-`write_parquet` from `stdlib.parquet`. Inside a function:
-
-```arx
-var frame: dataframe[...] = read_csv("input.csv")
-write_parquet(frame, "output.parquet", compression="zstd")
-```
-
-These eager operations handle every batch and close their internal sessions. For
-bounded processing, the format modules also provide unified `CSVStream` and
-`ParquetStream` owners with `next()`, `frame()` and `write(frame)`. Shared
-schemas, batches and IPC live in `stdlib.arrow`. See [CSV](csv.md) and
-[Parquet](parquet.md) for imports, parameters and safety limits, or run the
-[complete table example](../../examples/arrow/csv_parquet_tables.x).
-
-Use `cast(frame, dataframe[name:str | none])` to assert an exact static schema;
-runtime schemas do not infer static column types. No strings or nulls are
-silently discarded.
-
-For nullable tabular data, start with `dataframe[x:i32 | none]`, access
-`frame.x` as a Series, and use `fill_null(frame.x[0], 0)` for a non-nullable
-scalar. [Collections](collections.md#nullable-scalars-and-series-expressions)
-documents checked arithmetic, null masks and rich static schemas for file
-conversions.
-
-Series can also be sliced (`frame.x[::-1]`) or reduced
-(`fill_null(series_sum(frame.x), cast(0, i64))`). See
-[Series operations](collections.md#nullable-scalars-and-series-expressions) for
-null, overflow, mutation and rich-literal contracts.
+The complete programs above are compiled and run from this page by
+`packages/arx/tests/python/test_documentation.py`.

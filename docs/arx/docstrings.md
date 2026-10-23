@@ -39,7 +39,7 @@ title: Add two numbers
 The module docstring must:
 
 - be the first top-level statement
-- start at line 1, character 0
+- start at line 1, column 1 (no leading spaces)
 
 Valid:
 
@@ -57,8 +57,10 @@ fn main() -> i32:
 
 ## Function Docstring Rule
 
-A function docstring must be the first statement in the function body, right
-after `:` and the required newline/indentation.
+A function docstring, when present, must be the first statement in the function
+body, right after `:` and the required newline/indentation. The parser does not
+require a docstring in every user function; repository source-contract
+conventions still apply.
 
 Valid:
 

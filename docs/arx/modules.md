@@ -171,49 +171,17 @@ fn main() -> i32:
 
 ## Bundled `builtins`
 
-Arx also ships compiler-provided builtins backed by bundled Arx source modules.
+Compiler-provided builtins live in bundled `.x` package resources, separately
+from the importable `stdlib`. They are not copied into user projects, and local
+sources cannot replace the reserved namespace. Ambient names are injected only
+when not shadowed by a declaration or import. Explicit `builtins.files` imports
+resolve the canonical [File class](file-io.md), not a second implementation.
 
-Builtins and stdlib are intentionally separate:
-
-- builtins are compiler/language-provided facilities resolved by dedicated
-  compiler logic
-- stdlib is the importable library namespace under `stdlib`
-- builtin source files live under `packages/arx/src/arx/builtins/` in the
-  compiler repo
-- builtin source files use the `.x` extension and are bundled inside the
-  installed `arx` Python package
-- bundled builtin sources are loaded from package resources at compile time and
-  are not copied into user projects
-- builtin source modules are an internal compiler asset store, not a public
-  stdlib-like import surface
-- user code cannot import the internal `builtins` namespace directly
-- local user modules are not allowed to shadow the reserved `builtins` namespace
-
-The first builtin module is `generators`. It is intentionally generic so future
-generator helpers, `yield`, and fuller generator semantics can live in the same
-conceptual area.
-
-Current MVP:
-
-- `range` is available automatically without an import
-- supported callable shapes:
-  - `range(start, stop) -> list[i32]`
-  - `range(start, stop, step) -> list[i32]`
-- `start` and `stop` are always explicit
-- `step` defaults to `1` when omitted
-- `step > 0` counts up and `step < 0` counts down
-- `step == 0` is rejected with an assertion failure
-- for-in loops can iterate over `range(...)`, list literals, and list variables
-  because they consume list-valued expressions
-- ambient builtin names such as `range` are injected only when not shadowed by a
-  local top-level declaration or import
-
-Example:
-
-```arx
-fn main() -> none:
-  print(range(0, 4)[2])
-```
+Builtin `range` currently allocates a scalar list; its declaration lives in
+`packages/arx/src/arx/builtins/generators.x`. See
+[for-in workflows](control-flow.md#for-loop-for-in-style) and
+[list ownership](collections.md#lists). The module name does not imply Arx
+supports general generators or `yield`.
 
 ### Namespace Imports
 

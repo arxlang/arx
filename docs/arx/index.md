@@ -32,70 +32,29 @@ Arx source
 - [Configure projects and imports](projects.md)
 - [Write and run compiled tests](testing.md)
 
-## Language reference
+## Language guides {#language-reference}
 
 - [Modules and imports](modules.md)
 - [Functions](functions.md)
 - [Text file I/O](file-io.md)
 - [Classes](classes.md)
 - [Data types](datatypes.md)
-- [Built-in types](built-in-types.md)
+- [Choosing built-in types](built-in-types.md)
 - [Collections and Apache Arrow](collections.md)
 - [CSV files and DataFrame conversion](csv.md)
 - [Parquet files and DataFrame conversion](parquet.md)
 - [Control flow](control-flow.md)
 - [Douki docstrings](docstrings.md)
 
-## Implemented areas
+## Support and contracts
 
-The current frontend supports:
+The [capability matrix](capability-matrix.md) is the single compact summary of
+implemented support and exclusions. The [preview contracts](specification.md)
+explain arithmetic, ownership, failure, and compatibility decisions; neither is
+a stability promise.
 
-- typed functions, defaults, extern declarations, and function templates
-- mutable variables, finite union aliases, casts, and type queries
-- `if`/`else`, `while`, count-style `for`, and list-valued `for ... in`
-- absolute, relative, grouped, namespace, standard-library, and installed
-  package imports
-- named function/method calls with source-order evaluation and call-time
-  defaults
-- classes, inheritance, fields, methods, constructor keywords, `__init__` and
-  `__del__` hooks, and acyclic reference-managed lifetimes
-- lists and builtin `range`
-- restricted native UTF-8 text files with builtin `File` and its `open` adapter
-- fixed-shape numeric tensors and runtime-shaped tensor parameters
-- static-schema DataFrames and typed Series
-- dedicated CSV/Parquet modules with module-level DataFrame read/write
-  functions, typed filters and explicit streaming
-- runtime-schema RecordBatches, CSV, Parquet, IPC and C Data/C Stream via
-  `stdlib.arrow`
-- checked conversion between RecordBatches and non-null numeric/Boolean
-  DataFrames
-- assertions and the compiled `arx test` runner
-- token, ASTx, LLVM IR, object, executable, and run modes
-
-## Apache Arrow types
-
-Arx exposes typed collection syntax backed by IRx's native Arrow C++ runtime:
-
-| Arx type                  | Runtime representation |
-| ------------------------- | ---------------------- |
-| `tensor[T, D0, ...]`      | `arrow::Tensor`        |
-| `dataframe[name: T, ...]` | `arrow::Table`         |
-| `series[T]`               | `arrow::ChunkedArray`  |
-
-See [Collections and Apache Arrow](collections.md) for language rules and
-[Native Apache Arrow Support](../apache-arrow.md) for the runtime boundary and
-current interoperability features.
-
-## Current limits
-
-- Tensor elements are currently fixed-width signed integers or floats.
-- Tensors are readonly, and runtime-shaped parameters cannot be indexed
-  dynamically.
-- DataFrame columns currently use fixed-width numeric or Boolean values.
-- Runtime-schema DataFrame parameters do not expose columns by name.
-- The standard library and general language surface remain limited.
-- Arx does not define AST node types or feature lowering; those belong to ASTx
-  and IRx respectively.
+Handwritten pages focus on workflows and safety. Python API reference is
+[generated from source](../api/arx.md), not maintained as copied signatures.
 
 ## Related tools
 

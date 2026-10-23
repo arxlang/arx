@@ -26,21 +26,14 @@ reader. Writes borrow their input and return `none` only after checked
 finalization. The full result must fit in memory; `batch_size` is not a total
 memory limit. No RecordBatch conversion or DataFrame `.to_*` method is required.
 
-| `read_parquet(path, ...)` option | Default / behavior                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------- |
-| `schema`                         | Optional shared `Schema`; exact assertion of the final projected schema, including metadata |
-| `columns`                        | All columns; otherwise a nonempty unique literal list, preserving order                     |
-| `filters`                        | Typed `ParquetFilter`; exact returned-row filtering                                         |
-| `row_groups`                     | All; otherwise nonempty unique literal indices, file-only                                   |
-| `batch_size`                     | `65536` rows                                                                                |
-| `options`                        | Optional `ParquetOptions` snapshot for advanced controls                                    |
+Writes are non-atomic by default and do not append unless requested. Choose
+atomic publication explicitly when existing output must survive a failed write;
+see the [safe-write contract](#encryption-and-safe-writes) for its limits.
 
-| `write_parquet(frame, path, ...)` option | Default / behavior                                        |
-| ---------------------------------------- | --------------------------------------------------------- |
-| `compression`, `row_group_size`          | `"snappy"`, `1048576` rows                                |
-| `atomic`, `durable`, `append`            | `false`; transaction restrictions below                   |
-| `partition_columns`                      | Omitted for a file; otherwise a nonempty unique name list |
-| `options`                                | Optional `ParquetOptions` snapshot                        |
+Option declarations and validation live in `irx.analysis.table_io`,
+`irx.parquet_options`, and `packages/arx/src/arx/stdlib/parquet.x`. The
+[generated Python reference](../api/irx/table_io.md) supplies Python signatures;
+the workflow and safety rules below apply to the native engine.
 
 Explicit keywords override an options snapshot **even when equal to a default**.
 Selections and filters replace, not append to, the corresponding settings. The
@@ -72,35 +65,28 @@ serialized type tags and tuple-filter expressions are not this public API.
 
 ## Explicit streaming and ownership
 
-Import `ParquetStream` from `stdlib.parquet` for incremental reading or writing.
-The previous `Parquet` class name is removed, without a compatibility alias;
-`read_parquet` and `write_parquet` still handle whole DataFrames.
+Use `ParquetStream` for incremental reading or writing. It starts closed and has
+one active mode. Reads advance with `next()`; false means EOF, not an empty
+batch, and leaves the reader open. Current batch/frame snapshots require a
+successful advance and survive reader closure. Schema snapshots are independent,
+even before the first batch or after EOF.
 
-- `ParquetStream()` starts closed.
-- `open_read(path, batch_size=65536)` streams a file in batches of at most that
-  many rows. `open_read_as(path, schema, batch_size=65536)` additionally asserts
-  the exact decoded schema, including names/order, types, nullability and
-  metadata.
-- `next()` advances; `false` means EOF. `batch()` and `frame()` return
-  independent owners of the current batch, without advancing. Both require a
-  current batch.
-- `open_write(path, schema, compression="snappy", row_group_size=1048576)`
-  creates/truncates one file. Multiple batches may share a buffered row group.
-- `write(batch)` and `write(frame)` require the input schema to match exactly.
-- `schema()` returns an independently owned recursive schema, even before the
-  first batch or after EOF. Writer snapshots describe the **input** schema;
-  explicit normalization may produce a different physical schema on disk.
-- `close()` checks footer finalization. Successful close is idempotent and
-  allows reopening. Failed sessions permit cleanup only; create a new owner
-  afterward.
+Writers require an exact input schema, including metadata and nullability.
+Schema snapshots describe that input; explicit normalization may change the
+physical schema on disk. Multiple writes may share a buffered row group. Call
+writer `close()` explicitly to check footer finalization. Successful close is
+idempotent and permits reopening; a failed session allows cleanup only. Aliases
+share session state. Wrong-mode calls fail before opening another file. Compiled
+runtime failures use `ARX-RUNTIME-ARROW-001`, not catchable Arx exceptions.
 
-Sizes are positive `i64` values. EOF leaves the reader open. Aliases share the
-session, but returned schema/batch snapshots survive closure. Wrong-mode calls
-fail before opening another file. Compiled runtime failures use
-`ARX-RUNTIME-ARROW-001`, not catchable Arx exceptions.
+Batch and row-group sizes must be positive; batching bounds rows and normal
+buffering, not total bytes in arbitrary values or retained frames.
 
-See the [basic roundtrip](../../examples/arrow/parquet_roundtrip.x) and
-[nullable-data scan](../../examples/arrow/parquet_nullable.x) examples.
+See the
+[basic roundtrip](https://github.com/arxlang/arx/blob/main/examples/arrow/parquet_roundtrip.x)
+and
+[nullable-data scan](https://github.com/arxlang/arx/blob/main/examples/arrow/parquet_nullable.x)
+examples.
 
 ## Configured sessions
 
@@ -125,26 +111,12 @@ wrong-mode settings fail rather than being ignored. Python accepts an immutable
 snapshot, including explicit defaults. Python `None` means no override. Arx
 streaming uses the explicit `open_*_options` methods for advanced settings.
 
-| Setting                            | Arx setter                | Meaning                                                                                    |
-| ---------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
-| `batch_size`                       | `set_int`                 | Maximum rows per read batch; also bounds rewrite-append reads                              |
-| `column`                           | `set_text`, repeatable    | Project top-level columns, in requested order                                              |
-| `row_group`                        | `set_int`, repeatable     | Select file row groups, in requested order; not valid for a dataset                        |
-| predicates                         | `set_filters(where(...))` | Typed AND comparisons and null checks; see above                                           |
-| `dataset`, `hive`, `unify`         | `set_int`, flags 0/1      | Directory scan, Hive partition discovery and opt-in schema union                           |
-| `partition_column`                 | `set_text`, repeatable    | Partition output by string/integer, Boolean, date32, time or timestamp columns             |
-| `use_threads`, `pre_buffer`        | `set_int`, flags          | Threading for reads/writes; read pre-buffering; defaults off                               |
-| `compression`                      | `set_text`                | `snappy`, `uncompressed`, `zstd`, `gzip`, `brotli`, `lz4`                                  |
-| `compression_level`                | `set_int`                 | Codec-specific level, validated against the installed codec                                |
-| `row_group_size`, `data_page_size` | `set_int`                 | Writer row-group row limit and page byte target                                            |
-| `normalize`                        | `set_int`, flag           | Explicit checked temporal normalization, described below                                   |
-| `reconstruct`                      | `set_int`, flag           | File/dataset logical reconstruction for numeric dictionaries and nullable fixed-size lists |
-| `atomic`, `durable`, `append`      | `set_int`, flags          | Local atomic snapshots/rewrite append; optional fsync durability                           |
-
-Python uses `columns`, `row_groups`, `partition_columns` tuples and a tuple of
-`ParquetPredicate(column, operation, value)` objects. Filter columns need not be
-projected. Arrow Dataset performs partition/statistics pruning where possible
-and evaluates the residual filter; this is not a general query language.
+Projection and row-group selection preserve requested order; row groups are
+file-only. Arx `set_text("column", ...)` and `set_int("row_group", ...)` add
+selections, while eager keyword selections replace the captured selection.
+Python uses checked tuples for selections and predicates. Neither surface is a
+general query language. Invalid codecs, settings, or mode combinations fail
+explicitly.
 
 ## Types and temporal policy
 
@@ -296,34 +268,13 @@ metadata.
 
 ## DataFrame conversion
 
-Static `cast(batch, dataframe[name:T, ...])` accepts exact names/order/types for
-signed/unsigned integers, floats, Boolean, `str`, `date` (date32), `time`
-(time64 microseconds) and `timestamp`/`datetime` (timezone-naive timestamp
-microseconds). Use `T | none` for nullable columns, for example
-`dataframe[id:u64 | none, name:str | none]`. Non-nullable targets still reject
-actual nulls. No implicit unit/timezone conversion is performed. Other temporal
-units/timezones can use parameterized static annotations or runtime schemas.
-
-Nullable signed numeric/Boolean/string and temporal literals are supported. Use
-`date("2026-01-01")`, `time("01:02:03")`, `timestamp("2026-01-01T01:02:03")` or
-`datetime("2026-01-01T01:02:03")`. Literal timestamp/time values currently use
-whole seconds and no timezone; other units, fractions and zones can be imported
-as Arrow data. Signed-to-unsigned literal coercion is not implicit; populate
-unsigned columns through RecordBatches. Static conversions preserve input schema
-and field metadata. Configure output from the converted batch's schema.
-`cast(batch, dataframe[...])` with literal ellipsis creates a runtime-schema
-DataFrame preserving RecordBatch-supported Arrow types and metadata, including
-nested, decimal, nullable and timezone-aware columns. These frames support local
-variables, parameters, returns, `nrows()`/`ncols()` and checked RecordBatch
-conversion. They do not infer static column types or permit unchecked narrowing.
-To obtain a static frame, use `cast(frame, dataframe[id:i64])` directly. Every
-chunk is checked, including reachable nested nullability; metadata and chunked
-buffers are preserved without implicit conversion. Numeric/Boolean nullable
-scalar and Series expressions are supported as described in
-[collections](collections.md).
-
-[CSV conversion ownership rules](csv.md#checked-dataframe-conversion) apply
-unchanged.
+Use the shared
+[checked conversion contract](collections.md#checked-dataframe-conversion) and
+[parameterized schema rules](collections.md#parameterized-static-dataframe-schemas).
+A static cast is an exact assertion, never implicit physical conversion or
+projection. Runtime-schema frames preserve supported rich Arrow data without
+inferring static column types. Format normalization/reconstruction rules above
+still apply when those frames are written to Parquet.
 
 ## Python example
 
@@ -354,11 +305,3 @@ Parquet, Dataset and Acero libraries. Arx resolves the canonical bundled
 modules, but lowers only resolved reachable declarations (whole referenced
 classes, including destructors). CSV-only programs no longer activate or link
 Parquet.
-
-Static RecordBatch/DataFrame casts now support parameterized decimal,
-timezone/unit, binary, nested and dictionary columns; they preserve input
-metadata without implicit physical conversions. Numeric/Boolean Series support
-checked indexing and null-propagating expressions. See
-[collections](collections.md#nullable-scalars-and-series-expressions). These
-language changes do not remove the format-specific reconstruction restrictions
-or provide distributed cloud transactions.

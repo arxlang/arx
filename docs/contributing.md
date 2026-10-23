@@ -56,12 +56,21 @@ compiler.
 
 ## Documentation and examples
 
-- Update reference docs and examples with every behavior change.
+- Keep public types, defaults, validation, ownership, and failure contracts next
+  to code, with focused tests. Do not duplicate signatures, method catalogs, or
+  parameter tables in handwritten pages.
+- Update short guides only for changed workflows, architecture, restrictions,
+  migration decisions, or data-loss/resource-safety contracts. Put common and
+  advanced API examples in the PR description or executable tests.
+- Leave generated API output to `scripts/gen_api_docs.py` and the Quarto
+  pre-render hook. Keep that pipeline working without expanding it for an
+  unrelated API change.
 - Every committed `.x` file begins with a valid Douki module docstring.
 - Class, function, and method docstrings use Douki YAML inside triple backticks.
 - Use quadruple Markdown fences around Arx examples containing docstrings.
-- Keep `packages/arx/src/arx/lexer/syntax.json`, lexer behavior, and the lexical
-  syntax page aligned.
+- Keep the syntax manifest, lexer behavior, tests, and editor consumers aligned;
+  update the short syntax guide when a workflow or restriction changes.
+- Examples used as support evidence must execute in tests.
 - State experimental limits explicitly; do not document planned behavior as
   implemented.
 
@@ -82,7 +91,9 @@ Actions workflows. Use direct commands or plain Python/xonsh statements.
 
 ## Pull requests
 
-- Include focused tests and documentation.
+- Include focused tests, accurate source contracts, and necessary guide updates.
+- Record intentional breaking changes in concise release notes rather than
+  maintaining parallel deprecated API documentation.
 - Report checks that could not run and why.
 - Use a Conventional Commit title; releases use squash merge and
   semantic-release.
