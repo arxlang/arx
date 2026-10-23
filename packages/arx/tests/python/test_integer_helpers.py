@@ -43,6 +43,31 @@ def i32_expression(value: int) -> str:
 
 
 @private
+def signed_limits(width: int) -> str:
+    """
+    title: Declare typed limits using only representable i32 literal tokens.
+    parameters:
+      width:
+        type: int
+    returns:
+      type: str
+    """
+    type_ = f"i{width}"
+    maximum = f"cast({2 ** (width - 1) - 1}, {type_})"
+    if width == 64:
+        maximum = (
+            "cast(2147483647, i64) * 65536 * 65536"
+            " + cast(65535, i64) * 65536 + 65535"
+        )
+    return (
+        f"var zero: {type_} = cast(0, {type_})\n"
+        f"var one: {type_} = cast(1, {type_})\n"
+        f"var maximum: {type_} = {maximum}\n"
+        f"var minimum: {type_} = zero - maximum - one\n"
+    )
+
+
+@private
 def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     """
     title: Verify helper LLVM and execute without unbounded time or allocation.
@@ -148,6 +173,103 @@ def test_range_matches_python(
     assert result.stdout == "".join(f"{value}\n" for value in expected)
 
 
+@pytest.mark.parametrize("width", [8, 16, 32, 64])
+def test_math_preserves_signed_integer_types(
+    tmp_path: Path, width: int
+) -> None:
+    """
+    title: Preserve each signed width through arithmetic and boundary cases.
+    parameters:
+      tmp_path:
+        type: Path
+      width:
+        type: int
+    """
+    type_ = f"i{width}"
+    body = signed_limits(width)
+    for helper, arguments in (
+        ("abs", "zero - maximum"),
+        ("min", "maximum, minimum"),
+        ("max", "minimum, maximum"),
+        ("clamp", "value=zero, upper=maximum, lower=minimum"),
+        ("square", "maximum"),
+    ):
+        body += f"assert isinstance(math.{helper}({arguments}), {type_})\n"
+    body += (
+        "assert math.abs(zero) == zero\n"
+        "assert math.abs(one) == one\n"
+        "assert math.abs(zero - one) == one\n"
+        "assert math.abs(maximum) == maximum\n"
+        "assert math.abs(minimum + one) == maximum\n"
+        "assert math.min(maximum, minimum) == minimum\n"
+        "assert math.min(minimum, maximum) == minimum\n"
+        "assert math.min(one, one) == one\n"
+        "assert math.max(minimum, maximum) == maximum\n"
+        "assert math.max(maximum, minimum) == maximum\n"
+        "assert math.max(one, one) == one\n"
+        "assert math.clamp(minimum, minimum, maximum) == minimum\n"
+        "assert math.clamp(maximum, minimum, maximum) == maximum\n"
+        "assert math.clamp(zero, minimum, maximum) == zero\n"
+        "assert math.clamp(minimum, maximum, maximum) == maximum\n"
+        "assert math.clamp(maximum, minimum, minimum) == minimum\n"
+        "assert math.square(zero) == zero\n"
+        "assert math.square(zero - one) == one\n"
+        "assert math.square(maximum) == one\n"
+        "assert math.square(minimum) == zero\n"
+        f"assert math.square(cast(0 - 5, {type_})) == 25\n"
+        "print(maximum)\n"
+        "print(minimum)\n"
+    )
+    result = run_helpers(tmp_path, body)
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+    assert result.stdout == f"{2 ** (width - 1) - 1}\n{-(2 ** (width - 1))}\n"
+
+
+@pytest.mark.parametrize("width", [8, 16, 32, 64])
+@pytest.mark.parametrize(
+    "expression,message",
+    [
+        (
+            "math.abs(minimum)",
+            "abs() result is out of range for the input type",
+        ),
+        *[
+            (
+                f"math.clamp({value}, maximum, minimum)",
+                "clamp() lower bound must not exceed upper bound",
+            )
+            for value in ("minimum", "zero", "maximum")
+        ],
+    ],
+)
+def test_templated_math_checks_each_width(
+    tmp_path: Path, width: int, expression: str, message: str
+) -> None:
+    """
+    title: Fail before returning a value for every signed-width specialization.
+    parameters:
+      tmp_path:
+        type: Path
+      width:
+        type: int
+      expression:
+        type: str
+      message:
+        type: str
+    """
+    result = run_helpers(
+        tmp_path, signed_limits(width) + f"print({expression})\nprint(123)"
+    )
+    assert result.returncode == 1, result.stderr
+    assert result.stdout == ""
+    failure = parse_assert_failure_output(result.stderr)
+    assert failure is not None, result.stderr
+    assert failure.message == message
+    assert failure.line > 0
+    assert failure.col > 0
+
+
 @pytest.mark.parametrize(
     "statement,message",
     [
@@ -165,7 +287,7 @@ def test_range_matches_python(
         ),
         (
             "print(math.abs((0 - 2147483647) - 1))",
-            "abs() result is out of range for i32",
+            "abs() result is out of range for the input type",
         ),
         (
             "print(math.clamp(0, 1, 0))",

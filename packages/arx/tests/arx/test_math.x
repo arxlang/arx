@@ -72,3 +72,19 @@ fn test_square_wraps_i32() -> none:
   assert math.square(0 - 65536) == 0
   assert math.square(2147483647) == 1
   assert math.square((0 - 2147483647) - 1) == 0
+
+fn test_template_calls() -> none:
+  ```
+  title: test_template_calls
+  summary: Preserve inferred narrow types or explicitly select a wider type.
+  ```
+  var narrow: i8 = cast(0 - 12, i8)
+  assert isinstance(math.abs(narrow), i8)
+  assert math.abs(narrow) == 12
+  assert math.square(narrow) == 0 - 112
+  assert math.square<int64>(narrow) == 144
+  assert isinstance(math.min<i64>(narrow, 0), i64)
+  assert math.min<i64>(narrow, 0) == 0 - 12
+  assert math.max<int32>(lhs=narrow, rhs=3) == 3
+  assert math.clamp<i64>(upper=9, value=narrow, lower=0) == 0
+  assert math.abs<int16>(value=narrow) == 12

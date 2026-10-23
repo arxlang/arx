@@ -235,8 +235,40 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     llvm.parse_assembly(text).verify()
     assert "add i64" in text
     assert "trunc i64" in text
-    assert "abs() result is out of range for i32" in text
+    assert "abs() result is out of range for the input type" in text
     assert "clamp() lower bound must not exceed upper bound" in text
+
+
+@pytest.mark.parametrize("width", [8, 16, 32, 64])
+def test_math_templates_translate_concrete_widths(width: int) -> None:
+    """
+    title: >-
+      Imported aliases lower inferred and explicit concrete template calls.
+    parameters:
+      width:
+        type: int
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Signed math specialization translation\n```\n"
+        "import math as arithmetic from stdlib\n"
+        "import square as squared from stdlib.math\n"
+        "fn main() -> i32:\n"
+        f"  var value: i{width} = cast(0 - 3, i{width})\n"
+        f"  var zero: i{width} = cast(0, i{width})\n"
+        f"  var magnitude: i{width} = arithmetic.abs(value)\n"
+        "  arithmetic.min(magnitude, value)\n"
+        "  arithmetic.max(magnitude, value)\n"
+        "  arithmetic.clamp(magnitude, zero, magnitude)\n"
+        f"  squared<int{width}>(value=value)\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "typed_math")
+    root = ParsedModule("typed_math", module)
+    text = ArxBuilder().translate_modules(root, FileImportResolver(()))
+    llvm.parse_assembly(text).verify()
+    assert f"call i{width} " in text
+    assert f"sub i{width} " in text
+    assert f"mul i{width} " in text
 
 
 def test_class_lifecycle_translate_verifies() -> None:
