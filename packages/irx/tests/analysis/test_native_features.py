@@ -274,3 +274,36 @@ def test_native_record_names_and_duplicates_are_rejected() -> None:
             root.ast,
             native_features=(*root.native_features, *root.native_features),
         )
+
+
+@pytest.mark.parametrize("invalid", ["arity", "path_type", "result"])
+def test_table_io_host_capability_validates_shape(invalid: str) -> None:
+    """
+    title: An explicit host cannot accidentally bypass FFI with an invalid ABI.
+    parameters:
+      invalid:
+        type: str
+    """
+    args = astx.Arguments(astx.Argument("path", astx.String()))
+    if invalid == "arity":
+        args = astx.Arguments()
+    if invalid == "path_type":
+        args = astx.Arguments(astx.Argument("path", astx.Int32()))
+    prototype = astx.FunctionPrototype(
+        "custom_reader",
+        args,
+        astx.Int32() if invalid == "result" else astx.DataFrameType(),
+    )
+    prototype.is_extern = True
+    module = astx.Module()
+    module.block.append(prototype)
+    with pytest.raises(ValueError, match="table I/O capability"):
+        ParsedModule(
+            "invalid",
+            module,
+            native_bindings=(
+                NativeBinding(
+                    prototype, ("record_batch",), table_io="read_csv"
+                ),
+            ),
+        )

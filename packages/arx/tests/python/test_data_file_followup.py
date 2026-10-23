@@ -13,7 +13,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from irx.record_batch import Parquet, ParquetOptions
+from irx.record_batch import ParquetOptions, ParquetStream
 
 from .test_arrow_interop import HAS_NATIVE, compile_program
 
@@ -36,23 +36,24 @@ def test_compiled_nullable_file_conversion(tmp_path: Path) -> None:
         type: Path
     """
     source = f"""
-import (Parquet, ParquetOptions, RecordBatch, Schema) from stdlib.arrow
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
+import (RecordBatch, Schema) from stdlib.arrow
 
 fn keep(frame: {FRAME}) -> {FRAME}:
   return frame
 
 fn main() -> i32:
-  var source: Parquet = Parquet()
-  var target: Parquet = Parquet()
+  var source: ParquetStream = ParquetStream()
+  var target: ParquetStream = ParquetStream()
   var options: ParquetOptions = ParquetOptions()
   options.set_int("atomic", 1)
   source.open_read("input.parquet", batch_size=2)
   var schema: Schema = Schema()
-  schema.add("id", 7, true)
-  schema.add("label", 11, true)
-  schema.add("day", 13, true)
-  schema.add("clock", 21, true)
-  schema.add("stamp", 17, true)
+  schema.add("id", "uint64", true)
+  schema.add("label", "utf8", true)
+  schema.add("day", "date32[day]", true)
+  schema.add("clock", "time64[us]", true)
+  schema.add("stamp", "timestamp[us]", true)
   target.open_write_options("output.parquet", schema, options)
   while source.next():
     var batch: RecordBatch = source.batch()
@@ -106,19 +107,20 @@ def test_compiled_nullable_literal_and_filter(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, ParquetOptions, RecordBatch) from stdlib.arrow
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
+import RecordBatch from stdlib.arrow
 type Frame = dataframe[id:i64 | none, label:str | none]
 fn main() -> i32:
   var frame: Frame = dataframe({id: [1, none, 3], label: ["a", none, "c"]})
   var batch: RecordBatch = cast(frame, RecordBatch)
-  var target: Parquet = Parquet()
+  var target: ParquetStream = ParquetStream()
   target.open_write("literal.parquet", batch.schema())
   target.write(batch)
   target.close()
-  var source: Parquet = Parquet()
+  var source: ParquetStream = ParquetStream()
   var options: ParquetOptions = ParquetOptions()
   options.set_text("column", "label")
-  options.where("id", "gt", "1", "int64")
+  options.set_filters(where("id", ">", 1))
   source.open_read_options("literal.parquet", options)
   var rows: i64 = 0
   while source.next():
@@ -153,7 +155,8 @@ def test_compiled_temporal_literals(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, RecordBatch) from stdlib.arrow
+import ParquetStream from stdlib.parquet
+import RecordBatch from stdlib.arrow
 type Frame = dataframe[day:date | none, clock:time | none, ts:timestamp | none]
 fn main() -> i32:
   var frame: Frame = dataframe({
@@ -162,7 +165,7 @@ fn main() -> i32:
     ts: [timestamp("1969-12-31T23:59:59"), none],
   })
   var batch: RecordBatch = cast(frame, RecordBatch)
-  var target: Parquet = Parquet()
+  var target: ParquetStream = ParquetStream()
   target.open_write("temporal.parquet", batch.schema())
   target.write(batch)
   target.close()
@@ -195,12 +198,13 @@ def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
         type: Path
     """
     source = """
-import (Parquet, ParquetOptions, RecordBatch) from stdlib.arrow
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
+import RecordBatch from stdlib.arrow
 fn keep_dynamic(frame: dataframe[...]) -> dataframe[...]:
   return frame
 fn main() -> i32:
-  var reader: Parquet = Parquet()
-  var writer: Parquet = Parquet()
+  var reader: ParquetStream = ParquetStream()
+  var writer: ParquetStream = ParquetStream()
   var options: ParquetOptions = ParquetOptions()
   options.encryption_key_hex("30313233343536373839616263646566")
   reader.open_read("rich.parquet")
@@ -246,7 +250,7 @@ fn main() -> i32:
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    with Parquet() as reader:
+    with ParquetStream() as reader:
         reader.open_read(
             tmp_path / "encrypted.parquet",
             options=ParquetOptions(encryption_key=b"0123456789abcdef"),

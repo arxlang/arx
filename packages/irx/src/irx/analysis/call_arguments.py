@@ -119,3 +119,39 @@ def argument_slots(
         )
         valid = False
     return tuple(indices) if valid else None
+
+
+@private
+@typechecked
+def contextualize_null_arguments(
+    node: astx.FunctionCall, function: SemanticFunction
+) -> None:
+    """
+    title: >-
+      Box explicit none arguments using the resolved positional or named
+      parameter.
+    parameters:
+      node:
+        type: astx.FunctionCall
+      function:
+        type: SemanticFunction
+    """
+    slots = argument_slots(function, node)
+    if slots is None:
+        return
+    values = list(call_evaluations(node))
+    for position, slot in enumerate(slots):
+        if slot >= len(function.signature.parameters):
+            continue
+        target = function.signature.parameters[slot].type_
+        if isinstance(target, astx.NullableType) and isinstance(
+            values[position], astx.LiteralNone
+        ):
+            value = values[position]
+            boxed = astx.Cast(value, target)
+            boxed.loc = value.loc
+            values[position] = boxed
+    count = len(tuple(node.args))
+    node.args = values[:count]
+    for keyword, value in zip(node.keywords, values[count:]):
+        keyword.value = value

@@ -223,7 +223,13 @@ from astx.modules import (
     NamespaceKind,
     NamespaceType,
 )
-from astx.nullable import ColumnType, NullableType, NullCheck, NullFill
+from astx.nullable import (
+    ColumnType,
+    NullableType,
+    NullCheck,
+    NullFill,
+    SeriesReduction,
+)
 from astx.operators import (
     AssignmentExpr,
     AugAssign,
@@ -541,6 +547,7 @@ __all__ = [
     "PrintExpr",
     "Program",
     "ScopeKind",
+    "SeriesReduction",
     "SeriesRelease",
     "SeriesRetain",
     "SeriesType",

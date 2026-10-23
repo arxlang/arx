@@ -541,6 +541,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: AssignmentBinOp
         """
+        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+            return
         var_lhs = node.lhs
         if not isinstance(
             var_lhs,

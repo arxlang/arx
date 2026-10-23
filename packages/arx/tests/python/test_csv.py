@@ -18,7 +18,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 PIPELINE = """
-import (CSV, Schema) from stdlib.arrow
+import CSVStream from stdlib.csv
+import Schema from stdlib.arrow
 import RecordBatch as Batch from stdlib.arrow
 
 fn keep(frame: dataframe[id:i64]) -> dataframe[id:i64]:
@@ -28,11 +29,11 @@ fn convert(frame: dataframe[id:i64]) -> Batch:
   return cast(frame, Batch)
 
 fn main() -> i32:
-  var reader: CSV = CSV()
+  var reader: CSVStream = CSVStream()
   reader.open_read("input.csv", block_size=128)
   var schema: Schema = Schema()
-  schema.add("id", 3, false)
-  var writer: CSV = CSV()
+  schema.add("id", "int64", false)
+  var writer: CSVStream = CSVStream()
   writer.open_write("output.csv", schema)
   var rows: i64 = 0
   while reader.next():

@@ -22,6 +22,7 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.nullable import resolve_nullable_global
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -323,6 +324,11 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             type: astx.VariableDeclaration
         """
         self._resolve_declared_type(node.type_, node=node)
+        if isinstance(node.type_, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            node.value = astx.Cast(node.value, node.type_)
+            node.value.loc = node.value.value.loc
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
@@ -346,6 +352,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
+        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
@@ -356,6 +363,11 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             type: astx.InlineVariableDeclaration
         """
         self._resolve_declared_type(node.type_, node=node)
+        if isinstance(node.type_, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            node.value = astx.Cast(node.value, node.type_)
+            node.value.loc = node.value.value.loc
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
@@ -379,3 +391,4 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
+        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)

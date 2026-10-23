@@ -603,6 +603,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_RETURN,
             )
             return
+        expected = self.context.current_function.signature.return_type
+        if isinstance(expected, astx.NullableType) and isinstance(
+            node.value, astx.LiteralNone
+        ):
+            node.value = astx.Cast(node.value, expected)
+            node.value.loc = node.value.value.loc
         generator = self.context.current_function.signature.metadata.get(
             "generator"
         )

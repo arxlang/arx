@@ -36,3 +36,14 @@ def test_nullable_runtime_validation() -> None:
         astx.ColumnType("decimal128", (12, object()))  # type: ignore[arg-type]
     with pytest.raises(TypeCheckError):
         astx.NullFill(astx.LiteralInt32(1), 1)  # type: ignore[arg-type]
+
+
+def test_series_reduction_structure() -> None:
+    """
+    title: Preserve operation names and child nodes in reduction expressions.
+    """
+    node = astx.SeriesReduction("sum", astx.Identifier("values"))
+    assert "sum" in str(node.get_struct())
+    assert "values" in str(node.get_struct(simplified=True))
+    with pytest.raises(TypeCheckError):
+        astx.SeriesReduction(1, astx.Identifier("values"))  # type: ignore[arg-type]

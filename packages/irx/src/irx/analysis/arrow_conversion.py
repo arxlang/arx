@@ -36,6 +36,20 @@ ARROW_RESOURCES = frozenset({ResourceKind.DATAFRAME, ResourceKind.SERIES})
 @private
 @typechecked
 @dataclass(frozen=True)
+class ArrowTableCast:
+    """
+    title: Checked table-to-table conversion without combining chunks.
+    attributes:
+      schema_ipc:
+        type: bytes | None
+    """
+
+    schema_ipc: bytes | None
+
+
+@private
+@typechecked
+@dataclass(frozen=True)
 class ArrowConversion:
     """
     title: Resolved native conversion plan; no lookup remains for lowering.
@@ -165,6 +179,45 @@ def resolve_arrow_cast(
     analyzer._set_resource_ownership(node, None)
     source = analyzer._expr_type(node.value)
     target = node.target_type
+    if isinstance(source, astx.DataFrameType) and isinstance(
+        target, astx.DataFrameType
+    ):
+        function = analyzer.context.current_function
+        if (
+            function is None
+            or function.signature.metadata.get("generator") is not None
+        ):
+            lifecycle_error(
+                analyzer,
+                node,
+                "Arrow conversions require a non-generator function",
+            )
+            return True
+        if target.row_count is not None:
+            lifecycle_error(
+                analyzer, node, "Arrow casts do not support fixed row counts"
+            )
+            return True
+        try:
+            table_schema_ipc = (
+                dataframe_schema_ipc(target)
+                if target.columns is not None
+                else None
+            )
+        except (TypeError, ValueError) as error:
+            analyzer.context.diagnostics.add(
+                str(error),
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return True
+        info.extras[ARROW_CONVERSION] = ArrowTableCast(table_schema_ipc)
+        info.extras[DATAFRAME_SCHEMA_EXTRA] = schema_from_type(target)
+        analyzer._set_type(node, target)
+        analyzer._set_resource_ownership(
+            node, arrow_ownership(target, OwnershipKind.OWNED)
+        )
+        return True
     to_dataframe = isinstance(target, astx.DataFrameType)
     dataframe: astx.DataFrameType
     if isinstance(target, astx.DataFrameType) and isinstance(

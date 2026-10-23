@@ -1,20 +1,92 @@
 # Parquet files and DataFrames
 
-`Parquet` in `stdlib.arrow` owns a native Arrow read or write session. Compiled
-programs do not start Python or load whole files into a Table. Use separate
-instances for input and output.
+Import operations from **`stdlib.parquet`**, independently of CSV. Shared
+`Schema`/`RecordBatch` and IPC remain in `stdlib.arrow`. All file operations use
+the native Arrow/Parquet engine; compiled programs do not start Python.
 
-## Basic API and ownership
+## Read and write a DataFrame
 
-- `Parquet()` starts closed.
+````arx
+```
+title: Filter and copy Parquet rows
+```
+import (read_parquet, write_parquet, where) from stdlib.parquet
+
+fn main() -> i32:
+  ```
+  title: Filter exact rows and finalize the destination
+  ```
+  var frame: dataframe[...] = read_parquet("events.parquet", columns=["name"], filters=where("id", ">", 10))
+  write_parquet(frame, "selected.parquet", compression="zstd", atomic=true)
+  return 0
+````
+
+Reads eagerly return an independently owned, chunked DataFrame and close the
+reader. Writes borrow their input and return `none` only after checked
+finalization. The full result must fit in memory; `batch_size` is not a total
+memory limit. No RecordBatch conversion or DataFrame `.to_*` method is required.
+
+| `read_parquet(path, ...)` option | Default / behavior                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------- |
+| `schema`                         | Optional shared `Schema`; exact assertion of the final projected schema, including metadata |
+| `columns`                        | All columns; otherwise a nonempty unique literal list, preserving order                     |
+| `filters`                        | Typed `ParquetFilter`; exact returned-row filtering                                         |
+| `row_groups`                     | All; otherwise nonempty unique literal indices, file-only                                   |
+| `batch_size`                     | `65536` rows                                                                                |
+| `options`                        | Optional `ParquetOptions` snapshot for advanced controls                                    |
+
+| `write_parquet(frame, path, ...)` option | Default / behavior                                        |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `compression`, `row_group_size`          | `"snappy"`, `1048576` rows                                |
+| `atomic`, `durable`, `append`            | `false`; transaction restrictions below                   |
+| `partition_columns`                      | Omitted for a file; otherwise a nonempty unique name list |
+| `options`                                | Optional `ParquetOptions` snapshot                        |
+
+Explicit keywords override an options snapshot **even when equal to a default**.
+Selections and filters replace, not append to, the corresponding settings. The
+options owner is never mutated. Unknown parameters, empty selections and
+unsupported values fail rather than falling back.
+
+Without `options`, reads inspect the path, treating files as files and
+directories as Hive-aware datasets; suffixes are irrelevant. Writes with
+`partition_columns` select Hive dataset mode. Explicit `options` preserves its
+existing dataset/Hive policy instead of enabling discovery automatically.
+
+### Typed predicates and configuration
+
+```arx
+import (ParquetFilter, ParquetOptions, where) from stdlib.parquet
+
+# Inside a function; minimum_id may be a runtime signed integer:
+var predicate: ParquetFilter = where("id", ">=", minimum_id)
+var both: ParquetFilter = predicate.and_where("active", "==", true)
+var options: ParquetOptions = ParquetOptions(atomic=true, durable=true)
+```
+
+Comparisons are `==`, `!=`, `<`, `<=`, `>`, `>=`, with string, signed integer,
+floating or Boolean values. `where("name", "is_null")` and `is_valid` omit the
+value. `and_where` returns a separate group, preserving the original. Filter
+columns need not be projected; nulls are excluded by ordinary comparisons.
+Pruning is only an optimization, never a substitute for filtering rows. OR/IN,
+serialized type tags and tuple-filter expressions are not this public API.
+
+## Explicit streaming and ownership
+
+Import `ParquetStream` from `stdlib.parquet` for incremental reading or writing.
+The previous `Parquet` class name is removed, without a compatibility alias;
+`read_parquet` and `write_parquet` still handle whole DataFrames.
+
+- `ParquetStream()` starts closed.
 - `open_read(path, batch_size=65536)` streams a file in batches of at most that
   many rows. `open_read_as(path, schema, batch_size=65536)` additionally asserts
   the exact decoded schema, including names/order, types, nullability and
   metadata.
-- `next()` advances; `false` means EOF. `batch()` returns an independent owner.
+- `next()` advances; `false` means EOF. `batch()` and `frame()` return
+  independent owners of the current batch, without advancing. Both require a
+  current batch.
 - `open_write(path, schema, compression="snappy", row_group_size=1048576)`
   creates/truncates one file. Multiple batches may share a buffered row group.
-- `write(batch)` requires the input schema to match exactly.
+- `write(batch)` and `write(frame)` require the input schema to match exactly.
 - `schema()` returns an independently owned recursive schema, even before the
   first batch or after EOF. Writer snapshots describe the **input** schema;
   explicit normalization may produce a different physical schema on disk.
@@ -36,35 +108,38 @@ Arx exposes a scoped `ParquetOptions` builder. Its validated setters are copied
 at open; later mutations do not change an active session:
 
 ```arx
-var options: ParquetOptions = ParquetOptions()
-options.set_int("batch_size", 1024)
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
+
+# Inside a function:
+var options: ParquetOptions = ParquetOptions(batch_size=1024)
 options.set_text("column", "name")
-options.where("id", "gt", "10", "int64")
-var source: Parquet = Parquet()
+options.set_filters(where("id", ">", 10))
+var source: ParquetStream = ParquetStream()
 source.open_read_options("input.parquet", options)
 ```
 
 Use `open_write_options(path, schema, options)` for writes. Unknown settings and
 wrong-mode settings fail rather than being ignored. Python accepts an immutable
 `ParquetOptions` value via `open_read(..., options=...)` or
-`open_write(..., options=...)`; do not combine it with nondefault convenience
-arguments such as `batch_size=`.
+`open_write(..., options=...)`; explicit convenience arguments override the
+snapshot, including explicit defaults. Python `None` means no override. Arx
+streaming uses the explicit `open_*_options` methods for advanced settings.
 
-| Setting                            | Arx setter                              | Meaning                                                                                                                                  |
-| ---------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `batch_size`                       | `set_int`                               | Maximum rows per read batch; also bounds rewrite-append reads                                                                            |
-| `column`                           | `set_text`, repeatable                  | Project top-level columns, in requested order                                                                                            |
-| `row_group`                        | `set_int`, repeatable                   | Select file row groups, in requested order; not valid for a dataset                                                                      |
-| predicates                         | `where(column, operation, value, type)` | AND comparisons; operations `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `is_null`, `is_valid`; literal types `string`, `int64`, `double`, `bool` |
-| `dataset`, `hive`, `unify`         | `set_int`, flags 0/1                    | Directory scan, Hive partition discovery and opt-in schema union                                                                         |
-| `partition_column`                 | `set_text`, repeatable                  | Partition output by string/integer, Boolean, date32, time or timestamp columns                                                           |
-| `use_threads`, `pre_buffer`        | `set_int`, flags                        | Threading for reads/writes; read pre-buffering; defaults off                                                                             |
-| `compression`                      | `set_text`                              | `snappy`, `uncompressed`, `zstd`, `gzip`, `brotli`, `lz4`                                                                                |
-| `compression_level`                | `set_int`                               | Codec-specific level, validated against the installed codec                                                                              |
-| `row_group_size`, `data_page_size` | `set_int`                               | Writer row-group row limit and page byte target                                                                                          |
-| `normalize`                        | `set_int`, flag                         | Explicit checked temporal normalization, described below                                                                                 |
-| `reconstruct`                      | `set_int`, flag                         | Single-file logical reconstruction for numeric dictionaries and nullable fixed-size lists                                                |
-| `atomic`, `durable`, `append`      | `set_int`, flags                        | Local atomic snapshots/rewrite append; optional fsync durability                                                                         |
+| Setting                            | Arx setter                | Meaning                                                                                    |
+| ---------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| `batch_size`                       | `set_int`                 | Maximum rows per read batch; also bounds rewrite-append reads                              |
+| `column`                           | `set_text`, repeatable    | Project top-level columns, in requested order                                              |
+| `row_group`                        | `set_int`, repeatable     | Select file row groups, in requested order; not valid for a dataset                        |
+| predicates                         | `set_filters(where(...))` | Typed AND comparisons and null checks; see above                                           |
+| `dataset`, `hive`, `unify`         | `set_int`, flags 0/1      | Directory scan, Hive partition discovery and opt-in schema union                           |
+| `partition_column`                 | `set_text`, repeatable    | Partition output by string/integer, Boolean, date32, time or timestamp columns             |
+| `use_threads`, `pre_buffer`        | `set_int`, flags          | Threading for reads/writes; read pre-buffering; defaults off                               |
+| `compression`                      | `set_text`                | `snappy`, `uncompressed`, `zstd`, `gzip`, `brotli`, `lz4`                                  |
+| `compression_level`                | `set_int`                 | Codec-specific level, validated against the installed codec                                |
+| `row_group_size`, `data_page_size` | `set_int`                 | Writer row-group row limit and page byte target                                            |
+| `normalize`                        | `set_int`, flag           | Explicit checked temporal normalization, described below                                   |
+| `reconstruct`                      | `set_int`, flag           | File/dataset logical reconstruction for numeric dictionaries and nullable fixed-size lists |
+| `atomic`, `durable`, `append`      | `set_int`, flags          | Local atomic snapshots/rewrite append; optional fsync durability                           |
 
 Python uses `columns`, `row_groups`, `partition_columns` tuples and a tuple of
 `ParquetPredicate(column, operation, value)` objects. Filter columns need not be
@@ -107,7 +182,7 @@ Extension storage is never implicitly normalized.
 
 ### Explicit logical reconstruction
 
-`reconstruct=true` on a **single-file writer** supports numeric dictionaries
+`reconstruct=true` on a **file or dataset writer** supports numeric dictionaries
 (including decimals) and fixed-size lists with null parents. IRx writes ordinary
 value columns/variable lists plus the reserved `IRX:logical_schema:v1` IPC
 schema metadata. IRx readers validate that metadata against the physical schema
@@ -116,13 +191,17 @@ projected scans. Dictionary codebooks are rebuilt per batch; safe index casts
 reject capacity overflow. Ordered dictionary reconstruction is rejected because
 its codebook ordering cannot be preserved. Codes are not stable identifiers.
 
+Dataset common metadata carries the logical schema across fragments, including
+projection and atomic append. Reconstruction does not relax append schema
+checks; schema evolution that changes logical-schema metadata is rejected.
+
 Other readers see the documented physical types, not the reconstructed schema.
 Use IPC when arbitrary consumers must see the exact original Arrow types. Strict
 writes without this option still reject numeric dictionaries and null fixed-list
-parents. Dataset reconstruction, unions and list views are not supported; errors
-are explicit. Both internal schema metadata keys are reserved. The scalar
-`BatchBuilder`/getter API is not a recursive value API; use C Data imports and
-`RecordBatch.from_arrow` / `to_arrow` for rich values.
+parents. Unions and list views are not supported; errors are explicit. Both
+internal schema metadata keys are reserved. The scalar `BatchBuilder`/getter API
+is not a recursive value API; use C Data imports and `RecordBatch.from_arrow` /
+`to_arrow` for rich values.
 
 ## Datasets, evolution and filesystems
 
@@ -161,6 +240,11 @@ readers have closed. Never edit a published generation or its hardlinked files.
 External readers can follow the public symlink, but only IRx readers implement
 generation pinning. This is a local commit protocol, not an object-store table
 format or distributed transaction.
+
+Decimal128/256 and floating-point partition keys preserve their declared types.
+Decimal paths are parsed with checked Arrow decimal conversion rather than
+floating-point intermediates. Floating keys must be finite and cannot be
+negative zero: equality grouping cannot preserve those values exactly.
 
 Hive names cannot contain `/`, backslash, `=` or `%`. The string value
 `__HIVE_DEFAULT_PARTITION__` is reserved for nulls. Other strings are
@@ -232,9 +316,11 @@ DataFrame preserving RecordBatch-supported Arrow types and metadata, including
 nested, decimal, nullable and timezone-aware columns. These frames support local
 variables, parameters, returns, `nrows()`/`ncols()` and checked RecordBatch
 conversion. They do not infer static column types or permit unchecked narrowing.
-To obtain a static frame, convert back to RecordBatch and perform a checked
-static cast. Numeric/Boolean nullable scalar and Series expressions are
-supported as described in [collections](collections.md).
+To obtain a static frame, use `cast(frame, dataframe[id:i64])` directly. Every
+chunk is checked, including reachable nested nullability; metadata and chunked
+buffers are preserved without implicit conversion. Numeric/Boolean nullable
+scalar and Series expressions are supported as described in
+[collections](collections.md).
 
 [CSV conversion ownership rules](csv.md#checked-dataframe-conversion) apply
 unchanged.
@@ -242,35 +328,32 @@ unchanged.
 ## Python example
 
 ```python
-from irx.record_batch import Parquet, ParquetOptions, ParquetPredicate
+from irx.table_io import read_parquet, write_parquet, where
+from irx.record_batch import ParquetOptions
 
-with Parquet() as source, Parquet() as target:
-    source.open_read("input.parquet", options=ParquetOptions(
-        columns=("id", "name"),
-        predicates=(ParquetPredicate("id", "gt", 10),),
-    ))
-    schema = source.schema()
-    try:
-        target.open_write("output.parquet", schema,
-                          options=ParquetOptions(atomic=True, compression="zstd"))
-    finally:
-        schema.release()
-    for batch in source:
-        target.write_batch(batch)
+frame = read_parquet("input.parquet", columns=["name"],
+                     filters=where("id", ">", 10))
+write_parquet(frame, "output.parquet", compression="zstd",
+              options=ParquetOptions(atomic=True))
 ```
 
-Iteration releases a batch on advancement. Use `next_batch()` and explicit
-`release()` when retaining the native batch longer; exported `to_arrow()` values
-own independent references. Low-level `open_parquet` factories remain available.
-Import does not build native code. CSV/IPC use the base ctypes library; Parquet
-loads a separate on-demand plugin linked to that same base instance.
-`IRX_RECORD_BATCH_LIBRARY` overrides retain the legacy all-in-one ABI contract.
+These helpers return/accept `pyarrow.Table`, accept `PathLike` paths and
+`pyarrow.Schema` assertions, and use the native C Stream bridge. No Python
+format engine is substituted. For streaming, `irx.record_batch.ParquetStream`
+remains available. Its iteration releases a batch on advancement. Use
+`next_batch()` and explicit `release()` when retaining the native batch longer;
+exported `to_arrow()` values own independent references. Low-level
+`open_parquet` factories remain available. Import does not build native code.
+CSV/IPC use the base ctypes library; Parquet loads a separate on-demand plugin
+linked to that same base instance. `IRX_RECORD_BATCH_LIBRARY` overrides retain
+the legacy all-in-one ABI contract.
 
 IRx registers `parquet` separately from `record_batch`. The base feature links
 Arrow and Compute for nullable kernels. Parquet additionally links matching
-Parquet, Dataset and Acero libraries. Arx analyzes all of `stdlib.arrow`, but
-lowers only resolved reachable declarations (whole referenced classes, including
-destructors). CSV-only programs no longer activate or link Parquet.
+Parquet, Dataset and Acero libraries. Arx resolves the canonical bundled
+modules, but lowers only resolved reachable declarations (whole referenced
+classes, including destructors). CSV-only programs no longer activate or link
+Parquet.
 
 Static RecordBatch/DataFrame casts now support parameterized decimal,
 timezone/unit, binary, nested and dictionary columns; they preserve input

@@ -19,12 +19,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 PIPELINE = """
-import (Parquet, CSV, RecordBatch, Schema) from stdlib.arrow
+import ParquetStream from stdlib.parquet
+import CSVStream from stdlib.csv
+import (RecordBatch, Schema) from stdlib.arrow
 
 fn keep(frame: dataframe[id:i64]) -> dataframe[id:i64]:
   return frame
 
-fn check_mode(v: i64, r: Parquet, w: Parquet, c: CSV, b: RecordBatch) -> none:
+fn check_mode(v: i64, r: ParquetStream, w: ParquetStream, \
+c: CSVStream, b: RecordBatch) -> none:
   if v == 1001:
     w.next()
     return none
@@ -45,18 +48,18 @@ fn check_mode(v: i64, r: Parquet, w: Parquet, c: CSV, b: RecordBatch) -> none:
 
 fn output_schema() -> Schema:
   var schema: Schema = Schema()
-  schema.add("id", 3, false)
+  schema.add("id", "int64", false)
   return schema
 
 fn main() -> i32:
-  var source: Parquet = Parquet()
+  var source: ParquetStream = ParquetStream()
   source.open_read("input.parquet", batch_size=7)
   var input_schema: Schema = source.schema()
   var schema: Schema = Schema()
-  schema.add("id", 3, false)
-  var output: Parquet = Parquet()
+  schema.add("id", "int64", false)
+  var output: ParquetStream = ParquetStream()
   output.open_write("output.parquet", schema, row_group_size=11)
-  var csv: CSV = CSV()
+  var csv: CSVStream = CSVStream()
   csv.open_write("output.csv", schema)
   schema.close()
   var rows: i64 = 0

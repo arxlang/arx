@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+typedef struct irx_arrow_table_handle irx_arrow_table_handle;
+
 #define IRX_OK       0
 #define IRX_EOF      1   /* non-error: reader has no more batches */
 #define IRX_ERR_ARROW   -1
@@ -76,6 +78,8 @@ int irx_parquet_options_text(IrxParquetOptions *, const char *name, const char *
 int irx_parquet_options_key(IrxParquetOptions *, const uint8_t *, int64_t size);
 int irx_parquet_options_filter(IrxParquetOptions *, const char *column,
     const char *operation, const char *value, const char *type);
+int irx_rb_parquet_read_table(const char *, const IrxRbSchema *, const IrxParquetOptions *, int, irx_arrow_table_handle **);
+int irx_rb_parquet_write_table(const irx_arrow_table_handle *, const char *, const IrxParquetOptions *, int);
 int irx_rb_parquet_reader_open_options(const char *, const IrxRbSchema *,
     const IrxParquetOptions *, IrxRbStreamReader **);
 int irx_rb_parquet_writer_open_options(const IrxRbSchema *, const char *,
@@ -84,6 +88,16 @@ int irx_rb_parquet_writer_open_options(const IrxRbSchema *, const char *,
 /* CSV uses the same owned readers/writers as IPC. A null read schema enables
  * first-block inference. Outputs are null on failure; schema is borrowed only
  * for this call. Delimiter must be exactly one non-NUL ASCII byte. */
+typedef struct IrxCsvOptions IrxCsvOptions;
+IrxCsvOptions *irx_csv_options_new(void);
+void irx_csv_options_release(IrxCsvOptions *);
+int irx_csv_options_int(IrxCsvOptions *, const char *, int64_t);
+int irx_csv_options_text(IrxCsvOptions *, const char *, const char *);
+int irx_csv_options_clear(IrxCsvOptions *, const char *);
+int irx_rb_csv_reader_open_options(const char *, const IrxRbSchema *, const IrxCsvOptions *, IrxRbStreamReader **);
+int irx_rb_csv_writer_open_options(const IrxRbSchema *, const char *, const IrxCsvOptions *, IrxRbStreamWriter **);
+int irx_rb_csv_read_table(const char *, const IrxRbSchema *, const IrxCsvOptions *, irx_arrow_table_handle **);
+int irx_rb_csv_write_table(const irx_arrow_table_handle *, const char *, const IrxCsvOptions *);
 int irx_rb_csv_reader_open(const char *path, const IrxRbSchema *schema,
                           const char *delimiter, int header, int block_size,
                           IrxRbStreamReader **out);
@@ -105,6 +119,13 @@ struct irx_arrow_table_handle;
  * On IRX_OK, release *out with irx_arrow_table_release or irx_rb_batch_release,
  * respectively. On error a valid out slot is reset to NULL. Complete supported
  * Arrow schemas/metadata are preserved; table export may combine chunks/copy. */
+/* Chunk-preserving table bridges. Inputs are borrowed, output slots are null
+ * on failure, and stream/table outputs own independent Arrow references. */
+int irx_rb_reader_read_table(IrxRbStreamReader *, irx_arrow_table_handle **);
+int irx_rb_table_schema(const irx_arrow_table_handle *, IrxRbSchema **);
+int irx_rb_writer_write_table(IrxRbStreamWriter *, const irx_arrow_table_handle *);
+int irx_rb_table_cast(const irx_arrow_table_handle *, const IrxRbSchema *, irx_arrow_table_handle **);
+int irx_rb_table_project(const irx_arrow_table_handle *, const char *const *, int32_t, irx_arrow_table_handle **);
 int irx_rb_batch_to_dynamic_table(const IrxRbBatch *batch, struct irx_arrow_table_handle **out);
 int irx_rb_table_to_dynamic_batch(const struct irx_arrow_table_handle *table, IrxRbBatch **out);
 /* Results own independent references. Neither operation consumes its input. */
@@ -130,6 +151,7 @@ IrxRbType *irx_type_struct(const char *const *names,
 void irx_type_release(IrxRbType *type);
 
 int irx_rb_schema_create(IrxRbSchema **out);
+int irx_rb_schema_add_named_field(IrxRbSchema *, const char *, const char *, int);
 int irx_rb_schema_add_field(IrxRbSchema *schema,
                              const char  *name,
                              IrxColumnType type,

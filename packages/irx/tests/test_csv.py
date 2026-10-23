@@ -266,7 +266,7 @@ def test_unified_csv_preserves_existing_bytes(
       header:
         type: bool
     """
-    from irx.record_batch import CSV  # noqa: PLC0415
+    from irx.record_batch import CSVStream  # noqa: PLC0415
 
     schema = RecordBatchSchema().add_field("id", IrxColumnType.INT64, False)
     schema.add_field("text", IrxColumnType.UTF8)
@@ -284,7 +284,7 @@ def test_unified_csv_preserves_existing_bytes(
         schema, old, delimiter=";", header=header
     ) as writer:
         writer.write_batch(batch)
-    with CSV() as file:
+    with CSVStream() as file:
         file.open_write(new, schema, delimiter=";", header=header)
         file.write_batch(batch)
         file.close()

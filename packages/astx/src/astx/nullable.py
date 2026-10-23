@@ -255,3 +255,64 @@ def column_type_name(value: DataType | str | int) -> str:
     if isinstance(value, (NullableType, ColumnType)):
         return str(value)
     return type(value).__name__ if isinstance(value, DataType) else repr(value)
+
+
+@public
+@typechecked
+class SeriesReduction(DataType):
+    """
+    title: Reduce a column using an explicit null-skipping aggregate.
+    attributes:
+      operation:
+        type: str
+      value:
+        type: Expr
+      type_:
+        type: DataType
+    """
+
+    operation: str
+    value: Expr
+    type_: DataType
+
+    def __init__(
+        self,
+        operation: str,
+        value: Expr,
+        loc: SourceLocation = NO_SOURCE_LOCATION,
+    ) -> None:
+        """
+        title: Model a reduction without choosing backend kernel types.
+        parameters:
+          operation:
+            type: str
+          value:
+            type: Expr
+          loc:
+            type: SourceLocation
+        """
+        super().__init__(loc=loc)
+        self.operation = operation
+        self.value = value
+        self.type_ = AnyType()
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Include the operation and operand in structural output.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
+        return self._prepare_struct(
+            "SeriesReduction",
+            cast(
+                ReprStruct,
+                {
+                    "operation": self.operation,
+                    "value": self.value.get_struct(simplified),
+                },
+            ),
+            simplified,
+        )

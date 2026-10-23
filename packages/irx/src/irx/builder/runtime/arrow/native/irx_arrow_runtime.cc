@@ -5,6 +5,8 @@
 #include <arrow/api.h>
 #include <arrow/c/bridge.h>
 #include <arrow/tensor.h>
+#include <arrow/ipc/api.h>
+#include <arrow/io/api.h>
 
 #include <errno.h>
 #include <stddef.h>
@@ -1835,6 +1837,44 @@ const char* irx_arrow_last_error(void) {
   return last_error;
 }
 
+int irx_arrow_table_import_stream(ArrowArrayStream* stream,
+                                  irx_arrow_table_handle** out_table) {
+  clear_error();
+  if (!out_table) return set_error(EINVAL, "out_table must not be NULL");
+  *out_table = nullptr;
+  if (!stream || !stream->release) return set_error(EINVAL, "stream is released");
+  try {
+    auto reader = arrow::ImportRecordBatchReader(stream);
+    if (!reader.ok()) return set_error(EINVAL, "%s", reader.status().ToString().c_str());
+    auto table = arrow::Table::FromRecordBatchReader(reader->get());
+    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    auto status = (*table)->ValidateFull();
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    auto result = std::make_unique<irx_arrow_table_handle>();
+    result->refcount = kInitialRefcount;
+    result->table = *table;
+    *out_table = result.release();
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_import_stream", error);
+  }
+}
+
+int irx_arrow_table_export_stream(const irx_arrow_table_handle* table,
+                                  ArrowArrayStream* stream) {
+  clear_error();
+  if (!table || !table->table || !stream || stream->release)
+    return set_error(EINVAL, "table and released stream output are required");
+  try {
+    auto reader = std::make_shared<arrow::TableBatchReader>(table->table);
+    auto status = arrow::ExportRecordBatchReader(reader, stream);
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    return kArrowOk;
+  } catch (const std::exception& error) {
+    return set_exception_error("irx_arrow_table_export_stream", error);
+  }
+}
+
 int irx_arrow_table_import_batch(ArrowArray* array, ArrowSchema* schema,
                                  irx_arrow_table_handle** out_table) {
   clear_error();
@@ -1879,3 +1919,27 @@ int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
 }  // extern "C"
 
 #include "irx_arrow_series.h"
+
+
+extern "C" int irx_arrow_table_from_ipc(const uint8_t* data, int64_t length, irx_arrow_table_handle** out) {
+  clear_error();
+  if (!out) return set_error(EINVAL, "table output must not be NULL");
+  *out = nullptr;
+  if (!data || length <= 0) return set_error(EINVAL, "IPC literal requires nonempty bytes");
+  try {
+    // Copy caller memory: the returned table must outlive the input buffer.
+    auto buffer = arrow::Buffer::FromString(std::string(reinterpret_cast<const char*>(data), static_cast<size_t>(length)));
+    auto source = std::make_shared<arrow::io::BufferReader>(buffer);
+    auto reader = arrow::ipc::RecordBatchStreamReader::Open(source);
+    if (!reader.ok()) return set_error(EINVAL, "%s", reader.status().ToString().c_str());
+    auto table = (*reader)->ToTable();
+    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    auto status = (*table)->ValidateFull();
+    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    auto result = std::make_unique<irx_arrow_table_handle>();
+    result->refcount = 1;
+    result->table = *table;
+    *out = result.release();
+    return 0;
+  } catch (const std::exception& error) { return set_exception_error("IPC literal", error); }
+}

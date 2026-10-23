@@ -17,11 +17,17 @@ import astx
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.class_lifecycle import lifecycle_error
+from irx.analysis.dataframe_literals import dataframe_literal_ipc
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
-from irx.analysis.nullable import nullable_error, scalar_type, set_operation
+from irx.analysis.nullable import (
+    nullable_error,
+    resolve_series_reduction,
+    scalar_type,
+    set_operation,
+)
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, OwnershipTransferKind
 from irx.analysis.types import same_type
@@ -107,6 +113,16 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         set_operation(
             cast(SemanticAnalyzerCore, self), node, "coalesce", inner, result
         )
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.SeriesReduction) -> None:
+        """
+        title: Resolve an explicitly named null-skipping Series reduction.
+        parameters:
+          node:
+            type: astx.SeriesReduction
+        """
+        resolve_series_reduction(cast(SemanticAnalyzerCore, self), node)
 
     def _dataframe_schema(
         self,
@@ -217,11 +233,29 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         if schema is not None and any(
             isinstance(c.type_, astx.ColumnType) for c in schema.columns
         ):
-            nullable_error(
-                cast(SemanticAnalyzerCore, self),
-                node,
-                "Parameterized DataFrame columns require a checked "
-                "RecordBatch conversion, not a literal",
+            try:
+                self._semantic(node).extras["dataframe_literal_ipc"] = (
+                    dataframe_literal_ipc(node)
+                )
+            except (ValueError, OverflowError) as error:
+                nullable_error(
+                    cast(SemanticAnalyzerCore, self), node, str(error)
+                )
+                return
+            self._set_dataframe_schema(node, schema)
+            self._set_type(node, node.type_)
+            function = self.context.current_function
+            if (
+                function is None
+                or function.signature.metadata.get("generator") is not None
+            ):
+                lifecycle_error(
+                    cast(SemanticAnalyzerCore, self),
+                    node,
+                    "Arrow values require a non-generator function",
+                )
+            self._set_resource_ownership(
+                node, arrow_ownership(node.type_, OwnershipKind.OWNED)
             )
             return
         if schema is None:

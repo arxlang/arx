@@ -13,7 +13,14 @@ from public import private
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.resolved_nodes import OwnershipKind
-from irx.analysis.types import is_integer_type, is_numeric_type, same_type
+from irx.analysis.types import (
+    common_numeric_type,
+    is_assignable,
+    is_integer_type,
+    is_numeric_type,
+    is_unsigned_type,
+    same_type,
+)
 from irx.builtins.collections.column_types import (
     column_arrow_type,
     dataframe_schema_ipc,
@@ -54,11 +61,14 @@ class ColumnOperation:
         type: int
       result:
         type: astx.DataType
+      input_type:
+        type: astx.DataType | None
     """
 
     kernel: str
     type_id: int
     result: astx.DataType
+    input_type: astx.DataType | None = None
 
 
 @private
@@ -123,7 +133,7 @@ def set_operation(
         type: astx.DataType
     """
     type_id = dataframe_type_id(input_type)
-    if type_id is None:
+    if type_id is None and kernel not in {"slice", "is_null", "count"}:
         nullable_error(
             analyzer,
             node,
@@ -132,7 +142,7 @@ def set_operation(
         )
         return
     analyzer._semantic(node).extras["column_operation"] = ColumnOperation(
-        kernel, type_id, result
+        kernel, type_id or 0, result, input_type
     )
     analyzer._set_type(node, result)
     if isinstance(result, astx.SeriesType):
@@ -169,17 +179,20 @@ def resolve_column_binary(
     left = analyzer._expr_type(node.lhs)
     right = analyzer._expr_type(node.rhs)
     managed = (astx.SeriesType, astx.NullableType)
+    if node.op_code == "=" and isinstance(node.lhs, astx.SubscriptExpr):
+        return resolve_series_store(analyzer, node)
     if node.op_code == "=" or not (
         isinstance(left, managed) or isinstance(right, managed)
     ):
         return False
     lhs, rhs = scalar_type(left), scalar_type(right)
     kernel = KERNELS.get(node.op_code)
-    if kernel is None or not same_type(lhs, rhs):
+    promoted = lhs if same_type(lhs, rhs) else common_numeric_type(lhs, rhs)
+    if kernel is None or promoted is None:
         nullable_error(
             analyzer,
             node,
-            "nullable/Series operators require matching scalar "
+            "nullable/Series operators require compatible scalar "
             "types and a supported operator; cast operands explicitly",
         )
         return True
@@ -195,8 +208,8 @@ def resolve_column_binary(
             analyzer, node, "Series logical operators require bool operands"
         )
         return True
-    assert lhs is not None
-    output = astx.Boolean() if node.op_code in COMPARISONS else lhs
+    assert promoted is not None
+    output = astx.Boolean() if node.op_code in COMPARISONS else promoted
     nullable = any(
         isinstance(t, astx.NullableType)
         or (isinstance(t, astx.SeriesType) and t.nullable)
@@ -205,7 +218,7 @@ def resolve_column_binary(
     result: astx.DataType = astx.NullableType(output) if nullable else output
     if isinstance(left, astx.SeriesType) or isinstance(right, astx.SeriesType):
         result = astx.SeriesType(output, nullable=nullable)
-    set_operation(analyzer, node, kernel, lhs, result)
+    set_operation(analyzer, node, kernel, promoted, result)
     return True
 
 
@@ -227,6 +240,29 @@ def resolve_column_index(
     source = analyzer._expr_type(node.value)
     if not isinstance(source, astx.SeriesType):
         return False
+    if isinstance(node.index, astx.LiteralNone):
+        for bound in (node.lower, node.upper, node.step):
+            if isinstance(bound, astx.LiteralNone):
+                continue
+            analyzer.visit(bound)
+            if not is_integer_type(analyzer._expr_type(bound)) or isinstance(
+                analyzer._expr_type(bound), (astx.UInt64, astx.UInt128)
+            ):
+                nullable_error(
+                    analyzer,
+                    node,
+                    "Series slice bounds require integers "
+                    "representable as i64",
+                )
+                return True
+        set_operation(
+            analyzer,
+            node,
+            "slice",
+            source.element_type,
+            astx.SeriesType(source.element_type, nullable=source.nullable),
+        )
+        return True
     index = analyzer._expr_type(node.index)
     if not is_integer_type(index) or isinstance(
         index, (astx.UInt64, astx.UInt128)
@@ -293,19 +329,6 @@ def validate_column_declaration(
                 node,
                 "nullable scalars support fixed-width numeric and bool types",
             )
-        if (
-            isinstance(
-                node,
-                (astx.VariableDeclaration, astx.InlineVariableDeclaration),
-            )
-            and analyzer.context.current_function is None
-            and analyzer.context.current_class is None
-        ):
-            nullable_error(
-                analyzer,
-                node,
-                "nullable scalar globals are unsupported; use function locals",
-            )
         return
     try:
         if (
@@ -322,3 +345,182 @@ def validate_column_declaration(
             column_arrow_type(type_.element_type)
     except (ValueError, TypeError) as error:
         nullable_error(analyzer, node, str(error))
+
+
+@private
+@typechecked
+def resolve_column_unary(
+    analyzer: SemanticAnalyzerCore, node: astx.UnaryOp
+) -> bool:
+    """
+    title: Resolve checked, null-propagating unary column operations.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.UnaryOp
+    returns:
+      type: bool
+    """
+    source = analyzer._expr_type(node.operand)
+    if not isinstance(source, (astx.NullableType, astx.SeriesType)):
+        return False
+    inner = scalar_type(source)
+    kernels = {
+        "+": "identity",
+        "-": "negate_checked",
+        "!": "invert",
+        "not": "invert",
+    }
+    kernel = kernels.get(node.op_code)
+    if (
+        kernel is None
+        or (kernel == "invert" and not isinstance(inner, astx.Boolean))
+        or (kernel != "invert" and not is_numeric_type(inner))
+    ):
+        nullable_error(
+            analyzer,
+            node,
+            "unsupported nullable/Series unary operator or operand type",
+        )
+        return True
+    if kernel == "negate_checked" and is_unsigned_type(inner):
+        nullable_error(
+            analyzer,
+            node,
+            "negation requires a signed numeric type; "
+            "cast unsigned values explicitly",
+        )
+        return True
+    set_operation(analyzer, node, kernel, inner, source)
+    return True
+
+
+@private
+@typechecked
+def resolve_series_reduction(
+    analyzer: SemanticAnalyzerCore, node: astx.SeriesReduction
+) -> None:
+    """
+    title: Resolve null-skipping reductions with explicit accumulator types.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.SeriesReduction
+    """
+    analyzer.visit(node.value)
+    source = analyzer._expr_type(node.value)
+    if not isinstance(source, astx.SeriesType):
+        nullable_error(analyzer, node, "Series reductions require a Series")
+        return
+    inner = source.element_type
+    operation = node.operation
+    if operation not in {"sum", "min", "max", "mean", "count", "any", "all"}:
+        nullable_error(analyzer, node, "unknown Series reduction")
+        return
+    if operation in {"any", "all"}:
+        if not isinstance(inner, astx.Boolean):
+            nullable_error(
+                analyzer, node, "Boolean reductions require bool columns"
+            )
+            return
+        output: astx.DataType = astx.Boolean()
+    elif operation == "count":
+        output = astx.Int64()
+    else:
+        if not is_numeric_type(inner):
+            nullable_error(
+                analyzer, node, "numeric reductions require numeric columns"
+            )
+            return
+        assert inner is not None
+        output = inner
+        if operation == "mean" or (
+            operation == "sum" and not is_integer_type(inner)
+        ):
+            output = astx.Float64()
+        elif operation == "sum":
+            output = astx.UInt64() if is_unsigned_type(inner) else astx.Int64()
+    result = output if operation == "count" else astx.NullableType(output)
+    set_operation(analyzer, node, operation, inner, result)
+
+
+@private
+@typechecked
+def resolve_nullable_global(
+    analyzer: SemanticAnalyzerCore,
+    node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+) -> None:
+    """
+    title: >-
+      Resolve POD nullable globals to static validity and payload constants.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+    """
+    if (
+        not isinstance(node.type_, astx.NullableType)
+        or analyzer.context.current_function is not None
+        or analyzer.context.current_class is not None
+    ):
+        return
+    value = node.value
+    if isinstance(value, astx.Cast) and isinstance(
+        value.value, astx.LiteralNone
+    ):
+        value = value.value
+    if value is None or isinstance(value, (astx.Undefined, astx.LiteralNone)):
+        payload: tuple[bool, int | float] = (False, 0)
+    elif isinstance(value, astx.Literal) and isinstance(
+        value.value, (int, float, bool)
+    ):
+        payload = (True, value.value)
+    else:
+        nullable_error(
+            analyzer,
+            node,
+            "nullable globals require a numeric/Boolean "
+            "literal or none initializer",
+        )
+        return
+    analyzer._semantic(node).extras["nullable_global"] = payload
+
+
+@private
+@typechecked
+def resolve_series_store(
+    analyzer: SemanticAnalyzerCore, node: astx.BinaryOp
+) -> bool:
+    """
+    title: Resolve checked element updates on a mutable Series binding.
+    parameters:
+      analyzer:
+        type: SemanticAnalyzerCore
+      node:
+        type: astx.BinaryOp
+    returns:
+      type: bool
+    """
+    assert isinstance(node.lhs, astx.SubscriptExpr)
+    source = analyzer._expr_type(node.lhs.value)
+    if not isinstance(source, astx.SeriesType):
+        return False
+    if isinstance(node.lhs.index, astx.LiteralNone):
+        nullable_error(
+            analyzer, node, "Series assignment requires a single index"
+        )
+        return True
+    element = analyzer._expr_type(node.lhs)
+    if not is_assignable(element, analyzer._expr_type(node.rhs)):
+        nullable_error(
+            analyzer,
+            node,
+            "Series update requires an assignable scalar, "
+            "preserving nullability",
+        )
+        return True
+    set_operation(analyzer, node, "set", source.element_type, astx.NoneType())
+    return True

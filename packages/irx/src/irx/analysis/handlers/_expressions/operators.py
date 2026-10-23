@@ -32,7 +32,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.normalization import normalize_flags, normalize_operator
-from irx.analysis.nullable import nullable_error, resolve_column_binary
+from irx.analysis.nullable import resolve_column_binary, resolve_column_unary
 from irx.analysis.ownership import (
     resource_ownership,
     string_resource_ownership,
@@ -75,13 +75,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             self._set_type(node, None)
             return
         operand_type = self._expr_type(node.operand)
-        if isinstance(operand_type, (astx.SeriesType, astx.NullableType)):
-            nullable_error(
-                cast(SemanticAnalyzerCore, self),
-                node,
-                "Use binary arithmetic, is_null or fill_null for "
-                "nullable/Series values",
-            )
+        if resolve_column_unary(cast(SemanticAnalyzerCore, self), node):
             return
         if node.op_code in {"+", "-"} and not is_numeric_type(operand_type):
             self.context.diagnostics.add(
@@ -144,6 +138,14 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).resolved_resource_store = None
         self._semantic(node).lifecycle_field_store = False
         self.visit(node.lhs)
+        target = self._expr_type(node.lhs)
+        if (
+            node.op_code == "="
+            and isinstance(target, astx.NullableType)
+            and isinstance(node.rhs, astx.LiteralNone)
+        ):
+            node.rhs = astx.Cast(node.rhs, target)
+            node.rhs.loc = node.rhs.value.loc
         self.visit(node.rhs)
         lhs_type = self._expr_type(node.lhs)
         rhs_type = self._expr_type(node.rhs)
@@ -159,6 +161,23 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
+        if (
+            node.op_code == "="
+            and isinstance(node.lhs, astx.SubscriptExpr)
+            and isinstance(self._expr_type(node.lhs.value), astx.SeriesType)
+        ):
+            if (
+                self._resolve_mutation_target(
+                    node.lhs.value,
+                    node=node,
+                    action="update",
+                    invalid_message=(
+                        "Series updates require a mutable variable or field"
+                    ),
+                )
+                is None
+            ):
+                return
         if resolve_column_binary(cast(SemanticAnalyzerCore, self), node):
             return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)

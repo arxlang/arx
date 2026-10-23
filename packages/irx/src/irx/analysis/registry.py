@@ -533,7 +533,13 @@ class SemanticRegistry:
             required_runtime_features=required_runtime_features,
         )
 
-        if validate_ffi and signature.is_extern:
+        table_io = self.context.native_table_io.get(id(prototype))
+        if table_io is not None:
+            signature = replace(
+                signature,
+                metadata={**signature.metadata, "table_io": table_io},
+            )
+        if validate_ffi and signature.is_extern and table_io is None:
             ffi = build_ffi_callable_info(
                 self.context,
                 signature=signature,

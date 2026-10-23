@@ -429,6 +429,23 @@ class ExpressionParserMixin(ParserMixinBase):
                 )
             return self.parse_dataframe_constructor()
 
+        if id_name in {
+            "series_sum",
+            "series_min",
+            "series_max",
+            "series_mean",
+            "series_count",
+            "series_any",
+            "series_all",
+        }:
+            if template_args is not None:
+                raise ParserException("Series reductions reject templates.")
+            value = cast(astx.Expr, self.parse_expression())
+            self._consume_operator(")")
+            return astx.SeriesReduction(
+                id_name.removeprefix("series_"), value, loc=id_loc
+            )
+
         if id_name in {"is_null", "fill_null"}:
             if template_args is not None:
                 raise ParserException(
@@ -558,7 +575,37 @@ class ExpressionParserMixin(ParserMixinBase):
 
         indices: list[astx.Expr] = []
         while True:
-            indices.append(cast(astx.Expr, self.parse_expression()))
+            first = (
+                astx.LiteralNone()
+                if self._is_operator(":")
+                else cast(astx.Expr, self.parse_expression())
+            )
+            if self._is_operator(":"):
+                if indices:
+                    raise ParserException(
+                        "Multidimensional slices are unsupported."
+                    )
+                self._consume_operator(":")
+                stop = (
+                    astx.LiteralNone()
+                    if self._is_operator(":") or self._is_operator("]")
+                    else cast(astx.Expr, self.parse_expression())
+                )
+                step: astx.Expr = astx.LiteralNone()
+                if self._is_operator(":"):
+                    self._consume_operator(":")
+                    if not self._is_operator("]"):
+                        step = cast(astx.Expr, self.parse_expression())
+                self._consume_operator("]")
+                return astx.SubscriptExpr(
+                    cast(astx.Expr, base),
+                    astx.LiteralNone(),
+                    lower=first,
+                    upper=stop,
+                    step=step,
+                    loc=subscript_loc,
+                )
+            indices.append(first)
             if self._is_operator("]"):
                 break
             self._consume_operator(",")
@@ -628,7 +675,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
             self._consume_operator(":")
             value = self.parse_expression()
-            if not isinstance(value, astx.LiteralList):
+            if not isinstance(value, (astx.LiteralList, astx.LiteralTuple)):
                 raise ParserException(
                     "DataFrame constructor column values must be list "
                     "literals."

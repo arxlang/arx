@@ -18,6 +18,18 @@ NativeArtifactKind = Literal[
     "c_source", "cxx_source", "object", "static_library"
 ]
 
+TableIOOperation = Literal[
+    "read_csv",
+    "write_csv",
+    "read_parquet",
+    "write_parquet",
+    "where",
+    "csv_frame",
+    "parquet_frame",
+    "csv_write_frame",
+    "parquet_write_frame",
+]
+
 
 @public
 @typechecked
@@ -126,15 +138,19 @@ class NativeBinding:
         type: astx.FunctionPrototype
       features:
         type: tuple[str, Ellipsis]
+      table_io:
+        type: TableIOOperation | None
     """
 
     declaration: astx.FunctionPrototype
     features: tuple[str, ...]
+    table_io: TableIOOperation | None = None
 
     def __init__(
         self,
         declaration: astx.FunctionPrototype,
         features: tuple[str, ...],
+        table_io: TableIOOperation | None = None,
     ) -> None:
         """
         title: Validate a declaration identity and its feature names.
@@ -143,6 +159,8 @@ class NativeBinding:
             type: astx.FunctionPrototype
           features:
             type: tuple[str, Ellipsis]
+          table_io:
+            type: TableIOOperation | None
         """
         if not features or any(not name.strip() for name in features):
             raise ValueError("native bindings require nonempty feature names")
@@ -150,3 +168,4 @@ class NativeBinding:
             raise ValueError("duplicate native binding features")
         object.__setattr__(self, "declaration", declaration)
         object.__setattr__(self, "features", features)
+        object.__setattr__(self, "table_io", table_io)

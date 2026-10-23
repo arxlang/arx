@@ -214,11 +214,14 @@ def test_owned_series_and_scalar_execute() -> None:
             "supported operator",
         ),
         (
-            lambda: astx.BinaryOp("+", column(), astx.LiteralFloat32(1.0)),
-            "matching scalar types",
+            lambda: astx.BinaryOp("+", column(), astx.LiteralBoolean(True)),
+            "compatible scalar types",
         ),
         (lambda: astx.BinaryOp("and", column(), column()), "require bool"),
-        (lambda: astx.UnaryOp("-", column()), "Use binary arithmetic"),
+        (
+            lambda: astx.UnaryOp("++", column()),
+            "unsupported nullable/Series unary",
+        ),
         (lambda: astx.NullCheck(astx.LiteralInt32(0)), "is_null requires"),
         (
             lambda: astx.NullFill(column(), astx.LiteralBoolean(True)),
@@ -369,3 +372,68 @@ def test_rich_recordbatch_cast_translate() -> None:
     assert_ir_parses(text)
     assert "irx_rb_api_schema_ipc" in text
     assert "irx_rb_api_batch_to_table" in text
+
+
+@pytest.mark.parametrize("operation", ["sum", "min", "max", "mean", "count"])
+def test_reduction_lowering(operation: str) -> None:
+    """
+    title: Resolve each null-skipping numeric reduction before native calls.
+    parameters:
+      operation:
+        type: str
+    """
+    reduction = astx.SeriesReduction(operation, column())
+    module = make_main_module(
+        frame(astx.Int32(), astx.LiteralInt32(1)),
+        reduction,
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    text = Builder().translate(module)
+    assert_ir_parses(text)
+    assert "irx_arrow_column_compute_promoted" in text
+
+
+@pytest.mark.parametrize("operation", ["any", "all"])
+def test_boolean_reduction_lowering(operation: str) -> None:
+    """
+    title: Boolean reductions retain nullable result validity.
+    parameters:
+      operation:
+        type: str
+    """
+    reduction = astx.SeriesReduction(operation, column())
+    module = make_main_module(
+        frame(astx.Boolean(), astx.LiteralBoolean(True)),
+        reduction,
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    assert_ir_parses(Builder().translate(module))
+
+
+def test_slice_and_update_lowering() -> None:
+    """
+    title: Slice results are owned and element stores produce no stack value.
+    """
+    series = astx.SeriesType(astx.Int32(), nullable=True)
+    sliced = astx.SubscriptExpr(
+        column(), astx.LiteralNone(), step=astx.LiteralInt32(-1)
+    )
+    update = astx.BinaryOp(
+        "=",
+        astx.SubscriptExpr(astx.Identifier("values"), astx.LiteralInt32(0)),
+        astx.LiteralNone(),
+    )
+    module = make_main_module(
+        frame(astx.Int32(), astx.LiteralInt32(1)),
+        astx.VariableDeclaration(
+            "values",
+            series,
+            value=sliced,
+            mutability=astx.MutabilityKind.mutable,
+        ),
+        update,
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    text = Builder().translate(module)
+    assert_ir_parses(text)
+    assert "irx_arrow_series_set" in text and "irx_arrow_series_slice" in text

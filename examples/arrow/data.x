@@ -10,9 +10,9 @@ fn make_batch() -> RecordBatch:
   summary: Produces two rows with exact non-nullable Arrow types.
   ```
   var schema: Schema = Schema()
-  schema.add("id", 3)
-  schema.add("score", 9)
-  schema.add("active", 10)
+  schema.add("id", "int64")
+  schema.add("score", "float64")
+  schema.add("active", "bool")
   var builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_i64(0, 7)

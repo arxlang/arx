@@ -6,11 +6,68 @@ release changes unless a more specific instruction file overrides it.
 
 ## Core Objectives
 
-1. Preserve existing behavior unless the task explicitly changes it.
+1. Keep changes scoped; apply the pre-2.0 compatibility policy below.
 2. Respect package ownership and keep cross-package contracts aligned.
 3. Keep Python 3.10-3.14 behavior and the relevant quality gates green.
 4. Make minimal, targeted changes with focused tests and documentation.
 5. Report evidence honestly; never invent commands, results, spans, or support.
+
+## Compatibility Before Arx 2.0
+
+- Backward compatibility is not a requirement before Arx 2.0. Prefer the
+  clearest, most robust API and architecture for the requested feature, even
+  when that means changing or removing existing APIs, syntax, or import paths.
+- Do not add compatibility aliases, shims, deprecated entry points, or
+  deprecation periods solely to preserve old usage unless explicitly requested.
+  Do not retain an inferior design just to avoid a breaking change.
+- Update affected callers, tests, examples, documentation, and cross-package
+  contracts together in the same PR. Describe intentional breaking changes;
+  historical usage does not need a parallel supported implementation.
+- This policy does not authorize unrelated changes or weaken correctness, data
+  integrity, ownership, diagnostics, or validation. Preserve behavior outside
+  the requested scope and keep all components of the current release consistent,
+  including native ABI producers and consumers.
+- Revisit and explicitly define the compatibility policy when Arx reaches 2.0;
+  do not assume this pre-2.0 exemption continues afterward.
+
+## Arx API And Syntax Design
+
+Arx should be approachable and easy to use. Python and its widely used library
+APIs are primary usability references, not compatibility specifications. We do
+not aim to recreate Python or make Arx identical to it.
+
+- When designing or extending syntax, a feature, builtin, library, class,
+  function, or method, first consider how the equivalent task is expressed in
+  Python. Examine relevant builtins, the standard library, and established
+  Python ecosystem libraries, not just core Python syntax.
+- Prefer familiar names, call shapes, conventions, and workflows when they fit
+  Arx. Evaluate the user-facing experience before settling on the internal
+  implementation; do not expose low-level runtime plumbing as the only way to
+  perform a common task.
+- Propose the public API with a short common-case example and an example of more
+  advanced configuration. Explain defaults, return values, errors, ownership
+  where relevant, supported options, and intentional differences from the Python
+  reference. Clearly label proposed syntax as unimplemented.
+- Make common operations simple: minimize required arguments and boilerplate,
+  use sensible and safe defaults, and keep naming and behavior consistent across
+  related APIs. Convenience must not conceal surprising data loss, resource use,
+  or lifecycle requirements.
+- Provide the meaningful parameterization needed for the supported workflows,
+  rather than hardcoding policy or exposing only a minimally usable interface.
+  Prefer clear named parameters; group related advanced settings in focused,
+  typed options when that keeps calls simpler. Avoid redundant entry points,
+  ambiguous flags, and speculative knobs without a concrete use case.
+- Keep the API robust: validate options and their combinations, reject
+  unsupported behavior explicitly, and provide actionable errors. Document
+  restrictions instead of silently ignoring parameters or changing semantics.
+- Adapt rather than copy. Preserve Arx's type system, ownership guarantees,
+  native execution model, package boundaries, and behavior outside the requested
+  scope. Explain deviations that improve safety, clarity, or consistency.
+  Familiarity alone does not justify unsafe coercions or unnecessary language
+  complexity.
+- Borrowing an API design does not require importing its Python implementation,
+  adding a dependency, or promising full feature parity. Keep implementation
+  scope focused while making the supported interface coherent and useful.
 
 ## Working With Repository State
 
@@ -314,6 +371,10 @@ toolchain blockers. Do not imply that an unrun check passed.
   scripts, and release assets when adding or renaming a package.
 - Use a Conventional Commit PR title. The project squash-merges PRs and releases
   the package set in lockstep.
+- When a final answer delivers implementation changes or a plan intended for a
+  PR, end it with `PR title: <title>`. Suggest one concise Conventional Commit
+  title describing the overall change, not just the latest edit. Omit this line
+  for unrelated questions or responses where no PR is applicable.
 
 ## PR Review Protocol
 
@@ -339,6 +400,10 @@ risks or checks rather than inventing confidence.
 Before finalizing a change, verify as applicable:
 
 - [ ] behavior changes have focused tests
+- [ ] new public APIs consider Python ecosystem ergonomics and document
+      examples, defaults, configuration, errors, and intentional differences
+- [ ] intentional breaking changes update affected callers and docs together,
+      without unnecessary pre-2.0 compatibility layers
 - [ ] frontend, ASTx, semantics, lowering, runtime, and exports remain aligned
 - [ ] syntax changes update manifest, lexer, parser, tests, docs, and examples
 - [ ] touched code passes relevant Ruff, mypy, Douki, and unit checks

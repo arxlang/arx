@@ -33,6 +33,17 @@ int main() {
     irx_arrow_chunked_array_handle* sum = nullptr;
     assert(irx_arrow_column_compute("add_checked", IRX_ARROW_TYPE_INT32,
         column, 0, 1, column, 0, 1, &sum, &bits, &valid) == 0);
+    irx_arrow_chunked_array_handle* slice = nullptr;
+    assert(irx_arrow_series_slice(column, 0, 0, -1, 0, &slice) == 0);
+    assert(irx_arrow_series_set(column, 1, IRX_ARROW_TYPE_INT32, 9, 1, 1) == 0);
+    assert(irx_arrow_series_index(slice, 0, IRX_ARROW_TYPE_INT32, &bits, &valid) == 0);
+    assert(valid == 0);
+    assert(irx_arrow_series_set(column, -1, IRX_ARROW_TYPE_INT32, 9, 1, 1) != 0);
+    irx_arrow_chunked_array_handle* reduced = nullptr;
+    assert(irx_arrow_column_compute("sum", IRX_ARROW_TYPE_INT32,
+        column, 0, 1, nullptr, 0, 0, &reduced, &bits, &valid) == 0);
+    assert(reduced == nullptr && bits == 14 && valid == 1);
+    irx_arrow_chunked_array_release(slice);
     irx_arrow_chunked_array_release(column);
     assert(irx_arrow_series_index(sum, 0, IRX_ARROW_TYPE_INT32, &bits, &valid) == 0);
     assert(bits == 10 && valid == 1);
@@ -63,7 +74,55 @@ int main() {
     assert(irx_rb_batch_get_int32(batch, 0, 0, &value) == 0 && value == 5);
     irx_rb_batch_release(batch);
     irx_rb_stream_reader_close(reader);
+
+    // Exercise multi-batch tables independently of their closed input session.
+    assert(irx_rb_parquet_reader_open("sanitizer.parquet", nullptr, 1, &reader) == 0);
+    table = nullptr;
+    assert(irx_rb_reader_read_table(reader, &table) == 0);
+    irx_rb_stream_reader_close(reader);
+    assert(irx_arrow_table_num_rows(table) == 2);
+    ArrowArrayStream stream{};
+    assert(irx_arrow_table_export_stream(table, &stream) == 0);
+    irx_arrow_table_handle* imported = nullptr;
+    assert(irx_arrow_table_import_stream(&stream, &imported) == 0);
+    assert(stream.release == nullptr);
+    irx_arrow_table_release(table);
+    assert(irx_rb_table_schema(imported, &schema) == 0);
+    irx_arrow_table_handle* checked = nullptr;
+    assert(irx_rb_table_cast(imported, schema, &checked) == 0);
+    irx_arrow_table_release(checked);
+    IrxRbSchema* required = nullptr;
+    assert(irx_rb_schema_create(&required) == 0);
+    assert(irx_rb_schema_add_named_field(required, "x", "int32", 0) == 0);
+    checked = reinterpret_cast<irx_arrow_table_handle*>(1);
+    assert(irx_rb_table_cast(imported, required, &checked) < 0);
+    assert(checked == nullptr);
+    irx_rb_schema_release(required);
+    const char* missing[] = {"missing"};
+    checked = reinterpret_cast<irx_arrow_table_handle*>(1);
+    assert(irx_rb_table_project(imported, missing, 1, &checked) < 0);
+    assert(checked == nullptr);
+    IrxCsvOptions* csv = irx_csv_options_new();
+    assert(csv != nullptr);
+    assert(irx_rb_csv_write_table(imported, "sanitizer.csv", csv) == 0);
+    assert(irx_rb_csv_read_table("sanitizer.csv", schema, csv, &checked) == 0);
+    assert(irx_arrow_table_num_rows(checked) == 2);
+    irx_csv_options_release(csv);
+    irx_rb_schema_release(schema);
+    irx_arrow_table_release(imported);
+    options = irx_parquet_options_new();
+    assert(irx_parquet_options_int(options, "row_group_size", 1) == 0);
+    assert(irx_rb_parquet_write_table(checked, "table.parquet", options, 1) == 0);
+    irx_arrow_table_release(checked);
+    irx_parquet_options_release(options);
+    options = irx_parquet_options_new();
+    assert(irx_rb_parquet_read_table("table.parquet", nullptr, options, 1, &imported) == 0);
+    assert(irx_arrow_table_num_rows(imported) == 2);
+    irx_arrow_table_release(imported);
+    irx_parquet_options_release(options);
   }
   std::remove("sanitizer.parquet");
+  std::remove("table.parquet");
+  std::remove("sanitizer.csv");
   return 0;
 }

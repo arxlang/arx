@@ -44,7 +44,25 @@ enum irx_arrow_type_id {
  */
 int irx_arrow_series_index(const irx_arrow_chunked_array_handle*, int64_t,
     int32_t, uint64_t*, int32_t*);
+/* IPC input is borrowed and copied. Success transfers one owned table handle;
+ * failure clears out. The result does not borrow the input bytes. */
+int irx_arrow_table_from_ipc(const uint8_t* data, int64_t length,
+    irx_arrow_table_handle** out);
+/* Mutate the shared Series handle, not the originating table. On failure the
+ * handle is unchanged. Concurrent mutation/read of this handle is unsupported. */
+int irx_arrow_series_set(irx_arrow_chunked_array_handle* column, int64_t index,
+    int32_t type, uint64_t bits, int32_t valid, int32_t nullable);
+/* Slice inputs are borrowed; success returns an independently owned column.
+ * bounds bit 0 supplies start and bit 1 supplies stop. Zero step is an error.
+ * Defaults, negative bounds and clamping follow Python slicing semantics. */
+int irx_arrow_series_slice(const irx_arrow_chunked_array_handle*, int64_t,
+    int64_t, int64_t, int32_t, irx_arrow_chunked_array_handle**);
 int irx_arrow_column_compute(const char*, int32_t,
+    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
+    const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
+    irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
+/* As above, with checked casts to the semantically resolved common type. */
+int irx_arrow_column_compute_promoted(const char*, int32_t,
     const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
     const irx_arrow_chunked_array_handle*, uint64_t, int32_t,
     irx_arrow_chunked_array_handle**, uint64_t*, int32_t*);
@@ -177,6 +195,11 @@ int irx_arrow_table_column_by_index(
     irx_arrow_chunked_array_handle** out_column);
 /* C Data imports consume the supplied callbacks; exports own fresh references.
  * Table export combines all chunks, and may allocate. Outputs must be empty. */
+/* C Stream transfers consume the input on success; outputs start released. */
+int irx_arrow_table_import_stream(struct ArrowArrayStream* stream,
+                                  irx_arrow_table_handle** out_table);
+int irx_arrow_table_export_stream(const irx_arrow_table_handle* table,
+                                  struct ArrowArrayStream* out_stream);
 int irx_arrow_table_import_batch(struct ArrowArray* array, struct ArrowSchema* schema,
                                  irx_arrow_table_handle** out_table);
 int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,

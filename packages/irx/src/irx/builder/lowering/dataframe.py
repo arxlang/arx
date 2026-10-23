@@ -468,6 +468,40 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameLiteral
         """
+        info = getattr(node, "semantic", None)
+        payload = (
+            None if info is None else info.extras.get("dataframe_literal_ipc")
+        )
+        if isinstance(payload, bytes):
+            data = ir.Constant(
+                ir.ArrayType(ir.IntType(8), len(payload)), bytearray(payload)
+            )
+            storage = ir.GlobalVariable(
+                self._llvm.module,
+                data.type,
+                self._llvm.module.get_unique_name("dataframe_literal"),
+            )
+            storage.linkage = "internal"
+            storage.global_constant = True
+            storage.initializer = data
+            zero = ir.Constant(ir.IntType(32), 0)
+            pointer = self._llvm.ir_builder.gep(
+                storage, [zero, zero], inbounds=True
+            )
+            output = self.create_entry_block_alloca(
+                "literal_table", self._llvm.TABLE_HANDLE_TYPE
+            )
+            status = self._llvm.ir_builder.call(
+                self.require_runtime_symbol(
+                    "dataframe", "irx_arrow_table_from_ipc"
+                ),
+                [pointer, ir.Constant(ir.IntType(64), len(payload)), output],
+            )
+            self._check_arrow_status(status, "dataframe_literal")
+            table = self._llvm.ir_builder.load(output)
+            self.arrow_temporary(node, table)
+            self.result_stack.append(table)
+            return
         if node.type_.columns is None:
             raise Exception("dataframe literal lowering requires a schema")
 

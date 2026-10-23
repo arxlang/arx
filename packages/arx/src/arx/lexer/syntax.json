@@ -179,7 +179,17 @@
     "series_type": {
       "form": "series[type] or series[type | none]",
       "indexing": "series[index]",
-      "null_operations": ["is_null(value)", "fill_null(value, replacement)"]
+      "null_operations": ["is_null(value)", "fill_null(value, replacement)"],
+      "slicing": "series[start:stop:step]",
+      "reductions": [
+        "series_sum",
+        "series_min",
+        "series_max",
+        "series_mean",
+        "series_count",
+        "series_any",
+        "series_all"
+      ]
     },
     "call_arguments": {
       "form": "callee(positional, name=value, ...)",
@@ -276,7 +286,14 @@
       "range",
       "time",
       "timestamp",
-      "type"
+      "type",
+      "series_sum",
+      "series_min",
+      "series_max",
+      "series_mean",
+      "series_count",
+      "series_any",
+      "series_all"
     ]
   }
 }

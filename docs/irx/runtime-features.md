@@ -246,11 +246,11 @@ Parquet adapters are registered separately from the base RecordBatch runtime.
 Array/tensor linker flags are unchanged; matching PyArrow libraries are used,
 not system Arrow. Availability is checked when a feature is activated.
 
-The `CSV` and `Parquet` facades use distinct nominal opaque handles and a shared
-checked session lifecycle; raw reader/writer ABI entrypoints remain additive and
-compatible. New sources, headers and library flags participate in native-cache
-fingerprinting and wheel asset audits. See [Parquet I/O](../arx/parquet.md) for
-type and DataFrame restrictions.
+The `CSVStream` and `ParquetStream` facades use distinct nominal opaque handles
+and a shared checked session lifecycle; raw reader/writer ABI entrypoints remain
+additive and compatible. New sources, headers and library flags participate in
+native-cache fingerprinting and wheel asset audits. See
+[Parquet I/O](../arx/parquet.md) for type and DataFrame restrictions.
 
 ## Optional Parquet feature
 
@@ -271,3 +271,36 @@ still validates every declaration, while lowering retains referenced classes
 remain eager by default. CSV-only programs therefore do not activate Parquet.
 See [format contracts](../arx/parquet.md) for transactional datasets, durable
 local writes, reconstruction and runtime-schema DataFrames.
+
+Series runtime primitives also provide checked unary kernels, common-type
+promotion, null-skipping reductions, bounded slices and failure-atomic element
+updates. Slice results own independent handles; updates replace a handle's
+column without modifying the originating table. Rich literal construction copies
+validated IPC data into owned Arrow storage. These operations are registered
+with the existing DataFrame runtime feature and do not activate Parquet.
+
+## Tabular I/O capabilities
+
+Hosts register actual bundled declarations with `NativeBinding.table_io` and
+canonical classes with `ParsedModule.native_arrow_classes`. IRx validates the
+prototype and resolves optional argument presence, canonical handle fields,
+source-order evaluation, selectors and ownership into a `TableIOCall` sidecar.
+Lowering consumes that plan. Matching a function/class name never grants these
+privileges; arbitrary DataFrame FFI remains rejected. CSV uses `record_batch`,
+while Parquet configuration and file operations activate `parquet` lazily.
+
+The native `irx_rb_reader_read_table`, `irx_rb_writer_write_table`,
+`irx_rb_table_schema`, `irx_rb_table_project` and `irx_rb_table_cast` APIs
+borrow inputs. Read/project/cast outputs own independent references and are null
+on failure. Release tables with `irx_arrow_table_release`, schemas with
+`irx_rb_schema_release`. Reads close their internal reader before returning;
+writes check finalization and release unfinished writers without committing.
+
+`irx_arrow_table_export_stream` requires a released/zeroed `ArrowArrayStream`
+output and gives it independent ownership. `irx_arrow_table_import_stream`
+consumes the C Stream and drains it without combining chunks. An unconsumed
+stream must be released, including failure paths. The Arrow runtime uses its own
+status/error channel; check that before reading outputs, independently of the
+record-batch status channel. Python `irx.table_io` installs all ctypes
+signatures lazily and scopes every handle/stream. Missing symbols in explicit
+native overrides require rebuilding/unsetting the override, not fallback.

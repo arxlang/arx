@@ -1,4 +1,6 @@
 # mypy: disable-error-code=no-redef
+# mypy: disable-error-code=attr-defined
+# mypy: disable-error-code=untyped-decorator
 """
 title: Lower resolved nullable operations through focused Arrow primitives.
 """
@@ -29,12 +31,16 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
     title: Materialize scalar validity and independently owned Series results.
     """
 
-    def column_operand(self, node: astx.AST) -> list[ir.Value]:
+    def column_operand(
+        self, node: astx.AST, target: astx.DataType | None = None
+    ) -> list[ir.Value]:
         """
         title: Encode either an opaque column or fixed-width scalar bits.
         parameters:
           node:
             type: astx.AST
+          target:
+            type: astx.DataType | None
         returns:
           type: list[ir.Value]
         """
@@ -52,6 +58,11 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 builder.extract_value(value, 0), ir.IntType(32)
             )
             value = builder.extract_value(value, 1)
+            type_ = type_.value_type
+        if target is not None:
+            value = self._cast_ast_value(
+                value, source_type=type_, target_type=target
+            )
         if isinstance(value.type, ir.FloatType):
             value = builder.bitcast(value, ir.IntType(32))
         elif isinstance(value.type, ir.DoubleType):
@@ -139,8 +150,14 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         if not isinstance(plan, ColumnOperation):
             return False
         builder = self._llvm.ir_builder
+        if isinstance(node, astx.BinaryOp) and plan.kernel == "set":
+            self.lower_series_store(node, plan)
+            return True
         bits = self.create_entry_block_alloca("column_bits", ir.IntType(64))
         valid = self.create_entry_block_alloca("column_valid", ir.IntType(32))
+        if isinstance(node, astx.SubscriptExpr) and plan.kernel == "slice":
+            self.lower_series_slice(node)
+            return True
         if isinstance(node, astx.SubscriptExpr):
             operand = self.column_operand(node.value)
             self.visit_child(node.index)
@@ -171,16 +188,20 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
             return True
         if isinstance(node, astx.BinaryOp):
             lhs, rhs = (
-                self.column_operand(node.lhs),
-                self.column_operand(node.rhs),
+                self.column_operand(node.lhs, plan.input_type),
+                self.column_operand(node.rhs, plan.input_type),
             )
         elif isinstance(node, astx.NullFill):
             lhs, rhs = (
                 self.column_operand(node.value),
                 self.column_operand(node.replacement),
             )
-        elif isinstance(node, astx.NullCheck):
-            lhs = self.column_operand(node.value)
+        elif isinstance(
+            node, (astx.NullCheck, astx.SeriesReduction, astx.UnaryOp)
+        ):
+            lhs = self.column_operand(
+                node.operand if isinstance(node, astx.UnaryOp) else node.value
+            )
             rhs = [
                 ir.Constant(self._llvm.CHUNKED_ARRAY_HANDLE_TYPE, None),
                 ir.Constant(ir.IntType(64), 0),
@@ -196,7 +217,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
         )._constant_c_string_pointer(plan.kernel, name_hint="column_kernel")
         status = builder.call(
             self.require_runtime_symbol(
-                "dataframe", "irx_arrow_column_compute"
+                "dataframe", "irx_arrow_column_compute_promoted"
             ),
             [
                 kernel,
@@ -245,3 +266,99 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 metadata="column_operation",
                 context="fill_null",
             )
+
+    def lower_series_slice(self, node: astx.SubscriptExpr) -> None:
+        """
+        title: Lower resolved slice bounds without reading failed outputs.
+        parameters:
+          node:
+            type: astx.SubscriptExpr
+        """
+        column = self.column_operand(node.value)[0]
+        bounds = 0
+        values: list[ir.Value] = []
+        for index, (bound, default) in enumerate(
+            zip((node.lower, node.upper, node.step), (0, 0, 1))
+        ):
+            if isinstance(bound, astx.LiteralNone):
+                values.append(ir.Constant(ir.IntType(64), default))
+                continue
+            bounds |= 1 << index
+            self.visit_child(bound)
+            value = require_lowered_value(
+                safe_pop(self.result_stack), node=bound, context="slice bound"
+            )
+            values.append(
+                self._cast_ast_value(
+                    value,
+                    source_type=self._resolved_ast_type(bound),
+                    target_type=astx.Int64(),
+                )
+            )
+        output = self.create_entry_block_alloca(
+            "slice_output", self._llvm.CHUNKED_ARRAY_HANDLE_TYPE
+        )
+        status = self._llvm.ir_builder.call(
+            self.require_runtime_symbol("dataframe", "irx_arrow_series_slice"),
+            [column, *values, ir.Constant(ir.IntType(32), bounds), output],
+        )
+        self._check_arrow_status(status, "series_slice")
+        value = self._llvm.ir_builder.load(output)
+        self.arrow_temporary(node, value)
+        self.result_stack.append(value)
+
+    @VisitorCore.visit.dispatch
+    def visit(self, node: astx.SeriesReduction) -> None:
+        """
+        title: Lower a fully resolved null-skipping Series reduction.
+        parameters:
+          node:
+            type: astx.SeriesReduction
+        """
+        if not self.lower_column_operation(node):
+            require_semantic_metadata(
+                None,
+                node=node,
+                metadata="column_operation",
+                context="Series reduction",
+            )
+
+    def lower_series_store(
+        self, node: astx.BinaryOp, plan: ColumnOperation
+    ) -> None:
+        """
+        title: Update one element without producing a statement value.
+        parameters:
+          node:
+            type: astx.BinaryOp
+          plan:
+            type: ColumnOperation
+        """
+        assert isinstance(node.lhs, astx.SubscriptExpr)
+        column = self.column_operand(node.lhs.value)[0]
+        self.visit_child(node.lhs.index)
+        index = require_lowered_value(
+            safe_pop(self.result_stack),
+            node=node,
+            context="Series update index",
+        )
+        index = self._cast_ast_value(
+            index,
+            source_type=self._resolved_ast_type(node.lhs.index),
+            target_type=astx.Int64(),
+        )
+        operand = self.column_operand(node.rhs, plan.input_type)
+        source = self._resolved_ast_type(node.lhs.value)
+        assert isinstance(source, astx.SeriesType)
+        status = self._llvm.ir_builder.call(
+            self.require_runtime_symbol("dataframe", "irx_arrow_series_set"),
+            [
+                column,
+                index,
+                ir.Constant(ir.IntType(32), plan.type_id),
+                operand[1],
+                operand[2],
+                ir.Constant(ir.IntType(32), int(source.nullable)),
+            ],
+        )
+        self._check_arrow_status(status, "series_set")

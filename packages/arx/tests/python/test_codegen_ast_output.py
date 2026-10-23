@@ -302,7 +302,7 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
         "import (Schema, BatchBuilder) from stdlib.arrow\n"
         "fn main() -> i32:\n"
         "  var schema: Schema = Schema()\n"
-        '  schema.add("id", 3)\n'
+        '  schema.add("id", "int64")\n'
         "  var builder: BatchBuilder = BatchBuilder(schema)\n"
         "  builder.append_i64(0, 42)\n"
         "  return cast(builder.finish().nrows(), i32)\n"
@@ -368,19 +368,13 @@ def test_temporal_dataframe_translate_uses_semantic_epoch_values() -> None:
     assert "irx_rb_api_append_time" in text
 
 
-@pytest.mark.parametrize(
-    "expression", ["frame", "cast(frame, dataframe[id:i64])"]
-)
-def test_dynamic_dataframe_cannot_silently_narrow(expression: str) -> None:
+def test_dynamic_dataframe_cannot_silently_narrow() -> None:
     """
     title: Runtime schemas cannot satisfy static contracts without checking.
-    parameters:
-      expression:
-        type: str
     """
     ArxIO.string_to_buffer(
         "fn narrow(frame: dataframe[...]) -> dataframe[id:i64]:\n"
-        f"  return {expression}\n"
+        "  return frame\n"
     )
     module = Parser().parse(Lexer().lex(), "unsafe_narrow")
     with pytest.raises(SemanticError):
@@ -415,9 +409,15 @@ def test_nullable_series_translate_verifies() -> None:
             "nullable scalars",
         ),
         ("var bad: i32 = frame.x[0]", "cannot assign"),
-        ("var bad: nullable[i32] = frame.x[0] + 1.5", "matching scalar types"),
+        (
+            "var bad: nullable[i32] = frame.x[0] + true",
+            "compatible scalar types",
+        ),
         ("var bad: nullable[i32] = frame.x[-1.0]", "integer representable"),
-        ("var bad: nullable[i32] = -frame.x[0]", "Use binary arithmetic"),
+        (
+            "var bad: nullable[i32] = ++frame.x[0]",
+            "unsupported nullable/Series unary",
+        ),
         ("var bad: bool = is_null(1)", "is_null requires"),
         ("var bad: i32 = fill_null(frame.x[0], 1.5)", "matching non-null"),
         ("if frame.x[0]:\n    return 1", "condition must be Boolean"),
@@ -441,3 +441,128 @@ def test_nullable_semantic_errors(body: str, message: str) -> None:
     )
     with pytest.raises(SemanticError, match=message):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize("namespace", [False, True])
+def test_table_io_translate_uses_resolved_calls(namespace: bool) -> None:
+    """
+    title: CSV-only imported calls and direct casts emit verified native IR.
+    parameters:
+      namespace:
+        type: bool
+    """
+    imports = (
+        "import stdlib.csv as csv\n"
+        if namespace
+        else "import (read_csv, write_csv) from stdlib.csv\n"
+    )
+    prefix = "csv." if namespace else ""
+    ArxIO.string_to_buffer(
+        imports + "fn main() -> i32:\n"
+        f'  var source: dataframe[...] = {prefix}read_csv("in.csv")\n'
+        "  var frame: dataframe[id:i64] = cast(source, dataframe[id:i64])\n"
+        f'  {prefix}write_csv(frame=frame, path="out.csv")\n'
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "table_io")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("table_io", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(text).verify()
+    assert "irx_rb_api_read_csv" in text
+    assert "irx_rb_api_table_cast" in text
+    assert "irx_rb_api_write_csv" in text
+    assert (
+        "parquet"
+        not in builder.translator.runtime_features.active_feature_names()
+    )
+
+
+@pytest.mark.parametrize(
+    "module_name,class_name",
+    [("csv", "CSVStream"), ("parquet", "ParquetStream")],
+)
+@pytest.mark.parametrize("alias", [False, True])
+def test_format_stream_imports_translate(
+    module_name: str, class_name: str, alias: bool
+) -> None:
+    """
+    title: Explicit stream types and import aliases retain native lifecycles.
+    parameters:
+      module_name:
+        type: str
+      class_name:
+        type: str
+      alias:
+        type: bool
+    """
+    local_name = "Stream" if alias else class_name
+    imported = f"{class_name} as Stream" if alias else class_name
+    ArxIO.string_to_buffer(
+        f"import {imported} from stdlib.{module_name}\n"
+        "fn main() -> i32:\n"
+        f"  var stream: {local_name} = {local_name}()\n"
+        "  stream.close()\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "format_stream")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("format_stream", module), FileImportResolver(())
+    )
+    llvm.parse_assembly(text).verify()
+    for operation in ("new", "close", "destroy"):
+        assert f"irx_rb_api_{module_name}_{operation}" in text
+    features = builder.translator.runtime_features.active_feature_names()
+    assert "record_batch" in features
+    assert ("parquet" in features) == (module_name == "parquet")
+
+
+@pytest.mark.parametrize(
+    "module_name,class_name", [("csv", "CSV"), ("parquet", "Parquet")]
+)
+def test_legacy_format_class_names_are_not_exported(
+    module_name: str, class_name: str
+) -> None:
+    """
+    title: Removed format class names do not acquire compatibility aliases.
+    parameters:
+      module_name:
+        type: str
+      class_name:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        f"import {class_name} from stdlib.{module_name}\n"
+        "fn main() -> i32:\n  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "legacy_format")
+    with pytest.raises(
+        SemanticError, match=f"Imported symbol '{class_name}' was not found"
+    ):
+        ArxBuilder().translate_modules(
+            ParsedModule("legacy_format", module), FileImportResolver(())
+        )
+
+
+def test_table_io_names_do_not_grant_capabilities() -> None:
+    """
+    title: Equally named user functions remain ordinary scalar functions.
+    """
+    ArxIO.string_to_buffer(
+        "fn read_csv(path: i32) -> i32:\n  return path + 1\n"
+        "fn write_parquet(frame: i32) -> i32:\n  return frame + 1\n"
+        "fn main() -> i32:\n  return write_parquet(read_csv(0))\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert (
+        "record_batch"
+        not in builder.translator.runtime_features.active_feature_names()
+    )
+    assert (
+        "parquet"
+        not in builder.translator.runtime_features.active_feature_names()
+    )

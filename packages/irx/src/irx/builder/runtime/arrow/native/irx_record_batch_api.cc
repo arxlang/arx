@@ -698,3 +698,60 @@ void api_open_write(IrxRbApiParquet *box, const char *path, IrxRbApiSchema *sche
     } catch (const std::exception &error) { fail(error.what()); }
 }
 }
+
+IrxCsvOptions *irx_rb_api_csv_options_new(void) {
+    auto result = irx_csv_options_new();
+    if (!result) fail(irx_record_batch_errmsg());
+    return result;
+}
+void irx_rb_api_csv_options_destroy(IrxCsvOptions *o) { irx_csv_options_release(o); }
+void irx_rb_api_csv_options_int(IrxCsvOptions *o, const char *k, int64_t v) { checked(irx_csv_options_int(o, k, v)); }
+void irx_rb_api_csv_options_text(IrxCsvOptions *o, const char *k, const char *v) { checked(irx_csv_options_text(o, k, v)); }
+void irx_rb_api_csv_options_clear(IrxCsvOptions *o, const char *k) { checked(irx_csv_options_clear(o, k)); }
+irx_arrow_table_handle *irx_rb_api_read_csv(const char *path, IrxRbApiSchema *schema, IrxCsvOptions *o) {
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_csv_read_table(path, schema ? schema->get() : nullptr, o, &result));
+    return result;
+}
+void irx_rb_api_write_csv(irx_arrow_table_handle *table, const char *path, IrxCsvOptions *o) {
+    checked(irx_rb_csv_write_table(table, path, o));
+}
+irx_arrow_table_handle *irx_rb_api_table_cast(irx_arrow_table_handle *table, IrxRbApiSchema *schema) {
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_table_cast(table, schema->get(), &result));
+    return result;
+}
+void irx_rb_api_schema_add_name(IrxRbApiSchema *schema, const char *name, const char *type, int32_t nullable) {
+    checked(irx_rb_schema_add_named_field(schema->get(), name, type, nullable));
+}
+namespace irx {
+const IrxRbSchema *api_schema_value(IrxRbApiSchema *box) { return box ? box->get() : nullptr; }
+}
+irx_arrow_table_handle *irx_rb_api_csv_frame(IrxRbApiCsv *box) {
+    try {
+    box->require(FileMode::Read, "frame");
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_batch_to_dynamic_table(box->reader.current.get(), &result));
+    return result;
+    } catch (const std::exception &error) { fail(error.what()); }
+}
+irx_arrow_table_handle *irx_rb_api_parquet_frame(IrxRbApiParquet *box) {
+    try {
+    box->require(FileMode::Read, "frame");
+    irx_arrow_table_handle *result = nullptr;
+    checked(irx_rb_batch_to_dynamic_table(box->reader.current.get(), &result));
+    return result;
+    } catch (const std::exception &error) { fail(error.what()); }
+}
+void irx_rb_api_csv_write_frame(IrxRbApiCsv *box, irx_arrow_table_handle *table) {
+    try {
+    box->require(FileMode::Write, "write");
+    box->check(irx_rb_writer_write_table(box->writer.get(), table));
+    } catch (const std::exception &error) { fail(error.what()); }
+}
+void irx_rb_api_parquet_write_frame(IrxRbApiParquet *box, irx_arrow_table_handle *table) {
+    try {
+    box->require(FileMode::Write, "write");
+    box->check(irx_rb_writer_write_table(box->writer.get(), table));
+    } catch (const std::exception &error) { fail(error.what()); }
+}
