@@ -109,9 +109,9 @@ website:
               href: arx/native-packages.md
             - text: Compiled Tests
               href: arx/testing.md
-        - section: Language Reference
+        - section: Language Guides
           contents:
-            - text: Specification Status
+            - text: Preview Contracts
               href: arx/specification.md
             - text: Capability Matrix
               href: arx/capability-matrix.md

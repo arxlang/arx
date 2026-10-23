@@ -22,12 +22,6 @@ arx --show-ast program.x
 arx --show-llvm-ir program.x
 ```
 
-| Option           | Output                                  |
-| ---------------- | --------------------------------------- |
-| `--show-tokens`  | lexer tokens and source positions       |
-| `--show-ast`     | parser output expressed as ASTx nodes   |
-| `--show-llvm-ir` | LLVM IR after IRx analysis and lowering |
-
 These modes stop after printing the requested representation.
 
 ## Build and run
@@ -41,15 +35,9 @@ arx run program.x
 The compiler emits an executable when the module defines `main`. Without a
 native entry point, or with `--lib`, it emits an object artifact instead.
 
-| Option                       | Purpose                                         |
-| ---------------------------- | ----------------------------------------------- |
-| `--output-file PATH`         | select the object or executable path            |
-| `--lib`                      | emit a library/object artifact                  |
-| `--run`                      | build and run an executable                     |
-| `--link-mode MODE`           | use `auto`, `pie`, or `no-pie` linking          |
-| `--diagnostic-format FORMAT` | use `human` or versioned `json` errors          |
-| `--traceback`                | expose Python tracebacks for compiler debugging |
-| `--version`                  | print the installed version                     |
+Use `arx --help` for the complete option list and defaults rather than a copied
+flag catalog. Diagnostics and linker choices below have operational
+consequences.
 
 Compiling multiple input files in one invocation is not currently supported. Use
 [project-aware imports](projects.md#imports) to compile a module graph from one

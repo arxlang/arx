@@ -221,8 +221,9 @@ and may be replaced or shared. Empty fields use the normal checked class
 reference behavior. The builtin File class itself owns one private native handle
 initialized once by its compiler-provided constructor; users cannot extract or
 replace that handle. Final File release invokes normal owned-field cleanup. See
-the [owned-file example](../../examples/class-lifecycle.x) and
-[file API](file-io.md). File subclassing and reopening are deferred.
+the
+[owned-file example](https://github.com/arxlang/arx/blob/main/examples/class-lifecycle.x)
+and [file API](file-io.md). File subclassing and reopening are deferred.
 
 This reference-counted subset is synchronous and non-atomic. Cyclic field-type
 graphs are rejected conservatively, including edges through assignable subtypes,

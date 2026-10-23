@@ -6,32 +6,15 @@ POSIX text-file interface. `open(...)` is a compiler-backed factory adapter to
 path. Both are available without an import and use C stdio, not Python or Arrow.
 Lowercase `file` remains a compatibility spelling for the builtin `File` type.
 
-```text
-File(file, mode="r", buffering=-1, encoding=none, errors=none,
-     newline=none, closefd=true, opener=none) -> File
+The default is a strict UTF-8 text read. Use `mode="w"` to create/truncate or
+`mode="a"` to append. Only the path and mode can be runtime strings; other
+Python-shaped settings accept only the implemented default profile. Nondefault
+buffering, encodings, error policies, newline handling, descriptors, and openers
+are rejected rather than ignored. Options are checked before I/O; a dynamic mode
+is checked before opening or truncating a path.
 
-open(file, mode="r", buffering=-1, encoding=none, errors=none,
-     newline=none, closefd=true, opener=none) -> File
-```
-
-| Parameter   | Supported values                                                 |
-| ----------- | ---------------------------------------------------------------- |
-| `file`      | String path, relative to the running program's working directory |
-| `mode`      | `"r"`, `"w"`, `"a"`, `"rt"`, `"wt"`, `"at"`; default `"r"`       |
-| `buffering` | Constant `-1` (C stdio defaults)                                 |
-| `encoding`  | `none` or constant `"utf-8"`                                     |
-| `errors`    | `none` or constant `"strict"`                                    |
-| `newline`   | `none`                                                           |
-| `closefd`   | Constant `true`                                                  |
-| `opener`    | `none`                                                           |
-
-The first two arguments may be runtime string expressions. All other arguments
-must be supported constants. Positional arguments and keywords may be mixed; the
-File builtin profile, class constructors, and ordinary functions/methods support
-named arguments. `stream.write(text="hello")` uses the declared method name;
-`read`, `flush`, and `close` still accept no arguments. Invalid options are
-rejected before compilation can execute file I/O; dynamic modes are checked
-before opening or truncating a path.
+Paths are relative to the running program's working directory, not its source
+file.
 
 Reading requires an existing file. Writing creates or truncates it. Appending
 creates it if necessary and writes at the end. No binary/update/exclusive modes,
@@ -61,14 +44,14 @@ fn main() -> i32:
   return 0
 ````
 
-## Methods and lifetime
+## Text and lifetime safety
 
-- `read()` returns all remaining text, or `""` at EOF. It has no size argument.
-  CRLF and CR become LF. Malformed UTF-8 and embedded NUL are rejected; Arx's
-  current C-string ABI cannot represent file text containing NUL safely.
-- `write(text)` returns an `i64` Unicode character count, not UTF-8 byte count.
-- `flush()` checks buffered writes; it does not guarantee durable storage.
-- `close()` is idempotent. Other operations on a closed file fail.
+Reads consume all remaining text (not a size-limited chunk), returning an
+independent string or `""` at EOF. CRLF and CR become LF; malformed UTF-8 and
+embedded NUL fail. Write counts are Unicode characters, not bytes. Explicit
+flush checks buffered writes without promising durability. Close is idempotent;
+other operations on a closed file fail. Method signatures and concise contracts
+live in `packages/arx/src/arx/builtins/files.x`.
 
 Public `File` values follow ordinary acyclic class-reference ownership. Aliases
 share one stream and cursor; closing through one reference closes it for all

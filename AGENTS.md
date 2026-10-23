@@ -9,7 +9,8 @@ release changes unless a more specific instruction file overrides it.
 1. Keep changes scoped; apply the pre-2.0 compatibility policy below.
 2. Respect package ownership and keep cross-package contracts aligned.
 3. Keep Python 3.10-3.14 behavior and the relevant quality gates green.
-4. Make minimal, targeted changes with focused tests and documentation.
+4. Make minimal, targeted changes with focused tests, source contracts, and only
+   necessary guide, architecture, or safety documentation.
 5. Report evidence honestly; never invent commands, results, spans, or support.
 
 ## Compatibility Before Arx 2.0
@@ -20,9 +21,10 @@ release changes unless a more specific instruction file overrides it.
 - Do not add compatibility aliases, shims, deprecated entry points, or
   deprecation periods solely to preserve old usage unless explicitly requested.
   Do not retain an inferior design just to avoid a breaking change.
-- Update affected callers, tests, examples, documentation, and cross-package
-  contracts together in the same PR. Describe intentional breaking changes;
-  historical usage does not need a parallel supported implementation.
+- Update affected callers, tests, examples, source contracts, and necessary
+  guides together in the same PR. Record intentional breaking changes in concise
+  release notes, not parallel deprecated API documentation; historical usage
+  does not need a parallel supported implementation.
 - This policy does not authorize unrelated changes or weaken correctness, data
   integrity, ownership, diagnostics, or validation. Preserve behavior outside
   the requested scope and keep all components of the current release consistent,
@@ -44,10 +46,11 @@ not aim to recreate Python or make Arx identical to it.
   Arx. Evaluate the user-facing experience before settling on the internal
   implementation; do not expose low-level runtime plumbing as the only way to
   perform a common task.
-- Propose the public API with a short common-case example and an example of more
-  advanced configuration. Explain defaults, return values, errors, ownership
-  where relevant, supported options, and intentional differences from the Python
-  reference. Clearly label proposed syntax as unimplemented.
+- Propose the public API with a short common-case and advanced example in the PR
+  description or executable tests. Keep defaults, return meaning, supported
+  options, validation, errors, and relevant ownership next to code. Explain
+  intentional differences from the Python reference without duplicating the
+  contract across guides. Clearly label proposed syntax as unimplemented.
 - Make common operations simple: minimize required arguments and boilerplate,
   use sensible and safe defaults, and keep naming and behavior consistent across
   related APIs. Convenience must not conceal surprising data loss, resource use,
@@ -68,6 +71,33 @@ not aim to recreate Python or make Arx identical to it.
 - Borrowing an API design does not require importing its Python implementation,
   adding a dependency, or promising full feature parity. Keep implementation
   scope focused while making the supported interface coherent and useful.
+
+## Documentation Scope
+
+Keep handwritten documentation small. Document getting started, short common
+workflows, architecture and ownership boundaries, intentional restrictions,
+migration decisions, and behavior whose omission could cause data loss or
+resource misuse. Do not create or maintain handwritten API catalogs, copied
+signatures, exhaustive method lists, or duplicated parameter/default tables.
+
+Keep concise public contracts next to code: types, defaults, return meaning,
+supported options, validation, relevant ownership, and failure behavior. Follow
+existing Douki conventions; do not weaken required docstrings or runtime type
+checking. A user-facing API change requires tests and a concise code contract,
+not an additional API reference page. Update a short guide or example only when
+the workflow or important operational contract changes.
+
+Existing generated reference output stays generated. Do not hand-edit it. Keep
+`scripts/gen_api_docs.py` and its Quarto pre-render hook working; do not expand
+their output or build a new documentation platform for an unrelated API change.
+A future separate project will generate API reference from authoritative code
+and semantic signatures.
+
+Keep one compact capability/status page describing support boundaries, not every
+method. Preserve essential explanations of null semantics, aliasing, mutation,
+atomic publication, durability, error recovery, native dependencies, and
+unsupported behavior in code/tests or one appropriate guide before removing
+duplicated reference material.
 
 ## Working With Repository State
 
@@ -135,9 +165,9 @@ Important root locations:
 - Hosts provide `ParsedModule` and `ImportResolver`. IRx must not find or parse
   source files itself.
 - When a feature needs a reusable node, add it to ASTx and coordinate frontend
-  emission, IRx semantics, lowering, exports, docs, and tests. When a needed
-  semantic or lowering hook is absent, implement it in IRx rather than adding a
-  frontend workaround.
+  emission, IRx semantics, lowering, exports, source contracts, and tests, plus
+  necessary guide or architecture changes. When a needed semantic or lowering
+  hook is absent, implement it in IRx rather than adding a frontend workaround.
 - `packages/arx/src/arx/codegen.py` is an Arx integration adapter over IRx. Keep
   it small and prefer shrinking it; do not add general feature lowering there.
 - Never silently omit input or emit a generic node that merely fails in a later
@@ -204,7 +234,8 @@ Arx uses significant two-space indentation. The lexical source of truth is
 2. Update token definitions and lexer behavior.
 3. Update the relevant parser module or mixin.
 4. Add lexer, parser, and integration tests.
-5. Update docs, examples, and editor-facing consumers.
+5. Update affected executable examples and editor-facing consumers; update a
+   short guide only when workflows or important restrictions change.
 
 Do not infer parser, semantic, or lowering support from a keyword or operator
 being present in the manifest. Check each downstream stage. Preserve current
@@ -229,7 +260,8 @@ The parser enforces these rules:
 
 - A module docstring is the first top-level statement and starts at line 1,
   column 1, without leading spaces.
-- A function docstring is the first statement in its function block.
+- A function docstring, when present, is the first statement in its function
+  block. The parser does not require one in every user function.
 - Class or member docstrings appear in the supported declaration position and
   use the same valid Douki YAML form.
 - Abstract methods may use a docstring-only body when supported by the parser.
@@ -305,11 +337,13 @@ extract -> validate -> resolve_signature -> lower
 - Codegen/control-flow changes need a translate-path regression, normally in
   `packages/arx/tests/python/test_codegen_ast_output.py`, and a build/run test
   when behavior depends on linked execution and the toolchain is available.
-- Keep `examples/*.x`, stdlib files, tests, syntax manifests, and documentation
-  synchronized with supported behavior. Never invent syntax in examples.
-- Update language overview, getting-started material, and relevant `docs/arx/`
-  pages when public Arx behavior changes. Quarto API documentation is generated
-  through `scripts/gen_api_docs.py`.
+- Keep affected `examples/*.x`, stdlib files, tests, syntax manifests, and
+  source contracts synchronized with supported behavior. Never invent syntax in
+  examples; examples used as support evidence must execute in tests.
+- Follow Documentation Scope: update necessary workflow, architecture, and
+  safety guidance, not API catalogs. A new public symbol does not require a new
+  page or changes to every overview. Leave generated reference output to
+  `scripts/gen_api_docs.py`.
 - Public cross-package changes may also require schemas, exports, package
   manifests, dependency pins, build scripts, and release wiring.
 
@@ -400,14 +434,19 @@ risks or checks rather than inventing confidence.
 Before finalizing a change, verify as applicable:
 
 - [ ] behavior changes have focused tests
-- [ ] new public APIs consider Python ecosystem ergonomics and document
-      examples, defaults, configuration, errors, and intentional differences
-- [ ] intentional breaking changes update affected callers and docs together,
-      without unnecessary pre-2.0 compatibility layers
+- [ ] new public APIs consider Python ecosystem ergonomics, with common/advanced
+      examples in the PR or tests and concise accurate contracts next to code
+- [ ] intentional breaking changes update affected callers and necessary guides
+      together, with concise release notes and no unnecessary pre-2.0
+      compatibility layers
 - [ ] frontend, ASTx, semantics, lowering, runtime, and exports remain aligned
-- [ ] syntax changes update manifest, lexer, parser, tests, docs, and examples
+- [ ] syntax changes update manifest, lexer, parser, tests, affected executable
+      examples, editor consumers, and necessary workflow/restriction guidance
 - [ ] touched code passes relevant Ruff, mypy, Douki, and unit checks
 - [ ] generated LLVM and native boundaries are validated where affected
-- [ ] docs, schemas, manifests, dependency pins, and release wiring are current
+- [ ] necessary guide/architecture/safety changes are synchronized; source
+      contracts are accurate; handwritten API duplication has not increased;
+      examples used as support evidence execute in tests
+- [ ] schemas, manifests, dependency pins, and release wiring are current
 - [ ] no unrelated refactor, formatting churn, generic error, or silent fallback
 - [ ] the final report lists executed checks and remaining blockers

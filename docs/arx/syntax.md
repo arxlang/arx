@@ -1,20 +1,24 @@
-# Arx Lexical Syntax Specification
+# Arx Lexical Syntax
 
-Status: draft `0.2.0`
-
-This page documents token-level behavior used by the lexer and editor tooling.
-The normative source is `packages/arx/src/arx/lexer/syntax.json`. Parser and
-semantic rules live in the [language reference](index.md#language-reference).
+The authoritative token spellings, aliases, and editor-tooling inventory live in
+`packages/arx/src/arx/lexer/syntax.json`. This guide covers writing source and
+important restrictions, not a duplicate token catalog. Parser and semantic
+support is summarized in the [capability matrix](capability-matrix.md).
 
 ## Source files and whitespace
 
 - recognized extensions: `.x` and `.arx`
 - indentation is significant
 - the canonical indentation unit is 2 spaces
-- the syntax manifest forbids tabs; current lexer diagnostics do not enforce
-  that rule consistently, so source must use spaces
+- tabs outside quoted literal contents are rejected; use spaces
 - newlines delimit logical lines
 - blank lines do not create indentation transitions
+
+Files must be valid UTF-8 and no larger than 4 MiB of UTF-8 bytes. Token start
+locations use one-based lines and Unicode code-point columns. The lexer also
+limits delimiter nesting to 256, numeric tokens to 4,096 characters, and non-EOF
+tokens to 250,000. These are compiler-version resource limits, not a frozen
+language compatibility promise.
 
 ```arx
 fn absolute(value: i32) -> i32:
@@ -55,29 +59,11 @@ Reference pattern for Unicode-aware tooling:
 The exact Unicode categories currently follow the Python runtime. Matching is
 case-sensitive.
 
-## Keywords
+## Reserved forms
 
-Reserved lexical keywords:
-
-```text
-assert class const else extern fn for if import in return then var while
-```
-
-Contextual keywords:
-
-```text
-as binary from operator type unary
-```
-
-Literal keywords:
-
-```text
-true false none
-```
-
-Lexical reservation does not by itself promise a complete parser or lowering for
-every word. In particular, `const`, `then`, and operator-declaration words
-remain reserved while their general language forms are incomplete.
+Lexical reservation does not promise parsing or lowering. In particular, general
+`const`, `then`, and operator declarations remain unavailable even though their
+spellings are recognized.
 
 ## Numeric literals
 
@@ -113,38 +99,6 @@ The lexer recognizes these escapes:
 Raw strings, triple-quoted strings, and interpolation are not supported. Triple
 backticks are reserved for Douki docstrings, not ordinary string values.
 
-## Operators and punctuation
-
-Single-character tokens:
-
-```text
-= < > + - * / . : , ; @ | ! ( ) [ ] { }
-```
-
-Multi-character operators:
-
-```text
-== != <= >= -> && || ++ --
-```
-
-Word-form logical operators:
-
-```text
-and or
-```
-
-Current groups:
-
-- assignment: `=`
-- comparison: `<`, `>`, `<=`, `>=`, `==`, `!=`
-- arithmetic: `+`, `-`, `*`, `/`
-- logical: `&&`, `||`, `and`, `or`, `!`
-- type union: `|`
-- punctuation: `@`, `:`, `,`, `;`, `.`
-
-`++` and `--` are lexed as unary operators. Availability in a particular
-semantic context depends on the parser and IRx type rules.
-
 ## Structural forms
 
 ### Declaration modifiers
@@ -179,46 +133,19 @@ import (
 ) from math
 ```
 
-### Collection type forms
+### Collection annotations
 
-```text
-list[T]
-tensor[T, D0, D1]
-tensor[T, ...]
-dataframe[name: T, ...]
-dataframe[...]
-series[T]
-```
-
-The literal `...` is accepted only in the runtime-layout parameter forms
-described by the type reference.
-
-## Builtin lexical names
-
-Builtin type names include numeric aliases, `bool`, `none`, text and temporal
-types, plus `list`, `tensor`, `dataframe`, and `series`. Builtin callable names
-include `cast`, `dataframe`, `isinstance`, `print`, `range`, and `type`.
-
-These names are recorded for syntax tooling. Parser resolution still decides
-whether a name is a type, constructor, ambient builtin, local binding, or
-ordinary identifier in context.
+See [type annotations](datatypes.md#collection-annotations). Literal ellipsis
+has different support boundaries for runtime-shaped tensors and runtime-schema
+DataFrames; it is not uniformly parameter-only.
 
 ## Consistency rule
 
-Changes to lexical syntax must update `syntax.json` first, then the lexer,
-tests, this document, examples, and any derived editor grammars.
+Changes to lexical syntax update the manifest first, then tokenization, parser,
+tests, and derived editor consumers. Update this short guide only for changed
+workflows or restrictions.
 
-`File` and `open` remain identifiers. Lowercase `file` is a compatibility type
-spelling for the canonical builtin File class, not a native handle. Both public
-file constructors accept named arguments (`file=`, `mode=`, etc.), and class
-constructors accept names from their own `__init__` parameters. Dunder spellings
-remain identifier tokens, not lexer keywords. Class methods named `__name__` are
-reserved for documented language protocols. `__init__` and `__del__` are
-lifecycle hooks; existing IRx `__enter__` and `__exit__` names are also
-recognized without adding Arx `with` syntax. Plain `init` and `deinit` have no
-special meaning. See [Classes](classes.md) and [Text File I/O](file-io.md) for
-restrictions. Ordinary function/method calls also accept positional arguments
-followed by named values (`callee(value=expr)`). They reject positional-after-
-keyword calls, duplicates, unknown names, and argument unpacking. See
-[Functions](functions.md#keyword-arguments). Arx `with` statements remain
-unsupported.
+`File`, `open`, and dunder method names remain identifiers, not new keywords.
+[Class lifecycle hooks](classes.md#lifecycle-hooks) do not add Arx `with`
+statements. [Named calls](functions.md#keyword-arguments) use resolved
+signatures, not lexical privilege based on the callee's spelling.
