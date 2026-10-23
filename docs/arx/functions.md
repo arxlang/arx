@@ -106,15 +106,20 @@ fn main() -> i32:
 
 Function templates use an `@<...>` block on the line immediately before `fn`.
 Each template parameter must declare a bound, and bounds may be a single type or
-a `|` union of concrete types. Explicit template arguments are written between
-the callee name and `(`.
+a `|` union of concrete types. Module-local type aliases can name and compose
+these bounds; importing aliases from another module is not supported. Explicit
+template arguments are written between the callee name and `(`.
 
 ````arx
 ```
 title: Template function example
 summary: Uses one bounded template parameter with inferred and explicit calls.
 ```
-@<T: i32 | f64>
+type SignedInteger = i8 | i16 | i32 | i64
+type Float = f32 | f64
+type Real = SignedInteger | Float
+
+@<T: Real>
 fn add(x: T, y: T) -> T:
   ```
   title: add
@@ -128,9 +133,14 @@ fn main() -> i32:
   summary: Calls template specializations through inference and explicit args.
   ```
   print(add(1, 2))
-  print(add<f64>(1.5, 2.5))
+  assert add<f64>(1.5, 2.5) == 4.0
   return 0
 ````
+
+Here `T` is one concrete type, not a union-valued argument. Inferred arguments
+for the same `T` must agree in type; use explicit specialization or casts to
+choose conversions. Each concrete member of a bound must support the function
+body, so define only the numeric group that the operation actually supports.
 
 ## Function Body Rules
 

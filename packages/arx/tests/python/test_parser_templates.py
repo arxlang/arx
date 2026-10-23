@@ -93,6 +93,47 @@ def test_parse_template_function_metadata_and_calls() -> None:
     assert isinstance(explicit_args[0], astx.Float64)
 
 
+def test_parse_composed_alias_bounds() -> None:
+    """
+    title: Flatten reusable named numeric groups into concrete template bounds.
+    """
+    tree = _parse(
+        "```\ntitle: Composed numeric bounds\n```\n"
+        "type SignedInteger = i8 | i16 | i32 | i64\n"
+        "type UnsignedInteger = u8 | u16 | u32 | u64\n"
+        "type Integer = SignedInteger | UnsignedInteger\n"
+        "type Float = f32 | f64\n"
+        "type Real = Integer | Float\n"
+        "@<T: Integer>\n"
+        "fn whole(value: T) -> T:\n"
+        "  return value\n"
+        "@<T: Real>\n"
+        "fn number(value: T) -> T:\n"
+        "  return value\n"
+    )
+    integers = [
+        astx.Int8,
+        astx.Int16,
+        astx.Int32,
+        astx.Int64,
+        astx.UInt8,
+        astx.UInt16,
+        astx.UInt32,
+        astx.UInt64,
+    ]
+    assert len(tree.nodes) == 2
+    for function, members in zip(
+        tree.nodes,
+        [integers, [*integers, astx.Float32, astx.Float64]],
+        strict=True,
+    ):
+        assert isinstance(function, astx.FunctionDef)
+        params = astx.get_template_params(function.prototype)
+        assert len(params) == 1
+        assert isinstance(params[0].bound, astx.UnionType)
+        assert [type(member) for member in params[0].bound.members] == members
+
+
 def test_parse_template_method_with_mixed_prefix_order() -> None:
     """
     title: Parse one template method with modifiers and explicit call args.

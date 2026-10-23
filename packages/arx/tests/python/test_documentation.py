@@ -58,6 +58,7 @@ def documented_program(page: str, title: str) -> str:
     [
         ("getting-started.md", "Hello module", "42"),
         ("getting-started.md", "Arrow-backed collections", ""),
+        ("functions.md", "Template function example", "3"),
         ("file-io.md", "Native text file example", "hello"),
         ("collections.md", "Nullable column expressions", ""),
         ("csv.md", "Copy a CSV file", ""),

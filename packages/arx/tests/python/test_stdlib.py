@@ -11,6 +11,11 @@ import astx as irx_astx
 import pytest
 
 from arx import main as main_module
+from arx.codegen import ArxBuilder
+from arx.io import ArxIO
+from arx.lexer import Lexer
+from arx.parser import Parser
+from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
 
 try:
@@ -151,3 +156,83 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
         match="reserved stdlib namespace 'stdlib' cannot be shadowed",
     ):
         app.compile()
+
+
+@pytest.mark.parametrize(
+    "helper,arity",
+    [("abs", 1), ("min", 2), ("max", 2), ("clamp", 3), ("square", 1)],
+)
+@pytest.mark.parametrize(
+    "type_,value",
+    [
+        ("f32", "1.0"),
+        ("f64", "1.0"),
+        ("u8", "cast(1, u8)"),
+        ("u64", "cast(1, u64)"),
+        ("bool", "True"),
+        ("nullable[i32]", "none"),
+        ("str", '"1"'),
+    ],
+)
+@pytest.mark.parametrize("explicit", [False, True])
+def test_math_templates_reject_unsupported_types(
+    helper: str, arity: int, type_: str, value: str, explicit: bool
+) -> None:
+    """
+    title: Reject types outside the shared signed bound before LLVM lowering.
+    parameters:
+      helper:
+        type: str
+      arity:
+        type: int
+      type_:
+        type: str
+      value:
+        type: str
+      explicit:
+        type: bool
+    """
+    specialization = f"<{type_}>" if explicit else ""
+    arguments = ", ".join(["value"] * arity)
+    ArxIO.string_to_buffer(
+        "```\ntitle: Unsupported math specialization\n```\n"
+        "import math from stdlib\n"
+        "fn main() -> i32:\n"
+        f"  var value: {type_} = {value}\n"
+        f"  math.{helper}{specialization}({arguments})\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "unsupported_math")
+    root = ParsedModule("unsupported_math", module)
+    with pytest.raises(SemanticError, match="does not satisfy bound"):
+        ArxBuilder().translate_modules(
+            root, main_module.FileImportResolver(())
+        )
+
+
+@pytest.mark.parametrize(
+    "call",
+    ["min(small, wide)", "max(small, wide)", "clamp(small, small, wide)"],
+)
+def test_math_templates_require_consistent_inference(call: str) -> None:
+    """
+    title: Do not silently promote mixed-width arguments during inference.
+    parameters:
+      call:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Mixed-width math inference\n```\n"
+        "import math from stdlib\n"
+        "fn main() -> i32:\n"
+        "  var small: i8 = cast(1, i8)\n"
+        "  var wide: i64 = cast(2, i64)\n"
+        f"  math.{call}\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex(), "mixed_math")
+    root = ParsedModule("mixed_math", module)
+    with pytest.raises(SemanticError, match="Conflicting inferences"):
+        ArxBuilder().translate_modules(
+            root, main_module.FileImportResolver(())
+        )

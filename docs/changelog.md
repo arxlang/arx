@@ -3,8 +3,23 @@
 
 ## Unreleased
 
+### Integer helper safety and templates
+
+- `range` now terminates without wrapping when a step crosses an i32 endpoint;
+  it still returns an eagerly allocated `list[i32]`.
+- `stdlib.math` scalar helpers now use a shared signed-integer template bound
+  for `i8`, `i16`, `i32`, and `i64`, preserving the selected result type.
+- `stdlib.math.abs` on the selected type's minimum and `clamp` with reversed
+  bounds now fail checked assertions instead of returning incorrect values.
+  These failures remain fatal, not catchable exceptions. `square` wraps at the
+  selected width.
+
 ### Migration notes
 
+- Math helpers no longer convert every call to `i32`. Inferred arguments must
+  have the same concrete signed type; use casts or explicit specialization,
+  such as `math.min<i64>(small, wide)`, when mixing widths. Floating-point,
+  unsigned, Boolean, and nullable specializations remain unsupported.
 - CSV and Parquet operations live in `stdlib.csv` and `stdlib.parquet`;
   `stdlib.arrow` retains shared schemas, batches, and IPC. Use `CSVStream` and
   `ParquetStream` for explicit sessions instead of the removed `CSV` and
