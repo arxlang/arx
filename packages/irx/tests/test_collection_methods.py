@@ -379,7 +379,7 @@ def test_collection_contains_rejects_wrong_probe_type() -> None:
         astx.FunctionReturn(
             astx.CollectionContains(
                 astx.LiteralList([astx.LiteralInt32(1)]),
-                astx.LiteralFloat32(1.5),
+                astx.LiteralString("1"),
             )
         ),
         return_type=astx.Boolean(),
@@ -470,3 +470,43 @@ def test_nonlowerable_collection_forms_reject_semantically(
 
     with pytest.raises(SemanticError, match="currently supports"):
         analyze(module)
+
+
+@pytest.mark.parametrize(
+    "probe,expected",
+    [
+        (astx.LiteralInt32(1), 2),
+        (astx.LiteralFloat32(1.0), 2),
+        (astx.LiteralFloat32(1.5), 0),
+    ],
+)
+def test_numeric_search_uses_lossless_comparison_domains(
+    probe: astx.DataType, expected: int
+) -> None:
+    """
+    title: Numeric collection matches use the same domains as scalar equality.
+    parameters:
+      probe:
+        type: astx.DataType
+      expected:
+        type: int
+    """
+    expression = astx.CollectionCount(
+        astx.LiteralTuple((astx.LiteralUInt32(1), astx.LiteralFloat32(1.0))),
+        probe,
+    )
+    module = make_main_module(astx.FunctionReturn(expression))
+    assert_jit_int_main_result(Builder(), module, expected)
+
+
+def test_numeric_search_rejects_an_uncomparable_member() -> None:
+    """
+    title: >-
+      An incompatible numeric member cannot silently disappear from a count.
+    """
+    expression = astx.CollectionCount(
+        astx.LiteralTuple((astx.LiteralInt64(1), astx.LiteralUInt64(1))),
+        astx.LiteralInt64(1),
+    )
+    with pytest.raises(SemanticError, match="no lossless common numeric type"):
+        analyze(make_main_module(astx.FunctionReturn(expression)))

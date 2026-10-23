@@ -19,7 +19,10 @@ from irx.analysis.builtin_file import (
     is_native_file_class,
     resolve_public_file_construction,
 )
-from irx.analysis.call_arguments import call_evaluations
+from irx.analysis.call_arguments import (
+    analyze_numeric_arguments,
+    call_evaluations,
+)
 from irx.analysis.class_lifecycle import (
     INITIALIZER_HOOK,
     class_ownership,
@@ -35,6 +38,7 @@ from irx.analysis.handlers._expressions.class_support import (
     ExpressionClassSupportVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import default_numeric_literal_type
 from irx.analysis.resolved_nodes import (
     MethodDispatchKind,
     OwnershipKind,
@@ -218,8 +222,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            self.visit(arg)
-            arg_types.append(self._expr_type(arg))
+            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+                self.visit(arg)
+            arg_types.append(
+                default_numeric_literal_type(arg)
+                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                else self._expr_type(arg)
+            )
         if not self._require_value_expression(
             node.receiver,
             context="Method call receiver",
@@ -228,6 +237,9 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         receiver_type = self._expr_type(node.receiver)
         if isinstance(receiver_type, astx.FileType):
+            for arg in call_evaluations(node):
+                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+                    self.visit(arg)
             resolve_file_method(cast(SemanticAnalyzerCore, self), node)
             return
         class_ = self._resolve_class_from_type(
@@ -271,6 +283,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if function is None:
             raise TypeError("instance method must have a lowered function")
         visible_function = self._visible_method_function(class_, member)
+        arg_types = analyze_numeric_arguments(
+            node,
+            visible_function,
+            self.visit,
+            self._expr_type,
+            typed_visited=True,
+        )
         if function.template_params:
             specialized_function = self._resolve_template_method_call_target(
                 function,
@@ -351,8 +370,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            self.visit(arg)
-            arg_types.append(self._expr_type(arg))
+            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+                self.visit(arg)
+            arg_types.append(
+                default_numeric_literal_type(arg)
+                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                else self._expr_type(arg)
+            )
         if not self._require_value_expression(
             node.receiver,
             context="Base method call receiver",
@@ -392,6 +416,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if function is None:
             raise TypeError("base method must have a lowered function")
         visible_function = self._visible_method_function(base_class, member)
+        arg_types = analyze_numeric_arguments(
+            node,
+            visible_function,
+            self.visit,
+            self._expr_type,
+            typed_visited=True,
+        )
         if function.template_params:
             specialized_function = self._resolve_template_method_call_target(
                 function,
@@ -450,8 +481,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            self.visit(arg)
-            arg_types.append(self._expr_type(arg))
+            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+                self.visit(arg)
+            arg_types.append(
+                default_numeric_literal_type(arg)
+                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                else self._expr_type(arg)
+            )
         class_ = self._resolve_named_class(node.class_name, node=node)
         if class_ is None:
             self._set_type(node, None)
@@ -478,6 +514,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if function is None:
             raise TypeError("static method must have a lowered function")
         visible_function = self._visible_method_function(class_, member)
+        arg_types = analyze_numeric_arguments(
+            node,
+            visible_function,
+            self.visit,
+            self._expr_type,
+            typed_visited=True,
+        )
         if function.template_params:
             specialized_function = self._resolve_template_method_call_target(
                 function,

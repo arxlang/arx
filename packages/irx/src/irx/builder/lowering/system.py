@@ -19,6 +19,7 @@ from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import (
     display_type_name,
     is_boolean_type,
+    is_numeric_type,
     is_unsigned_type,
 )
 from irx.builder.core import VisitorCore
@@ -28,6 +29,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.control_flow import ControlFlowVisitorMixin
+from irx.builder.numeric import lower_numeric_cast
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
 from irx.typecheck import typechecked
@@ -124,6 +126,30 @@ class SystemVisitorMixin(ClassVisitorMixin):
                 return
             raise Exception(
                 f"Unsupported cast from {value.type} to {target_llvm_type}"
+            )
+        if semantic.numeric_conversion is not None:
+            result = lower_numeric_cast(
+                self,
+                node,
+                value,
+                semantic.numeric_conversion,
+                semantic.numeric_mode,
+            )
+            self.result_stack.append(result)
+            return
+        scalar_source = (
+            source_type.value_type
+            if isinstance(source_type, astx.NullableType)
+            else source_type
+        )
+        scalar_target = (
+            target_type.value_type
+            if isinstance(target_type, astx.NullableType)
+            else target_type
+        )
+        if is_numeric_type(scalar_source) and is_numeric_type(scalar_target):
+            raise_lowering_internal_error(
+                "numeric cast is missing its conversion plan", node=node
             )
         result = self._cast_ast_value(
             value,

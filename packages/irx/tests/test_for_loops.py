@@ -8,7 +8,11 @@ import pytest
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 
-from .conftest import assert_ir_parses, assert_jit_int_main_result
+from .conftest import (
+    assert_ir_parses,
+    assert_jit_int_main_result,
+    build_and_run,
+)
 
 
 def build_int32_main_module(body: astx.Block) -> astx.Module:
@@ -895,7 +899,7 @@ def test_for_count_uses_single_initializer_alloca(
     ir_result = builder.translate(module)
 
     assert ir_result.count('%"i" = alloca i32') == 1
-    assert ir_result.count('store i32 %"inctmp", i32* %"i"') == 1
+    assert ir_result.count('store i32 %"addtmp", i32* %"i"') == 1
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -938,3 +942,22 @@ def test_for_count_zero_iterations_preserve_post_loop_state(
     )
 
     assert_jit_int_main_result(builder, module, 41)
+
+
+def test_range_induction_does_not_wrap() -> None:
+    """
+    title: Backend fixed-width induction fails before wrapping its counter.
+    """
+    loop = astx.ForRangeLoopStmt(
+        variable=astx.InlineVariableDeclaration("i", astx.Int8()),
+        start=astx.LiteralInt8(126),
+        end=astx.LiteralInt8(127),
+        step=astx.LiteralInt8(2),
+        body=astx.Block(),
+    )
+    module = build_int32_main_module(
+        block_of(loop, astx.FunctionReturn(astx.LiteralInt32(0)))
+    )
+    result = build_and_run(LLVMBuilder(), module)
+    assert result.returncode != 0
+    assert "ARX-RUNTIME-ARITHMETIC-001" in result.stderr

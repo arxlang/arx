@@ -7,6 +7,8 @@ from typing import Any
 import astx
 import pytest
 
+from irx.analysis.normalization import normalize_flags, normalize_operator
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder, Visitor
 from llvmlite import ir
 
@@ -74,6 +76,46 @@ def _make_binop_visitor(
         return original_visit(node, *args, **kwargs)
 
     builder.visit = mock_visit  # type: ignore[method-assign]
+
+    def load_operands(
+        node: astx.BinaryOp, *, unify_numeric: bool = True
+    ) -> tuple[ir.Value, ir.Value, bool]:
+        """
+        title: Supply raw LLVM operands without simulating semantic analysis.
+        parameters:
+          node:
+            type: astx.BinaryOp
+          unify_numeric:
+            type: bool
+        returns:
+          type: tuple[ir.Value, ir.Value, bool]
+        """
+        unsigned = bool(getattr(node, "unsigned", False))
+        lhs, rhs = lhs_val, rhs_val
+        if unify_numeric:
+            lhs, rhs = builder._unify_numeric_operands(
+                lhs, rhs, unsigned=unsigned
+            )
+        type_ = astx.UInt32() if unsigned else astx.Int32()
+        node.semantic = SemanticInfo(
+            resolved_type=type_,
+            semantic_flags=normalize_flags(
+                node, lhs_type=type_, rhs_type=type_
+            ),
+            resolved_operator=normalize_operator(
+                node.op_code,
+                result_type=type_,
+                lhs_type=type_,
+                rhs_type=type_,
+                flags=normalize_flags(node, lhs_type=type_, rhs_type=type_),
+                mode=astx.NumericMode.WRAPPING,
+            ),
+        )
+        return lhs, rhs, unsigned
+
+    # These are raw LLVM emission tests, not a source-language typing path.
+    # Production operand loading now requires analyzed conversion sidecars.
+    builder._load_binary_operands = load_operands  # type: ignore[method-assign]
     return builder
 
 

@@ -230,6 +230,8 @@ from astx.nullable import (
     NullFill,
     SeriesReduction,
 )
+from astx.numeric import SourceFloat, SourceInteger
+from astx.numeric_mode import NumericMode
 from astx.operators import (
     AssignmentExpr,
     AugAssign,
@@ -538,6 +540,7 @@ __all__ = [
     "NullFill",
     "NullableType",
     "Number",
+    "NumericMode",
     "OpaqueHandleType",
     "OperatorType",
     "OrOp",
@@ -554,6 +557,8 @@ __all__ = [
     "SetComprehension",
     "SetType",
     "SignedInteger",
+    "SourceFloat",
+    "SourceInteger",
     "SourceLocation",
     "Starred",
     "StatementType",

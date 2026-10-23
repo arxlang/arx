@@ -279,10 +279,13 @@ def test_feature_backed_extern_collects_linker_flags() -> None:
     builder.translate(module)
 
     assert builder.translator.runtime_features.active_feature_names() == (
+        "errors",
         "libm",
     )
     assert builder.translator.runtime_features.linker_flags() == ("-lm",)
-    assert builder.translator.runtime_features.native_artifacts() == ()
+    artifacts = builder.translator.runtime_features.native_artifacts()
+    assert len(artifacts) == 1
+    assert artifacts[0].path.name == "irx_error_runtime.c"
 
 
 def test_runtime_feature_state_reports_unknown_feature_structurally() -> None:

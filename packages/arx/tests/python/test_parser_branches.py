@@ -473,13 +473,13 @@ def test_parse_function_and_extern_argument_defaults() -> None:
     assert isinstance(fn, astx.FunctionDef)
 
     extern_default = extern.args.nodes[0].default
-    assert isinstance(extern_default, astx.LiteralInt32)
+    assert isinstance(extern_default, astx.SourceInteger)
     assert extern_default.value == 3
 
     value_arg = fn.prototype.args.nodes[0]
     step_arg = fn.prototype.args.nodes[1]
     assert isinstance(value_arg.default, astx.Undefined)
-    assert isinstance(step_arg.default, astx.LiteralInt32)
+    assert isinstance(step_arg.default, astx.SourceInteger)
     assert step_arg.default.value == 1
 
 
@@ -497,7 +497,7 @@ def test_parse_method_argument_defaults() -> None:
     assert isinstance(class_def, astx.ClassDefStmt)
     method = class_def.methods[0]
     amount_arg = method.prototype.args.nodes[0]
-    assert isinstance(amount_arg.default, astx.LiteralInt32)
+    assert isinstance(amount_arg.default, astx.SourceInteger)
     assert amount_arg.default.value == 1
 
 
@@ -528,7 +528,7 @@ def test_parse_range_keeps_source_arguments() -> None:
     assert isinstance(second_decl.value, astx.FunctionCall)
     assert second_decl.value.fn == "range"
     assert len(second_decl.value.args) == 3
-    assert isinstance(second_decl.value.args[2], astx.LiteralInt32)
+    assert isinstance(second_decl.value.args[2], astx.SourceInteger)
     assert second_decl.value.args[2].value == 2
 
 
@@ -549,7 +549,7 @@ def test_parse_range_keeps_variable_stop_without_synthetic_step() -> None:
     assert isinstance(decl.value, astx.FunctionCall)
     assert decl.value.fn == "range"
     assert len(decl.value.args) == 2
-    assert isinstance(decl.value.args[0], astx.LiteralInt32)
+    assert isinstance(decl.value.args[0], astx.SourceInteger)
     assert decl.value.args[0].value == 0
     assert isinstance(decl.value.args[1], astx.Identifier)
     assert decl.value.args[1].name == "n"
@@ -769,8 +769,9 @@ def test_parse_unary_and_prototype_error_paths() -> None:
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     expr = parser.parse_expression()
-    assert isinstance(expr, astx.UnaryOp)
-    assert isinstance(expr.type_, astx.DataType)
+    assert isinstance(expr, astx.SourceInteger)
+    assert expr.value == -1
+    assert type(expr.type_) is astx.DataType
 
     ArxIO.string_to_buffer("(")
     parser = Parser(Lexer().lex())

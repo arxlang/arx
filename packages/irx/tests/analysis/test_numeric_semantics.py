@@ -22,13 +22,13 @@ def _semantic_type(node: astx.AST) -> astx.DataType | None:
     return getattr(getattr(node, "semantic", None), "resolved_type", None)
 
 
-def test_analyze_promotes_int64_and_float32_to_float64() -> None:
+def test_analyze_promotes_int32_and_float32_to_float64() -> None:
     """
-    title: Mixed int64 and float32 arithmetic should promote to float64.
+    title: Mixed int32 and float32 arithmetic should promote to float64.
     """
     expr = astx.BinaryOp(
         "+",
-        astx.LiteralInt64(1),
+        astx.LiteralInt32(1),
         astx.LiteralFloat32(2.0),
     )
 
@@ -56,10 +56,10 @@ def test_analyze_marks_signed_result_when_signed_operand_is_wider() -> None:
     assert semantic.semantic_flags.unsigned is False
 
 
-def test_unsigned_result_when_unsigned_operand_is_not_narrower() -> None:
+def test_mixed_comparison_uses_lossless_signed_domain() -> None:
     """
     title: >-
-      Equal-or-wider unsigned integers should drive mixed integer semantics.
+      Mixed integer comparisons use a signed domain containing both operands.
     """
     expr = astx.BinaryOp(
         ">",
@@ -71,12 +71,13 @@ def test_unsigned_result_when_unsigned_operand_is_not_narrower() -> None:
 
     semantic = getattr(expr, "semantic")
     assert semantic.resolved_type.__class__ is astx.Boolean
-    assert semantic.semantic_flags.unsigned is True
+    assert semantic.semantic_flags.unsigned is False
 
 
-def test_analyze_marks_unsigned_result_at_equal_width_boundary() -> None:
+def test_analyze_widens_at_equal_width_boundary() -> None:
     """
-    title: Equal-width signed and unsigned integers should promote to unsigned.
+    title: >-
+      Equal-width signed and unsigned integers require a wider signed type.
     """
     expr = astx.BinaryOp(
         "+",
@@ -87,8 +88,8 @@ def test_analyze_marks_unsigned_result_at_equal_width_boundary() -> None:
     analyze(expr)
 
     semantic = getattr(expr, "semantic")
-    assert semantic.resolved_type.__class__ is astx.UInt32
-    assert semantic.semantic_flags.unsigned is True
+    assert semantic.resolved_type.__class__ is astx.Int64
+    assert semantic.semantic_flags.unsigned is False
 
 
 def test_analyze_rejects_implicit_signed_to_unsigned_assignment() -> None:

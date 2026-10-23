@@ -249,23 +249,28 @@ class ExpressionParserMixin(ParserMixinBase):
         lhs = self.parse_unary()
         return self.parse_bin_op_rhs(0, lhs)
 
-    def parse_int_expr(self) -> astx.LiteralInt32:
+    def parse_int_expr(self) -> astx.SourceInteger:
         """
         title: Parse the integer expression.
         returns:
-          type: astx.LiteralInt32
+          type: astx.SourceInteger
         """
-        result = astx.LiteralInt32(self.tokens.cur_tok.value)
+        result = astx.SourceInteger(
+            self.tokens.cur_tok.value, loc=self.tokens.cur_tok.location
+        )
         self.tokens.get_next_token()
         return result
 
-    def parse_float_expr(self) -> astx.LiteralFloat32:
+    def parse_float_expr(self) -> astx.SourceFloat:
         """
         title: Parse the float expression.
         returns:
-          type: astx.LiteralFloat32
+          type: astx.SourceFloat
         """
-        result = astx.LiteralFloat32(self.tokens.cur_tok.value)
+        result = astx.SourceFloat(
+            self.tokens.cur_tok.source_text or str(self.tokens.cur_tok.value),
+            loc=self.tokens.cur_tok.location,
+        )
         self.tokens.get_next_token()
         return result
 
@@ -460,7 +465,27 @@ class ExpressionParserMixin(ParserMixinBase):
             self._consume_operator(")")
             return astx.NullFill(value, replacement, loc=id_loc)
 
-        if id_name == builtins.BUILTIN_CAST:
+        if id_name in {"wrapping_add", "wrapping_sub", "wrapping_mul"}:
+            lhs = cast(astx.DataType, self.parse_expression())
+            self._consume_operator(",")
+            rhs = cast(astx.DataType, self.parse_expression())
+            self._consume_operator(")")
+            operation = astx.BinaryOp(
+                {
+                    "wrapping_add": "+",
+                    "wrapping_sub": "-",
+                    "wrapping_mul": "*",
+                }[id_name],
+                lhs,
+                rhs,
+                loc=id_loc,
+                mode=astx.NumericMode.WRAPPING,
+            )
+            if template_args is not None:
+                astx.set_template_args(operation, template_args)
+            return operation
+
+        if id_name in {builtins.BUILTIN_CAST, "wrapping_cast"}:
             if template_args is not None:
                 raise ParserException(
                     f"Builtin '{id_name}' does not accept template arguments."
@@ -475,9 +500,17 @@ class ExpressionParserMixin(ParserMixinBase):
                     "Builtin 'cast' does not support union target types yet."
                 )
             self._consume_operator(")")
-            return builtins.build_cast(
-                cast(astx.DataType, value_expr), target_type
+            result = astx.Cast(
+                cast(astx.DataType, value_expr),
+                target_type,
+                mode=(
+                    astx.NumericMode.WRAPPING
+                    if id_name == "wrapping_cast"
+                    else astx.NumericMode.CHECKED
+                ),
             )
+            result.loc = id_loc
+            return result
 
         if id_name == builtins.BUILTIN_ISINSTANCE:
             if template_args is not None:
@@ -878,7 +911,7 @@ class ExpressionParserMixin(ParserMixinBase):
             )
 
         for axis, index in enumerate(indices):
-            if not isinstance(index, astx.LiteralInt32):
+            if not isinstance(index, (astx.LiteralInt32, astx.SourceInteger)):
                 continue
             extent = layout.shape[axis]
             if index.value < 0 or index.value >= extent:
@@ -927,6 +960,15 @@ class ExpressionParserMixin(ParserMixinBase):
                 f"Unary operator '{op_code}' requires an expression operand.",
                 op_loc,
             )
+        if op_code in {"+", "-"} and isinstance(operand, astx.SourceInteger):
+            return astx.SourceInteger(
+                -operand.value if op_code == "-" else operand.value, loc=op_loc
+            )
+        if op_code in {"+", "-"} and isinstance(operand, astx.SourceFloat):
+            text = operand.text
+            if op_code == "-":
+                text = text[1:] if text.startswith("-") else "-" + text
+            return astx.SourceFloat(text, loc=op_loc)
         unary = astx.UnaryOp(op_code, operand, loc=op_loc)
         unary.type_ = cast(
             astx.ExprType,

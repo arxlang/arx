@@ -14,16 +14,13 @@ fn abs(value: T) -> T:
   ```
   title: abs
   summary: >-
-    Returns the absolute value as T. The minimum of T fails an assertion
+    Returns the absolute value as T. The minimum of T fails checked arithmetic
     because its positive magnitude is not representable, unlike Python's
     arbitrary-precision integer result.
   ```
   var zero: T = cast(0, T)
   if value < zero:
-    var magnitude: T = zero - value
-    # Only the minimum remains negative after wrapping fixed-width negation.
-    assert magnitude > zero, "abs() result is out of range for the input type"
-    return magnitude
+    return zero - value
   else:
     return value
 
@@ -72,8 +69,8 @@ fn square(value: T) -> T:
   ```
   title: square
   summary: >-
-    Returns T with its square modulo 2^N, where N is the bit width of T.
-    Overflow wraps like ordinary scalar multiplication; it does not trap or
-    widen the result.
+    Returns the square as T. Unrepresentable products fail checked arithmetic
+    in every build. Choose a wider specialization before the multiplication
+    when needed; the destination type does not widen an already typed result.
   ```
   return value * value

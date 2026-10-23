@@ -12,6 +12,7 @@ import astx
 from public import private
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     ClassLifecyclePhase,
@@ -443,6 +444,11 @@ def constructor_arguments(
             )
         supplied[item.name] = len(evaluations)
         evaluations.append(item.value)
+    for param in params:
+        if param.name in supplied:
+            contextualize_literal(
+                evaluations[supplied[param.name]], param.type_
+            )
     for value in evaluations:
         analyzer.visit(value)
     indices: list[int] = []

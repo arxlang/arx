@@ -13,6 +13,7 @@ from typing import cast
 
 import astx
 
+from irx.analysis.numeric_literals import default_numeric_literal_type
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.buffer import BufferMutability, BufferOwnership, buffer_view_flags
 from irx.builtins.collections.tensor import (
@@ -457,6 +458,8 @@ def _infer_element_type(value: astx.Literal) -> astx.DataType:
     returns:
       type: astx.DataType
     """
+    if isinstance(value, (astx.SourceInteger, astx.SourceFloat)):
+        return default_numeric_literal_type(value)
     if isinstance(value, (astx.LiteralInt8, astx.LiteralUTF8Char)):
         return astx.Int8()
     if isinstance(value, astx.LiteralInt16):
@@ -502,6 +505,7 @@ def _validate_scalar_literal(
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
+                astx.SourceInteger,
                 astx.LiteralInt64,
             ),
         ):
@@ -518,8 +522,10 @@ def _validate_scalar_literal(
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
+                astx.SourceInteger,
                 astx.LiteralInt64,
                 astx.LiteralFloat32,
+                astx.SourceFloat,
                 astx.LiteralFloat64,
             ),
         ):
@@ -565,6 +571,10 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
     returns:
       type: astx.Literal
     """
+    if isinstance(value, astx.SourceInteger):
+        return astx.SourceInteger(value.value, loc=value.loc)
+    if isinstance(value, astx.SourceFloat):
+        return astx.SourceFloat(value.text, loc=value.loc)
     if isinstance(value, astx.LiteralInt8):
         return astx.LiteralInt8(value.value)
     if isinstance(value, astx.LiteralInt16):

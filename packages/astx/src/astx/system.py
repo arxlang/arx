@@ -8,6 +8,7 @@ import itertools
 
 import astx
 
+from astx.numeric_mode import NumericMode
 from astx.tools.typing import typechecked
 
 
@@ -135,18 +136,23 @@ class Cast(astx.DataType):
         type: astx.DataType
       target_type:
         type: astx.DataType
+      mode:
+        type: NumericMode
       type_:
         type: astx.DataType
     """
 
     value: astx.DataType = astx.LiteralNone()
     target_type: astx.DataType = astx.LiteralNone()
+    mode: NumericMode
     type_: astx.DataType
 
     def __init__(
         self,
         value: astx.DataType,
         target_type: astx.DataType,
+        *,
+        mode: NumericMode = NumericMode.CHECKED,
     ) -> None:
         """
         title: Initialize Cast.
@@ -155,8 +161,11 @@ class Cast(astx.DataType):
             type: astx.DataType
           target_type:
             type: astx.DataType
+          mode:
+            type: NumericMode
         """
         super().__init__()
+        self.mode = mode
         self.value = value
         self.target_type = target_type
         self.type_ = target_type
@@ -170,7 +179,10 @@ class Cast(astx.DataType):
         returns:
           type: astx.base.ReprStruct
         """
-        key = f"Cast[{self.target_type}]"
+        prefix = (
+            "WrappingCast" if self.mode is NumericMode.WRAPPING else "Cast"
+        )
+        key = f"{prefix}[{self.target_type}]"
         value = self.value.get_struct(simplified)
         return self._prepare_struct(key, value, simplified)
 

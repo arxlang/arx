@@ -17,6 +17,7 @@ from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.builder.runtime.assertions import parse_assert_failure_output
+from irx.builder.runtime.errors import parse_runtime_failure_output
 from llvmlite import binding as llvm
 from public import private
 
@@ -192,7 +193,7 @@ def test_math_preserves_signed_integer_types(
         ("min", "maximum, minimum"),
         ("max", "minimum, maximum"),
         ("clamp", "value=zero, upper=maximum, lower=minimum"),
-        ("square", "maximum"),
+        ("square", "one"),
     ):
         body += f"assert isinstance(math.{helper}({arguments}), {type_})\n"
     body += (
@@ -214,8 +215,8 @@ def test_math_preserves_signed_integer_types(
         "assert math.clamp(maximum, minimum, minimum) == minimum\n"
         "assert math.square(zero) == zero\n"
         "assert math.square(zero - one) == one\n"
-        "assert math.square(maximum) == one\n"
-        "assert math.square(minimum) == zero\n"
+        "assert wrapping_mul(maximum, maximum) == one\n"
+        "assert wrapping_mul(minimum, minimum) == zero\n"
         f"assert math.square(cast(0 - 5, {type_})) == 25\n"
         "print(maximum)\n"
         "print(minimum)\n"
@@ -232,7 +233,7 @@ def test_math_preserves_signed_integer_types(
     [
         (
             "math.abs(minimum)",
-            "abs() result is out of range for the input type",
+            "integer arithmetic result is out of range",
         ),
         *[
             (
@@ -263,7 +264,11 @@ def test_templated_math_checks_each_width(
     )
     assert result.returncode == 1, result.stderr
     assert result.stdout == ""
-    failure = parse_assert_failure_output(result.stderr)
+    failure = (
+        parse_runtime_failure_output(result.stderr)
+        if "integer arithmetic" in message
+        else parse_assert_failure_output(result.stderr)
+    )
     assert failure is not None, result.stderr
     assert failure.message == message
     assert failure.line > 0
@@ -287,7 +292,7 @@ def test_templated_math_checks_each_width(
         ),
         (
             "print(math.abs((0 - 2147483647) - 1))",
-            "abs() result is out of range for the input type",
+            "integer arithmetic result is out of range",
         ),
         (
             "print(math.clamp(0, 1, 0))",
@@ -327,7 +332,11 @@ def test_invalid_helper_arguments_fail(
     result = run_helpers(tmp_path, statement + "\nprint(123)")
     assert result.returncode == 1, result.stderr
     assert result.stdout == ""
-    failure = parse_assert_failure_output(result.stderr)
+    failure = (
+        parse_runtime_failure_output(result.stderr)
+        if "integer arithmetic" in message
+        else parse_assert_failure_output(result.stderr)
+    )
     assert failure is not None, result.stderr
     assert failure.message == message
     assert failure.line > 0

@@ -62,16 +62,16 @@ fn test_square() -> none:
   assert math.square(0 - 1) == 1
   assert math.square(46340) == 2147395600
 
-fn test_square_wraps_i32() -> none:
+fn test_explicit_wrapping_multiplication() -> none:
   ```
-  title: test_square_wraps_i32
-  summary: Preserves ordinary modulo multiplication instead of checked overflow.
+  title: test_explicit_wrapping_multiplication
+  summary: Modulo arithmetic requires explicit wrapping, while square is checked.
   ```
-  assert math.square(46341) == 0 - 2147479015
-  assert math.square(65536) == 0
-  assert math.square(0 - 65536) == 0
-  assert math.square(2147483647) == 1
-  assert math.square((0 - 2147483647) - 1) == 0
+  assert wrapping_mul(46341, 46341) == 0 - 2147479015
+  assert wrapping_mul(65536, 65536) == 0
+  assert wrapping_mul(0 - 65536, 0 - 65536) == 0
+  assert wrapping_mul(2147483647, 2147483647) == 1
+  assert wrapping_mul((0 - 2147483647) - 1, (0 - 2147483647) - 1) == 0
 
 fn test_template_calls() -> none:
   ```
@@ -81,7 +81,8 @@ fn test_template_calls() -> none:
   var narrow: i8 = cast(0 - 12, i8)
   assert isinstance(math.abs(narrow), i8)
   assert math.abs(narrow) == 12
-  assert math.square(narrow) == 0 - 112
+  assert wrapping_mul(narrow, narrow) == 0 - 112
+  assert math.square(cast(narrow, i64)) == 144
   assert math.square<int64>(narrow) == 144
   assert isinstance(math.min<i64>(narrow, 0), i64)
   assert math.min<i64>(narrow, 0) == 0 - 12

@@ -16,6 +16,7 @@ from irx.analysis.handlers._expressions.tensor_buffer_support import (
     ExpressionTensorBufferSupportVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.validation import validate_assignment
 from irx.buffer import (
     BUFFER_FLAG_VALIDITY_BITMAP,
@@ -58,6 +59,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
             type: astx.TensorLiteral
         """
         for item in node.values:
+            contextualize_literal(item, node.element_type)
             self.visit(item)
             validate_assignment(
                 self.context.diagnostics,
@@ -337,13 +339,14 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         self.visit(node.base)
         for index in node.indices:
             self.visit(index)
-        self.visit(node.value)
         element_type = self._validate_tensor_index_operation(
             node=node,
             base=node.base,
             indices=node.indices,
             is_store=True,
         )
+        contextualize_literal(node.value, element_type)
+        self.visit(node.value)
         if element_type is not None:
             validate_assignment(
                 self.context.diagnostics,

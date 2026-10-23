@@ -1110,32 +1110,6 @@ class VisitorMixinTypingBase:
         _ = target_type
         return cast(ir.Value, None)
 
-    def _coerce_numeric_operands_for_types(
-        self,
-        _lhs: ir.Value,
-        _rhs: ir.Value,
-        *,
-        lhs_type: astx.DataType | None,
-        rhs_type: astx.DataType | None,
-    ) -> tuple[ir.Value, ir.Value]:
-        """
-        title: Coerce numeric operands for types.
-        parameters:
-          _lhs:
-            type: ir.Value
-          _rhs:
-            type: ir.Value
-          lhs_type:
-            type: astx.DataType | None
-          rhs_type:
-            type: astx.DataType | None
-        returns:
-          type: tuple[ir.Value, ir.Value]
-        """
-        _ = lhs_type
-        _ = rhs_type
-        return cast(tuple[ir.Value, ir.Value], (None, None))
-
     def _emit_numeric_compare(
         self,
         _op_code: str,

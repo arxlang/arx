@@ -17,6 +17,7 @@ from astx.base import (
     ReprStruct,
     SourceLocation,
 )
+from astx.numeric_mode import NumericMode
 from astx.tools.typing import typechecked
 
 
@@ -317,6 +318,8 @@ class BinaryOp(DataTypeOps):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
     """
 
     kind: ASTKind
@@ -325,6 +328,7 @@ class BinaryOp(DataTypeOps):
     lhs: DataType
     rhs: DataType
     op_code: str
+    mode: NumericMode
 
     def __init__(
         self,
@@ -333,6 +337,8 @@ class BinaryOp(DataTypeOps):
         rhs: DataType,
         loc: SourceLocation = NO_SOURCE_LOCATION,
         parent: Optional[ASTNodes] = None,
+        *,
+        mode: NumericMode = NumericMode.CHECKED,
     ) -> None:
         """
         title: Initialize the BinaryOp instance.
@@ -347,9 +353,12 @@ class BinaryOp(DataTypeOps):
             type: SourceLocation
           parent:
             type: Optional[ASTNodes]
+          mode:
+            type: NumericMode
         """
         super().__init__(loc=loc, parent=parent)
 
+        self.mode = mode
         self.op_code = op_code
         self.lhs = lhs
         self.rhs = rhs
@@ -386,7 +395,12 @@ class BinaryOp(DataTypeOps):
         returns:
           type: ReprStruct
         """
-        key = f"BINARY[{self.op_code}]"
+        prefix = (
+            "WRAPPING_BINARY"
+            if self.mode is NumericMode.WRAPPING
+            else "BINARY"
+        )
+        key = f"{prefix}[{self.op_code}]"
         lhs = {"lhs": self.lhs.get_struct(simplified)}
         rhs = {"rhs": self.rhs.get_struct(simplified)}
 
@@ -408,6 +422,8 @@ class BoolBinaryOp(BinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -547,6 +563,8 @@ class AndOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -598,6 +616,8 @@ class OrOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -649,6 +669,8 @@ class XorOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -700,6 +722,8 @@ class NandOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -751,6 +775,8 @@ class NorOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """
@@ -802,6 +828,8 @@ class XnorOp(BoolBinaryOp):
         type: DataType
       op_code:
         type: str
+      mode:
+        type: NumericMode
       kind:
         type: ASTKind
     """

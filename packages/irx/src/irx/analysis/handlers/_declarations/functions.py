@@ -254,7 +254,9 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
             type: astx.FunctionPrototype
         """
         for template_param in astx.get_template_params(node):
-            self._resolve_declared_type(template_param.bound, node=node)
+            self._resolve_declared_type(
+                template_param.bound, node=node, storage_required=False
+            )
         for arg in node.args.nodes:
             self._resolve_declared_type(arg.type_, node=arg)
         self._resolve_declared_type(node.return_type, node=node)
@@ -279,7 +281,9 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
             type: astx.FunctionDef
         """
         for template_param in astx.get_template_params(node.prototype):
-            self._resolve_declared_type(template_param.bound, node=node)
+            self._resolve_declared_type(
+                template_param.bound, node=node, storage_required=False
+            )
         for arg in node.prototype.args.nodes:
             self._resolve_declared_type(arg.type_, node=arg)
         self._resolve_declared_type(node.prototype.return_type, node=node)

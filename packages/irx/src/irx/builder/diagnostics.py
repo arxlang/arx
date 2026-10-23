@@ -41,7 +41,10 @@ def resolved_ast_type_name(node: astx.AST | None) -> str:
     resolved_type = getattr(semantic, "resolved_type", None)
     if isinstance(resolved_type, astx.DataType):
         return display_type_name(resolved_type)
-    return display_type_name(getattr(node, "type_", None))
+    raw_type = getattr(node, "type_", None)
+    return display_type_name(
+        raw_type if isinstance(raw_type, astx.DataType) else None
+    )
 
 
 @typechecked

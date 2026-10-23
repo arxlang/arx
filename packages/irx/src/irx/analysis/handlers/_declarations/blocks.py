@@ -23,6 +23,7 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.nullable import resolve_nullable_global
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -332,6 +333,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
+            contextualize_literal(node.value, node.type_)
             self.visit(node.value)
             if self._require_value_expression(
                 node.value,
@@ -371,6 +373,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
+            contextualize_literal(node.value, node.type_)
             self.visit(node.value)
             if self._require_value_expression(
                 node.value,

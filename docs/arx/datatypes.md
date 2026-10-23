@@ -53,8 +53,9 @@ fn identity(value: Number) -> Number:
 ````
 
 Union annotations use `|`. Numeric unions currently lower through a shared
-numeric storage type. Runtime tagged unions and runtime narrowing are not part
-of the current model.
+lossless numeric storage type; incompatible runtime unions are rejected. Generic
+union bounds constrain template membership without allocating union storage.
+Runtime tagged unions and runtime narrowing are not part of the current model.
 
 ## Choosing a type
 

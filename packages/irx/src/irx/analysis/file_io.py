@@ -101,6 +101,7 @@ def supported_option(name: str, value: astx.DataType) -> bool:
             astx.LiteralInt8,
             astx.LiteralInt16,
             astx.LiteralInt32,
+            astx.SourceInteger,
             astx.LiteralInt64,
         )
         if isinstance(value, astx.UnaryOp) and value.op_code == "-":

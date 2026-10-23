@@ -4,8 +4,10 @@ title: Tests for Python AST to ASTx lowering.
 
 import ast
 import ctypes
+import struct
 
-from typing import Any, Callable
+from types import SimpleNamespace
+from typing import Any, Callable, cast
 
 import arxjit
 import astx
@@ -24,6 +26,7 @@ from arxjit.source import ExtractedSource, extract_source
 from arxjit.types import Signature, SigType, bool_, f32, f64, i32, i64
 from astx.base import NO_SOURCE_LOCATION
 from astx.binary_op import _BINARY_OP_TYPES
+from irx.analysis import SemanticError, SemanticInfo
 from irx.analysis.api import analyze
 from irx.analysis.registry import MAIN_FUNCTION_NAME
 from irx.analysis.types import common_numeric_type
@@ -351,10 +354,9 @@ def test_reserved_names_match_irx() -> None:
     """
     title: The reserved-name list agrees with IRx's own constant.
     summary: >-
-      The list is duplicated rather than imported so that importing arxjit does
-      not pull in the compiler. This keeps the copy honest: if IRx renames or
-      adds an entry point, this fails rather than the mangling quietly ceasing
-      to apply.
+      This pins the frontend's reserved-name vocabulary to IRx: if IRx renames
+      or adds an entry point, this fails rather than the mangling quietly
+      ceasing to apply.
     """
     assert MAIN_FUNCTION_NAME in RESERVED_NAMES
 
@@ -485,7 +487,12 @@ def test_a_float_overflow_reported_by_exception_is_rejected(
         """
         raise OverflowError("float too large to pack with f format")
 
-    monkeypatch.setattr(lowering.struct, "pack", raising)
+    # Keep the fault local: pytest-xdist also uses the shared struct module.
+    monkeypatch.setattr(
+        lowering,
+        "struct",
+        SimpleNamespace(pack=raising, unpack=struct.unpack),
+    )
     with pytest.raises(LoweringError) as excinfo:
         _from_source("def sample():\n    return 1.5\n", f32())
     assert "out of range" in str(excinfo.value)
@@ -750,21 +757,19 @@ def test_a_comparison_lowers_its_operands_at_the_wider_type() -> None:
 @pytest.mark.parametrize(
     ("literal", "sig_type", "expected"),
     [
-        ("3", i32, astx.LiteralInt64),
+        ("3", i32, astx.LiteralInt32),
         ("1.5", f32, astx.LiteralFloat64),
     ],
 )
-def test_a_narrow_parameter_compares_against_a_wide_literal(
+def test_a_parameter_compares_against_the_inferred_literal_type(
     literal: str, sig_type: SigType, expected: type[astx.Literal]
 ) -> None:
     """
-    title: A narrow parameter is widened to meet its literal, not the reverse.
+    title: Comparisons use the shared integer default and Python float width.
     summary: >-
-      Inference gives a bare literal the widest type of its kind, so an i32 or
-      f32 parameter is compared against an Int64 or Float64. That is the one
-      place a literal is deliberately not built at the parameter's width: a
-      comparison widens both sides rather than assigning to either, and IRx
-      inserts exactly this widening, which analyze proves it accepts.
+      Small bare integers default to i32 while Python floats remain f64. A
+      comparison does not infer from its Boolean return type; IRx analyzes the
+      resulting operands and inserts only lossless widening.
     parameters:
       literal:
         type: str
@@ -952,9 +957,9 @@ def test_integer_true_division_executes_with_python_semantics(
     assert execute_bool(module, "sample__sample") is True
 
 
-def test_int64_and_float32_comparison_executes_at_float64() -> None:
+def test_integer_literal_and_float32_comparison_executes_at_float64() -> None:
     """
-    title: Int64 literals are not rounded to Float32 before comparison.
+    title: Integer literals are not rounded to Float32 before comparison.
     summary: >-
       16,777,217 is the first integer Float32 cannot represent exactly. A
       Float32 value of 16,777,216 must remain less than that literal.
@@ -1114,8 +1119,8 @@ def test_numeric_promotion_agrees_with_irx_for_every_type_pair() -> None:
     """
     title: ArxJIT and IRx choose the same type for every numeric pair.
     summary: >-
-      In particular, Int32/Float32 stays Float32 while Int64/Float32 becomes
-      Float64. Checking the full product prevents either policy drifting.
+      Int32/Float32 selects Float64; Int64/float has no lossless common domain.
+      Checking successes and rejections prevents policy drift.
     """
     numeric_types = (i32, i64, f32, f64)
     source = "def sample():\n    return 1\n"
@@ -1127,25 +1132,79 @@ def test_numeric_promotion_agrees_with_irx_for_every_type_pair() -> None:
     lowerer = lowering.Lowerer(extracted, i64())
     for left in numeric_types:
         for right in numeric_types:
-            promoted = lowerer.promote(left, right)
             expected = common_numeric_type(
                 lowering.astx_type(left), lowering.astx_type(right)
             )
-            assert expected is not None
+            if expected is None:
+                with pytest.raises(LoweringError, match="no lossless"):
+                    lowerer.promote(left, right, node)
+                continue
+            promoted = lowerer.promote(left, right, node)
             assert type(lowering.astx_type(promoted)) is type(expected)
 
 
-def test_every_scalar_pair_has_a_frontend_promotion() -> None:
+@pytest.mark.parametrize("float_type", [f32, f64])
+@pytest.mark.parametrize("operator", ["<", "+"])
+def test_lossy_typed_pairs_fail_at_the_analysis_boundary(
+    float_type: SigType, operator: str
+) -> None:
     """
-    title: Every scalar pair this stage can infer has a promotion entry.
+    title: Typed i64/float operands cannot acquire a lossy common domain.
+    parameters:
+      float_type:
+        type: SigType
+      operator:
+        type: str
     """
-    scalar_names = set(SCALARS)
-    expected = {
-        frozenset({left, right})
-        for left in scalar_names
-        for right in scalar_names
-    }
-    assert set(lowering.PROMOTIONS) == expected
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    signature = (
+        bool_(i64, float_type) if operator == "<" else f64(i64, float_type)
+    )
+    if operator == "<":
+        with pytest.raises(LoweringError, match="no lossless"):
+            _module_from_source(source, signature)
+        return
+    with pytest.raises(SemanticError):
+        analyze(_module_from_source(source, signature))
+
+
+@pytest.mark.parametrize(
+    "float_type, value", [(f32, 2**24 + 1), (f64, 2**53 + 1)]
+)
+def test_integer_literals_in_float_context_must_remain_exact(
+    float_type: SigType, value: int
+) -> None:
+    """
+    title: Contextual integer literals never silently round into a float.
+    parameters:
+      float_type:
+        type: SigType
+      value:
+        type: int
+    """
+    source = f"def sample():\n    return {value}\n"
+    with pytest.raises(LoweringError, match="not exactly representable"):
+        _module_from_source(source, float_type())
+
+
+@pytest.mark.parametrize("operator", ["+", "<"])
+def test_i32_float32_pair_analyzes_in_float64(operator: str) -> None:
+    """
+    title: Arithmetic and comparisons share lossless i32/f32 promotion.
+    parameters:
+      operator:
+        type: str
+    """
+    source = f"def sample(a, b):\n    return a {operator} b\n"
+    signature = bool_(i32, f32) if operator == "<" else f64(i32, f32)
+    module = _module_from_source(source, signature)
+    analyze(module)
+    result = _returned(module)
+    assert isinstance(result, astx.BinaryOp)
+    semantic = cast(SemanticInfo, getattr(result, "semantic"))
+    plan = semantic.resolved_operator
+    assert plan is not None
+    assert isinstance(plan.computation_type, astx.Float64)
 
 
 def test_the_operator_tables_agree_with_astx() -> None:
@@ -1166,11 +1225,9 @@ def test_docstring_and_pass_lower_to_nothing() -> None:
     title: Statements with no compiled effect contribute no astx nodes.
     """
 
-    def nothing() -> int:
+    def nothing() -> None:
         """
         title: Do nothing at all.
-        returns:
-          type: int
         """
         pass
 

@@ -11,6 +11,7 @@ summary: >-
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import cast
 
 import astx
@@ -33,19 +34,32 @@ from irx.analysis.handlers.base import (
 )
 from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.nullable import resolve_column_binary, resolve_column_unary
+from irx.analysis.numeric_literals import (
+    analyze_constant_cast,
+    analyze_constant_operation,
+    contextualize_literal,
+)
+from irx.analysis.numeric_policy import (
+    classify_numeric_conversion,
+    integer_bounds,
+)
 from irx.analysis.ownership import (
     resource_ownership,
     string_resource_ownership,
 )
-from irx.analysis.resolved_nodes import OwnershipKind
+from irx.analysis.resolved_nodes import ImplicitConversion, OwnershipKind
 from irx.analysis.types import (
+    common_numeric_type,
     display_type_name,
+    is_assignable,
     is_boolean_type,
     is_float_type,
     is_integer_type,
     is_numeric_type,
     is_string_type,
     is_type_member,
+    same_type,
+    union_storage_type,
 )
 from irx.analysis.typing import binary_result_type, unary_result_type
 from irx.analysis.validation import validate_assignment, validate_cast
@@ -125,6 +139,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             ),
         )
         self._set_type(node, result_type)
+        analyze_constant_operation(node, self.context, result_type)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BinaryOp) -> None:
@@ -137,8 +152,26 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).resource_ownership = None
         self._semantic(node).resolved_resource_store = None
         self._semantic(node).lifecycle_field_store = False
+        source_literal = (astx.SourceInteger, astx.SourceFloat)
+        rhs_visited = False
+        if isinstance(node.lhs, source_literal) and not isinstance(
+            node.rhs, source_literal
+        ):
+            self.visit(node.rhs)
+            rhs_visited = True
+            contextualize_literal(node.lhs, self._expr_type(node.rhs))
+        explicit = (
+            astx.get_template_args(node)
+            if node.mode is astx.NumericMode.WRAPPING
+            else None
+        )
+        if explicit is not None and len(explicit) == 1:
+            contextualize_literal(node.lhs, explicit[0])
+            contextualize_literal(node.rhs, explicit[0])
         self.visit(node.lhs)
         target = self._expr_type(node.lhs)
+        if not isinstance(node.lhs, source_literal):
+            contextualize_literal(node.rhs, target)
         if (
             node.op_code == "="
             and isinstance(target, astx.NullableType)
@@ -146,7 +179,15 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         ):
             node.rhs = astx.Cast(node.rhs, target)
             node.rhs.loc = node.rhs.value.loc
-        self.visit(node.rhs)
+        if not rhs_visited:
+            with self.context.constant_diagnostics(
+                node.op_code not in {"&&", "and", "||", "or"}
+                or (
+                    isinstance(node.lhs, astx.LiteralBoolean)
+                    and node.lhs.value == (node.op_code in {"&&", "and"})
+                )
+            ):
+                self.visit(node.rhs)
         lhs_type = self._expr_type(node.lhs)
         rhs_type = self._expr_type(node.rhs)
         if (
@@ -178,6 +219,59 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 is None
             ):
                 return
+        if node.mode is astx.NumericMode.WRAPPING:
+            chosen = (
+                explicit[0]
+                if explicit is not None and len(explicit) == 1
+                else lhs_type
+            )
+            valid = (
+                node.op_code in {"+", "-", "*"}
+                and chosen is not None
+                and integer_bounds(chosen) is not None
+                and lhs_type is not None
+                and integer_bounds(lhs_type) is not None
+                and rhs_type is not None
+                and integer_bounds(rhs_type) is not None
+                and (explicit is None or len(explicit) == 1)
+                and (
+                    same_type(lhs_type, rhs_type)
+                    if explicit is None
+                    else is_assignable(chosen, lhs_type)
+                    and is_assignable(chosen, rhs_type)
+                )
+            )
+            if not valid:
+                self.context.diagnostics.add(
+                    "wrapping arithmetic requires one concrete integer type; "
+                    "use "
+                    "an explicit lossless specialization",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return
+            assert chosen is not None
+            flags = normalize_flags(node, lhs_type=chosen, rhs_type=chosen)
+            plan = normalize_operator(
+                node.op_code,
+                result_type=chosen,
+                lhs_type=lhs_type,
+                rhs_type=rhs_type,
+                flags=flags,
+                mode=node.mode,
+            )
+
+            plan = replace(
+                plan,
+                computation_type=chosen,
+                lhs_conversion=ImplicitConversion(lhs_type, chosen),
+                rhs_conversion=ImplicitConversion(rhs_type, chosen),
+            )
+            self._set_flags(node, flags)
+            self._set_operator(node, plan)
+            self._set_type(node, chosen)
+            analyze_constant_operation(node, self.context, chosen)
+            return
         if resolve_column_binary(cast(SemanticAnalyzerCore, self), node):
             return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)
@@ -303,8 +397,21 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
             )
 
+        if (
+            is_numeric_type(lhs_type)
+            and is_numeric_type(rhs_type)
+            and common_numeric_type(lhs_type, rhs_type) is None
+        ):
+            self.context.diagnostics.add(
+                "numeric operands have no lossless common type; use an "
+                "explicit cast",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
         result_type = binary_result_type(node.op_code, lhs_type, rhs_type)
         self._set_type(node, result_type)
+        analyze_constant_operation(node, self.context, result_type)
         self._set_operator(
             node,
             normalize_operator(
@@ -330,7 +437,69 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             type: astx.Cast
         """
         self._semantic(node).resource_ownership = None
+        if node.mode is astx.NumericMode.CHECKED and not (
+            isinstance(node.value, astx.SourceInteger)
+            and is_float_type(
+                node.target_type.value_type
+                if isinstance(node.target_type, astx.NullableType)
+                else node.target_type
+            )
+        ):
+            contextualize_literal(node.value, node.target_type)
         self.visit(node.value)
+        source = self._expr_type(node.value)
+        target = node.target_type
+        source_scalar = (
+            source.value_type
+            if isinstance(source, astx.NullableType)
+            else source
+        )
+        target_scalar = (
+            target.value_type
+            if isinstance(target, astx.NullableType)
+            else target
+        )
+        if isinstance(source_scalar, astx.UnionType):
+            source_scalar = union_storage_type(source_scalar)
+        if isinstance(target_scalar, astx.UnionType):
+            target_scalar = union_storage_type(target_scalar)
+        if target_scalar is None:
+            self.context.diagnostics.add(
+                "union has no lossless scalar storage",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        self._semantic(node).numeric_mode = node.mode
+        if source_scalar is not None:
+            self._semantic(
+                node
+            ).numeric_conversion = classify_numeric_conversion(
+                source_scalar, target_scalar
+            )
+        if (
+            is_numeric_type(source_scalar)
+            and is_numeric_type(target_scalar)
+            and self._semantic(node).numeric_conversion is None
+        ):
+            self.context.diagnostics.add(
+                "unsupported numeric conversion domain",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        analyze_constant_cast(node, self.context)
+        if node.mode is astx.NumericMode.WRAPPING and (
+            source_scalar is None
+            or integer_bounds(source_scalar) is None
+            or integer_bounds(target_scalar) is None
+        ):
+            self.context.diagnostics.add(
+                "wrapping_cast requires integer source and destination types",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
         if isinstance(node.target_type, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
         ):

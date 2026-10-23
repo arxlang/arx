@@ -149,7 +149,9 @@ def test_integer_division_by_zero_reports_runtime_diagnostic(
       tmp_path:
         type: Path
     """
-    module_ast = _parse_min_module("fn main() -> i32:\n  return 1 / 0\n")
+    module_ast = _parse_min_module(
+        "fn main() -> i32:\n  var zero: i32 = 0\n  return 1 / zero\n"
+    )
     binary = tmp_path / "division_by_zero"
     ArxBuilder().build(module_ast, str(binary))
 
@@ -164,7 +166,7 @@ def test_integer_division_by_zero_reports_runtime_diagnostic(
     report = parse_runtime_failure_output(result.stderr)
     assert report is not None
     assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
-    assert report.line == 2
+    assert report.line == 3
     assert report.col > 0
 
 

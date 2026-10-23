@@ -51,6 +51,8 @@ class SemanticContext:
         type: SemanticClass | None
       current_module_key:
         type: ModuleKey | None
+      check_constant_expressions:
+        type: bool
       loop_depth:
         type: int
       native_feature_names:
@@ -79,12 +81,30 @@ class SemanticContext:
     current_function: SemanticFunction | None = None
     current_class: SemanticClass | None = None
     current_module_key: ModuleKey | None = None
+    check_constant_expressions: bool = True
     loop_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
+
+    @contextmanager
+    def constant_diagnostics(self, enabled: bool) -> Iterator[None]:
+        """
+        title: Suppress operation errors in possibly unevaluated branches.
+        parameters:
+          enabled:
+            type: bool
+        returns:
+          type: Iterator[None]
+        """
+        previous = self.check_constant_expressions
+        self.check_constant_expressions = previous and enabled
+        try:
+            yield
+        finally:
+            self.check_constant_expressions = previous
 
     def next_symbol_id(self, prefix: str) -> str:
         """

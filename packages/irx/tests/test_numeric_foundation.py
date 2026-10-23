@@ -32,15 +32,15 @@ def test_translate_implicit_integer_widening_for_variable_initializers() -> (
     assert_ir_parses(ir_text)
 
 
-def test_translate_mixed_int64_and_float32_promotes_to_double() -> None:
+def test_translate_mixed_int32_and_float32_promotes_to_double() -> None:
     """
-    title: Mixed int64 and float32 arithmetic should lower through double.
+    title: Mixed int32 and float32 arithmetic should lower through double.
     """
     module = make_main_module(
         astx.VariableDeclaration(
             name="left",
-            type_=astx.Int64(),
-            value=astx.LiteralInt64(1),
+            type_=astx.Int32(),
+            value=astx.LiteralInt32(1),
         ),
         astx.VariableDeclaration(
             name="right",
@@ -61,7 +61,7 @@ def test_translate_mixed_int64_and_float32_promotes_to_double() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert "sitofp i64" in ir_text
+    assert "sitofp i32" in ir_text
     assert "fpext float" in ir_text
     assert "fadd double" in ir_text
     assert_ir_parses(ir_text)
@@ -168,8 +168,8 @@ def test_mixed_signed_and_unsigned_comparison_uses_canonical_promotion() -> (
 
     ir_text = Builder().translate(module)
 
-    assert "sext i16 -1 to i32" in ir_text
-    assert "icmp ugt i32" in ir_text
+    assert "sext i16 -1 to i64" in ir_text
+    assert "icmp sgt i64" in ir_text
     assert_ir_parses(ir_text)
 
 
