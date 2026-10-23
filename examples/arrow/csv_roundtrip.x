@@ -3,7 +3,7 @@ title: Stream CSV through checked DataFrame conversions
 summary: Run from the repository root; input and output must be distinct files.
 ```
 import (Schema, RecordBatch) from stdlib.arrow
-import CSV from stdlib.csv
+import CSVStream from stdlib.csv
 
 fn main() -> i32:
   ```
@@ -11,9 +11,9 @@ fn main() -> i32:
   ```
   var schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var reader: CSV = CSV()
+  var reader: CSVStream = CSVStream()
   reader.open_read_as("examples/arrow/input.csv", schema)
-  var writer: CSV = CSV()
+  var writer: CSVStream = CSVStream()
   writer.open_write("output.csv", schema)
   while reader.next():
     var batch: RecordBatch = reader.batch()

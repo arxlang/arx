@@ -259,6 +259,6 @@ explicit modifier intent on the same nodes that later lowering consumes.
 
 A runtime-schema `dataframe[...]` method parameter also accepts a statically
 typed DataFrame, without converting its data. An exact static-schema overload
-wins if present. This permits `CSV.write(frame)` and `Parquet.write(frame)` for
-both kinds of frame; it does not permit implicit narrowing or general numeric
-conversion-ranked overloads.
+wins if present. This permits `CSVStream.write(frame)` and
+`ParquetStream.write(frame)` for both kinds of frame; it does not permit
+implicit narrowing or general numeric conversion-ranked overloads.

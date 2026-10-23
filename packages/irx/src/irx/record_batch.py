@@ -2767,12 +2767,14 @@ class FileSession:
 
 @public
 @typechecked
-class Parquet(FileSession):
+class ParquetStream(FileSession):
     """
-    title: A Parquet file or dataset with explicit read or write sessions.
+    title: Stream a Parquet file or dataset in explicit read or write mode.
     summary: >-
-      Flat supported schemas only; no implicit temporal coercion. Close
-      explicitly to check footer errors. Output is partial on failure.
+      Process batches incrementally without implicit temporal coercion. Close
+      explicitly to check footer errors. Nontransactional output is partial on
+      failure. Use irx.table_io.read_parquet and write_parquet for eager
+      tables.
     attributes:
       mode:
         type: Literal[closed, read, write, failed]
@@ -2855,12 +2857,13 @@ class Parquet(FileSession):
 
 @public
 @typechecked
-class CSV(FileSession):
+class CSVStream(FileSession):
     """
-    title: A local CSV file with the same session API as Parquet.
+    title: Stream a local CSV file with the same session API as ParquetStream.
     summary: >-
       Preserve existing Arrow CSV quoting, null and first-block inference
-      rules. Explicit schemas control parsing, unlike Parquet assertions.
+      rules. Explicit schemas control parsing, unlike Parquet assertions. Use
+      irx.table_io.read_csv and write_csv for eager tables instead.
     attributes:
       mode:
         type: Literal[closed, read, write, failed]

@@ -15,8 +15,8 @@ import pytest
 
 from irx import record_batch as rb
 from irx.record_batch import (
-    CSV,
-    Parquet,
+    CSVStream,
+    ParquetStream,
     RecordBatch,
     RecordBatchSchema,
     RecordBatchStreamReader,
@@ -103,7 +103,7 @@ def test_parquet_exact_types(
     path = tmp_path / "input.parquet"
     output = tmp_path / "output.parquet"
     pq.write_table(expected, path, row_group_size=2, version="2.6")
-    with Parquet() as source, Parquet() as target:
+    with ParquetStream() as source, ParquetStream() as target:
         source.open_read(path, batch_size=batch_size)
         snapshot = source.schema()
         target.open_write(output, snapshot, row_group_size=3)
@@ -140,7 +140,7 @@ def test_parquet_empty_and_schema_ownership(
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64, False)
     path = tmp_path / "empty.parquet"
-    file = Parquet()
+    file = ParquetStream()
     file.open_write(path, schema, compression=codec)
     schema.release()
     snapshot = file.schema()
@@ -221,7 +221,7 @@ def test_newly_supported_read_schema(
     pq.write_table(
         pa.table([pa.array([None], type=type_)], names=["bad"]), path
     )
-    with Parquet() as file:
+    with ParquetStream() as file:
         file.open_read(path)
         schema = file.schema()
         assert schema.to_arrow().field("bad").type == type_
@@ -246,7 +246,7 @@ def test_invalid_sizes(tmp_path: Path, value: object) -> None:
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
     path = tmp_path / "sentinel"
     path.write_bytes(b"original")
-    with Parquet() as file:
+    with ParquetStream() as file:
         with pytest.raises((ValueError, TypeCheckError)):
             file.open_read(path, batch_size=value)  # type: ignore[arg-type]
         with pytest.raises((ValueError, TypeCheckError)):
@@ -255,9 +255,30 @@ def test_invalid_sizes(tmp_path: Path, value: object) -> None:
     schema.release()
 
 
-@pytest.mark.parametrize("format_", [CSV, Parquet])
+@pytest.mark.parametrize(
+    "stream_name,legacy_name",
+    [("CSVStream", "CSV"), ("ParquetStream", "Parquet")],
+)
+def test_stream_exports_have_no_legacy_aliases(
+    stream_name: str, legacy_name: str
+) -> None:
+    """
+    title: Python exports explicitly named streams without legacy aliases.
+    parameters:
+      stream_name:
+        type: str
+      legacy_name:
+        type: str
+    """
+    assert stream_name in rb.__all__
+    assert getattr(rb, stream_name).__name__ == stream_name
+    assert legacy_name not in rb.__all__
+    assert not hasattr(rb, legacy_name)
+
+
+@pytest.mark.parametrize("format_", [CSVStream, ParquetStream])
 def test_unified_modes_and_reopen(
-    tmp_path: Path, format_: type[CSV] | type[Parquet]
+    tmp_path: Path, format_: type[CSVStream] | type[ParquetStream]
 ) -> None:
     """
     title: >-
@@ -266,7 +287,7 @@ def test_unified_modes_and_reopen(
       tmp_path:
         type: Path
       format_:
-        type: type[CSV] | type[Parquet]
+        type: type[CSVStream] | type[ParquetStream]
     """
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
     path = tmp_path / "data"
@@ -433,9 +454,9 @@ def test_failed_session_and_exception_cleanup(tmp_path: Path) -> None:
     path = tmp_path / "input.parquet"
     pq.write_table(pa.table({"other": [1]}), path)
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
-    file = Parquet()
+    file = ParquetStream()
     with pytest.raises(RuntimeError, match="schema mismatch"):
-        with file, Parquet() as source:
+        with file, ParquetStream() as source:
             source.open_read(path)
             file.open_write(tmp_path / "output.parquet", schema)
             for batch in source:
@@ -460,7 +481,7 @@ def test_invalid_paths_options_and_corruption(tmp_path: Path) -> None:
     """
     path = tmp_path / "data"
     schema = RecordBatchSchema().add_field("id", rb.IrxColumnType.INT64)
-    with Parquet() as file:
+    with ParquetStream() as file:
         for candidate in [path, tmp_path]:
             with pytest.raises(RuntimeError):
                 file.open_read(candidate)
@@ -489,7 +510,7 @@ def test_missing_optional_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setattr(rb, "_get_lib", object)
     monkeypatch.setenv(rb.IRX_RECORD_BATCH_LIBRARY_ENV, "legacy-override")
-    with Parquet() as file:
+    with ParquetStream() as file:
         with pytest.raises(
             RuntimeError, match="lacks Parquet support; rebuild"
         ):
@@ -509,9 +530,9 @@ def test_footer_failure_is_sticky(tmp_path: Path) -> None:
     """
     script = """
 import resource, signal, sys
-from irx.record_batch import IrxColumnType, RecordBatchSchema, Parquet
+from irx.record_batch import IrxColumnType, RecordBatchSchema, ParquetStream
 schema = RecordBatchSchema().add_field("id", IrxColumnType.INT64)
-f = Parquet()
+f = ParquetStream()
 f.open_write(sys.argv[1], schema)
 signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
 resource.setrlimit(resource.RLIMIT_FSIZE, (8, 8))
@@ -552,7 +573,7 @@ def test_codec_properties_and_zero_row_write(
     builder.append_int64(0, 42)
     batch = builder.finish()
     path = tmp_path / "codec.parquet"
-    with Parquet() as file:
+    with ParquetStream() as file:
         file.open_write(path, schema, compression=codec)
         file.write_batch(empty)
         file.write_batch(batch)
@@ -628,7 +649,7 @@ def test_snapshot_rebuild_preserves_timezone(
     )
     path = tmp_path / "time.parquet"
     pq.write_table(pa.table([pa.array([], type=type_)], schema=schema), path)
-    with Parquet() as source:
+    with ParquetStream() as source:
         source.open_read(path)
         snapshot = source.schema()
     builder = rb.RecordBatchBuilder(snapshot)
@@ -666,7 +687,7 @@ def test_late_corruption_is_not_eof(tmp_path: Path) -> None:
     with path.open("r+b") as file:
         file.seek(offset)
         file.write(b"\xff" * size)
-    source = Parquet()
+    source = ParquetStream()
     source.open_read(path, batch_size=20)
     first = source.next_batch()
     assert first is not None and first.get_int64(0, 0) == 0
@@ -695,7 +716,7 @@ def test_plain_external_schema_and_float_specials(tmp_path: Path) -> None:
         path,
         store_schema=False,
     )
-    with Parquet() as source, Parquet() as target:
+    with ParquetStream() as source, ParquetStream() as target:
         source.open_read(path)
         snapshot = source.schema()
         target.open_write(tmp_path / "copy.parquet", snapshot)

@@ -2,7 +2,7 @@
 title: Nullable DataFrames with atomic Parquet output and a filtered scan
 summary: Creates its input locally and uses the native Arrow Dataset scanner.
 ```
-import (Parquet, ParquetOptions, where) from stdlib.parquet
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
 
 fn main() -> i32:
@@ -18,7 +18,7 @@ fn main() -> i32:
   var options: ParquetOptions = ParquetOptions()
   options.set_int("atomic", 1)
   options.set_int("durable", 1)
-  var file: Parquet = Parquet()
+  var file: ParquetStream = ParquetStream()
   file.open_write_options("nullable.parquet", batch.schema(), options)
   file.write(batch)
   file.close()

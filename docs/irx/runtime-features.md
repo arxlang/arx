@@ -246,11 +246,11 @@ Parquet adapters are registered separately from the base RecordBatch runtime.
 Array/tensor linker flags are unchanged; matching PyArrow libraries are used,
 not system Arrow. Availability is checked when a feature is activated.
 
-The `CSV` and `Parquet` facades use distinct nominal opaque handles and a shared
-checked session lifecycle; raw reader/writer ABI entrypoints remain additive and
-compatible. New sources, headers and library flags participate in native-cache
-fingerprinting and wheel asset audits. See [Parquet I/O](../arx/parquet.md) for
-type and DataFrame restrictions.
+The `CSVStream` and `ParquetStream` facades use distinct nominal opaque handles
+and a shared checked session lifecycle; raw reader/writer ABI entrypoints remain
+additive and compatible. New sources, headers and library flags participate in
+native-cache fingerprinting and wheel asset audits. See
+[Parquet I/O](../arx/parquet.md) for type and DataFrame restrictions.
 
 ## Optional Parquet feature
 

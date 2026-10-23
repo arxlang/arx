@@ -18,9 +18,9 @@ from irx.builder.runtime.record_batch import (
     build_record_batch_runtime_feature,
 )
 from irx.record_batch import (
-    Parquet,
     ParquetOptions,
     ParquetPredicate,
+    ParquetStream,
     RecordBatch,
     RecordBatchSchema,
     RecordBatchStreamReader,
@@ -72,7 +72,7 @@ def write_batch(
     schema = RecordBatchSchema.from_arrow(batch.schema)
     native = RecordBatch.from_arrow(batch)
     try:
-        with Parquet() as target:
+        with ParquetStream() as target:
             target.open_write(path, schema, options=options)
             target.write_batch(native)
     finally:
@@ -93,7 +93,7 @@ def read_batches(
     returns:
       type: list[pa.RecordBatch]
     """
-    with Parquet() as source:
+    with ParquetStream() as source:
         source.open_read(path, options=options)
         return [batch.to_arrow() for batch in source]
 
@@ -119,7 +119,7 @@ def test_recursive_roundtrip(
     batch = pa.record_batch([pa.array(values, type=kind)], schema=schema)
     path = tmp_path / "rich.parquet"
     write_batch(path, batch)
-    with Parquet() as source:
+    with ParquetStream() as source:
         source.open_read(path)
         snapshot = source.schema()
         saved = snapshot.to_arrow()
@@ -237,7 +237,7 @@ def test_atomic_append_and_abort(tmp_path: Path) -> None:
     native = RecordBatch.from_arrow(batch)
     try:
         with pytest.raises(ValueError, match="abort"):
-            with Parquet() as output:
+            with ParquetStream() as output:
                 output.open_write(
                     path, schema, options=ParquetOptions(atomic=True)
                 )
@@ -422,7 +422,7 @@ def test_partitioned_write_append_and_empty(tmp_path: Path) -> None:
         write_batch(path, batch, options)
     empty = tmp_path / "empty"
     write_batch(empty, batch.slice(0, 0), options)
-    with Parquet() as source:
+    with ParquetStream() as source:
         source.open_read(
             empty, options=ParquetOptions(dataset=True, hive=True)
         )

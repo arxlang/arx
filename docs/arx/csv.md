@@ -91,11 +91,16 @@ schema to preserve widths and temporal units on a roundtrip.
 
 ## Explicit streaming
 
+Use `CSVStream` for incremental processing instead of loading the entire file
+into a DataFrame. It supports either read or write mode. The previous `CSV`
+class name is removed, without a compatibility alias; `read_csv` and `write_csv`
+are unchanged.
+
 ```arx
-import CSV from stdlib.csv
+import CSVStream from stdlib.csv
 
 # Inside a function:
-var source: CSV = CSV()
+var source: CSVStream = CSVStream()
 source.open_read("large.csv")
 while source.next():
   var chunk: dataframe[...] = source.frame()
@@ -103,7 +108,7 @@ while source.next():
 source.close()
 ```
 
-`CSV()` starts closed and has one read or write mode.
+`CSVStream()` starts closed and has one read or write mode.
 `open_read_as(path, schema, ...)` supplies an explicit schema;
 `open_write(path, schema, ...)` configures output. These session factories
 expose delimiter/header and read block size. The additional dialect controls
@@ -155,7 +160,7 @@ engines. Use `pyarrow.Schema` for `schema`. Selectors accept checked sequences.
 Imports do not compile native code; CSV-only use does not load Parquet, Dataset
 or Acero. Stale native-library overrides produce a rebuild/unset error.
 
-For streaming, `irx.record_batch.CSV` and the lower-level
+For streaming, `irx.record_batch.CSVStream` and the lower-level
 `RecordBatchStreamReader.open_csv` / `RecordBatchStreamWriter.open_csv` remain
 available. Iteration releases its batch on advancement; `batch.to_arrow()`
 exports independent Arrow references. Release manually retained batch/schema

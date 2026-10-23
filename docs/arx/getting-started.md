@@ -164,10 +164,10 @@ write_parquet(frame, "output.parquet", compression="zstd")
 ```
 
 These eager operations handle every batch and close their internal sessions. For
-bounded processing, the format modules also provide unified `CSV` and `Parquet`
-owners with `next()`, `frame()` and `write(frame)`. Shared schemas, batches and
-IPC live in `stdlib.arrow`. See [CSV](csv.md) and [Parquet](parquet.md) for
-imports, parameters and safety limits, or run the
+bounded processing, the format modules also provide unified `CSVStream` and
+`ParquetStream` owners with `next()`, `frame()` and `write(frame)`. Shared
+schemas, batches and IPC live in `stdlib.arrow`. See [CSV](csv.md) and
+[Parquet](parquet.md) for imports, parameters and safety limits, or run the
 [complete table example](../../examples/arrow/csv_parquet_tables.x).
 
 Use `cast(frame, dataframe[name:str | none])` to assert an exact static schema;

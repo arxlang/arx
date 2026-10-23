@@ -198,10 +198,10 @@ class ParquetOptions:
     return none
 
 
-class Parquet:
+class ParquetStream:
   ```
-  title: Parquet
-  summary: Scoped file owner with explicit read or write mode.
+  title: ParquetStream
+  summary: Scoped owner for incremental reading or writing in one active mode.
   ```
   @[private]
   handle: ArrowParquetHandle

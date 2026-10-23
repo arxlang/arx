@@ -21,10 +21,10 @@ extern irx_rb_api_csv_open_read(box: ArrowCsvHandle, path: str, delimiter: str, 
 extern irx_rb_api_csv_open_read_as(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
 extern irx_rb_api_csv_open_write(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
 
-class CSV:
+class CSVStream:
   ```
-  title: CSV
-  summary: Scoped file owner with explicit read or write mode.
+  title: CSVStream
+  summary: Scoped owner for incremental reading or writing in one active mode.
   ```
   @[private]
   handle: ArrowCsvHandle

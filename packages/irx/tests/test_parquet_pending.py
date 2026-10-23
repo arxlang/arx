@@ -17,8 +17,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from irx.record_batch import (
-    Parquet,
     ParquetOptions,
+    ParquetStream,
     RecordBatchSchema,
     parquet_library,
 )
@@ -37,14 +37,14 @@ def test_csv_does_not_require_parquet(tmp_path: Path) -> None:
     code = """
 from unittest.mock import patch
 import pyarrow as pa
-from irx.record_batch import CSV, RecordBatchSchema
+from irx.record_batch import CSVStream, RecordBatchSchema
 with patch(
     'irx.builder.runtime.record_batch.build_parquet_runtime_feature',
     side_effect=RuntimeError('Parquet disabled'),
 ):
     schema = RecordBatchSchema.from_arrow(pa.schema([('id', pa.int64())]))
     try:
-        with CSV() as file:
+        with CSVStream() as file:
             file.open_write('empty.csv', schema)
     finally:
         schema.release()
@@ -71,7 +71,7 @@ def test_local_writer_exclusion_and_release(tmp_path: Path) -> None:
     batch = pa.record_batch([[1]], names=["id"])
     schema = RecordBatchSchema.from_arrow(batch.schema)
     try:
-        with Parquet() as first, Parquet() as second:
+        with ParquetStream() as first, ParquetStream() as second:
             first.open_write(path, schema, options=ParquetOptions(atomic=True))
             with pytest.raises(RuntimeError, match="busy"):
                 second.open_write(path, schema)
@@ -129,7 +129,7 @@ def test_atomic_dataset_snapshot_and_encryption(
     write_batch(path, batch, options)
     assert path.is_symlink()
     old_generation = path.resolve()
-    with Parquet() as old_reader:
+    with ParquetStream() as old_reader:
         old_reader.open_read(path, options=scan)
         write_batch(path, batch, options)
         assert path.resolve() != old_generation
@@ -170,7 +170,7 @@ def test_atomic_dataset_abort_and_evolution(tmp_path: Path) -> None:
     schema = RecordBatchSchema.from_arrow(first.schema)
     try:
         with pytest.raises(ValueError, match="cancel"):
-            with Parquet() as writer:
+            with ParquetStream() as writer:
                 writer.open_write(path, schema, options=write)
                 raise ValueError("cancel")
     finally:
@@ -352,7 +352,7 @@ def test_reconstruction_projection_and_empty_schema(tmp_path: Path) -> None:
     )
     assert result.column("value").to_pylist() == [1, 2]
     write_batch(path, batch.slice(0, 0), ParquetOptions(reconstruct=True))
-    with Parquet() as reader:
+    with ParquetStream() as reader:
         reader.open_read(path)
         schema = reader.schema()
         try:
@@ -438,9 +438,9 @@ def test_process_death_releases_writer_lease(tmp_path: Path) -> None:
     code = """
 import os
 import pyarrow as pa
-from irx.record_batch import Parquet, ParquetOptions, RecordBatchSchema
+from irx.record_batch import ParquetStream, ParquetOptions, RecordBatchSchema
 schema = RecordBatchSchema.from_arrow(pa.schema([('id', pa.int64())]))
-writer = Parquet()
+writer = ParquetStream()
 writer.open_write('data.parquet', schema, options=ParquetOptions(atomic=True))
 os._exit(0)
 """
@@ -469,7 +469,7 @@ def test_invalid_reconstruction_metadata_fails_on_open(tmp_path: Path) -> None:
         {b"IRX:logical_schema:v1": b"malformed"}
     )
     pq.write_table(table, path)
-    with Parquet() as reader:
+    with ParquetStream() as reader:
         with pytest.raises(RuntimeError):
             reader.open_read(path)
 

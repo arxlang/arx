@@ -224,7 +224,7 @@ title: Stream CSV through checked DataFrame conversions
 summary: Run from the repository root; input and output must be distinct files.
 ```
 import (Schema, RecordBatch) from stdlib.arrow
-import CSV from stdlib.csv
+import CSVStream from stdlib.csv
 
 fn main() -> i32:
   ```
@@ -232,9 +232,9 @@ fn main() -> i32:
   ```
   var schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var reader: CSV = CSV()
+  var reader: CSVStream = CSVStream()
   reader.open_read_as("input.csv", schema)
-  var writer: CSV = CSV()
+  var writer: CSVStream = CSVStream()
   writer.open_write("compiled.csv", schema)
   while reader.next():
     var batch: RecordBatch = reader.batch()
@@ -249,18 +249,18 @@ fn main() -> i32:
 PARQUET_MODULE = """```
 title: Installed Parquet interoperability and DataFrame smoke
 ```
-import Parquet from stdlib.parquet
+import ParquetStream from stdlib.parquet
 import (RecordBatch, Schema) from stdlib.arrow
 
 fn main() -> i32:
   ```
   title: Convert all Python-produced Parquet batches in compiled Arx
   ```
-  var reader: Parquet = Parquet()
+  var reader: ParquetStream = ParquetStream()
   reader.open_read("python.parquet", batch_size=1)
   var schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var writer: Parquet = Parquet()
+  var writer: ParquetStream = ParquetStream()
   writer.open_write("compiled.parquet", schema, row_group_size=2)
   while reader.next():
     var batch: RecordBatch = reader.batch()
@@ -295,7 +295,7 @@ fn main() -> i32:
 TABLE_IO_MODULE = """```
 title: Installed format modules and table I/O
 ```
-import (read_csv, write_csv, CSV) from stdlib.csv
+import (read_csv, write_csv, CSVStream) from stdlib.csv
 import Schema from stdlib.arrow
 import (read_parquet, write_parquet, where, ParquetOptions) from stdlib.parquet
 
@@ -316,7 +316,7 @@ fn main() -> i32:
   write_csv(typed, "tables.csv")
   var schema: Schema = Schema()
   schema.add("id", "int64")
-  var sink: CSV = CSV()
+  var sink: CSVStream = CSVStream()
   sink.open_write("tables-stream.csv", schema)
   sink.write(typed)
   sink.close()
@@ -340,8 +340,8 @@ from irx.table_io import (
     read_csv, write_csv, read_parquet, write_parquet, where,
 )
 from irx.record_batch import (
-    CSV,
-    Parquet,
+    CSVStream,
+    ParquetStream,
     ParquetOptions,
     ParquetPredicate,
     RecordBatch,
@@ -414,7 +414,7 @@ with csv_reader as csv:
     if csv_batch is None or csv_batch.get_int32(0, 0) != 42:
         raise RuntimeError("CSV wheel smoke returned wrong data")
     csv_batch.release()
-with CSV() as source, Parquet() as target:
+with CSVStream() as source, ParquetStream() as target:
     source.open_read(root / "python.csv", schema=schema)
     target.open_write(root / "facade.parquet", schema)
     for copied in source:
@@ -431,13 +431,13 @@ rich = pa.record_batch(
 )
 rich_schema = RecordBatchSchema.from_arrow(rich.schema)
 rich_batch = RecordBatch.from_arrow(rich)
-with Parquet() as target:
+with ParquetStream() as target:
     target.open_write(root / "rich.parquet", rich_schema,
                       options=ParquetOptions(atomic=True))
     target.write_batch(rich_batch)
 rich_batch.release()
 rich_schema.release()
-with Parquet() as source:
+with ParquetStream() as source:
     source.open_read(root / "rich.parquet", options=ParquetOptions(
         columns=("items",),
         predicates=(ParquetPredicate("items", "is_valid"),),

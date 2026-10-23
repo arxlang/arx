@@ -116,17 +116,17 @@ def test_compiled_streaming_frames(tmp_path: Path) -> None:
     binary = tmp_path / "stream"
     compile_program(
         """
-import CSV from stdlib.csv
-import (Parquet, read_parquet, write_parquet) from stdlib.parquet
+import CSVStream from stdlib.csv
+import (ParquetStream, read_parquet, write_parquet) from stdlib.parquet
 import Schema from stdlib.arrow
 fn main() -> i32:
   var schema: Schema = Schema()
   schema.add("id", "int64", nullable=false)
-  var source: CSV = CSV()
+  var source: CSVStream = CSVStream()
   source.open_read_as("input.csv", schema, block_size=16)
-  var destination: Parquet = Parquet()
+  var destination: ParquetStream = ParquetStream()
   destination.open_write("output.parquet", source.schema(), row_group_size=2)
-  var csv_copy: CSV = CSV()
+  var csv_copy: CSVStream = CSVStream()
   csv_copy.open_write("copy.csv", schema)
   while source.next():
     var frame: dataframe[...] = source.frame()

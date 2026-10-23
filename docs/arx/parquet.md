@@ -72,7 +72,11 @@ serialized type tags and tuple-filter expressions are not this public API.
 
 ## Explicit streaming and ownership
 
-- `Parquet()` starts closed.
+Import `ParquetStream` from `stdlib.parquet` for incremental reading or writing.
+The previous `Parquet` class name is removed, without a compatibility alias;
+`read_parquet` and `write_parquet` still handle whole DataFrames.
+
+- `ParquetStream()` starts closed.
 - `open_read(path, batch_size=65536)` streams a file in batches of at most that
   many rows. `open_read_as(path, schema, batch_size=65536)` additionally asserts
   the exact decoded schema, including names/order, types, nullability and
@@ -104,10 +108,13 @@ Arx exposes a scoped `ParquetOptions` builder. Its validated setters are copied
 at open; later mutations do not change an active session:
 
 ```arx
+import (ParquetStream, ParquetOptions, where) from stdlib.parquet
+
+# Inside a function:
 var options: ParquetOptions = ParquetOptions(batch_size=1024)
 options.set_text("column", "name")
 options.set_filters(where("id", ">", 10))
-var source: Parquet = Parquet()
+var source: ParquetStream = ParquetStream()
 source.open_read_options("input.parquet", options)
 ```
 
@@ -332,14 +339,14 @@ write_parquet(frame, "output.parquet", compression="zstd",
 
 These helpers return/accept `pyarrow.Table`, accept `PathLike` paths and
 `pyarrow.Schema` assertions, and use the native C Stream bridge. No Python
-format engine is substituted. For streaming, `irx.record_batch.Parquet` remains
-available. Its iteration releases a batch on advancement. Use `next_batch()` and
-explicit `release()` when retaining the native batch longer; exported
-`to_arrow()` values own independent references. Low-level `open_parquet`
-factories remain available. Import does not build native code. CSV/IPC use the
-base ctypes library; Parquet loads a separate on-demand plugin linked to that
-same base instance. `IRX_RECORD_BATCH_LIBRARY` overrides retain the legacy
-all-in-one ABI contract.
+format engine is substituted. For streaming, `irx.record_batch.ParquetStream`
+remains available. Its iteration releases a batch on advancement. Use
+`next_batch()` and explicit `release()` when retaining the native batch longer;
+exported `to_arrow()` values own independent references. Low-level
+`open_parquet` factories remain available. Import does not build native code.
+CSV/IPC use the base ctypes library; Parquet loads a separate on-demand plugin
+linked to that same base instance. `IRX_RECORD_BATCH_LIBRARY` overrides retain
+the legacy all-in-one ABI contract.
 
 IRx registers `parquet` separately from `record_batch`. The base feature links
 Arrow and Compute for nullable kernels. Parquet additionally links matching

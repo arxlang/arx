@@ -358,24 +358,24 @@ is not sanitizer-instrumented by this command.
 
 ## CSV streaming and checked conversion
 
-`CSV` in `stdlib.csv` and Python `irx.record_batch` reuses Arrow C++ streaming
-readers and writers. Python generic stream factories remain supported. Both
-`cast(batch, dataframe[name:T, ...])` and `cast(frame, RecordBatch)` support
-exact static scalar schemas, including nullable columns. Literal-ellipsis
-`dataframe[...]` preserves runtime schemas with rich types and metadata.
-Conversion results own their references independently; DataFrame-to-RecordBatch
-export combines **all** chunks and may allocate. See
+`CSVStream` in `stdlib.csv` and Python `irx.record_batch` reuses Arrow C++
+streaming readers and writers. Python generic stream factories remain supported.
+Both `cast(batch, dataframe[name:T, ...])` and `cast(frame, RecordBatch)`
+support exact static scalar schemas, including nullable columns.
+Literal-ellipsis `dataframe[...]` preserves runtime schemas with rich types and
+metadata. Conversion results own their references independently;
+DataFrame-to-RecordBatch export combines **all** chunks and may allocate. See
 [CSV files and DataFrames](arx/csv.md) for schemas, null rules, lifetime,
 streaming failure semantics and the intentionally restricted DataFrame subset.
 
-## Parquet and unified file owners
+## Explicit CSV and Parquet streams
 
-`CSV` and `Parquet` expose `open_read`, `open_write`, batch operations, `schema`
-and `close`, with one active session per owner. Parquet uses Arrow's native
-batch reader and buffered writer, not a whole-file Table or Python subprocess.
-The runtime owns the parent Parquet reader across C stream exports and checks
-footer finalization. Supported recursive types retain Arrow metadata;
-unsupported types and implicit temporal coercion are rejected. See
+`CSVStream` and `ParquetStream` expose `open_read`, `open_write`, batch
+operations, `schema` and `close`, with one active session per owner. Parquet
+uses Arrow's native batch reader and buffered writer, not a whole-file Table or
+Python subprocess. The runtime owns the parent Parquet reader across C stream
+exports and checks footer finalization. Supported recursive types retain Arrow
+metadata; unsupported types and implicit temporal coercion are rejected. See
 [Parquet files and DataFrames](arx/parquet.md) for the precise contract.
 
 The `record_batch` runtime links `libarrow`; the dependent `parquet` feature
@@ -392,9 +392,9 @@ libraries or assume an unversioned `-lparquet` symlink exists.
 pushdown, Hive datasets, checked temporal normalization, codecs, local atomic
 replacement/rewrite append, encrypted snapshot datasets, nullable write-schema
 evolution, fsync durability and cooperating-writer exclusion. Rich recursive
-schemas cross the existing opaque native handles and Arrow C Data boundary. The
-unified `CSV` replaces the removed `CSVReader`/`CSVWriter` classes; see the
-[migration notes](arx/csv.md#migrating-the-split-api).
+schemas cross the existing opaque native handles and Arrow C Data boundary.
+`CSVStream` and `ParquetStream` name the incremental session APIs explicitly;
+use the module-level `read_*` / `write_*` functions for whole DataFrames.
 
 ## Dedicated file-format APIs and table interchange
 

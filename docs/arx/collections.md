@@ -91,8 +91,8 @@ Rules:
 Use `read_csv` / `write_csv` from `stdlib.csv` and `read_parquet` /
 `write_parquet` from `stdlib.parquet` for file I/O. Reads return independently
 owned runtime-schema frames; writes borrow frames and check finalization. No
-format-specific DataFrame methods or `to_*` aliases are added. `CSV` and
-`Parquet` in those modules support explicit streaming via `frame()` and
+format-specific DataFrame methods or `to_*` aliases are added. `CSVStream` and
+`ParquetStream` in those modules support explicit streaming via `frame()` and
 `write(frame)`.
 
 `Schema`, `BatchBuilder`, `RecordBatch` and IPC remain in `stdlib.arrow`.

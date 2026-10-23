@@ -306,8 +306,9 @@ these bindings merely by declaring matching handle type names.
 
 ## Tabular standard-library modules
 
-- `stdlib.csv`: `read_csv`, `write_csv`, and the unified streaming `CSV` owner.
-- `stdlib.parquet`: `read_parquet`, `write_parquet`, `Parquet`,
+- `stdlib.csv`: `read_csv`, `write_csv`, and the unified streaming `CSVStream`
+  owner.
+- `stdlib.parquet`: `read_parquet`, `write_parquet`, `ParquetStream`,
   `ParquetOptions`, `ParquetFilter`, and `where`.
 - `stdlib.arrow`: canonical shared `Schema`, `RecordBatch`, `BatchBuilder`, IPC
   and Arrow interoperability.
