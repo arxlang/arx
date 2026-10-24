@@ -139,6 +139,8 @@ def execute_boolean(
     builder = Builder()
     llvm_module = llvm.parse_assembly(builder.translate(module))
     llvm_module.verify()
+    # The host needs a context even when the function needs no native calls.
+    builder.translator.activate_runtime_feature("exceptions")
     root = Path(__file__).resolve().parents[3] / ".tmp" / "arxjit-exceptions"
     root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=root) as temporary:
@@ -961,6 +963,24 @@ def test_an_arithmetic_operand_is_typed_from_its_own_operands() -> None:
     assert isinstance(returned, astx.BinaryOp)
     assert isinstance(returned.lhs, astx.BinaryOp)
     assert isinstance(returned.lhs.rhs, astx.LiteralFloat64)
+
+
+@pytest.mark.parametrize("expected", [False, True])
+def test_execution_host_provides_context_for_runtime_free_function(
+    expected: bool,
+) -> None:
+    """
+    title: The execution host supplies its own native context dependency.
+    parameters:
+      expected:
+        type: bool
+    """
+    source = f"def sample():\n    return {expected}\n"
+    module = _module_from_source(source, bool_())
+    builder = Builder()
+    llvm.parse_assembly(builder.translate(module)).verify()
+    assert builder.translator.runtime_features.native_artifacts() == ()
+    assert execute_boolean(module, "sample__sample") is expected
 
 
 @pytest.mark.parametrize("expression", ["1 / 2 > 0", "3 / 2 == 1.5"])
