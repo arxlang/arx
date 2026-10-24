@@ -153,6 +153,8 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
     """
     from arx.builtin_files import needs_file_builtin  # noqa: PLC0415
 
+    if module.name == arx_builtins.BUILTIN_EXCEPTION_MODULE:
+        return module
     needs_file = needs_file_builtin(module)
     implicit_imports = arx_builtins.get_ambient_builtin_imports(module.name)
     missing_imports: list[astx.ImportFromStmt] = []
@@ -170,7 +172,10 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
             and not _has_top_level_binding_name(module, alias.name)
         )
         if not names:
-            if module_name != arx_builtins.BUILTIN_FILE_MODULE:
+            if module_name not in {
+                arx_builtins.BUILTIN_FILE_MODULE,
+                arx_builtins.BUILTIN_EXCEPTION_MODULE,
+            }:
                 continue
             if any(
                 (
@@ -184,8 +189,8 @@ def inject_ambient_builtin_imports(module: astx.Module) -> astx.Module:
                 for node in module.nodes
             ):
                 continue
-        # An empty import still records the canonical type dependency when
-        # a user declaration shadows the ambient File binding.
+        # Empty imports retain native type capabilities even when user
+        # declarations shadow every ambient binding from the builtin module.
         aliases = [astx.AliasExpr(name) for name in names]
         missing_imports.append(
             astx.ImportFromStmt(
@@ -664,12 +669,20 @@ class FileImportResolver:
         builtin_asset = arx_builtins.load_builtin_module(requested_specifier)
         ArxIO.string_to_buffer(builtin_asset.source)
         file_builtin = requested_specifier == arx_builtins.BUILTIN_FILE_MODULE
+        exception_builtin = (
+            requested_specifier == arx_builtins.BUILTIN_EXCEPTION_MODULE
+        )
+        builtin_types: dict[str, astx.DataType] = {}
+        if file_builtin:
+            builtin_types["NativeFileHandle"] = astx.FileType()
+        if exception_builtin:
+            builtin_types["NativeExceptionRecord"] = astx.OpaqueHandleType(
+                "irx_exception_info"
+            )
         module_ast = Parser().parse(
             Lexer().lex(),
             requested_specifier,
-            builtin_types={"NativeFileHandle": astx.FileType()}
-            if file_builtin
-            else None,
+            builtin_types=builtin_types or None,
         )
         module_ast = inject_ambient_builtin_imports(module_ast)
         return ParsedModule(
@@ -677,6 +690,11 @@ class FileImportResolver:
             ast=module_ast,
             display_name=requested_specifier,
             origin=builtin_asset.origin,
+            exception_classes=tuple(
+                node
+                for node in module_ast.nodes
+                if exception_builtin and isinstance(node, astx.ClassDefStmt)
+            ),
             native_file_class=(
                 next(
                     node

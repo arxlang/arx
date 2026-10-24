@@ -81,8 +81,8 @@ def lower_table_io(
         returns:
           type: ir.Value
         """
-        return builder.call(
-            visitor.require_runtime_symbol(feature, name), args
+        return visitor.checked_native_call(
+            node, visitor.require_runtime_symbol(feature, name), args
         )
 
     # All explicitly supplied operands run once, in source order, before
@@ -180,6 +180,9 @@ def lower_table_io(
         prefix + ("copy" if parquet else "new"),
         [values.get("options", null)] if parquet else [],
     )
+    options_cleanup = visitor.track_native_handle(
+        node, feature, prefix + "destroy", options
+    )
     for argument in plan.arguments:
         name = argument.name
         if name in {"path", "frame", "schema", "options"}:
@@ -224,8 +227,8 @@ def lower_table_io(
     if parquet:
         args.append(ir.Constant(ir.IntType(32), int("options" not in values)))
     result = invoke(feature, "irx_rb_api_" + operation, args)
-    invoke(feature, prefix + "destroy", [options])
     if reading:
         visitor.arrow_temporary(node, result)
         visitor.result_stack.append(result)
+    visitor.release_native_handle(options_cleanup)
     return True

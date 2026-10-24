@@ -331,8 +331,13 @@ def test_struct_parameter_by_value_is_supported(
 
     ir_text = builder.translate(module)
 
-    assert 'define i32 @"main__read_x"(%"main__Point" %"p")' in ir_text
-    assert 'call i32 @"main__read_x"(%"main__Point" ' in ir_text
+    assert (
+        'define i32 @"main__read_x"(i8* %"context", '
+        '%"main__Point" %"p", i32* %"result_out")' in ir_text
+    )
+    assert (
+        'call i32 @"main__read_x"(i8* %"context", %"main__Point" ' in ir_text
+    )
     assert_ir_parses(ir_text)
 
 
@@ -377,9 +382,16 @@ def test_struct_return_by_value_and_assignment_from_call(
 
     ir_text = builder.translate(module)
 
-    assert 'define %"main__Point" @"main__make_point"()' in ir_text
-    assert 'call %"main__Point" @"main__make_point"()' in ir_text
-    assert 'store %"main__Point" %"calltmp", %"main__Point"* %"p"' in ir_text
+    assert (
+        'define i32 @"main__make_point"(i8* %"context", '
+        '%"main__Point"* %"result_out")' in ir_text
+    )
+    assert (
+        'call i32 @"main__make_point"(i8* %"context", '
+        '%"main__Point"* %"call.result")' in ir_text
+    )
+    assert 'load %"main__Point", %"main__Point"* %"call.result"' in ir_text
+    assert "call.success" in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -443,7 +455,10 @@ def test_nested_struct_return_by_value_is_supported(
     ir_text = builder.translate(module)
 
     assert '%"main__Container" = type {%"main__Payload", i1}' in ir_text
-    assert 'define %"main__Container" @"main__make_outer"()' in ir_text
+    assert (
+        'define i32 @"main__make_outer"(i8* %"context", '
+        '%"main__Container"* %"result_out")' in ir_text
+    )
     assert_ir_parses(ir_text)
 
 

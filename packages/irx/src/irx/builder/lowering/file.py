@@ -2,7 +2,7 @@
 title: Lower semantically resolved single-owner file operations.
 """
 
-from typing import cast
+from typing import Any, cast
 
 import astx
 
@@ -70,11 +70,9 @@ class FileVisitorMixin(VisitorMixinBase):
           cleanup_temporaries:
             type: bool
         """
-        if self.emitting_failure_cleanup:
-            return
         function = self._llvm.ir_builder.function
-        fail = function.append_basic_block("file.fail")
-        success = function.append_basic_block("file.ok")
+        fail = function.append_basic_block("native.fail")
+        success = function.append_basic_block("native.ok")
         ok = self._llvm.ir_builder.icmp_signed(
             "==",
             status,
@@ -82,43 +80,65 @@ class FileVisitorMixin(VisitorMixinBase):
         )
         self._llvm.ir_builder.cbranch(ok, success, fail)
         self._llvm.ir_builder.position_at_end(fail)
-        if cleanup_temporaries:
-            # Do not replace the original failure with a cleanup error.
-            self.emitting_failure_cleanup = True
-            try:
-                for cleanup in reversed(self.cleanup_stack):
-                    if cleanup.owner_symbol_id is None:
-                        cleanup.emitter()
-            finally:
-                self.emitting_failure_cleanup = False
-        for instance in reversed(self.class_construction_stack):
-            rollback_error = self.file_error_buffer()
-            release = self.require_runtime_symbol("class", "irx_class_release")
-            pointer = instance
-            if pointer.type != self._llvm.INT8_TYPE.as_pointer():
-                pointer = self._llvm.ir_builder.bitcast(
-                    pointer, self._llvm.INT8_TYPE.as_pointer()
-                )
-            self._llvm.ir_builder.call(release, [pointer, rollback_error])
-        failure = self.require_runtime_symbol("errors", "__arx_runtime_fail")
-        self._llvm.ir_builder.call(
-            failure,
-            [
-                cast(ControlFlowVisitorMixin, self)._constant_c_string_pointer(
-                    code, name_hint="file_code"
-                ),
-                cast(ControlFlowVisitorMixin, self)._constant_c_string_pointer(
-                    cast(ControlFlowVisitorMixin, self)._assert_source_name(
-                        node
-                    ),
-                    name_hint="file_source",
-                ),
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.line),
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.col),
-                error,
-            ],
+        pending = cast(Any, self).exception_call(
+            "pending", [cast(Any, self).context_value()]
         )
-        self._llvm.ir_builder.unreachable()
+        existing = function.append_basic_block("native.pending")
+        materialize = function.append_basic_block("native.error")
+        self._llvm.ir_builder.cbranch(
+            self._llvm.ir_builder.icmp_signed(
+                "!=", pending, ir.Constant(ir.IntType(32), 0)
+            ),
+            existing,
+            materialize,
+        )
+        self._llvm.ir_builder.position_at_end(existing)
+        cast(Any, self).emit_exception_transfer(node)
+        self._llvm.ir_builder.position_at_end(materialize)
+        if code == "ARX-RUNTIME-FILE-001":
+            os_error = function.append_basic_block("native.oserror")
+            value_error = function.append_basic_block("native.valueerror")
+            self._llvm.ir_builder.cbranch(
+                self._llvm.ir_builder.icmp_signed(
+                    ">=", status, ir.Constant(ir.IntType(32), 65536)
+                ),
+                os_error,
+                value_error,
+            )
+            self._llvm.ir_builder.position_at_end(os_error)
+            cast(Any, self).raise_runtime_exception(
+                node, "OSError", error, code=code
+            )
+            self._llvm.ir_builder.position_at_end(value_error)
+            overflow = function.append_basic_block("native.overflow")
+            other = function.append_basic_block("native.filevalue")
+            self._llvm.ir_builder.cbranch(
+                self._llvm.ir_builder.icmp_signed(
+                    "==", status, ir.Constant(ir.IntType(32), 5)
+                ),
+                overflow,
+                other,
+            )
+            self._llvm.ir_builder.position_at_end(overflow)
+            cast(Any, self).raise_runtime_exception(
+                node, "OverflowError", error, code=code
+            )
+            self._llvm.ir_builder.position_at_end(other)
+            allocation = self._llvm.ir_builder.icmp_signed(
+                "==", status, ir.Constant(ir.IntType(32), 4)
+            )
+            cast(Any, self).fatal_status(
+                node,
+                self._llvm.ir_builder.neg(
+                    self._llvm.ir_builder.zext(allocation, ir.IntType(32))
+                ),
+            )
+        cast(Any, self).raise_runtime_exception(
+            node,
+            "ValueError" if "FILE" in code else "RuntimeError",
+            error,
+            code=code,
+        )
         self._llvm.ir_builder.position_at_end(success)
 
     def file_cleanup(

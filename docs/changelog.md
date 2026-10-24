@@ -3,6 +3,25 @@
 
 ## Unreleased
 
+### Python-inspired exceptions (breaking)
+
+- `raise`, ordered `except` handlers, `else`, and `finally` now propagate across
+  generated calls. Builtin and single-inheritance user exception classes use
+  ordinary nominal identities; causes and dynamic bare re-raise are supported.
+- Checked numeric, assertion, bounds, file, and Arrow/CSV/Parquet failures are
+  catchable. Finalizers and owned-resource cleanup run before propagation;
+  implicit cleanup preserves a primary failure and records secondary failures.
+- `try`, `except`, `finally`, and `raise` are reserved keywords. ASTx now models
+  cause/else clauses and qualified handler references; `ThrowStmt.get_struct()`
+  names its children. Empty handler type lists are not catch-all handlers.
+- Generated functions and runtime callbacks use a context/status/result-slot
+  ABI; rebuild all native producers and consumers together. Ordinary external
+  C signatures remain unchanged. Uncaught failures use structured exception
+  reports; ArxPy exposes them as execution-result data, not Python exceptions.
+- Protected regions spanning generator suspension, Python traceback mutation,
+  exception groups, asynchronous exceptions, and ArxJIT exception lowering
+  remain unsupported. See the [support boundary](support-matrix.md#exception-capability-boundary).
+
 ### Checked numeric promotion (breaking)
 
 - Numeric promotion and implicit conversions are now lossless across the whole
@@ -34,8 +53,8 @@
 - `stdlib.math` scalar helpers now use a shared signed-integer template bound
   for `i8`, `i16`, `i32`, and `i64`, preserving the selected result type.
 - `stdlib.math.abs` on the selected type's minimum now fails checked arithmetic;
-  `clamp` with reversed bounds fails an assertion. Both failures remain fatal,
-  not catchable exceptions.
+  `clamp` with reversed bounds raises `AssertionError`; `abs` overflow raises
+  `OverflowError`. These failures can be handled by exception statements.
 
 ### Migration notes
 

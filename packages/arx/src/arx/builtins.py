@@ -11,6 +11,8 @@ from typing import Any, TypeAlias, cast
 import astx
 import astx as irx_astx
 
+from irx.analysis.exception_types import EXCEPTION_HIERARCHY
+
 Traversable: TypeAlias = Any
 
 BUILTIN_NAMESPACE = "builtins"
@@ -24,6 +26,9 @@ BUILTIN_ISINSTANCE = "isinstance"
 BUILTIN_OPEN = "open"
 BUILTIN_FILE = "File"
 BUILTIN_FILE_MODULE = "builtins.files"
+BUILTIN_EXCEPTION_MODULE = "builtins.exceptions"
+EXCEPTION_BUILTIN_NAMES = tuple(name for name, _ in EXCEPTION_HIERARCHY)
+
 BUILTIN_PRINT = "print"
 BUILTIN_RANGE = "range"
 BUILTIN_TYPE = "type"
@@ -72,11 +77,16 @@ class AmbientBuiltinBinding:
 _AMBIENT_BUILTIN_BINDINGS = (
     AmbientBuiltinBinding(name=BUILTIN_RANGE, module=_GENERATORS_MODULE),
     AmbientBuiltinBinding(name=BUILTIN_FILE, module=BUILTIN_FILE_MODULE),
+    *(
+        AmbientBuiltinBinding(name=name, module=BUILTIN_EXCEPTION_MODULE)
+        for name in EXCEPTION_BUILTIN_NAMES
+    ),
 )
 
 __all__ = [
     "BUILTIN_CAST",
     "BUILTIN_DATAFRAME",
+    "BUILTIN_EXCEPTION_MODULE",
     "BUILTIN_FILE",
     "BUILTIN_FILE_MODULE",
     "BUILTIN_ISINSTANCE",
@@ -86,6 +96,7 @@ __all__ = [
     "BUILTIN_RANGE",
     "BUILTIN_SOURCE_EXTENSION",
     "BUILTIN_TYPE",
+    "EXCEPTION_BUILTIN_NAMES",
     "AmbientBuiltinBinding",
     "BuiltinModuleAsset",
     "build_cast",
@@ -98,6 +109,7 @@ __all__ = [
     "is_builtin_module_specifier",
     "list_builtin_modules",
     "load_builtin_module",
+    "needs_exception_builtin",
     "resolve_builtin_resource",
 ]
 
@@ -437,3 +449,15 @@ def _split_module_name(module_name: str) -> tuple[str, ...]:
     ):
         raise LookupError(module_name)
     return tuple(module_name.split("."))
+
+
+def needs_exception_builtin(module: astx.Module) -> bool:
+    """
+    title: Require canonical exception identities for generated runtime guards.
+    parameters:
+      module:
+        type: astx.Module
+    returns:
+      type: bool
+    """
+    return module.name != BUILTIN_EXCEPTION_MODULE

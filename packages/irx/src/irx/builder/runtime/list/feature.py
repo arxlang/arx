@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from llvmlite import ir
+from public import private
 
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
@@ -23,7 +24,7 @@ from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
     LIST_DESTROY_SYMBOL,
-    LIST_REQUIRE_OK_SYMBOL,
+    LIST_STATUS_MESSAGE_SYMBOL,
 )
 from irx.typecheck import typechecked
 
@@ -54,9 +55,9 @@ def build_list_runtime_feature() -> RuntimeFeature:
                 LIST_DESTROY_SYMBOL,
                 _declare_list_destroy,
             ),
-            LIST_REQUIRE_OK_SYMBOL: ExternalSymbolSpec(
-                LIST_REQUIRE_OK_SYMBOL,
-                _declare_list_require_ok,
+            LIST_STATUS_MESSAGE_SYMBOL: ExternalSymbolSpec(
+                LIST_STATUS_MESSAGE_SYMBOL,
+                declare_list_status_message,
             ),
         },
         artifacts=(
@@ -73,7 +74,7 @@ def build_list_runtime_feature() -> RuntimeFeature:
                 LIST_APPEND_SYMBOL,
                 LIST_AT_SYMBOL,
                 LIST_DESTROY_SYMBOL,
-                LIST_REQUIRE_OK_SYMBOL,
+                LIST_STATUS_MESSAGE_SYMBOL,
             ),
             "limitations": (
                 "scalar element storage only",
@@ -140,10 +141,11 @@ def _declare_list_at(visitor: VisitorProtocol) -> ir.Function:
       type: ir.Function
     """
     fn_type = ir.FunctionType(
-        visitor._llvm.INT8_TYPE.as_pointer(),
+        visitor._llvm.INT32_TYPE,
         [
             _list_llvm_type(visitor).as_pointer(),
             visitor._llvm.INT64_TYPE,
+            visitor._llvm.INT8_TYPE.as_pointer().as_pointer(),
         ],
     )
     return declare_external_function(
@@ -174,10 +176,11 @@ def _declare_list_destroy(visitor: VisitorProtocol) -> ir.Function:
     )
 
 
+@private
 @typechecked
-def _declare_list_require_ok(visitor: VisitorProtocol) -> ir.Function:
+def declare_list_status_message(visitor: VisitorProtocol) -> ir.Function:
     """
-    title: Declare the fail-closed dynamic-list status checker.
+    title: Declare the non-throwing status diagnostic accessor.
     parameters:
       visitor:
         type: VisitorProtocol
@@ -185,11 +188,11 @@ def _declare_list_require_ok(visitor: VisitorProtocol) -> ir.Function:
       type: ir.Function
     """
     fn_type = ir.FunctionType(
-        visitor._llvm.VOID_TYPE,
+        visitor._llvm.INT8_TYPE.as_pointer(),
         [visitor._llvm.INT32_TYPE],
     )
     return declare_external_function(
         visitor._llvm.module,
-        LIST_REQUIRE_OK_SYMBOL,
+        LIST_STATUS_MESSAGE_SYMBOL,
         fn_type,
     )

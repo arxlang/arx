@@ -751,11 +751,11 @@ statement over IRx class values:
 - semantic analysis resolves zero-argument instance methods named `__enter__`
   and `__exit__`
 - `__enter__` runs before the body
-- `__exit__` runs on normal fallthrough and before structured `return`, `break`,
-  or `continue` transfers leave the body
+- `__exit__` runs on normal fallthrough, exceptional propagation, and before
+  structured `return`, `break`, or `continue` transfers leave the body
 - an optional target binds the `__enter__` result for the with-body scope only
 - targets require `__enter__` to return a non-void value
-- the initial contract does not implement Python exception propagation or
+- the zero-argument exit contract does not implement Python's
   `__exit__(exc_type, exc_value, traceback)` suppression semantics
 
 Lowering consumes the resolved context-manager sidecar instead of rediscovering

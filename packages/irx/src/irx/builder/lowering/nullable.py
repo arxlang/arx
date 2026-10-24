@@ -183,7 +183,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                     valid,
                 ],
             )
-            self._check_arrow_status(status, "series_index")
+            self.check_arrow_status(node, status, "series_index")
             self.column_result(node, plan, bits, valid)
             return True
         if isinstance(node, astx.BinaryOp):
@@ -229,7 +229,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 valid,
             ],
         )
-        self._check_arrow_status(status, "column_compute")
+        self.check_arrow_status(node, status, "column_compute")
         if isinstance(plan.result, astx.SeriesType):
             column = builder.load(output)
             self.arrow_temporary(node, column)
@@ -302,7 +302,7 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
             self.require_runtime_symbol("dataframe", "irx_arrow_series_slice"),
             [column, *values, ir.Constant(ir.IntType(32), bounds), output],
         )
-        self._check_arrow_status(status, "series_slice")
+        self.check_arrow_status(node, status, "series_slice")
         value = self._llvm.ir_builder.load(output)
         self.arrow_temporary(node, value)
         self.result_stack.append(value)
@@ -361,4 +361,4 @@ class NullableVisitorMixin(DataFrameVisitorMixin):
                 ir.Constant(ir.IntType(32), int(source.nullable)),
             ],
         )
-        self._check_arrow_status(status, "series_set")
+        self.check_arrow_status(node, status, "series_set")

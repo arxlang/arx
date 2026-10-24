@@ -14,9 +14,9 @@ struct irx_file {
   int readable;
 };
 
-static int32_t irx_file_error(char* error, const char* message) {
+static int32_t irx_file_error(char* error, int32_t status, const char* message) {
   if (error != NULL) snprintf(error, IRX_FILE_ERROR_CAPACITY, "%s", message);
-  return 1;
+  return status;
 }
 
 static int32_t irx_file_system_error(char* error, const char* operation) {
@@ -24,7 +24,7 @@ static int32_t irx_file_system_error(char* error, const char* operation) {
   if (error != NULL)
     snprintf(error, IRX_FILE_ERROR_CAPACITY, "%s: %s", operation,
              saved_errno ? strerror(saved_errno) : "I/O failure");
-  return 1;
+  return IRX_FILE_OS_ERROR | (saved_errno & 65535);
 }
 
 static void irx_file_clear_error(char* error) {
@@ -43,7 +43,7 @@ static int32_t irx_file_utf8(const unsigned char* data, size_t length,
     size_t continuation;
     unsigned char first = data[i++];
     if (first == 0)
-      return irx_file_error(error, "text containing NUL is unsupported");
+      return irx_file_error(error, IRX_FILE_ENCODING, "text containing NUL is unsupported");
     if (first < 0x80) {
       cp = first;
       continuation = 0;
@@ -61,19 +61,19 @@ static int32_t irx_file_utf8(const unsigned char* data, size_t length,
       continuation = 3;
       minimum = 0x10000;
     } else
-      return irx_file_error(error, "invalid UTF-8 text");
+      return irx_file_error(error, IRX_FILE_ENCODING, "invalid UTF-8 text");
     if (continuation > length - i)
-      return irx_file_error(error, "incomplete UTF-8 text");
+      return irx_file_error(error, IRX_FILE_ENCODING, "incomplete UTF-8 text");
     while (continuation-- > 0) {
       unsigned char next = data[i++];
       if ((next & 0xc0) != 0x80)
-        return irx_file_error(error, "invalid UTF-8 text");
+        return irx_file_error(error, IRX_FILE_ENCODING, "invalid UTF-8 text");
       cp = (cp << 6) | (next & 0x3f);
     }
     if (cp < minimum || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff))
-      return irx_file_error(error, "invalid UTF-8 code point");
+      return irx_file_error(error, IRX_FILE_ENCODING, "invalid UTF-8 code point");
     if (chars == INT64_MAX)
-      return irx_file_error(error, "text character count overflow");
+      return irx_file_error(error, IRX_FILE_OVERFLOW, "text character count overflow");
     chars++;
   }
   *count = chars;
@@ -87,7 +87,7 @@ int32_t irx_file_open(const char* path, const char* mode, irx_file** out,
   irx_file_clear_error(error);
   if (out != NULL) *out = NULL;
   if (out == NULL || path == NULL || mode == NULL)
-    return irx_file_error(error, "open requires a path, mode, and output");
+    return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "open requires a path, mode, and output");
   if (!strcmp(mode, "r") || !strcmp(mode, "rt"))
     canonical[0] = 'r';
   else if (!strcmp(mode, "w") || !strcmp(mode, "wt"))
@@ -95,16 +95,15 @@ int32_t irx_file_open(const char* path, const char* mode, irx_file** out,
   else if (!strcmp(mode, "a") || !strcmp(mode, "at"))
     canonical[0] = 'a';
   else
-    return irx_file_error(error,
-                          "open supports only r, w, a, rt, wt, at modes");
+    return irx_file_error(error, IRX_FILE_MODE, "open supports only r, w, a, rt, wt, at modes");
   handle = malloc(sizeof(*handle));
-  if (handle == NULL) return irx_file_error(error, "file allocation failed");
+  if (handle == NULL) return irx_file_error(error, IRX_FILE_ALLOCATION, "file allocation failed");
   errno = 0;
   handle->stream = fopen(path, canonical);
   if (handle->stream == NULL) {
-    irx_file_system_error(error, "open failed");
+    int32_t status = irx_file_system_error(error, "open failed");
     free(handle);
-    return 1;
+    return status;
   }
   handle->readable = canonical[0] == 'r';
   *out = handle;
@@ -117,25 +116,25 @@ int32_t irx_file_read(irx_file* handle, char** out, char* error) {
   char* buffer;
   irx_file_clear_error(error);
   if (out != NULL) *out = NULL;
-  if (out == NULL) return irx_file_error(error, "read requires an output");
+  if (out == NULL) return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "read requires an output");
   if (handle == NULL || handle->stream == NULL)
-    return irx_file_error(error, "read on a closed file");
-  if (!handle->readable) return irx_file_error(error, "file is not readable");
+    return irx_file_error(error, IRX_FILE_CLOSED, "read on a closed file");
+  if (!handle->readable) return irx_file_error(error, IRX_FILE_MODE, "file is not readable");
   buffer = malloc(capacity);
-  if (buffer == NULL) return irx_file_error(error, "read allocation failed");
+  if (buffer == NULL) return irx_file_error(error, IRX_FILE_ALLOCATION, "read allocation failed");
   for (;;) {
     size_t received;
     if (capacity - used <= 1) {
       char* grown;
       if (capacity > SIZE_MAX / 2) {
         free(buffer);
-        return irx_file_error(error, "read size overflow");
+        return irx_file_error(error, IRX_FILE_OVERFLOW, "read size overflow");
       }
       capacity *= 2;
       grown = realloc(buffer, capacity);
       if (grown == NULL) {
         free(buffer);
-        return irx_file_error(error, "read allocation failed");
+        return irx_file_error(error, IRX_FILE_ALLOCATION, "read allocation failed");
       }
       buffer = grown;
     }
@@ -143,19 +142,19 @@ int32_t irx_file_read(irx_file* handle, char** out, char* error) {
     received = fread(buffer + used, 1, capacity - used - 1, handle->stream);
     used += received;
     if (ferror(handle->stream)) {
-      irx_file_system_error(error, "read failed");
+      int32_t status = irx_file_system_error(error, "read failed");
       free(buffer);
-      return 1;
+      return status;
     }
     if (feof(handle->stream)) break;
     if (received == 0) {
       free(buffer);
-      return irx_file_error(error, "read made no progress");
+      return irx_file_error(error, IRX_FILE_NO_PROGRESS, "read made no progress");
     }
   }
-  if (irx_file_utf8((const unsigned char*)buffer, used, &count, error)) {
-    free(buffer);
-    return 1;
+  {
+    int32_t status = irx_file_utf8((const unsigned char*)buffer, used, &count, error);
+    if (status) { free(buffer); return status; }
   }
   for (source = 0, target = 0; source < used; source++) {
     if (buffer[source] == '\r') {
@@ -176,13 +175,15 @@ int32_t irx_file_write(irx_file* handle, const char* text, int64_t* out,
   irx_file_clear_error(error);
   if (out != NULL) *out = 0;
   if (out == NULL || text == NULL)
-    return irx_file_error(error, "write requires text and output");
+    return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "write requires text and output");
   if (handle == NULL || handle->stream == NULL)
-    return irx_file_error(error, "write on a closed file");
-  if (handle->readable) return irx_file_error(error, "file is not writable");
+    return irx_file_error(error, IRX_FILE_CLOSED, "write on a closed file");
+  if (handle->readable) return irx_file_error(error, IRX_FILE_MODE, "file is not writable");
   length = strlen(text);
-  if (irx_file_utf8((const unsigned char*)text, length, &count, error))
-    return 1;
+  {
+    int32_t status = irx_file_utf8((const unsigned char*)text, length, &count, error);
+    if (status) return status;
+  }
   errno = 0;
   if (fwrite(text, 1, length, handle->stream) != length)
     return irx_file_system_error(error, "write failed");
@@ -193,7 +194,7 @@ int32_t irx_file_write(irx_file* handle, const char* text, int64_t* out,
 int32_t irx_file_flush(irx_file* handle, char* error) {
   irx_file_clear_error(error);
   if (handle == NULL || handle->stream == NULL)
-    return irx_file_error(error, "flush on a closed file");
+    return irx_file_error(error, IRX_FILE_CLOSED, "flush on a closed file");
   /* fflush on an input stream is not portable C; there is nothing to write. */
   if (handle->readable) return 0;
   errno = 0;
@@ -205,7 +206,7 @@ int32_t irx_file_flush(irx_file* handle, char* error) {
 int32_t irx_file_close(irx_file* handle, char* error) {
   FILE* stream;
   irx_file_clear_error(error);
-  if (handle == NULL) return irx_file_error(error, "close requires a file");
+  if (handle == NULL) return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "close requires a file");
   stream = handle->stream;
   if (stream == NULL) return 0;
   handle->stream = NULL;

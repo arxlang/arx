@@ -1,3 +1,4 @@
+#include "irx_arrow_status.h"
 // Copyright IRx contributors.
 
 #include "irx_arrow_runtime.h"
@@ -19,6 +20,7 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -259,15 +261,29 @@ int set_error(int code, const char* format, ...) {
   va_start(args, format);
   std::vsnprintf(last_error, sizeof(last_error), format, args);
   va_end(args);
-  return code;
+  switch (code) {
+    case EINVAL: return IRX_ERR_INVALID;
+    case ERANGE: return IRX_ERR_OOB;
+    case EOVERFLOW: return IRX_ERR_OVERFLOW;
+    case ENOMEM: return IRX_ERR_ALLOC;
+    case EIO: return IRX_ERR_IO;
+    default: return code;
+  }
 }
 
 int set_arrow_error(int code, const char* context, const arrow::Status& status) {
-  return set_error(code, "%s: %s", context, status.ToString().c_str());
+  (void)code;
+  return set_error(irx::record_batch_status(status), "%s: %s", context,
+                   status.ToString().c_str());
 }
 
 int set_exception_error(const char* context, const std::exception& exc) {
-  return set_error(EINVAL, "%s: %s", context, exc.what());
+    int code = IRX_ERR_ARROW;
+  if (dynamic_cast<const std::bad_alloc*>(&exc)) code = IRX_ERR_ALLOC;
+  else if (dynamic_cast<const std::out_of_range*>(&exc)) code = IRX_ERR_OOB;
+  else if (dynamic_cast<const std::invalid_argument*>(&exc)) code = IRX_ERR_INVALID;
+  else if (dynamic_cast<const std::overflow_error*>(&exc)) code = IRX_ERR_OVERFLOW;
+  return set_error(code, "%s: %s", context, exc.what());
 }
 
 const TypeSpec* type_spec_from_type_id(int32_t type_id) {
@@ -482,7 +498,7 @@ template <typename Builder, typename Value>
 int append_typed_value(arrow::ArrayBuilder* builder, Value value) {
   auto* typed_builder = dynamic_cast<Builder*>(builder);
   if (typed_builder == nullptr) {
-    return set_error(EINVAL, "array builder element type mismatch");
+    return set_error(IRX_ERR_TYPE, "array builder element type mismatch");
   }
   const arrow::Status status = typed_builder->Append(value);
   if (!status.ok()) {
@@ -504,7 +520,7 @@ int append_int_value(arrow::ArrayBuilder* builder, int32_t type_id, int64_t valu
     case IRX_ARROW_TYPE_BOOL:
       return append_typed_value<arrow::BooleanBuilder>(builder, value != 0);
     default:
-      return set_error(EINVAL, "array builder expected a signed integer element type");
+      return set_error(IRX_ERR_TYPE, "array builder expected a signed integer element type");
   }
 }
 
@@ -522,7 +538,7 @@ int append_uint_value(
     case IRX_ARROW_TYPE_UINT64:
       return append_typed_value<arrow::UInt64Builder>(builder, static_cast<uint64_t>(value));
     default:
-      return set_error(EINVAL, "array builder expected an unsigned integer element type");
+      return set_error(IRX_ERR_TYPE, "array builder expected an unsigned integer element type");
   }
 }
 
@@ -536,7 +552,7 @@ int append_double_value(
     case IRX_ARROW_TYPE_FLOAT64:
       return append_typed_value<arrow::DoubleBuilder>(builder, value);
     default:
-      return set_error(EINVAL, "array builder expected a floating element type");
+      return set_error(IRX_ERR_TYPE, "array builder expected a floating element type");
   }
 }
 
@@ -801,6 +817,7 @@ extern "C" {
 int irx_arrow_schema_import_copy(
     const ArrowSchema* schema,
     irx_arrow_schema_handle** out_schema) {
+  try {
   clear_error();
   try {
     if (out_schema == nullptr) {
@@ -827,11 +844,18 @@ int irx_arrow_schema_import_copy(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_schema_import_copy", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_schema_import_copy", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_schema_export(
     const irx_arrow_schema_handle* schema,
     ArrowSchema* out_schema) {
+  try {
   clear_error();
   try {
     if (schema == nullptr) {
@@ -849,6 +873,12 @@ int irx_arrow_schema_export(
     return kArrowOk;
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_schema_export", exc);
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_schema_export", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
@@ -871,6 +901,7 @@ int32_t irx_arrow_schema_is_nullable(const irx_arrow_schema_handle* schema) {
 }
 
 int irx_arrow_schema_retain(irx_arrow_schema_handle* schema) {
+  try {
   clear_error();
   if (schema == nullptr) {
     return kArrowOk;
@@ -880,6 +911,12 @@ int irx_arrow_schema_retain(irx_arrow_schema_handle* schema) {
   }
   schema->refcount += 1;
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_schema_retain", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 void irx_arrow_schema_release(irx_arrow_schema_handle* schema) {
@@ -895,6 +932,7 @@ void irx_arrow_schema_release(irx_arrow_schema_handle* schema) {
 int irx_arrow_array_builder_new(
     int32_t type_id,
     irx_arrow_array_builder_handle** out_builder) {
+  try {
   clear_error();
   try {
     if (out_builder == nullptr) {
@@ -923,11 +961,18 @@ int irx_arrow_array_builder_new(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_builder_new", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_new", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_append_null(
     irx_arrow_array_builder_handle* builder,
     int64_t count) {
+  try {
   clear_error();
   if (builder == nullptr) {
     return set_error(EINVAL, "builder must not be NULL");
@@ -940,52 +985,94 @@ int irx_arrow_array_builder_append_null(
     return set_arrow_error(EINVAL, "Arrow null append failed", status);
   }
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_append_null", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_append_int(
     irx_arrow_array_builder_handle* builder,
     int64_t value) {
+  try {
   clear_error();
   if (builder == nullptr) {
     return set_error(EINVAL, "builder must not be NULL");
   }
   return append_int_value(builder->builder.get(), builder->type_id, value);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_append_int", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_append_uint(
     irx_arrow_array_builder_handle* builder,
     uint64_t value) {
+  try {
   clear_error();
   if (builder == nullptr) {
     return set_error(EINVAL, "builder must not be NULL");
   }
   return append_uint_value(builder->builder.get(), builder->type_id, value);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_append_uint", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_append_double(
     irx_arrow_array_builder_handle* builder,
     double value) {
+  try {
   clear_error();
   if (builder == nullptr) {
     return set_error(EINVAL, "builder must not be NULL");
   }
   return append_double_value(builder->builder.get(), builder->type_id, value);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_append_double", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_int32_new(
     irx_arrow_array_builder_handle** out_builder) {
+  try {
   return irx_arrow_array_builder_new(IRX_ARROW_TYPE_INT32, out_builder);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_int32_new", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_append_int32(
     irx_arrow_array_builder_handle* builder,
     int32_t value) {
+  try {
   return irx_arrow_array_builder_append_int(builder, value);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_append_int32", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_builder_finish(
     irx_arrow_array_builder_handle* builder,
     irx_arrow_array_handle** out_array) {
+  try {
   clear_error();
   try {
     if (builder == nullptr) {
@@ -1023,6 +1110,12 @@ int irx_arrow_array_builder_finish(
     return set_error(ENOMEM, "failed to allocate Arrow array");
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_builder_finish", exc);
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_builder_finish", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
@@ -1098,6 +1191,7 @@ int32_t irx_arrow_array_can_borrow_buffer_view(
 int irx_arrow_array_schema_copy(
     const irx_arrow_array_handle* array,
     irx_arrow_schema_handle** out_schema) {
+  try {
   clear_error();
   try {
     if (array == nullptr || !array->array) {
@@ -1125,12 +1219,19 @@ int irx_arrow_array_schema_copy(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_schema_copy", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_schema_copy", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_export(
     const irx_arrow_array_handle* array,
     ArrowArray* out_array,
     ArrowSchema* out_schema) {
+  try {
   clear_error();
   try {
     if (array == nullptr || !array->array) {
@@ -1150,19 +1251,33 @@ int irx_arrow_array_export(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_export", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_export", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_import(
     const ArrowArray* array,
     const ArrowSchema* schema,
     irx_arrow_array_handle** out_array) {
+  try {
   return irx_arrow_array_import_copy(array, schema, out_array);
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_import", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_import_copy(
     const ArrowArray* array,
     const ArrowSchema* schema,
     irx_arrow_array_handle** out_array) {
+  try {
   clear_error();
   try {
     if (array == nullptr || schema == nullptr) {
@@ -1200,12 +1315,19 @@ int irx_arrow_array_import_copy(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_import_copy", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_import_copy", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_import_move(
     ArrowArray* array,
     ArrowSchema* schema,
     irx_arrow_array_handle** out_array) {
+  try {
   clear_error();
   try {
     if (array == nullptr || schema == nullptr) {
@@ -1249,6 +1371,12 @@ int irx_arrow_array_import_move(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_array_import_move", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_import_move", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_validity_bitmap(
@@ -1256,6 +1384,7 @@ int irx_arrow_array_validity_bitmap(
     const void** out_data,
     int64_t* out_offset_bits,
     int64_t* out_length_bits) {
+  try {
   clear_error();
   if (array == nullptr || !array->array) {
     return set_error(EINVAL, "array must not be NULL");
@@ -1273,11 +1402,18 @@ int irx_arrow_array_validity_bitmap(
     *out_offset_bits = array->array->offset();
   }
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_validity_bitmap", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_borrow_buffer_view(
     const irx_arrow_array_handle* array,
     irx_buffer_view* out_view) {
+  try {
   clear_error();
   if (array == nullptr || !array->array) {
     return set_error(EINVAL, "array must not be NULL");
@@ -1321,9 +1457,16 @@ int irx_arrow_array_borrow_buffer_view(
     out_view->flags |= IRX_BUFFER_FLAG_VALIDITY_BITMAP;
   }
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_borrow_buffer_view", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_array_retain(irx_arrow_array_handle* array) {
+  try {
   clear_error();
   if (array == nullptr) {
     return kArrowOk;
@@ -1333,6 +1476,12 @@ int irx_arrow_array_retain(irx_arrow_array_handle* array) {
   }
   array->refcount += 1;
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_array_retain", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 void irx_arrow_array_release(irx_arrow_array_handle* array) {
@@ -1351,6 +1500,7 @@ int irx_arrow_tensor_builder_new(
     const int64_t* shape,
     const int64_t* strides,
     irx_arrow_tensor_builder_handle** out_builder) {
+  try {
   clear_error();
   try {
     if (out_builder == nullptr) {
@@ -1407,11 +1557,18 @@ int irx_arrow_tensor_builder_new(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_tensor_builder_new", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_builder_new", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_tensor_builder_append_int(
     irx_arrow_tensor_builder_handle* builder,
     int64_t value) {
+  try {
   clear_error();
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
@@ -1434,13 +1591,20 @@ int irx_arrow_tensor_builder_append_int(
       return kArrowOk;
     default:
       builder->values_appended -= 1;
-      return set_error(EINVAL, "tensor builder expected a signed integer element type");
+      return set_error(IRX_ERR_TYPE, "tensor builder expected a signed integer element type");
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_builder_append_int", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
 int irx_arrow_tensor_builder_append_uint(
     irx_arrow_tensor_builder_handle* builder,
     uint64_t value) {
+  try {
   clear_error();
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
@@ -1463,13 +1627,20 @@ int irx_arrow_tensor_builder_append_uint(
       return kArrowOk;
     default:
       builder->values_appended -= 1;
-      return set_error(EINVAL, "tensor builder expected an unsigned integer element type");
+      return set_error(IRX_ERR_TYPE, "tensor builder expected an unsigned integer element type");
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_builder_append_uint", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
 int irx_arrow_tensor_builder_append_double(
     irx_arrow_tensor_builder_handle* builder,
     double value) {
+  try {
   clear_error();
   uint8_t* slot = nullptr;
   const int code = tensor_builder_require_slot(builder, &slot);
@@ -1486,13 +1657,20 @@ int irx_arrow_tensor_builder_append_double(
       return kArrowOk;
     default:
       builder->values_appended -= 1;
-      return set_error(EINVAL, "tensor builder expected a floating element type");
+      return set_error(IRX_ERR_TYPE, "tensor builder expected a floating element type");
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_builder_append_double", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
 int irx_arrow_tensor_builder_finish(
     irx_arrow_tensor_builder_handle* builder,
     irx_arrow_tensor_handle** out_tensor) {
+  try {
   clear_error();
   try {
     if (builder == nullptr) {
@@ -1535,6 +1713,12 @@ int irx_arrow_tensor_builder_finish(
     return set_error(ENOMEM, "failed to allocate Arrow tensor handle");
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_tensor_builder_finish", exc);
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_builder_finish", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
@@ -1591,6 +1775,7 @@ const int64_t* irx_arrow_tensor_strides(const irx_arrow_tensor_handle* tensor) {
 int irx_arrow_tensor_borrow_buffer_view(
     const irx_arrow_tensor_handle* tensor,
     irx_buffer_view* out_view) {
+  try {
   clear_error();
   if (tensor == nullptr || !tensor->tensor) {
     return set_error(EINVAL, "tensor must not be NULL");
@@ -1616,9 +1801,16 @@ int irx_arrow_tensor_borrow_buffer_view(
     out_view->flags |= IRX_BUFFER_FLAG_F_CONTIGUOUS;
   }
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_borrow_buffer_view", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor) {
+  try {
   clear_error();
   if (tensor == nullptr) {
     return kArrowOk;
@@ -1628,6 +1820,12 @@ int irx_arrow_tensor_retain(irx_arrow_tensor_handle* tensor) {
   }
   tensor->refcount += 1;
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_tensor_retain", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 void irx_arrow_tensor_release(irx_arrow_tensor_handle* tensor) {
@@ -1645,6 +1843,7 @@ int irx_arrow_table_new_from_arrays(
     const char** names,
     irx_arrow_array_handle** arrays,
     irx_arrow_table_handle** out_table) {
+  try {
   clear_error();
   try {
     if (out_table == nullptr) {
@@ -1705,6 +1904,12 @@ int irx_arrow_table_new_from_arrays(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_table_new_from_arrays", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_new_from_arrays", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
@@ -1729,6 +1934,7 @@ int irx_arrow_table_column_by_name(
     const irx_arrow_table_handle* table,
     const char* name,
     irx_arrow_chunked_array_handle** out_column) {
+  try {
   clear_error();
   try {
     if (table == nullptr || !table->table) {
@@ -1758,12 +1964,19 @@ int irx_arrow_table_column_by_name(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_table_column_by_name", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_column_by_name", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_table_column_by_index(
     const irx_arrow_table_handle* table,
     int32_t index,
     irx_arrow_chunked_array_handle** out_column) {
+  try {
   clear_error();
   try {
     if (table == nullptr || !table->table) {
@@ -1774,7 +1987,7 @@ int irx_arrow_table_column_by_index(
     }
     *out_column = nullptr;
     if (index < 0 || index >= table->table->num_columns()) {
-      return set_error(EINVAL, "column index is out of bounds");
+      return set_error(IRX_ERR_OOB, "column index is out of bounds");
     }
 
     auto handle = std::make_unique<irx_arrow_chunked_array_handle>();
@@ -1787,9 +2000,16 @@ int irx_arrow_table_column_by_index(
   } catch (const std::exception& exc) {
     return set_exception_error("irx_arrow_table_column_by_index", exc);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_column_by_index", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_table_retain(irx_arrow_table_handle* table) {
+  try {
   clear_error();
   if (table == nullptr) {
     return kArrowOk;
@@ -1799,6 +2019,12 @@ int irx_arrow_table_retain(irx_arrow_table_handle* table) {
   }
   table->refcount += 1;
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_retain", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 void irx_arrow_table_release(irx_arrow_table_handle* table) {
@@ -1812,6 +2038,7 @@ void irx_arrow_table_release(irx_arrow_table_handle* table) {
 }
 
 int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
+  try {
   clear_error();
   if (column == nullptr) {
     return kArrowOk;
@@ -1821,6 +2048,12 @@ int irx_arrow_chunked_array_retain(irx_arrow_chunked_array_handle* column) {
   }
   column->refcount += 1;
   return kArrowOk;
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_chunked_array_retain", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 void irx_arrow_chunked_array_release(irx_arrow_chunked_array_handle* column) {
@@ -1839,17 +2072,18 @@ const char* irx_arrow_last_error(void) {
 
 int irx_arrow_table_import_stream(ArrowArrayStream* stream,
                                   irx_arrow_table_handle** out_table) {
+  try {
   clear_error();
   if (!out_table) return set_error(EINVAL, "out_table must not be NULL");
   *out_table = nullptr;
   if (!stream || !stream->release) return set_error(EINVAL, "stream is released");
   try {
     auto reader = arrow::ImportRecordBatchReader(stream);
-    if (!reader.ok()) return set_error(EINVAL, "%s", reader.status().ToString().c_str());
+    if (!reader.ok()) return set_error(irx::record_batch_status(reader.status()), "%s", reader.status().ToString().c_str());
     auto table = arrow::Table::FromRecordBatchReader(reader->get());
-    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    if (!table.ok()) return set_error(irx::record_batch_status(table.status()), "%s", table.status().ToString().c_str());
     auto status = (*table)->ValidateFull();
-    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     auto result = std::make_unique<irx_arrow_table_handle>();
     result->refcount = kInitialRefcount;
     result->table = *table;
@@ -1858,36 +2092,50 @@ int irx_arrow_table_import_stream(ArrowArrayStream* stream,
   } catch (const std::exception& error) {
     return set_exception_error("irx_arrow_table_import_stream", error);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_import_stream", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_table_export_stream(const irx_arrow_table_handle* table,
                                   ArrowArrayStream* stream) {
+  try {
   clear_error();
   if (!table || !table->table || !stream || stream->release)
     return set_error(EINVAL, "table and released stream output are required");
   try {
     auto reader = std::make_shared<arrow::TableBatchReader>(table->table);
     auto status = arrow::ExportRecordBatchReader(reader, stream);
-    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     return kArrowOk;
   } catch (const std::exception& error) {
     return set_exception_error("irx_arrow_table_export_stream", error);
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_export_stream", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
 int irx_arrow_table_import_batch(ArrowArray* array, ArrowSchema* schema,
                                  irx_arrow_table_handle** out_table) {
+  try {
   clear_error();
   if (!out_table) return set_error(EINVAL, "out_table must not be NULL");
   *out_table = nullptr;
   if (!array || !schema) return set_error(EINVAL, "C Data input must not be NULL");
   try {
     auto batch = arrow::ImportRecordBatch(array, schema);
-    if (!batch.ok()) return set_error(EINVAL, "%s", batch.status().ToString().c_str());
+    if (!batch.ok()) return set_error(irx::record_batch_status(batch.status()), "%s", batch.status().ToString().c_str());
     auto valid = (*batch)->ValidateFull();
-    if (!valid.ok()) return set_error(EINVAL, "%s", valid.ToString().c_str());
+    if (!valid.ok()) return set_error(irx::record_batch_status(valid), "%s", valid.ToString().c_str());
     auto table = arrow::Table::FromRecordBatches({*batch});
-    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    if (!table.ok()) return set_error(irx::record_batch_status(table.status()), "%s", table.status().ToString().c_str());
     auto result = std::make_unique<irx_arrow_table_handle>();
     result->refcount = kInitialRefcount;
     result->table = *table;
@@ -1896,10 +2144,17 @@ int irx_arrow_table_import_batch(ArrowArray* array, ArrowSchema* schema,
   } catch (const std::exception& error) {
     return set_exception_error("irx_arrow_table_import_batch", error);
   }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_import_batch", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
                                  ArrowArray* array, ArrowSchema* schema) {
+  try {
   clear_error();
   if (!table || !table->table || !array || !schema)
     return set_error(EINVAL, "table and C Data outputs must not be NULL");
@@ -1907,12 +2162,18 @@ int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
     return set_error(EINVAL, "C Data outputs must be released before export");
   try {
     auto batch = table->table->CombineChunksToBatch();
-    if (!batch.ok()) return set_error(EINVAL, "%s", batch.status().ToString().c_str());
+    if (!batch.ok()) return set_error(irx::record_batch_status(batch.status()), "%s", batch.status().ToString().c_str());
     auto status = arrow::ExportRecordBatch(**batch, array, schema);
-    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     return kArrowOk;
   } catch (const std::exception& error) {
     return set_exception_error("irx_arrow_table_export_batch", error);
+  }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_export_batch", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
   }
 }
 
@@ -1922,6 +2183,7 @@ int irx_arrow_table_export_batch(const irx_arrow_table_handle* table,
 
 
 extern "C" int irx_arrow_table_from_ipc(const uint8_t* data, int64_t length, irx_arrow_table_handle** out) {
+  try {
   clear_error();
   if (!out) return set_error(EINVAL, "table output must not be NULL");
   *out = nullptr;
@@ -1931,15 +2193,21 @@ extern "C" int irx_arrow_table_from_ipc(const uint8_t* data, int64_t length, irx
     auto buffer = arrow::Buffer::FromString(std::string(reinterpret_cast<const char*>(data), static_cast<size_t>(length)));
     auto source = std::make_shared<arrow::io::BufferReader>(buffer);
     auto reader = arrow::ipc::RecordBatchStreamReader::Open(source);
-    if (!reader.ok()) return set_error(EINVAL, "%s", reader.status().ToString().c_str());
+    if (!reader.ok()) return set_error(irx::record_batch_status(reader.status()), "%s", reader.status().ToString().c_str());
     auto table = (*reader)->ToTable();
-    if (!table.ok()) return set_error(EINVAL, "%s", table.status().ToString().c_str());
+    if (!table.ok()) return set_error(irx::record_batch_status(table.status()), "%s", table.status().ToString().c_str());
     auto status = (*table)->ValidateFull();
-    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     auto result = std::make_unique<irx_arrow_table_handle>();
     result->refcount = 1;
     result->table = *table;
     *out = result.release();
     return 0;
   } catch (const std::exception& error) { return set_exception_error("IPC literal", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_table_from_ipc", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }

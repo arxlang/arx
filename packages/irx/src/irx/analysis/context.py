@@ -11,10 +11,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Iterator
 
+import astx
+
 from public import public
 
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.resolved_nodes import (
+    ResolvedExceptionType,
     SemanticClass,
     SemanticFunction,
     SemanticStruct,
@@ -55,12 +58,18 @@ class SemanticContext:
         type: bool
       loop_depth:
         type: int
+      exception_region_depth:
+        type: int
       native_feature_names:
         type: tuple[str, Ellipsis]
       native_bindings:
         type: dict[int, tuple[str, Ellipsis]]
       native_table_io:
         type: dict[int, TableIOOperation]
+      exception_declarations:
+        type: tuple[astx.ClassDefStmt, Ellipsis]
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
       _symbol_counter:
         type: int
       _method_slot_counter:
@@ -83,9 +92,14 @@ class SemanticContext:
     current_module_key: ModuleKey | None = None
     check_constant_expressions: bool = True
     loop_depth: int = 0
+    exception_region_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
+    exception_declarations: tuple[astx.ClassDefStmt, ...] = ()
+    runtime_exception_types: dict[str, ResolvedExceptionType] = field(
+        default_factory=dict
+    )
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
 

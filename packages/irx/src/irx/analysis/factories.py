@@ -367,6 +367,7 @@ class SemanticEntityFactory:
             calling_convention=calling_convention,
             is_variadic=is_variadic,
             is_extern=is_extern,
+            exception_abi=not is_extern,
             symbol_name=symbol_name,
             required_runtime_features=required_runtime_features,
             ffi=ffi,

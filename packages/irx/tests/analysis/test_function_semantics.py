@@ -752,3 +752,30 @@ def test_main_requires_definition() -> None:
         match="Function 'main' must have a definition",
     ):
         analyze(module)
+
+
+def test_void_return_can_forward_a_void_call() -> None:
+    """
+    title: Return forwarding preserves evaluation and possible callee failure.
+    """
+    call = astx.FunctionCall("fail", [])
+    returned = astx.FunctionReturn(call)
+    module = astx.Module()
+    module.append(
+        astx.FunctionDef(
+            astx.FunctionPrototype("fail", astx.Arguments(), astx.NoneType()),
+            _block(astx.ThrowStmt(astx.ClassConstruct("ValueError"))),
+        )
+    )
+    module.append(
+        astx.FunctionDef(
+            astx.FunctionPrototype(
+                "forward", astx.Arguments(), astx.NoneType()
+            ),
+            _block(returned),
+        )
+    )
+    analyze(module)
+    assert _semantic(call).resolved_call is not None
+    assert _semantic(returned).resolved_return.returns_void
+    assert isinstance(_semantic(call).resolved_type, astx.NoneType)

@@ -39,7 +39,7 @@ python -c "from irx.builder.runtime.record_batch import ensure_record_batch_shar
 ```
 
 The generated library, objects, and source/toolchain fingerprint are stored
-under `${XDG_CACHE_HOME:-~/.cache}/arxlang/irx/record_batch/abi-1` by default.
+under `${XDG_CACHE_HOME:-~/.cache}/arxlang/irx/record_batch/abi-2` by default.
 Set `IRX_NATIVE_CACHE_DIR` to move the native cache or
 `IRX_RECORD_BATCH_LIBRARY` to use an exact library path. The loader rejects ABI
 mismatches and asks for a rebuild before configuring ctypes symbols.

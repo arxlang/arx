@@ -256,9 +256,13 @@ def test_buffer_view_passes_by_value_to_irx_functions() -> None:
     ir_text = Builder().translate(module)
 
     assert (
-        'define i32 @"main__use_view"(%"irx_buffer_view" %"view")'
+        'define i32 @"main__use_view"(i8* %"context", '
+        '%"irx_buffer_view" %"view", i32* %"result_out")'
     ) in ir_text
-    assert 'call i32 @"main__use_view"(%"irx_buffer_view" ' in ir_text
+    assert (
+        'call i32 @"main__use_view"(i8* %"context", %"irx_buffer_view" '
+        in ir_text
+    )
     assert_ir_parses(ir_text)
 
 
@@ -650,7 +654,10 @@ def test_plain_buffer_descriptor_does_not_activate_runtime_feature() -> None:
     active_features = runtime_features.active_feature_names()
     assert "buffer" not in active_features
     assert "irx_buffer_view_retain" not in ir_text
-    assert builder.translator.runtime_features.native_artifacts() == ()
+    assert all(
+        "buffer" not in str(artifact.path)
+        for artifact in builder.translator.runtime_features.native_artifacts()
+    )
 
 
 def test_buffer_runtime_owner_retain_release_harness() -> None:

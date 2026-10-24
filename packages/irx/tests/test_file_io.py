@@ -543,7 +543,8 @@ def test_file_cleanup_in_terminating_branch(tmp_path: Path) -> None:
     )
     text = Builder().translate(module)
     llvm.parse_assembly(text).verify()
-    assert text.index('call i32 @"irx_file_release"') < text.index("ret i32 7")
+    assert 'call i32 @"irx_file_release"' in text
+    assert "store i32 7" in text
     executable = tmp_path / "branch"
     Builder().build(module, str(executable))
     result = subprocess.run(
@@ -621,3 +622,35 @@ def test_reanalysis_clears_read_ownership_for_statement_only_method() -> None:
     llvm.parse_assembly(text).verify()
     assert getattr(method, "semantic").resource_ownership is None
     assert "irx_file_read" not in text
+
+
+def test_native_error_categories_preserve_errno(
+    native: ctypes.CDLL, tmp_path: Path
+) -> None:
+    """
+    title: File categories and captured errno do not depend on message text.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      tmp_path:
+        type: Path
+    """
+    import errno  # noqa: PLC0415
+
+    native.irx_file_test_fault(0)
+    output = ctypes.c_void_p(123)
+    error = ctypes.create_string_buffer(256)
+    missing = bytes(tmp_path / "missing")
+    status = native.irx_file_open(missing, b"r", ctypes.byref(output), error)
+    assert status == 65536 | errno.ENOENT
+    assert output.value is None
+    status = native.irx_file_open(missing, b"bad", ctypes.byref(output), error)
+    mode_status = 6
+    assert status == mode_status
+    assert output.value is None
+    closed_status = 2
+    assert (
+        native.irx_file_read(None, ctypes.byref(output), error)
+        == closed_status
+    )
+    assert output.value is None

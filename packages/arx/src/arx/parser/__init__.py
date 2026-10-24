@@ -11,6 +11,7 @@ from arx.lexer import TokenList
 from arx.parser.control_flow import ControlFlowParserMixin
 from arx.parser.core import ParserCore
 from arx.parser.declarations import DeclarationParserMixin
+from arx.parser.exceptions import ExceptionParserMixin
 from arx.parser.expressions import ExpressionParserMixin
 from arx.parser.imports import ImportParserMixin
 from arx.parser.state import (
@@ -23,6 +24,7 @@ from arx.tensor import TensorBinding
 
 
 class Parser(
+    ExceptionParserMixin,
     ImportParserMixin,
     DeclarationParserMixin,
     ExpressionParserMixin,

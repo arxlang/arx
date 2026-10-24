@@ -50,7 +50,7 @@ int32_t irx_class_retain(void* value, char* error) {
   owner->references++;
   return 0;
 }
-int32_t irx_class_release(void* value, char* error) {
+int32_t irx_class_release(void* context, void* value, char* error) {
   irx_class_owner* owner;
   int32_t status;
   if (error) error[0] = 0;
@@ -59,7 +59,7 @@ int32_t irx_class_release(void* value, char* error) {
   if (!owner->references)
     return irx_class_error(error, "class release during destruction");
   if (--owner->references) return 0;
-  status = owner->drop(value, error);
+  status = owner->drop(context, value, error);
   free(value);
   free(owner);
   return status;

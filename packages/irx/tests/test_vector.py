@@ -7,6 +7,7 @@ from typing import Any
 import astx
 import pytest
 
+from irx.analysis import analyze
 from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder, Visitor
@@ -24,8 +25,14 @@ def setup_builder() -> Visitor:
     """
     main_builder = Builder()
     visitor = main_builder.translator
-    func_type = ir.FunctionType(visitor._llvm.INT32_TYPE, [])
+    provider = analyze(astx.Module(name="vector_context"))
+    assert isinstance(provider, astx.Module)
+    visitor._translate_modules([provider])
+    func_type = ir.FunctionType(
+        visitor._llvm.INT32_TYPE, [ir.IntType(8).as_pointer()]
+    )
     fn = ir.Function(visitor._llvm.module, func_type, name="main")
+    visitor.exception_context = fn.args[0]
     bb = fn.append_basic_block("entry")
     visitor._llvm.ir_builder = ir.IRBuilder(bb)
     return visitor

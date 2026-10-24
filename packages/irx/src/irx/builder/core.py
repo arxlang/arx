@@ -40,6 +40,7 @@ from irx.analysis.resolved_nodes import (
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
+    ResolvedExceptionType,
     ResourceKind,
     SemanticClassLayout,
     SemanticClassLayoutField,
@@ -59,18 +60,17 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.protocols import VisitorProtocol
 from irx.builder.runtime import safe_pop
-from irx.builder.runtime.errors import (
-    RUNTIME_FAILURE_FEATURE_NAME,
-    RUNTIME_FAILURE_SYMBOL_NAME,
-)
 from irx.builder.runtime.registry import (
     RuntimeFeatureState,
     get_default_runtime_feature_registry,
 )
 from irx.builder.state import (
     CleanupAction,
+    CleanupKind,
+    ExceptionTarget,
     LoopTargets,
     NamedValueMap,
+    PendingReturn,
     ResultStackValue,
 )
 from irx.builder.types import (
@@ -396,6 +396,12 @@ class VisitorCore(BuilderVisitor):
     _current_generator_next_state: int | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
+    runtime_exception_types: dict[str, ResolvedExceptionType]
+    exception_context: ir.Value | None
+    exception_result_slot: ir.Value | None
+    exception_targets: list[ExceptionTarget]
+    pending_returns: list[PendingReturn]
+    llvm_function_signatures: dict[str, FunctionSignature]
 
     def __init__(
         self,
@@ -438,6 +444,12 @@ class VisitorCore(BuilderVisitor):
         self._current_generator_frame_slots = {}
         self._current_generator_out_ptr = None
         self._current_generator_next_state = None
+        self.runtime_exception_types = {}
+        self.exception_context = None
+        self.exception_result_slot = None
+        self.exception_targets = []
+        self.pending_returns = []
+        self.llvm_function_signatures = {}
 
         self.initialize()
         self.target = llvm.Target.from_default_triple()
@@ -487,10 +499,56 @@ class VisitorCore(BuilderVisitor):
           excluded_owner_symbol_ids:
             type: frozenset[str]
         """
-        for cleanup in reversed(self.cleanup_stack[start_depth:]):
-            if cleanup.owner_symbol_id in excluded_owner_symbol_ids:
-                continue
-            cleanup.emitter()
+        original = self.cleanup_stack
+        try:
+            for index in reversed(range(start_depth, len(original))):
+                if self._llvm.ir_builder.block.is_terminated:
+                    break
+                cleanup = original[index]
+                # Remove the action before executing it: failures and explicit
+                # finalizer transfers may exit only through remaining regions.
+                self.cleanup_stack = original[:index]
+                if cleanup.owner_symbol_id in excluded_owner_symbol_ids:
+                    continue
+                if (
+                    cleanup.kind is CleanupKind.RESOURCE
+                    and cleanup.fallible
+                    and self.exception_context is not None
+                ):
+                    visitor = cast(Any, self)
+                    token = visitor.exception_call(
+                        "cleanup_enter", [self.exception_context]
+                    )
+                    done = self._llvm.ir_builder.function.append_basic_block(
+                        "cleanup.done"
+                    )
+                    self.exception_targets.append(
+                        ExceptionTarget(done, len(self.cleanup_stack))
+                    )
+                    previous_pending = self.pending_returns
+                    self.pending_returns = []
+                    try:
+                        cleanup.emitter()
+                    finally:
+                        self.pending_returns = previous_pending
+                        self.exception_targets.pop()
+                    if not self._llvm.ir_builder.block.is_terminated:
+                        self._llvm.ir_builder.branch(done)
+                    self._llvm.ir_builder.position_at_end(done)
+                    visitor.exception_call(
+                        "cleanup_leave", [self.exception_context, token]
+                    )
+                else:
+                    cleanup.emitter()
+                if (
+                    cleanup.fallible
+                    and self.exception_context is not None
+                    and not self.emitting_failure_cleanup
+                    and not self._llvm.ir_builder.block.is_terminated
+                ):
+                    cast(Any, self).propagate_pending_exception()
+        finally:
+            self.cleanup_stack = original
 
     def _emit_temporary_cleanups(self, start_depth: int) -> None:
         """
@@ -500,14 +558,15 @@ class VisitorCore(BuilderVisitor):
             type: int
         """
         new_actions = self.cleanup_stack[start_depth:]
-        for cleanup in reversed(new_actions):
-            if cleanup.owner_symbol_id is None:
-                cleanup.emitter()
-        self.cleanup_stack[start_depth:] = [
-            cleanup
-            for cleanup in new_actions
-            if cleanup.owner_symbol_id is not None
+        retained = [
+            item for item in new_actions if item.owner_symbol_id is not None
         ]
+        temporaries = [
+            item for item in new_actions if item.owner_symbol_id is None
+        ]
+        self.cleanup_stack[start_depth:] = [*retained, *temporaries]
+        self._emit_active_cleanups(start_depth + len(retained))
+        self.cleanup_stack[start_depth:] = retained
 
     def _register_owned_list_temporary(
         self,
@@ -552,7 +611,7 @@ class VisitorCore(BuilderVisitor):
             """
             self._llvm.ir_builder.call(destroy_fn, [list_ptr])
 
-        self.cleanup_stack.append(CleanupAction(destroy_list))
+        self.cleanup_stack.append(CleanupAction(destroy_list, fallible=False))
 
     def _register_owned_string_temporary(
         self,
@@ -594,7 +653,9 @@ class VisitorCore(BuilderVisitor):
             """
             self._llvm.ir_builder.call(free_fn, [pointer])
 
-        self.cleanup_stack.append(CleanupAction(destroy_string))
+        self.cleanup_stack.append(
+            CleanupAction(destroy_string, fallible=False)
+        )
 
     def _guard_runtime_condition(
         self,
@@ -604,6 +665,7 @@ class VisitorCore(BuilderVisitor):
         code: str,
         message: str,
         block_name: str,
+        exception_role: str = "RuntimeError",
     ) -> None:
         """
         title: >-
@@ -619,6 +681,8 @@ class VisitorCore(BuilderVisitor):
             type: str
           block_name:
             type: str
+          exception_role:
+            type: str
         """
         function = self._llvm.ir_builder.function
         fail_block = function.append_basic_block(f"{block_name}.fail")
@@ -626,36 +690,12 @@ class VisitorCore(BuilderVisitor):
         self._llvm.ir_builder.cbranch(condition, pass_block, fail_block)
 
         self._llvm.ir_builder.position_at_start(fail_block)
-        for instance in reversed(self.class_construction_stack):
-            release = self.require_runtime_symbol("class", "irx_class_release")
-            from irx.builder.lowering.classes import (  # noqa: PLC0415
-                ClassVisitorMixin,
-            )
-
-            lifetime = cast(ClassVisitorMixin, self)
-            details = lifetime.file_error_buffer()
-            self._llvm.ir_builder.call(
-                release, [lifetime.class_raw(instance), details]
-            )
-        string_pointer = cast(Any, self)._constant_c_string_pointer
-        failure = self.require_runtime_symbol(
-            RUNTIME_FAILURE_FEATURE_NAME,
-            RUNTIME_FAILURE_SYMBOL_NAME,
+        cast(Any, self).raise_runtime_exception(
+            node,
+            exception_role,
+            cast(Any, self).exception_string(message),
+            code=code,
         )
-        self._llvm.ir_builder.call(
-            failure,
-            [
-                string_pointer(code, name_hint=f"{block_name}_code"),
-                string_pointer(
-                    cast(Any, self)._assert_source_name(node),
-                    name_hint=f"{block_name}_source",
-                ),
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.line),
-                ir.Constant(self._llvm.INT32_TYPE, node.loc.col),
-                string_pointer(message, name_hint=f"{block_name}_message"),
-            ],
-        )
-        self._llvm.ir_builder.unreachable()
         self._llvm.ir_builder.position_at_start(pass_block)
 
     def _guard_heap_allocation(
@@ -710,6 +750,26 @@ class VisitorCore(BuilderVisitor):
             self._set_entry_function_from_module(analyzed)
             self._translate_modules([analyzed])
         else:
+            metadata = getattr(analyzed, "semantic", None)
+            if metadata is not None:
+                self.runtime_exception_types.update(
+                    metadata.runtime_exception_types
+                )
+            declarations = [
+                item.class_.declaration
+                for item in self.runtime_exception_types.values()
+            ]
+            for declaration in declarations:
+                key = semantic_class_key(declaration, declaration.name)
+                type_ = self._llvm.module.context.get_identified_type(
+                    semantic_class_name(declaration, declaration.name)
+                )
+                self.struct_types[key] = type_
+                self.llvm_structs_by_qualified_name[key] = type_
+            for declaration in declarations:
+                cast(VisitorProtocol, self).declare_class(declaration)
+            for declaration in declarations:
+                self.visit(declaration)
             self.visit(analyzed)
         return str(self._llvm.module)
 
@@ -799,7 +859,7 @@ class VisitorCore(BuilderVisitor):
             self.entry_function_symbol_id is not None
             and function_key == self.entry_function_symbol_id
         ):
-            return "main"
+            return "irx.entry.main"
         return semantic_function_name(node, fallback)
 
     def _namespace_global(
@@ -913,6 +973,19 @@ class VisitorCore(BuilderVisitor):
             )
             for module in modules
         ]
+        for module in modules:
+            metadata = getattr(module, "semantic", None)
+            if metadata is not None:
+                self.runtime_exception_types.update(
+                    metadata.runtime_exception_types
+                )
+        present = {id(node) for _, nodes in module_nodes for node in nodes}
+        if module_nodes:
+            for exception in self.runtime_exception_types.values():
+                declaration = exception.class_.declaration
+                if id(declaration) not in present:
+                    module_nodes[0][1].append(declaration)
+                    present.add(id(declaration))
         for _module, nodes in module_nodes:
             for node in nodes:
                 if not isinstance(
@@ -1016,6 +1089,7 @@ class VisitorCore(BuilderVisitor):
                         continue
                     self.visit(node)
 
+        cast(Any, self).emit_entry_wrapper()
         self._current_module_display_name = None
 
     def activate_runtime_feature(self, feature_name: str) -> None:

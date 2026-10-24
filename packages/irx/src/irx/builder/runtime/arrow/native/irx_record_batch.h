@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "irx_arrow_c_abi.h"
+#include "irx_native_status.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,14 +14,7 @@ extern "C" {
 
 typedef struct irx_arrow_table_handle irx_arrow_table_handle;
 
-#define IRX_OK       0
-#define IRX_EOF      1   /* non-error: reader has no more batches */
-#define IRX_ERR_ARROW   -1
-#define IRX_ERR_NULLPTR -2
-#define IRX_ERR_OOB     -3  /* column / row index out of bounds */
-#define IRX_ERR_TYPE    -4  /* type mismatch */
-#define IRX_ERR_IO      -5
-#define IRX_RECORD_BATCH_ABI_VERSION 1
+#define IRX_RECORD_BATCH_ABI_VERSION 2
 
 typedef enum IrxColumnType {
     IRX_COL_INT8    = 0,

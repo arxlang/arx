@@ -11,6 +11,7 @@ from irx.analysis import SemanticError
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 from irx.system import PrintExpr
+from llvmlite import binding as llvm
 
 from .conftest import check_result
 
@@ -57,10 +58,11 @@ class TestVoidFunctionNoReturn:
         module.block.append(main_fn)
 
         ir_text = builder.translate(module)
-        assert "ret void" in ir_text, (
-            "Expected implicit 'ret void' in IR for void function "
-            f"with no return statement, but got:\n{ir_text}"
-        )
+        emitted = llvm.parse_assembly(ir_text)
+        emitted.verify()
+        function = emitted.get_function("main__do_nothing")
+        assert "ret i32 0" in str(function)
+        assert 'define i32 @"main__do_nothing"(i8* %"context")' in ir_text
 
     def test_void_function_with_print_no_explicit_return(
         self, builder_class: type[Builder]

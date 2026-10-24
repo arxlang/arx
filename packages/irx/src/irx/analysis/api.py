@@ -98,6 +98,14 @@ def analyze_modules(
                 code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
             )
     analyzer = SemanticAnalyzer(session=session)
+    if not analyzer.context.exception_declarations:
+        from irx.analysis.exception_types import (  # noqa: PLC0415
+            builtin_exception_module,
+        )
+
+        builtin = builtin_exception_module()
+        analyzer.context.exception_declarations = builtin.exception_classes
+        analyzer.analyze_parsed_module(builtin, predeclared=False)
 
     for parsed_module in session.ordered_modules():
         analyzer._reset_template_analysis_state(parsed_module.ast)

@@ -140,7 +140,7 @@ def test_print_recursive_function_call_result_codegen() -> None:
     ir_text = _translate_and_validate(module)
     fib_name = mangle_function_name("main", "fib")
     assert f'define i32 @"{fib_name}"' in ir_text
-    assert f'call i32 @"{fib_name}"(i32 10)' in ir_text
+    assert f'call i32 @"{fib_name}"(i8* %"context", i32 10,' in ir_text
     assert "%lld" in ir_text
     _assert_puts_uses_char_ptr(ir_text)
 
@@ -190,7 +190,7 @@ def test_print_float_function_call_result_codegen() -> None:
 
     ir_text = _translate_and_validate(module)
     average_name = mangle_function_name("main", "average")
-    assert f'define float @"{average_name}"' in ir_text
-    assert f'call float @"{average_name}"' in ir_text
+    assert f'define i32 @"{average_name}"(i8* %"context",' in ir_text
+    assert f'call i32 @"{average_name}"(i8* %"context",' in ir_text
     assert "%.6f" in ir_text
     _assert_puts_uses_char_ptr(ir_text)

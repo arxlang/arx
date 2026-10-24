@@ -206,15 +206,20 @@ def test_print_expr_uses_libc_feature_without_array_runtime() -> None:
     assert '@"snprintf"' in ir_text
 
 
-def test_simple_module_has_no_native_runtime_artifacts() -> None:
+def test_simple_module_uses_only_scalar_context_runtime() -> None:
     """
-    title: A simple module should not request any native runtime artifacts.
+    title: A simple module needs scalar context and class lifetime support.
     """
     builder = Builder()
 
     builder.translate(_main_return_zero_module())
 
-    assert builder.translator.runtime_features.native_artifacts() == ()
+    artifacts = builder.translator.runtime_features.native_artifacts()
+    assert {artifact.path.name for artifact in artifacts} == {
+        "irx_class_runtime.c",
+        "irx_exception_runtime.c",
+        "irx_error_runtime.c",
+    }
 
 
 def test_list_runtime_exposes_status_and_destroy_contract() -> None:
@@ -227,7 +232,7 @@ def test_list_runtime_exposes_status_and_destroy_contract() -> None:
         "irx_list_append",
         "irx_list_at",
         "irx_list_destroy",
-        "irx_list_require_ok",
+        "irx_list_status_message",
     }
     assert "no destroy or release helper yet" not in feature.metadata.get(
         "limitations",
@@ -249,8 +254,7 @@ def test_runtime_failure_feature_has_machine_protocol_and_native_source() -> (
 
 def test_feature_backed_extern_collects_linker_flags() -> None:
     """
-    title: >-
-      Feature-backed externs should activate linker flags without artifacts.
+    title: Extern features add linker flags to the checked scalar ABI baseline.
     """
     builder = Builder()
     module = astx.Module()
@@ -279,13 +283,19 @@ def test_feature_backed_extern_collects_linker_flags() -> None:
     builder.translate(module)
 
     assert builder.translator.runtime_features.active_feature_names() == (
+        "class",
         "errors",
+        "exceptions",
+        "libc",
         "libm",
     )
     assert builder.translator.runtime_features.linker_flags() == ("-lm",)
     artifacts = builder.translator.runtime_features.native_artifacts()
-    assert len(artifacts) == 1
-    assert artifacts[0].path.name == "irx_error_runtime.c"
+    assert {artifact.path.name for artifact in artifacts} == {
+        "irx_class_runtime.c",
+        "irx_exception_runtime.c",
+        "irx_error_runtime.c",
+    }
 
 
 def test_runtime_feature_state_reports_unknown_feature_structurally() -> None:

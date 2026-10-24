@@ -18,7 +18,9 @@ from llvmlite import binding as llvm
 from typeguard import TypeCheckError
 
 NATIVE = Path(__file__).parents[1] / "src/irx/builder/runtime/classes/native"
-DROP = ctypes.CFUNCTYPE(ctypes.c_int32, ctypes.c_void_p, ctypes.c_void_p)
+DROP = ctypes.CFUNCTYPE(
+    ctypes.c_int32, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p
+)
 ERROR_CAPACITY = 256
 EXPECTED_FIELD_VALUE = 7
 
@@ -87,11 +89,12 @@ void test_references(void* value, uint64_t n) {
         ctypes.POINTER(ctypes.c_void_p),
         ctypes.c_void_p,
     ]
-    for name in ("retain", "release", "require"):
+    for name in ("retain", "require"):
         getattr(runtime, f"irx_class_{name}").argtypes = [
             ctypes.c_void_p,
             ctypes.c_void_p,
         ]
+    runtime.irx_class_release.argtypes = [ctypes.c_void_p] * 3
     runtime.irx_class_complete.argtypes = [ctypes.c_void_p]
     runtime.irx_class_completed.argtypes = [ctypes.c_void_p]
     runtime.test_references.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
@@ -113,10 +116,12 @@ def test_failed_creation_initializes_output(
     """
 
     @DROP
-    def drop(value: int, error: int) -> int:
+    def drop(context: int | None, value: int, error: int) -> int:
         """
         title: Reject destructor calls without a constructed payload.
         parameters:
+          context:
+            type: int | None
           value:
             type: int
           error:
@@ -145,10 +150,12 @@ def test_last_release_and_drop_failure(native: ctypes.CDLL) -> None:
     error = ctypes.create_string_buffer(ERROR_CAPACITY)
 
     @DROP
-    def drop(value: int, details: int) -> int:
+    def drop(context: int | None, value: int, details: int) -> int:
         """
         title: Forbid resurrection and preserve the destructor error.
         parameters:
+          context:
+            type: int | None
           value:
             type: int
           details:
@@ -167,9 +174,9 @@ def test_last_release_and_drop_failure(native: ctypes.CDLL) -> None:
     native.irx_class_complete(output)
     assert native.irx_class_completed(output) == 1
     assert native.irx_class_retain(output, error) == 0
-    assert native.irx_class_release(output, error) == 0
+    assert native.irx_class_release(None, output, error) == 0
     assert not calls
-    assert native.irx_class_release(output, error) != 0
+    assert native.irx_class_release(None, output, error) != 0
     assert len(calls) == 1
     assert error.value == b"drop failed"
 
@@ -183,10 +190,12 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
     """
 
     @DROP
-    def drop(value: int, error: int) -> int:
+    def drop(context: int | None, value: int, error: int) -> int:
         """
         title: Drop a payload without owned fields.
         parameters:
+          context:
+            type: int | None
           value:
             type: int
           error:
@@ -198,7 +207,7 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
 
     error = ctypes.create_string_buffer(ERROR_CAPACITY)
     assert native.irx_class_retain(None, error) == 0
-    assert native.irx_class_release(None, error) == 0
+    assert native.irx_class_release(None, None, error) == 0
     assert native.irx_class_require(None, error) != 0
     for _ in range(200):
         output = ctypes.c_void_p()
@@ -208,7 +217,7 @@ def test_empty_overflow_and_repeated_lifetimes(native: ctypes.CDLL) -> None:
         native.test_references(output, 2**64 - 1)
         assert native.irx_class_retain(output, error) != 0
         native.test_references(output, 1)
-        assert native.irx_class_release(output, error) == 0
+        assert native.irx_class_release(None, output, error) == 0
 
 
 def test_constructor_model_runtime_checks() -> None:

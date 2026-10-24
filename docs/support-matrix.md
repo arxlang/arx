@@ -30,6 +30,36 @@ currently verifies from the target that may become supported at GA:
 requirements. IRx compiles native C/C++ runtime features on demand and therefore
 requires a compatible compiler/linker for those features.
 
+### Exception capability boundary
+
+Arx and direct ASTx/IRx compilation support synchronous nominal exceptions:
+`raise`, ordered subtype/tuple catches, dynamically scoped bare re-raise,
+explicit causes, normal-only `else`, and all-exit `finally`. An exception is an
+owned class instance with a read-only message; aliases retained from a handler
+remain valid after its binding leaves scope.
+
+Generated calls use an explicit context, status, and success-only result slot.
+Cleanup is compiler-generated, not platform or C++ stack unwinding. Failed
+constructors roll back initialized owners. A failing implicit cleanup preserves
+an existing failure as primary; an explicit finalizer may replace it. Generator
+resume failures propagate separately from normal exhaustion. `else` may read
+definitely initialized direct try locals, not conditional/nested locals whose
+ownership cannot be proved. Move-only list restrictions still apply in
+finalizers.
+
+Checked arithmetic/conversion, assertions, list/Series bounds, file, and
+Arrow/CSV/Parquet operations participate in this model. Invalid source programs
+still fail compilation; ordinary IEEE floating arithmetic is unchanged. External
+C routines cannot raise through arbitrary foreign frames. Allocation failure in
+exception machinery and fatal native corruption are not recoverable.
+
+Not supported: protected regions spanning `yield`, asynchronous exceptions,
+exception groups/`except*`, mutable Python traceback attributes, and exception
+lowering in ArxJIT (whose decorator still runs Python fallback). Direct ASTx
+`WithStmt` cleanup calls its existing zero-argument exit method without
+exception suppression; this does not add Arx `with`, `break`, or `continue`
+syntax.
+
 ## Wheel gate
 
 The `wheel-smoke` CI job builds all six lockstep packages once, installs those

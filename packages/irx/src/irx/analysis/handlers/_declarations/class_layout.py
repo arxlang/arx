@@ -12,6 +12,7 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import astx
 
@@ -20,7 +21,10 @@ from irx.analysis.class_lifecycle import (
     field_resource,
     lifecycle_plan,
 )
-from irx.analysis.handlers.base import SemanticVisitorMixinBase
+from irx.analysis.handlers.base import (
+    SemanticAnalyzerCore,
+    SemanticVisitorMixinBase,
+)
 from irx.analysis.module_symbols import (
     mangle_class_descriptor_name,
     mangle_class_dispatch_name,
@@ -613,3 +617,8 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         families = self._class_family_components(self._family_classes())
         for family in families:
             self._finalize_class_family(family)
+        from irx.analysis.exception_types import (  # noqa: PLC0415
+            register_exception_types,
+        )
+
+        register_exception_types(cast(SemanticAnalyzerCore, self))

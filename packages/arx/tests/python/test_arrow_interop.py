@@ -19,7 +19,7 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -248,10 +248,19 @@ def test_public_input_errors(
     )
     result = run_roundtrip(roundtrip, tmp_path, [batch])
     assert result.returncode == 1
-    report = parse_runtime_failure_output(result.stderr)
-    assert report is not None
+    report = parse_exception_output(result.stderr)
+    assert report is not None, result.stderr
     assert report.code == "ARX-RUNTIME-ARROW-001"
-    assert report.line == 0
+    role = "ValueError" if failure == "nul" else "TypeError"
+    assert report.type_name == f"builtins.exceptions::class::{role}"
+    assert report.source == "stdlib.arrow"
+    assert report.line > 0
+    assert report.col > 0
+    assert any(frame.source == "arrow_test" for frame in report.frames)
+    if failure == "nul":
+        assert "embedded NUL" in report.message
+    else:
+        assert report.message == "type mismatch on get"
 
 
 @pytest.mark.parametrize("payload", (b"not arrow", b""))
@@ -407,11 +416,31 @@ def test_compiled_tcp_failure(
         command = dedent(
             f"""
             import ctypes
+            import sys
             lib = ctypes.CDLL({str(demonstrations / "component.so")!r})
+            context = ctypes.c_void_p()
+            create = lib.irx_exception_context_create
+            create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+            create.restype = ctypes.c_int32
+            assert create(ctypes.byref(context)) == 0
+            report = lib.irx_exception_report
+            report.argtypes = [ctypes.c_void_p]
+            report.restype = None
+            destroy = lib.irx_exception_context_destroy
+            destroy.argtypes = [ctypes.c_void_p]
+            destroy.restype = None
             receive = lib.component__receive_tcp
-            receive.argtypes = [ctypes.c_char_p, ctypes.c_int32]
+            receive.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
+                                ctypes.c_int32,
+                                ctypes.POINTER(ctypes.c_int32)]
             receive.restype = ctypes.c_int32
-            receive(b"127.0.0.1", {port})
+            result = ctypes.c_int32()
+            status = receive(context, b"127.0.0.1", {port},
+                             ctypes.byref(result))
+            if status:
+                report(context)
+            destroy(context)
+            sys.exit(1 if status else result.value)
             """
         )
         process = subprocess.Popen(

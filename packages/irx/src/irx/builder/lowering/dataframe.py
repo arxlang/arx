@@ -11,6 +11,7 @@ from typing import Any, cast
 import astx
 
 from llvmlite import ir
+from public import private
 
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import is_float_type, is_unsigned_type
@@ -21,10 +22,8 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
-from irx.builder.runtime.assertions.feature import (
-    ASSERT_FAILURE_SYMBOL_NAME,
-    ASSERT_RUNTIME_FEATURE_NAME,
-)
+from irx.builder.runtime.record_batch_api import ARROW_API_SIGNATURES
+from irx.builder.state import CleanupAction
 from irx.builder.types import is_int_type
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
@@ -39,62 +38,154 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
     title: DataFrame visitor mixin.
     """
 
-    def _check_arrow_status(self, status: ir.Value, operation: str) -> None:
+    @private
+    def checked_native_call(
+        self, node: astx.AST, function: ir.Function, args: list[ir.Value]
+    ) -> ir.Value:
         """
-        title: Branch to the assertion runtime when an Arrow call fails.
+        title: Call a checked facade and load its result only after success.
         parameters:
+          node:
+            type: astx.AST
+          function:
+            type: ir.Function
+          args:
+            type: list[ir.Value]
+        returns:
+          type: ir.Value
+          description: Value result, or the successful status for void APIs.
+        """
+        contract = ARROW_API_SIGNATURES.get(function.name)
+        if contract is None:
+            raise_lowering_internal_error(
+                "missing checked native signature", node=node
+            )
+        output = None
+        operands = list(args)
+        if contract[0] != "v":
+            output_type = function.function_type.args[-2].pointee
+            output = self.create_entry_block_alloca(
+                "native.result", output_type
+            )
+            operands.append(output)
+        error = self.create_entry_block_alloca(
+            "native.error", ir.ArrayType(ir.IntType(8), 1024)
+        )
+        zero = ir.Constant(ir.IntType(32), 0)
+        message = self._llvm.ir_builder.gep(error, [zero, zero])
+        operands.append(message)
+        status = self._llvm.ir_builder.call(function, operands)
+        self.check_arrow_status(node, status, function.name, message)
+        return status if output is None else self._llvm.ir_builder.load(output)
+
+    @private
+    def check_arrow_status(
+        self,
+        node: astx.AST,
+        status: ir.Value,
+        operation: str,
+        message: ir.Value | None = None,
+    ) -> None:
+        """
+        title: Translate typed native failures without parsing diagnostic text.
+        parameters:
+          node:
+            type: astx.AST
           status:
             type: ir.Value
           operation:
             type: str
+          message:
+            type: ir.Value | None
         """
-        is_ok = self._llvm.ir_builder.icmp_signed(
-            "==",
-            status,
-            ir.Constant(self._llvm.INT32_TYPE, 0),
-            f"{operation}_ok",
-        )
-        counter = getattr(self, "_dataframe_runtime_check_counter", 0)
-        setattr(self, "_dataframe_runtime_check_counter", counter + 1)
         function = self._llvm.ir_builder.function
-        pass_block = function.append_basic_block(
-            f"dataframe_runtime_ok_{counter}"
+        success = function.append_basic_block(operation + ".success")
+        failure = function.append_basic_block(operation + ".failure")
+        self._llvm.ir_builder.cbranch(
+            self._llvm.ir_builder.icmp_signed(
+                "==", status, ir.Constant(status.type, 0)
+            ),
+            success,
+            failure,
         )
-        fail_block = function.append_basic_block(
-            f"dataframe_runtime_fail_{counter}"
-        )
-        self._llvm.ir_builder.cbranch(is_ok, pass_block, fail_block)
-
-        self._llvm.ir_builder.position_at_start(fail_block)
-        last_error = self.require_runtime_symbol(
-            "dataframe",
-            "irx_arrow_last_error",
-        )
-        message_ptr = self._llvm.ir_builder.call(
-            last_error,
-            [],
-            f"{operation}_message",
-        )
-        source_ptr = cast(Any, self)._constant_c_string_pointer(
-            "irx-arrow-dataframe",
-            name_hint="dataframe_runtime_source",
-        )
-        fail_function = self.require_runtime_symbol(
-            ASSERT_RUNTIME_FEATURE_NAME,
-            ASSERT_FAILURE_SYMBOL_NAME,
-        )
-        self._llvm.ir_builder.call(
-            fail_function,
-            [
-                source_ptr,
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                message_ptr,
-            ],
-        )
+        self._llvm.ir_builder.position_at_end(failure)
+        if message is None:
+            message = self._llvm.ir_builder.call(
+                self.require_runtime_symbol(
+                    "dataframe", "irx_arrow_last_error"
+                ),
+                [],
+            )
+        fallback = function.append_basic_block("arrow.runtime_error")
+        switch = self._llvm.ir_builder.switch(status, fallback)
+        for code, role in (
+            (-2, "ValueError"),
+            (-3, "IndexError"),
+            (-4, "TypeError"),
+            (-5, "OSError"),
+            (-6, "ValueError"),
+            (-8, "OverflowError"),
+        ):
+            block = function.append_basic_block("arrow." + role)
+            switch.add_case(ir.Constant(status.type, code), block)
+            self._llvm.ir_builder.position_at_end(block)
+            self.raise_runtime_exception(
+                node, role, message, code="ARX-RUNTIME-ARROW-001"
+            )
+        allocation = function.append_basic_block("arrow.allocation_failure")
+        switch.add_case(ir.Constant(status.type, -7), allocation)
+        self._llvm.ir_builder.position_at_end(allocation)
+        self.fatal_status(node, status)
         self._llvm.ir_builder.unreachable()
+        self._llvm.ir_builder.position_at_end(fallback)
+        self.raise_runtime_exception(
+            node, "RuntimeError", message, code="ARX-RUNTIME-ARROW-001"
+        )
+        self._llvm.ir_builder.position_at_end(success)
 
-        self._llvm.ir_builder.position_at_start(pass_block)
+    @private
+    def track_native_handle(
+        self, node: astx.AST, feature: str, destroy: str, value: ir.Value
+    ) -> CleanupAction:
+        """
+        title: Own a construction handle across later fallible native calls.
+        parameters:
+          node:
+            type: astx.AST
+          feature:
+            type: str
+          destroy:
+            type: str
+          value:
+            type: ir.Value
+        returns:
+          type: CleanupAction
+        """
+
+        def release() -> None:
+            """
+            title: Destroy the handle through its declared native boundary.
+            """
+            function = self.require_runtime_symbol(feature, destroy)
+            if destroy in ARROW_API_SIGNATURES:
+                self.checked_native_call(node, function, [value])
+            else:
+                self._llvm.ir_builder.call(function, [value])
+
+        action = CleanupAction(release)
+        self.cleanup_stack.append(action)
+        return action
+
+    @private
+    def release_native_handle(self, action: CleanupAction) -> None:
+        """
+        title: Consume one tracked native handle on normal completion.
+        parameters:
+          action:
+            type: CleanupAction
+        """
+        self.cleanup_stack.remove(action)
+        action.emitter()
 
     def _append_dataframe_value(
         self,
@@ -137,7 +228,9 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 append,
                 [builder_handle, value],
             )
-            self._check_arrow_status(status, "dataframe_append_double")
+            self.check_arrow_status(
+                value_node, status, "dataframe_append_double"
+            )
             return
 
         append = self.require_runtime_symbol(
@@ -169,10 +262,11 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 "dataframe_trunc",
             )
         status = self._llvm.ir_builder.call(append, [builder_handle, value])
-        self._check_arrow_status(status, "dataframe_append_int")
+        self.check_arrow_status(value_node, status, "dataframe_append_int")
 
     def _build_arrow_array_from_column(
         self,
+        node: astx.AST,
         column_name: str,
         column_type: astx.DataType,
         values: tuple[astx.AST, ...],
@@ -180,6 +274,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         title: Build one Arrow array handle from column values.
         parameters:
+          node:
+            type: astx.AST
           column_name:
             type: str
           column_type:
@@ -213,12 +309,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 builder_slot,
             ],
         )
-        self._check_arrow_status(status, "dataframe_array_builder_new")
+        self.check_arrow_status(node, status, "dataframe_array_builder_new")
         builder_handle = self._llvm.ir_builder.load(
             builder_slot,
             f"{column_name}_array_builder",
         )
 
+        cleanup = self.track_native_handle(
+            node, "array", "irx_arrow_array_builder_release", builder_handle
+        )
         for value in values:
             self._append_dataframe_value(builder_handle, value, column_type)
 
@@ -230,7 +329,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             finish_builder,
             [builder_handle, array_slot],
         )
-        self._check_arrow_status(status, "dataframe_array_builder_finish")
+        self.check_arrow_status(node, status, "dataframe_array_builder_finish")
+        self.cleanup_stack.remove(cleanup)
         return self._llvm.ir_builder.load(
             array_slot,
             f"{column_name}_array",
@@ -283,7 +383,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                     column_slot,
                 ],
             )
-            self._check_arrow_status(status, "dataframe_column_by_index")
+            self.check_arrow_status(node, status, "dataframe_column_by_index")
         else:
             column_by_name = self.require_runtime_symbol(
                 "dataframe",
@@ -297,7 +397,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 column_by_name,
                 [table_handle, name_pointer, column_slot],
             )
-            self._check_arrow_status(status, "dataframe_column_by_name")
+            self.check_arrow_status(node, status, "dataframe_column_by_name")
 
         column_handle = self._llvm.ir_builder.load(
             column_slot,
@@ -330,11 +430,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         )
         assert node.type_.columns is not None
         builder = self._llvm.ir_builder
-        schema = builder.call(
+        schema = self.checked_native_call(
+            node,
             self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_schema_new"
             ),
             [],
+        )
+        schema_cleanup = self.track_native_handle(
+            node, "record_batch", "irx_rb_api_schema_destroy", schema
         )
         add = self.require_runtime_symbol(
             "record_batch", "irx_rb_api_schema_add"
@@ -343,7 +447,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             name = cast(Any, self)._constant_c_string_pointer(
                 column.name, name_hint="dataframe_field"
             )
-            builder.call(
+            self.checked_native_call(
+                node,
                 add,
                 [
                     schema,
@@ -352,11 +457,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                     ir.Constant(ir.IntType(32), int(column.nullable)),
                 ],
             )
-        owner = builder.call(
+        owner = self.checked_native_call(
+            node,
             self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_builder_new"
             ),
             [schema],
+        )
+        owner_cleanup = self.track_native_handle(
+            node, "record_batch", "irx_rb_api_builder_destroy", owner
         )
         values = {column.name: column.values for column in node.columns}
         append_names = {
@@ -382,7 +491,8 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             column_index = ir.Constant(ir.IntType(32), index)
             for value_node in values[column.name]:
                 if isinstance(value_node, astx.LiteralNone):
-                    builder.call(
+                    self.checked_native_call(
+                        node,
                         self.require_runtime_symbol(
                             "record_batch", "irx_rb_api_append_null"
                         ),
@@ -427,37 +537,36 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                     "record_batch",
                     "irx_rb_api_append_" + append_names[type_id],
                 )
-                builder.call(append, [owner, column_index, value])
-        batch = builder.call(
+                self.checked_native_call(
+                    node, append, [owner, column_index, value]
+                )
+        batch = self.checked_native_call(
+            node,
             self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_new"
             ),
             [],
         )
-        builder.call(
+        batch_cleanup = self.track_native_handle(
+            node, "record_batch", "irx_rb_api_batch_destroy", batch
+        )
+        self.checked_native_call(
+            node,
             self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_builder_finish"
             ),
             [owner, batch],
         )
-        table = builder.call(
+        table = self.checked_native_call(
+            node,
             self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_to_table"
             ),
             [batch, schema],
         )
-        for kind, handle in (
-            ("builder", owner),
-            ("batch", batch),
-            ("schema", schema),
-        ):
-            builder.call(
-                self.require_runtime_symbol(
-                    "record_batch", "irx_rb_api_" + kind + "_destroy"
-                ),
-                [handle],
-            )
         self.arrow_temporary(node, table)
+        for cleanup in (batch_cleanup, owner_cleanup, schema_cleanup):
+            self.release_native_handle(cleanup)
         self.result_stack.append(table)
 
     @VisitorCore.visit.dispatch
@@ -497,7 +606,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 ),
                 [pointer, ir.Constant(ir.IntType(64), len(payload)), output],
             )
-            self._check_arrow_status(status, "dataframe_literal")
+            self.check_arrow_status(node, status, "dataframe_literal")
             table = self._llvm.ir_builder.load(output)
             self.arrow_temporary(node, table)
             self.result_stack.append(table)
@@ -524,16 +633,13 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             return
 
         literal_by_name = {column.name: column for column in node.columns}
-        release_array = self.require_runtime_symbol(
-            "array",
-            "irx_arrow_array_release",
-        )
         table_new = self.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_new_from_arrays",
         )
 
         array_handles: list[ir.Value] = []
+        array_cleanups: list[CleanupAction] = []
         name_pointers: list[ir.Value] = []
         for schema_column in node.type_.columns:
             literal_column = literal_by_name.get(schema_column.name)
@@ -541,9 +647,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 raise Exception("dataframe literal is missing a column")
             array_handles.append(
                 self._build_arrow_array_from_column(
+                    node,
                     schema_column.name,
                     schema_column.type_,
                     literal_column.values,
+                )
+            )
+            array_cleanups.append(
+                self.track_native_handle(
+                    node, "array", "irx_arrow_array_release", array_handles[-1]
                 )
             )
             name_pointers.append(
@@ -610,16 +722,15 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 table_slot,
             ],
         )
-        self._check_arrow_status(status, "dataframe_table_new")
+        self.check_arrow_status(node, status, "dataframe_table_new")
         table_handle = self._llvm.ir_builder.load(
             table_slot,
             "dataframe_table",
         )
 
-        for array_handle in array_handles:
-            self._llvm.ir_builder.call(release_array, [array_handle])
-
         self.arrow_temporary(node, table_handle)
+        for cleanup in reversed(array_cleanups):
+            self.release_native_handle(cleanup)
         self.result_stack.append(table_handle)
 
     @VisitorCore.visit.dispatch
@@ -697,7 +808,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             "irx_arrow_table_retain",
         )
         status = self._llvm.ir_builder.call(retain, [table_handle])
-        self._check_arrow_status(status, "dataframe_table_retain")
+        self.check_arrow_status(node, status, "dataframe_table_retain")
         self.arrow_explicit_lifetime(node.base, table_handle, retain=True)
         self.result_stack.append(status)
 
@@ -734,7 +845,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             "irx_arrow_chunked_array_retain",
         )
         status = self._llvm.ir_builder.call(retain, [column_handle])
-        self._check_arrow_status(status, "dataframe_series_retain")
+        self.check_arrow_status(node, status, "dataframe_series_retain")
         self.arrow_explicit_lifetime(node.base, column_handle, retain=True)
         self.result_stack.append(status)
 

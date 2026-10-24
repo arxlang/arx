@@ -26,15 +26,18 @@
 #include <vector>
 
 static thread_local std::string tl_errmsg;
+static thread_local int tl_errcode = IRX_OK;
 
-static int set_err(const std::string &msg, int code = IRX_ERR_ARROW) {
+static int set_err(const std::string &msg, int code = IRX_ERR_INVALID) {
     tl_errmsg = msg;
+    tl_errcode = code;
     return code;
 }
 
 static int set_err(const arrow::Status &st, int code = IRX_ERR_ARROW) {
     tl_errmsg = st.ToString();
-    return code;
+    tl_errcode = code == IRX_ERR_ARROW ? irx::record_batch_status(st) : code;
+    return tl_errcode;
 }
 
 const char *irx_record_batch_errmsg(void) {
@@ -1212,7 +1215,7 @@ int irx_rb_stream_writer_write_batch(IrxRbStreamWriter *w,
         if (!st.ok()) { w->writer->Invalidate(st); return set_err(st); }
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(error.what());
+        return set_err(error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -1233,7 +1236,7 @@ int irx_rb_stream_writer_close(IrxRbStreamWriter *w) {
         w->closed = true;
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(error.what());
+        return set_err(error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -1361,7 +1364,7 @@ int irx_rb_stream_reader_next_batch(IrxRbStreamReader *r,
         *batch = b.release();
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(error.what());
+        return set_err(error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -1448,7 +1451,7 @@ int irx_rb_schema_from_ipc(const uint8_t *data, int64_t size, IrxRbSchema **out)
         if (status != IRX_OK) return status;
         *out = result.release();
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_rb_schema_import(ArrowSchema *schema, IrxRbSchema **out) {
     GUARD(out); *out = nullptr; GUARD(schema);
@@ -1753,7 +1756,7 @@ struct IrxCsvOptions {
 };
 IrxCsvOptions *irx_csv_options_new(void) {
     try { return new IrxCsvOptions(); }
-    catch (const std::exception &error) { set_err(error.what()); return nullptr; }
+    catch (const std::exception &error) { set_err(error.what(), irx::native_exception_status(error)); return nullptr; }
 }
 void irx_csv_options_release(IrxCsvOptions *options) { delete options; }
 int irx_csv_options_int(IrxCsvOptions *o, const char *name, int64_t value) {
@@ -1773,7 +1776,7 @@ int irx_csv_options_int(IrxCsvOptions *o, const char *name, int64_t value) {
         }
         o->supplied.insert(key);
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_csv_options_text(IrxCsvOptions *o, const char *name, const char *value) {
     GUARD(o); GUARD(name); GUARD(value);
@@ -1791,7 +1794,7 @@ int irx_csv_options_text(IrxCsvOptions *o, const char *name, const char *value) 
         else return set_err("unknown CSV text option: " + key, IRX_ERR_TYPE);
         o->supplied.insert(key);
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_csv_options_clear(IrxCsvOptions *o, const char *name) {
     GUARD(o); GUARD(name);
@@ -1803,7 +1806,7 @@ int irx_csv_options_clear(IrxCsvOptions *o, const char *name) {
         else return set_err("unknown CSV list option: " + key, IRX_ERR_TYPE);
         o->supplied.insert(key);
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 namespace {
 arrow::Status validate_csv(const IrxCsvOptions &o, bool writing) {
@@ -1852,7 +1855,7 @@ int irx_rb_csv_reader_open(const char *path, const IrxRbSchema *schema,
         IrxCsvOptions options;
         options.delimiter = delimiter; options.header = header; options.block_size = block_size;
         return irx_rb_csv_reader_open_options(path, schema, &options, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_rb_csv_reader_open_options(const char *path, const IrxRbSchema *schema,
                                   const IrxCsvOptions *configuration, IrxRbStreamReader **out) {
@@ -1918,7 +1921,7 @@ int irx_rb_csv_reader_open_options(const char *path, const IrxRbSchema *schema,
         *out = result.release();
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(std::string("CSV reader: ") + error.what());
+        return set_err(std::string("CSV reader: ") + error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -1931,7 +1934,7 @@ int irx_rb_csv_writer_open(const IrxRbSchema *schema, const char *path,
         IrxCsvOptions options;
         options.delimiter = delimiter; options.header = header;
         return irx_rb_csv_writer_open_options(schema, path, &options, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_rb_csv_writer_open_options(const IrxRbSchema *schema, const char *path,
                                   const IrxCsvOptions *configuration, IrxRbStreamWriter **out) {
@@ -1964,7 +1967,7 @@ int irx_rb_csv_writer_open_options(const IrxRbSchema *schema, const char *path,
         *out = result.release();
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(std::string("CSV writer: ") + error.what());
+        return set_err(std::string("CSV writer: ") + error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -2007,7 +2010,7 @@ int irx_rb_reader_read_table(IrxRbStreamReader *reader, irx_arrow_table_handle *
         auto table = arrow::Table::FromRecordBatches(reader->schema_handle.schema, batches);
         if (!table.ok()) return set_err(table.status());
         return export_table(*table, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_table_schema(const irx_arrow_table_handle *table, IrxRbSchema **out) {
@@ -2020,7 +2023,7 @@ int irx_rb_table_schema(const irx_arrow_table_handle *table, IrxRbSchema **out) 
         if (rc != IRX_OK) return rc;
         *out = result.release();
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_writer_write_table(IrxRbStreamWriter *writer, const irx_arrow_table_handle *table) {
@@ -2044,7 +2047,7 @@ int irx_rb_writer_write_table(IrxRbStreamWriter *writer, const irx_arrow_table_h
         }
     } catch (const std::exception &error) {
         writer->writer->Invalidate(arrow::Status::Invalid(error.what()));
-        return set_err(error.what());
+        return set_err(error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -2075,7 +2078,7 @@ int irx_rb_table_cast(const irx_arrow_table_handle *table, const IrxRbSchema *ex
         auto converted = arrow::Table::Make(arrow::schema(fields, value->schema()->metadata()),
                                             value->columns(), value->num_rows());
         return export_table(converted, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_table_project(const irx_arrow_table_handle *table, const char *const *names,
@@ -2097,7 +2100,7 @@ int irx_rb_table_project(const irx_arrow_table_handle *table, const char *const 
         auto selected = (*imported)->SelectColumns(indices);
         if (!selected.ok()) return set_err(selected.status());
         return export_table(*selected, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_csv_read_table(const char *path, const IrxRbSchema *schema,
@@ -2119,7 +2122,7 @@ int irx_rb_csv_read_table(const char *path, const IrxRbSchema *schema,
         }
         *out = owner.release();
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_rb_csv_write_table(const irx_arrow_table_handle *table, const char *path,
                            const IrxCsvOptions *options) {
@@ -2134,7 +2137,7 @@ int irx_rb_csv_write_table(const irx_arrow_table_handle *table, const char *path
         if (rc != IRX_OK) return rc;
         rc = irx_rb_writer_write_table(writer.get(), table);
         return rc == IRX_OK ? irx_rb_stream_writer_close(writer.get()) : rc;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_schema_add_named_field(IrxRbSchema *schema, const char *name, const char *type, int nullable) {
@@ -2151,7 +2154,7 @@ int irx_rb_schema_add_named_field(IrxRbSchema *schema, const char *name, const c
                 return irx_rb_schema_add_field(schema, name, kind, nullable);
         }
         return set_err("unsupported scalar type name: " + key, IRX_ERR_TYPE);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_batch_to_dynamic_table(const IrxRbBatch *batch, irx_arrow_table_handle **out) {
@@ -2172,7 +2175,7 @@ int irx_rb_batch_to_dynamic_table(const IrxRbBatch *batch, irx_arrow_table_handl
         if (rc != IRX_OK) return rc;
         return irx_arrow_table_import_batch(&array, &schema, out) == 0
             ? IRX_OK : set_err(irx_arrow_last_error());
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_table_to_dynamic_batch(const irx_arrow_table_handle *table, IrxRbBatch **out) {
@@ -2187,7 +2190,7 @@ int irx_rb_table_to_dynamic_batch(const irx_arrow_table_handle *table, IrxRbBatc
         if (irx_arrow_table_export_batch(table, &array, &schema) != 0)
             return set_err(irx_arrow_last_error());
         return irx_rb_batch_import(&array, &schema, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
@@ -2229,7 +2232,7 @@ int irx_rb_batch_to_table(const IrxRbBatch *batch, const IrxRbSchema *expected,
         int rc = irx_arrow_table_import_batch(&array, &schema, out);
         return rc == 0 ? IRX_OK : set_err(irx_arrow_last_error());
     } catch (const std::exception &error) {
-        return set_err(std::string("DataFrame conversion: ") + error.what());
+        return set_err(std::string("DataFrame conversion: ") + error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -2262,11 +2265,12 @@ int irx_rb_table_to_batch(const irx_arrow_table_handle *table, IrxRbBatch **out)
         *out = result.release();
         return IRX_OK;
     } catch (const std::exception &error) {
-        return set_err(std::string("RecordBatch conversion: ") + error.what());
+        return set_err(std::string("RecordBatch conversion: ") + error.what(), irx::native_exception_status(error));
     }
 }
 
 namespace irx {
+int api_last_error_code() { return tl_errcode; }
 int record_batch_error(const std::string &message, int code) { return set_err(message, code); }
 const std::shared_ptr<arrow::Schema> &record_batch_schema(const IrxRbSchema *schema) { return schema->schema; }
 int own_reader(std::shared_ptr<arrow::RecordBatchReader> reader, IrxRbStreamReader **out) {

@@ -64,13 +64,12 @@ class ArxBuilder(LLVMBuilder):
         returns:
           type: str
         """
-        from arx.builtin_files import needs_file_builtin  # noqa: PLC0415
         from arx.main import (  # noqa: PLC0415
             FileImportResolver,
             inject_ambient_builtin_imports,
         )
 
-        if isinstance(expr, astx.Module) and needs_file_builtin(expr):
+        if isinstance(expr, astx.Module):
             return self.translate_modules(
                 ParsedModule(expr.name, inject_ambient_builtin_imports(expr)),
                 FileImportResolver(input_files=()),

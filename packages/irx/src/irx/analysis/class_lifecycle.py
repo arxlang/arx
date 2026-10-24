@@ -877,6 +877,24 @@ def validate_file_fields(
                 "file fields must initialize on every constructor exit",
             )
 
+    def written_fields(node: astx.AST) -> set[str]:
+        """
+        title: Conservatively collect file fields published within a subtree.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: set[str]
+        """
+        names: set[str] = set()
+        if isinstance(node, astx.BinaryOp) and node.op_code == "=":
+            name = field_name(node.lhs)
+            if name is not None:
+                names.add(name)
+        for child in lifecycle_children(node):
+            names.update(written_fields(child))
+        return names
+
     def flow(node: astx.AST, state: set[str]) -> set[str] | None:
         """
         title: Merge definite initialization over supported branches.
@@ -908,6 +926,47 @@ def validate_file_fields(
             if right is None:
                 return left
             return left & right
+        if isinstance(node, astx.ThrowStmt):
+            reads(node, state)
+            return None
+        if isinstance(node, astx.ExceptionHandlerStmt):
+            normal = flow(node.body, set(state))
+            if normal is not None and node.else_body is not None:
+                normal = flow(node.else_body, normal)
+            alternatives = [normal] if normal is not None else []
+            try_writes = written_fields(node.body)
+            for handler in node.handlers:
+                if written_fields(handler.body) & try_writes:
+                    lifecycle_error(
+                        analyzer,
+                        handler,
+                        "file-field replacement after partial try "
+                        "is unsupported",
+                    )
+                result = flow(handler.body, set(state))
+                if result is not None:
+                    alternatives.append(result)
+            if node.finally_handler is not None:
+                prior_writes = set(try_writes)
+                for handler in node.handlers:
+                    prior_writes.update(written_fields(handler.body))
+                if node.else_body is not None:
+                    prior_writes.update(written_fields(node.else_body))
+                if written_fields(node.finally_handler.body) & prior_writes:
+                    lifecycle_error(
+                        analyzer,
+                        node.finally_handler,
+                        "file-field replacement in finalizers is unsupported",
+                    )
+                # Failure can occur before the first try initializer. A
+                # finalizer must not assume a field was published after it.
+                final = flow(node.finally_handler.body, set(state))
+                if final is None:
+                    return None
+                alternatives = [item | final for item in alternatives]
+            if not alternatives:
+                return None
+            return set.intersection(*alternatives)
         if isinstance(node, astx.FunctionReturn):
             exits(node, state)
             return None

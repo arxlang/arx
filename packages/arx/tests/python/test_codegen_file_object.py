@@ -20,7 +20,7 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver, get_module_name_from_file_path
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 from irx.builder.runtime.registry import RuntimeFeatureState
 from llvmlite import binding as llvm
 
@@ -163,7 +163,7 @@ def test_integer_division_by_zero_reports_runtime_diagnostic(
     )
 
     assert result.returncode == 1
-    report = parse_runtime_failure_output(result.stderr)
+    report = parse_exception_output(result.stderr)
     assert report is not None
     assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
     assert report.line == 3

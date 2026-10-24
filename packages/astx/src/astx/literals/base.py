@@ -109,3 +109,16 @@ class LiteralNone(Literal):
         super().__init__(loc)
         self.value = None
         self.type_ = NoneType()
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Represent explicit null in the supported scalar vocabulary.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
+        return self._prepare_struct(
+            f"Literal[{self.type_}]: None", "none", simplified
+        )

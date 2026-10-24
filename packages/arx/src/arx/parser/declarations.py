@@ -302,6 +302,14 @@ class DeclarationParserMixin(ParserMixinBase):
                         code="ARX-PARSE-DOCSTRING-001",
                     ) from err
                 self.tokens.get_next_token()
+                # Docstrings may be the entire body of a nominal subclass.
+                # Unlike declarations they do not consume a trailing newline.
+                next_kind = cast(TokenKind, self.tokens.cur_tok.kind)
+                if next_kind == TokenKind.eof or (
+                    next_kind != TokenKind.indent
+                    and self.tokens.cur_tok.location.col <= cur_indent
+                ):
+                    break
                 continue
 
             prefixes = ParsedDeclarationPrefixes()

@@ -12,6 +12,7 @@ from public import public
 from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.handlers.control_flow import ControlFlowVisitorMixin
 from irx.analysis.handlers.declarations import DeclarationVisitorMixin
+from irx.analysis.handlers.exceptions import ExceptionVisitorMixin
 from irx.analysis.handlers.expressions import ExpressionVisitorMixin
 from irx.analysis.handlers.imports import ImportVisitorMixin
 from irx.analysis.handlers.templates import TemplateVisitorMixin
@@ -24,6 +25,7 @@ class SemanticAnalyzer(
     ImportVisitorMixin,
     TemplateVisitorMixin,
     DeclarationVisitorMixin,
+    ExceptionVisitorMixin,
     ExpressionVisitorMixin,
     ControlFlowVisitorMixin,
     SemanticAnalyzerCore,

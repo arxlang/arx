@@ -41,7 +41,18 @@ from irx.builder.diagnostics import (
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.table_io import lower_table_io
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.record_batch_api import is_checked_native_facade
+from irx.builder.state import (
+    CleanupAction,
+    CleanupEmitter,
+    CleanupKind,
+    PendingReturn,
+)
 from irx.builder.types import is_int_type
+from irx.builtins.collections.list import (
+    LIST_DESTROY_SYMBOL,
+    LIST_RUNTIME_FEATURE,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -540,6 +551,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
             )
         self._apply_calling_convention(signature)
+        if signature.exception_abi:
+            args_type.insert(0, ir.IntType(8).as_pointer())
+            if not isinstance(return_type, ir.VoidType):
+                args_type.append(return_type.as_pointer())
+            return_type = ir.IntType(32)
         return ir.FunctionType(
             return_type,
             args_type,
@@ -581,7 +597,21 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                     signature.symbol_name,
                 )
                 declared_feature_name = feature_name
-                if fn.function_type != fn_type:
+                checked = is_checked_native_facade(
+                    signature.symbol_name,
+                    feature_name,
+                    self.runtime_features.feature(feature_name).metadata.get(
+                        "checked_facade_abi"
+                    ),
+                )
+                expected = fn_type
+                if checked:
+                    arguments = list(fn_type.args)
+                    if not isinstance(fn_type.return_type, ir.VoidType):
+                        arguments.append(fn_type.return_type.as_pointer())
+                    arguments.append(ir.IntType(8).as_pointer())
+                    expected = ir.FunctionType(ir.IntType(32), arguments)
+                if fn.function_type != expected:
                     raise_lowering_error(
                         f"runtime feature '{feature_name}' declares symbol "
                         f"'{signature.symbol_name}' with an incompatible "
@@ -617,8 +647,14 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 if signature.is_extern or function.definition is None:
                     fn.linkage = "external"
 
-        for idx, llvm_arg in enumerate(fn.args):
-            llvm_arg.name = function.args[idx].name
+        offset = int(signature.exception_abi)
+        if offset:
+            fn.args[0].name = "context"
+        for idx, symbol in enumerate(function.args):
+            fn.args[idx + offset].name = symbol.name
+        if offset and not isinstance(signature.return_type, astx.NoneType):
+            fn.args[-1].name = "result_out"
+        self.llvm_function_signatures[fn.name] = signature
 
         self.function_protos[function_key] = function.prototype
         self.llvm_functions_by_symbol_id[function_key] = fn
@@ -654,10 +690,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         callee_f = self._declare_semantic_function(target_function)
         llvm_args = self.lower_bound_call_arguments(resolution)
         self._apply_calling_convention(resolution.signature)
-        if isinstance(callee_f.function_type.return_type, ir.VoidType):
-            self._llvm.ir_builder.call(callee_f, llvm_args)
+        result = self.emit_resolved_call(
+            node, callee_f, resolution.signature, llvm_args
+        )
+        if result is None:
             return
-        result = self._llvm.ir_builder.call(callee_f, llvm_args, "calltmp")
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
@@ -719,10 +756,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             _ = safe_pop(self.result_stack)
             llvm_args = self.lower_bound_call_arguments(resolution)
             self._apply_calling_convention(function.signature)
-            if isinstance(callee.function_type.return_type, ir.VoidType):
-                self._llvm.ir_builder.call(callee, llvm_args)
+            result = self.emit_resolved_call(
+                node, callee, function.signature, llvm_args
+            )
+            if result is None:
                 return
-            result = self._llvm.ir_builder.call(callee, llvm_args, "calltmp")
             self._register_call_result_cleanup(node, result)
             self.result_stack.append(result)
             return
@@ -763,13 +801,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 method_resolution.function
             )
         self._apply_calling_convention(method_resolution.function.signature)
-        if isinstance(
-            method_resolution.function.signature.return_type,
-            astx.NoneType,
-        ):
-            self._llvm.ir_builder.call(callee, lowered_args)
+        result = self.emit_resolved_call(
+            node, callee, method_resolution.function.signature, lowered_args
+        )
+        if result is None:
             return
-        result = self._llvm.ir_builder.call(callee, lowered_args, "calltmp")
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
@@ -810,13 +846,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         lowered_args = [lowered_receiver, *llvm_args]
         callee = self._declare_semantic_function(method_resolution.function)
         self._apply_calling_convention(method_resolution.function.signature)
-        if isinstance(
-            method_resolution.function.signature.return_type,
-            astx.NoneType,
-        ):
-            self._llvm.ir_builder.call(callee, lowered_args)
+        result = self.emit_resolved_call(
+            node, callee, method_resolution.function.signature, lowered_args
+        )
+        if result is None:
             return
-        result = self._llvm.ir_builder.call(callee, lowered_args, "calltmp")
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
@@ -832,10 +866,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         callee = self._declare_semantic_function(method_resolution.function)
         llvm_args = self.lower_bound_call_arguments(method_resolution.call)
         self._apply_calling_convention(method_resolution.function.signature)
-        if isinstance(callee.function_type.return_type, ir.VoidType):
-            self._llvm.ir_builder.call(callee, llvm_args)
+        result = self.emit_resolved_call(
+            node, callee, method_resolution.function.signature, llvm_args
+        )
+        if result is None:
             return
-        result = self._llvm.ir_builder.call(callee, llvm_args, "calltmp")
         self._register_call_result_cleanup(node, result)
         self.result_stack.append(result)
 
@@ -876,12 +911,31 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         self.class_construction_stack = []
         self._current_function_return_type = signature.return_type
         self._current_function_signature = signature
+        previous_exception_state = (
+            self.exception_context,
+            self.exception_result_slot,
+            self.exception_targets,
+            self.pending_returns,
+        )
+        self.exception_context = (
+            fn.args[0] if signature.exception_abi else None
+        )
+        self.exception_result_slot = (
+            fn.args[-1]
+            if signature.exception_abi
+            and not isinstance(signature.return_type, astx.NoneType)
+            else None
+        )
+        self.exception_targets = []
+        self.pending_returns = []
 
         try:
             hidden_parameter_count = len(function.args) - len(
                 function.prototype.args.nodes
             )
-            for idx, llvm_arg in enumerate(fn.args):
+            offset = int(signature.exception_abi)
+            source_args = fn.args[offset : offset + len(function.args)]
+            for idx, llvm_arg in enumerate(source_args):
                 arg_symbol = function.args[idx]
                 arg_type = self._llvm_type_for_ast_type(
                     signature.parameters[idx].type_
@@ -939,10 +993,10 @@ class FunctionVisitorMixin(ClassVisitorMixin):
 
             self.visit_child(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
-                return_type = fn.function_type.return_type
-                if isinstance(return_type, ir.VoidType):
+                if isinstance(signature.return_type, astx.NoneType):
                     self._emit_active_cleanups()
-                    self._llvm.ir_builder.ret_void()
+                    if not self._llvm.ir_builder.block.is_terminated:
+                        self.emit_success_return(None)
                 else:
                     raise_lowering_internal_error(
                         f"function '{function.name}' reached lowering "
@@ -958,6 +1012,12 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             self.class_construction_stack = previous_construction
             self._current_function_return_type = previous_return_type
             self._current_function_signature = previous_signature
+            (
+                self.exception_context,
+                self.exception_result_slot,
+                self.exception_targets,
+                self.pending_returns,
+            ) = previous_exception_state
 
         self._emitted_function_bodies.add(function_key)
         self.result_stack.append(fn)
@@ -988,12 +1048,31 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             type: astx.FunctionReturn
         """
         if self._current_generator_frame_ptr is not None:
+            if node.value is not None and not isinstance(
+                node.value, astx.LiteralNone
+            ):
+                depth = len(self.result_stack)
+                self.visit_child(node.value)
+                del self.result_stack[depth:]
             cast(Any, self)._emit_generator_stop(node)
             return
         return_resolution = self._semantic_return_resolution(node)
         if return_resolution.returns_void:
+            if node.value is not None and not isinstance(
+                node.value, astx.LiteralNone
+            ):
+                depth = len(self.result_stack)
+                self.visit_child(node.value)
+                del self.result_stack[depth:]
             self._emit_active_cleanups()
-            self._llvm.ir_builder.ret_void()
+            if not self._llvm.ir_builder.block.is_terminated:
+                completed_cleanups = self.cleanup_stack
+                self.cleanup_stack = []
+                try:
+                    self.abandon_pending_returns()
+                    self.emit_success_return(None)
+                finally:
+                    self.cleanup_stack = completed_cleanups
             return
 
         if node.value is not None:
@@ -1018,24 +1097,129 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             target_type=return_resolution.expected_type,
         )
         return_ownership = resource_ownership(node)
-        if return_ownership is not None and return_ownership.resource_kind in {
-            ResourceKind.CLASS,
-            *ARROW_RESOURCES,
-        }:
+        preserve_source = (
+            return_ownership is not None
+            and return_ownership.source_symbol_id is not None
+            and return_ownership.resource_kind
+            in {ResourceKind.STRING, ResourceKind.CLASS, *ARROW_RESOURCES}
+            and (
+                bool(self.pending_returns)
+                or any(
+                    item.kind is CleanupKind.FINALLY
+                    for item in self.cleanup_stack
+                )
+            )
+        )
+        if (
+            return_ownership is not None
+            and return_ownership.resource_kind
+            in {
+                ResourceKind.CLASS,
+                *ARROW_RESOURCES,
+            }
+            and (
+                preserve_source
+                or return_ownership.transfer_kind
+                is not OwnershipTransferKind.MOVE
+            )
+        ):
             self.class_operation(node, "retain", retval)
         if (
             return_ownership is not None
             and return_ownership.resource_kind is ResourceKind.STRING
-            and return_ownership.transfer_kind is OwnershipTransferKind.COPY
+            and (
+                preserve_source
+                or return_ownership.transfer_kind is OwnershipTransferKind.COPY
+            )
         ):
             retval = self._copy_string_to_heap(node, retval)
-        fn_return_type = (
-            self._llvm.ir_builder.function.function_type.return_type
+        fn_return_type = self._llvm_type_for_ast_type(
+            return_resolution.expected_type
         )
         if is_int_type(fn_return_type) and fn_return_type.width == 1:
             if is_int_type(retval.type) and retval.type.width != 1:
                 retval = self._llvm.ir_builder.trunc(retval, ir.IntType(1))
-        self._emit_active_cleanups(
-            excluded_owner_symbol_ids=self._return_cleanup_exclusions(node),
+        previous_pending = self.pending_returns
+        actions: list[CleanupEmitter] = []
+        if return_ownership is not None:
+            if return_ownership.resource_kind in {
+                ResourceKind.CLASS,
+                *ARROW_RESOURCES,
+            }:
+                actions.append(
+                    lambda: self.class_operation(node, "release", retval)
+                )
+            elif return_ownership.resource_kind is ResourceKind.STRING:
+                free = self.require_runtime_symbol("libc", "free")
+
+                def abandon_string() -> None:
+                    """
+                    title: Release a string result whose return was replaced.
+                    """
+                    self._llvm.ir_builder.call(free, [retval])
+
+                actions.append(abandon_string)
+            elif return_ownership.resource_kind is ResourceKind.LIST:
+                returned_list = self.create_entry_block_alloca(
+                    "return.list", retval.type
+                )
+                self._llvm.ir_builder.store(retval, returned_list)
+                destroy = self.require_runtime_symbol(
+                    LIST_RUNTIME_FEATURE, LIST_DESTROY_SYMBOL
+                )
+
+                def abandon_list() -> None:
+                    """
+                    title: Destroy a moved list whose return was replaced.
+                    """
+                    self._llvm.ir_builder.call(destroy, [returned_list])
+
+                actions.append(abandon_list)
+        restore_depth = None
+        if (
+            return_ownership is not None
+            and return_ownership.resource_kind is ResourceKind.LIST
+            and return_ownership.transfer_kind is OwnershipTransferKind.MOVE
+            and return_ownership.source_symbol_id is not None
+        ):
+            restore_depth = next(
+                (
+                    index
+                    for index, action in enumerate(self.cleanup_stack)
+                    if action.owner_symbol_id
+                    == return_ownership.source_symbol_id
+                ),
+                None,
+            )
+        completion = PendingReturn(
+            tuple(actions),
+            tuple(self.exception_targets),
+            tuple(self.loop_stack),
+            restore_depth,
         )
-        self._llvm.ir_builder.ret(retval)
+        self.pending_returns = [*previous_pending, completion]
+        original_cleanups = self.cleanup_stack
+        exclusions = (
+            frozenset()
+            if preserve_source
+            else self._return_cleanup_exclusions(node)
+        )
+        self.cleanup_stack = [
+            CleanupAction(
+                lambda: None,
+                owner_symbol_id=item.owner_symbol_id,
+                fallible=False,
+            )
+            if item.owner_symbol_id in exclusions
+            else item
+            for item in original_cleanups
+        ]
+        try:
+            self._emit_active_cleanups()
+            if not self._llvm.ir_builder.block.is_terminated:
+                self.cleanup_stack = []
+                self.abandon_pending_returns(tuple(previous_pending))
+                self.emit_success_return(retval)
+        finally:
+            self.pending_returns = previous_pending
+            self.cleanup_stack = original_cleanups

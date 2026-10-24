@@ -149,12 +149,21 @@ class ControlFlowParserMixin(ParserMixinBase):
                     self.tokens.get_next_token()
                     docstring_allowed_here = False
                 else:
-                    node = self.parse_expression()
+                    node = self.parse_statement()
                     block.nodes.append(node)
                     docstring_allowed_here = False
 
+                same_line_statement = False
                 while self._is_operator(";"):
+                    separator_line = self.tokens.cur_tok.location.line
                     self.tokens.get_next_token()
+                    same_line_statement = (
+                        self.tokens.cur_tok.kind != TokenKind.eof
+                        and self.tokens.cur_tok.location.line == separator_line
+                    )
+
+                if same_line_statement:
+                    continue
 
                 next_kind: TokenKind = self.tokens.cur_tok.kind
                 if next_kind not in {
@@ -182,11 +191,8 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         then_block = self.parse_block()
 
-        if self.tokens.cur_tok.kind == TokenKind.indent:
-            self.tokens.get_next_token()
-
         else_block = astx.Block()
-        if self.tokens.cur_tok.kind == TokenKind.kw_else:
+        if self.match_clause(TokenKind.kw_else, if_loc.col - 1):
             self.tokens.get_next_token()  # eat else
             self._consume_operator(":")
             else_block = self.parse_block()

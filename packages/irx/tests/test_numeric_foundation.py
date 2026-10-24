@@ -122,7 +122,7 @@ def test_translate_function_call_implicitly_promotes_arguments() -> None:
     ir_text = Builder().translate(module)
 
     assert "sext i16 7 to i32" in ir_text
-    assert 'call i32 @"main__echo"(i32' in ir_text
+    assert 'call i32 @"main__echo"(i8* %"context", i32' in ir_text
     assert_ir_parses(ir_text)
 
 

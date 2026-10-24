@@ -5,7 +5,6 @@ title: Arx compiled test runner helpers.
 from __future__ import annotations
 
 import fnmatch
-import importlib
 import sys
 import tempfile
 
@@ -16,7 +15,12 @@ from typing import Literal
 import astx
 
 from irx.analysis.module_interfaces import ParsedModule
+from irx.analysis.module_symbols import qualified_class_name
 from irx.builder.base import CommandResult
+from irx.builder.runtime.exceptions import (
+    ExceptionReport,
+    parse_exception_output,
+)
 
 from arx.codegen import ArxBuilder
 from arx.io import ArxIO
@@ -31,8 +35,6 @@ from arx.parser import Parser
 DEFAULT_TEST_PATHS: tuple[str, ...] = ("tests",)
 DEFAULT_TEST_FILE_PATTERN = "test_*.x"
 DEFAULT_TEST_FUNCTION_PATTERN = "test_*"
-ASSERT_FAILURE_PREFIX = "ARX_ASSERT_FAIL"
-ASSERT_FAILURE_FIELD_COUNT = 5
 
 ALLOWED_SHARED_TOP_LEVEL_NODES = (
     astx.ClassDefStmt,
@@ -105,6 +107,8 @@ class TestExecutionResult:
         type: AssertionFailureReport | None
       artifact_dir:
         type: Path | None
+      exception:
+        type: ExceptionReport | None
     """
 
     name: str
@@ -114,6 +118,7 @@ class TestExecutionResult:
     stderr: str
     assertion_failure: AssertionFailureReport | None
     artifact_dir: Path | None = None
+    exception: ExceptionReport | None = None
 
 
 @dataclass(frozen=True)
@@ -168,129 +173,6 @@ class TestRunError(RuntimeError):
         """
         super().__init__(message)
         self.artifact_dir: Path | None = artifact_dir
-
-
-def _decode_assert_failure_field(text: str) -> str:
-    """
-    title: Decode one escaped assertion failure protocol field.
-    parameters:
-      text:
-        type: str
-    returns:
-      type: str
-    """
-    decoded: list[str] = []
-    index = 0
-    escapes = {
-        "\\": "\\",
-        "n": "\n",
-        "p": "|",
-        "r": "\r",
-        "t": "\t",
-    }
-
-    while index < len(text):
-        char = text[index]
-        if char != "\\":
-            decoded.append(char)
-            index += 1
-            continue
-
-        if index + 1 >= len(text):
-            decoded.append("\\")
-            break
-
-        escaped = text[index + 1]
-        replacement = escapes.get(escaped)
-        if replacement is None:
-            decoded.append("\\")
-            decoded.append(escaped)
-        else:
-            decoded.append(replacement)
-        index += 2
-
-    return "".join(decoded)
-
-
-def _parse_assert_failure_line(line: str) -> AssertionFailureReport | None:
-    """
-    title: Parse one machine-readable assertion failure line.
-    parameters:
-      line:
-        type: str
-    returns:
-      type: AssertionFailureReport | None
-    """
-    stripped = line.strip()
-    prefix = f"{ASSERT_FAILURE_PREFIX}|"
-    if not stripped.startswith(prefix):
-        return None
-
-    parts = stripped.split("|", ASSERT_FAILURE_FIELD_COUNT - 1)
-    if len(parts) != ASSERT_FAILURE_FIELD_COUNT:
-        return None
-
-    _, source, line_text, col_text, message = parts
-    try:
-        line_number = int(line_text)
-        col_number = int(col_text)
-    except ValueError:
-        return None
-
-    return AssertionFailureReport(
-        source=_decode_assert_failure_field(source),
-        line=line_number,
-        col=col_number,
-        message=_decode_assert_failure_field(message),
-    )
-
-
-def _parse_assert_failure_output_fallback(
-    stderr: str,
-) -> AssertionFailureReport | None:
-    """
-    title: Parse the first assertion failure from stderr using fallback logic.
-    parameters:
-      stderr:
-        type: str
-    returns:
-      type: AssertionFailureReport | None
-    """
-    for line in stderr.splitlines():
-        parsed = _parse_assert_failure_line(line)
-        if parsed is not None:
-            return parsed
-    return None
-
-
-def _parse_assert_failure_output(
-    stderr: str,
-) -> AssertionFailureReport | None:
-    """
-    title: Parse one assertion failure report from stderr.
-    parameters:
-      stderr:
-        type: str
-    returns:
-      type: AssertionFailureReport | None
-    """
-    try:
-        runtime_module = importlib.import_module(
-            "irx.builder.runtime.assertions"
-        )
-    except ImportError:
-        return _parse_assert_failure_output_fallback(stderr)
-
-    parsed = runtime_module.parse_assert_failure_output(stderr)
-    if parsed is None:
-        return None
-
-    return AssertionFailureReport(
-        source=parsed.source,
-        line=parsed.line,
-        col=parsed.col,
-        message=parsed.message,
-    )
 
 
 def _sanitize_name(text: str) -> str:
@@ -750,7 +632,19 @@ class ArxTestRunner:
         returns:
           type: TestExecutionResult
         """
-        assertion_failure = _parse_assert_failure_output(command_result.stderr)
+        exception = parse_exception_output(command_result.stderr)
+        assertion_failure: AssertionFailureReport | None = None
+        if exception is not None and (
+            exception.code == "ARX-RUNTIME-ASSERTION-001"
+            or exception.type_name
+            == qualified_class_name("builtins.exceptions", "AssertionError")
+        ):
+            assertion_failure = AssertionFailureReport(
+                source=exception.source,
+                line=exception.line,
+                col=exception.col,
+                message=exception.message,
+            )
         return TestExecutionResult(
             name=test_case.name,
             passed=command_result.success,
@@ -759,6 +653,7 @@ class ArxTestRunner:
             stderr=command_result.stderr,
             assertion_failure=assertion_failure,
             artifact_dir=artifact_dir,
+            exception=exception,
         )
 
     def _print_test_result(self, result: TestExecutionResult) -> None:
@@ -774,7 +669,21 @@ class ArxTestRunner:
 
         print(f"FAIL {result.name}")
         failure = result.assertion_failure
-        if failure is not None:
+        if result.exception is not None:
+            for report in (*result.exception.related, result.exception):
+                location = report.source
+                if report.line > 0 and report.col > 0:
+                    location += f":{report.line}:{report.col}"
+                print(
+                    f"  {report.role}: {location}: "
+                    f"{report.type_name}: {report.message}"
+                )
+                for frame in report.frames:
+                    location = frame.source
+                    if frame.line > 0 and frame.col > 0:
+                        location += f":{frame.line}:{frame.col}"
+                    print(f"    at {location}")
+        elif failure is not None:
             message_lines = failure.message.splitlines() or [""]
             print(
                 f"  {failure.source}:{failure.line}:{failure.col}: "

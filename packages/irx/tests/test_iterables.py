@@ -378,7 +378,7 @@ def test_for_in_lowers_to_list_iteration_blocks() -> None:
 
     assert "for.in.cond" in ir_text
     assert "for.in.advance" in ir_text
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -391,7 +391,7 @@ def test_dynamic_list_for_in_lowers() -> None:
 
     assert "irx_list_iter_length_i64" in ir_text
     assert "for.in.cond" in ir_text
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -432,7 +432,7 @@ def test_list_comprehension_lowers_to_dynamic_list_append() -> None:
 
     assert "list.comp.0.cond" in ir_text
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert 'call void @"irx_list_require_ok"' in ir_text
+    assert 'call i8* @"irx_list_status_message"' in ir_text
     assert 'call void @"irx_list_destroy"' in ir_text
     assert_ir_parses(ir_text)
 

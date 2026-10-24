@@ -31,7 +31,11 @@ def test_bundled_builtin_package_data_is_present() -> None:
     """
     title: Bundled builtin sources are present in package resources.
     """
-    assert builtins.list_builtin_modules() == ("files", "generators")
+    assert builtins.list_builtin_modules() == (
+        "exceptions",
+        "files",
+        "generators",
+    )
     assert builtins.resolve_builtin_resource("generators").name == (
         "generators.x"
     )
@@ -152,7 +156,7 @@ def test_ambient_builtin_imports_expose_range_by_default() -> None:
     title: Ambient builtin imports expose range outside its source module.
     """
     implicit_imports = builtins.get_ambient_builtin_imports("main")
-    assert len(implicit_imports) == 2
+    assert len(implicit_imports) == 3
     assert implicit_imports[0].module == "builtins.generators"
     assert [alias.name for alias in implicit_imports[0].names] == ["range"]
 
@@ -160,7 +164,8 @@ def test_ambient_builtin_imports_expose_range_by_default() -> None:
         "builtins.generators"
     )
     assert [item.module for item in source_module_imports] == [
-        "builtins.files"
+        "builtins.files",
+        "builtins.exceptions",
     ]
 
 
@@ -474,8 +479,18 @@ def test_ambient_builtin_injection_allows_local_range_definition(
         and node.module == "builtins.generators"
         for node in module.nodes
     )
-    assert isinstance(module.nodes[0], irx_astx.FunctionDef)
-    assert module.nodes[0].prototype.name == "range"
+    declarations = [
+        node
+        for node in module.nodes
+        if not isinstance(node, irx_astx.ImportFromStmt)
+    ]
+    assert isinstance(declarations[0], irx_astx.FunctionDef)
+    assert declarations[0].prototype.name == "range"
+    assert any(
+        isinstance(node, irx_astx.ImportFromStmt)
+        and node.module == "builtins.exceptions"
+        for node in module.nodes
+    )
 
 
 def test_ambient_builtin_injection_allows_imported_range_binding(
@@ -519,9 +534,14 @@ def test_ambient_builtin_injection_allows_imported_range_binding(
     module = app._get_codegen_astx()
 
     assert isinstance(module, irx_astx.Module)
-    assert isinstance(module.nodes[0], irx_astx.ImportFromStmt)
-    assert module.nodes[0].module == "helper"
-    assert [alias.name for alias in module.nodes[0].names] == ["range"]
+    imports = [
+        node
+        for node in module.nodes
+        if isinstance(node, irx_astx.ImportFromStmt)
+    ]
+    imported = next(node for node in imports if node.module == "helper")
+    assert [alias.name for alias in imported.names] == ["range"]
+    assert any(node.module == "builtins.exceptions" for node in imports)
     assert not any(
         isinstance(node, irx_astx.ImportFromStmt)
         and node.module == "builtins.generators"

@@ -54,6 +54,7 @@ def numeric_guard(
         block_name="numeric.conversion"
         if conversion
         else "numeric.arithmetic",
+        exception_role="OverflowError",
     )
 
 
@@ -249,6 +250,16 @@ def numeric_cast(
             double: ir.Value = value
             if not isinstance(value.type, ir.DoubleType):
                 double = builder.fpext(value, ir.DoubleType())
+            # NaN is an invalid value, unlike infinity or a finite value
+            # outside the target range, both of which are overflow failures.
+            visitor._guard_runtime_condition(
+                node,
+                builder.fcmp_ordered("==", double, double),
+                code="ARX-RUNTIME-CONVERSION-001",
+                message="cannot convert NaN to an integer",
+                block_name="numeric.conversion.nan",
+                exception_role="ValueError",
+            )
             # LLVM may lower truncation to a libm call on baseline targets.
             visitor.runtime_features.activate("libm")
             trunc = visitor._llvm.module.declare_intrinsic(

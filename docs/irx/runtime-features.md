@@ -22,20 +22,20 @@ available to the final link. Inactive features contribute nothing.
 
 Registered features:
 
-| Feature        | Responsibility                                       |
-| -------------- | ---------------------------------------------------- |
-| `libc`         | `puts`, checked allocation, formatting, and `free`   |
-| `file`         | Checked single-owner POSIX UTF-8 text files          |
-| `libm`         | math symbols and the platform math linker flag       |
-| `assertions`   | fatal assertion helper and machine-readable reports  |
-| `errors`       | fatal checked-runtime diagnostics and stable records |
-| `buffer`       | buffer-owner and view lifetime helpers               |
-| `list`         | minimal dynamic list creation, growth, and indexing  |
-| `array`        | one-dimensional Apache Arrow array runtime           |
-| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime       |
-| `dataframe`    | Arrow Table and ChunkedArray runtime                 |
-| `record_batch` | Arrow RecordBatch and IPC/CSV streaming              |
-| `parquet`      | Parquet files/datasets; depends on `record_batch`    |
+| Feature        | Responsibility                                                  |
+| -------------- | --------------------------------------------------------------- |
+| `libc`         | `puts`, checked allocation, formatting, and `free`              |
+| `file`         | Checked single-owner POSIX UTF-8 text files                     |
+| `libm`         | math symbols and the platform math linker flag                  |
+| `exceptions`   | checked contexts, retained class payloads, diagnostic snapshots |
+| `errors`       | unrecoverable runtime-machinery fallback diagnostics            |
+| `buffer`       | buffer-owner and view lifetime helpers                          |
+| `list`         | minimal dynamic list creation, growth, and indexing             |
+| `array`        | one-dimensional Apache Arrow array runtime                      |
+| `tensor`       | homogeneous N-dimensional Arrow Tensor runtime                  |
+| `dataframe`    | Arrow Table and ChunkedArray runtime                            |
+| `record_batch` | Arrow RecordBatch and IPC/CSV streaming                         |
+| `parquet`      | Parquet files/datasets; depends on `record_batch`               |
 
 The runtime layer is independent of Arx imports. Importing a source module and
 activating a native feature are different compiler operations.
@@ -162,17 +162,29 @@ before binding other symbols.
 This is RecordBatch IPC support, not an implementation of the Arrow C Stream
 `ArrowArrayStream` interface.
 
-## Assertions
+## Exceptions and native failures
 
-The `assertions` feature owns `__arx_assert_fail(...)`. On failure it writes one
-escaped, machine-readable line to `stderr` and exits nonzero:
+The `exceptions` feature depends only on ordinary class lifetime support, not
+Arrow. Generated functions pass an explicit context and return a checked status;
+value outputs are read only after success. Pending and dynamically handled
+exceptions retain ordinary class objects. Copied immutable diagnostic snapshots
+bound chains to 32 records and propagation traces to 64 locations without
+retaining causal class objects or forming ownership cycles.
 
-```text
-ARX_ASSERT_FAIL|<source>|<line>|<column>|<message>
-```
+Caught exceptions are silent. The outer execution boundary reports an uncaught
+exception using escaped, typed `ARX_EXCEPTION` records and optional
+`ARX_EXCEPTION_FRAME` records. `irx.builder.runtime.exceptions` parses these
+into `ExceptionReport`; type identities are canonical semantic IDs, not inferred
+from error text. Assertions use the same path as other catchable exceptions.
 
-Python helpers under `irx.builder.runtime.assertions` parse this protocol for
-the Arx test runner.
+Native list, file, and Arrow calls return structured status categories. Checked
+Arrow facades contain C++ exceptions and initialize failed outputs without
+publishing them. File statuses preserve captured POSIX errno. Consuming release
+still releases each owner on failure; implicit cleanup preserves the original
+exception and records secondary failures. Staged Parquet writes are abandoned on
+release; only explicit successful close publishes atomic replacements. Streaming
+CSV/IPC retains its existing non-atomic partial-output policy. Runtime-machinery
+allocation failure retains a minimal, non-recursive fatal fallback.
 
 ## Dynamic list caveat
 

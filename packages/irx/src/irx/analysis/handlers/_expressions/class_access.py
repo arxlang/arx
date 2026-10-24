@@ -162,6 +162,19 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
                 cast(SemanticAnalyzerCore, self), node, class_
             )
             return
+        canonical = self.context.get_class(class_.module_key, class_.name)
+        if canonical is not None:
+            class_ = canonical
+        if class_.exception_type is not None:
+            from irx.analysis.exception_types import (  # noqa: PLC0415
+                resolve_exception_construction,
+            )
+
+            resolve_exception_construction(
+                cast(SemanticAnalyzerCore, self), node, class_
+            )
+            return
+        assert class_.initialization is not None
         resolved_type = astx.ClassType(
             class_.name,
             resolved_name=class_.name,

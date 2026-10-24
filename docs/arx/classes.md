@@ -237,8 +237,10 @@ Allocation and empty-reference failures use `ARX-RUNTIME-CLASS-001`. Checked
 compiler-local construction failures release initialized fields, run only
 completed base-phase destructors, and free partial storage. Native field-release
 errors preserve the first error while continuing remaining field releases and
-freeing the object. Fatal errors inside called user code still exit without
-unwinding caller frames; this is not catchable exception support.
+freeing the object. Generated calls propagate exceptions through those cleanup
+edges; an implicit destructor failure preserves an existing primary exception.
+Unrecoverable native failures do not promise cleanup. See the
+[exception boundary](../support-matrix.md#exception-capability-boundary).
 
 ## IRx Alignment
 

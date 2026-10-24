@@ -852,7 +852,7 @@ class SemanticVisitorMixinTypingBase:
 
     def _guarantees_return(self, node: astx.AST) -> bool:
         """
-        title: Return whether a statement subtree guarantees return.
+        title: Return whether a statement subtree has no normal fallthrough.
         parameters:
           node:
             type: astx.AST
@@ -922,6 +922,11 @@ class SemanticAnalyzerCore(BaseVisitor):
             self.context.native_feature_names = tuple(session.native_features)
             self.context.native_bindings = dict(session.native_bindings)
             self.context.native_table_io = dict(session.native_table_io)
+            self.context.exception_declarations = tuple(
+                declaration
+                for module in session.modules.values()
+                for declaration in module.exception_classes
+            )
         self.factory = SemanticEntityFactory(self.context)
         self.registry = SemanticRegistry(self.context, self.factory)
         self.bindings = VisibleBindings(
@@ -941,12 +946,26 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.AST
         """
+        if self.session is None:
+            from irx.analysis.exception_types import (  # noqa: PLC0415
+                bind_direct_exception_names,
+                builtin_exception_module,
+            )
+
+            if not self.context.exception_declarations:
+                builtin = builtin_exception_module()
+                self.context.exception_declarations = builtin.exception_classes
+                self.analyze_parsed_module(builtin, predeclared=False)
+            bind_direct_exception_names(self, node)
         if isinstance(node, astx.Module):
             parsed_module = ParsedModule(node.name, node)
             self.analyze_parsed_module(parsed_module, predeclared=False)
         else:
             with self.context.scope("module"):
                 self.visit(node)
+        self._semantic(node).runtime_exception_types = dict(
+            self.context.runtime_exception_types
+        )
         self.context.diagnostics.raise_if_errors()
         return node
 
@@ -981,6 +1000,9 @@ class SemanticAnalyzerCore(BaseVisitor):
         )
 
         validate_class_graph(self)
+        self._semantic(parsed_module.ast).runtime_exception_types = dict(
+            self.context.runtime_exception_types
+        )
         return parsed_module.ast
 
     def _semantic(self, node: astx.AST) -> SemanticInfo:
@@ -2024,29 +2046,21 @@ class SemanticAnalyzerCore(BaseVisitor):
 
     def _guarantees_return(self, node: astx.AST) -> bool:
         """
-        title: Return whether a statement subtree guarantees return.
+        title: Return whether a statement subtree has no normal fallthrough.
         parameters:
           node:
             type: astx.AST
         returns:
           type: bool
         """
-        if isinstance(node, astx.FunctionReturn):
-            return True
-        if isinstance(node, astx.Block):
-            for child in node.nodes:
-                if self._guarantees_return(child):
-                    return True
-            return False
-        if isinstance(node, astx.IfStmt):
-            if node.else_ is None:
-                return False
-            return self._guarantees_return(
-                node.then
-            ) and self._guarantees_return(node.else_)
-        if isinstance(node, astx.WithStmt):
-            return self._guarantees_return(node.body)
-        return False
+        from irx.analysis.flow import (  # noqa: PLC0415
+            FlowOutcome,
+            flow_outcomes,
+        )
+
+        outcomes = flow_outcomes(node)
+        self._semantic(node).flow_outcomes = outcomes
+        return FlowOutcome.NORMAL not in outcomes
 
     @dispatch
     def visit(self, node: astx.AST) -> None:

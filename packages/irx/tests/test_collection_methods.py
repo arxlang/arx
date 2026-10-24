@@ -186,7 +186,9 @@ def test_literal_collection_contains(
 
     ir_text = builder.translate(module)
 
-    assert 'define i1 @"main__main_body"' in ir_text
+    assert (
+        'define i32 @"main__main_body"(i8* %"context", i1* %"result_out")'
+    ) in ir_text
     assert "collection_contains" in ir_text
     assert_ir_parses(ir_text)
 
@@ -335,7 +337,7 @@ def test_dynamic_list_search_lowers_to_runtime_loop() -> None:
 
     ir_text = builder.translate(module)
 
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert "collection.search.cond" in ir_text
     assert_ir_parses(ir_text)
 

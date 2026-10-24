@@ -852,6 +852,11 @@ def test_public_analysis_contract_is_stable() -> None:
         "semantic_validation",
     )
     assert contract.required_node_semantic_fields == (
+        "resolved_raise",
+        "resolved_exception_handler",
+        "resolved_try",
+        "runtime_exception_types",
+        "flow_outcomes",
         "resolved_type",
         "resolved_symbol",
         "resolved_function",
@@ -871,6 +876,7 @@ def test_public_analysis_contract_is_stable() -> None:
         "extras",
     )
     assert contract.required_session_fields == (
+        "runtime_exception_types",
         "root",
         "modules",
         "graph",

@@ -430,6 +430,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     function is not None
                     and function.signature.metadata.get("generator")
                     is not None
+                    and symbol.kind != "exception"
                 ):
                     self.context.diagnostics.add(
                         "class references in generators are unsupported",

@@ -18,7 +18,7 @@ are not supported in test entry files.
 ````arx
 ```
 title: Math tests
-summary: Uses fatal assertions in compiled tests.
+summary: Uses assertions in compiled tests.
 ```
 
 import math from stdlib

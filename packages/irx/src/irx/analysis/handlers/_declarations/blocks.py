@@ -18,6 +18,7 @@ import astx
 from irx.analysis.arrow_conversion import arrow_local
 from irx.analysis.class_lifecycle import class_local
 from irx.analysis.file_io import resolve_file_local
+from irx.analysis.flow import flow_outcomes
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
@@ -315,6 +316,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         self._predeclare_block_structs(block)
         for node in block.nodes:
             self.visit(node)
+        self._semantic(block).flow_outcomes = flow_outcomes(block)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.VariableDeclaration) -> None:

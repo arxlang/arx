@@ -29,22 +29,30 @@ from astx.tools.typing import typechecked
 class ThrowStmt(StatementType):
     """
     title: AST class for throw statements.
+    summary: >-
+      An absent exception models re-raising. An absent cause differs from an
+      explicit LiteralNone, which suppresses implicit diagnostic context.
     attributes:
       kind:
         type: ASTKind
       exception:
+        type: Optional[Expr]
+      cause:
         type: Optional[Expr]
     """
 
     kind: ASTKind
 
     exception: Optional[Expr]
+    cause: Optional[Expr]
 
     def __init__(
         self,
         exception: Optional[Expr] = None,
         parent: Optional[ASTNodes] = None,
         loc: SourceLocation = NO_SOURCE_LOCATION,
+        *,
+        cause: Optional[Expr] = None,
     ) -> None:
         """
         title: Initialize the instance.
@@ -55,9 +63,12 @@ class ThrowStmt(StatementType):
             type: Optional[ASTNodes]
           loc:
             type: SourceLocation
+          cause:
+            type: Optional[Expr]
         """
         super().__init__(loc=loc, parent=parent)
         self.exception = exception
+        self.cause = cause
         self.kind = ASTKind.ThrowStmtKind
 
     def __str__(self) -> str:
@@ -81,7 +92,11 @@ class ThrowStmt(StatementType):
           type: ReprStruct
         """
         key = f"THROW-STMT[{id(self)}]" if simplified else "THROW-STMT"
-        value = self.exception.get_struct(simplified) if self.exception else ""
+        value: DictDataTypesStruct = {}
+        if self.exception is not None:
+            value["exception"] = self.exception.get_struct(simplified)
+        if self.cause is not None:
+            value["cause"] = self.cause.get_struct(simplified)
         return self._prepare_struct(key, value, simplified)
 
 
@@ -90,6 +105,10 @@ class ThrowStmt(StatementType):
 class CatchHandlerStmt(StatementType):
     """
     title: AST class for catch statements.
+    summary: >-
+      None means an untyped handler; an empty collection stays empty for
+      semantic validation. Expressions allow qualified nominal references.
+      Every supplied collection item is validated, including lazy iterables.
     attributes:
       kind:
         type: ASTKind
@@ -98,20 +117,20 @@ class CatchHandlerStmt(StatementType):
       name:
         type: Optional[Identifier]
       types:
-        type: Optional[ASTNodes[Identifier]]
+        type: Optional[ASTNodes[Expr]]
     """
 
     kind: ASTKind
 
     body: Block[AST]
     name: Optional[Identifier]
-    types: Optional[ASTNodes[Identifier]]
+    types: Optional[ASTNodes[Expr]]
 
     def __init__(
         self,
         body: Block[AST],
         name: Optional[Identifier] = None,
-        types: Optional[Iterable[Identifier] | ASTNodes[Identifier]] = None,
+        types: Optional[Iterable[Expr] | ASTNodes[Expr]] = None,
         parent: Optional[ASTNodes] = None,
         loc: SourceLocation = NO_SOURCE_LOCATION,
     ) -> None:
@@ -123,7 +142,7 @@ class CatchHandlerStmt(StatementType):
           name:
             type: Optional[Identifier]
           types:
-            type: Optional[Iterable[Identifier] | ASTNodes[Identifier]]
+            type: Optional[Iterable[Expr] | ASTNodes[Expr]]
           parent:
             type: Optional[ASTNodes]
           loc:
@@ -133,12 +152,17 @@ class CatchHandlerStmt(StatementType):
         self.body = body
         self.name = name
 
-        if types:
+        if types is not None:
             if isinstance(types, ASTNodes):
+                for item in types.nodes:
+                    if not isinstance(item, Expr):
+                        raise TypeError("handler types must be expressions")
                 self.types = types
             else:
-                self.types = ASTNodes[Identifier]()
+                self.types = ASTNodes[Expr]()
                 for t in types:
+                    if not isinstance(t, Expr):
+                        raise TypeError("handler types must be expressions")
                     self.types.append(t)
         else:
             self.types = None
@@ -172,7 +196,9 @@ class CatchHandlerStmt(StatementType):
             {"name": self.name.get_struct(simplified)} if self.name else {}
         )
         types_dict = (
-            {"types": self.types.get_struct(simplified)} if self.types else {}
+            {"types": self.types.get_struct(simplified)}
+            if self.types is not None
+            else {}
         )
 
         value: DictDataTypesStruct = {
@@ -188,6 +214,10 @@ class CatchHandlerStmt(StatementType):
 class ExceptionHandlerStmt(StatementType):
     """
     title: AST class for try statements.
+    summary: >-
+      Preserve protected, handler, normal-completion, and finalization suites
+      as separate children. An absent else suite differs from an empty block.
+      Clause validity and execution support belong to semantic analysis.
     attributes:
       kind:
         type: ASTKind
@@ -197,6 +227,8 @@ class ExceptionHandlerStmt(StatementType):
         type: ASTNodes[CatchHandlerStmt]
       finally_handler:
         type: Optional[FinallyHandlerStmt]
+      else_body:
+        type: Optional[Block[AST]]
     """
 
     kind: ASTKind
@@ -204,6 +236,7 @@ class ExceptionHandlerStmt(StatementType):
     body: Block[AST]
     handlers: ASTNodes[CatchHandlerStmt]
     finally_handler: Optional[FinallyHandlerStmt]
+    else_body: Optional[Block[AST]]
 
     def __init__(
         self,
@@ -212,6 +245,8 @@ class ExceptionHandlerStmt(StatementType):
         finally_handler: Optional[FinallyHandlerStmt] = None,
         parent: Optional[ASTNodes] = None,
         loc: SourceLocation = NO_SOURCE_LOCATION,
+        *,
+        else_body: Optional[Block[AST]] = None,
     ) -> None:
         """
         title: Initialize the instance.
@@ -226,18 +261,26 @@ class ExceptionHandlerStmt(StatementType):
             type: Optional[ASTNodes]
           loc:
             type: SourceLocation
+          else_body:
+            type: Optional[Block[AST]]
         """
         super().__init__(loc=loc, parent=parent)
         self.body = body
 
         if isinstance(handlers, ASTNodes):
+            for item in handlers.nodes:
+                if not isinstance(item, CatchHandlerStmt):
+                    raise TypeError("handlers must be CatchHandlerStmt nodes")
             self.handlers = handlers
         else:
             self.handlers = ASTNodes[CatchHandlerStmt]()
             for h in handlers:
+                if not isinstance(h, CatchHandlerStmt):
+                    raise TypeError("handlers must be CatchHandlerStmt nodes")
                 self.handlers.append(h)
 
         self.finally_handler = finally_handler
+        self.else_body = else_body
 
         self.kind = ASTKind.ExceptionHandlerStmtKind
 
@@ -271,11 +314,17 @@ class ExceptionHandlerStmt(StatementType):
             if self.finally_handler
             else {}
         )
+        else_dict = (
+            {"else_body": self.else_body.get_struct(simplified)}
+            if self.else_body is not None
+            else {}
+        )
 
         value: DictDataTypesStruct = {
             **cast(DictDataTypesStruct, body_dict),
             **cast(DictDataTypesStruct, handlers_dict),
             **cast(DictDataTypesStruct, finally_dict),
+            **cast(DictDataTypesStruct, else_dict),
         }
         return self._prepare_struct(key, value, simplified)
 

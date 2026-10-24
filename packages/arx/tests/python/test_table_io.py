@@ -11,7 +11,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from irx.analysis import SemanticError
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 
 from .test_arrow_interop import HAS_NATIVE, compile_program
 
@@ -220,7 +220,7 @@ def test_compiled_table_cast_checks_later_chunks(
         ]
         return
     assert run.returncode != 0
-    failure = parse_runtime_failure_output(run.stderr)
+    failure = parse_exception_output(run.stderr)
     assert failure is not None
     assert "null" in failure.message
     assert not (tmp_path / "output.csv").exists()

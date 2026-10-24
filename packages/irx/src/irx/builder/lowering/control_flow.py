@@ -39,13 +39,14 @@ from irx.builder.diagnostics import (
     resolved_ast_type_name,
 )
 from irx.builder.numeric import resolved_integer_operation
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
 from irx.builder.runtime import safe_pop
-from irx.builder.runtime.assertions import (
-    ASSERT_FAILURE_SYMBOL_NAME,
-    ASSERT_RUNTIME_FEATURE_NAME,
+from irx.builder.state import (
+    CleanupAction,
+    CleanupEmitter,
+    CleanupKind,
+    LoopTargets,
 )
-from irx.builder.state import CleanupAction, CleanupEmitter, LoopTargets
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add
 from irx.diagnostics import DiagnosticCodes
@@ -314,7 +315,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: Iterator[None]
         """
-        self.cleanup_stack.append(CleanupAction(cleanup))
+        self.cleanup_stack.append(
+            CleanupAction(cleanup, kind=CleanupKind.FINALLY)
+        )
         try:
             yield
         finally:
@@ -497,16 +500,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         cast(Any, self)._apply_calling_convention(
             method_resolution.function.signature
         )
-        if isinstance(
-            method_resolution.function.signature.return_type,
-            astx.NoneType,
-        ):
-            self._llvm.ir_builder.call(callee, lowered_args)
-            return None
-        return self._llvm.ir_builder.call(
-            callee,
-            lowered_args,
-            f"{method_resolution.member.name}_context",
+        return cast(Any, self).emit_resolved_call(
+            node, callee, method_resolution.function.signature, lowered_args
         )
 
     def _require_llvm_type(
@@ -907,13 +902,26 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         )
         return builder.or_(positive_path, negative_path, "for.range.cond")
 
-    @VisitorCore.visit.dispatch
+    @cast(DispatchRegistrar, VisitorCore.visit).dispatch
     def visit(self, block: astx.Block) -> None:
         """
         title: Visit Block nodes.
         parameters:
           block:
             type: astx.Block
+        """
+        self.lower_statement_block(block)
+
+    def lower_statement_block(
+        self, block: astx.Block, *, preserve_scope: bool = False
+    ) -> None:
+        """
+        title: Lower statements with optional ownership continuation into else.
+        parameters:
+          block:
+            type: astx.Block
+          preserve_scope:
+            type: bool
         """
         cleanup_depth = len(self.cleanup_stack)
         try:
@@ -937,13 +945,17 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     break
                 self._emit_temporary_cleanups(statement_cleanup_depth)
 
-            if self._llvm.ir_builder.block.terminator is None:
+            if (
+                not preserve_scope
+                and self._llvm.ir_builder.block.terminator is None
+            ):
                 self._emit_active_cleanups(cleanup_depth)
 
             if result is not None:
                 self.result_stack.append(result)
         finally:
-            del self.cleanup_stack[cleanup_depth:]
+            if not preserve_scope:
+                del self.cleanup_stack[cleanup_depth:]
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.AssertStmt) -> None:
@@ -966,22 +978,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.cbranch(condition_value, pass_bb, fail_bb)
 
         self._llvm.ir_builder.position_at_start(fail_bb)
-        source_ptr = self._constant_c_string_pointer(
-            self._assert_source_name(node),
-            name_hint="assert_source",
-        )
-        line_value = ir.Constant(self._llvm.INT32_TYPE, node.loc.line)
-        col_value = ir.Constant(self._llvm.INT32_TYPE, node.loc.col)
         message_ptr = self._lower_assert_message_pointer(node)
-        fail_function = self.require_runtime_symbol(
-            ASSERT_RUNTIME_FEATURE_NAME,
-            ASSERT_FAILURE_SYMBOL_NAME,
+        cast(Any, self).raise_runtime_exception(
+            node,
+            "AssertionError",
+            message_ptr,
+            code="ARX-RUNTIME-ASSERTION-001",
         )
-        self._llvm.ir_builder.call(
-            fail_function,
-            [source_ptr, line_value, col_value, message_ptr],
-        )
-        self._llvm.ir_builder.unreachable()
 
         self._llvm.ir_builder.position_at_start(pass_bb)
 
@@ -1366,18 +1369,50 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             """
             title: Emit this with statement's exit call.
             """
+            visitor = cast(Any, self)
+            token = visitor.exception_call(
+                "finally_enter", [visitor.context_value()]
+            )
+
+            def discard() -> None:
+                """
+                title: Discard the replaced completion on explicit exit.
+                """
+                visitor.exception_call(
+                    "finally_leave",
+                    [
+                        visitor.context_value(),
+                        token,
+                        ir.Constant(ir.IntType(32), 0),
+                    ],
+                )
+
+            saved = self.cleanup_stack
+            self.cleanup_stack = [
+                *saved,
+                CleanupAction(discard, kind=CleanupKind.HANDLER),
+            ]
             self._lower_context_method_call(
                 node=node,
                 method_resolution=resolution.exit,
                 manager_value=manager_value,
                 manager_type=resolution.manager_type,
             )
+            self.cleanup_stack = saved
+            visitor.exception_call(
+                "finally_leave",
+                [
+                    visitor.context_value(),
+                    token,
+                    ir.Constant(ir.IntType(32), 1),
+                ],
+            )
 
         with self._cleanup_scope(cleanup):
             with self._context_target_binding(node, resolution, enter_value):
                 self._discard_child_results(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
-                cleanup()
+                self._emit_active_cleanups(len(self.cleanup_stack) - 1)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.BreakStmt) -> None:
@@ -1397,8 +1432,10 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     "for-range loop bodies"
                 ),
             )
+        cast(Any, self).abandon_loop_returns(self.loop_stack[-1])
         self._emit_active_cleanups(self.loop_stack[-1].cleanup_depth)
-        self._llvm.ir_builder.branch(self.loop_stack[-1].break_target)
+        if not self._llvm.ir_builder.block.is_terminated:
+            self._llvm.ir_builder.branch(self.loop_stack[-1].break_target)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.ContinueStmt) -> None:
@@ -1418,5 +1455,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     "for-range loop bodies"
                 ),
             )
+        cast(Any, self).abandon_loop_returns(self.loop_stack[-1])
         self._emit_active_cleanups(self.loop_stack[-1].cleanup_depth)
-        self._llvm.ir_builder.branch(self.loop_stack[-1].continue_target)
+        if not self._llvm.ir_builder.block.is_terminated:
+            self._llvm.ir_builder.branch(self.loop_stack[-1].continue_target)

@@ -4,8 +4,6 @@ title: Context-manager statement tests.
 
 from __future__ import annotations
 
-import re
-
 from typing import cast
 
 import astx
@@ -224,22 +222,6 @@ def _exit_with_parameter_method() -> astx.FunctionDef:
     )
 
 
-def _main_ir(ir_text: str) -> str:
-    """
-    title: Return the emitted LLVM body for main.
-    parameters:
-      ir_text:
-        type: str
-    returns:
-      type: str
-    """
-    start = ir_text.index('define i32 @"main"(')
-    end = ir_text.find("\ndefine ", start + 1)
-    if end < 0:
-        return ir_text[start:]
-    return ir_text[start:end]
-
-
 def test_analyze_with_resolves_context_protocol_and_target() -> None:
     """
     title: With statements resolve enter, exit, and target metadata.
@@ -455,16 +437,26 @@ def test_return_inside_with_emits_exit_before_ret(
         astx.FunctionReturn(astx.StaticFieldAccess("Manager", "state"))
     )
     with_stmt = astx.WithStmt(astx.ClassConstruct("Manager"), with_body)
+    helper = astx.FunctionDef(
+        astx.FunctionPrototype("use_manager", astx.Arguments(), astx.Int32()),
+        astx.Block(),
+    )
+    helper.body.append(with_stmt)
     module = _module(
         _manager_class(_enter_method(), _exit_method()),
-        _main(with_stmt),
+        helper,
+        _main(
+            astx.FunctionCall("use_manager", []),
+            astx.FunctionReturn(astx.StaticFieldAccess("Manager", "state")),
+        ),
     )
 
-    main_ir = _main_ir(builder.translate(module))
-    ret_index = main_ir.index("ret i32")
-    exit_before_return = main_ir[:ret_index]
-
-    assert re.search(r"call void .*__exit__", exit_before_return) is not None
+    ir_text = builder.translate(module)
+    assert 'define i32 @"main__use_manager"(i8* %"context",' in ir_text
+    assert_ir_parses(ir_text)
+    # Observe the state only after the helper has returned. Textual block
+    # order cannot prove cleanup ordering in a status-based failure CFG.
+    assert_jit_int_main_result(builder, module, EXIT_STATE)
 
 
 def test_with_target_is_scoped_to_body() -> None:

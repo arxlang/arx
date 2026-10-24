@@ -20,6 +20,7 @@ from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis import SemanticError, analyze
 from irx.analysis.module_interfaces import ParsedModule
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 from public import private
 
@@ -145,10 +146,11 @@ def test_native_integer_overflow(
         optimization,
     )
     assert result.returncode != 0
-    assert (
-        "ARX_RUNTIME_FAIL|ARX-RUNTIME-ARITHMETIC-001|numeric_é|"
-        in result.stderr
-    )
+    report = parse_exception_output(result.stderr)
+    assert report is not None
+    assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
+    assert report.type_name == "builtins.exceptions::class::OverflowError"
+    assert report.source == "numeric_é"
     assert "777" not in result.stdout
 
 

@@ -124,8 +124,14 @@ def test_translate_modules_mangles_same_named_functions() -> None:
         StaticImportResolver({"a": module_a, "b": module_b}),
     )
 
-    assert f'define i32 @"{mangle_function_name("a", "foo")}"()' in ir_text
-    assert f'define i32 @"{mangle_function_name("b", "foo")}"()' in ir_text
+    assert (
+        f'define i32 @"{mangle_function_name("a", "foo")}"'
+        '(i8* %"context", i32* %"result_out")' in ir_text
+    )
+    assert (
+        f'define i32 @"{mangle_function_name("b", "foo")}"'
+        '(i8* %"context", i32* %"result_out")' in ir_text
+    )
 
 
 def test_translate_modules_calls_imported_function_by_defining_symbol() -> (
@@ -151,7 +157,10 @@ def test_translate_modules_calls_imported_function_by_defining_symbol() -> (
         StaticImportResolver({"lib": lib}),
     )
 
-    assert f'call i32 @"{mangle_function_name("lib", "foo")}"()' in ir_text
+    assert (
+        f'call i32 @"{mangle_function_name("lib", "foo")}"'
+        '(i8* %"context", i32* %"call.result")' in ir_text
+    )
 
 
 def test_translate_modules_calls_function_through_module_namespace() -> None:
@@ -180,9 +189,7 @@ def test_translate_modules_calls_function_through_module_namespace() -> None:
         StaticImportResolver({"sciarx.stats": stats_module}),
     )
 
-    call_text = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
-    )
+    call_text = f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
 
     assert call_text in ir_text
 
@@ -219,9 +226,7 @@ def test_translate_modules_lowers_child_module_from_import() -> None:
         ),
     )
 
-    call_text = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
-    )
+    call_text = f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
 
     assert call_text in ir_text
 
@@ -274,10 +279,10 @@ def test_translate_modules_lowers_grouped_child_module_from_imports() -> None:
     )
 
     stats_call_text = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
+        f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
     )
     linalg_call_text = (
-        f'call double @"{mangle_function_name("sciarx.linalg", "norm2")}"('
+        f'call i32 @"{mangle_function_name("sciarx.linalg", "norm2")}"('
     )
 
     assert stats_call_text in ir_text
@@ -320,9 +325,7 @@ def test_translate_modules_keeps_direct_and_namespace_calls_equivalent() -> (
         root,
         StaticImportResolver({"sciarx.stats": stats_module}),
     )
-    call_text = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
-    )
+    call_text = f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
     expected_count = 2
 
     assert ir_text.count(call_text) == expected_count
@@ -359,9 +362,7 @@ def test_translate_modules_lowers_local_namespace_variables() -> None:
         StaticImportResolver({"sciarx.stats": stats_module}),
     )
 
-    call_text = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
-    )
+    call_text = f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
     namespace_global = mangle_namespace_name("sciarx.stats", "module")
 
     assert call_text in ir_text
@@ -405,12 +406,16 @@ def test_translate_modules_lowers_returned_namespace_values() -> None:
     )
 
     get_stats_name = mangle_function_name("app.main", "get_stats")
-    sum2_call = (
-        f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
-    )
+    sum2_call = f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
 
-    assert f'define i8* @"{get_stats_name}"()' in ir_text
-    assert f'call i8* @"{get_stats_name}"()' in ir_text
+    assert (
+        f'define i32 @"{get_stats_name}"(i8* %"context", i8** %"result_out")'
+        in ir_text
+    )
+    assert (
+        f'call i32 @"{get_stats_name}"(i8* %"context", i8** %"call.result")'
+        in ir_text
+    )
     assert sum2_call in ir_text
 
 
@@ -459,11 +464,14 @@ def test_translate_modules_lowers_namespace_parameters() -> None:
     use_stats_name = mangle_function_name("app.main", "use_stats")
     expected_namespace_call_count = 1
 
-    assert f'define double @"{use_stats_name}"(i8* %"stats_ns")' in ir_text
-    assert f'call double @"{use_stats_name}"(i8* @"' in ir_text
+    assert (
+        f'define i32 @"{use_stats_name}"(i8* %"context", '
+        f'i8* %"stats_ns", double* %"result_out")' in ir_text
+    )
+    assert f'call i32 @"{use_stats_name}"(i8* %"context", i8* @"' in ir_text
     assert (
         ir_text.count(
-            f'call double @"{mangle_function_name("sciarx.stats", "sum2")}"('
+            f'call i32 @"{mangle_function_name("sciarx.stats", "sum2")}"('
         )
         == expected_namespace_call_count
     )
@@ -500,7 +508,12 @@ def test_translate_modules_emits_imported_definition_once() -> None:
     )
     mangled_name = mangle_function_name("lib", "foo")
 
-    assert ir_text.count(f'define i32 @"{mangled_name}"()') == 1
+    assert (
+        ir_text.count(
+            f'define i32 @"{mangled_name}"(i8* %"context", i32* %"result_out")'
+        )
+        == 1
+    )
 
 
 def test_translate_modules_mangles_same_named_structs() -> None:
