@@ -56,6 +56,10 @@ class TokenKind(Enum):
     kw_for = -23
     kw_in = -24
     kw_while = -25
+    kw_try = -26
+    kw_except = -27
+    kw_finally = -28
+    kw_raise = -29
 
     # operators
     binary_op = -30
@@ -85,6 +89,10 @@ MAP_NAME_TO_KW_TOKEN = {
     "for": TokenKind.kw_for,
     "in": TokenKind.kw_in,
     "while": TokenKind.kw_while,
+    "try": TokenKind.kw_try,
+    "except": TokenKind.kw_except,
+    "finally": TokenKind.kw_finally,
+    "raise": TokenKind.kw_raise,
     "assert": TokenKind.kw_assert,
     "binary": TokenKind.binary_op,
     "unary": TokenKind.unary_op,
@@ -117,6 +125,10 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.kw_for: "for",
     TokenKind.kw_in: "in",
     TokenKind.kw_while: "while",
+    TokenKind.kw_try: "try",
+    TokenKind.kw_except: "except",
+    TokenKind.kw_finally: "finally",
+    TokenKind.kw_raise: "raise",
     TokenKind.kw_var: "var",
     TokenKind.kw_const: "const",
 }
@@ -385,6 +397,10 @@ class Lexer:
         "for": TokenKind.kw_for,
         "in": TokenKind.kw_in,
         "while": TokenKind.kw_while,
+        "try": TokenKind.kw_try,
+        "except": TokenKind.kw_except,
+        "finally": TokenKind.kw_finally,
+        "raise": TokenKind.kw_raise,
         "assert": TokenKind.kw_assert,
         "var": TokenKind.kw_var,
         "const": TokenKind.kw_const,

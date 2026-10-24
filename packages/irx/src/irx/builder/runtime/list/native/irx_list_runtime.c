@@ -8,11 +8,6 @@
 
 #define IRX_LIST_MIN_CAPACITY 4
 
-static void irx_list_fail(const char* message) {
-  fprintf(stderr, "%s\n", message);
-  exit(1);
-}
-
 static int32_t irx_list_next_capacity(
     int64_t current_capacity,
     int64_t* out_capacity) {
@@ -37,7 +32,8 @@ int32_t irx_list_append(irx_list* list, const void* value) {
   if (value == NULL) {
     return IRX_LIST_INVALID_ARGUMENT;
   }
-  if (list->element_size <= 0 || list->length < 0 || list->capacity < 0) {
+  if (list->element_size <= 0 || list->length < 0 || list->capacity < 0 ||
+      list->length > list->capacity || (list->capacity && !list->data)) {
     return IRX_LIST_INVALID_ARGUMENT;
   }
 
@@ -70,17 +66,16 @@ int32_t irx_list_append(irx_list* list, const void* value) {
   return IRX_LIST_OK;
 }
 
-void* irx_list_at(const irx_list* list, int64_t index) {
-  if (list == NULL) {
-    irx_list_fail("dynamic list indexing requires a non-null list");
-  }
-  if (index < 0 || index >= list->length) {
-    irx_list_fail("dynamic list index out of range");
-  }
-  if (list->data == NULL) {
-    irx_list_fail("dynamic list storage is null");
-  }
-  return list->data + ((size_t)index * (size_t)list->element_size);
+int32_t irx_list_at(const irx_list* list, int64_t index, void** out) {
+  if (out) *out = NULL;
+  if (!list || !out || list->length < 0 || list->capacity < list->length ||
+      list->element_size <= 0) return IRX_LIST_INVALID_ARGUMENT;
+  if (index < 0 || index >= list->length) return IRX_LIST_OUT_OF_RANGE;
+  if (!list->data) return IRX_LIST_INVALID_ARGUMENT;
+  if ((uint64_t)index > SIZE_MAX / (uint64_t)list->element_size)
+    return IRX_LIST_CAPACITY_OVERFLOW;
+  *out = list->data + ((size_t)index * (size_t)list->element_size);
+  return IRX_LIST_OK;
 }
 
 void irx_list_destroy(irx_list* list) {
@@ -93,20 +88,14 @@ void irx_list_destroy(irx_list* list) {
   list->capacity = 0;
 }
 
-void irx_list_require_ok(int32_t status) {
+const char* irx_list_status_message(int32_t status) {
   switch (status) {
-    case IRX_LIST_OK:
-      return;
+    case IRX_LIST_OK: return "";
     case IRX_LIST_INVALID_ARGUMENT:
-      irx_list_fail("dynamic list operation received an invalid argument");
-      return;
-    case IRX_LIST_CAPACITY_OVERFLOW:
-      irx_list_fail("dynamic list capacity overflow");
-      return;
-    case IRX_LIST_ALLOCATION_FAILED:
-      irx_list_fail("dynamic list allocation failed");
-      return;
-    default:
-      irx_list_fail("dynamic list operation returned an unknown status");
+      return "dynamic list operation received an invalid argument";
+    case IRX_LIST_CAPACITY_OVERFLOW: return "dynamic list capacity overflow";
+    case IRX_LIST_ALLOCATION_FAILED: return "dynamic list allocation failed";
+    case IRX_LIST_OUT_OF_RANGE: return "dynamic list index out of range";
+    default: return "dynamic list operation returned an unknown status";
   }
 }

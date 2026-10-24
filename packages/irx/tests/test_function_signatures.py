@@ -90,16 +90,19 @@ def test_uses_canonical_function_signature_for_definition_and_call() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert 'define i32 @"main__helper"(i32 %"value")' in ir_text
-    assert 'call i32 @"main__helper"(i32' in ir_text
+    assert (
+        'define i32 @"main__helper"(i8* %"context", '
+        'i32 %"value", i32* %"result_out")' in ir_text
+    )
+    assert 'call i32 @"main__helper"(i8* %"context", i32' in ir_text
     assert ir_text.count('define i32 @"main__helper"') == 1
     assert_ir_parses(ir_text)
 
 
-def test_translate_emits_ret_void_and_typed_ret() -> None:
+def test_translate_emits_status_and_typed_result_slots() -> None:
     """
     title: >-
-      Void and non-void returns should lower through semantic return metadata.
+      Void and value returns publish status with typed success-only output.
     """
     module = astx.Module()
     noop = astx.FunctionDef(
@@ -127,7 +130,8 @@ def test_translate_emits_ret_void_and_typed_ret() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert "ret void" in ir_text
+    assert 'define i32 @"main__noop"(i8* %"context")' in ir_text
+    assert 'i32* %"result_out"' in ir_text
     assert "sext i16 7 to i32" in ir_text
     assert "ret i32" in ir_text
     assert_ir_parses(ir_text)

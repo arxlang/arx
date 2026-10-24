@@ -34,6 +34,7 @@ from arxpy.typecheck import typechecked
 
 if TYPE_CHECKING:
     from irx.analysis.module_interfaces import ImportResolver, ParsedModule
+    from irx.builder.runtime.exceptions import ExceptionReport
 
 COMPILER_LOCK = threading.RLock()
 
@@ -185,6 +186,10 @@ class CompilationArtifact:
 class ExecutionResult:
     """
     title: Captured result of running an executable artifact.
+    summary: >-
+      A completed nonzero execution remains result data. The exception property
+      decodes an uncaught Arx exception when stderr contains a valid runtime
+      report; it does not raise a Python compiler exception.
     attributes:
       exit_code:
         type: int
@@ -212,6 +217,20 @@ class ExecutionResult:
         object.__setattr__(self, "exit_code", exit_code)
         object.__setattr__(self, "stdout", stdout)
         object.__setattr__(self, "stderr", stderr)
+
+    @property
+    def exception(self) -> ExceptionReport | None:
+        """
+        title: Decode an uncaught Arx exception as execution data.
+        summary: >-
+          Return None for ordinary output or a malformed record. Import the
+          runtime parser only on access, preserving lightweight metadata use.
+        returns:
+          type: ExceptionReport | None
+        """
+        from irx.builder.runtime.exceptions import parse_exception_output
+
+        return parse_exception_output(self.stderr)
 
 
 @private
@@ -326,12 +345,16 @@ def program_context(
         for node in program.module.nodes
         if isinstance(node, (astx.ImportStmt, astx.ImportFromStmt))
     ]
+    ambient_modules = {
+        "builtins.files",
+        "builtins.generators",
+        "builtins.exceptions",
+    }
     filesystem_imports = any(
         (
-            node.level != 0
-            or node.module not in {"builtins.files", "builtins.generators"}
+            node.level != 0 or node.module not in ambient_modules
             if isinstance(node, astx.ImportFromStmt)
-            else any(alias.name != "builtins.files" for alias in node.names)
+            else any(alias.name not in ambient_modules for alias in node.names)
         )
         for node in source_imports
     )

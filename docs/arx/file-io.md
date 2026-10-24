@@ -75,11 +75,11 @@ copied, returned, or replaced by user code; `NativeFileHandle` is not a public
 Arx type. General class finalization owns its release, not a second manual
 handle-freeing destructor.
 
-Direct creation and I/O failures report `ARX-RUNTIME-FILE-001` and exit nonzero.
-Class allocation, empty-reference, and class-release failures use
-`ARX-RUNTIME-CLASS-001`. Checked native creation failures preserve active local
-constructor rollback and completed-base cleanup. Fatal errors in arbitrary user
-calls still do not unwind caller frames or provide catchable exceptions.
+Direct creation and I/O failures use `ARX-RUNTIME-FILE-001` and raise typed
+exceptions (including `OSError` for operating-system failures). Class checks use
+`ARX-RUNTIME-CLASS-001`; allocation failure remains unrecoverable. Failed
+creation preserves constructor rollback and completed-base cleanup. See the
+[exception boundary](../support-matrix.md#exception-capability-boundary).
 Explicit close/flush are recommended to observe write errors before later work.
 `with`, iteration, seek/tell, binary I/O, and extra file properties are
 deferred.

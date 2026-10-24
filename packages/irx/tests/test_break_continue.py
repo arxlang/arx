@@ -40,9 +40,13 @@ def setup_function_context(visitor: LLVMVisitor) -> None:
       visitor:
         type: LLVMVisitor
     """
+    provider = analyze(astx.Module(name="loop_context"))
+    assert isinstance(provider, astx.Module)
+    visitor._translate_modules([provider])
     module = visitor._llvm.module
-    func_ty = ir.FunctionType(ir.IntType(32), [])
+    func_ty = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()])
     func = ir.Function(module, func_ty, name="test_func")
+    visitor.exception_context = func.args[0]
     entry_bb = func.append_basic_block("entry")
     visitor._llvm.ir_builder.position_at_end(entry_bb)
 

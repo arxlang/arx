@@ -75,11 +75,15 @@ def _nested_yield_nodes(node: astx.AST) -> tuple[astx.AST, ...]:
         )
 
     child_blocks: list[astx.Block] = []
-    for attribute_name in ("body", "then", "else_"):
+    for attribute_name in ("body", "then", "else_", "else_body"):
         child = getattr(node, attribute_name, None)
         if isinstance(child, astx.Block):
             child_blocks.append(child)
 
+    if isinstance(node, astx.ExceptionHandlerStmt):
+        child_blocks.extend(handler.body for handler in node.handlers)
+        if node.finally_handler is not None:
+            child_blocks.append(node.finally_handler.body)
     return tuple(
         yield_node
         for child in child_blocks

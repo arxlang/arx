@@ -16,6 +16,7 @@ from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
 from irx.analysis import SemanticError
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 
 from .file_support import analyze_arx as analyze
@@ -670,7 +671,10 @@ def test_field_drop_failure_continues_other_fields(tmp_path: Path) -> None:
     )
     result = run_class(tmp_path, declarations, "Failing()")
     assert result.returncode != 0
-    assert "ARX-RUNTIME-CLASS-001" in result.stderr
+    report = parse_exception_output(result.stderr)
+    assert report is not None
+    assert report.type_name == "builtins.exceptions::class::OSError"
+    assert report.code == "ARX-RUNTIME-FILE-001"
     assert result.stdout == "2\n1\n"
 
 
@@ -756,10 +760,24 @@ def test_constructor_allocation_failure_releases_argument(
     wrapper = tmp_path / "fault.c"
     wrapper.write_text(
         """#include <stddef.h>
+#include <stdint.h>
+typedef int32_t (*drop_callback)(void*, void*, char*);
+int32_t __real_irx_class_create(size_t, drop_callback, void**, char*);
 void* __real_calloc(size_t count, size_t size);
+static int fail_allocation = 0;
 void* __wrap_calloc(size_t count, size_t size) {
+  if (fail_allocation) {
+    fail_allocation = 0;
+    return NULL;
+  }
+  return __real_calloc(count, size);
+}
+int32_t __wrap_irx_class_create(size_t size, drop_callback drop,
+                              void** output, char* error) {
   static int calls = 0;
-  return ++calls == 3 ? NULL : __real_calloc(count, size);
+  /* Fail Holder allocation, not context creation or the Counter argument. */
+  fail_allocation = ++calls == 2;
+  return __real_irx_class_create(size, drop, output, error);
 }
 """,
         encoding="utf-8",
@@ -772,7 +790,7 @@ void* __wrap_calloc(size_t count, size_t size) {
             *builder.translator.runtime_features.native_artifacts(),
             NativeArtifact("c_source", wrapper),
         ),
-        linker_flags=("-Wl,--wrap=calloc",),
+        linker_flags=("-Wl,--wrap=calloc", "-Wl,--wrap=irx_class_create"),
     )
     result = subprocess.run(
         [str(program)],
@@ -814,7 +832,10 @@ class Holder:
 """
     result = run_class(tmp_path, declarations, "Holder()")
     assert result.returncode != 0
-    assert "ARX-RUNTIME-CLASS-001" in result.stderr
+    report = parse_exception_output(result.stderr)
+    assert report is not None
+    assert report.type_name == "builtins.exceptions::class::OSError"
+    assert report.code == "ARX-RUNTIME-FILE-001"
     assert result.stdout == "base\nbase\n"
 
 

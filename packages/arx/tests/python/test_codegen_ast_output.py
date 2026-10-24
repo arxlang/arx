@@ -232,7 +232,10 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
     assert "sext i8" in text
     assert "icmp slt i16" in text
     assert "llvm.sadd.with.overflow.i16" in text
-    assert "call i16" in text
+    assert any(
+        'call i32 @"main__combine"' in line and "i16*" in line
+        for line in text.splitlines()
+    )
 
 
 def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
@@ -306,7 +309,10 @@ def test_math_templates_translate_concrete_widths(width: int) -> None:
     root = ParsedModule("typed_math", module)
     text = ArxBuilder().translate_modules(root, FileImportResolver(()))
     llvm.parse_assembly(text).verify()
-    assert f"call i{width} " in text
+    assert any(
+        "call i32" in line and "square" in line and f"i{width}*" in line
+        for line in text.splitlines()
+    )
     assert f"llvm.ssub.with.overflow.i{width}" in text
     assert f"llvm.smul.with.overflow.i{width}" in text
 

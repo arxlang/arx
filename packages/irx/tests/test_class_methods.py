@@ -249,11 +249,15 @@ def test_instance_method_definition_emits_hidden_receiver_and_dispatch_table(
     method_name = _mangled_method_name(module, shape, "area")
     dispatch_name = mangle_class_dispatch_name("main", "Shape")
 
-    assert f'define i32 @"{method_name}"(%"main__Shape"* %"self")' in ir_text
+    assert (
+        f'define i32 @"{method_name}"(i8* %"context", '
+        f'%"main__Shape"* %"self", i32* %"result_out")' in ir_text
+    )
     assert (
         f'@"{dispatch_name}" = internal constant '
         f"[{SINGLE_DISPATCH_ENTRY_COUNT} x i8*] "
-        f'[i8* bitcast (i32 (%"main__Shape"*)* @"{method_name}" to i8*)]'
+        f'[i8* bitcast (i32 (i8*, %"main__Shape"*, '
+        f'i32*)* @"{method_name}" to i8*)]'
     ) in ir_text
     assert_ir_parses(ir_text)
 
@@ -329,8 +333,11 @@ def test_static_method_call_lowers_to_direct_call_without_receiver(
     ir_text = builder.translate(module)
     method_name = _mangled_method_name(module, math, "identity")
 
-    assert f'define i32 @"{method_name}"(i32 %"value")' in ir_text
-    assert f'call i32 @"{method_name}"(i32 4)' in ir_text
+    assert (
+        f'define i32 @"{method_name}"(i8* %"context", '
+        f'i32 %"value", i32* %"result_out")' in ir_text
+    )
+    assert f'call i32 @"{method_name}"(i8* %"context", i32 4,' in ir_text
     assert_ir_parses(ir_text)
 
 

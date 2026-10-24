@@ -10,12 +10,9 @@ import pytest
 from irx.analysis import SemanticError
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
-from irx.builder.runtime.assertions import (
-    ASSERT_FAILURE_SYMBOL_NAME,
-    ASSERT_RUNTIME_FEATURE_NAME,
-    AssertionFailureReport,
-    parse_assert_failure_line,
-    parse_assert_failure_output,
+from irx.builder.runtime.exceptions import (
+    ExceptionReport,
+    parse_exception_output,
 )
 from irx.system import AssertStmt
 
@@ -52,7 +49,7 @@ def _module_with_assert(
 
 def test_assert_stmt_translation_activates_runtime_feature() -> None:
     """
-    title: AssertStmt lowering should declare the assertion runtime helper.
+    title: AssertStmt lowering declares the checked exception runtime.
     """
     builder = LLVMBuilder()
     module = _module_with_assert(
@@ -69,11 +66,10 @@ def test_assert_stmt_translation_activates_runtime_feature() -> None:
     )
     native_artifacts = builder.translator.runtime_features.native_artifacts()
 
-    assert ASSERT_RUNTIME_FEATURE_NAME in active_features
-    assert ASSERT_FAILURE_SYMBOL_NAME in ir_text
-    assert 'call void @"__arx_assert_fail"' in ir_text
+    assert "exceptions" in active_features
+    assert 'call i32 @"irx_exception_raise"' in ir_text
     assert any(
-        artifact.path.name == "irx_assert_runtime.c"
+        artifact.path.name == "irx_exception_runtime.c"
         for artifact in native_artifacts
     )
     assert_ir_parses(ir_text)
@@ -115,7 +111,7 @@ def test_assert_stmt_passes_without_failure_output() -> None:
     result = build_and_run(builder, module)
 
     assert result.returncode == 0
-    assert parse_assert_failure_output(result.stderr) is None
+    assert parse_exception_output(result.stderr) is None
 
 
 def test_assert_stmt_failure_uses_default_message() -> None:
@@ -125,7 +121,10 @@ def test_assert_stmt_failure_uses_default_message() -> None:
     """
     builder = LLVMBuilder()
     expected_exit_code = 1
-    expected_failure = AssertionFailureReport(
+    expected_failure = ExceptionReport(
+        role="root",
+        code="ARX-RUNTIME-ASSERTION-001",
+        type_name="builtins.exceptions::class::AssertionError",
         source="tests/main.x",
         line=12,
         col=3,
@@ -144,7 +143,7 @@ def test_assert_stmt_failure_uses_default_message() -> None:
     result = build_and_run(builder, module)
 
     assert result.returncode == expected_exit_code
-    assert parse_assert_failure_output(result.stderr) == expected_failure
+    assert parse_exception_output(result.stderr) == expected_failure
 
 
 def test_assert_stmt_failure_uses_custom_message() -> None:
@@ -152,7 +151,10 @@ def test_assert_stmt_failure_uses_custom_message() -> None:
     title: A failing AssertStmt should preserve one explicit message string.
     """
     builder = LLVMBuilder()
-    expected_failure = AssertionFailureReport(
+    expected_failure = ExceptionReport(
+        role="root",
+        code="ARX-RUNTIME-ASSERTION-001",
+        type_name="builtins.exceptions::class::AssertionError",
         source="tests/main.x",
         line=8,
         col=5,
@@ -172,7 +174,7 @@ def test_assert_stmt_failure_uses_custom_message() -> None:
     result = build_and_run(builder, module)
 
     assert result.returncode == 1
-    assert parse_assert_failure_output(result.stderr) == expected_failure
+    assert parse_exception_output(result.stderr) == expected_failure
 
 
 def test_assert_stmt_failure_escapes_one_multiline_message() -> None:
@@ -181,7 +183,10 @@ def test_assert_stmt_failure_escapes_one_multiline_message() -> None:
     """
     builder = LLVMBuilder()
     expected_message = "left\\right\nnext line\nsecond|line\rthird\tindent"
-    expected_failure = AssertionFailureReport(
+    expected_failure = ExceptionReport(
+        role="root",
+        code="ARX-RUNTIME-ASSERTION-001",
+        type_name="builtins.exceptions::class::AssertionError",
         source="tests/main.x",
         line=10,
         col=7,
@@ -202,26 +207,30 @@ def test_assert_stmt_failure_escapes_one_multiline_message() -> None:
 
     assert result.returncode == 1
     assert result.stderr.count("\n") == 1
-    assert "ARX_ASSERT_FAIL|" in result.stderr
-    assert parse_assert_failure_output(result.stderr) == expected_failure
+    assert "ARX_EXCEPTION|root|ARX-RUNTIME-ASSERTION-001|" in result.stderr
+    assert parse_exception_output(result.stderr) == expected_failure
 
 
-def test_parse_assert_failure_line_decodes_escaped_fields() -> None:
+def test_parse_exception_report_decodes_escaped_fields() -> None:
     """
     title: Escaped protocol fields should decode back to their original text.
     """
     line = (
-        "ARX_ASSERT_FAIL|tests\\pmain.x|12|3|"
+        "ARX_EXCEPTION|root|ARX-RUNTIME-ASSERTION-001|"
+        "builtins.exceptions::class::AssertionError|tests\\pmain.x|12|3|"
         "left\\\\right\\nsecond\\pline\\rthird\\tindent"
     )
-    expected_failure = AssertionFailureReport(
+    expected_failure = ExceptionReport(
+        role="root",
+        code="ARX-RUNTIME-ASSERTION-001",
+        type_name="builtins.exceptions::class::AssertionError",
         source="tests|main.x",
         line=12,
         col=3,
         message="left\\right\nsecond|line\rthird\tindent",
     )
 
-    assert parse_assert_failure_line(line) == expected_failure
+    assert parse_exception_output(line) == expected_failure
 
 
 def test_assert_stmt_requires_boolean_condition() -> None:

@@ -10,15 +10,15 @@ from typing import TYPE_CHECKING, Iterable
 from llvmlite import ir
 
 from irx.builder.runtime.array.feature import build_array_runtime_feature
-from irx.builder.runtime.assertions.feature import (
-    build_assertions_runtime_feature,
-)
 from irx.builder.runtime.buffer.feature import build_buffer_runtime_feature
 from irx.builder.runtime.classes import build_class_runtime_feature
 from irx.builder.runtime.dataframe.feature import (
     build_dataframe_runtime_feature,
 )
 from irx.builder.runtime.errors.feature import build_runtime_failure_feature
+from irx.builder.runtime.exceptions.feature import (
+    build_exception_runtime_feature,
+)
 from irx.builder.runtime.feature_libc import build_libc_runtime_feature
 from irx.builder.runtime.feature_libm import build_libm_runtime_feature
 from irx.builder.runtime.features import NativeArtifact, RuntimeFeature
@@ -367,10 +367,10 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     """
     registry = RuntimeFeatureRegistry()
     registry.register(build_libc_runtime_feature())
-    registry.register(build_assertions_runtime_feature())
     registry.register(build_runtime_failure_feature())
     registry.register(build_file_runtime_feature())
     registry.register(build_class_runtime_feature())
+    registry.register(build_exception_runtime_feature())
     registry.register(build_libm_runtime_feature())
     registry.register(build_buffer_runtime_feature())
     registry.register(build_array_runtime_feature())

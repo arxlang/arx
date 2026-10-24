@@ -7,6 +7,13 @@ extern "C" {
 
 #define IRX_FILE_ERROR_CAPACITY 256
 typedef struct irx_file irx_file;
+typedef enum irx_file_status {
+  IRX_FILE_OK = 0, IRX_FILE_INVALID_ARGUMENT = 1, IRX_FILE_CLOSED = 2,
+  IRX_FILE_ENCODING = 3, IRX_FILE_ALLOCATION = 4, IRX_FILE_OVERFLOW = 5,
+  IRX_FILE_MODE = 6, IRX_FILE_NO_PROGRESS = 7,
+  /* OS failures encode the captured POSIX errno in the low 16 bits. */
+  IRX_FILE_OS_ERROR = 65536
+} irx_file_status;
 /* All errors are caller-owned buffers of IRX_FILE_ERROR_CAPACITY bytes.
  * Status 0 means success. Outputs are initialized even on failure and may only
  * be consumed on success. Read buffers belong to the caller and use free().

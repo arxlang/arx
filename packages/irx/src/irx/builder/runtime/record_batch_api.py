@@ -1,6 +1,16 @@
 """
-title: Checked RecordBatch facade ABI signatures.
+title: Logical value signatures for checked RecordBatch native facades.
+summary: >-
+  The registered C ABI returns i32 status and appends an output pointer for
+  non-void results followed by a caller-owned error buffer. These logical
+  signatures drive both declarations and generated-call adaptation.
 """
+
+from public import private
+
+from irx.typecheck import typechecked
+
+CHECKED_FACADE_ABI_VERSION = 2
 
 ARROW_API_SIGNATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "irx_rb_api_reader_csv": ("v", ("p", "p", "p", "i32", "i32")),
@@ -165,3 +175,30 @@ PARQUET_API_SYMBOLS = frozenset(
     or name
     in {"irx_rb_api_parquet_read_options", "irx_rb_api_parquet_write_options"}
 )
+
+
+@private
+@typechecked
+def is_checked_native_facade(
+    symbol_name: str, feature_name: str, abi_version: object
+) -> bool:
+    """
+    title: Select exact registered facade symbols using their native identity.
+    parameters:
+      symbol_name:
+        type: str
+      feature_name:
+        type: str
+      abi_version:
+        type: object
+    returns:
+      type: bool
+    notes: Raw exports in the same feature retain their original C signatures.
+    """
+    owner = "parquet" if symbol_name in PARQUET_API_SYMBOLS else "record_batch"
+    return (
+        symbol_name in ARROW_API_SIGNATURES
+        and feature_name == owner
+        and isinstance(abi_version, int)
+        and abi_version == CHECKED_FACADE_ABI_VERSION
+    )

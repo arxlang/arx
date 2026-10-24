@@ -280,18 +280,20 @@ class SystemVisitorMixin(ClassVisitorMixin):
             create = self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_schema_ipc"
             )
-            schema = builder.call(
-                create, [pointer, ir.Constant(ir.IntType(64), len(data))]
+            schema = self.checked_native_call(
+                node, create, [pointer, ir.Constant(ir.IntType(64), len(data))]
+            )
+            cleanup = self.track_native_handle(
+                node, "record_batch", "irx_rb_api_schema_destroy", schema
             )
             convert = self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_table_cast"
             )
-            result = builder.call(convert, [value, schema])
-            destroy = self.require_runtime_symbol(
-                "record_batch", "irx_rb_api_schema_destroy"
-            )
-            builder.call(destroy, [schema])
-        self.arrow_temporary(node, result)
+            result = self.checked_native_call(node, convert, [value, schema])
+            self.arrow_temporary(node, result)
+            self.release_native_handle(cleanup)
+        if plan.schema_ipc is None:
+            self.arrow_temporary(node, result)
         self.result_stack.append(result)
 
     def lower_arrow_cast(
@@ -318,7 +320,7 @@ class SystemVisitorMixin(ClassVisitorMixin):
                 convert = self.require_runtime_symbol(
                     "record_batch", "irx_rb_api_batch_to_dynamic_table"
                 )
-                table = builder.call(convert, [box])
+                table = self.checked_native_call(node, convert, [box])
                 self.arrow_temporary(node, table)
                 self.result_stack.append(table)
                 return
@@ -341,18 +343,25 @@ class SystemVisitorMixin(ClassVisitorMixin):
                 create = self.require_runtime_symbol(
                     "record_batch", "irx_rb_api_schema_ipc"
                 )
-                schema = builder.call(
+                schema = self.checked_native_call(
+                    node,
                     create,
                     [
                         pointer,
                         ir.Constant(ir.IntType(64), len(plan.schema_ipc)),
                     ],
                 )
+                cleanup = self.track_native_handle(
+                    node, "record_batch", "irx_rb_api_schema_destroy", schema
+                )
             else:
                 create = self.require_runtime_symbol(
                     "record_batch", "irx_rb_api_schema_new"
                 )
-                schema = builder.call(create, [])
+                schema = self.checked_native_call(node, create, [])
+                cleanup = self.track_native_handle(
+                    node, "record_batch", "irx_rb_api_schema_destroy", schema
+                )
                 add = self.require_runtime_symbol(
                     "record_batch", "irx_rb_api_schema_add"
                 )
@@ -362,7 +371,8 @@ class SystemVisitorMixin(ClassVisitorMixin):
                     )._constant_c_string_pointer(
                         name, name_hint="dataframe_field"
                     )
-                    builder.call(
+                    self.checked_native_call(
+                        node,
                         add,
                         [
                             schema,
@@ -374,12 +384,9 @@ class SystemVisitorMixin(ClassVisitorMixin):
             convert = self.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_to_table"
             )
-            table = builder.call(convert, [box, schema])
-            destroy = self.require_runtime_symbol(
-                "record_batch", "irx_rb_api_schema_destroy"
-            )
-            builder.call(destroy, [schema])
+            table = self.checked_native_call(node, convert, [box, schema])
             self.arrow_temporary(node, table)
+            self.release_native_handle(cleanup)
             self.result_stack.append(table)
             return
         resolution = require_semantic_metadata(
@@ -399,4 +406,4 @@ class SystemVisitorMixin(ClassVisitorMixin):
             if plan.columns is None
             else "irx_rb_api_table_to_batch",
         )
-        builder.call(convert, [value, box])
+        self.checked_native_call(node, convert, [value, box])

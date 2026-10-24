@@ -340,7 +340,7 @@ def resolve_return(
     expected_type = function.signature.return_type
     callable_resolution = _callable_resolution(function)
     if is_none_type(expected_type):
-        if _is_void_return_sentinel(value):
+        if _is_void_return_sentinel(value) or is_none_type(value_type):
             return ReturnResolution(
                 callable=callable_resolution,
                 expected_type=expected_type,

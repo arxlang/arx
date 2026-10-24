@@ -16,8 +16,7 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
-from irx.builder.runtime.assertions import parse_assert_failure_output
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 from public import private
 
@@ -264,11 +263,7 @@ def test_templated_math_checks_each_width(
     )
     assert result.returncode == 1, result.stderr
     assert result.stdout == ""
-    failure = (
-        parse_runtime_failure_output(result.stderr)
-        if "integer arithmetic" in message
-        else parse_assert_failure_output(result.stderr)
-    )
+    failure = parse_exception_output(result.stderr)
     assert failure is not None, result.stderr
     assert failure.message == message
     assert failure.line > 0
@@ -332,11 +327,7 @@ def test_invalid_helper_arguments_fail(
     result = run_helpers(tmp_path, statement + "\nprint(123)")
     assert result.returncode == 1, result.stderr
     assert result.stdout == ""
-    failure = (
-        parse_runtime_failure_output(result.stderr)
-        if "integer arithmetic" in message
-        else parse_assert_failure_output(result.stderr)
-    )
+    failure = parse_exception_output(result.stderr)
     assert failure is not None, result.stderr
     assert failure.message == message
     assert failure.line > 0

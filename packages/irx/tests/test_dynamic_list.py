@@ -25,6 +25,7 @@ from irx.analysis import (
 )
 from irx.builder import Builder
 from irx.builder.base import CommandResult
+from public import private
 
 from .conftest import (
     assert_ir_parses,
@@ -36,6 +37,66 @@ HAS_CLANG = shutil.which("clang") is not None
 HAS_LITERAL_LIST = hasattr(astx, "LiteralList")
 EXPECTED_LIST_AT_CALLS = 3
 EXPECTED_REPLACEMENT_DESTROYS = 2
+
+
+@private
+def assert_executed_list_cleanups(
+    module: astx.Module,
+    tmp_path: Path,
+    expected: int,
+    expected_result: int = 0,
+) -> None:
+    """
+    title: Count executed destructors, not copies on disjoint exception edges.
+    parameters:
+      module:
+        type: astx.Module
+      tmp_path:
+        type: Path
+      expected:
+        type: int
+      expected_result:
+        type: int
+    """
+    builder = Builder()
+    text = builder.translate(module)
+    assert_ir_parses(text)
+    if not HAS_CLANG:
+        pytest.skip("executed ownership assertions require clang")
+    text = text.replace(
+        'call void @"irx_list_destroy"', 'call void @"test.list_destroy"'
+    ).replace('define i32 @"main"()', 'define i32 @"test.original_main"()')
+    text += """
+@test.list_cleanup_count = internal global i32 0
+define void @"test.list_destroy"({i8*, i64, i64, i64}* %value) {
+entry:
+  %previous = load i32, i32* @test.list_cleanup_count
+  %next = add i32 %previous, 1
+  store i32 %next, i32* @test.list_cleanup_count
+  call void @"irx_list_destroy"({i8*, i64, i64, i64}* %value)
+  ret void
+}
+define i32 @main() {
+entry:
+  %result = call i32 @"test.original_main"()
+  %count = load i32, i32* @test.list_cleanup_count
+  %ok = icmp eq i32 %result, EXPECTED_RESULT
+  %output = select i1 %ok, i32 %count, i32 255
+  ret i32 %output
+}
+""".replace("EXPECTED_RESULT", str(expected_result))
+    assert_ir_parses(text)
+    executable = tmp_path / "cleanup-count"
+    builder._build_from_ir(text, str(executable))
+    result = subprocess.run(
+        [str(executable)],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.stderr == ""
+    assert result.returncode == expected
 
 
 def _list_i32_type() -> astx.ListType:
@@ -50,7 +111,7 @@ def _list_i32_type() -> astx.ListType:
 def _mutable_decl(
     name: str,
     type_: astx.DataType,
-    value: astx.AST,
+    value: astx.Expr,
 ) -> astx.VariableDeclaration:
     """
     title: Build one mutable local variable declaration.
@@ -60,7 +121,7 @@ def _mutable_decl(
       type_:
         type: astx.DataType
       value:
-        type: astx.AST
+        type: astx.Expr
     returns:
       type: astx.VariableDeclaration
     """
@@ -72,12 +133,12 @@ def _mutable_decl(
     )
 
 
-def _index(base: astx.AST, index: int) -> astx.SubscriptExpr:
+def _index(base: astx.Expr, index: int) -> astx.SubscriptExpr:
     """
     title: Build one integer list index expression.
     parameters:
       base:
-        type: astx.AST
+        type: astx.Expr
       index:
         type: int
     returns:
@@ -398,12 +459,12 @@ def _direct_list_node_module() -> astx.Module:
     )
 
 
-def _literal_list_dynamic_index_module(index: astx.AST) -> astx.Module:
+def _literal_list_dynamic_index_module(index: astx.Expr) -> astx.Module:
     """
     title: Build one module that indexes one literal list through one variable.
     parameters:
       index:
-        type: astx.AST
+        type: astx.Expr
     returns:
       type: astx.Module
     """
@@ -432,8 +493,8 @@ def test_dynamic_list_appends_variable_values() -> None:
     ir_text = builder.translate(_singleton_module())
 
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert 'call void @"irx_list_require_ok"' in ir_text
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i8* @"irx_list_status_message"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -509,7 +570,7 @@ def test_direct_list_length_from_temporary_list_create() -> None:
 
     assert "irx_list_length_i32" in ir_text
     assert 'call i32 @"irx_list_append"' not in ir_text
-    assert 'call i8* @"irx_list_at"' not in ir_text
+    assert 'call i32 @"irx_list_at"' not in ir_text
     assert_ir_parses(ir_text)
 
     EXPECTED_EMPTY_LENGTH = 0
@@ -526,7 +587,7 @@ def test_direct_list_nodes_build_and_return() -> None:
     ir_text = builder.translate(module)
 
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert "irx_list_length_i32" in ir_text
     assert "list" in builder.translator.runtime_features.active_feature_names()
     assert_ir_parses(ir_text)
@@ -563,7 +624,7 @@ def test_direct_list_length_from_literal_list_returns_constant() -> None:
 
     assert "irx_list_length_i32" not in ir_text
     assert 'call i32 @"irx_list_append"' not in ir_text
-    assert 'call i8* @"irx_list_at"' not in ir_text
+    assert 'call i32 @"irx_list_at"' not in ir_text
     assert_ir_parses(ir_text)
 
     EXPECTED_LITERAL_LENGTH = 3
@@ -597,7 +658,7 @@ def test_direct_list_index_from_literal_list() -> None:
     ir_text = builder.translate(module)
 
     assert "literal_list_index_load" in ir_text
-    assert 'call i8* @"irx_list_at"' not in ir_text
+    assert 'call i32 @"irx_list_at"' not in ir_text
     assert_ir_parses(ir_text)
 
     EXPECTED_LITERAL_INDEX = 20
@@ -618,7 +679,7 @@ def test_direct_list_index_from_literal_list_dynamic_index_uses_runtime() -> (
     module = _literal_list_dynamic_index_module(astx.LiteralInt32(1))
     ir_text = builder.translate(module)
 
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
     EXPECTED_LITERAL_INDEX = 20
@@ -641,7 +702,7 @@ def test_direct_list_index_from_literal_list_dynamic_index_checks_bounds() -> (
     module = _literal_list_dynamic_index_module(astx.LiteralInt32(99))
     ir_text = builder.translate(module)
 
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
     result = _run_workspace_build(builder, module)
@@ -660,7 +721,7 @@ def test_dynamic_list_loop_build_and_return() -> None:
     ir_text = builder.translate(module)
 
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert ir_text.count('call i8* @"irx_list_at"') >= EXPECTED_LIST_AT_CALLS
+    assert ir_text.count('call i32 @"irx_list_at"') >= EXPECTED_LIST_AT_CALLS
     assert_ir_parses(ir_text)
 
     EXPECTED_LOOP_SUM = 6
@@ -677,7 +738,7 @@ def test_dynamic_list_uninitialized_local_build_and_append() -> None:
     ir_text = builder.translate(module)
 
     assert 'call i32 @"irx_list_append"' in ir_text
-    assert 'call i8* @"irx_list_at"' in ir_text
+    assert 'call i32 @"irx_list_at"' in ir_text
     assert_ir_parses(ir_text)
 
     EXPECTED_FIRST_VALUE = 11
@@ -1051,32 +1112,28 @@ def test_list_append_rejects_borrowed_parameter_storage() -> None:
         analyze(module)
 
 
-def test_list_lowering_cleans_owned_locals_but_moves_returned_storage() -> (
-    None
-):
+def test_list_lowering_cleans_owned_locals_but_moves_returned_storage(
+    tmp_path: Path,
+) -> None:
     """
-    title: Lowering should clean the caller local but move the callee result.
+    title: Lowering cleans the caller local but moves the callee result.
+    parameters:
+      tmp_path:
+        type: Path
     """
-    ir_text = Builder().translate(_singleton_module())
-
-    singleton_ir, main_ir = ir_text.split('define i32 @"main"()', maxsplit=1)
-    assert (
-        'call void @"irx_list_destroy"'
-        not in singleton_ir.split(
-            'define {i8*, i64, i64, i64} @"main__singleton"',
-            maxsplit=1,
-        )[1]
+    assert_executed_list_cleanups(
+        _singleton_module(), tmp_path, 1, expected_result=7
     )
-    assert main_ir.count('call void @"irx_list_destroy"') == 1
-    assert main_ir.index('call void @"irx_list_destroy"') < main_ir.index(
-        "ret i32"
-    )
-    assert_ir_parses(ir_text)
 
 
-def test_list_assignment_destroys_replaced_and_final_storage() -> None:
+def test_list_assignment_destroys_replaced_and_final_storage(
+    tmp_path: Path,
+) -> None:
     """
     title: Replacing an owned list should destroy both lifetime generations.
+    parameters:
+      tmp_path:
+        type: Path
     """
     list_type = _list_i32_type()
     module = _module_with_main(
@@ -1087,16 +1144,20 @@ def test_list_assignment_destroys_replaced_and_final_storage() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert (
-        ir_text.count('call void @"irx_list_destroy"')
-        == EXPECTED_REPLACEMENT_DESTROYS
-    )
     assert_ir_parses(ir_text)
+    assert_executed_list_cleanups(
+        module, tmp_path, EXPECTED_REPLACEMENT_DESTROYS
+    )
 
 
-def test_binary_list_assignment_destroys_replaced_and_final_storage() -> None:
+def test_binary_list_assignment_destroys_replaced_and_final_storage(
+    tmp_path: Path,
+) -> None:
     """
     title: Parsed assignment syntax should preserve list replacement cleanup.
+    parameters:
+      tmp_path:
+        type: Path
     """
     list_type = _list_i32_type()
     module = _module_with_main(
@@ -1111,11 +1172,10 @@ def test_binary_list_assignment_destroys_replaced_and_final_storage() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert (
-        ir_text.count('call void @"irx_list_destroy"')
-        == EXPECTED_REPLACEMENT_DESTROYS
-    )
     assert_ir_parses(ir_text)
+    assert_executed_list_cleanups(
+        module, tmp_path, EXPECTED_REPLACEMENT_DESTROYS
+    )
 
 
 def test_list_field_assignment_fails_without_object_cleanup_contract() -> None:
@@ -1191,9 +1251,12 @@ def test_nested_owned_list_elements_fail_without_recursive_cleanup() -> None:
         analyze(module)
 
 
-def test_nested_block_fallthrough_destroys_owned_list() -> None:
+def test_nested_block_fallthrough_destroys_owned_list(tmp_path: Path) -> None:
     """
     title: Normal nested-block fallthrough should destroy its owned list.
+    parameters:
+      tmp_path:
+        type: Path
     """
     then_block = astx.Block()
     then_block.append(
@@ -1213,20 +1276,25 @@ def test_nested_block_fallthrough_destroys_owned_list() -> None:
 
     ir_text = Builder().translate(module)
 
-    assert ir_text.count('call void @"irx_list_destroy"') == 1
     assert_ir_parses(ir_text)
+    assert_executed_list_cleanups(module, tmp_path, 1)
 
 
 @pytest.mark.parametrize(
     "terminator",
     [astx.BreakStmt(), astx.ContinueStmt()],
 )
-def test_loop_transfer_destroys_owned_list(terminator: astx.AST) -> None:
+def test_loop_transfer_destroys_owned_list(
+    terminator: astx.AST,
+    tmp_path: Path,
+) -> None:
     """
     title: Loop break and continue should destroy body-owned lists.
     parameters:
       terminator:
         type: astx.AST
+      tmp_path:
+        type: Path
     """
     loop_body = astx.Block()
     loop_body.append(
@@ -1236,10 +1304,16 @@ def test_loop_transfer_destroys_owned_list(terminator: astx.AST) -> None:
             astx.ListCreate(astx.Int32()),
         )
     )
+    loop_body.append(
+        astx.VariableAssignment("iteration_count", astx.LiteralInt32(1))
+    )
     loop_body.append(terminator)
     module = _module_with_main(
+        _mutable_decl("iteration_count", astx.Int32(), astx.LiteralInt32(0)),
         astx.WhileStmt(
-            condition=astx.LiteralBoolean(False),
+            condition=astx.BinaryOp(
+                "<", astx.Identifier("iteration_count"), astx.LiteralInt32(1)
+            ),
             body=loop_body,
         ),
         astx.FunctionReturn(astx.LiteralInt32(0)),
@@ -1247,15 +1321,18 @@ def test_loop_transfer_destroys_owned_list(terminator: astx.AST) -> None:
 
     ir_text = Builder().translate(module)
 
-    assert ir_text.count('call void @"irx_list_destroy"') == 1
     assert_ir_parses(ir_text)
+    assert_executed_list_cleanups(module, tmp_path, 1)
 
 
-def test_while_condition_destroys_list_call_temporary_each_evaluation() -> (
-    None
-):
+def test_while_condition_destroys_list_call_temporary_each_evaluation(
+    tmp_path: Path,
+) -> None:
     """
     title: A list call temporary in a loop condition should clean in the loop.
+    parameters:
+      tmp_path:
+        type: Path
     """
     module = _singleton_module()
     main = module.block[1]
@@ -1282,18 +1359,5 @@ def test_while_condition_destroys_list_call_temporary_each_evaluation() -> (
     main.body.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     ir_text = Builder().translate(module)
-    main_ir = ir_text.split('define i32 @"main"()', maxsplit=1)[1]
-    condition_ir = main_ir.split("while.cond:", maxsplit=1)[1].split(
-        "while.body:", maxsplit=1
-    )[0]
-
-    assert 'label %"numeric.conversion.pass"' in condition_ir
-    checked_condition = main_ir.split("numeric.conversion.pass:", maxsplit=1)[
-        1
-    ].split("numeric.conversion.fail:", maxsplit=1)[0]
-    assert checked_condition.count('call void @"irx_list_destroy"') == 1
-    assert 'label %"while.body"' in checked_condition
-    assert checked_condition.index('call void @"irx_list_destroy"') < (
-        checked_condition.index("br i1")
-    )
+    assert_executed_list_cleanups(module, tmp_path, 1)
     assert_ir_parses(ir_text)

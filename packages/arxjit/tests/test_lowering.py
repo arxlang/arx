@@ -5,7 +5,10 @@ title: Tests for Python AST to ASTx lowering.
 import ast
 import ctypes
 import struct
+import subprocess
+import tempfile
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, cast
 
@@ -32,6 +35,7 @@ from irx.analysis.registry import MAIN_FUNCTION_NAME
 from irx.analysis.types import common_numeric_type
 from irx.analysis.typing import binary_result_type
 from irx.builder import Builder
+from irx.builder.runtime.linking import compile_native_artifacts
 from llvmlite import binding as llvm
 
 PyFunc = Callable[..., Any]
@@ -117,56 +121,79 @@ def _returned(module: astx.Module) -> astx.DataType:
     return returned.value
 
 
-def execute_bool(module: astx.Module, symbol: str) -> bool:
+def execute_boolean(
+    module: astx.Module, symbol: str, value: float | None = None
+) -> bool:
     """
-    title: Translate and JIT-run a no-argument Boolean function.
-    parameters:
-      module:
-        type: astx.Module
-      symbol:
-        type: str
-    returns:
-      type: bool
-    """
-    llvm_module = llvm.parse_assembly(Builder().translate(module))
-    llvm_module.verify()
-    target_machine = llvm.Target.from_default_triple().create_target_machine()
-    engine = llvm.create_mcjit_compiler(
-        llvm.parse_assembly(""), target_machine
-    )
-    engine.add_module(llvm_module)
-    engine.finalize_object()
-    address = engine.get_function_address(symbol)
-    assert address != 0
-    function = ctypes.CFUNCTYPE(ctypes.c_bool)(address)
-    return bool(function())
-
-
-def execute_bool_f32(module: astx.Module, symbol: str, value: float) -> bool:
-    """
-    title: Translate and JIT-run a one-Float32-argument Boolean function.
+    title: Invoke a generated status-ABI function with its native context.
     parameters:
       module:
         type: astx.Module
       symbol:
         type: str
       value:
-        type: float
+        type: float | None
     returns:
       type: bool
     """
-    llvm_module = llvm.parse_assembly(Builder().translate(module))
+    builder = Builder()
+    llvm_module = llvm.parse_assembly(builder.translate(module))
     llvm_module.verify()
-    target_machine = llvm.Target.from_default_triple().create_target_machine()
-    engine = llvm.create_mcjit_compiler(
-        llvm.parse_assembly(""), target_machine
-    )
-    engine.add_module(llvm_module)
-    engine.finalize_object()
-    address = engine.get_function_address(symbol)
-    assert address != 0
-    function = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_float)(address)
-    return bool(function(value))
+    root = Path(__file__).resolve().parents[3] / ".tmp" / "arxjit-exceptions"
+    root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=root) as temporary:
+        inputs = compile_native_artifacts(
+            builder.translator.runtime_features.native_artifacts(),
+            Path(temporary),
+        )
+        library = Path(temporary) / "runtime.so"
+        subprocess.run(
+            [
+                "clang",
+                "-shared",
+                "-o",
+                str(library),
+                *(str(path) for path in inputs.objects),
+                *inputs.linker_flags,
+            ],
+            check=True,
+        )
+        llvm.load_library_permanently(str(library))
+        runtime = ctypes.CDLL(str(library))
+        runtime.irx_exception_context_create.argtypes = [
+            ctypes.POINTER(ctypes.c_void_p)
+        ]
+        runtime.irx_exception_context_destroy.argtypes = [ctypes.c_void_p]
+        runtime.irx_exception_context_destroy.restype = None
+        target = llvm.Target.from_default_triple().create_target_machine()
+        engine = llvm.create_mcjit_compiler(llvm.parse_assembly(""), target)
+        engine.add_module(llvm_module)
+        engine.finalize_object()
+        address = engine.get_function_address(symbol)
+        assert address != 0
+        context = ctypes.c_void_p()
+        assert runtime.irx_exception_context_create(ctypes.byref(context)) == 0
+        output = ctypes.c_bool()
+        try:
+            if value is None:
+                function = ctypes.CFUNCTYPE(
+                    ctypes.c_int32,
+                    ctypes.c_void_p,
+                    ctypes.POINTER(ctypes.c_bool),
+                )(address)
+                status = function(context, ctypes.byref(output))
+            else:
+                function = ctypes.CFUNCTYPE(
+                    ctypes.c_int32,
+                    ctypes.c_void_p,
+                    ctypes.c_float,
+                    ctypes.POINTER(ctypes.c_bool),
+                )(address)
+                status = function(context, value, ctypes.byref(output))
+            assert status == 0
+            return bool(output.value)
+        finally:
+            runtime.irx_exception_context_destroy(context)
 
 
 def test_literal_return_lowers_to_a_single_function_module() -> None:
@@ -954,7 +981,7 @@ def test_integer_true_division_executes_with_python_semantics(
     assert returned.lhs.op_code == "/"
     assert isinstance(returned.lhs.lhs, astx.LiteralFloat64)
     assert isinstance(returned.lhs.rhs, astx.LiteralFloat64)
-    assert execute_bool(module, "sample__sample") is True
+    assert execute_boolean(module, "sample__sample") is True
 
 
 def test_integer_literal_and_float32_comparison_executes_at_float64() -> None:
@@ -969,7 +996,7 @@ def test_integer_literal_and_float32_comparison_executes_at_float64() -> None:
     returned = _returned(module)
     assert isinstance(returned, astx.BinaryOp)
     assert isinstance(returned.rhs, astx.LiteralFloat64)
-    assert execute_bool_f32(module, "sample__sample", 16777216.0) is True
+    assert execute_boolean(module, "sample__sample", 16777216.0) is True
 
 
 def test_a_negated_operand_keeps_the_type_it_negates() -> None:

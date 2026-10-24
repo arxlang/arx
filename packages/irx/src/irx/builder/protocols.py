@@ -4,19 +4,32 @@ title: Typing protocols for llvmliteir visitors.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from abc import abstractmethod
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ParamSpec,
+    Protocol,
+    cast,
+)
 
 import astx
 
 from llvmlite import binding as llvm
 from llvmlite import ir
 
-from irx.analysis.resolved_nodes import FunctionSignature
+from irx.analysis.resolved_nodes import (
+    FunctionSignature,
+    ResolvedExceptionType,
+)
 from irx.base.visitors.protocols import BaseVisitorProtocol
 from irx.builder.state import (
     CleanupAction,
+    ExceptionTarget,
     LoopTargets,
     NamedValueMap,
+    PendingReturn,
     ResultStackValue,
 )
 from irx.builder.types import VariablesLLVM
@@ -26,10 +39,297 @@ if TYPE_CHECKING:
     from irx.builder.runtime.registry import RuntimeFeatureState
 
 
+DispatchParameters = ParamSpec("DispatchParameters")
+
+
+class DispatchRegistrar(Protocol):
+    """
+    title: Typed view of Plum's dynamically attached registration method.
+    """
+
+    @abstractmethod
+    def dispatch(self, method: Callable[DispatchParameters, None]) -> Any:
+        """
+        title: Register one typed overload in the open dispatch family.
+        summary: Plum exposes a dynamic multimethod, not this single signature.
+        parameters:
+          method:
+            type: Callable[DispatchParameters, None]
+        returns:
+          type: Any
+        """
+        del method
+        raise NotImplementedError
+
+
+@typechecked
+class ExceptionLoweringTypingBase:
+    """
+    title: Explicit execution-context and status-ABI lowering services.
+    attributes:
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
+      exception_context:
+        type: ir.Value | None
+      exception_result_slot:
+        type: ir.Value | None
+      exception_targets:
+        type: list[ExceptionTarget]
+      pending_returns:
+        type: list[PendingReturn]
+      llvm_function_signatures:
+        type: dict[str, FunctionSignature]
+    """
+
+    runtime_exception_types: dict[str, ResolvedExceptionType]
+    exception_context: ir.Value | None
+    exception_result_slot: ir.Value | None
+    exception_targets: list[ExceptionTarget]
+    pending_returns: list[PendingReturn]
+    llvm_function_signatures: dict[str, FunctionSignature]
+
+    def exception_call(self, operation: str, args: list[ir.Value]) -> ir.Value:
+        """
+        title: Call an opaque runtime exception operation.
+        parameters:
+          operation:
+            type: str
+          args:
+            type: list[ir.Value]
+        returns:
+          type: ir.Value
+        """
+        del operation, args
+        raise NotImplementedError
+
+    def context_value(self) -> ir.Value:
+        """
+        title: Require the current frame execution context.
+        returns:
+          type: ir.Value
+        """
+        raise NotImplementedError
+
+    def emit_resolved_call(
+        self,
+        node: astx.AST,
+        callee: ir.Value,
+        signature: FunctionSignature,
+        args: list[ir.Value],
+    ) -> ir.Value | None:
+        """
+        title: Emit a resolved call and consume success-only output storage.
+        parameters:
+          node:
+            type: astx.AST
+          callee:
+            type: ir.Value
+          signature:
+            type: FunctionSignature
+          args:
+            type: list[ir.Value]
+        returns:
+          type: ir.Value | None
+        """
+        del node, callee, signature, args
+        raise NotImplementedError
+
+    def propagate_status(self, node: astx.AST, status: ir.Value) -> None:
+        """
+        title: Route failed call status through lexical cleanup regions.
+        parameters:
+          node:
+            type: astx.AST
+          status:
+            type: ir.Value
+        """
+        del node, status
+        raise NotImplementedError
+
+    def emit_exception_transfer(self, node: astx.AST | None) -> None:
+        """
+        title: Exit the current region with the context pending exception.
+        parameters:
+          node:
+            type: astx.AST | None
+        """
+        del node
+        raise NotImplementedError
+
+    def emit_success_return(self, value: ir.Value | None) -> None:
+        """
+        title: Publish successful output after all cleanups.
+        parameters:
+          value:
+            type: ir.Value | None
+        """
+        del value
+        raise NotImplementedError
+
+    def abandon_pending_returns(
+        self,
+        completions: tuple[PendingReturn, ...] | None = None,
+        *,
+        preserved_depth: int | None = None,
+    ) -> None:
+        """
+        title: Release values whose pending return was replaced.
+        parameters:
+          completions:
+            type: tuple[PendingReturn, Ellipsis] | None
+          preserved_depth:
+            type: int | None
+        """
+        del completions
+        del preserved_depth
+        raise NotImplementedError
+
+    def raise_runtime_exception(
+        self, node: astx.AST, role: str, message: ir.Value, *, code: str
+    ) -> None:
+        """
+        title: Materialize a builtin nominal exception from native failure.
+        parameters:
+          node:
+            type: astx.AST
+          role:
+            type: str
+          message:
+            type: ir.Value
+          code:
+            type: str
+        """
+        del node, role, message, code
+        raise NotImplementedError
+
+    def fatal_status(self, node: astx.AST, status: ir.Value) -> None:
+        """
+        title: Fail without allocation on bookkeeping allocation failure.
+        parameters:
+          node:
+            type: astx.AST
+          status:
+            type: ir.Value
+        """
+        del node, status
+        raise NotImplementedError
+
+    def checked_native_call(
+        self, node: astx.AST, function: ir.Function, args: list[ir.Value]
+    ) -> ir.Value:
+        """
+        title: Invoke a checked native facade with success-only output slots.
+        parameters:
+          node:
+            type: astx.AST
+          function:
+            type: ir.Function
+          args:
+            type: list[ir.Value]
+        returns:
+          type: ir.Value
+        """
+        del node, function, args
+        raise NotImplementedError
+
+    def check_arrow_status(
+        self,
+        node: astx.AST,
+        status: ir.Value,
+        operation: str,
+        message: ir.Value | None = None,
+    ) -> None:
+        """
+        title: Convert a native Arrow failure category into an exception.
+        parameters:
+          node:
+            type: astx.AST
+          status:
+            type: ir.Value
+          operation:
+            type: str
+          message:
+            type: ir.Value | None
+        """
+        del node, status, operation, message
+        raise NotImplementedError
+
+    def track_native_handle(
+        self, node: astx.AST, feature: str, destroy: str, value: ir.Value
+    ) -> CleanupAction:
+        """
+        title: Register rollback for a partially assembled native handle.
+        parameters:
+          node:
+            type: astx.AST
+          feature:
+            type: str
+          destroy:
+            type: str
+          value:
+            type: ir.Value
+        returns:
+          type: CleanupAction
+        """
+        del node, feature, destroy, value
+        raise NotImplementedError
+
+    def release_native_handle(self, action: CleanupAction) -> None:
+        """
+        title: Release a native temporary after successful ownership transfer.
+        parameters:
+          action:
+            type: CleanupAction
+        """
+        del action
+        raise NotImplementedError
+
+    def _guard_runtime_condition(
+        self,
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+        exception_role: str = "RuntimeError",
+    ) -> None:
+        """
+        title: Raise the requested builtin if a native condition fails.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+          exception_role:
+            type: str
+        """
+        del node, condition, code, message, block_name, exception_role
+        raise NotImplementedError
+
+
 class VisitorProtocol(BaseVisitorProtocol, Protocol):
     """
     title: Stable interface used by visitor mixins and runtime features.
     attributes:
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
+      exception_context:
+        type: ir.Value | None
+      exception_result_slot:
+        type: ir.Value | None
+      exception_targets:
+        type: list[ExceptionTarget]
+      pending_returns:
+        type: list[PendingReturn]
+      llvm_function_signatures:
+        type: dict[str, FunctionSignature]
       _llvm:
         type: VariablesLLVM
       named_values:
@@ -80,6 +380,12 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
         type: llvm.TargetMachine
     """
 
+    runtime_exception_types: dict[str, ResolvedExceptionType]
+    exception_context: ir.Value | None
+    exception_result_slot: ir.Value | None
+    exception_targets: list[ExceptionTarget]
+    pending_returns: list[PendingReturn]
+    llvm_function_signatures: dict[str, FunctionSignature]
     _llvm: VariablesLLVM
     named_values: NamedValueMap
     const_vars: set[str]
@@ -105,6 +411,7 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
 
+    @abstractmethod
     def declare_class(self, node: astx.ClassDefStmt) -> None:
         """
         title: Declare a resolved class layout before lowering method bodies.
@@ -112,7 +419,8 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
           node:
             type: astx.ClassDefStmt
         """
-        ...
+        del node
+        raise NotImplementedError
 
     def get_function(self, _name: str) -> ir.Function | None:
         """
@@ -655,10 +963,22 @@ class VisitorProtocol(BaseVisitorProtocol, Protocol):
 
 
 @typechecked
-class VisitorMixinTypingBase:
+class VisitorMixinTypingBase(ExceptionLoweringTypingBase):
     """
     title: Type-checking-only annotation carrier for llvmliteir visitor mixins.
     attributes:
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
+      exception_context:
+        type: ir.Value | None
+      exception_result_slot:
+        type: ir.Value | None
+      exception_targets:
+        type: list[ExceptionTarget]
+      pending_returns:
+        type: list[PendingReturn]
+      llvm_function_signatures:
+        type: dict[str, FunctionSignature]
       _llvm:
         type: VariablesLLVM
       named_values:
@@ -709,6 +1029,12 @@ class VisitorMixinTypingBase:
         type: llvm.TargetMachine
     """
 
+    runtime_exception_types: dict[str, ResolvedExceptionType]
+    exception_context: ir.Value | None
+    exception_result_slot: ir.Value | None
+    exception_targets: list[ExceptionTarget]
+    pending_returns: list[PendingReturn]
+    llvm_function_signatures: dict[str, FunctionSignature]
     _llvm: VariablesLLVM
     named_values: NamedValueMap
     const_vars: set[str]

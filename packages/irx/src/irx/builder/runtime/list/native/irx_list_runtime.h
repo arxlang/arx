@@ -18,13 +18,15 @@ typedef enum irx_list_status {
   IRX_LIST_OK = 0,
   IRX_LIST_INVALID_ARGUMENT = 1,
   IRX_LIST_CAPACITY_OVERFLOW = 2,
-  IRX_LIST_ALLOCATION_FAILED = 3
+  IRX_LIST_ALLOCATION_FAILED = 3,
+  IRX_LIST_OUT_OF_RANGE = 4
 } irx_list_status;
 
 int32_t irx_list_append(irx_list* list, const void* value);
-void* irx_list_at(const irx_list* list, int64_t index);
+/* Output remains NULL on failure; callers may dereference only on success. */
+int32_t irx_list_at(const irx_list* list, int64_t index, void** out);
 void irx_list_destroy(irx_list* list);
-void irx_list_require_ok(int32_t status);
+const char* irx_list_status_message(int32_t status);
 
 #ifdef __cplusplus
 }

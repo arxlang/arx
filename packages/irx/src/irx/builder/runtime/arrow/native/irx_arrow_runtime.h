@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "irx_arrow_c_abi.h"
+#include "irx_native_status.h"
 #include "irx_buffer_runtime.h"
 
 #ifdef __cplusplus

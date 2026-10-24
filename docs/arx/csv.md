@@ -128,8 +128,8 @@ converts CSV to Parquet using only the module-level functions.
 - CSV has no remote URLs, compression/encoding discovery, append or atomic
   writes. Validation precedes truncation, but later data/I/O failures can leave
   partial output. A failed eager read never returns a partial table.
-- Compiled failures use `ARX-RUNTIME-ARROW-001`, not catchable Arx exceptions.
-  CSV row positions are not invented as Arx source locations.
+- Compiled failures use `ARX-RUNTIME-ARROW-001`, with typed catchable Arx
+  exceptions. CSV row positions are not invented as Arx source locations.
 
 ## Python integration
 

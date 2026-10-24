@@ -7,10 +7,10 @@
 #include <filesystem>
 #include <string_view>
 namespace {
-int set_err(const std::string &message, int code = IRX_ERR_ARROW) {
+int set_err(const std::string &message, int code = IRX_ERR_INVALID) {
     return irx::record_batch_error(message, code);
 }
-int set_err(const arrow::Status &status) { return set_err(status.ToString()); }
+int set_err(const arrow::Status &status) { return set_err(status.ToString(), irx::record_batch_status(status)); }
 }
 #define GUARD(p) do { if (!(p)) return set_err("null pointer argument", IRX_ERR_NULLPTR); } while (0)
 // Parquet uses the existing owned handles; its adapters own all file state.
@@ -22,7 +22,7 @@ int irx_rb_parquet_reader_open_options(const char *path, const IrxRbSchema *expe
         if (!reader.ok()) return set_err(reader.status());
         return irx::own_reader(*reader, out);
     } catch (const std::exception &error) {
-        return set_err(std::string("Parquet reader '") + path + "': " + error.what());
+        return set_err(std::string("Parquet reader '") + path + "': " + error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -34,7 +34,7 @@ int irx_rb_parquet_writer_open_options(const IrxRbSchema *schema, const char *pa
         if (!writer.ok()) return set_err(writer.status());
         return irx::own_writer(irx::record_batch_schema(schema), *writer, out);
     } catch (const std::exception &error) {
-        return set_err(std::string("Parquet writer '") + path + "': " + error.what());
+        return set_err(std::string("Parquet writer '") + path + "': " + error.what(), irx::native_exception_status(error));
     }
 }
 
@@ -53,11 +53,11 @@ int irx_rb_parquet_writer_open(const IrxRbSchema *schema, const char *path,
         options.compression = compression;
         options.row_group_size = row_group_size;
         return irx_rb_parquet_writer_open_options(schema, path, &options, out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 IrxParquetOptions *irx_parquet_options_new(void) {
     try { return new IrxParquetOptions(); }
-    catch (const std::exception &error) { set_err(error.what()); return nullptr; }
+    catch (const std::exception &error) { set_err(error.what(), irx::native_exception_status(error)); return nullptr; }
 }
 void irx_parquet_options_release(IrxParquetOptions *options) { delete options; }
 int irx_parquet_options_int(IrxParquetOptions *o, const char *name, int64_t value) {
@@ -92,7 +92,7 @@ int irx_parquet_options_int(IrxParquetOptions *o, const char *name, int64_t valu
             else return set_err("unknown Parquet integer option");
         }
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_parquet_options_text(IrxParquetOptions *o, const char *name, const char *value) {
     GUARD(o); GUARD(name); GUARD(value);
@@ -126,7 +126,7 @@ int irx_parquet_options_text(IrxParquetOptions *o, const char *name, const char 
             columns.emplace_back(value);
         } else return set_err("unknown Parquet text option");
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_parquet_options_key(IrxParquetOptions *o, const uint8_t *key, int64_t size) {
     GUARD(o); GUARD(key);
@@ -147,7 +147,7 @@ int irx_parquet_options_filter(IrxParquetOptions *o, const char *column,
             return set_err("predicate column must be nonempty UTF-8");
         o->predicates.push_back({column, operation, value, type});
         return IRX_OK;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 
 int irx_rb_parquet_read_table(const char *path, const IrxRbSchema *expected,
@@ -171,7 +171,7 @@ int irx_rb_parquet_read_table(const char *path, const IrxRbSchema *expected,
         std::unique_ptr<IrxRbStreamReader, decltype(&irx_rb_stream_reader_close)> reader(raw, irx_rb_stream_reader_close);
         if (rc != IRX_OK) return rc;
         return irx_rb_reader_read_table(reader.get(), out);
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }
 int irx_rb_parquet_write_table(const irx_arrow_table_handle *table, const char *path,
                                const IrxParquetOptions *options, int auto_dataset) {
@@ -189,5 +189,5 @@ int irx_rb_parquet_write_table(const irx_arrow_table_handle *table, const char *
         if (rc != IRX_OK) return rc;
         rc = irx_rb_writer_write_table(writer.get(), table);
         return rc == IRX_OK ? irx_rb_stream_writer_close(writer.get()) : rc;
-    } catch (const std::exception &error) { return set_err(error.what()); }
+    } catch (const std::exception &error) { return set_err(error.what(), irx::native_exception_status(error)); }
 }

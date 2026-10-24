@@ -514,8 +514,8 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     assert summary.exit_code == 0
     assert summary.passed == 2
     expected = [
-        ["ImportFromStmt", "helper", "test_first", "main"],
-        ["ImportFromStmt", "helper", "test_second", "main"],
+        ["ImportFromStmt", "ImportFromStmt", "helper", "test_first", "main"],
+        ["ImportFromStmt", "ImportFromStmt", "helper", "test_second", "main"],
     ]
     assert captured_wrappers == expected
 
@@ -640,8 +640,22 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
 
     assert summary.exit_code == 0
     expected = [
-        ["ImportFromStmt", "putchard", "helper", "test_first", "main"],
-        ["ImportFromStmt", "putchard", "helper", "test_second", "main"],
+        [
+            "ImportFromStmt",
+            "ImportFromStmt",
+            "putchard",
+            "helper",
+            "test_first",
+            "main",
+        ],
+        [
+            "ImportFromStmt",
+            "ImportFromStmt",
+            "putchard",
+            "helper",
+            "test_second",
+            "main",
+        ],
     ]
     assert captured_wrappers == expected
 
@@ -879,7 +893,9 @@ def test_arx_test_runner_reports_machine_readable_failures(
             return CommandResult(
                 stdout="",
                 stderr=(
-                    "ARX_ASSERT_FAIL|tests/main.x|12|3|"
+                    "ARX_EXCEPTION|root|ARX-RUNTIME-ASSERTION-001|"
+                    "builtins.exceptions::class::AssertionError|"
+                    "tests/main.x|12|3|"
                     "bad\\nmessage\\pwith pipe\\\\slash\n"
                 ),
                 returncode=1,
@@ -893,7 +909,10 @@ def test_arx_test_runner_reports_machine_readable_failures(
     out = capsys.readouterr().out
     assert summary.exit_code == 1
     assert summary.failed == 1
-    assert "tests/main.x:12:3: bad" in out
+    assert (
+        "tests/main.x:12:3: builtins.exceptions::class::AssertionError: bad"
+        in out
+    )
     assert "message|with pipe\\slash" in out
 
 

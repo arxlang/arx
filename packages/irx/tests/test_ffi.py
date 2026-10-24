@@ -105,7 +105,11 @@ def test_plain_extern_symbol_does_not_activate_runtime_feature() -> None:
 
     builder.translate(module)
 
-    assert builder.translator.runtime_features.active_feature_names() == ()
+    assert builder.translator.runtime_features.active_feature_names() == (
+        "class",
+        "errors",
+        "exceptions",
+    )
 
 
 def test_translate_feature_backed_extern_activates_runtime_feature() -> None:
@@ -134,7 +138,10 @@ def test_translate_feature_backed_extern_activates_runtime_feature() -> None:
     ir_text = builder.translate(module)
 
     assert builder.translator.runtime_features.active_feature_names() == (
+        "class",
         "errors",
+        "exceptions",
+        "libc",
         "libm",
     )
     assert 'declare external double @"sqrt"(double %"value")' in ir_text

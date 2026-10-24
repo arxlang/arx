@@ -36,6 +36,7 @@ from irx.builder.runtime.features import (
 from irx.builder.runtime.linking import compile_native_artifacts
 from irx.builder.runtime.record_batch_api import (
     ARROW_API_SIGNATURES,
+    CHECKED_FACADE_ABI_VERSION,
     PARQUET_API_SYMBOLS,
 )
 from irx.record_batch_abi import record_batch_library_path
@@ -277,10 +278,14 @@ def _make_declarer(
         returns:
           type: ir.Function
         """
-        fn_type = ir.FunctionType(
-            _resolve_type(visitor, ret_code),
-            [_resolve_type(visitor, code) for code in arg_codes],
-        )
+        result = _resolve_type(visitor, ret_code)
+        arguments = [_resolve_type(visitor, code) for code in arg_codes]
+        if name in ARROW_API_SIGNATURES:
+            if ret_code != "v":
+                arguments.append(result.as_pointer())
+            arguments.append(_resolve_type(visitor, "p"))
+            result = _resolve_type(visitor, "i32")
+        fn_type = ir.FunctionType(result, arguments)
         return declare_external_function(
             visitor._llvm.module,  # type: ignore[attr-defined]
             name,
@@ -323,16 +328,6 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         )
     )
 
-    artifacts += (
-        NativeArtifact(
-            kind="c_source",
-            path=native_dir.parent.parent
-            / "errors"
-            / "native"
-            / "irx_error_runtime.c",
-        ),
-    )
-
     symbols = {
         name: ExternalSymbolSpec(name, _make_declarer(name, ret, args))
         for name, (ret, args) in _SIGNATURES.items()
@@ -346,6 +341,8 @@ def build_record_batch_runtime_feature() -> RuntimeFeature:
         linker_flags=arrowcpp_linker_flags(),
         metadata={
             "canonical_name": "record_batch",
+            "checked_facade_abi": CHECKED_FACADE_ABI_VERSION,
+            "checked_facade_error_capacity": 1024,
             "depends_on": ("array",),
             "opaque_handles": {
                 "schema": "IrxRbSchema",
@@ -399,7 +396,10 @@ def build_parquet_runtime_feature() -> RuntimeFeature:
         linker_flags=linker_flags,
         dependencies=("record_batch",),
         unavailable_reason=unavailable,
-        metadata={"canonical_name": "parquet"},
+        metadata={
+            "canonical_name": "parquet",
+            "checked_facade_abi": CHECKED_FACADE_ABI_VERSION,
+        },
     )
 
 

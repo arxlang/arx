@@ -94,6 +94,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             CleanupAction(
                 destroy_list,
                 owner_symbol_id=ownership.owner_symbol_id,
+                fallible=False,
             )
         )
 
@@ -184,6 +185,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             CleanupAction(
                 destroy_string,
                 owner_symbol_id=ownership.owner_symbol_id,
+                fallible=False,
             )
         )
 

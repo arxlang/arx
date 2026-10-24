@@ -56,7 +56,7 @@ def build_class_runtime_feature() -> RuntimeFeature:
             parameters: list[ir.Type] = [pointer, pointer]
             if operation == "create":
                 drop = ir.FunctionType(
-                    integer, [pointer, pointer]
+                    integer, [pointer, pointer, pointer]
                 ).as_pointer()
                 parameters = [
                     visitor._llvm.SIZE_T_TYPE,
@@ -64,6 +64,8 @@ def build_class_runtime_feature() -> RuntimeFeature:
                     pointer.as_pointer(),
                     pointer,
                 ]
+            elif operation == "release":
+                parameters = [pointer, pointer, pointer]
             elif operation in {"complete", "completed"}:
                 parameters = [pointer]
                 if operation == "complete":

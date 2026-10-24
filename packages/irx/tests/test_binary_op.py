@@ -7,6 +7,7 @@ import pytest
 
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
+from irx.builder.runtime.exceptions import parse_exception_output
 from irx.system import Cast, PrintExpr
 
 from .conftest import assert_ir_parses, build_and_run, check_result
@@ -294,12 +295,15 @@ def test_scalar_integer_invalid_divisor_fails_deterministically(
 
     ir_text = LLVMBuilder().translate(module)
     assert_ir_parses(ir_text)
-    assert "integer_divisor_is_zero" in ir_text
-    assert "integer_dividend_is_minimum" in ir_text
+    assert "integer.division.zero" in ir_text
+    assert "integer.division.overflow" in ir_text
     assert "__arx_runtime_fail" in ir_text
     assert "unreachable" in ir_text
 
     result = build_and_run(LLVMBuilder(), module)
     assert result.returncode == 1
-    assert "ARX_RUNTIME_FAIL|ARX-RUNTIME-ARITHMETIC-001" in result.stderr
-    assert "zero divisor or an unrepresentable signed result" in result.stderr
+    report = parse_exception_output(result.stderr)
+    assert report is not None
+    assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
+    assert report.type_name == "builtins.exceptions::class::ZeroDivisionError"
+    assert report.message == "integer division or remainder by zero"

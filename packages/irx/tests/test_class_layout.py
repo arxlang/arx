@@ -288,7 +288,8 @@ def test_ir_defined_functions_use_pointer_abi_for_class_values(
 ) -> None:
     """
     title: >-
-      IR-defined function signatures pass and return class values by pointer.
+      Generated signatures pass class pointers and publish them through output
+      slots.
     parameters:
       builder_class:
         type: type[Builder]
@@ -312,7 +313,8 @@ def test_ir_defined_functions_use_pointer_abi_for_class_values(
     ir_text = builder.translate(module)
 
     assert (
-        'define %"main__Widget"* @"main__identity"(%"main__Widget"* %"value")'
+        'define i32 @"main__identity"(i8* %"context", '
+        '%"main__Widget"* %"value", %"main__Widget"** %"result_out")'
     ) in ir_text
     assert_ir_parses(ir_text)
 

@@ -98,6 +98,7 @@ def integer_kernel(
         code: str,
         message: str,
         block_name: str,
+        exception_role: str = "RuntimeError",
     ) -> None:
         """
         title: >-
@@ -112,6 +113,8 @@ def integer_kernel(
           message:
             type: str
           block_name:
+            type: str
+          exception_role:
             type: str
         """
         checks.append(condition)
@@ -327,6 +330,7 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
         code: str,
         message: str,
         block_name: str,
+        exception_role: str = "RuntimeError",
     ) -> None:
         """
         title: >-
@@ -341,6 +345,8 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
           message:
             type: str
           block_name:
+            type: str
+          exception_role:
             type: str
         """
         builder.store(

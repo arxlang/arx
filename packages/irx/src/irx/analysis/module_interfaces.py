@@ -62,6 +62,12 @@ class ParsedModule:
         type: bool
       native_arrow_classes:
         type: tuple[astx.ClassDefStmt, Ellipsis]
+      exception_classes:
+        type: tuple[astx.ClassDefStmt, Ellipsis]
+        description: >-
+          Explicit declaration identities for one complete builtin exception
+          hierarchy. IRx validates its nominal bases and native storage schema;
+          matching source names alone never register an exception capability.
     """
 
     key: ModuleKey
@@ -74,12 +80,14 @@ class ParsedModule:
     native_record_batch_class: astx.ClassDefStmt | None = None
     lazy_declarations: bool = False
     native_arrow_classes: tuple[astx.ClassDefStmt, ...] = ()
+    exception_classes: tuple[astx.ClassDefStmt, ...] = ()
 
     def __post_init__(self) -> None:
         """
         title: Validate an explicit host capability against its parsed module.
         """
         validate_file_registration(self.native_file_class, self.ast)
+        validate_exception_registration(self.exception_classes, self.ast)
         for declaration in self.native_arrow_classes:
             if not any(node is declaration for node in self.ast.nodes):
                 raise ValueError(
@@ -92,6 +100,26 @@ class ParsedModule:
         validate_native_registration(
             self.native_features, self.native_bindings, self.ast
         )
+
+
+@private
+@typechecked
+def validate_exception_registration(
+    declarations: tuple[astx.ClassDefStmt, ...], module: astx.Module
+) -> None:
+    """
+    title: Validate all exception capability items and declaration membership.
+    parameters:
+      declarations:
+        type: tuple[astx.ClassDefStmt, Ellipsis]
+      module:
+        type: astx.Module
+    """
+    if len({id(item) for item in declarations}) != len(declarations):
+        raise ValueError("duplicate exception class registration")
+    for declaration in declarations:
+        if not any(node is declaration for node in module.nodes):
+            raise ValueError("exception class must belong to its module")
 
 
 @private

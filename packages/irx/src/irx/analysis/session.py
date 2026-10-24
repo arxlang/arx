@@ -19,7 +19,7 @@ from irx.analysis.module_interfaces import (
     ModuleKey,
     ParsedModule,
 )
-from irx.analysis.resolved_nodes import SemanticBinding
+from irx.analysis.resolved_nodes import ResolvedExceptionType, SemanticBinding
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.native import NativeFeature, TableIOOperation
 from irx.typecheck import typechecked
@@ -101,6 +101,8 @@ class CompilationSession:
         type: dict[int, TableIOOperation]
       lowering_declarations:
         type: frozenset[int] | None
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
       _resolution_cache:
         type: dict[tuple[ModuleKey, str], ParsedModule | None]
       _probe_cache:
@@ -120,6 +122,9 @@ class CompilationSession:
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
     native_table_io: dict[int, TableIOOperation] = field(default_factory=dict)
     lowering_declarations: frozenset[int] | None = None
+    runtime_exception_types: dict[str, ResolvedExceptionType] = field(
+        default_factory=dict
+    )
     _resolution_cache: dict[tuple[ModuleKey, str], ParsedModule | None] = (
         field(default_factory=dict)
     )

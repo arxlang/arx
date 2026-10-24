@@ -254,10 +254,36 @@ class ParserCore(ParserMixinBase):
                 allow_module_docstring = False
                 continue
 
-            tree.nodes.append(self.parse_expression())
+            tree.nodes.append(self.parse_statement())
             allow_module_docstring = False
 
         return tree
+
+    def match_clause(self, kind: TokenKind, indentation: int) -> bool:
+        """
+        title: Consume line markers only when a same-level clause follows.
+        parameters:
+          kind:
+            type: TokenKind
+          indentation:
+            type: int
+        returns:
+          type: bool
+        """
+        token = self.tokens.cur_tok
+        position = self.tokens.position
+        while token.kind == TokenKind.indent:
+            if token.value != indentation:
+                return False
+            if position >= len(self.tokens.tokens):
+                return False
+            token = self.tokens.tokens[position]
+            position += 1
+        if token.location.col != indentation + 1 or token.kind != kind:
+            return False
+        while self.tokens.cur_tok.kind == TokenKind.indent:
+            self.tokens.get_next_token()
+        return True
 
     def _push_value_scope(
         self,

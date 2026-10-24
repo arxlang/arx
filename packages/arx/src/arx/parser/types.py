@@ -532,6 +532,7 @@ class TypeParserMixin(ParserMixinBase):
                     type_name in self.known_class_names
                     or type_name in self.imported_type_names
                     or type_name == builtins.BUILTIN_FILE
+                    or type_name in builtins.EXCEPTION_BUILTIN_NAMES
                 ):
                     type_ = astx.ClassType(type_name)
                 else:

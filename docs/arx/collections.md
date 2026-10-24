@@ -25,8 +25,10 @@ fn sum_values() -> i32:
 ```
 
 Dynamic lists are move-only: owned locals and non-transferred temporaries are
-released on ordinary lexical exits and replacement; returning an owned list
-moves it to the caller. Parameters borrow storage and cannot append or return
+released on normal and exceptional lexical exits and replacement; returning an
+owned list moves it to the caller. A list moved into a pending return cannot be
+read or reassigned through that binding in `finally`; a separate fresh owned
+return value is allowed. Parameters borrow storage and cannot append or return
 that borrow. Literal-list views are non-owning and cannot escape into dynamic
 owners or call arguments. See the
 [enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract)

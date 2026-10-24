@@ -2,6 +2,11 @@
 title: Tests for string operations.
 """
 
+import subprocess
+import tempfile
+
+from pathlib import Path
+
 import astx
 import pytest
 
@@ -17,10 +22,69 @@ from irx.analysis import (
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
 from irx.system import PrintExpr
+from llvmlite import binding as llvm
+from llvmlite import ir
 
 from .conftest import assert_ir_parses, check_result
 
 EXPECTED_STRING_REPLACEMENT_FREES = 2
+
+
+def assert_executed_string_frees(module: astx.Module, expected: int) -> None:
+    """
+    title: Count executed source cleanup calls instead of failure-edge copies.
+    summary: Instrument source functions only; runtime bookkeeping is separate.
+    parameters:
+      module:
+        type: astx.Module
+      expected:
+        type: int
+    """
+    builder = LLVMBuilder()
+    builder.translate(module)
+    generated = builder.translator._llvm.module
+    integer = ir.IntType(32)
+    counter = ir.GlobalVariable(generated, integer, "test.free_count")
+    counter.initializer = ir.Constant(integer, 0)
+    for function in builder.translator.llvm_functions_by_symbol_id.values():
+        for block in function.blocks:
+            for instruction in list(block.instructions):
+                if (
+                    not isinstance(instruction, ir.CallInstr)
+                    or instruction.callee.name != "free"
+                ):
+                    continue
+                instrument = ir.IRBuilder(block)
+                instrument.position_before(instruction)
+                increment = instrument.add(
+                    instrument.load(counter), ir.Constant(integer, 1)
+                )
+                instrument.store(increment, counter)
+    wrapper = generated.get_global("main")
+    assert isinstance(wrapper, ir.Function)
+    success = next(
+        block for block in wrapper.blocks if block.name == "success"
+    )
+    terminator = success.terminator
+    assert terminator is not None
+    instrument = ir.IRBuilder(success)
+    instrument.position_before(terminator)
+    counted = instrument.load(counter)
+    terminator.replace_usage(terminator.operands[0], counted)
+    text = str(generated)
+    llvm.parse_assembly(text).verify()
+    with tempfile.TemporaryDirectory() as directory:
+        executable = Path(directory) / "string_cleanup"
+        builder._build_from_ir(text, str(executable))
+        result = subprocess.run(
+            [str(executable)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    assert result.stderr == ""
+    assert result.returncode == expected
 
 
 def _string_concat(lhs: str, rhs: str) -> astx.BinaryOp:
@@ -450,7 +514,7 @@ def test_owned_string_local_is_released_after_use() -> None:
 
     ir_text = LLVMBuilder().translate(module)
 
-    assert ir_text.count('call void @"free"') == 1
+    assert_executed_string_frees(module, 1)
     assert "ARX-RUNTIME-STRING-001" in ir_text
     assert_ir_parses(ir_text)
     check_result(
@@ -483,9 +547,7 @@ def test_owned_string_assignment_releases_each_lifetime_generation() -> None:
 
     ir_text = LLVMBuilder().translate(module)
 
-    assert (
-        ir_text.count('call void @"free"') == EXPECTED_STRING_REPLACEMENT_FREES
-    )
+    assert_executed_string_frees(module, EXPECTED_STRING_REPLACEMENT_FREES)
     assert_ir_parses(ir_text)
     check_result(
         "build",
@@ -530,7 +592,7 @@ def test_static_string_return_is_copied_and_released_by_caller() -> None:
     assert literal_ownership.escape_kind is OwnershipEscapeKind.RETURN
     assert call_ownership is not None
     assert call_ownership.kind is OwnershipKind.OWNED
-    assert ir_text.count('call void @"free"') == 1
+    assert_executed_string_frees(module, 1)
     assert_ir_parses(ir_text)
     check_result(
         "build",
@@ -577,7 +639,7 @@ def test_owned_string_return_moves_cleanup_to_caller() -> None:
     assert returned_ownership is not None
     assert returned_ownership.transfer_kind is OwnershipTransferKind.MOVE
     assert returned_ownership.escape_kind is OwnershipEscapeKind.RETURN
-    assert ir_text.count('call void @"free"') == 1
+    assert_executed_string_frees(module, 1)
     assert_ir_parses(ir_text)
     check_result(
         "build",
@@ -595,9 +657,10 @@ def test_printed_string_temporary_is_released_after_consumption() -> None:
 
     ir_text = LLVMBuilder().translate(module)
 
-    assert ir_text.count('call void @"free"') == 1
-    puts_position = ir_text.index('call i32 @"puts"')
-    free_position = ir_text.index('call void @"free"')
+    assert_executed_string_frees(module, 1)
+    source_main = ir_text[ir_text.index('define i32 @"irx.entry.main"') :]
+    puts_position = source_main.index('call i32 @"puts"')
+    free_position = source_main.index('call void @"free"')
     assert puts_position < free_position
     assert_ir_parses(ir_text)
     check_result(
@@ -616,16 +679,16 @@ def test_printed_string_temporary_is_released_after_consumption() -> None:
     ],
 )
 def test_string_assignment_rejects_storage_class_changes(
-    initializer: astx.AST,
-    replacement: astx.AST,
+    initializer: astx.Expr,
+    replacement: astx.DataType,
 ) -> None:
     """
     title: Assignment should not mix static and heap string lifetimes.
     parameters:
       initializer:
-        type: astx.AST
+        type: astx.Expr
       replacement:
-        type: astx.AST
+        type: astx.DataType
     """
     module = _string_main(
         astx.VariableDeclaration(

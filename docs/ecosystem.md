@@ -48,7 +48,7 @@ Implemented today:
 - lists and builtin `range`
 - fixed-shape numeric tensors plus runtime-shaped tensor parameters
 - static-schema DataFrames and typed Series
-- fatal assertions and the compiled `arx test` runner
+- typed exceptions, assertions, and the compiled `arx test` runner
 - token, AST, LLVM IR, object, executable, and run modes
 
 Important limits:

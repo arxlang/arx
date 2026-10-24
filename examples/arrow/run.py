@@ -133,19 +133,9 @@ def c_interfaces(directory: Path) -> None:
     library = ctypes.CDLL(
         str(build(EXAMPLES / "component.x", directory / "component.so", True))
     )
-    for name, arity in (
-        ("produce_stream", 1),
-        ("produce_array", 2),
-        ("consume_stream", 1),
-        ("consume_array", 2),
-    ):
-        function = getattr(library, f"component__{name}")
-        setattr(library, name, function)
-        function.argtypes = [ctypes.c_int64] * arity
-        function.restype = ctypes.c_int32
     stream = ffi.new("struct ArrowArrayStream *")
     stream_address = int(ffi.cast("uintptr_t", stream))
-    assert library.produce_stream(stream_address) == 0
+    assert call_component(library, "produce_stream", stream_address) == 0
     # Arx locals have already gone out of scope before PyArrow imports.
     reader = pa.RecordBatchReader._import_from_c(stream_address)
     gc.collect()
@@ -157,20 +147,70 @@ def c_interfaces(directory: Path) -> None:
     schema = ffi.new("struct ArrowSchema *")
     array_address = int(ffi.cast("uintptr_t", array))
     schema_address = int(ffi.cast("uintptr_t", schema))
-    assert library.produce_array(array_address, schema_address) == 0
+    assert (
+        call_component(library, "produce_array", array_address, schema_address)
+        == 0
+    )
     batch = pa.RecordBatch._import_from_c(array_address, schema_address)
     gc.collect()
     assert batch.equals(expected_batch(), check_metadata=True)
     expected_batch()._export_to_c(array_address, schema_address)
-    assert library.consume_array(array_address, schema_address) == 0
+    assert (
+        call_component(library, "consume_array", array_address, schema_address)
+        == 0
+    )
     assert array.release == ffi.NULL
     assert schema.release == ffi.NULL
     pa.RecordBatchReader.from_batches(
         expected_batch().schema, [expected_batch()]
     )._export_to_c(stream_address)
-    assert library.consume_stream(stream_address) == 0
+    assert call_component(library, "consume_stream", stream_address) == 0
     assert stream.release == ffi.NULL
     print("C Data/C Stream: compiled producer and consumer passed")
+
+
+def call_component(library: ctypes.CDLL, name: str, *addresses: int) -> int:
+    """
+    title: Call a generated function through the checked native ABI.
+    parameters:
+      library:
+        type: ctypes.CDLL
+      name:
+        type: str
+      addresses:
+        type: int
+        variadic: positional
+    returns:
+      type: int
+    notes: Read the result only on success and always release the context.
+    """
+    create = library.irx_exception_context_create
+    create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+    create.restype = ctypes.c_int32
+    destroy = library.irx_exception_context_destroy
+    destroy.argtypes = [ctypes.c_void_p]
+    destroy.restype = None
+    report = library.irx_exception_report
+    report.argtypes = [ctypes.c_void_p]
+    report.restype = None
+    context = ctypes.c_void_p()
+    if create(ctypes.byref(context)) != 0:
+        raise RuntimeError("could not allocate the exception context")
+    try:
+        function = getattr(library, f"component__{name}")
+        function.argtypes = [
+            ctypes.c_void_p,
+            *([ctypes.c_int64] * len(addresses)),
+            ctypes.POINTER(ctypes.c_int32),
+        ]
+        function.restype = ctypes.c_int32
+        result = ctypes.c_int32()
+        if function(context, *addresses, ctypes.byref(result)) != 0:
+            report(context)
+            raise RuntimeError(f"compiled component {name} raised")
+        return result.value
+    finally:
+        destroy(context)
 
 
 def tcp(directory: Path) -> None:

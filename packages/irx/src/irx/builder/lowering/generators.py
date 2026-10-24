@@ -10,11 +10,14 @@ summary: >-
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 import astx
 
 from llvmlite import ir
+from public import private
 
 from irx.analysis.resolved_nodes import (
     ResolvedGeneratorFunction,
@@ -32,10 +35,10 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.state import ExceptionTarget
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
-GENERATOR_FRAME_ALLOCATION_BYTES = 4096
 GENERATOR_STATE_FIELD_INDEX = 0
 GENERATOR_EXHAUSTED_FIELD_INDEX = 1
 
@@ -55,6 +58,50 @@ def _is_yield_node(node: astx.AST) -> bool:
 
 @typechecked
 class GeneratorVisitorMixin(VisitorMixinBase):
+    @private
+    @contextmanager
+    def generator_function_scope(
+        self, generator: ResolvedGeneratorFunction
+    ) -> Iterator[None]:
+        """
+        title: Isolate status and cleanup state in factory and resume frames.
+        parameters:
+          generator:
+            type: ResolvedGeneratorFunction
+        returns:
+          type: Iterator[None]
+        """
+        previous = (
+            self.exception_context,
+            self.exception_result_slot,
+            self.exception_targets,
+            self.pending_returns,
+            self.cleanup_stack,
+            self._current_function_return_type,
+            self._current_function_signature,
+        )
+        self.exception_context = None
+        self.exception_result_slot = None
+        self.exception_targets = []
+        self.pending_returns = []
+        self.cleanup_stack = []
+        self._current_function_return_type = (
+            generator.function.signature.return_type
+        )
+        self._current_function_signature = generator.function.signature
+        try:
+            yield
+        finally:
+            (
+                self.exception_context,
+                self.exception_result_slot,
+                self.exception_targets,
+                self.pending_returns,
+                self.cleanup_stack,
+                self._current_function_return_type,
+                self._current_function_signature,
+            ) = previous
+
     def _semantic_generator_function(
         self,
         node: astx.FunctionDef,
@@ -303,8 +350,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             return existing
         yield_type = self._generator_yield_type(generator)
         resume_type = ir.FunctionType(
-            self._llvm.BOOLEAN_TYPE,
-            [self._llvm.OPAQUE_POINTER_TYPE, yield_type.as_pointer()],
+            self._llvm.INT32_TYPE,
+            [
+                self._llvm.OPAQUE_POINTER_TYPE,
+                self._llvm.OPAQUE_POINTER_TYPE,
+                yield_type.as_pointer(),
+                self._llvm.BOOLEAN_TYPE.as_pointer(),
+            ],
         )
         resume = ir.Function(
             self._llvm.module,
@@ -312,8 +364,10 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             self._generator_resume_name(function),
         )
         resume.linkage = "internal"
-        resume.args[0].name = "frame"
-        resume.args[1].name = "out"
+        resume.args[0].name = "context"
+        resume.args[1].name = "frame"
+        resume.args[2].name = "out"
+        resume.args[3].name = "produced"
         self._generator_resume_functions[function.symbol_id] = resume
         return resume
 
@@ -339,7 +393,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
 
     def _emit_generator_stop(self, node: astx.AST | None = None) -> None:
         """
-        title: Emit generator exhaustion and return false from resume.
+        title: Publish successful exhaustion separately from resume failure.
         parameters:
           node:
             type: astx.AST | None
@@ -350,6 +404,9 @@ class GeneratorVisitorMixin(VisitorMixinBase):
                 "generator stop emitted outside resume function",
                 node=node,
             )
+        self._emit_active_cleanups(0)
+        if self._llvm.ir_builder.block.is_terminated:
+            return
         exhausted_addr = self._generator_field_address(
             frame_ptr,
             GENERATOR_EXHAUSTED_FIELD_INDEX,
@@ -359,7 +416,11 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             ir.Constant(self._llvm.BOOLEAN_TYPE, 1),
             exhausted_addr,
         )
-        self._llvm.ir_builder.ret(ir.Constant(self._llvm.BOOLEAN_TYPE, 0))
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.BOOLEAN_TYPE, 0),
+            self._llvm.ir_builder.function.args[3],
+        )
+        self._llvm.ir_builder.ret(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     def _lower_generator_suspend(
         self,
@@ -398,6 +459,9 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             )
             self._llvm.ir_builder.store(yielded, out_ptr)
 
+        self._emit_temporary_cleanups(0)
+        if self._llvm.ir_builder.block.is_terminated:
+            return
         state_addr = self._generator_field_address(
             frame_ptr,
             GENERATOR_STATE_FIELD_INDEX,
@@ -407,7 +471,11 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             ir.Constant(self._llvm.INT32_TYPE, next_state),
             state_addr,
         )
-        self._llvm.ir_builder.ret(ir.Constant(self._llvm.BOOLEAN_TYPE, 1))
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.BOOLEAN_TYPE, 1),
+            self._llvm.ir_builder.function.args[3],
+        )
+        self._llvm.ir_builder.ret(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     def _lower_generator_body_from_state(
         self,
@@ -434,8 +502,12 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             if yielded_seen < state_index:
                 continue
             stack_size_before = len(self.result_stack)
+            cleanup_depth = len(self.cleanup_stack)
             self.visit_child(node)
             del self.result_stack[stack_size_before:]
+            if self._llvm.ir_builder.block.is_terminated:
+                return
+            self._emit_temporary_cleanups(cleanup_depth)
             if self._llvm.ir_builder.block.is_terminated:
                 return
         if not self._llvm.ir_builder.block.is_terminated:
@@ -464,7 +536,11 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         frame_type, slots = self._generator_frame_layout(generator)
         entry = resume.append_basic_block("entry")
         self._llvm.ir_builder = ir.IRBuilder(entry)
-        raw_frame = resume.args[0]
+        self.exception_context = resume.args[0]
+        self.exception_result_slot = None
+        failure = resume.append_basic_block("failure")
+        self.exception_targets = [ExceptionTarget(failure, 0)]
+        raw_frame = resume.args[1]
         frame_ptr = self._llvm.ir_builder.bitcast(
             raw_frame,
             frame_type.as_pointer(),
@@ -513,9 +589,12 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         saved_next_state = self._current_generator_next_state
         self._current_generator_frame_ptr = frame_ptr
         self._current_generator_frame_slots = slots
-        self._current_generator_out_ptr = resume.args[1]
+        self._current_generator_out_ptr = resume.args[2]
         try:
             for index, block in enumerate(state_blocks):
+                # Owned locals across suspension are rejected by semantics;
+                # each resume state has its own temporary cleanup ledger.
+                self.cleanup_stack = []
                 self._llvm.ir_builder.position_at_start(block)
                 self._bind_generator_frame_symbols(frame_ptr, slots)
                 self._current_generator_next_state = index + 1
@@ -523,8 +602,15 @@ class GeneratorVisitorMixin(VisitorMixinBase):
                     function.definition.body,
                     state_index=index,
                 )
+            self.cleanup_stack = []
             self._llvm.ir_builder.position_at_start(done_bb)
             self._emit_generator_stop(function.definition)
+            self._llvm.ir_builder.position_at_end(failure)
+            # A failed resume is terminal, not normal exhaustion in this call.
+            self._llvm.ir_builder.store(
+                ir.Constant(self._llvm.BOOLEAN_TYPE, 1), exhausted_addr
+            )
+            self._llvm.ir_builder.ret(ir.Constant(self._llvm.INT32_TYPE, 1))
         finally:
             self.named_values = saved_named_values
             self.const_vars = saved_const_vars
@@ -536,26 +622,38 @@ class GeneratorVisitorMixin(VisitorMixinBase):
     def _allocate_generator_frame(
         self,
         frame_type: ir.IdentifiedStructType,
+        node: astx.AST,
     ) -> ir.Value:
         """
-        title: Allocate one generator frame on the heap.
+        title: Allocate one generator frame or fail before dereferencing null.
         parameters:
           frame_type:
             type: ir.IdentifiedStructType
+          node:
+            type: astx.AST
         returns:
           type: ir.Value
         """
         malloc = self._malloc_function()
         size_type = self._llvm.SIZE_T_TYPE or self._llvm.INT64_TYPE
+        size = self._llvm.ir_builder.ptrtoint(
+            self._llvm.ir_builder.gep(
+                ir.Constant(frame_type.as_pointer(), None),
+                [ir.Constant(self._llvm.INT32_TYPE, 1)],
+            ),
+            size_type,
+        )
         raw = self._llvm.ir_builder.call(
-            malloc,
-            [
-                ir.Constant(
-                    size_type,
-                    GENERATOR_FRAME_ALLOCATION_BYTES,
-                )
-            ],
-            name="generator_alloc",
+            malloc, [size], name="generator_alloc"
+        )
+        invalid = self._llvm.ir_builder.icmp_unsigned(
+            "==", raw, ir.Constant(raw.type, None)
+        )
+        self.fatal_status(
+            node,
+            self._llvm.ir_builder.neg(
+                self._llvm.ir_builder.zext(invalid, self._llvm.INT32_TYPE)
+            ),
         )
         return self._llvm.ir_builder.bitcast(
             raw,
@@ -584,7 +682,11 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         resume = self._declare_generator_resume(generator)
         entry = factory.append_basic_block("entry")
         self._llvm.ir_builder = ir.IRBuilder(entry)
-        frame_ptr = self._allocate_generator_frame(frame_type)
+        self.exception_context = factory.args[0]
+        self.exception_result_slot = factory.args[-1]
+        frame_ptr = self._allocate_generator_frame(
+            frame_type, function.prototype
+        )
 
         state_addr = self._generator_field_address(
             frame_ptr,
@@ -605,7 +707,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             exhausted_addr,
         )
 
-        for llvm_arg, symbol in zip(factory.args, function.args):
+        for llvm_arg, symbol in zip(factory.args[1:-1], function.args):
             field_index = slots.get(symbol.symbol_id)
             if field_index is None:
                 continue
@@ -639,7 +741,7 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             1,
             name="generator_with_resume",
         )
-        self._llvm.ir_builder.ret(generator_value)
+        self.emit_success_return(generator_value)
         self._emitted_function_bodies.add(function.symbol_id)
         return factory
 
@@ -659,8 +761,10 @@ class GeneratorVisitorMixin(VisitorMixinBase):
           type: ir.Function
         """
         _ = node
-        factory = self._lower_generator_factory(generator)
-        self._emit_generator_resume_body(generator)
+        with self.generator_function_scope(generator):
+            factory = self._lower_generator_factory(generator)
+        with self.generator_function_scope(generator):
+            self._emit_generator_resume_body(generator)
         self.result_stack.append(factory)
         return factory
 
@@ -724,8 +828,13 @@ class GeneratorVisitorMixin(VisitorMixinBase):
             name="generator_resume_raw",
         )
         resume_type = ir.FunctionType(
-            self._llvm.BOOLEAN_TYPE,
-            [self._llvm.OPAQUE_POINTER_TYPE, llvm_element_type.as_pointer()],
+            self._llvm.INT32_TYPE,
+            [
+                self._llvm.OPAQUE_POINTER_TYPE,
+                self._llvm.OPAQUE_POINTER_TYPE,
+                llvm_element_type.as_pointer(),
+                self._llvm.BOOLEAN_TYPE.as_pointer(),
+            ],
         )
         resume = self._llvm.ir_builder.bitcast(
             resume_raw,
@@ -754,11 +863,18 @@ class GeneratorVisitorMixin(VisitorMixinBase):
         )
         self._llvm.ir_builder.branch(cond_bb)
 
+        produced = self.create_entry_block_alloca(
+            "generator.produced", self._llvm.BOOLEAN_TYPE
+        )
         self._llvm.ir_builder.position_at_start(cond_bb)
-        has_value = self._llvm.ir_builder.call(
+        status = self._llvm.ir_builder.call(
             resume,
-            [frame_value, yielded_addr],
-            name="generator_has_value",
+            [self.context_value(), frame_value, yielded_addr, produced],
+            name="generator.status",
+        )
+        self.propagate_status(node, status)
+        has_value = self._llvm.ir_builder.load(
+            produced, name="generator_has_value"
         )
         self._llvm.ir_builder.cbranch(has_value, body_bb, exit_bb)
 

@@ -2,7 +2,7 @@
 title: Lower resolved class lifetimes without re-resolving ownership or names.
 """
 
-from typing import cast
+from typing import Any, cast
 
 import astx
 
@@ -26,7 +26,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.file import FileVisitorMixin
 from irx.builder.runtime import safe_pop
-from irx.builder.state import CleanupAction
+from irx.builder.state import CleanupAction, ExceptionTarget
 from irx.typecheck import typechecked
 
 
@@ -181,9 +181,10 @@ class ClassVisitorMixin(FileVisitorMixin):
         function = self.require_runtime_symbol(
             "class", f"irx_class_{operation}"
         )
-        status = self._llvm.ir_builder.call(
-            function, [self.class_raw(value), error]
-        )
+        args = [self.class_raw(value), error]
+        if operation == "release":
+            args.insert(0, cast(Any, self).context_value())
+        status = self._llvm.ir_builder.call(function, args)
         self.file_check(node, status, error, code="ARX-RUNTIME-CLASS-001")
 
     def class_cleanup(
@@ -234,7 +235,12 @@ class ClassVisitorMixin(FileVisitorMixin):
                 self.class_operation(node, "release", current)
 
         self.cleanup_stack.append(
-            CleanupAction(release, owner_symbol_id=owner)
+            CleanupAction(
+                release,
+                owner_symbol_id=owner,
+                fallible=ownership is None
+                or ownership.resource_kind not in ARROW_RESOURCES,
+            )
         )
 
     def class_pin(self, node: astx.AST, value: ir.Value) -> None:
@@ -308,7 +314,7 @@ class ClassVisitorMixin(FileVisitorMixin):
         integer = self._llvm.INT32_TYPE
         function = ir.Function(
             self._llvm.module,
-            ir.FunctionType(integer, [pointer, pointer]),
+            ir.FunctionType(integer, [pointer, pointer, pointer]),
             name=name,
         )
         function.linkage = "internal"
@@ -316,8 +322,16 @@ class ClassVisitorMixin(FileVisitorMixin):
         self._llvm.ir_builder = ir.IRBuilder(
             function.append_basic_block("entry")
         )
+        previous_context = self.exception_context
+        previous_targets = self.exception_targets
+        previous_cleanups = self.cleanup_stack
+        previous_returns = self.pending_returns
+        self.pending_returns = []
+        self.exception_context = function.args[0]
+        self.exception_targets = []
+        self.cleanup_stack = []
         try:
-            value, error = function.args
+            context, value, error = function.args
             type_ = astx.ClassType(
                 class_.name,
                 module_key=class_.module_key,
@@ -333,6 +347,7 @@ class ClassVisitorMixin(FileVisitorMixin):
             )
             zero = ir.Constant(integer, 0)
             details = self._llvm.ir_builder.gep(local_error, [zero, zero])
+            self._llvm.ir_builder.store(ir.Constant(ir.IntType(8), 0), details)
             completed_fn = self.require_runtime_symbol(
                 "class", "irx_class_completed"
             )
@@ -349,11 +364,46 @@ class ClassVisitorMixin(FileVisitorMixin):
                             phase.destructor
                         )
                         receiver = self._llvm.ir_builder.bitcast(
-                            instance, hook.args[0].type
+                            instance, hook.args[1].type
                         )
-                        self._llvm.ir_builder.call(hook, [receiver])
+                        token = cast(Any, self).exception_call(
+                            "cleanup_enter", [context]
+                        )
+                        status = self._llvm.ir_builder.call(
+                            hook, [context, receiver]
+                        )
+                        cast(Any, self).exception_call(
+                            "cleanup_leave", [context, token]
+                        )
+                        self._llvm.ir_builder.call(
+                            record, [status, details, first, error]
+                        )
                 for item in reversed(phase.fields):
                     kind = item.field.resource_kind
+                    canonical = cast(
+                        SemanticInfo, getattr(class_.declaration, "semantic")
+                    ).resolved_class
+                    assert canonical is not None
+                    exception = canonical.exception_type
+                    if (
+                        exception is not None
+                        and item.field == exception.diagnostic_field
+                    ):
+                        address = self._llvm.ir_builder.gep(
+                            instance,
+                            [
+                                zero,
+                                ir.Constant(integer, item.field.storage_index),
+                            ],
+                        )
+                        cast(Any, self).exception_call(
+                            "info_release",
+                            [self._llvm.ir_builder.load(address)],
+                        )
+                        self._llvm.ir_builder.store(
+                            ir.Constant(pointer, None), address
+                        )
+                        continue
                     if kind is None:
                         continue
                     address = self._llvm.ir_builder.gep(
@@ -373,11 +423,31 @@ class ClassVisitorMixin(FileVisitorMixin):
                         release = self.require_runtime_symbol(
                             feature, f"irx_{feature}_release"
                         )
-                        status = self._llvm.ir_builder.call(
-                            release, [raw, details]
+                        operands = [raw, details]
+                        if feature == "class":
+                            operands.insert(0, context)
+                        token = cast(Any, self).exception_call(
+                            "cleanup_enter", [context]
                         )
+                        status = self._llvm.ir_builder.call(release, operands)
                         self._llvm.ir_builder.call(
                             record, [status, details, first, error]
+                        )
+                        done = function.append_basic_block("drop.field.done")
+                        self.exception_targets = [ExceptionTarget(done, 0)]
+                        self.file_check(
+                            class_.declaration,
+                            status,
+                            details,
+                            code="ARX-RUNTIME-FILE-001"
+                            if feature == "file"
+                            else "ARX-RUNTIME-CLASS-001",
+                        )
+                        self._llvm.ir_builder.branch(done)
+                        self._llvm.ir_builder.position_at_end(done)
+                        self.exception_targets = []
+                        cast(Any, self).exception_call(
+                            "cleanup_leave", [context, token]
                         )
                     self._llvm.ir_builder.store(
                         ir.Constant(stored.type, None), address
@@ -385,6 +455,10 @@ class ClassVisitorMixin(FileVisitorMixin):
             self._llvm.ir_builder.ret(self._llvm.ir_builder.load(first))
         finally:
             self._llvm.ir_builder = previous
+            self.exception_context = previous_context
+            self.exception_targets = previous_targets
+            self.cleanup_stack = previous_cleanups
+            self.pending_returns = previous_returns
         return function
 
     def lower_class_construct(
@@ -464,6 +538,10 @@ class ClassVisitorMixin(FileVisitorMixin):
             self._llvm.ir_builder.store(initial, address)
         previous_construction = self.class_construction_stack
         self.class_construction_stack = [*previous_construction, raw]
+        rollback = CleanupAction(
+            lambda: self.class_operation(node, "release", instance)
+        )
+        self.cleanup_stack.append(rollback)
         try:
             for phase_index, phase in enumerate(
                 resolution.initialization.phases
@@ -472,7 +550,26 @@ class ClassVisitorMixin(FileVisitorMixin):
                     field = item.field
                     assert field.member.type_ is not None
                     native_file = resolution.native_file
-                    if native_file is not None and field == native_file.field:
+                    native_exception = resolution.native_exception
+                    if (
+                        native_exception is not None
+                        and field
+                        == native_exception.exception_type.diagnostic_field
+                    ):
+                        value = ir.Constant(pointer, None)
+                    elif (
+                        native_exception is not None
+                        and field
+                        == native_exception.exception_type.message_field
+                    ):
+                        value = (
+                            values[native_exception.message_index]
+                            if native_exception.message_index is not None
+                            else cast(Any, self).exception_string("")
+                        )
+                    elif (
+                        native_file is not None and field == native_file.field
+                    ):
                         value = self.create_native_file(
                             node,
                             native_file.operands,
@@ -558,7 +655,10 @@ class ClassVisitorMixin(FileVisitorMixin):
                     )
                     arguments = [
                         self._llvm.ir_builder.bitcast(
-                            instance, function.args[0].type
+                            instance,
+                            function.args[
+                                int(phase.initializer.signature.exception_abi)
+                            ].type,
                         )
                     ]
                     if (
@@ -596,13 +696,20 @@ class ClassVisitorMixin(FileVisitorMixin):
                                     target_type=parameter.type_,
                                 )
                             )
-                    self._llvm.ir_builder.call(function, arguments)
+                    cast(Any, self).emit_resolved_call(
+                        node, function, phase.initializer.signature, arguments
+                    )
                 complete = self.require_runtime_symbol(
                     "class", "irx_class_complete"
                 )
                 self._llvm.ir_builder.call(complete, [raw])
+            if resolution.native_exception is not None:
+                cast(Any, self).initialize_exception_record(
+                    node, instance, resolution.native_exception.exception_type
+                )
         finally:
             self.class_construction_stack = previous_construction
+            self.cleanup_stack.remove(rollback)
         ownership = require_semantic_metadata(
             resource_ownership(node),
             node=node,

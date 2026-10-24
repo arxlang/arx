@@ -13,11 +13,11 @@ extern "C" {
  * Final release frees both allocations even when the callback reports error.
  * Counts are synchronous, non-atomic; cycles and resurrection are unsupported.
  */
-typedef int32_t (*irx_class_drop)(void* payload, char* error);
+typedef int32_t (*irx_class_drop)(void* context, void* payload, char* error);
 int32_t irx_class_create(size_t size, irx_class_drop drop, void** output,
                          char* error);
 int32_t irx_class_retain(void* payload, char* error);
-int32_t irx_class_release(void* payload, char* error);
+int32_t irx_class_release(void* context, void* payload, char* error);
 /* require checks nullable field/receiver access. error is a caller-owned
  * IRX_CLASS_ERROR_CAPACITY buffer; successful checked operations clear it. */
 int32_t irx_class_require(void* payload, char* error);

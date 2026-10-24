@@ -111,6 +111,7 @@ arrow::Result<arrow::Datum> reduce_column(const std::string& name, const arrow::
 extern "C" int irx_arrow_series_index(
     const irx_arrow_chunked_array_handle* column, int64_t index, int32_t type,
     uint64_t* out_bits, int32_t* out_valid) {
+  try {
   clear_error();
   if (out_bits) *out_bits = 0;
   if (out_valid) *out_valid = 0;
@@ -118,14 +119,20 @@ extern "C" int irx_arrow_series_index(
   try {
     auto spec = type_spec_from_type_id(type);
     if (!column || !column->column || !spec || column->column->type()->id() != spec->arrow_type_id)
-      return set_error(EINVAL, "Series index type mismatch");
+      return set_error(IRX_ERR_TYPE, "Series index type mismatch");
     if (index < 0 || index >= column->column->length())
       return set_error(ERANGE, "Series index out of bounds");
     auto scalar = column->column->GetScalar(index);
-    if (!scalar.ok()) return set_error(EINVAL, "%s", scalar.status().ToString().c_str());
+    if (!scalar.ok()) return set_error(irx::record_batch_status(scalar.status()), "%s", scalar.status().ToString().c_str());
     auto status = scalar_bits(**scalar, out_bits, out_valid);
-    return status.ok() ? 0 : set_error(EINVAL, "%s", status.ToString().c_str());
+    return status.ok() ? 0 : set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
   } catch (const std::exception& error) { return set_exception_error("Series index", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_series_index", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 extern "C" int irx_arrow_column_compute(
@@ -133,6 +140,7 @@ extern "C" int irx_arrow_column_compute(
     const irx_arrow_chunked_array_handle* lhs, uint64_t lhs_bits, int32_t lhs_valid,
     const irx_arrow_chunked_array_handle* rhs, uint64_t rhs_bits, int32_t rhs_valid,
     irx_arrow_chunked_array_handle** out_column, uint64_t* out_bits, int32_t* out_valid) {
+  try {
   clear_error();
   if (out_column) *out_column = nullptr;
   if (out_bits) *out_bits = 0;
@@ -151,24 +159,24 @@ extern "C" int irx_arrow_column_compute(
       left_scalar = arrow::MakeNullScalar(lhs->column->type());
       right_scalar = left_scalar;
     }
-    if (!left_scalar || !right_scalar) return set_error(EINVAL, "unsupported Series operand type");
+    if (!left_scalar || !right_scalar) return set_error(IRX_ERR_TYPE, "unsupported Series operand type");
     for (auto column : {lhs, rhs})
       if (column && (!column->column || !column->column->type()->Equals(left_scalar->type)))
-        return set_error(EINVAL, "Series operand type mismatch");
+        return set_error(IRX_ERR_TYPE, "Series operand type mismatch");
     if (lhs && rhs && lhs->column->length() != rhs->column->length())
       return set_error(EINVAL, "Series lengths must match");
     static const auto initialized = arrow::compute::Initialize();
-    if (!initialized.ok()) return set_error(EINVAL, "%s", initialized.ToString().c_str());
+    if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     std::vector<arrow::Datum> inputs = {lhs ? arrow::Datum(lhs->column) : arrow::Datum(left_scalar)};
     const bool reduction = name == "sum" || name == "min" || name == "max" || name == "mean" || name == "count" || name == "any" || name == "all";
     const bool unary = reduction || name == "is_null" || name == "identity" || name == "negate_checked" || name == "invert";
     if (!unary) inputs.push_back(rhs ? arrow::Datum(rhs->column) : arrow::Datum(right_scalar));
     arrow::Result<arrow::Datum> computed = name == "identity" ? arrow::Result<arrow::Datum>(inputs[0])
         : reduction ? reduce_column(name, inputs[0]) : arrow::compute::CallFunction(name, inputs);
-    if (!computed.ok()) return set_error(EINVAL, "%s", computed.status().ToString().c_str());
+    if (!computed.ok()) return set_error(irx::record_batch_status(computed.status()), "%s", computed.status().ToString().c_str());
     if (computed->is_scalar()) {
       auto status = scalar_bits(*computed->scalar(), out_bits, out_valid);
-      return status.ok() ? 0 : set_error(EINVAL, "%s", status.ToString().c_str());
+      return status.ok() ? 0 : set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     }
     auto result = std::make_unique<irx_arrow_chunked_array_handle>();
     result->refcount = 1;
@@ -177,6 +185,12 @@ extern "C" int irx_arrow_column_compute(
     *out_column = result.release();
     return 0;
   } catch (const std::exception& error) { return set_exception_error("Series compute", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_column_compute", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 extern "C" int irx_arrow_column_compute_promoted(
@@ -184,6 +198,7 @@ extern "C" int irx_arrow_column_compute_promoted(
     const irx_arrow_chunked_array_handle* lhs, uint64_t lhs_bits, int32_t lhs_valid,
     const irx_arrow_chunked_array_handle* rhs, uint64_t rhs_bits, int32_t rhs_valid,
     irx_arrow_chunked_array_handle** out_column, uint64_t* out_bits, int32_t* out_valid) {
+  try {
   clear_error();
   if (out_column) *out_column = nullptr;
   if (out_bits) *out_bits = 0;
@@ -193,7 +208,7 @@ extern "C" int irx_arrow_column_compute_promoted(
     auto scalar = column_scalar(type, 0, false);
     if (!scalar) return irx_arrow_column_compute(kernel, type, lhs, lhs_bits, lhs_valid, rhs, rhs_bits, rhs_valid, out_column, out_bits, out_valid);
     static const auto initialized = arrow::compute::Initialize();
-    if (!initialized.ok()) return set_error(EINVAL, "%s", initialized.ToString().c_str());
+    if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     irx_arrow_chunked_array_handle left{}, right{};
     auto convert = [&scalar](const irx_arrow_chunked_array_handle* source, irx_arrow_chunked_array_handle* target) -> arrow::Status {
       if (!source) return arrow::Status::OK();
@@ -204,15 +219,22 @@ extern "C" int irx_arrow_column_compute_promoted(
     };
     auto status = convert(lhs, &left);
     if (status.ok()) status = convert(rhs, &right);
-    if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+    if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
     return irx_arrow_column_compute(kernel, type, lhs ? &left : nullptr, lhs_bits, lhs_valid,
         rhs ? &right : nullptr, rhs_bits, rhs_valid, out_column, out_bits, out_valid);
   } catch (const std::exception& error) { return set_exception_error("Series promotion", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_column_compute_promoted", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 extern "C" int irx_arrow_series_slice(
     const irx_arrow_chunked_array_handle* column, int64_t start, int64_t stop,
     int64_t step, int32_t bounds, irx_arrow_chunked_array_handle** out) {
+  try {
   clear_error();
   if (!out) return set_error(EINVAL, "slice output must not be NULL");
   *out = nullptr;
@@ -230,35 +252,42 @@ extern "C" int irx_arrow_series_slice(
     arrow::Int64Builder builder;
     for (int64_t i = start; step > 0 ? i < stop : i > stop;) {
       auto status = builder.Append(i);
-      if (!status.ok()) return set_error(EINVAL, "%s", status.ToString().c_str());
+      if (!status.ok()) return set_error(irx::record_batch_status(status), "%s", status.ToString().c_str());
       if (step > 0 ? step >= stop - i : step <= stop - i) break;
       i += step;
     }
     auto indices = builder.Finish();
-    if (!indices.ok()) return set_error(EINVAL, "%s", indices.status().ToString().c_str());
+    if (!indices.ok()) return set_error(irx::record_batch_status(indices.status()), "%s", indices.status().ToString().c_str());
     static const auto initialized = arrow::compute::Initialize();
-    if (!initialized.ok()) return set_error(EINVAL, "%s", initialized.ToString().c_str());
+    if (!initialized.ok()) return set_error(irx::record_batch_status(initialized), "%s", initialized.ToString().c_str());
     auto taken = arrow::compute::Take(arrow::Datum(column->column), arrow::Datum(*indices));
-    if (!taken.ok()) return set_error(EINVAL, "%s", taken.status().ToString().c_str());
+    if (!taken.ok()) return set_error(irx::record_batch_status(taken.status()), "%s", taken.status().ToString().c_str());
     auto result = std::make_unique<irx_arrow_chunked_array_handle>();
     result->refcount = 1;
     result->column = taken->chunked_array();
     *out = result.release();
     return 0;
   } catch (const std::exception& error) { return set_exception_error("Series slice", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_series_slice", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 
 extern "C" int irx_arrow_series_set(irx_arrow_chunked_array_handle* column,
     int64_t index, int32_t type, uint64_t bits, int32_t valid, int32_t nullable) {
+  try {
   clear_error();
   try {
     auto scalar = column_scalar(type, bits, valid != 0);
     if (!column || !column->column || !scalar || !scalar->type->Equals(column->column->type()))
-      return set_error(EINVAL, "Series update type mismatch");
+      return set_error(IRX_ERR_TYPE, "Series update type mismatch");
     if (!valid && !nullable) return set_error(EINVAL, "null update of non-nullable Series");
     if (index < 0 || index >= column->column->length()) return set_error(ERANGE, "Series index out of bounds");
     auto replacement = arrow::MakeArrayFromScalar(*scalar, 1);
-    if (!replacement.ok()) return set_error(EINVAL, "%s", replacement.status().ToString().c_str());
+    if (!replacement.ok()) return set_error(irx::record_batch_status(replacement.status()), "%s", replacement.status().ToString().c_str());
     std::vector<std::shared_ptr<arrow::Array>> chunks;
     auto prefix = column->column->Slice(0, index);
     auto suffix = column->column->Slice(index + 1);
@@ -269,5 +298,11 @@ extern "C" int irx_arrow_series_set(irx_arrow_chunked_array_handle* column,
     column->column = std::move(result);
     return 0;
   } catch (const std::exception& error) { return set_exception_error("Series update", error); }
+
+  } catch (const std::exception& native_error) {
+    return set_exception_error("irx_arrow_series_set", native_error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown native Arrow failure");
+  }
 }
 #endif

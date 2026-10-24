@@ -13,8 +13,9 @@ from typing import Any
 
 import astx
 
-from public import public
+from public import private, public
 
+from irx.analysis.flow import FlowOutcome
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.numeric_policy import (
     NumericConversion,
@@ -384,6 +385,11 @@ class FunctionSignature:
         type: bool
       is_extern:
         type: bool
+      exception_abi:
+        type: bool
+        description: >-
+          Generated functions return status and receive context plus a typed
+          output slot for non-none results. Externs retain their declared ABI.
       symbol_name:
         type: str
       required_runtime_features:
@@ -400,6 +406,7 @@ class FunctionSignature:
     calling_convention: CallingConvention
     is_variadic: bool = False
     is_extern: bool = False
+    exception_abi: bool = True
     symbol_name: str = ""
     required_runtime_features: tuple[str, ...] = ()
     ffi: FFICallableInfo | None = None
@@ -937,6 +944,8 @@ class SemanticClass:
         type: bool
       is_abstract:
         type: bool
+      exception_type:
+        type: ResolvedExceptionType | None
     """
 
     symbol_id: str
@@ -975,6 +984,7 @@ class SemanticClass:
     is_structurally_resolved: bool = False
     is_resolved: bool = False
     is_abstract: bool = False
+    exception_type: ResolvedExceptionType | None = None
 
 
 @public
@@ -1639,6 +1649,157 @@ class ResolvedStaticClassFieldAccess:
 
 @public
 @typechecked
+class ExceptionCauseMode(str, Enum):
+    """
+    title: Diagnostic chaining requested by a raise expression.
+    """
+
+    IMPLICIT = "implicit"
+    EXPLICIT = "explicit"
+    SUPPRESS = "suppress"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedExceptionType:
+    """
+    title: Nominal exception identity and validated base storage.
+    attributes:
+      class_:
+        type: SemanticClass
+      diagnostic_field:
+        type: SemanticClassLayoutField
+      message_field:
+        type: SemanticClassLayoutField
+      ancestry:
+        type: tuple[str, Ellipsis]
+    """
+
+    class_: SemanticClass
+    diagnostic_field: SemanticClassLayoutField
+    message_field: SemanticClassLayoutField
+    ancestry: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        """
+        title: Check generated dataclass arguments at the runtime boundary.
+        """
+        validate_exception_type_metadata(
+            self.class_,
+            self.diagnostic_field,
+            self.message_field,
+            self.ancestry,
+        )
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedNativeExceptionInitialization:
+    """
+    title: Native diagnostic initialization within ordinary class construction.
+    attributes:
+      exception_type:
+        type: ResolvedExceptionType
+      message_index:
+        type: int | None
+        description: >-
+          Index into source-order construction evaluations. None initializes
+          the inherited message to the empty string before a custom
+          initializer.
+    """
+
+    exception_type: ResolvedExceptionType
+    message_index: int | None
+
+    def __post_init__(self) -> None:
+        """
+        title: Check generated dataclass arguments at the runtime boundary.
+        """
+        validate_exception_initialization(
+            self.exception_type, self.message_index
+        )
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedRaise:
+    """
+    title: Validated raised value and explicit diagnostic cause.
+    attributes:
+      exception_type:
+        type: ResolvedExceptionType | None
+      cause_mode:
+        type: ExceptionCauseMode
+      cause_type:
+        type: ResolvedExceptionType | None
+    """
+
+    exception_type: ResolvedExceptionType | None = None
+    cause_mode: ExceptionCauseMode = ExceptionCauseMode.IMPLICIT
+    cause_type: ResolvedExceptionType | None = None
+
+    def __post_init__(self) -> None:
+        """
+        title: Check generated dataclass arguments at the runtime boundary.
+        """
+        validate_raise_metadata(
+            self.exception_type, self.cause_mode, self.cause_type
+        )
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedExceptionHandler:
+    """
+    title: Ordered nominal matches and a lexical handler binding.
+    attributes:
+      types:
+        type: tuple[ResolvedExceptionType, Ellipsis]
+      symbol:
+        type: SemanticSymbol | None
+      binding_type:
+        type: astx.ClassType
+    """
+
+    types: tuple[ResolvedExceptionType, ...]
+    symbol: SemanticSymbol | None
+    binding_type: astx.ClassType
+
+    def __post_init__(self) -> None:
+        """
+        title: Check generated dataclass arguments at the runtime boundary.
+        """
+        validate_exception_handler_metadata(
+            self.types, self.symbol, self.binding_type
+        )
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedTry:
+    """
+    title: Validated statement-only exception region.
+    attributes:
+      handlers:
+        type: tuple[ResolvedExceptionHandler, Ellipsis]
+    """
+
+    handlers: tuple[ResolvedExceptionHandler, ...]
+
+    def __post_init__(self) -> None:
+        """
+        title: Check generated dataclass arguments at the runtime boundary.
+        """
+        validate_exception_handlers(self.handlers)
+
+
+@public
+@typechecked
 @dataclass(frozen=True)
 class ResolvedClassConstruction:
     """
@@ -1659,6 +1820,8 @@ class ResolvedClassConstruction:
         type: tuple[astx.DataType, Ellipsis]
       native_file:
         type: ResolvedNativeFileInitialization | None
+      native_exception:
+        type: ResolvedNativeExceptionInitialization | None
     """
 
     class_: SemanticClass
@@ -1667,6 +1830,7 @@ class ResolvedClassConstruction:
     argument_indices: tuple[int, ...] = ()
     argument_types: tuple[astx.DataType, ...] = ()
     native_file: ResolvedNativeFileInitialization | None = None
+    native_exception: ResolvedNativeExceptionInitialization | None = None
 
 
 @public
@@ -2000,6 +2164,16 @@ class SemanticInfo:
         type: ResolvedContextManager | None
       resolved_class_construction:
         type: ResolvedClassConstruction | None
+      resolved_raise:
+        type: ResolvedRaise | None
+      resolved_exception_handler:
+        type: ResolvedExceptionHandler | None
+      resolved_try:
+        type: ResolvedTry | None
+      flow_outcomes:
+        type: frozenset[FlowOutcome]
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
       resolved_return:
         type: ReturnResolution | None
       resolved_generator_function:
@@ -2056,6 +2230,13 @@ class SemanticInfo:
     resolved_method_call: ResolvedMethodCall | None = None
     resolved_context_manager: ResolvedContextManager | None = None
     resolved_class_construction: ResolvedClassConstruction | None = None
+    resolved_raise: ResolvedRaise | None = None
+    resolved_exception_handler: ResolvedExceptionHandler | None = None
+    resolved_try: ResolvedTry | None = None
+    flow_outcomes: frozenset[FlowOutcome] = frozenset()
+    runtime_exception_types: dict[str, ResolvedExceptionType] = field(
+        default_factory=dict
+    )
     resolved_return: ReturnResolution | None = None
     resolved_generator_function: ResolvedGeneratorFunction | None = None
     resolved_yield: ResolvedYield | None = None
@@ -2068,3 +2249,91 @@ class SemanticInfo:
     initializer_receiver: SemanticSymbol | None = None
     semantic_flags: SemanticFlags = field(default_factory=SemanticFlags)
     extras: dict[str, Any] = field(default_factory=dict)
+
+
+@private
+@typechecked
+def validate_exception_type_metadata(
+    class_: SemanticClass,
+    diagnostic_field: SemanticClassLayoutField,
+    message_field: SemanticClassLayoutField,
+    ancestry: tuple[str, ...],
+) -> None:
+    """
+    title: Validate exception metadata and every collection item.
+    parameters:
+      class_:
+        type: SemanticClass
+      diagnostic_field:
+        type: SemanticClassLayoutField
+      message_field:
+        type: SemanticClassLayoutField
+      ancestry:
+        type: tuple[str, Ellipsis]
+    """
+
+
+@private
+@typechecked
+def validate_exception_initialization(
+    exception_type: ResolvedExceptionType, message_index: int | None
+) -> None:
+    """
+    title: Validate exception metadata and every collection item.
+    parameters:
+      exception_type:
+        type: ResolvedExceptionType
+      message_index:
+        type: int | None
+    """
+
+
+@private
+@typechecked
+def validate_raise_metadata(
+    exception_type: ResolvedExceptionType | None,
+    cause_mode: ExceptionCauseMode,
+    cause_type: ResolvedExceptionType | None,
+) -> None:
+    """
+    title: Validate exception metadata and every collection item.
+    parameters:
+      exception_type:
+        type: ResolvedExceptionType | None
+      cause_mode:
+        type: ExceptionCauseMode
+      cause_type:
+        type: ResolvedExceptionType | None
+    """
+
+
+@private
+@typechecked
+def validate_exception_handler_metadata(
+    types: tuple[ResolvedExceptionType, ...],
+    symbol: SemanticSymbol | None,
+    binding_type: astx.ClassType,
+) -> None:
+    """
+    title: Validate exception metadata and every collection item.
+    parameters:
+      types:
+        type: tuple[ResolvedExceptionType, Ellipsis]
+      symbol:
+        type: SemanticSymbol | None
+      binding_type:
+        type: astx.ClassType
+    """
+
+
+@private
+@typechecked
+def validate_exception_handlers(
+    handlers: tuple[ResolvedExceptionHandler, ...],
+) -> None:
+    """
+    title: Validate exception metadata and every collection item.
+    parameters:
+      handlers:
+        type: tuple[ResolvedExceptionHandler, Ellipsis]
+    """

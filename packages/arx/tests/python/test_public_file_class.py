@@ -16,7 +16,7 @@ from arx.main import inject_ambient_builtin_imports
 from arx.parser import Parser
 from arxpy import ArtifactKind, CompileError, Compiler, ParseError
 from irx.analysis.resolved_nodes import ResourceKind, SemanticInfo
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 
 MODULE_DOC = "```\ntitle: Public File regression\n```\n"
@@ -453,7 +453,7 @@ def test_public_aliases_share_cursor_and_closed_state(tmp_path: Path) -> None:
     )
     result = compiler.run(artifact, cwd=tmp_path)
     assert result.exit_code == 1
-    failure = parse_runtime_failure_output(result.stderr)
+    failure = parse_exception_output(result.stderr)
     assert failure is not None
     assert failure.code == "ARX-RUNTIME-FILE-001"
     assert "closed" in failure.message

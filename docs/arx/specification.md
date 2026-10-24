@@ -65,11 +65,13 @@ zero divisors and signed minimum with negative one before LLVM executes the
 operation. Integer SIMD lowering checks every supplied active lane; no masked
 source-vector API is implied. Floating-point division follows IEEE behavior.
 
-Dynamic scalar arithmetic failures emit `ARX_RUNTIME_FAIL` with
-`ARX-RUNTIME-ARITHMETIC-001`; conversion failures use
-`ARX-RUNTIME-CONVERSION-001`. Both terminate with status 1 regardless of
-optimization. They are not catchable exceptions and do not promise stack
-unwinding or cleanup of caller-owned resources.
+Dynamic integer zero divisors raise `ZeroDivisionError`; out-of-range arithmetic
+and conversions raise `OverflowError`, at every optimization level. Diagnostic
+codes remain `ARX-RUNTIME-ARITHMETIC-001` and `ARX-RUNTIME-CONVERSION-001`.
+These failures propagate through generated cleanup edges and can be caught;
+uncaught exceptions produce structured reports and a nonzero exit status.
+Statically invalid expressions remain compile-time diagnostics. See the
+[exception support boundary](../support-matrix.md#exception-capability-boundary).
 
 [Nullable and Series arithmetic](collections.md#nullable-scalars-and-series-expressions)
 retains checked Arrow kernels, status checking, null propagation, and checked
@@ -111,18 +113,20 @@ specifies executable module-level statements.
 
 Expected source/compiler failures exit the CLI with status 1, CLI usage failures
 use status 2, and sanitized internal compiler failures use status 70.
-`--traceback` is an explicit developer opt-in. Compiled assertion failure uses
-the versioned `ARX_ASSERT_FAIL` stderr record and exits nonzero. Fatal checked
-runtime operations use the versioned `ARX_RUNTIME_FAIL` record and an
-operation-specific stable code. Allocation failure and general language-level
-panic propagation remain undecided and are therefore not yet stable semantics.
+`--traceback` is an explicit developer opt-in. Compiled assertions raise
+`AssertionError`. Uncaught exceptions emit `ARX_EXCEPTION` records with stable
+operation codes and `ARX_EXCEPTION_FRAME` records for recorded call sites, then
+exit nonzero. The test runner and ArxPy decode these reports without treating
+completed subprocess failures as Python compiler errors. Unrecoverable native or
+exception-machinery allocation failures retain the `ARX_RUNTIME_FAIL` fallback;
+they do not promise recovery or cleanup.
 
 ### Compatibility identifiers
 
 - language draft: `0.1.0`;
 - source edition: `2026-preview`;
 - compiler diagnostic JSON schema: `1`;
-- RecordBatch native C ABI: `1`.
+- RecordBatch native C ABI: `2`.
 
 The language draft and preview edition do not grant source compatibility. Before
 Arx 2.0, replace APIs within the requested scope and update callers, tests,

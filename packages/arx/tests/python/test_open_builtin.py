@@ -20,7 +20,7 @@ from arx.lexer import Lexer
 from arx.main import ArxMain
 from arx.parser import Parser
 from irx.analysis import SemanticError
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 
 from .file_support import analyze_arx as analyze
@@ -240,7 +240,7 @@ def test_open_native_bad_text(tmp_path: Path, content: bytes) -> None:
     """
     (tmp_path / "bad").write_bytes(content)
     result = execute(tmp_path, 'var f: file = open("bad")\nf.read()')
-    failure = parse_runtime_failure_output(result.stderr)
+    failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
     assert failure is not None and failure.code == "ARX-RUNTIME-FILE-001"
 
@@ -279,7 +279,7 @@ def test_open_filesystem_failures(tmp_path: Path, arguments: str) -> None:
     """
     (tmp_path / "folder").mkdir()
     result = execute(tmp_path, f"var f: file = open({arguments})")
-    failure = parse_runtime_failure_output(result.stderr)
+    failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
     assert failure is not None and failure.code == "ARX-RUNTIME-FILE-001"
     assert "open failed" in result.stderr
@@ -401,7 +401,7 @@ def test_closed_file_error_has_real_method_location(tmp_path: Path) -> None:
     result = execute(
         tmp_path, 'var f: file = open("out", "w")\nf.close()\nf.read()'
     )
-    failure = parse_runtime_failure_output(result.stderr)
+    failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
     assert failure is not None
     assert failure.line == 8

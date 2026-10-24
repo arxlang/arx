@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from irx.analysis import SemanticError
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 
 from .test_arrow_interop import HAS_NATIVE, compile_program
 
@@ -130,7 +130,7 @@ def test_compiled_conversion_reports_data_errors(
     assert result.returncode != 0
     assert "ARX-RUNTIME-ARROW-001" in result.stderr
     assert message in result.stderr
-    assert parse_runtime_failure_output(result.stderr) is not None
+    assert parse_exception_output(result.stderr) is not None
 
 
 def test_unregistered_recordbatch_name_is_not_a_capability(

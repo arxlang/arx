@@ -4,13 +4,14 @@ External native packages initially use existing scalar/string extern contracts.
 An external Arx class may own a checked integer token through `__init__` and
 `__del__`, but token validation and foreign allocations belong to its C ABI
 wrapper. This adds no raw pointer ownership, binary strings, owned extern string
-results, or cross-frame unwind. See
+results, or foreign-frame unwind. Generated Arx calls use checked exception
+propagation and lexical cleanup. See
 [native packages](../arx/native-packages.md).
 
 ## Status and purpose
 
 This inventory was checked against the local IRx lowering and native runtime on
-2026-10-15. It is the starting point for the Arx resource model, not yet a
+2026-10-24. It is the starting point for the Arx resource model, not yet a
 complete production ownership specification. Scalar dynamic lists, immutable
 strings, text files, and acyclic class references have bounded enforced
 ownership slices. A resource may be promoted to the stable language only after
@@ -71,11 +72,11 @@ handles or values in caller-owned output slots. The required rule is:
 4. translate the native error into a structured diagnostic or API exception;
 5. on success, immediately record the resulting ownership obligation.
 
-The dynamic list append API returns a status, and current lowering immediately
-passes it to the fail-closed `irx_list_require_ok` runtime check. Dynamic
-indexing still returns a pointer and terminates the process on invalid input.
-The index interface and language-level error model need a consistent
-status/output-slot design before list ownership is stable.
+Dynamic list append and indexing return checked statuses. Indexing publishes its
+borrowed element pointer through an output slot only on success; lowering turns
+failures into typed exceptions before reading that slot. The
+`irx_list_status_message` accessor supplies diagnostic text, not error
+categories.
 
 ## Enforced scalar dynamic-list contract
 
@@ -181,8 +182,9 @@ live in class fields; existing class aggregate/global/generator limits remain.
 
 The optional registered file runtime still uses the opaque `irx_file_*` C ABI.
 Every output slot is read only after successful status checking. Explicit close
-is idempotent; final class release also frees the native wrapper. This does not
-add catchable exceptions or general cross-frame fatal-error unwinding.
+is idempotent; final class release also frees the native wrapper. Typed I/O
+failures propagate through generated cleanup edges. Unrecoverable native
+failures do not promise foreign-frame unwinding.
 
 ## Acyclic Class References
 
@@ -198,12 +200,14 @@ Owned string/file/class fields drop in reverse canonical storage phases, after
 each completed phase's `__del__`. Partial construction skips incomplete hooks
 but releases all initialized fields. Native field-release errors preserve the
 first status and continue other field releases. Source hook bodies cannot
-escape/resurrect `self`; fatal called code still does not unwind callers.
-String-field reads take owned snapshots so later expression effects cannot
-invalidate an evaluated string pointer. Reference counts are non-atomic, and
-cyclic schemas (including subtype edges) are rejected. General containers,
-generator capture, global owners, and external class ownership remain out of
-scope.
+escape/resurrect `self`. Generated calls propagate exceptions through cleanup;
+implicit destruction preserves an existing primary failure and records secondary
+failures. Native corruption and exception-machinery allocation failures remain
+unrecoverable. String-field reads take owned snapshots so later expression
+effects cannot invalidate an evaluated string pointer. Reference counts are
+non-atomic, and cyclic schemas (including subtype edges) are rejected. General
+containers, generator capture, global owners, and external class ownership
+remain out of scope.
 
 ## Named Calls And Default Arguments
 
@@ -213,8 +217,9 @@ in source order, then fill omitted defaults in declaration order using resolved
 parameter symbols. The completed values are emitted in positional ABI order.
 Class and string-field snapshots must survive later keyword/default effects.
 Public File method lowering consumes this same binding plan while retaining
-caller-side native status checks and locations. No new native ABI, implicit
-unwinding, cyclic ownership, or raw file-handle escape is introduced.
+caller-side native status checks and locations. Generated calls prepend an
+exception context and publish result slots only on success. Foreign C ABI
+contracts, cyclic-ownership restrictions, and raw-handle escape checks remain.
 
 ## RecordBatch IPC and C sharing
 
@@ -227,8 +232,10 @@ The `stdlib.arrow` classes own `IrxRbApi*` boxes in private opaque fields. Their
 ordinary class destructors destroy each box exactly once. `close()` releases the
 box's contained resource but keeps the box alive for aliases and repeated close.
 A closed object rejects value access. Writer destruction closes best-effort;
-call `close()` explicitly to observe flush/footer failures. Native errors in the
-checked facade terminate the process and do not promise stack unwinding.
+call `close()` explicitly to observe flush/footer failures. The checked facade
+returns typed statuses and caller-owned diagnostics; generated callers raise
+nominal exceptions only after checking those statuses. Cleanup preserves the
+existing stream publication/abandonment contract.
 
 C Data exports and stream outputs retain buffers independently. Move imports
 consume the supplied C structs; failure can also consume them, so inspect the

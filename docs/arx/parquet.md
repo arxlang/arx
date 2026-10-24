@@ -77,7 +77,8 @@ physical schema on disk. Multiple writes may share a buffered row group. Call
 writer `close()` explicitly to check footer finalization. Successful close is
 idempotent and permits reopening; a failed session allows cleanup only. Aliases
 share session state. Wrong-mode calls fail before opening another file. Compiled
-runtime failures use `ARX-RUNTIME-ARROW-001`, not catchable Arx exceptions.
+runtime failures use `ARX-RUNTIME-ARROW-001`, with typed catchable Arx
+exceptions.
 
 Batch and row-group sizes must be positive; batching bounds rows and normal
 buffering, not total bytes in arbitrary values or retained frames.

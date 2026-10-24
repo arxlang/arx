@@ -11,6 +11,7 @@ from typing import Any, cast
 import astx
 
 from llvmlite import ir
+from public import private
 
 from irx.analysis.resolved_nodes import IterationKind, ResolvedIteration
 from irx.builder.core import VisitorCore, semantic_symbol_key
@@ -22,8 +23,8 @@ from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
     LIST_FIELD_INDICES,
-    LIST_REQUIRE_OK_SYMBOL,
     LIST_RUNTIME_FEATURE,
+    LIST_STATUS_MESSAGE_SYMBOL,
     list_element_type,
 )
 from irx.diagnostics import DiagnosticCodes
@@ -35,6 +36,52 @@ class ListVisitorMixin(VisitorMixinBase):
     """
     title: Dynamic-list visitor mixin.
     """
+
+    @private
+    def check_list_status(self, node: astx.AST, status: ir.Value) -> None:
+        """
+        title: Convert typed list statuses before reading success output slots.
+        parameters:
+          node:
+            type: astx.AST
+          status:
+            type: ir.Value
+        """
+        function = self._llvm.ir_builder.function
+        success = function.append_basic_block("list.success")
+        failure = function.append_basic_block("list.failure")
+        self._llvm.ir_builder.cbranch(
+            self._llvm.ir_builder.icmp_signed(
+                "==", status, ir.Constant(status.type, 0)
+            ),
+            success,
+            failure,
+        )
+        self._llvm.ir_builder.position_at_end(failure)
+        message = self._llvm.ir_builder.call(
+            self.require_runtime_symbol(
+                LIST_RUNTIME_FEATURE, LIST_STATUS_MESSAGE_SYMBOL
+            ),
+            [status],
+        )
+        fallback = function.append_basic_block("list.runtime_error")
+        switch = self._llvm.ir_builder.switch(status, fallback)
+        for number, role in (
+            (1, "ValueError"),
+            (2, "OverflowError"),
+            (4, "IndexError"),
+        ):
+            block = function.append_basic_block("list." + role)
+            switch.add_case(ir.Constant(status.type, number), block)
+            self._llvm.ir_builder.position_at_end(block)
+            self.raise_runtime_exception(
+                node, role, message, code="ARX-RUNTIME-LIST-001"
+            )
+        self._llvm.ir_builder.position_at_end(fallback)
+        self.raise_runtime_exception(
+            node, "RuntimeError", message, code="ARX-RUNTIME-LIST-001"
+        )
+        self._llvm.ir_builder.position_at_end(success)
 
     def _llvm_list_type(self) -> ir.Type:
         """
@@ -283,14 +330,16 @@ class ListVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        raw_ptr = self._llvm.ir_builder.call(
-            self.require_runtime_symbol(
-                LIST_RUNTIME_FEATURE,
-                LIST_AT_SYMBOL,
-            ),
-            [list_ptr, index],
-            name="irx_list_at_ptr",
+        output = self.create_entry_block_alloca(
+            "list.element.out", self._llvm.OPAQUE_POINTER_TYPE
         )
+        status = self._llvm.ir_builder.call(
+            self.require_runtime_symbol(LIST_RUNTIME_FEATURE, LIST_AT_SYMBOL),
+            [list_ptr, index, output],
+            name="irx_list_at_status",
+        )
+        self.check_list_status(base, status)
+        raw_ptr = self._llvm.ir_builder.load(output, name="irx_list_at_ptr")
         llvm_element_type = self._list_element_llvm_type(base)
         typed_ptr = self._llvm.ir_builder.bitcast(
             raw_ptr,
@@ -648,13 +697,7 @@ class ListVisitorMixin(VisitorMixinBase):
             [output_ptr, raw_value_ptr],
             name="irx_list_comprehension_append_status",
         )
-        self._llvm.ir_builder.call(
-            self.require_runtime_symbol(
-                LIST_RUNTIME_FEATURE,
-                LIST_REQUIRE_OK_SYMBOL,
-            ),
-            [append_status],
-        )
+        self.check_list_status(node, append_status)
 
     def _lower_list_comprehension_filters(
         self,
@@ -1077,11 +1120,5 @@ class ListVisitorMixin(VisitorMixinBase):
             [list_ptr, raw_value_ptr],
             name="irx_list_append_status",
         )
-        self._llvm.ir_builder.call(
-            self.require_runtime_symbol(
-                LIST_RUNTIME_FEATURE,
-                LIST_REQUIRE_OK_SYMBOL,
-            ),
-            [result],
-        )
+        self.check_list_status(node, result)
         self.result_stack.append(result)

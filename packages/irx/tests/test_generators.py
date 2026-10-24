@@ -13,7 +13,7 @@ from irx.analysis import SemanticError, analyze
 from irx.analysis.resolved_nodes import IterationKind
 from irx.builder import Builder
 
-from .conftest import assert_build_output, assert_ir_parses
+from .conftest import assert_build_output, assert_ir_parses, build_and_run
 
 HAS_CLANG = shutil.which("clang") is not None
 
@@ -443,8 +443,16 @@ def test_generator_resume_uses_element_slot() -> None:
     """
     ir_text = Builder().translate(_sum_generator_float_target_module())
     assert '%"item_yielded" = alloca i32' in ir_text
-    resume_call = 'call i1 %"generator_resume"(i8* %"generator_frame", i32*'
-    assert resume_call in ir_text
+    resume_call = next(
+        line
+        for line in ir_text.splitlines()
+        if 'call i32 %"generator_resume"' in line
+    )
+    assert 'i8* %"generator_frame"' in resume_call
+    context_and_frame_count = 2
+    assert resume_call.count("i8*") == context_and_frame_count
+    assert '%"generator.produced" = alloca i1' in ir_text
+    assert 'i32* %"item_yielded", i1* %"generator.produced"' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -481,3 +489,84 @@ def test_exhausted_generator_stays_done() -> None:
         _guarded_exhaustion_module(),
         str(expected_sum),
     )
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+def test_generator_failure_is_not_exhaustion() -> None:
+    """
+    title: A failed resume propagates once and leaves the generator exhausted.
+    """
+    tree = _sum_generator_module()
+    generator = tree.nodes[0]
+    assert isinstance(generator, astx.FunctionDef)
+    generator.body.nodes.insert(
+        2,
+        astx.ThrowStmt(
+            astx.ClassConstruct(
+                "ValueError", (astx.LiteralString("resume failed"),)
+            )
+        ),
+    )
+    main = tree.nodes[1]
+    assert isinstance(main, astx.FunctionDef)
+    loop = main.body.nodes[1]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    loop.iterable = astx.Identifier("values")
+    main.body = _block_of(
+        main.body.nodes[0],
+        astx.VariableDeclaration(
+            "values",
+            astx.GeneratorType(astx.Int32()),
+            value=astx.FunctionCall("numbers", []),
+        ),
+        astx.ExceptionHandlerStmt(
+            _block_of(loop),
+            [
+                astx.CatchHandlerStmt(
+                    _block_of(
+                        astx.VariableAssignment(
+                            "total",
+                            astx.BinaryOp(
+                                "+",
+                                astx.Identifier("total"),
+                                astx.LiteralInt32(10),
+                            ),
+                        )
+                    ),
+                    types=[astx.Identifier("ValueError")],
+                )
+            ],
+        ),
+        astx.ForInLoopStmt(
+            astx.Identifier("again"),
+            astx.Identifier("values"),
+            _block_of(astx.VariableAssignment("total", astx.LiteralInt32(99))),
+        ),
+        astx.FunctionReturn(astx.Identifier("total")),
+    )
+    assert_ir_parses(Builder().translate(tree))
+    assert_build_output(Builder(), tree, "11")
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+def test_generator_return_runs_nonsuspending_finally() -> None:
+    """
+    title: A generator return executes a finalizer before reporting exhaustion.
+    """
+    tree = _sum_generator_module()
+    generator = tree.nodes[0]
+    assert isinstance(generator, astx.FunctionDef)
+    generator.body = _block_of(
+        astx.YieldStmt(astx.LiteralInt32(1)),
+        astx.ExceptionHandlerStmt(
+            _block_of(astx.FunctionReturn(astx.LiteralNone())),
+            [],
+            astx.FinallyHandlerStmt(
+                _block_of(astx.PrintExpr(astx.LiteralString("done")))
+            ),
+        ),
+    )
+    result = build_and_run(Builder(), tree)
+    assert result.returncode == 1
+    assert result.stdout.strip() == "done"
+    assert result.stderr == ""

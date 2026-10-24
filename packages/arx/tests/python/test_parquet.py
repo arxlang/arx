@@ -10,7 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from irx.builder.runtime.errors import parse_runtime_failure_output
+from irx.builder.runtime.exceptions import parse_exception_output
 
 from .test_arrow_interop import HAS_NATIVE, compile_program
 
@@ -189,7 +189,7 @@ def test_compiled_failures(
         pipeline, tmp_path, pa.table({"id": pa.array(values, type=pa.int64())})
     )
     assert result.returncode != 0
-    failure = parse_runtime_failure_output(result.stderr)
+    failure = parse_exception_output(result.stderr)
     assert failure is not None
     assert failure.code == "ARX-RUNTIME-ARROW-001"
     assert message in result.stderr

@@ -4,14 +4,32 @@ title: Tests for Boolean semantics, lowering, and comparisons.
 
 from __future__ import annotations
 
+import re
+
 import astx
 import pytest
 
 from irx.analysis import SemanticError, analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
+from llvmlite import binding as llvm
+from public import private
 
 from .conftest import assert_ir_parses, make_main_module
+
+
+@private
+def source_main_ir(ir_text: str) -> str:
+    """
+    title: Inspect the generated source main separately from C ABI wrappers.
+    parameters:
+      ir_text:
+        type: str
+    returns:
+      type: str
+    """
+    module = llvm.parse_assembly(ir_text)
+    return str(module.get_function("irx.entry.main"))
 
 
 def _boolean_main_module(*nodes: astx.AST) -> astx.Module:
@@ -71,7 +89,7 @@ def test_boolean_literal_declaration_and_assignment(
     assert "alloca i1" in ir_text
     assert "store i1 1" in ir_text
     assert "store i1 0" in ir_text
-    assert "ret i1" in ir_text
+    assert 'i1* %"result_out"' in ir_text
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -116,8 +134,9 @@ def test_function_accepts_boolean_parameter_and_returns_boolean(
     ir_text = builder.translate(module)
 
     assert_ir_parses(ir_text)
-    assert "define i1" in ir_text
-    assert "call i1" in ir_text
+    assert 'define i32 @"main__negate"(i8* %"context",' in ir_text
+    assert 'i1* %"result_out"' in ir_text
+    assert 'call i32 @"main__negate"(i8* %"context", i1 1,' in ir_text
     assert "xor i1" in ir_text
 
 
@@ -151,7 +170,7 @@ def test_comparison_result_assigns_to_boolean_variable(
     assert_ir_parses(ir_text)
     assert "icmp " in ir_text
     assert "store i1" in ir_text
-    assert "ret i1" in ir_text
+    assert 'i1* %"result_out"' in ir_text
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -207,8 +226,9 @@ def test_comparison_result_returns_from_function(
     ir_text = builder.translate(module)
 
     assert_ir_parses(ir_text)
-    assert "define i1" in ir_text
-    assert "call i1" in ir_text
+    assert 'define i32 @"main__less"(i8* %"context",' in ir_text
+    assert 'i1* %"result_out"' in ir_text
+    assert 'call i32 @"main__less"(i8* %"context",' in ir_text
     assert "icmp " in ir_text
 
 
@@ -280,8 +300,8 @@ def test_boolean_condition_in_while(builder_class: type[Builder]) -> None:
 
     assert_ir_parses(ir_text)
     assert "br i1" in ir_text
-    assert "icmp " not in ir_text
-    assert "fcmp " not in ir_text
+    assert re.search(r"icmp\s+\w+\s+i1\b", source_main_ir(ir_text)) is None
+    assert "fcmp " not in source_main_ir(ir_text)
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -327,8 +347,8 @@ def test_boolean_condition_in_for_count_loop(
 
     assert_ir_parses(ir_text)
     assert "br i1" in ir_text
-    assert "icmp " not in ir_text
-    assert "fcmp " not in ir_text
+    assert re.search(r"icmp\s+\w+\s+i1\b", source_main_ir(ir_text)) is None
+    assert "fcmp " not in source_main_ir(ir_text)
     assert "for.count.body" in ir_text
 
 
@@ -423,8 +443,8 @@ def test_boolean_if_condition_branches_without_truthiness_compare(
     ir_text = builder.translate(module)
 
     assert "br i1" in ir_text
-    assert "icmp " not in ir_text
-    assert "fcmp " not in ir_text
+    assert re.search(r"icmp\s+\w+\s+i1\b", source_main_ir(ir_text)) is None
+    assert "fcmp " not in source_main_ir(ir_text)
 
 
 def test_rejects_if_integer_condition() -> None:

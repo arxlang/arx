@@ -77,7 +77,10 @@ def test_record_batch_library_path_uses_abi_scoped_cache(
 
     path = record_batch_library_path()
 
-    assert path.parent == tmp_path / "record_batch" / "abi-1"
+    assert (
+        path.parent
+        == tmp_path / "record_batch" / f"abi-{RECORD_BATCH_ABI_VERSION}"
+    )
     assert path.name == record_batch_library_name()
 
 
@@ -373,7 +376,9 @@ def test_record_batch_native_abi_mismatch_fails_before_symbol_binding(
     )
     assert result.returncode == 0, result.stderr
 
-    with pytest.raises(RuntimeError, match="expected 1, found 999"):
+    with pytest.raises(
+        RuntimeError, match=f"expected {RECORD_BATCH_ABI_VERSION}, found 999"
+    ):
         record_batch_module._configure_lib(ctypes.CDLL(str(library)))
 
 

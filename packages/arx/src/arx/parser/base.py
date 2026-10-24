@@ -10,7 +10,7 @@ from __future__ import annotations
 import astx
 
 from arx.dataframe import DataFrameBinding
-from arx.lexer import Token, TokenList
+from arx.lexer import Token, TokenKind, TokenList
 from arx.parser.state import (
     ParsedAnnotation,
     ParsedDeclarationPrefixes,
@@ -67,6 +67,29 @@ class ParserMixinBase:
     type_aliases: dict[str, astx.DataType]
     value_scopes: list[set[str]]
     tokens: TokenList
+
+    def parse_statement(self) -> astx.AST:
+        """
+        title: Parse a statement without admitting it as an expression operand.
+        returns:
+          type: astx.AST
+        """
+        raise NotImplementedError
+
+    def match_clause(self, kind: TokenKind, indentation: int) -> bool:
+        """
+        title: Match a clause without consuming an unrelated line marker.
+        parameters:
+          kind:
+            type: TokenKind
+          indentation:
+            type: int
+        returns:
+          type: bool
+        """
+        del kind
+        del indentation
+        raise NotImplementedError
 
     def _push_value_scope(
         self,
