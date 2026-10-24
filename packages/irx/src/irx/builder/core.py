@@ -46,7 +46,6 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.types import (
     bit_width,
-    common_numeric_type,
     float_promotion_width_for_integer_width,
     is_boolean_type,
     is_float_type,
@@ -1486,28 +1485,21 @@ class VisitorCore(BuilderVisitor):
         returns:
           type: astx.DataType | None
         """
-        members = tuple(type_.members)
-        if not members:
-            return None
-
-        storage_type: astx.DataType | None = members[0]
-        for member in members[1:]:
-            numeric_type = common_numeric_type(storage_type, member)
-            if numeric_type is not None:
-                storage_type = numeric_type
-                continue
-
-            storage_llvm_type = self._llvm_type_for_ast_type(storage_type)
-            member_llvm_type = self._llvm_type_for_ast_type(member)
-            if (
-                storage_llvm_type is not None
-                and member_llvm_type is not None
-                and storage_llvm_type == member_llvm_type
-            ):
-                continue
-            return None
-
-        return storage_type
+        info = require_semantic_metadata(
+            getattr(type_, "semantic", None),
+            node=type_,
+            metadata="semantic",
+            context="union storage",
+        )
+        return cast(
+            astx.DataType,
+            require_semantic_metadata(
+                info.numeric_storage,
+                node=type_,
+                metadata="numeric_storage",
+                context="union storage",
+            ),
+        )
 
     def _resolved_class_receiver_field_address(
         self,
@@ -1926,44 +1918,6 @@ class VisitorCore(BuilderVisitor):
             f"Unsupported scalar cast from {source_type!r} to {target_type!r}"
         )
 
-    def _coerce_numeric_operands_for_types(
-        self,
-        lhs: ir.Value,
-        rhs: ir.Value,
-        *,
-        lhs_type: astx.DataType | None,
-        rhs_type: astx.DataType | None,
-    ) -> tuple[ir.Value, ir.Value]:
-        """
-        title: Coerce numeric operands from semantic types.
-        parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          lhs_type:
-            type: astx.DataType | None
-          rhs_type:
-            type: astx.DataType | None
-        returns:
-          type: tuple[ir.Value, ir.Value]
-        """
-        target_type = common_numeric_type(lhs_type, rhs_type)
-        if target_type is None:
-            return lhs, rhs
-        return (
-            self._cast_ast_value(
-                lhs,
-                source_type=lhs_type,
-                target_type=target_type,
-            ),
-            self._cast_ast_value(
-                rhs,
-                source_type=rhs_type,
-                target_type=target_type,
-            ),
-        )
-
     def _unify_numeric_operands(
         self,
         lhs: ir.Value,
@@ -1973,9 +1927,9 @@ class VisitorCore(BuilderVisitor):
         """
         title: Unify numeric operands for raw LLVM values.
         summary: >-
-          This is a fallback helper for low-level builder/test usage when
-          semantic operand types are unavailable. Normal AST lowering should
-          prefer semantic-aware coercion instead.
+          Raw LLVM fixture/storage adaptation only, not a language conversion
+          policy. Analyzed AST lowering must use resolved operand plans and
+          must never call this helper as a missing-metadata fallback.
         parameters:
           lhs:
             type: ir.Value

@@ -4,6 +4,7 @@ title: Declaration dependency traversal preserves expression-bearing map keys.
 
 import astx
 
+from irx.analysis import analyze
 from irx.analysis.module_interfaces import ParsedModule
 from irx.analysis.reachability import DeclarationReachability
 from irx.analysis.session import CompilationSession
@@ -44,3 +45,16 @@ def test_literal_dictionary_keys_are_reachable() -> None:
     reached = walker.collect([literal])
     assert id(key) in reached
     assert id(value) in reached
+
+
+def test_exact_numeric_literals_are_reachable_leaves() -> None:
+    """
+    title: Exact Decimal payloads carry no declaration dependencies.
+    """
+    root = ParsedModule("root", astx.Module())
+    walker = DeclarationReachability(CompilationSession(root, unused_resolver))
+    literal = astx.LiteralFloat(
+        "1.000000059604644830901776231257827021181583404541015625"
+    )
+    analyze(literal)
+    assert id(literal) in walker.collect([literal])

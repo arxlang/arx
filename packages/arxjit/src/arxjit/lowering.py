@@ -34,6 +34,8 @@ import astx
 # and Argument its type_ to be.
 from astx.base import NO_SOURCE_LOCATION
 from astx.types.base import AnyType
+from irx.analysis.numeric_literals import default_numeric_literal_type
+from irx.analysis.numeric_policy import lossless_common_numeric_type
 from plum import dispatch
 from public import private
 
@@ -136,34 +138,11 @@ COMPARE_OPS: dict[type[ast.cmpop], str] = {
     ast.GtE: ">=",
 }
 
-# Pairwise rather than ranked because Float32 can represent Int32 but cannot
-# represent every Int64. Numeric entries mirror IRx's canonical promotion
-# policy; the Boolean entries preserve the existing frontend inference rule
-# until validation can distinguish Python's numeric bool behavior from IRx's
-# strict logical Boolean type.
-PROMOTIONS: dict[frozenset[str], SigType] = {
-    frozenset({"Boolean"}): bool_,
-    frozenset({"Boolean", "Int32"}): i32,
-    frozenset({"Boolean", "Int64"}): i64,
-    frozenset({"Boolean", "Float32"}): f32,
-    frozenset({"Boolean", "Float64"}): f64,
-    frozenset({"Int32"}): i32,
-    frozenset({"Int32", "Int64"}): i64,
-    frozenset({"Int32", "Float32"}): f32,
-    frozenset({"Int32", "Float64"}): f64,
-    frozenset({"Int64"}): i64,
-    frozenset({"Int64", "Float32"}): f64,
-    frozenset({"Int64", "Float64"}): f64,
-    frozenset({"Float32"}): f32,
-    frozenset({"Float32", "Float64"}): f64,
-    frozenset({"Float64"}): f64,
-}
-
 # IRx reserves "main" as the program entry point and requires it to take no
 # parameters and return Int32, so a decorated Python function of that name
 # cannot be emitted under its own name. Kept as a literal rather than imported
-# from irx.analysis.registry so that importing arxjit does not pull in the
-# compiler; test_reserved_names_match_irx pins the two together.
+# from irx.analysis.registry to keep this frontend rule separate from the
+# registry implementation; test_reserved_names_match_irx pins the vocabulary.
 RESERVED_NAMES = frozenset({"main"})
 MANGLE_PREFIX = "arxjit_"
 
@@ -663,7 +642,7 @@ class Lowerer:
             )
         comparator = node.comparators[0]
         operand_type = self.promote(
-            self.infer(node.left), self.infer(comparator)
+            self.infer(node.left), self.infer(comparator), node
         )
         return self.binary(
             node,
@@ -739,22 +718,41 @@ class Lowerer:
         )
 
     @private
-    def promote(self, left: SigType, right: SigType) -> SigType:
+    def promote(self, left: SigType, right: SigType, node: ast.AST) -> SigType:
         """
         title: Pick the type that can represent both of two operand types.
         summary: >-
-          Promotion is pairwise because a single ordering cannot describe the
-          Int64/Float32 pair: IRx promotes it to Float64, while Int32/Float32
-          remains Float32.
+          Numeric inference delegates to IRx's lossless domain policy:
+          Int32/Float32 selects Float64, while Int64/float is rejected. Boolean
+          inference retains Python's existing selection rule; it does not
+          authorize implicit Boolean conversions during IRx analysis.
         parameters:
           left:
             type: SigType
           right:
             type: SigType
+          node:
+            type: ast.AST
         returns:
           type: SigType
+        raises:
+          LoweringError: If no lossless common numeric domain exists.
         """
-        return PROMOTIONS[frozenset({left.astx_name, right.astx_name})]
+        if left == bool_:
+            return right
+        if right == bool_:
+            return left
+        common = lossless_common_numeric_type(
+            astx_type(left), astx_type(right)
+        )
+        if common is not None:
+            for candidate in (i32, i64, f32, f64):
+                if type(common) is scalar(candidate).type_:
+                    return candidate
+        raise self.reject(
+            node,
+            f"no lossless common numeric type for {left} and {right}",
+        )
 
     @dispatch
     def infer(self, node: ast.AST) -> SigType:
@@ -783,11 +781,10 @@ class Lowerer:
         """
         title: Infer the type of a literal from its Python kind.
         summary: >-
-          The widest type of each kind, because a literal standing on its own
-          has only Python's own notion of its type to go on: Python integers
-          are unbounded and its floats are doubles. A narrower type is still
-          reached wherever the context declares one, which is what the expected
-          type passed to lowering is for.
+          Integer literals use IRx's i32-then-i64 source default; Python float
+          literals remain f64. A declared context can still select another
+          width when the literal is representable. This does not change the
+          reserved Python int annotation, which continues to mean i64.
         parameters:
           node:
             type: ast.Constant
@@ -800,7 +797,8 @@ class Lowerer:
         if isinstance(value, bool):
             return bool_
         if isinstance(value, int):
-            return i64
+            default = default_numeric_literal_type(astx.LiteralInteger(value))
+            return i32 if isinstance(default, astx.Int32) else i64
         if isinstance(value, float):
             return f64
         name = type(value).__name__
@@ -841,7 +839,9 @@ class Lowerer:
         returns:
           type: SigType
         """
-        inferred = self.promote(self.infer(node.left), self.infer(node.right))
+        inferred = self.promote(
+            self.infer(node.left), self.infer(node.right), node
+        )
         if isinstance(node.op, ast.Div) and inferred in (bool_, i32, i64):
             return f64
         return inferred
@@ -996,7 +996,9 @@ class Lowerer:
         summary: >-
           Converting an integer can overflow when it has more magnitude than a
           double holds, and a double can exceed what a single holds, so both
-          steps are checked rather than left to produce an infinity.
+          steps are checked rather than left to produce an infinity. Integer
+          literals must also remain exact; rounded integer values require an
+          explicit conversion rather than an implicit literal context.
         parameters:
           node:
             type: ast.expr
@@ -1021,6 +1023,18 @@ class Lowerer:
             raise self.reject(
                 node, f"the literal {value!r} is out of range for {expected}"
             )
+        if isinstance(value, int):
+            rounded = (
+                struct.unpack("f", struct.pack("f", converted))[0]
+                if target.single
+                else converted
+            )
+            if rounded != value:
+                raise self.reject(
+                    node,
+                    f"the integer literal {value!r} is not exactly "
+                    f"representable in {expected}",
+                )
         return converted
 
     def arguments(self) -> astx.Arguments:

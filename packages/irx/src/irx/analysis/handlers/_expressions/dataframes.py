@@ -28,6 +28,7 @@ from irx.analysis.nullable import (
     scalar_type,
     set_operation,
 )
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, OwnershipTransferKind
 from irx.analysis.types import same_type
@@ -91,9 +92,10 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             type: astx.NullFill
         """
         self.visit(node.value)
-        self.visit(node.replacement)
         source = self._expr_type(node.value)
         inner = scalar_type(source)
+        contextualize_literal(node.replacement, inner)
+        self.visit(node.replacement)
         if not isinstance(
             source, (astx.NullableType, astx.SeriesType)
         ) or not same_type(inner, self._expr_type(node.replacement)):
@@ -316,6 +318,12 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 None if schema is None else schema.column(literal_column.name)
             )
             for value in literal_column.values:
+                contextualize_literal(
+                    value,
+                    declared_column.type_
+                    if declared_column is not None
+                    else None,
+                )
                 self.visit(value)
                 if declared_column is not None:
                     if declared_column.nullable and isinstance(

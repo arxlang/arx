@@ -268,11 +268,16 @@ def test_scalar_integer_invalid_divisor_fails_deterministically(
     module = astx.Module(name="arithmetic_failure")
     body = astx.Block()
     body.append(
+        astx.VariableDeclaration(
+            "zero", astx.Int32(), value=astx.LiteralInt32(0)
+        )
+    )
+    body.append(
         astx.FunctionReturn(
             astx.BinaryOp(
                 operator,
                 astx.LiteralInt32(1),
-                astx.LiteralInt32(0),
+                astx.Identifier("zero"),
             )
         )
     )

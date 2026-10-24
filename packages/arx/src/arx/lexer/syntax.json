@@ -275,6 +275,10 @@
     ],
     "functions": [
       "cast",
+      "wrapping_cast",
+      "wrapping_add",
+      "wrapping_sub",
+      "wrapping_mul",
       "dataframe",
       "date",
       "datetime",

@@ -10,9 +10,10 @@ import astx
 
 from llvmlite import ir
 
-from irx.builder.core import VisitorCore, semantic_assignment_key
+from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import require_lowered_value
 from irx.builder.lowering.nullable import NullableVisitorMixin
+from irx.builder.numeric import resolved_integer_operation
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_fp_type, is_int_type
@@ -42,68 +43,35 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
                 value = (
                     self._llvm.ir_builder.fneg(value)
                     if is_fp_type(value.type)
-                    else self._llvm.ir_builder.neg(value)
+                    else resolved_integer_operation(
+                        cast(VisitorCore, self),
+                        node,
+                        ir.Constant(value.type, 0),
+                        value,
+                        "-",
+                    )
                 )
             self.result_stack.append(value)
             return
-        if node.op_code == "++":
-            self.visit_child(node.operand)
-            operand_val = safe_pop(self.result_stack)
-            if operand_val is None:
-                raise Exception("codegen: Invalid unary operand.")
-            operand_name = (
-                node.operand.name
-                if isinstance(node.operand, astx.Identifier)
-                else getattr(node.operand, "field_name", "field")
-            )
-            operand_key = semantic_assignment_key(node, operand_name)
-
+        if node.op_code in {"++", "--"}:
+            target_addr = self._lvalue_address(node.operand)
+            operand_val = self._llvm.ir_builder.load(target_addr)
             one = ir.Constant(operand_val.type, 1)
             if is_fp_type(operand_val.type):
-                result = self._llvm.ir_builder.fadd(operand_val, one, "inctmp")
+                result = (
+                    self._llvm.ir_builder.fadd
+                    if node.op_code == "++"
+                    else self._llvm.ir_builder.fsub
+                )(operand_val, one)
             else:
-                result = self._llvm.ir_builder.add(operand_val, one, "inctmp")
-
-            if (
-                isinstance(node.operand, astx.Identifier)
-                and operand_key in self.const_vars
-            ):
-                raise Exception(
-                    f"Cannot mutate '{operand_name}': declared as constant"
+                result = resolved_integer_operation(
+                    cast(VisitorCore, self),
+                    node,
+                    operand_val,
+                    one,
+                    "+" if node.op_code == "++" else "-",
                 )
-            target_addr = self._lvalue_address(node.operand)
             self._llvm.ir_builder.store(result, target_addr)
-
-            self.result_stack.append(result)
-            return
-
-        if node.op_code == "--":
-            self.visit_child(node.operand)
-            operand_val = safe_pop(self.result_stack)
-            if operand_val is None:
-                raise Exception("codegen: Invalid unary operand.")
-            operand_name = (
-                node.operand.name
-                if isinstance(node.operand, astx.Identifier)
-                else getattr(node.operand, "field_name", "field")
-            )
-            operand_key = semantic_assignment_key(node, operand_name)
-            one = ir.Constant(operand_val.type, 1)
-            if is_fp_type(operand_val.type):
-                result = self._llvm.ir_builder.fsub(operand_val, one, "dectmp")
-            else:
-                result = self._llvm.ir_builder.sub(operand_val, one, "dectmp")
-
-            if (
-                isinstance(node.operand, astx.Identifier)
-                and operand_key in self.const_vars
-            ):
-                raise Exception(
-                    f"Cannot mutate '{operand_name}': declared as constant"
-                )
-            target_addr = self._lvalue_address(node.operand)
-            self._llvm.ir_builder.store(result, target_addr)
-
             self.result_stack.append(result)
             return
 

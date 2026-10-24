@@ -62,12 +62,12 @@ def test_parse_float_expr() -> None:
     parser.tokens.get_next_token()
     expr = parser.parse_float_expr()
     assert expr
-    assert isinstance(expr, astx.LiteralFloat32)
+    assert isinstance(expr, astx.LiteralFloat)
     assert expr.value == 1.0
 
     expr = parser.parse_float_expr()
     assert expr
-    assert isinstance(expr, astx.LiteralFloat32)
+    assert isinstance(expr, astx.LiteralFloat)
     assert expr.value == 2.5
 
     ArxIO.string_to_buffer("3.25")
@@ -76,7 +76,7 @@ def test_parse_float_expr() -> None:
     parser.tokens.get_next_token()
     expr = parser.parse_float_expr()
     assert expr
-    assert isinstance(expr, astx.LiteralFloat32)
+    assert isinstance(expr, astx.LiteralFloat)
     assert expr.value == 3.25
 
 
@@ -90,7 +90,7 @@ def test_parse_int_expr() -> None:
 
     parser.tokens.get_next_token()
     expr = parser.parse_int_expr()
-    assert isinstance(expr, astx.LiteralInt32)
+    assert isinstance(expr, astx.LiteralInteger)
     assert expr.value == 7
 
 
@@ -666,8 +666,8 @@ def test_parse_module_namespace_member_call() -> None:
     assert result.value.receiver.name == "stats"
     assert result.value.method_name == "sum2"
     assert len(result.value.args) == 2
-    assert isinstance(result.value.args[0], astx.LiteralFloat32)
-    assert isinstance(result.value.args[1], astx.LiteralFloat32)
+    assert isinstance(result.value.args[0], astx.LiteralFloat)
+    assert isinstance(result.value.args[1], astx.LiteralFloat)
 
 
 def test_parse_while_stmt() -> None:

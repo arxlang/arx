@@ -27,6 +27,7 @@ from irx.analysis.handlers._declarations.class_methods import (
     DeclarationClassMethodVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     ClassMemberKind,
@@ -127,6 +128,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
             ):
                 with self.context.in_class(class_):
+                    contextualize_literal(attribute.value, attribute.type_)
                     self.visit(attribute.value)
                 if self._require_value_expression(
                     attribute.value,
@@ -867,6 +869,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                                 continue
                             value = initializer.value
                             body.append(value)
+                            contextualize_literal(
+                                value, initializer.field.member.type_
+                            )
                             self.visit(value)
                             self._semantic(
                                 value

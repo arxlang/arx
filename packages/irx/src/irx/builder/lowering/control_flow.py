@@ -38,6 +38,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
     resolved_ast_type_name,
 )
+from irx.builder.numeric import resolved_integer_operation
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.assertions import (
@@ -1299,11 +1300,12 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         current_value = self._llvm.ir_builder.load(
             var_addr, node.variable.name
         )
-        next_value = emit_add(
-            self._llvm.ir_builder,
-            current_value,
-            step_val,
-            "nextvar",
+        next_value = (
+            emit_add(self._llvm.ir_builder, current_value, step_val, "nextvar")
+            if is_float_type(loop_type)
+            else resolved_integer_operation(
+                cast(VisitorCore, self), node, current_value, step_val, "+"
+            )
         )
         self._llvm.ir_builder.store(next_value, var_addr)
         self._llvm.ir_builder.branch(cond_bb)

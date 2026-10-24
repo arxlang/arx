@@ -2,12 +2,13 @@
 title: Bind source call operands without reordering their evaluation.
 """
 
-from typing import cast
+from typing import Callable, cast
 
 import astx
 
 from public import private
 
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.resolved_nodes import SemanticFunction
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
@@ -155,3 +156,79 @@ def contextualize_null_arguments(
     node.args = values[:count]
     for keyword, value in zip(node.keywords, values[count:]):
         keyword.value = value
+
+
+@private
+@typechecked
+def analyze_numeric_arguments(
+    node: astx.AST,
+    function: SemanticFunction | None,
+    visit: Callable[[astx.AST], None],
+    type_of: Callable[[astx.AST | None], astx.DataType | None],
+    *,
+    typed_visited: bool = False,
+) -> list[astx.DataType | None]:
+    """
+    title: Bind literal context after typed arguments, independent of order.
+    summary: >-
+      Only semantic traversal is reordered; lowering retains source evaluation
+      order. Concrete arguments still participate in strict same-T inference.
+    parameters:
+      node:
+        type: astx.AST
+      function:
+        type: SemanticFunction | None
+      visit:
+        type: Callable[[astx.AST], None]
+      type_of:
+        type: Callable[[astx.AST | None], astx.DataType | None]
+      typed_visited:
+        type: bool
+    returns:
+      type: list[astx.DataType | None]
+    """
+    values = call_evaluations(node)
+    if function is None:
+        for value in values:
+            visit(value)
+        return [type_of(value) for value in values]
+    slots = argument_slots(function, node)
+    if slots is None:
+        for value in values:
+            visit(value)
+        return [type_of(value) for value in values]
+    explicit = astx.get_template_args(node)
+    selected = {
+        param.name: type_
+        for param, type_ in zip(function.template_params, explicit or ())
+    }
+    expected: astx.DataType | None
+    for value, slot in zip(values, slots):
+        if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+            continue
+        if slot < len(function.signature.parameters):
+            expected = function.signature.parameters[slot].type_
+            contextualize_literal(value, expected)
+        if not typed_visited:
+            visit(value)
+        if slot < len(function.signature.parameters):
+            expected = function.signature.parameters[slot].type_
+            actual = type_of(value)
+            if (
+                isinstance(expected, astx.TemplateTypeVar)
+                and actual is not None
+            ):
+                selected.setdefault(expected.name, actual)
+    for value, slot in zip(values, slots):
+        if not isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+            continue
+        expected = (
+            function.signature.parameters[slot].type_
+            if slot < len(function.signature.parameters)
+            else None
+        )
+        if isinstance(expected, astx.TemplateTypeVar):
+            expected = selected.get(expected.name)
+        contextualize_literal(value, expected)
+        visit(value)
+    return [type_of(value) for value in values]

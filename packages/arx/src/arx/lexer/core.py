@@ -133,17 +133,21 @@ class Token:
         type: Any
       location:
         type: SourceLocation
+      source_text:
+        type: str | None
     """
 
     kind: TokenKind
     value: Any
     location: SourceLocation
+    source_text: str | None
 
     def __init__(
         self,
         kind: TokenKind,
         value: Any,
         location: SourceLocation = SourceLocation(0, 0),
+        source_text: str | None = None,
     ) -> None:
         """
         title: Initialize Token.
@@ -154,7 +158,10 @@ class Token:
             type: Any
           location:
             type: SourceLocation
+          source_text:
+            type: str | None
         """
+        self.source_text = source_text
         self.kind = kind
         self.value = value
         self.location = copy.deepcopy(location)
@@ -533,12 +540,14 @@ class Lexer:
                 return Token(
                     kind=TokenKind.int_literal,
                     value=int(num_str),
+                    source_text=num_str,
                     location=token_location,
                 )
 
             return Token(
                 kind=TokenKind.float_literal,
                 value=float(num_str),
+                source_text=num_str,
                 location=token_location,
             )
 

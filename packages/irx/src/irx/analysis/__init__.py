@@ -24,6 +24,14 @@ from irx.analysis.module_interfaces import (
     ModuleKey,
     ParsedModule,
 )
+from irx.analysis.numeric_policy import (
+    NumericConversion,
+    NumericConversionKind,
+    classify_numeric_conversion,
+    integer_bounds,
+    is_lossless_numeric_conversion,
+    lossless_common_numeric_type,
+)
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -114,6 +122,8 @@ __all__ = [
     "IterationOrder",
     "MethodDispatchKind",
     "ModuleKey",
+    "NumericConversion",
+    "NumericConversionKind",
     "OwnershipEscapeKind",
     "OwnershipKind",
     "OwnershipTransferKind",
@@ -164,8 +174,12 @@ __all__ = [
     "analyze",
     "analyze_module",
     "analyze_modules",
+    "classify_numeric_conversion",
     "get_semantic_contract",
+    "integer_bounds",
+    "is_lossless_numeric_conversion",
     "list_resource_ownership",
+    "lossless_common_numeric_type",
     "resolve_iteration_capability",
     "resource_ownership",
     "string_resource_ownership",

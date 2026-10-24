@@ -4,10 +4,13 @@ title: ASTx Data Types module.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 from public import public
 
 from astx.base import (
     NO_SOURCE_LOCATION,
+    DataType,
     ReprStruct,
     SourceLocation,
 )
@@ -626,3 +629,103 @@ class LiteralComplex64(LiteralComplex):
         """
         super().__init__(real, imag, loc)
         self.type_ = Complex64()
+
+
+@public
+@typechecked
+class LiteralInteger(Literal):
+    """
+    title: Exact integer literal awaiting semantic contextualization.
+    summary: >-
+      No concrete width is declared. Analysis must preserve value and record
+      the chosen type and converted constant separately in semantic metadata.
+    attributes:
+      value:
+        type: int
+      type_:
+        type: DataType
+    """
+
+    value: int
+    type_: DataType
+
+    def __init__(
+        self, value: int, loc: SourceLocation = NO_SOURCE_LOCATION
+    ) -> None:
+        """
+        title: Preserve the mathematical integer, without truncating its width.
+        parameters:
+          value:
+            type: int
+          loc:
+            type: SourceLocation
+        raises:
+          TypeError: If value is Boolean rather than an integer literal.
+        """
+        super().__init__(loc=loc)
+        if isinstance(value, bool):
+            raise TypeError("integer literals do not accept Boolean values")
+        self.value = value
+        self.type_ = DataType()
+
+
+@public
+@typechecked
+class LiteralFloat(Literal):
+    """
+    title: Exact decimal floating literal awaiting semantic contextualization.
+    summary: >-
+      Accept decimal text or Decimal, never an already-rounded Python float.
+      The finite Decimal payload is independent of the active decimal context.
+      Analysis must preserve it and record the chosen binary format and rounded
+      constant in semantic metadata. Typed LiteralFloat32 and related nodes
+      instead express an explicitly chosen binary format.
+    attributes:
+      value:
+        type: Decimal
+      type_:
+        type: DataType
+    """
+
+    value: Decimal
+    type_: DataType
+
+    def __init__(
+        self, value: str | Decimal, loc: SourceLocation = NO_SOURCE_LOCATION
+    ) -> None:
+        """
+        title: Preserve an exact finite decimal value without binary rounding.
+        parameters:
+          value:
+            type: str | Decimal
+          loc:
+            type: SourceLocation
+        raises:
+          ValueError: If the value is malformed or nonfinite.
+        """
+        super().__init__(loc=loc)
+        try:
+            exact = Decimal(value)
+        except InvalidOperation as error:
+            raise ValueError(
+                "floating literal requires a decimal value"
+            ) from error
+        if not exact.is_finite():
+            raise ValueError(
+                "floating literal requires a finite decimal value"
+            )
+        self.value = exact
+        self.type_ = DataType()
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Represent the exact value without introducing a JSON float.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
+        return self._prepare_struct(
+            "LiteralFloat", str(self.value), simplified
+        )

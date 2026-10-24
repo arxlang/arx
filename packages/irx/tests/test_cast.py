@@ -17,8 +17,6 @@ from .conftest import check_result
     [
         # widening: 42 fits fine, result is still "42"
         (astx.Int8, astx.LiteralInt8, 42, astx.Int32, "42"),
-        # narrowing with truncation: 300 -> i8 = 44 (300 % 256)
-        (astx.Int32, astx.LiteralInt32, 300, astx.Int8, "44"),
         # narrowing that fits: 42 -> i8 still "42"
         (astx.Int16, astx.LiteralInt16, 42, astx.Int8, "42"),
     ],

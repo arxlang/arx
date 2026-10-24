@@ -18,6 +18,7 @@ import astx
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.call_arguments import (
+    analyze_numeric_arguments,
     call_evaluations,
     contextualize_null_arguments,
 )
@@ -354,9 +355,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             cast(SemanticAnalyzerCore, self), node, binding.function
         ):
             return
-        for argument in call_evaluations(node):
-            self.visit(argument)
-            arg_types.append(self._expr_type(argument))
+        arg_types.extend(
+            analyze_numeric_arguments(
+                node, binding.function, self.visit, self._expr_type
+            )
+        )
         function = binding.function
         if function is None:
             self.context.diagnostics.add(
@@ -576,10 +579,12 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             ):
                 return
             contextualize_null_arguments(node, binding.function)
-        arg_types: list[astx.DataType | None] = []
-        for arg in call_evaluations(node):
-            self.visit(arg)
-            arg_types.append(self._expr_type(arg))
+        arg_types = analyze_numeric_arguments(
+            node,
+            binding.function if binding is not None else None,
+            self.visit,
+            self._expr_type,
+        )
         binding = self.bindings.resolve(node.fn)
         if binding is None:
             self.context.diagnostics.add(

@@ -16,6 +16,10 @@ import astx
 from public import public
 
 from irx.analysis.module_interfaces import ModuleKey
+from irx.analysis.numeric_policy import (
+    NumericConversion,
+    classify_numeric_conversion,
+)
 from irx.typecheck import typechecked
 
 
@@ -987,10 +991,30 @@ class ImplicitConversion:
         type: astx.DataType | None
       target_type:
         type: astx.DataType | None
+      numeric:
+        type: NumericConversion | None
+        description: >-
+          Checked-policy classification for supported numeric domains. This
+          describes required guards; lowering must implement the conversion
+          plan.
     """
 
     source_type: astx.DataType | None
     target_type: astx.DataType | None
+    numeric: NumericConversion | None = field(init=False, default=None)
+
+    def __post_init__(self) -> None:
+        """
+        title: Classify numeric source and destination domains during analysis.
+        """
+        if self.source_type is not None and self.target_type is not None:
+            object.__setattr__(
+                self,
+                "numeric",
+                classify_numeric_conversion(
+                    self.source_type, self.target_type
+                ),
+            )
 
 
 @public
@@ -1476,19 +1500,32 @@ class ResolvedOperator:
         type: str
       result_type:
         type: astx.DataType | None
+      mode:
+        type: astx.NumericMode
       lhs_type:
         type: astx.DataType | None
       rhs_type:
         type: astx.DataType | None
       flags:
         type: SemanticFlags
+      computation_type:
+        type: astx.DataType | None
+        description: Numeric operand type, distinct from comparison results.
+      lhs_conversion:
+        type: ImplicitConversion | None
+      rhs_conversion:
+        type: ImplicitConversion | None
     """
 
     op_code: str
     result_type: astx.DataType | None = None
+    mode: astx.NumericMode = astx.NumericMode.CHECKED
     lhs_type: astx.DataType | None = None
     rhs_type: astx.DataType | None = None
     flags: SemanticFlags = field(default_factory=SemanticFlags)
+    computation_type: astx.DataType | None = None
+    lhs_conversion: ImplicitConversion | None = None
+    rhs_conversion: ImplicitConversion | None = None
 
 
 @public
@@ -1811,6 +1848,10 @@ class ResolvedCollectionMethod:
         type: astx.DataType
       argument_types:
         type: tuple[astx.DataType, Ellipsis]
+      comparison_plans:
+        type: tuple[ResolvedOperator, Ellipsis]
+      matching_types:
+        type: tuple[astx.DataType, Ellipsis]
       mutates:
         type: bool
       extras:
@@ -1822,6 +1863,8 @@ class ResolvedCollectionMethod:
     method: CollectionMethodKind
     return_type: astx.DataType
     argument_types: tuple[astx.DataType, ...] = ()
+    comparison_plans: tuple[ResolvedOperator, ...] = ()
+    matching_types: tuple[astx.DataType, ...] = ()
     mutates: bool = False
     extras: dict[str, Any] = field(default_factory=dict)
 
@@ -1904,6 +1947,17 @@ class SemanticInfo:
       Aggregate all semantic sidecar fields that analysis may attach to a
       single AST node.
     attributes:
+      numeric_storage:
+        type: astx.DataType | None
+      literal_context:
+        type: astx.DataType | None
+        description: Expected literal type, consumed by the next literal visit.
+      numeric_constant:
+        type: int | float | None
+      numeric_conversion:
+        type: NumericConversion | None
+      numeric_mode:
+        type: astx.NumericMode
       resolved_type:
         type: astx.DataType | None
       resolved_symbol:
@@ -1972,6 +2026,11 @@ class SemanticInfo:
         type: dict[str, Any]
     """
 
+    numeric_storage: astx.DataType | None = None
+    literal_context: astx.DataType | None = None
+    numeric_constant: int | float | None = None
+    numeric_conversion: NumericConversion | None = None
+    numeric_mode: astx.NumericMode = astx.NumericMode.CHECKED
     resolved_type: astx.DataType | None = None
     resolved_symbol: SemanticSymbol | None = None
     resolved_function: SemanticFunction | None = None

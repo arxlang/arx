@@ -35,7 +35,7 @@ from llvmlite import ir
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.resolved_nodes import OwnershipTransferKind, ResourceKind
-from irx.analysis.types import common_numeric_type, is_string_type
+from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
     semantic_assignment_key,
@@ -46,9 +46,11 @@ from irx.builder.core import (
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
     require_lowered_value,
+    require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.nullable import NullableVisitorMixin
+from irx.builder.numeric import resolved_integer_operation
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.errors import (
     RUNTIME_FAILURE_FEATURE_NAME,
@@ -103,28 +105,72 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             raise Exception("codegen: Invalid lhs/rhs")
 
         unsigned = uses_unsigned_semantics(node)
-        lhs_type = self._resolved_ast_type(node.lhs)
-        rhs_type = self._resolved_ast_type(node.rhs)
-        semantic_numeric_type = common_numeric_type(lhs_type, rhs_type)
         if (
             unify_numeric
             and self._is_numeric_value(llvm_lhs)
             and self._is_numeric_value(llvm_rhs)
         ):
-            if semantic_numeric_type is not None:
-                llvm_lhs, llvm_rhs = self._coerce_numeric_operands_for_types(
-                    llvm_lhs,
-                    llvm_rhs,
-                    lhs_type=lhs_type,
-                    rhs_type=rhs_type,
-                )
-            else:
-                # This is a low-level fallback for raw LLVM helper use only.
-                llvm_lhs, llvm_rhs = self._unify_numeric_operands(
-                    llvm_lhs,
-                    llvm_rhs,
-                    unsigned=unsigned,
-                )
+            semantic = require_semantic_metadata(
+                getattr(node, "semantic", None),
+                node=node,
+                metadata="semantic",
+                context="binary",
+            )
+            operation = require_semantic_metadata(
+                semantic.resolved_operator,
+                node=node,
+                metadata="resolved_operator",
+                context="numeric operands",
+            )
+            require_semantic_metadata(
+                operation.computation_type,
+                node=node,
+                metadata="computation_type",
+                context="numeric operands",
+            )
+            unsigned = operation.flags.unsigned
+            left = require_semantic_metadata(
+                operation.lhs_conversion,
+                node=node,
+                metadata="lhs_conversion",
+                context="numeric operands",
+            )
+            right = require_semantic_metadata(
+                operation.rhs_conversion,
+                node=node,
+                metadata="rhs_conversion",
+                context="numeric operands",
+            )
+            llvm_lhs = self._cast_ast_value(
+                llvm_lhs,
+                source_type=require_semantic_metadata(
+                    left.source_type,
+                    node=node,
+                    metadata="lhs_conversion.source_type",
+                    context="numeric operands",
+                ),
+                target_type=require_semantic_metadata(
+                    left.target_type,
+                    node=node,
+                    metadata="lhs_conversion.target_type",
+                    context="numeric operands",
+                ),
+            )
+            llvm_rhs = self._cast_ast_value(
+                llvm_rhs,
+                source_type=require_semantic_metadata(
+                    right.source_type,
+                    node=node,
+                    metadata="rhs_conversion.source_type",
+                    context="numeric operands",
+                ),
+                target_type=require_semantic_metadata(
+                    right.target_type,
+                    node=node,
+                    metadata="rhs_conversion.target_type",
+                    context="numeric operands",
+                ),
+            )
 
         return llvm_lhs, llvm_rhs, unsigned
 
@@ -160,8 +206,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 )
                 self._apply_fast_math(result)
             else:
-                result = self._llvm.ir_builder.add(
-                    llvm_lhs, llvm_rhs, name="vaddtmp"
+                result = resolved_integer_operation(
+                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "+"
                 )
         finally:
             self.set_fast_math(prev_fast_math)
@@ -407,8 +453,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 )
                 self._apply_fast_math(result)
             else:
-                result = self._llvm.ir_builder.sub(
-                    llvm_lhs, llvm_rhs, name="vsubtmp"
+                result = resolved_integer_operation(
+                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "-"
                 )
         finally:
             self.set_fast_math(prev_fast_math)
@@ -468,8 +514,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 )
                 self._apply_fast_math(result)
             else:
-                result = self._llvm.ir_builder.mul(
-                    llvm_lhs, llvm_rhs, name="vmultmp"
+                result = resolved_integer_operation(
+                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "*"
                 )
         finally:
             self.set_fast_math(prev_fast_math)
@@ -511,6 +557,14 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 )
                 self._apply_fast_math(result)
             else:
+                for lane in range(llvm_lhs.type.count):
+                    index = ir.Constant(ir.IntType(32), lane)
+                    self._guard_scalar_integer_divisor(
+                        node,
+                        self._llvm.ir_builder.extract_element(llvm_lhs, index),
+                        self._llvm.ir_builder.extract_element(llvm_rhs, index),
+                        unsigned=unsigned,
+                    )
                 result = emit_int_div(
                     self._llvm.ir_builder, llvm_lhs, llvm_rhs, unsigned
                 )
@@ -683,6 +737,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 llvm_rhs,
             )
             self._register_owned_string_temporary(node, result)
+        elif is_int_type(llvm_lhs.type):
+            result = resolved_integer_operation(
+                self, node, llvm_lhs, llvm_rhs, "+"
+            )
         else:
             result = emit_add(
                 self._llvm.ir_builder, llvm_lhs, llvm_rhs, "addtmp"
@@ -713,7 +771,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             result = self._llvm.ir_builder.fsub(llvm_lhs, llvm_rhs, "subtmp")
             self._apply_fast_math(result)
         else:
-            result = self._llvm.ir_builder.sub(llvm_lhs, llvm_rhs, "subtmp")
+            result = resolved_integer_operation(
+                self, node, llvm_lhs, llvm_rhs, "-"
+            )
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch
@@ -737,7 +797,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             result = self._llvm.ir_builder.fmul(llvm_lhs, llvm_rhs, "multmp")
             self._apply_fast_math(result)
         else:
-            result = self._llvm.ir_builder.mul(llvm_lhs, llvm_rhs, "multmp")
+            result = resolved_integer_operation(
+                self, node, llvm_lhs, llvm_rhs, "*"
+            )
         self.result_stack.append(result)
 
     @VisitorCore.visit.dispatch

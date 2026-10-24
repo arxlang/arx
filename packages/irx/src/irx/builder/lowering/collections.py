@@ -19,9 +19,10 @@ from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
     ResolvedCollectionMethod,
 )
-from irx.analysis.types import is_assignable
+from irx.analysis.types import same_type
 from irx.builder.core import VisitorCore, uses_unsigned_semantics
 from irx.builder.diagnostics import require_semantic_metadata
+from irx.builder.numeric import guard_collection_length
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builtins.collections.list import LIST_FIELD_INDICES, list_element_type
@@ -105,6 +106,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             length_ptr,
             name="irx_collection_length_i64",
         )
+        guard_collection_length(cast(VisitorCore, self), base, length_i64)
         return cast(
             ir.Value,
             self._llvm.ir_builder.trunc(
@@ -141,9 +143,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         rhs: ir.Value,
         *,
         lhs_type: astx.DataType | None,
-        rhs_type: astx.DataType | None,
         unsigned: bool,
         name: str,
+        resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
         """
         title: Emit one equality comparison for collection search.
@@ -154,29 +156,52 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: ir.Value
           lhs_type:
             type: astx.DataType | None
-          rhs_type:
-            type: astx.DataType | None
           unsigned:
             type: bool
           name:
             type: str
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: ir.Value
         """
         visitor = cast(Any, self)
         if visitor._is_numeric_value(lhs) and visitor._is_numeric_value(rhs):
-            lhs, rhs = visitor._coerce_numeric_operands_for_types(
-                lhs,
-                rhs,
-                lhs_type=lhs_type,
-                rhs_type=rhs_type,
+            plan = next(
+                (
+                    plan
+                    for plan in resolution.comparison_plans
+                    if same_type(plan.lhs_type, lhs_type)
+                ),
+                None,
             )
-            if lhs.type != rhs.type:
-                lhs, rhs = visitor._unify_numeric_operands(
-                    lhs,
-                    rhs,
-                    unsigned=unsigned,
-                )
+            plan = require_semantic_metadata(
+                plan,
+                node=resolution.receiver_node,
+                metadata="numeric comparison",
+                context="collection search",
+            )
+            left = require_semantic_metadata(
+                plan.lhs_conversion,
+                node=resolution.receiver_node,
+                metadata="lhs conversion",
+                context="collection search",
+            )
+            right = require_semantic_metadata(
+                plan.rhs_conversion,
+                node=resolution.receiver_node,
+                metadata="rhs conversion",
+                context="collection search",
+            )
+            lhs = visitor._cast_ast_value(
+                lhs, source_type=left.source_type, target_type=left.target_type
+            )
+            rhs = visitor._cast_ast_value(
+                rhs,
+                source_type=right.source_type,
+                target_type=right.target_type,
+            )
+            unsigned = plan.flags.unsigned
             return visitor._emit_numeric_compare(
                 "==",
                 lhs,
@@ -226,6 +251,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         self,
         entry_type: astx.DataType | None,
         probe_type: astx.DataType | None,
+        resolution: ResolvedCollectionMethod,
     ) -> bool:
         """
         title: Return whether one literal entry can match a probe value.
@@ -234,18 +260,24 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: astx.DataType | None
           probe_type:
             type: astx.DataType | None
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: bool
         """
         if entry_type is None or probe_type is None:
             return True
-        return is_assignable(entry_type, probe_type)
+        return any(
+            same_type(entry_type, allowed)
+            for allowed in resolution.matching_types
+        )
 
     def _lower_literal_collection_contains(
         self,
         *,
         base: astx.AST,
         value: astx.AST,
+        resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
         """
         title: Lower containment for a literal collection.
@@ -254,6 +286,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: astx.AST
           value:
             type: astx.AST
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: ir.Value
         """
@@ -270,7 +304,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         result: ir.Value = ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
         for index, entry in enumerate(entries):
             entry_type = self._resolved_ast_type(entry)
-            if not self._entry_can_match_probe(entry_type, probe_type):
+            if not self._entry_can_match_probe(
+                entry_type, probe_type, resolution
+            ):
                 continue
             self.visit_child(entry)
             candidate = safe_pop(self.result_stack)
@@ -279,8 +315,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             match = self._emit_collection_equal(
                 candidate,
                 needle,
+                resolution=resolution,
                 lhs_type=entry_type,
-                rhs_type=probe_type,
                 unsigned=uses_unsigned_semantics(entry)
                 or uses_unsigned_semantics(value),
                 name=f"collection_contains_{index}",
@@ -298,6 +334,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         base: astx.AST,
         value: astx.AST,
         method: CollectionMethodKind,
+        resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
         """
         title: Lower dynamic-list containment, index, or count.
@@ -308,6 +345,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: astx.AST
           method:
             type: CollectionMethodKind
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: ir.Value
         """
@@ -322,16 +361,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
         )._list_pointer_and_length_for_iteration(
             base,
         )
+        guard_collection_length(cast(VisitorCore, self), base, length)
         self.visit_child(value)
         needle = safe_pop(self.result_stack)
         if needle is None:
             raise TypeError("list search requires a value")
-        needle = cast(Any, self)._cast_ast_value(
-            needle,
-            source_type=self._resolved_ast_type(value),
-            target_type=element_type,
-        )
-
         builder = self._llvm.ir_builder
         index_addr = self.create_entry_block_alloca(
             "collection_search_index",
@@ -384,8 +418,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
         match = self._emit_collection_equal(
             item,
             needle,
+            resolution=resolution,
             lhs_type=element_type,
-            rhs_type=element_type,
             unsigned=uses_unsigned_semantics(value),
             name="collection_search_match",
         )
@@ -501,6 +535,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         base: astx.AST,
         value: astx.AST,
         method: CollectionMethodKind,
+        resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
         """
         title: Lower collection search for literals or dynamic lists.
@@ -511,6 +546,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: astx.AST
           method:
             type: CollectionMethodKind
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: ir.Value
         """
@@ -525,10 +562,12 @@ class CollectionVisitorMixin(VisitorMixinBase):
         ):
             if method is CollectionMethodKind.CONTAINS:
                 return self._lower_literal_collection_contains(
+                    resolution=resolution,
                     base=base,
                     value=value,
                 )
             return self._lower_literal_sequence_search(
+                resolution=resolution,
                 base=base,
                 value=value,
                 method=method,
@@ -536,6 +575,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
 
         if isinstance(self._resolved_ast_type(base), astx.ListType):
             result = self._lower_list_search(
+                resolution=resolution,
                 base=base,
                 value=value,
                 method=method,
@@ -560,6 +600,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         base: astx.AST,
         value: astx.AST,
         method: CollectionMethodKind,
+        resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
         """
         title: Lower index or count for a literal list or tuple.
@@ -570,6 +611,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: astx.AST
           method:
             type: CollectionMethodKind
+          resolution:
+            type: ResolvedCollectionMethod
         returns:
           type: ir.Value
         """
@@ -588,7 +631,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         result: ir.Value = self._initial_list_search_result(method)
         for index, entry in enumerate(entries):
             entry_type = self._resolved_ast_type(entry)
-            if not self._entry_can_match_probe(entry_type, probe_type):
+            if not self._entry_can_match_probe(
+                entry_type, probe_type, resolution
+            ):
                 continue
             self.visit_child(entry)
             candidate = safe_pop(self.result_stack)
@@ -597,8 +642,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
             match = self._emit_collection_equal(
                 candidate,
                 needle,
+                resolution=resolution,
                 lhs_type=entry_type,
-                rhs_type=probe_type,
                 unsigned=uses_unsigned_semantics(entry)
                 or uses_unsigned_semantics(value),
                 name=f"collection_sequence_match_{index}",
@@ -728,6 +773,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             raise TypeError("collection contains has invalid semantic method")
         self.result_stack.append(
             self._sequence_or_literal_search(
+                resolution=resolution,
                 base=node.base,
                 value=node.value,
                 method=CollectionMethodKind.CONTAINS,
@@ -747,6 +793,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             raise TypeError("collection index has invalid semantic method")
         self.result_stack.append(
             self._sequence_or_literal_search(
+                resolution=resolution,
                 base=node.base,
                 value=node.value,
                 method=CollectionMethodKind.INDEX,
@@ -766,6 +813,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             raise TypeError("collection count has invalid semantic method")
         self.result_stack.append(
             self._sequence_or_literal_search(
+                resolution=resolution,
                 base=node.base,
                 value=node.value,
                 method=CollectionMethodKind.COUNT,

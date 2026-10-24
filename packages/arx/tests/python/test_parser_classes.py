@@ -50,7 +50,7 @@ def test_parse_dunder_hooks_preserves_protocol_names() -> None:
     initializer = declaration.methods[0]
     assert [arg.name for arg in initializer.prototype.args.nodes] == ["value"]
     assert isinstance(
-        initializer.prototype.args.nodes[0].default, astx.LiteralInt32
+        initializer.prototype.args.nodes[0].default, astx.LiteralInteger
     )
 
 
@@ -197,7 +197,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
     assert getattr(area.prototype, "is_abstract", False) is False
     area_return = area.body.nodes[0]
     assert isinstance(area_return, astx.FunctionReturn)
-    assert isinstance(area_return.value, astx.LiteralInt32)
+    assert isinstance(area_return.value, astx.LiteralInteger)
     assert area_return.value.value == 0
 
     base_counter = tree.nodes[1]
@@ -250,7 +250,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
     )
     assert getattr(version, "is_static", False) is True
     assert isinstance(version.type_, astx.Int32)
-    assert isinstance(version.value, astx.LiteralInt32)
+    assert isinstance(version.value, astx.LiteralInteger)
 
     internal = counter.attributes.nodes[1]
     assert internal.visibility is astx.VisibilityKind.private
@@ -263,7 +263,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
     )
     assert not getattr(internal, "is_static", False)
     assert isinstance(internal.type_, astx.Int32)
-    assert isinstance(internal.value, astx.LiteralInt32)
+    assert isinstance(internal.value, astx.LiteralInteger)
 
     internal_total = counter.methods.nodes[0]
     assert isinstance(internal_total, astx.FunctionDef)

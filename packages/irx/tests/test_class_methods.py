@@ -842,7 +842,7 @@ def test_static_field_increment_updates_global(
 
     ir_text = builder.translate(module)
 
-    assert "add i32" in ir_text
+    assert "llvm.sadd.with.overflow.i32" in ir_text
     assert_jit_int_main_result(builder, module, INCREMENTED_STATIC_VALUE)
 
 

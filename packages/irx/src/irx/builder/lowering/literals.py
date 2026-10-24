@@ -146,6 +146,34 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         )
 
     @VisitorCore.visit.dispatch
+    def visit(self, node: astx.LiteralInteger | astx.LiteralFloat) -> None:
+        """
+        title: Emit a source literal using its resolved semantic type.
+        parameters:
+          node:
+            type: astx.LiteralInteger | astx.LiteralFloat
+        """
+        semantic = require_semantic_metadata(
+            getattr(node, "semantic", None),
+            node=node,
+            metadata="semantic",
+            context="numeric literal",
+        )
+        type_ = require_semantic_metadata(
+            self._llvm_type_for_ast_type(semantic.resolved_type),
+            node=node,
+            metadata="resolved_type",
+            context="numeric literal",
+        )
+        constant = require_semantic_metadata(
+            semantic.numeric_constant,
+            node=node,
+            metadata="numeric_constant",
+            context="numeric literal",
+        )
+        self.result_stack.append(ir.Constant(type_, constant))
+
+    @VisitorCore.visit.dispatch
     def visit(self, node: astx.LiteralInt32) -> None:
         """
         title: Visit LiteralInt32 nodes.

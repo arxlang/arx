@@ -9,6 +9,7 @@ from typing import cast
 import astx
 import pytest
 
+from irx.analysis import analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder
@@ -203,19 +204,19 @@ def test_loop_lowering_does_not_consume_preexisting_result_stack_values(
     marker = ir.Constant(ir.IntType(32), 123)
     visitor.result_stack.append(marker)
 
-    visitor.visit(
-        astx.ForCountLoopStmt(
-            initializer=astx.InlineVariableDeclaration(
-                "i",
-                type_=astx.Int32(),
-                value=astx.LiteralInt32(0),
-                mutability=astx.MutabilityKind.mutable,
-            ),
-            condition=astx.LiteralBoolean(False),
-            update=astx.UnaryOp(op_code="++", operand=astx.Identifier("i")),
-            body=astx.Block(),
-        )
+    loop = astx.ForCountLoopStmt(
+        initializer=astx.InlineVariableDeclaration(
+            "i",
+            type_=astx.Int32(),
+            value=astx.LiteralInt32(0),
+            mutability=astx.MutabilityKind.mutable,
+        ),
+        condition=astx.LiteralBoolean(False),
+        update=astx.UnaryOp(op_code="++", operand=astx.Identifier("i")),
+        body=astx.Block(),
     )
+    analyze(loop)
+    visitor.visit(loop)
 
     assert visitor.result_stack == [marker]
 

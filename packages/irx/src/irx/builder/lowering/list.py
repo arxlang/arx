@@ -15,6 +15,7 @@ from llvmlite import ir
 from irx.analysis.resolved_nodes import IterationKind, ResolvedIteration
 from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import raise_lowering_error
+from irx.builder.numeric import guard_collection_length
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builtins.collections.list import (
@@ -217,6 +218,7 @@ class ListVisitorMixin(VisitorMixinBase):
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
+                astx.LiteralInteger,
                 astx.LiteralInt64,
                 astx.LiteralUInt8,
                 astx.LiteralUInt16,
@@ -1017,6 +1019,7 @@ class ListVisitorMixin(VisitorMixinBase):
             length_ptr,
             name="irx_list_length_i64",
         )
+        guard_collection_length(self, node, length_i64)
         # IRx currently exposes list lengths as Int32 even though the runtime
         # stores the backing length field as Int64.
         self.result_stack.append(

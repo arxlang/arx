@@ -27,6 +27,8 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.normalization import normalize_flags, normalize_operator
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -56,7 +58,11 @@ from irx.analysis.types import (
     is_none_type,
     is_string_type,
 )
-from irx.analysis.validation import resolve_return, validate_call
+from irx.analysis.validation import (
+    resolve_return,
+    validate_assignment,
+    validate_call,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -626,6 +632,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             self._set_type(node, None)
             return
         if node.value is not None:
+            contextualize_literal(node.value, expected)
             self.visit(node.value)
         return_resolution = resolve_return(
             self.context.diagnostics,
@@ -686,9 +693,16 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="if")
-        self.visit(node.then)
+        known = (
+            node.condition.value
+            if isinstance(node.condition, astx.LiteralBoolean)
+            else None
+        )
+        with self.context.constant_diagnostics(known is True):
+            self.visit(node.then)
         if node.else_ is not None:
-            self.visit(node.else_)
+            with self.context.constant_diagnostics(known is False):
+                self.visit(node.else_)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -702,7 +716,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         self.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="while")
         with self.context.in_loop():
-            self.visit(node.body)
+            with self.context.constant_diagnostics(False):
+                self.visit(node.body)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -715,6 +730,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         with self.context.scope("for-count"):
             if node.initializer.value is not None:
+                contextualize_literal(
+                    node.initializer.value, node.initializer.type_
+                )
                 self.visit(node.initializer.value)
             symbol = self.registry.declare_local(
                 node.initializer.name,
@@ -730,9 +748,11 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 node.condition,
                 label="for-count loop",
             )
-            self.visit(node.update)
+            with self.context.constant_diagnostics(False):
+                self.visit(node.update)
             with self.context.in_loop():
-                self.visit(node.body)
+                with self.context.constant_diagnostics(False):
+                    self.visit(node.body)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -743,11 +763,38 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ForRangeLoopStmt
         """
+        loop_type = node.variable.type_
+        self._resolve_declared_type(loop_type, node=node.variable)
+        if not (is_integer_type(loop_type) or is_float_type(loop_type)):
+            self.context.diagnostics.add(
+                "for-range requires a numeric variable", node=node
+            )
+            return
+        self._set_operator(
+            node,
+            normalize_operator(
+                "+",
+                result_type=loop_type,
+                lhs_type=loop_type,
+                rhs_type=loop_type,
+                flags=normalize_flags(
+                    node, lhs_type=loop_type, rhs_type=loop_type
+                ),
+            ),
+        )
         with self.context.scope("for-range"):
-            self.visit(node.start)
-            self.visit(node.end)
-            if not isinstance(node.step, astx.LiteralNone):
-                self.visit(node.step)
+            for value in (node.start, node.end, node.step):
+                if isinstance(value, astx.LiteralNone):
+                    continue
+                contextualize_literal(value, loop_type)
+                self.visit(value)
+                validate_assignment(
+                    self.context.diagnostics,
+                    target_name="range variable",
+                    target_type=loop_type,
+                    value_type=self._expr_type(value),
+                    node=value,
+                )
             symbol = self.registry.declare_local(
                 node.variable.name,
                 node.variable.type_,
@@ -758,7 +805,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             )
             self._set_symbol(node.variable, symbol)
             with self.context.in_loop():
-                self.visit(node.body)
+                with self.context.constant_diagnostics(False):
+                    self.visit(node.body)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -796,7 +844,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             self._set_iteration(node.iterable, resolved_iteration)
             self._set_iteration(node, resolved_iteration)
             with self.context.in_loop():
-                self.visit(node.body)
+                with self.context.constant_diagnostics(False):
+                    self.visit(node.body)
         self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
@@ -830,7 +879,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             with self.context.scope("with"):
-                self.visit(node.body)
+                with self.context.constant_diagnostics(False):
+                    self.visit(node.body)
             self._set_type(node, None)
             return
 
@@ -855,7 +905,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                     node.target,
                     enter.call.result_type,
                 )
-            self.visit(node.body)
+            with self.context.constant_diagnostics(False):
+                self.visit(node.body)
 
         if enter is not None and exit_ is not None:
             self._set_context_manager(

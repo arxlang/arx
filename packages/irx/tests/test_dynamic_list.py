@@ -1287,8 +1287,13 @@ def test_while_condition_destroys_list_call_temporary_each_evaluation() -> (
         "while.body:", maxsplit=1
     )[0]
 
-    assert condition_ir.count('call void @"irx_list_destroy"') == 1
-    assert condition_ir.index('call void @"irx_list_destroy"') < (
-        condition_ir.index("br i1")
+    assert 'label %"numeric.conversion.pass"' in condition_ir
+    checked_condition = main_ir.split("numeric.conversion.pass:", maxsplit=1)[
+        1
+    ].split("numeric.conversion.fail:", maxsplit=1)[0]
+    assert checked_condition.count('call void @"irx_list_destroy"') == 1
+    assert 'label %"while.body"' in checked_condition
+    assert checked_condition.index('call void @"irx_list_destroy"') < (
+        checked_condition.index("br i1")
     )
     assert_ir_parses(ir_text)

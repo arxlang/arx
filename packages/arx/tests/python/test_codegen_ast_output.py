@@ -215,6 +215,46 @@ def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     assert "ARX-RUNTIME-FILE-001" in result
 
 
+def test_numeric_operand_plans_translate_mixed_widths() -> None:
+    """
+    title: Translate analyzed scalar conversions for arithmetic and comparison.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Numeric operand plan translation\n```\n"
+        "fn combine(small: i8, large: i16) -> i16:\n"
+        "  var ordered: bool = small < large\n"
+        "  return small + large\n"
+        "fn main() -> i32:\n"
+        "  return combine(cast(1, i8), cast(2, i16))\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "sext i8" in text
+    assert "icmp slt i16" in text
+    assert "llvm.sadd.with.overflow.i16" in text
+    assert "call i16" in text
+
+
+def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
+    """
+    title: >-
+      Numeric unions retain comparison support without a raw LLVM fallback.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Numeric union comparison translation\n```\n"
+        "type Number = i32 | i64\n"
+        "fn compare(a: Number, b: i32) -> bool:\n"
+        "  return a < b\n"
+        "fn main() -> i32:\n"
+        "  var result: bool = compare(1, 2)\n"
+        "  return 0\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "sext i32" in text
+    assert "icmp slt i64" in text
+
+
 def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     """
     title: >-
@@ -233,9 +273,9 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     )
     text = ArxBuilder().translate_modules(root, FileImportResolver(()))
     llvm.parse_assembly(text).verify()
-    assert "add i64" in text
+    assert "llvm.sadd.with.overflow.i64" in text
     assert "trunc i64" in text
-    assert "abs() result is out of range for the input type" in text
+    assert "ARX-RUNTIME-ARITHMETIC-001" in text
     assert "clamp() lower bound must not exceed upper bound" in text
 
 
@@ -267,8 +307,8 @@ def test_math_templates_translate_concrete_widths(width: int) -> None:
     text = ArxBuilder().translate_modules(root, FileImportResolver(()))
     llvm.parse_assembly(text).verify()
     assert f"call i{width} " in text
-    assert f"sub i{width} " in text
-    assert f"mul i{width} " in text
+    assert f"llvm.ssub.with.overflow.i{width}" in text
+    assert f"llvm.smul.with.overflow.i{width}" in text
 
 
 def test_class_lifecycle_translate_verifies() -> None:

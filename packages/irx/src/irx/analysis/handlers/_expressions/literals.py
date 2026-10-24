@@ -17,6 +17,8 @@ from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.arrow_conversion import contains_arrow
 from irx.analysis.class_lifecycle import contains_class
 from irx.analysis.collections import (
@@ -29,7 +31,9 @@ from irx.analysis.handlers.base import (
     SemanticVisitorMixinBase,
 )
 from irx.analysis.iterables import resolve_iteration_capability
+from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.nullable import resolve_column_index
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
     string_resource_ownership,
@@ -41,10 +45,13 @@ from irx.analysis.resolved_nodes import (
     ResolvedCollectionMethod,
 )
 from irx.analysis.types import (
+    common_numeric_type,
     display_type_name,
     is_assignable,
     is_boolean_type,
     is_integer_type,
+    is_numeric_type,
+    same_type,
 )
 from irx.analysis.validation import (
     validate_assignment,
@@ -58,6 +65,26 @@ from irx.builtins.collections.list import (
 )
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
+
+
+@private
+@typechecked
+def collection_probe_matches(
+    expected: astx.DataType, actual: astx.DataType | None
+) -> bool:
+    """
+    title: Numeric searches use comparison domains, not assignment domains.
+    parameters:
+      expected:
+        type: astx.DataType
+      actual:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if is_numeric_type(expected) and is_numeric_type(actual):
+        return common_numeric_type(expected, actual) is not None
+    return is_assignable(expected, actual)
 
 
 @typechecked
@@ -286,7 +313,25 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         for element in cast(list[astx.AST], getattr(node, "elements")):
             self.visit(element)
             self.reject_class_element(element)
-        self._set_type(node, getattr(node, "type_", None))
+        elements = cast(list[astx.AST], getattr(node, "elements"))
+        types = [self._expr_type(element) for element in elements]
+        concrete: list[astx.ExprType] = [
+            type_ for type_ in types if type_ is not None
+        ]
+        if isinstance(node, astx.LiteralTuple):
+            self._set_type(node, astx.TupleType(concrete))
+        elif isinstance(node, astx.LiteralList):
+            unique: list[astx.ExprType] = []
+            for member in concrete:
+                if not any(
+                    same_type(
+                        cast(astx.DataType, member),
+                        cast(astx.DataType, previous),
+                    )
+                    for previous in unique
+                ):
+                    unique.append(member)
+            self._set_type(node, astx.ListType(unique, size=len(elements)))
 
     def _has_compatible_collection_probe(
         self,
@@ -306,7 +351,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         if actual_type is None or not expected_types:
             return True
         return any(
-            is_assignable(expected_type, actual_type)
+            collection_probe_matches(expected_type, actual_type)
             for expected_type in expected_types
         )
 
@@ -337,6 +382,54 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         if receiver_type is None:
             self._set_collection_method(node, None)
             return
+        probe = getattr(node, "value", None)
+        probe_type = (
+            self._expr_type(probe) if isinstance(probe, astx.AST) else None
+        )
+        entry_types = argument_types
+        if isinstance(
+            base,
+            (
+                astx.LiteralList,
+                astx.LiteralTuple,
+                astx.LiteralSet,
+                astx.LiteralDict,
+            ),
+        ):
+            entry_types = tuple(
+                type_
+                for entry in base.elements
+                if (type_ := self._expr_type(entry)) is not None
+            )
+        if is_numeric_type(probe_type) and any(
+            is_numeric_type(type_)
+            and common_numeric_type(type_, probe_type) is None
+            for type_ in entry_types
+        ):
+            self.context.diagnostics.add(
+                "collection comparison has no lossless common numeric type; "
+                "use an explicit cast",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        matching = tuple(
+            type_
+            for type_ in entry_types
+            if collection_probe_matches(type_, probe_type)
+        )
+        comparisons = tuple(
+            normalize_operator(
+                "==",
+                result_type=astx.Boolean(),
+                lhs_type=type_,
+                rhs_type=probe_type,
+                flags=normalize_flags(
+                    node, lhs_type=type_, rhs_type=probe_type
+                ),
+            )
+            for type_ in matching
+        )
         self._set_collection_method(
             node,
             ResolvedCollectionMethod(
@@ -345,6 +438,8 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 method=method,
                 return_type=return_type,
                 argument_types=argument_types,
+                comparison_plans=comparisons,
+                matching_types=matching,
             ),
         )
 
@@ -539,6 +634,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             node.base,
             context="collection containment",
         )
+        contexts = collection_contains_types(base_type)
+        if len(contexts) == 1:
+            contextualize_literal(node.value, contexts[0])
         self.visit(node.value)
         expected_types = collection_contains_types(base_type)
         actual_type = self._expr_type(node.value)
@@ -587,6 +685,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             node.base,
             context="collection index",
         )
+        contexts = collection_contains_types(base_type)
+        if len(contexts) == 1:
+            contextualize_literal(node.value, contexts[0])
         self.visit(node.value)
         expected_types = collection_contains_types(base_type)
         if base_type is not None and not collection_supports_sequence_search(
@@ -646,6 +747,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             node.base,
             context="collection count",
         )
+        contexts = collection_contains_types(base_type)
+        if len(contexts) == 1:
+            contextualize_literal(node.value, contexts[0])
         self.visit(node.value)
         expected_types = collection_contains_types(base_type)
         if base_type is not None and not collection_supports_sequence_search(
@@ -734,9 +838,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 "currently supported for lowering",
                 node=node,
             )
-        self._set_type(
-            node, cast(astx.DataType | None, getattr(node, "type_", None))
-        )
+        self._set_type(node, astx.LiteralSet(node.elements).type_)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.LiteralDict) -> None:
@@ -751,9 +853,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self.visit(value)
             self.reject_class_element(key)
             self.reject_class_element(value)
-        self._set_type(
-            node, cast(astx.DataType | None, getattr(node, "type_", None))
-        )
+        self._set_type(node, astx.LiteralDict(node.elements).type_)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListCreate) -> None:
@@ -948,6 +1048,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ListAppend
         """
         self.visit(node.base)
+        base_type = self._expr_type(node.base)
+        contextualize_literal(
+            node.value,
+            list_element_type(base_type)
+            if isinstance(base_type, astx.ListType)
+            else None,
+        )
         self.visit(node.value)
         self.reject_class_element(node.value)
 
@@ -1071,12 +1178,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                     astx.LiteralInt8,
                     astx.LiteralInt16,
                     astx.LiteralInt32,
+                    astx.LiteralInteger,
                     astx.LiteralInt64,
                     astx.LiteralUInt8,
                     astx.LiteralUInt16,
                     astx.LiteralUInt32,
                     astx.LiteralUInt64,
                     astx.LiteralFloat32,
+                    astx.LiteralFloat,
                     astx.LiteralFloat64,
                     astx.Identifier,
                 ),

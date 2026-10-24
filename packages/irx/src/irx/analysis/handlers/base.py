@@ -18,6 +18,10 @@ from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
+from irx.analysis.numeric_literals import (
+    contextualize_literal,
+    resolve_numeric_literal,
+)
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import (
@@ -54,6 +58,7 @@ from irx.analysis.types import (
     contains_file_type,
     display_type_name,
     is_assignable,
+    union_storage_type,
 )
 from irx.base.visitors.base import BaseVisitor
 from irx.diagnostics import DiagnosticCodes
@@ -714,6 +719,7 @@ class SemanticVisitorMixinTypingBase:
         *,
         node: astx.AST,
         unknown_message: str = "Unknown type '{name}'",
+        storage_required: bool = True,
     ) -> astx.DataType:
         """
         title: Resolve one declared type in place.
@@ -724,6 +730,8 @@ class SemanticVisitorMixinTypingBase:
             type: astx.AST
           unknown_message:
             type: str
+          storage_required:
+            type: bool
         returns:
           type: astx.DataType
         """
@@ -1005,7 +1013,11 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         info = self._semantic(node)
         info.resolved_type = type_
-        if type_ is not None and hasattr(node, "type_"):
+        if (
+            type_ is not None
+            and hasattr(node, "type_")
+            and not isinstance(node, (astx.LiteralInteger, astx.LiteralFloat))
+        ):
             try:
                 setattr(node, "type_", clone_type(type_))
             except Exception:
@@ -1596,6 +1608,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         *,
         node: astx.AST,
         unknown_message: str = "Unknown type '{name}'",
+        storage_required: bool = True,
     ) -> astx.DataType:
         """
         title: Resolve one declared type in place.
@@ -1606,6 +1619,8 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: astx.AST
           unknown_message:
             type: str
+          storage_required:
+            type: bool
         returns:
           type: astx.DataType
         """
@@ -1619,6 +1634,12 @@ class SemanticAnalyzerCore(BaseVisitor):
             validate_column_declaration,
         )
 
+        if isinstance(type_, astx.UInt128):
+            self.context.diagnostics.add(
+                "UInt128 numeric execution is unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
         validate_column_declaration(self, type_, node)
         if not isinstance(
             type_, astx.DataFrameType | astx.SeriesType
@@ -1663,12 +1684,21 @@ class SemanticAnalyzerCore(BaseVisitor):
                     node=node,
                     unknown_message=unknown_message,
                 )
+            self._semantic(type_).numeric_storage = union_storage_type(type_)
+            if storage_required and union_storage_type(type_) is None:
+                self.context.diagnostics.add(
+                    "union has no lossless scalar storage; use an explicit "
+                    "concrete type",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
             self._set_type(type_, type_)
             return type_
         if isinstance(type_, astx.TemplateTypeVar):
             self._resolve_declared_type(
                 type_.bound,
                 node=node,
+                storage_required=False,
                 unknown_message=unknown_message,
             )
             self._set_type(type_, type_)
@@ -1826,6 +1856,7 @@ class SemanticAnalyzerCore(BaseVisitor):
                         value = argument.default
                         argument.default = astx.Cast(value, argument.type_)
                         argument.default.loc = value.loc
+                    contextualize_literal(argument.default, argument.type_)
                     self.visit(argument.default)
                     default_type = self._expr_type(argument.default)
                     if not is_assignable(argument.type_, default_type):
@@ -1988,7 +2019,8 @@ class SemanticAnalyzerCore(BaseVisitor):
           node:
             type: astx.AST
         """
-        self._set_type(node, getattr(node, "type_", None))
+        literal_type = resolve_numeric_literal(node, self.context.diagnostics)
+        self._set_type(node, literal_type or getattr(node, "type_", None))
 
     def _guarantees_return(self, node: astx.AST) -> bool:
         """

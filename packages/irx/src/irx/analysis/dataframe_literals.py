@@ -14,15 +14,77 @@ import pyarrow as pa
 
 from public import private
 
+from irx.analysis.numeric_literals import (
+    contextualize_literal,
+    numeric_constant,
+    resolve_numeric_literal,
+)
+from irx.analysis.numeric_policy import SIGNED_TYPES, UNSIGNED_TYPES
+from irx.analysis.types import is_assignable
 from irx.analysis.validation import (
     validate_literal_datetime,
     validate_literal_time,
     validate_literal_timestamp,
 )
 from irx.builtins.collections.column_types import dataframe_schema_ipc
+from irx.diagnostics import DiagnosticBag
 from irx.typecheck import typechecked
 
 PAIR_SIZE = 2
+
+
+@private
+@typechecked
+def numeric_literal_cell(
+    node: astx.AST, type_: pa.DataType, path: str
+) -> object:
+    """
+    title: >-
+      Apply scalar representability rules to nested Arrow numeric constants.
+    parameters:
+      node:
+        type: astx.AST
+      type_:
+        type: pa.DataType
+      path:
+        type: str
+    returns:
+      type: object
+    """
+    value = getattr(node, "value", None)
+    if pa.types.is_integer(type_) and type(value) is not int:
+        raise ValueError(f"{path}: integer literal required")
+    if pa.types.is_floating(type_) and type(value) not in (
+        int,
+        float,
+        Decimal,
+    ):
+        raise ValueError(f"{path}: numeric literal required")
+    classes: dict[type[astx.DataType], int]
+    if pa.types.is_signed_integer(type_):
+        classes = SIGNED_TYPES
+    elif pa.types.is_unsigned_integer(type_):
+        classes = UNSIGNED_TYPES
+    else:
+        classes = {astx.Float16: 16, astx.Float32: 32, astx.Float64: 64}
+    target = next(
+        type_class()
+        for type_class, width in classes.items()
+        if width == type_.bit_width
+    )
+    contextualize_literal(node, target)
+    diagnostics = DiagnosticBag()
+    actual = resolve_numeric_literal(node, diagnostics)
+    if (
+        diagnostics.has_errors()
+        or actual is None
+        or not is_assignable(target, actual)
+    ):
+        raise ValueError(
+            f"{path}: numeric literal is not losslessly "
+            f"representable in {type_}"
+        )
+    return numeric_constant(node)
 
 
 @private
@@ -95,6 +157,8 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
                 for value in elements
             ]
         raise ValueError(f"{path}: nested literal does not match {type_}")
+    if pa.types.is_integer(type_) or pa.types.is_floating(type_):
+        return numeric_literal_cell(node, type_, path)
     value = getattr(node, "value", None)
     if pa.types.is_decimal(type_):
         if not isinstance(value, (str, int)) or isinstance(value, bool):
@@ -141,7 +205,7 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
         if type(value) is not int:
             raise ValueError(f"{path}: integer literal required")
     elif pa.types.is_floating(type_):
-        if type(value) not in (int, float):
+        if type(value) not in (int, float, Decimal):
             raise ValueError(f"{path}: numeric literal required")
     elif pa.types.is_string(type_) or pa.types.is_large_string(type_):
         if not isinstance(value, str):

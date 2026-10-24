@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import fields, is_dataclass
 from datetime import date, time
+from decimal import Decimal
 from enum import Enum
 from typing import cast
 
@@ -96,6 +97,7 @@ class DeclarationReachability:
                 bytes,
                 int,
                 float,
+                Decimal,
                 Enum,
                 type,
                 astx.SourceLocation,

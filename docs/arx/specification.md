@@ -21,26 +21,65 @@ lowering uses conditional blocks and a merge value rather than eager LLVM
 
 ### Fixed-width integer overflow
 
-Non-nullable scalar integer addition, subtraction, and multiplication use modulo
-`2^N` arithmetic for an `N`-bit result. Scalar integer narrowing discards high
-bits and therefore uses the same modulo rule. These operations do not trap on
-overflow and optimization must not assume that signed overflow is impossible.
-The compiled datatype conformance module covers signed boundary wrap,
-subtraction wrap, multiplication wrap, and narrowing.
+Fixed-width signed and unsigned 8–64-bit integer `+`, `-`, `*`, negation, and
+supported increment/decrement operations are checked in every build. IRx
+fixed-width range induction is checked too; the stdlib `range` helper uses wider
+endpoint arithmetic to terminate safely on an overshooting step. Overflow fails
+before storing or publishing a result; an unused expression is still checked.
+Provably evaluated invalid constant operations are semantic errors. Untaken
+branches and short-circuited operands do not execute checks.
 
-[Nullable and Series arithmetic](collections.md#nullable-scalars-and-series-expressions)
-instead uses checked integer operations and explicit null propagation.
+Implicit numeric conversions preserve the **entire source type's domain**. Mixed
+operands use the smallest supported lossless common domain: `i32 + u32` computes
+in `i64`, and `i32 + f32` in `f64`; `i64 + u64` and `i64 + f64` require an
+explicit conversion. A destination annotation never widens a computation
+retroactively. Same-type templates keep their selected type; widen operands or
+select `math.square<i64>(narrow)` before multiplication, not afterward.
+
+Source integer literals use the declared/argument/peer type when representable,
+otherwise default to `i32`, then `i64`. Uncontextualized floating literals
+default to `f32`. Decimal literals retain their exact value until type
+selection, then round directly to the chosen binary format, nearest with ties to
+even. Explicitly typed ASTx literals are never recontextualized. Generic
+inference uses concrete arguments before contextualizing literal arguments,
+independently of argument order; literals do not make conflicting concrete
+same-`T` arguments compatible.
+
+`cast(value, Type)` checks integer range, including equal-width signedness
+changes. Float-to-integer casts truncate toward zero, then require a finite,
+representable result. Explicit integer-to-float and float-narrowing casts may
+round; finite input must not become infinity. Existing floating NaN, infinity,
+signed zero, and ordinary IEEE floating arithmetic are preserved. Implicit
+integer-to-float conversions may not discard integer precision.
+
+Intentional modulo arithmetic requires `wrapping_add`, `wrapping_sub`,
+`wrapping_mul`, or `wrapping_cast(value, IntegerType)`. Binary wrapping operands
+must have the same integer type, or an explicit lossless specialization such as
+`wrapping_add<i64>(narrow, 1)`. Boolean and floating operands are rejected.
+These forms do not change surrounding expressions' checked behavior.
 
 ### Integer division and remainder failures
 
-Signed integer division truncates toward zero. Integer division or remainder
-fails before executing the LLVM operation when the divisor is zero. Signed
-minimum divided by or reduced modulo negative one also fails because its
-quotient is not representable. Failure emits the machine-readable
-`ARX_RUNTIME_FAIL` record with code `ARX-RUNTIME-ARITHMETIC-001` and exits with
-status 1. The same guards apply to signed and unsigned scalar widths supported
-by the compiler. Floating-point division and vector division remain outside this
-rule until their non-finite and per-lane behavior is specified.
+Signed integer division truncates toward zero. Division and remainder reject
+zero divisors and signed minimum with negative one before LLVM executes the
+operation. Integer SIMD lowering checks every supplied active lane; no masked
+source-vector API is implied. Floating-point division follows IEEE behavior.
+
+Dynamic scalar arithmetic failures emit `ARX_RUNTIME_FAIL` with
+`ARX-RUNTIME-ARITHMETIC-001`; conversion failures use
+`ARX-RUNTIME-CONVERSION-001`. Both terminate with status 1 regardless of
+optimization. They are not catchable exceptions and do not promise stack
+unwinding or cleanup of caller-owned resources.
+
+[Nullable and Series arithmetic](collections.md#nullable-scalars-and-series-expressions)
+retains checked Arrow kernels, status checking, null propagation, and checked
+reduction accumulators. Nullable scalar casts skip invalid payloads entirely.
+Tensor element operations use scalar checks; bulk tensor arithmetic and
+nonidentity Series/tensor casts are rejected rather than reinterpreting storage.
+List length/search results must fit their public `i32` domain. Numeric runtime
+unions require lossless shared storage; generic union bounds are membership
+constraints and need no runtime storage. Raw FFI internals and external native
+functions remain outside these language guarantees.
 
 ## Ownership
 

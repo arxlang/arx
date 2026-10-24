@@ -290,6 +290,7 @@ def resolve_table_io(
                         astx.LiteralInt8,
                         astx.LiteralInt16,
                         astx.LiteralInt32,
+                        astx.LiteralInteger,
                         astx.LiteralInt64,
                     ),
                 ):

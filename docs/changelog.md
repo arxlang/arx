@@ -3,16 +3,39 @@
 
 ## Unreleased
 
+### Checked numeric promotion (breaking)
+
+- Numeric promotion and implicit conversions are now lossless across the whole
+  source domain. Mixed signed/unsigned comparisons no longer reinterpret
+  negatives; combinations without a common domain require an explicit cast.
+- Integer arithmetic and numeric casts now fail on out-of-range results in all
+  builds. Source literals retain context and signed minima until type checking.
+  `math.square` preserves its selected type and fails on overflow; widen its
+  input or explicitly select a wider specialization before computing.
+- Use `wrapping_add`, `wrapping_sub`, `wrapping_mul`, and `wrapping_cast` only
+  where modulo arithmetic is intended. Ordinary narrowing no longer truncates
+  silently. Nonidentity Series/tensor casts are explicitly unsupported.
+- ArxJIT lowering shares IRx numeric promotion; integer source literals use
+  i32-then-i64 inference and must remain exact in floating contexts. Python
+  `@jit` fallback and the reserved `int` annotation (i64) are unchanged.
+- ASTx contextual numeric nodes are `LiteralInteger` and `LiteralFloat`, in
+  `astx.literals`. `LiteralFloat` accepts exact decimal text or `Decimal`, not
+  Python `float`. These replace `SourceInteger`/`SourceFloat` without aliases.
+  IRx preserves literal payloads and resolves types and rounded values only in
+  semantic metadata, avoiding decimal-to-f32/f16 double rounding.
+- Direct ASTx/IRx clients must analyze numeric nodes before lowering. Arithmetic
+  and conversion plans, including union storage, are authoritative sidecars.
+  See the [numeric safety contract](arx/specification.md#fixed-width-integer-overflow).
+
 ### Integer helper safety and templates
 
 - `range` now terminates without wrapping when a step crosses an i32 endpoint;
   it still returns an eagerly allocated `list[i32]`.
 - `stdlib.math` scalar helpers now use a shared signed-integer template bound
   for `i8`, `i16`, `i32`, and `i64`, preserving the selected result type.
-- `stdlib.math.abs` on the selected type's minimum and `clamp` with reversed
-  bounds now fail checked assertions instead of returning incorrect values.
-  These failures remain fatal, not catchable exceptions. `square` wraps at the
-  selected width.
+- `stdlib.math.abs` on the selected type's minimum now fails checked arithmetic;
+  `clamp` with reversed bounds fails an assertion. Both failures remain fatal,
+  not catchable exceptions.
 
 ### Migration notes
 

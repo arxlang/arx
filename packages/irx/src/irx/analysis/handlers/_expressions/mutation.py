@@ -18,6 +18,7 @@ from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.handlers.class_helpers import (
     ClassMemberFormattingVisitorMixin,
 )
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -452,8 +453,11 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
           node:
             type: astx.VariableAssignment
         """
-        self.visit(node.value)
         symbol = self.context.scopes.resolve(node.name)
+        contextualize_literal(
+            node.value, symbol.type_ if symbol is not None else None
+        )
+        self.visit(node.value)
         if symbol is None:
             self.context.diagnostics.add(
                 f"cannot assign to unresolved name '{node.name}'",
