@@ -18,6 +18,11 @@
 - ArxJIT lowering shares IRx numeric promotion; integer source literals use
   i32-then-i64 inference and must remain exact in floating contexts. Python
   `@jit` fallback and the reserved `int` annotation (i64) are unchanged.
+- ASTx contextual numeric nodes are `LiteralInteger` and `LiteralFloat`, in
+  `astx.literals`. `LiteralFloat` accepts exact decimal text or `Decimal`, not
+  Python `float`. These replace `SourceInteger`/`SourceFloat` without aliases.
+  IRx preserves literal payloads and resolves types and rounded values only in
+  semantic metadata, avoiding decimal-to-f32/f16 double rounding.
 - Direct ASTx/IRx clients must analyze numeric nodes before lowering. Arithmetic
   and conversion plans, including union storage, are authoritative sidecars.
   See the [numeric safety contract](arx/specification.md#fixed-width-integer-overflow).

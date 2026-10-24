@@ -797,7 +797,7 @@ class Lowerer:
         if isinstance(value, bool):
             return bool_
         if isinstance(value, int):
-            default = default_numeric_literal_type(astx.SourceInteger(value))
+            default = default_numeric_literal_type(astx.LiteralInteger(value))
             return i32 if isinstance(default, astx.Int32) else i64
         if isinstance(value, float):
             return f64

@@ -187,6 +187,7 @@ from astx.literals import (
     LiteralDate,
     LiteralDateTime,
     LiteralDict,
+    LiteralFloat,
     LiteralFloat16,
     LiteralFloat32,
     LiteralFloat64,
@@ -195,6 +196,7 @@ from astx.literals import (
     LiteralInt32,
     LiteralInt64,
     LiteralInt128,
+    LiteralInteger,
     LiteralList,
     LiteralNone,
     LiteralSet,
@@ -230,7 +232,6 @@ from astx.nullable import (
     NullFill,
     SeriesReduction,
 )
-from astx.numeric import SourceFloat, SourceInteger
 from astx.numeric_mode import NumericMode
 from astx.operators import (
     AssignmentExpr,
@@ -497,6 +498,7 @@ __all__ = [
     "LiteralDate",
     "LiteralDateTime",
     "LiteralDict",
+    "LiteralFloat",
     "LiteralFloat16",
     "LiteralFloat32",
     "LiteralFloat64",
@@ -505,6 +507,7 @@ __all__ = [
     "LiteralInt32",
     "LiteralInt64",
     "LiteralInt128",
+    "LiteralInteger",
     "LiteralList",
     "LiteralNone",
     "LiteralSet",
@@ -557,8 +560,6 @@ __all__ = [
     "SetComprehension",
     "SetType",
     "SignedInteger",
-    "SourceFloat",
-    "SourceInteger",
     "SourceLocation",
     "Starred",
     "StatementType",

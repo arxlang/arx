@@ -5,7 +5,6 @@ title: Contextual numeric literals and constant representability.
 from __future__ import annotations
 
 import math
-import struct
 
 from typing import cast
 
@@ -14,6 +13,7 @@ import astx
 from public import private, public
 
 from irx.analysis.context import SemanticContext
+from irx.analysis.float_literals import rounded_float
 from irx.analysis.numeric_policy import FLOAT_PRECISIONS, integer_bounds
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
@@ -23,7 +23,7 @@ from irx.typecheck import typechecked
 @public
 @typechecked
 def default_numeric_literal_type(
-    node: astx.SourceInteger | astx.SourceFloat,
+    node: astx.LiteralInteger | astx.LiteralFloat,
 ) -> astx.DataType:
     """
     title: >-
@@ -32,11 +32,11 @@ def default_numeric_literal_type(
       Contextual typing and representability remain semantic responsibilities.
     parameters:
       node:
-        type: astx.SourceInteger | astx.SourceFloat
+        type: astx.LiteralInteger | astx.LiteralFloat
     returns:
       type: astx.DataType
     """
-    if isinstance(node, astx.SourceFloat):
+    if isinstance(node, astx.LiteralFloat):
         return astx.Float32()
     return (
         astx.Int32() if -(1 << 31) <= node.value < (1 << 31) else astx.Int64()
@@ -49,7 +49,8 @@ def contextualize_literal(
     value: astx.AST | None, target: astx.DataType | None
 ) -> None:
     """
-    title: Apply context to source literals, never to typed computations.
+    title: >-
+      Record expected types for exact literals, never for typed computations.
     parameters:
       value:
         type: astx.AST | None
@@ -59,21 +60,22 @@ def contextualize_literal(
     if isinstance(target, astx.NullableType):
         target = target.value_type
     if isinstance(
-        value, (astx.SourceInteger, astx.SourceFloat)
+        value, (astx.LiteralInteger, astx.LiteralFloat)
     ) and isinstance(target, astx.SeriesType):
         target = target.element_type
+    if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+        info = literal_semantic(value)
+        info.literal_context = None
+        if type(target) in FLOAT_PRECISIONS or (
+            isinstance(value, astx.LiteralInteger)
+            and target is not None
+            and integer_bounds(target) is not None
+        ):
+            info.literal_context = target
+        return
     if target is None:
         return
-    if isinstance(value, astx.SourceInteger) and (
-        integer_bounds(target) is not None or type(target) in FLOAT_PRECISIONS
-    ):
-        value.type_ = target
-    elif (
-        isinstance(value, astx.SourceFloat)
-        and type(target) in FLOAT_PRECISIONS
-    ):
-        value.type_ = target
-    elif isinstance(value, (astx.LiteralList, astx.LiteralSet)):
+    if isinstance(value, (astx.LiteralList, astx.LiteralSet)):
         element: astx.DataType | None = None
         if (
             isinstance(target, astx.ListType)
@@ -101,25 +103,20 @@ def contextualize_literal(
 
 @private
 @typechecked
-def rounded_float(value: int | float, target: astx.DataType) -> float:
+def literal_semantic(node: astx.AST) -> SemanticInfo:
     """
-    title: Round a host value to one supported floating format.
+    title: Obtain a literal's semantic sidecar without modifying its payload.
     parameters:
-      value:
-        type: int | float
-      target:
-        type: astx.DataType
+      node:
+        type: astx.AST
     returns:
-      type: float
+      type: SemanticInfo
     """
-    value = float(value)
-    formats: dict[type[astx.DataType], str] = {
-        astx.Float16: "e",
-        astx.Float32: "f",
-        astx.Float64: "d",
-    }
-    code = formats[type(target)]
-    return float(struct.unpack(code, struct.pack(code, value))[0])
+    info = getattr(node, "semantic", None)
+    if not isinstance(info, SemanticInfo):
+        info = SemanticInfo()
+        setattr(node, "semantic", info)
+    return info
 
 
 @private
@@ -128,7 +125,11 @@ def resolve_numeric_literal(
     node: astx.AST, diagnostics: DiagnosticBag
 ) -> astx.DataType | None:
     """
-    title: Resolve source literals and validate explicitly typed integer nodes.
+    title: Resolve exact or explicitly typed literals into semantic metadata.
+    summary: >-
+      Consume any expected type for this visit; stale prior resolutions never
+      determine a context-typed literal's default. Preserve original values and
+      declared types, including explicitly typed floating payloads.
     parameters:
       node:
         type: astx.AST
@@ -139,17 +140,17 @@ def resolve_numeric_literal(
     """
     if not isinstance(node, astx.Literal):
         return None
+    info = literal_semantic(node)
+    expected = info.literal_context
+    info.literal_context = None
+    info.numeric_constant = None
     target = node.type_
-    if isinstance(node, astx.SourceInteger):
-        if (
-            integer_bounds(node.type_) is None
-            and type(node.type_) not in FLOAT_PRECISIONS
-        ):
-            target = default_numeric_literal_type(node)
-    elif isinstance(node, astx.SourceFloat):
-        node.value = float(node.text)
-        if type(node.type_) not in FLOAT_PRECISIONS:
-            target = default_numeric_literal_type(node)
+    if isinstance(node, (astx.LiteralInteger, astx.LiteralFloat)):
+        target = (
+            expected
+            if expected is not None
+            else default_numeric_literal_type(node)
+        )
     if not isinstance(target, astx.DataType):
         return None
     if isinstance(target, astx.UInt128):
@@ -161,29 +162,20 @@ def resolve_numeric_literal(
         return target
     bounds = integer_bounds(target)
     invalid = False
+    constant: int | float | None = None
     if bounds is not None and isinstance(node.value, int):
-        invalid = not bounds[0] <= node.value <= bounds[1]
-    elif (
-        isinstance(node, (astx.SourceInteger, astx.SourceFloat))
-        and type(target) in FLOAT_PRECISIONS
-    ):
+        constant = node.value
+        invalid = not bounds[0] <= constant <= bounds[1]
+    elif type(target) in FLOAT_PRECISIONS:
         try:
-            rounded = rounded_float(node.value, target)
-            invalid = not math.isfinite(rounded)
-            if isinstance(node, astx.SourceInteger):
-                invalid = invalid or rounded != node.value
-            else:
-                node.value = rounded
-        except (OverflowError, ValueError):
-            invalid = True
-    elif (
-        isinstance(node.value, float)
-        and type(target) in FLOAT_PRECISIONS
-        and math.isfinite(node.value)
-    ):
-        try:
-            node.value = rounded_float(node.value, target)
-            invalid = not math.isfinite(node.value)
+            constant = rounded_float(node.value, target)
+            invalid = (
+                not math.isfinite(constant)
+                if isinstance(node, (astx.LiteralInteger, astx.LiteralFloat))
+                else math.isfinite(node.value) and not math.isfinite(constant)
+            )
+            if isinstance(node, astx.LiteralInteger):
+                invalid = invalid or constant != node.value
         except (OverflowError, ValueError):
             invalid = True
     if invalid:
@@ -192,6 +184,8 @@ def resolve_numeric_literal(
             node=node,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
         )
+    else:
+        info.numeric_constant = constant
     return target
 
 

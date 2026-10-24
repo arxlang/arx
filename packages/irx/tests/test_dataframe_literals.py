@@ -154,3 +154,21 @@ def test_rich_literal_semantics_and_lowering() -> None:
                 astx.VariableDeclaration("frame", bad.type_, value=bad)
             )
         )
+
+
+def test_exact_float_literal_rounds_before_arrow_serialization() -> None:
+    """
+    title: >-
+      Arrow IPC receives the resolved binary value, not a host-rounded decimal.
+    """
+    exact = Decimal("1.000000059604644830901776231257827021181583404541015625")
+    cell = astx.LiteralFloat(exact)
+    expected = 1.00000011920928955078125
+    type_ = astx.DataFrameType([astx.DataFrameColumn("x", astx.Float32())])
+    literal = astx.DataFrameLiteral(
+        [astx.DataFrameLiteralColumn("x", (cell,))], type_=type_
+    )
+    with pa.ipc.open_stream(dataframe_literal_ipc(literal)) as reader:
+        assert reader.read_all()["x"].to_pylist() == [expected]
+    assert cell.value == exact
+    assert type(cell.type_) is astx.DataType

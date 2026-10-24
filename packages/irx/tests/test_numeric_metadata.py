@@ -208,3 +208,40 @@ def test_numeric_cast_requires_conversion_plan() -> None:
     semantic.numeric_conversion = None
     with pytest.raises(LoweringError, match="numeric cast is missing"):
         numeric_visitor().visit(expression)
+
+
+@pytest.mark.parametrize(
+    "value", [astx.LiteralInteger(1), astx.LiteralFloat("1.25")]
+)
+def test_contextual_literal_lowering_requires_resolved_value(
+    value: astx.Literal,
+) -> None:
+    """
+    title: Lowering must not reconstruct an exact literal's converted value.
+    parameters:
+      value:
+        type: astx.Literal
+    """
+    analyze(value)
+    semantic = cast(SemanticInfo, getattr(value, "semantic"))
+    semantic.numeric_constant = None
+    visitor = numeric_visitor()
+    with pytest.raises(LoweringError, match="missing numeric_constant"):
+        visitor.visit(value)
+
+
+def test_contextual_literal_lowering_uses_the_semantic_constant() -> None:
+    """
+    title: >-
+      The backend consumes the resolved value rather than the original decimal.
+    """
+    value = astx.LiteralFloat("1.25")
+    analyze(value)
+    semantic = cast(SemanticInfo, getattr(value, "semantic"))
+    expected = 1.5
+    semantic.numeric_constant = expected
+    visitor = numeric_visitor()
+    visitor.visit(value)
+    (constant,) = visitor.result_stack
+    assert isinstance(constant, ir.Constant)
+    assert constant.constant == expected

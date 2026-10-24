@@ -485,3 +485,63 @@ def test_generic_union_bound_needs_no_runtime_storage(tmp_path: Path) -> None:
         "fn identity(value: T) -> T:\n  return value\n",
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_exact_decimal_literals_across_contexts(
+    tmp_path: Path, optimization: int
+) -> None:
+    """
+    title: >-
+      Exact decimals round once through scalar, container and generic paths.
+    parameters:
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    exact = "1.000000059604644830901776231257827021181583404541015625"
+    definitions = (
+        "type Floating = f32 | f64\n"
+        "@<T: Floating>\n"
+        "fn precise() -> T:\n"
+        f"  return {exact}\n"
+        "fn default_value(value: f32 = " + exact + ") -> f32:\n"
+        "  return value\n"
+        "class Constants:\n"
+        "  @[public, static, constant]\n"
+        f"  value: f32 = {exact}\n"
+        "class Values:\n"
+        "  tiny: i8 = 7\n"
+        f"  wide: f64 = {exact}\n"
+        f"  fn __init__(self, tiny: i8 = 9, wide: f64 = {exact}) -> none:\n"
+        "    assert self.tiny == 7\n"
+        "    assert self.wide == wide\n"
+        "    self.tiny = tiny\n"
+        "    return none\n"
+    )
+    body = f"""var value: f32 = {exact}
+assert value > 1.0
+var negative: f32 = -{exact}
+assert negative < -1.0
+var half: f16 = 1.00048828125000000000000000000001
+assert half > 1.0
+var present: nullable[f32] = {exact}
+assert fill_null(present, 0.0) == value
+var items: list[f32]
+items.append({exact})
+assert items[0] == value
+var vector: tensor[f32, 1] = [{exact}]
+assert vector[0] == value
+assert Constants.value == value
+assert default_value() == value
+assert precise<f32>() == value
+var wide: f64 = precise<f64>()
+assert wide < cast(value, f64)
+var instance: Values = Values()
+assert instance.tiny == 9
+assert instance.wide == wide
+var negzero: f32 = -0.0
+assert (1.0 / negzero) < 0.0"""
+    result = run_numeric(tmp_path, body, optimization, definitions)
+    assert result.returncode == 0, result.stderr

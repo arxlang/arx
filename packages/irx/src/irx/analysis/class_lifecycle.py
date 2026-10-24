@@ -463,6 +463,7 @@ def constructor_arguments(
                 continue
             supplied[param.name] = len(evaluations)
             evaluations.append(cast(astx.DataType, param.default))
+            contextualize_literal(param.default, param.type_)
             analyzer.visit(param.default)
         index = supplied[param.name]
         indices.append(index)

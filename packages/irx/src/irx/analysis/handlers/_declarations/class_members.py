@@ -869,6 +869,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                                 continue
                             value = initializer.value
                             body.append(value)
+                            contextualize_literal(
+                                value, initializer.field.member.type_
+                            )
                             self.visit(value)
                             self._semantic(
                                 value

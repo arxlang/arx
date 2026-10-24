@@ -204,7 +204,7 @@ def analyze_numeric_arguments(
     }
     expected: astx.DataType | None
     for value, slot in zip(values, slots):
-        if isinstance(value, (astx.SourceInteger, astx.SourceFloat)):
+        if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
             continue
         if slot < len(function.signature.parameters):
             expected = function.signature.parameters[slot].type_
@@ -220,7 +220,7 @@ def analyze_numeric_arguments(
             ):
                 selected.setdefault(expected.name, actual)
     for value, slot in zip(values, slots):
-        if not isinstance(value, (astx.SourceInteger, astx.SourceFloat)):
+        if not isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
             continue
         expected = (
             function.signature.parameters[slot].type_

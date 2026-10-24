@@ -249,25 +249,25 @@ class ExpressionParserMixin(ParserMixinBase):
         lhs = self.parse_unary()
         return self.parse_bin_op_rhs(0, lhs)
 
-    def parse_int_expr(self) -> astx.SourceInteger:
+    def parse_int_expr(self) -> astx.LiteralInteger:
         """
         title: Parse the integer expression.
         returns:
-          type: astx.SourceInteger
+          type: astx.LiteralInteger
         """
-        result = astx.SourceInteger(
+        result = astx.LiteralInteger(
             self.tokens.cur_tok.value, loc=self.tokens.cur_tok.location
         )
         self.tokens.get_next_token()
         return result
 
-    def parse_float_expr(self) -> astx.SourceFloat:
+    def parse_float_expr(self) -> astx.LiteralFloat:
         """
         title: Parse the float expression.
         returns:
-          type: astx.SourceFloat
+          type: astx.LiteralFloat
         """
-        result = astx.SourceFloat(
+        result = astx.LiteralFloat(
             self.tokens.cur_tok.source_text or str(self.tokens.cur_tok.value),
             loc=self.tokens.cur_tok.location,
         )
@@ -911,7 +911,7 @@ class ExpressionParserMixin(ParserMixinBase):
             )
 
         for axis, index in enumerate(indices):
-            if not isinstance(index, (astx.LiteralInt32, astx.SourceInteger)):
+            if not isinstance(index, (astx.LiteralInt32, astx.LiteralInteger)):
                 continue
             extent = layout.shape[axis]
             if index.value < 0 or index.value >= extent:
@@ -960,15 +960,15 @@ class ExpressionParserMixin(ParserMixinBase):
                 f"Unary operator '{op_code}' requires an expression operand.",
                 op_loc,
             )
-        if op_code in {"+", "-"} and isinstance(operand, astx.SourceInteger):
-            return astx.SourceInteger(
+        if op_code in {"+", "-"} and isinstance(operand, astx.LiteralInteger):
+            return astx.LiteralInteger(
                 -operand.value if op_code == "-" else operand.value, loc=op_loc
             )
-        if op_code in {"+", "-"} and isinstance(operand, astx.SourceFloat):
-            text = operand.text
+        if op_code in {"+", "-"} and isinstance(operand, astx.LiteralFloat):
+            value = operand.value
             if op_code == "-":
-                text = text[1:] if text.startswith("-") else "-" + text
-            return astx.SourceFloat(text, loc=op_loc)
+                value = value.copy_negate()
+            return astx.LiteralFloat(value, loc=op_loc)
         unary = astx.UnaryOp(op_code, operand, loc=op_loc)
         unary.type_ = cast(
             astx.ExprType,

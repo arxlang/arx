@@ -152,7 +152,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(node).resource_ownership = None
         self._semantic(node).resolved_resource_store = None
         self._semantic(node).lifecycle_field_store = False
-        source_literal = (astx.SourceInteger, astx.SourceFloat)
+        source_literal = (astx.LiteralInteger, astx.LiteralFloat)
         rhs_visited = False
         if isinstance(node.lhs, source_literal) and not isinstance(
             node.rhs, source_literal
@@ -438,7 +438,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         """
         self._semantic(node).resource_ownership = None
         if node.mode is astx.NumericMode.CHECKED and not (
-            isinstance(node.value, astx.SourceInteger)
+            isinstance(node.value, astx.LiteralInteger)
             and is_float_type(
                 node.target_type.value_type
                 if isinstance(node.target_type, astx.NullableType)

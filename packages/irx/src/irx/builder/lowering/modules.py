@@ -19,6 +19,7 @@ from irx.builder.core import (
     semantic_struct_key,
     semantic_struct_name,
 )
+from irx.builder.diagnostics import require_semantic_metadata
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.types import is_fp_type, is_int_type
 from irx.typecheck import typechecked
@@ -58,6 +59,20 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         """
         if value is None or isinstance(value, astx.Undefined):
             return self._default_global_initializer(llvm_type)
+        if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+            semantic = require_semantic_metadata(
+                getattr(value, "semantic", None),
+                node=value,
+                metadata="semantic",
+                context="global numeric literal",
+            )
+            constant = require_semantic_metadata(
+                semantic.numeric_constant,
+                node=value,
+                metadata="numeric_constant",
+                context="global numeric literal",
+            )
+            return ir.Constant(llvm_type, constant)
         if isinstance(value, astx.LiteralBoolean):
             return ir.Constant(llvm_type, int(value.value))
         if isinstance(
@@ -66,7 +81,6 @@ class ModuleVisitorMixin(ClassVisitorMixin):
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
-                astx.SourceInteger,
                 astx.LiteralInt64,
                 astx.LiteralUInt8,
                 astx.LiteralUInt16,
@@ -81,7 +95,6 @@ class ModuleVisitorMixin(ClassVisitorMixin):
             (
                 astx.LiteralFloat16,
                 astx.LiteralFloat32,
-                astx.SourceFloat,
                 astx.LiteralFloat64,
             ),
         ):

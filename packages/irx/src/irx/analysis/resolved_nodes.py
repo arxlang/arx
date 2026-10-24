@@ -1949,6 +1949,9 @@ class SemanticInfo:
     attributes:
       numeric_storage:
         type: astx.DataType | None
+      literal_context:
+        type: astx.DataType | None
+        description: Expected literal type, consumed by the next literal visit.
       numeric_constant:
         type: int | float | None
       numeric_conversion:
@@ -2024,6 +2027,7 @@ class SemanticInfo:
     """
 
     numeric_storage: astx.DataType | None = None
+    literal_context: astx.DataType | None = None
     numeric_constant: int | float | None = None
     numeric_conversion: NumericConversion | None = None
     numeric_mode: astx.NumericMode = astx.NumericMode.CHECKED

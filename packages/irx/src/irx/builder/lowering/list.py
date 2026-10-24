@@ -218,7 +218,7 @@ class ListVisitorMixin(VisitorMixinBase):
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
-                astx.SourceInteger,
+                astx.LiteralInteger,
                 astx.LiteralInt64,
                 astx.LiteralUInt8,
                 astx.LiteralUInt16,

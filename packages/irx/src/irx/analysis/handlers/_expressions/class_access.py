@@ -222,11 +222,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
                 else self._expr_type(arg)
             )
         if not self._require_value_expression(
@@ -238,7 +238,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         receiver_type = self._expr_type(node.receiver)
         if isinstance(receiver_type, astx.FileType):
             for arg in call_evaluations(node):
-                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
                     self.visit(arg)
             resolve_file_method(cast(SemanticAnalyzerCore, self), node)
             return
@@ -370,11 +370,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         self.visit(node.receiver)
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
                 else self._expr_type(arg)
             )
         if not self._require_value_expression(
@@ -481,11 +481,11 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):
-            if not isinstance(arg, (astx.SourceInteger, astx.SourceFloat)):
+            if not isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat)):
                 self.visit(arg)
             arg_types.append(
                 default_numeric_literal_type(arg)
-                if isinstance(arg, (astx.SourceInteger, astx.SourceFloat))
+                if isinstance(arg, (astx.LiteralInteger, astx.LiteralFloat))
                 else self._expr_type(arg)
             )
         class_ = self._resolve_named_class(node.class_name, node=node)

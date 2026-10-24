@@ -458,7 +458,7 @@ def _infer_element_type(value: astx.Literal) -> astx.DataType:
     returns:
       type: astx.DataType
     """
-    if isinstance(value, (astx.SourceInteger, astx.SourceFloat)):
+    if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
         return default_numeric_literal_type(value)
     if isinstance(value, (astx.LiteralInt8, astx.LiteralUTF8Char)):
         return astx.Int8()
@@ -505,7 +505,7 @@ def _validate_scalar_literal(
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
-                astx.SourceInteger,
+                astx.LiteralInteger,
                 astx.LiteralInt64,
             ),
         ):
@@ -522,10 +522,10 @@ def _validate_scalar_literal(
                 astx.LiteralInt8,
                 astx.LiteralInt16,
                 astx.LiteralInt32,
-                astx.SourceInteger,
+                astx.LiteralInteger,
                 astx.LiteralInt64,
                 astx.LiteralFloat32,
-                astx.SourceFloat,
+                astx.LiteralFloat,
                 astx.LiteralFloat64,
             ),
         ):
@@ -571,10 +571,10 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
     returns:
       type: astx.Literal
     """
-    if isinstance(value, astx.SourceInteger):
-        return astx.SourceInteger(value.value, loc=value.loc)
-    if isinstance(value, astx.SourceFloat):
-        return astx.SourceFloat(value.text, loc=value.loc)
+    if isinstance(value, astx.LiteralInteger):
+        return astx.LiteralInteger(value.value, loc=value.loc)
+    if isinstance(value, astx.LiteralFloat):
+        return astx.LiteralFloat(value.value, loc=value.loc)
     if isinstance(value, astx.LiteralInt8):
         return astx.LiteralInt8(value.value)
     if isinstance(value, astx.LiteralInt16):

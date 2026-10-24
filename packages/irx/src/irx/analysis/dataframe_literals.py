@@ -16,6 +16,7 @@ from public import private
 
 from irx.analysis.numeric_literals import (
     contextualize_literal,
+    numeric_constant,
     resolve_numeric_literal,
 )
 from irx.analysis.numeric_policy import SIGNED_TYPES, UNSIGNED_TYPES
@@ -53,7 +54,11 @@ def numeric_literal_cell(
     value = getattr(node, "value", None)
     if pa.types.is_integer(type_) and type(value) is not int:
         raise ValueError(f"{path}: integer literal required")
-    if pa.types.is_floating(type_) and type(value) not in (int, float):
+    if pa.types.is_floating(type_) and type(value) not in (
+        int,
+        float,
+        Decimal,
+    ):
         raise ValueError(f"{path}: numeric literal required")
     classes: dict[type[astx.DataType], int]
     if pa.types.is_signed_integer(type_):
@@ -79,7 +84,7 @@ def numeric_literal_cell(
             f"{path}: numeric literal is not losslessly "
             f"representable in {type_}"
         )
-    return getattr(node, "value", None)
+    return numeric_constant(node)
 
 
 @private
@@ -200,7 +205,7 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
         if type(value) is not int:
             raise ValueError(f"{path}: integer literal required")
     elif pa.types.is_floating(type_):
-        if type(value) not in (int, float):
+        if type(value) not in (int, float, Decimal):
             raise ValueError(f"{path}: numeric literal required")
     elif pa.types.is_string(type_) or pa.types.is_large_string(type_):
         if not isinstance(value, str):

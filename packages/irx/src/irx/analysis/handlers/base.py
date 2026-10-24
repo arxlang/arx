@@ -1013,7 +1013,11 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         info = self._semantic(node)
         info.resolved_type = type_
-        if type_ is not None and hasattr(node, "type_"):
+        if (
+            type_ is not None
+            and hasattr(node, "type_")
+            and not isinstance(node, (astx.LiteralInteger, astx.LiteralFloat))
+        ):
             try:
                 setattr(node, "type_", clone_type(type_))
             except Exception:
@@ -2017,12 +2021,6 @@ class SemanticAnalyzerCore(BaseVisitor):
         """
         literal_type = resolve_numeric_literal(node, self.context.diagnostics)
         self._set_type(node, literal_type or getattr(node, "type_", None))
-        if (
-            isinstance(node, astx.Literal)
-            and isinstance(node.value, (int, float))
-            and not isinstance(node.value, bool)
-        ):
-            self._semantic(node).numeric_constant = node.value
 
     def _guarantees_return(self, node: astx.AST) -> bool:
         """
