@@ -20,8 +20,11 @@ from arx.settings import (
 )
 from arxpy import ArtifactKind, CompileError, Compiler
 from irx.builder.runtime.registry import get_default_runtime_feature_registry
-from irx.diagnostics import DiagnosticCodes
+from irx.diagnostics import DiagnosticCodes, NativeCompileError
+from irx.native import NativeArtifact
 from llvmlite import binding as llvm
+
+from .native_support import NativeObjectCache
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "native-package"
 DOC = "```\ntitle: Native dependency consumer\n```\n"
@@ -50,6 +53,42 @@ fn main() -> i32:
   assert bridge.fixture_release(token=replacement) == 0
   return 0
 """
+
+
+def test_native_object_reuse_tracks_headers_and_flags(tmp_path: Path) -> None:
+    """
+    title: Reuse only identical compiler inputs and never cache failed builds.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("native object reuse requires clang")
+    header = tmp_path / "value.h"
+    header.write_text("#ifndef VALUE\n#define VALUE 1\n#endif\n")
+    source = tmp_path / "value.c"
+    source.write_text('#include "value.h"\nint value(void) {return VALUE;}\n')
+    cache = NativeObjectCache(tmp_path, tmp_path)
+    artifact = NativeArtifact("c_source", source)
+    first = cache.compile(artifact, tmp_path, "clang")
+    assert cache.compile(artifact, tmp_path, "clang") == first
+    header.write_text("#ifndef VALUE\n#define VALUE 2\n#endif\n")
+    second = cache.compile(artifact, tmp_path, "clang")
+    third = cache.compile(
+        NativeArtifact("c_source", source, compile_flags=("-DVALUE=3",)),
+        tmp_path,
+        "clang",
+    )
+    fourth = cache.compile(
+        NativeArtifact("c_source", source, compile_flags=("-DVALUE=4",)),
+        tmp_path,
+        "clang",
+    )
+    assert len({p.read_bytes() for p in (first, second, third, fourth)}) == 4
+    source.write_text("invalid C source\n")
+    with pytest.raises(NativeCompileError):
+        cache.compile(artifact, tmp_path, "clang")
+    assert len(cache.objects) == 4
 
 
 def project(tmp_path: Path) -> Path:

@@ -81,7 +81,8 @@ groups:
             help: Specify parameters to be used for tests
             type: string
             default: >-
-              -vv --cov=arx --cov-fail-under=86
+              -vv -n 2 --dist=loadfile --durations=20
+              --cov=arx --cov-fail-under=86
               --cov-report=term-missing --no-cov-on-fail
         run: pytest ${{ args.path }} ${{ args.params }}
 

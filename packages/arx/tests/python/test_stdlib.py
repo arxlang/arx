@@ -43,6 +43,25 @@ def test_bundled_stdlib_package_data_is_present() -> None:
     includes = pyproject["tool"]["poetry"]["include"]
     assert "src/arx/stdlib/**/*.x" in includes
 
+    # Check every declaration's bound once instead of rejecting every type
+    # through the entire module pipeline for each helper separately.
+    ArxIO.file_to_buffer(str(stdlib_root / "math.x"))
+    module = Parser().parse(Lexer().lex(), "math")
+    helpers = {
+        node.prototype.name: node
+        for node in module.nodes
+        if isinstance(node, irx_astx.FunctionDef)
+    }
+    for name in ("abs", "min", "max", "clamp", "square"):
+        (parameter,) = irx_astx.get_template_params(helpers[name])
+        assert isinstance(parameter.bound, irx_astx.UnionType)
+        assert {type(member) for member in parameter.bound.members} == {
+            irx_astx.Int8,
+            irx_astx.Int16,
+            irx_astx.Int32,
+            irx_astx.Int64,
+        }
+
 
 def test_file_import_resolver_loads_stdlib_from_bundled_package(
     tmp_path: Path,
@@ -159,19 +178,15 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "helper,arity",
-    [("abs", 1), ("min", 2), ("max", 2), ("clamp", 3), ("square", 1)],
-)
-@pytest.mark.parametrize(
-    "type_,value",
+    "helper,arity,type_,value",
     [
-        ("f32", "1.0"),
-        ("f64", "1.0"),
-        ("u8", "cast(1, u8)"),
-        ("u64", "cast(1, u64)"),
-        ("bool", "True"),
-        ("nullable[i32]", "none"),
-        ("str", '"1"'),
+        ("abs", 1, "f32", "1.0"),
+        ("min", 2, "f64", "1.0"),
+        ("max", 2, "u8", "cast(1, u8)"),
+        ("clamp", 3, "u64", "cast(1, u64)"),
+        ("square", 1, "bool", "True"),
+        ("abs", 1, "nullable[i32]", "none"),
+        ("min", 2, "str", '"1"'),
     ],
 )
 @pytest.mark.parametrize("explicit", [False, True])
@@ -180,6 +195,9 @@ def test_math_templates_reject_unsupported_types(
 ) -> None:
     """
     title: Reject types outside the shared signed bound before LLVM lowering.
+    summary: >-
+      Cover every helper, rejected type, and inferred/explicit call form
+      without repeating the shared SignedInteger bound's Cartesian product.
     parameters:
       helper:
         type: str

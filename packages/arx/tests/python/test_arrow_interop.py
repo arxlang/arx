@@ -97,12 +97,13 @@ def compile_program(source: str, path: Path) -> None:
     builder = ArxBuilder()
     root = ParsedModule("arrow_test", module)
     resolver = FileImportResolver(())
-    llvm.parse_assembly(builder.translate_modules(root, resolver)).verify()
+    text = builder.translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
     assert (
         "record_batch"
         in builder.translator.runtime_features.active_feature_names()
     )
-    builder.build_modules(root, resolver, str(path))
+    builder._build_from_ir_result(text, str(path), True, "auto")
 
 
 @pytest.fixture(scope="module", params=("file", "stream"))

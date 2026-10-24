@@ -109,9 +109,17 @@ def run_numeric(
 
 
 @pytest.mark.parametrize("optimization", [0, 3])
-@pytest.mark.parametrize("width", [8, 16, 32, 64])
-@pytest.mark.parametrize("unsigned", [False, True])
-@pytest.mark.parametrize("operator", ["+", "-", "*"])
+@pytest.mark.parametrize(
+    "operator,unsigned,width",
+    [
+        ("+", False, 8),
+        ("+", True, 32),
+        ("-", False, 64),
+        ("-", True, 8),
+        ("*", False, 16),
+        ("*", True, 64),
+    ],
+)
 def test_native_integer_overflow(
     tmp_path: Path,
     optimization: int,
@@ -120,8 +128,11 @@ def test_native_integer_overflow(
     operator: str,
 ) -> None:
     """
-    title: >-
-      Every supported width fails before publication in optimized builds too.
+    title: Each signed/unsigned guard reports failure at O0 and O3.
+    summary: >-
+      IRx's checked-integer oracle covers the complete width/operator matrix.
+      Here every width participates in representative frontend-to-runtime
+      checks, including diagnostics and failure before output publication.
     parameters:
       tmp_path:
         type: Path

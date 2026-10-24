@@ -87,6 +87,11 @@ checking. A user-facing API change requires tests and a concise code contract,
 not an additional API reference page. Update a short guide or example only when
 the workflow or important operational contract changes.
 
+Do not add a document per feature or fix. Prefer updating the existing contract
+or guide over creating another page. Unless explicitly requested, keep
+investigation diaries and test-result catalogs out of the repository; report
+validation in the PR or CI output. Preserve required source docstrings.
+
 Existing generated reference output stays generated. Do not hand-edit it. Keep
 `scripts/gen_api_docs.py` and its Quarto pre-render hook working; do not expand
 their output or build a new documentation platform for an unrelated API change.
@@ -326,14 +331,25 @@ extract -> validate -> resolve_signature -> lower
 
 ## Tests, Documentation, And Examples
 
-- Add focused tests at the earliest layer responsible for the behavior, plus
-  integration tests at every affected package boundary.
+- Extend existing tests and fixtures first. Add cases only for distinct current
+  contracts or failure modes not already covered, not one test per PR or bug ID.
+- Put detailed cases at the earliest responsible layer and representative
+  integration tests at changed package boundaries. Do not repeat full matrices
+  across layers; each parameter dimension must address a distinct risk.
+- Reuse verified IR and compilation fixtures rather than rebuilding identical
+  programs for different inputs. Native artifact reuse must respect source,
+  headers, flags, target, compiler, and ABI; isolate execution and mutable
+  state.
+- Retire tests that only preserve intentionally removed pre-2.0 behavior.
+  Consolidate regressions only when the same invariant remains covered or was
+  intentionally removed, never merely because a test is old. Preserve meaningful
+  ownership, cleanup, diagnostics, overflow, and data-integrity coverage.
 - Arx Python tests live in `packages/arx/tests/python/`; compiled Arx tests live
   in `packages/arx/tests/arx/`.
 - ASTx, IRx, ArxPy, ArxJIT, and AIX tests live under their respective
   `packages/<name>/tests/` trees.
 - Parser or syntax changes need lexer/parser coverage and at least one relevant
-  example or compiled-language test.
+  example or compiled-language test; reuse existing coverage where sufficient.
 - Codegen/control-flow changes need a translate-path regression, normally in
   `packages/arx/tests/python/test_codegen_ast_output.py`, and a build/run test
   when behavior depends on linked execution and the toolchain is available.
@@ -366,6 +382,12 @@ makim <package>.typecheck
 makim <package>.lint
 makim <package>.ci
 ```
+
+For expensive test changes, measure setup/compilation and execution separately
+(for example, `pytest --durations=20`) and report before/after evidence.
+Eliminate repeated work before raising timeouts or adding parallelism; do not
+weaken assertions, skip required cases, or lower coverage gates for a faster
+green run.
 
 Repository-wide and documentation checks are:
 
@@ -433,7 +455,8 @@ risks or checks rather than inventing confidence.
 
 Before finalizing a change, verify as applicable:
 
-- [ ] behavior changes have focused tests
+- [ ] behavior changes have focused, non-duplicative coverage; expensive test
+      additions justify their runtime and obsolete cases are removed or updated
 - [ ] new public APIs consider Python ecosystem ergonomics, with common/advanced
       examples in the PR or tests and concise accurate contracts next to code
 - [ ] intentional breaking changes update affected callers and necessary guides
