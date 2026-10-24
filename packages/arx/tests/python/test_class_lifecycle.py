@@ -72,9 +72,10 @@ def run_class(
         pytest.skip("native lifecycle execution requires clang")
     module = parsed(declarations, body)
     builder = ArxBuilder()
-    llvm.parse_assembly(builder.translate(module)).verify()
+    text = builder.translate(module)
+    llvm.parse_assembly(text).verify()
     output = tmp_path / "program"
-    builder.build(module, str(output))
+    builder._build_from_ir_result(text, str(output), True, "auto")
     return subprocess.run(
         [str(output)],
         cwd=tmp_path,

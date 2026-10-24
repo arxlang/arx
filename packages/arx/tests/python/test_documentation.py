@@ -86,9 +86,10 @@ def test_documented_program(
     root = ParsedModule("guide", inject_ambient_builtin_imports(module))
     resolver = FileImportResolver(())
     builder = ArxBuilder()
-    llvm.parse_assembly(builder.translate_modules(root, resolver)).verify()
+    text = builder.translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
     binary = tmp_path / "guide"
-    builder.build_modules(root, resolver, str(binary))
+    builder._build_from_ir_result(text, str(binary), True, "auto")
 
     # All examples run in isolation, including their truncating file writes.
     if page == "csv.md":

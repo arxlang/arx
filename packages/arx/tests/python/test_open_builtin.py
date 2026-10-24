@@ -66,9 +66,10 @@ def execute(
         pytest.skip("clang is required for native open execution")
     module = parse_module(body, declarations)
     builder = ArxBuilder()
-    llvm.parse_assembly(builder.translate(module)).verify()
+    text = builder.translate(module)
+    llvm.parse_assembly(text).verify()
     executable = tmp_path / "program"
-    builder.build(module, str(executable))
+    builder._build_from_ir_result(text, str(executable), True, "auto")
     return subprocess.run(
         [str(executable)],
         cwd=tmp_path,

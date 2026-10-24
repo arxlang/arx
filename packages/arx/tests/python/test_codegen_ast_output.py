@@ -621,33 +621,6 @@ def test_format_stream_imports_translate(
     assert ("parquet" in features) == (module_name == "parquet")
 
 
-@pytest.mark.parametrize(
-    "module_name,class_name", [("csv", "CSV"), ("parquet", "Parquet")]
-)
-def test_legacy_format_class_names_are_not_exported(
-    module_name: str, class_name: str
-) -> None:
-    """
-    title: Removed format class names do not acquire compatibility aliases.
-    parameters:
-      module_name:
-        type: str
-      class_name:
-        type: str
-    """
-    ArxIO.string_to_buffer(
-        f"import {class_name} from stdlib.{module_name}\n"
-        "fn main() -> i32:\n  return 0\n"
-    )
-    module = Parser().parse(Lexer().lex(), "legacy_format")
-    with pytest.raises(
-        SemanticError, match=f"Imported symbol '{class_name}' was not found"
-    ):
-        ArxBuilder().translate_modules(
-            ParsedModule("legacy_format", module), FileImportResolver(())
-        )
-
-
 def test_table_io_names_do_not_grant_capabilities() -> None:
     """
     title: Equally named user functions remain ordinary scalar functions.

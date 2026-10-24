@@ -93,9 +93,10 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     )
     resolver = FileImportResolver(())
     builder = ArxBuilder()
-    llvm.parse_assembly(builder.translate_modules(root, resolver)).verify()
+    text = builder.translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
     binary = tmp_path / "helpers"
-    builder.build_modules(root, resolver, str(binary))
+    builder._build_from_ir_result(text, str(binary), True, "auto")
 
     command = [str(binary)]
     if sys.platform == "linux":
@@ -119,58 +120,58 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-@pytest.mark.parametrize(
-    "start,stop,step",
-    [
-        pytest.param(0, 4, None, id="default-step"),
-        pytest.param(2, 8, 2, id="positive-step"),
-        pytest.param(5, 0, -1, id="negative-step"),
-        pytest.param(8, 2, -2, id="descending-exclusive-stop"),
-        pytest.param(0, 0, None, id="equal-default"),
-        pytest.param(7, 7, -1, id="equal-descending"),
-        pytest.param(5, 0, 1, id="wrong-direction-positive"),
-        pytest.param(0, 5, -1, id="wrong-direction-negative"),
-        pytest.param(I32_MAX - 3, I32_MAX, 1, id="maximum-stop"),
-        pytest.param(I32_MIN + 3, I32_MIN, -1, id="minimum-stop"),
-        pytest.param(I32_MIN, I32_MIN + 1, 1, id="minimum-start"),
-        pytest.param(I32_MAX, I32_MAX - 1, -1, id="maximum-start"),
-        pytest.param(I32_MAX - 1, I32_MAX, 2, id="overshoot-maximum"),
-        pytest.param(I32_MIN + 1, I32_MIN, -2, id="overshoot-minimum"),
-        pytest.param(1, I32_MAX, I32_MAX, id="maximum-step-overshoot"),
-        pytest.param(I32_MIN, I32_MAX, I32_MAX, id="full-width-ascending"),
-        pytest.param(I32_MAX, I32_MIN, I32_MIN, id="full-width-descending"),
-        pytest.param(I32_MAX, I32_MAX, I32_MIN, id="equal-maximum"),
-        pytest.param(I32_MIN, I32_MIN, I32_MAX, id="equal-minimum"),
-    ],
-)
-def test_range_matches_python(
-    tmp_path: Path, start: int, stop: int, step: int | None
-) -> None:
+def test_range_matches_python(tmp_path: Path) -> None:
     """
-    title: Compare complete eager i32 results to Python exclusive-stop ranges.
+    title: Compare all eager range boundaries in one bounded native program.
     parameters:
       tmp_path:
         type: Path
-      start:
-        type: int
-      stop:
-        type: int
-      step:
-        type: int | None
     """
-    arguments = f"start={i32_expression(start)}, stop={i32_expression(stop)}"
-    if step is not None:
-        arguments += f", step={i32_expression(step)}"
-    result = run_helpers(
-        tmp_path,
-        f"var values: list[i32] = range({arguments})\n"
-        "for value in values:\n"
-        "  print(value)",
-    )
+    cases: list[tuple[int, int, int | None, str]] = [
+        (0, 4, None, "default-step"),
+        (2, 8, 2, "positive-step"),
+        (5, 0, -1, "negative-step"),
+        (8, 2, -2, "descending-exclusive-stop"),
+        (0, 0, None, "equal-default"),
+        (7, 7, -1, "equal-descending"),
+        (5, 0, 1, "wrong-direction-positive"),
+        (0, 5, -1, "wrong-direction-negative"),
+        (I32_MAX - 3, I32_MAX, 1, "maximum-stop"),
+        (I32_MIN + 3, I32_MIN, -1, "minimum-stop"),
+        (I32_MIN, I32_MIN + 1, 1, "minimum-start"),
+        (I32_MAX, I32_MAX - 1, -1, "maximum-start"),
+        (I32_MAX - 1, I32_MAX, 2, "overshoot-maximum"),
+        (I32_MIN + 1, I32_MIN, -2, "overshoot-minimum"),
+        (1, I32_MAX, I32_MAX, "maximum-step-overshoot"),
+        (I32_MIN, I32_MAX, I32_MAX, "full-width-ascending"),
+        (I32_MAX, I32_MIN, I32_MIN, "full-width-descending"),
+        (I32_MAX, I32_MAX, I32_MIN, "equal-maximum"),
+        (I32_MIN, I32_MIN, I32_MAX, "equal-minimum"),
+    ]
+    body: list[str] = []
+    expected: list[str] = []
+    for index, (start, stop, step, label) in enumerate(cases):
+        arguments = (
+            f"start={i32_expression(start)}, stop={i32_expression(stop)}"
+        )
+        if step is not None:
+            arguments += f", step={i32_expression(step)}"
+        body.extend(
+            [
+                f'print("{label}")',
+                f"var values{index}: list[i32] = range({arguments})",
+                f"for value in values{index}:\n  print(value)",
+            ]
+        )
+        expected.append(label)
+        expected.extend(
+            str(value)
+            for value in range(start, stop, 1 if step is None else step)
+        )
+    result = run_helpers(tmp_path, "\n".join(body))
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
-    expected = range(start, stop, 1 if step is None else step)
-    assert result.stdout == "".join(f"{value}\n" for value in expected)
+    assert result.stdout.splitlines() == expected
 
 
 @pytest.mark.parametrize("width", [8, 16, 32, 64])
