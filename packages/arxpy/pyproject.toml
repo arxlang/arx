@@ -1,6 +1,6 @@
 [project]
 name = "arxpy"
-version = "1.24.1"  # semantic-release
+version = "1.25.0"  # semantic-release
 description = "ArxPy is a Python API layer for the Arx compiler."
 readme = "README.md"
 authors = [
@@ -10,7 +10,7 @@ license = "Apache-2.0"
 requires-python = ">=3.10,<4"
 dependencies = [
   "atpublic >= 4.0",
-  "arxlang == 1.24.1",  # semantic-release
+  "arxlang == 1.25.0",  # semantic-release
   "typeguard >= 4",
 ]
 

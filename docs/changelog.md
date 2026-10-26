@@ -1,6 +1,38 @@
 # Release Notes
 ---
 
+# [1.25.0](https://github.com/arxlang/arx/compare/1.24.1...1.25.0) (2026-10-26)
+
+
+### Bug Fixes
+
+* **aix:** lower ¬ to IRx's ! operator ([#120](https://github.com/arxlang/arx/issues/120)) ([c17f0cd](https://github.com/arxlang/arx/commit/c17f0cd1113ed99bbd978ea0d013f1bde0a22b7e))
+* **arxjit:** preserve Python expression semantics in lowering ([#114](https://github.com/arxlang/arx/issues/114)) ([0a68b0b](https://github.com/arxlang/arx/commit/0a68b0bbb53de8c352bf14df2d5fbdd33637e9fe))
+* **stdlib:** validate integer helper boundaries ([#137](https://github.com/arxlang/arx/issues/137)) ([3695ef6](https://github.com/arxlang/arx/commit/3695ef648c9d61aeac1f45f81dc29b229f148d63))
+* Update AGENTS.md ([#113](https://github.com/arxlang/arx/issues/113)) ([641eb1a](https://github.com/arxlang/arx/commit/641eb1a59708f33d662dff31e18671c190bf6995))
+
+
+### Features
+
+* add Arrow-backed CSV I/O and checked DataFrame conversion ([#130](https://github.com/arxlang/arx/issues/130)) ([ca93587](https://github.com/arxlang/arx/commit/ca935877b503720726f747474db1d41e45c941f2))
+* add nullable Series operations and rich DataFrame schemas ([#133](https://github.com/arxlang/arx/issues/133)) ([7ee36fc](https://github.com/arxlang/arx/commit/7ee36fc64a2dbeb6f32bdc85fbfc011842cae22d))
+* add Python-style exceptions across compiler and runtime ([#139](https://github.com/arxlang/arx/issues/139)) ([e65e38c](https://github.com/arxlang/arx/commit/e65e38c0b09d174c19f5caa6727c071ffb8cd3c7))
+* Add support for file management ([#122](https://github.com/arxlang/arx/issues/122)) ([877651d](https://github.com/arxlang/arx/commit/877651d724f896d30ad4cdb5bd38a2bc2af2f259))
+* Add support for keyword argument for method and function calls ([#125](https://github.com/arxlang/arx/issues/125)) ([7be3b76](https://github.com/arxlang/arx/commit/7be3b7682de3f27e9f6ddfccd27f2d809e449325))
+* **arxjit:** lower a validated function's shell to an astx module ([#107](https://github.com/arxlang/arx/issues/107)) ([b8e82b1](https://github.com/arxlang/arx/commit/b8e82b177caecbff60bd0134a4458539cd9c88cd)), closes [#99](https://github.com/arxlang/arx/issues/99)
+* **arxjit:** lower comparisons and boolean operators to astx ([#112](https://github.com/arxlang/arx/issues/112)) ([e6ba880](https://github.com/arxlang/arx/commit/e6ba8808a2a12a8ad94ccd4292e32dfb66276845))
+* **arxjit:** lower expressions to astx ([#109](https://github.com/arxlang/arx/issues/109)) ([b011728](https://github.com/arxlang/arx/commit/b0117287de7bab8edecb5d85e4d1d94f8c221e4e)), closes [#107](https://github.com/arxlang/arx/issues/107) [#107](https://github.com/arxlang/arx/issues/107)
+* **arxjit:** resolve a compilable signature from Python annotations ([#103](https://github.com/arxlang/arx/issues/103)) ([61d48c2](https://github.com/arxlang/arx/commit/61d48c2bfc80696f02a9b5fb4f3d90663d292002))
+* enforce lossless promotion and checked arithmetic ([#138](https://github.com/arxlang/arx/issues/138)) ([9e4d9a5](https://github.com/arxlang/arx/commit/9e4d9a5c91773150f6a8175ec8f8ef36736f9d17))
+* expose Arrow IPC, C Data/C Stream, and TCP interoperability in Arx ([#128](https://github.com/arxlang/arx/issues/128)) ([23e1e9b](https://github.com/arxlang/arx/commit/23e1e9b875c44fa59f39979dddc4f9a8ed1ddaa6))
+* extend Parquet I/O and nullable DataFrame support ([#132](https://github.com/arxlang/arx/issues/132)) ([8abddd3](https://github.com/arxlang/arx/commit/8abddd31f247d50dc174e82a1d7200ae14400277))
+* harden compiler ownership and production readiness ([#115](https://github.com/arxlang/arx/issues/115)) ([84aa7a1](https://github.com/arxlang/arx/commit/84aa7a13aa204a983dfca714aeeb0fb12dbf18df))
+* Implement parquet handling ([#131](https://github.com/arxlang/arx/issues/131)) ([97589f9](https://github.com/arxlang/arx/commit/97589f9d4114523f3daa8dc9aa9d31458b37aff6))
+* implement scoped lifecycle plan ([#123](https://github.com/arxlang/arx/issues/123)) ([7cc0b3e](https://github.com/arxlang/arx/commit/7cc0b3ed0816a850f5684fdbe6cdc25e2354b642))
+* Improve File class ([#124](https://github.com/arxlang/arx/issues/124)) ([93132fc](https://github.com/arxlang/arx/commit/93132fc1a475661f3b8cb3747ad65d8cb72246a4))
+* **stdlib:** add CSV and Parquet modules with DataFrame I/O ([#135](https://github.com/arxlang/arx/issues/135)) ([b8c7e0d](https://github.com/arxlang/arx/commit/b8c7e0d78c63a525a2730d43dd0627c94d06ba1b))
+* support native dependencies for external Arx packages ([#126](https://github.com/arxlang/arx/issues/126)) ([f1cda76](https://github.com/arxlang/arx/commit/f1cda76d669a214c8c8787b5015052e03c53d1d8))
+
 ## Unreleased
 
 ### Python-inspired exceptions (breaking)
