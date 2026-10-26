@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -432,7 +432,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -441,7 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -496,6 +496,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -708,6 +720,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -755,7 +773,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#compile-an-arrow-backed-value" id="toc-compile-an-arrow-backed-value" class="nav-link" data-scroll-target="#compile-an-arrow-backed-value">Compile an Arrow-backed value</a></li>
   <li><a href="#exchange-arrow-data-with-python" id="toc-exchange-arrow-data-with-python" class="nav-link" data-scroll-target="#exchange-arrow-data-with-python">Exchange Arrow data with Python</a></li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next steps</a></li>
-  <li><a href="#class-lifetimes" id="toc-class-lifetimes" class="nav-link" data-scroll-target="#class-lifetimes">Class Lifetimes</a></li>
+  <li><a href="#workflow-guides" id="toc-workflow-guides" class="nav-link" data-scroll-target="#workflow-guides">Workflow guides</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -845,7 +863,10 @@ fn main() -&gt; i32:
     score: [0.5, 0.8, 1.0],
   })
   var scores: series[f64] = rows.score
-  return cast(rows.nrows(), i32)</code></pre>
+  assert grid[1, 0] == 3
+  assert rows.nrows() == 3
+  assert scores[2] == 1.0
+  return 0</code></pre>
 <p>The corresponding native runtime sources and linker inputs are included only when the compilation unit uses those features.</p>
 </section>
 <section id="exchange-arrow-data-with-python" class="level2">
@@ -864,12 +885,17 @@ fn main() -&gt; i32:
 <li><a href="../arx/testing.html">Compiled tests</a></li>
 <li><a href="../apache-arrow.html">Apache Arrow runtime</a></li>
 </ul>
-<p>For native text files, construct <code>File(path, mode="w")</code> or use its <code>open(...)</code> factory adapter. Both return shared class references; lowercase <code>file</code> remains valid in annotations. See <a href="../arx/file-io.html">Text File I/O</a> and <code>examples/file-io.x</code>. Run the example in a scratch directory: it creates or truncates <code>file-io-example.txt</code> relative to the running program.</p>
 </section>
-<section id="class-lifetimes" class="level2">
-<h2 class="anchored" data-anchor-id="class-lifetimes">Class Lifetimes</h2>
-<p>For external C ABI backends, see <a href="../arx/native-packages.html">Native Packages</a>. Native sources and libraries are explicit dependency metadata, not compiler builtins.</p>
-<p>Classes support <code>__init__(self, ...) -&gt; none</code> and <code>__del__(self) -&gt; none</code> hooks. <code>Counter(value=7)</code> binds constructor keywords. Ordinary functions and methods also accept names from their declarations (see <a href="../arx/functions.html">Functions</a>). Class aliases share identity, and final reference release runs the destructor and releases owned string/file/class fields. Cycles and owned containers/globals/generator captures are deliberately excluded. See <a href="../arx/classes.html">Classes</a> and <code>examples/class-lifecycle.x</code> for the complete slice.</p>
+<section id="workflow-guides" class="level2">
+<h2 class="anchored" data-anchor-id="workflow-guides">Workflow guides</h2>
+<ul>
+<li><a href="../arx/file-io.html">Text files</a>: shared references, checked UTF-8, and explicit close. Run <code>examples/file-io.x</code> in a scratch directory; it creates or truncates its output file.</li>
+<li><a href="../arx/classes.html">Classes</a>: identity, construction, and final-reference cleanup.</li>
+<li><a href="../arx/csv.html">CSV</a> and <a href="../arx/parquet.html">Parquet</a>: eager DataFrames or explicit bounded streams, exact schema checks, and safe output publication.</li>
+<li><a href="../arx/collections.html#nullable-scalars-and-series-expressions">Nullable collections</a>: validity, checked arithmetic, and mutation ownership.</li>
+<li><a href="../arx/native-packages.html">Native packages</a>: explicit external C ABI dependencies.</li>
+</ul>
+<p>The complete programs above are compiled and run from this page by <code>packages/arx/tests/python/test_documentation.py</code>.</p>
 
 
 </section>

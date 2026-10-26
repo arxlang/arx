@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/datatypes.html">Data Types</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/datatypes.html">Data Types</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -714,16 +732,16 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#data-types" id="toc-data-types" class="nav-link active" data-scroll-target="#data-types">Data Types</a>
   <ul class="collapse">
   <li><a href="#type-annotations" id="toc-type-annotations" class="nav-link" data-scroll-target="#type-annotations">Type Annotations</a></li>
-  <li><a href="#common-annotation-forms" id="toc-common-annotation-forms" class="nav-link" data-scroll-target="#common-annotation-forms">Common Annotation Forms</a></li>
+  <li><a href="#collection-annotations" id="toc-collection-annotations" class="nav-link" data-scroll-target="#collection-annotations">Collection annotations</a></li>
   <li><a href="#type-aliases-and-union-types" id="toc-type-aliases-and-union-types" class="nav-link" data-scroll-target="#type-aliases-and-union-types">Type Aliases And Union Types</a></li>
-  <li><a href="#built-in-type-reference" id="toc-built-in-type-reference" class="nav-link" data-scroll-target="#built-in-type-reference">Built-in Type Reference</a></li>
+  <li><a href="#choosing-a-type" id="toc-choosing-a-type" class="nav-link" data-scroll-target="#choosing-a-type">Choosing a type</a></li>
   <li><a href="#class-references" id="toc-class-references" class="nav-link" data-scroll-target="#class-references">Class References</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/datatypes.html">Data Types</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/datatypes.html">Data Types</a></li></ol></nav></header>
 
 
 
@@ -750,35 +768,9 @@ fn add(a: i32, b: i32) -&gt; i32:
   ```
   return a + b</code></pre>
 </section>
-<section id="common-annotation-forms" class="level2">
-<h2 class="anchored" data-anchor-id="common-annotation-forms">Common Annotation Forms</h2>
-<pre class="arx"><code>fn summarize(name: str, values: list[i32]) -&gt; none:
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  var rows: dataframe[id: i32, score: f64] = dataframe({
-    id: [1, 2],
-    score: [0.5, 1.0],
-  })
-  var count: i32 = 0
-  print(grid[0, 1])
-  print(rows.nrows())
-  return</code></pre>
-<p>Common places where types appear:</p>
-<ul>
-<li>function parameters: <code>fn add(a: i32, b: i32) -&gt; i32:</code></li>
-<li>union function parameters: <code>fn id(value: i32 | i64) -&gt; i32 | i64:</code></li>
-<li>function return types: <code>fn test_add() -&gt; none:</code></li>
-<li>variable declarations: <code>var total: i32 = 0</code></li>
-<li>type aliases: <code>type Number = i32 | i64</code></li>
-<li>generic collection annotations: <code>list[i32]</code></li>
-<li>shaped 1D tensor annotations: <code>tensor[i32, 4]</code></li>
-<li>multidimensional tensor annotations: <code>tensor[i32, 2, 2]</code></li>
-<li>runtime-shaped tensor parameters: <code>fn sink(x: tensor[i32, ...]) -&gt; none:</code></li>
-<li>static-schema DataFrame annotations: <code>dataframe[id: i32, score: f64]</code></li>
-<li>runtime-schema DataFrame parameters: <code>fn sink(rows: dataframe[...]) -&gt; none:</code></li>
-<li>typed DataFrame column annotations: <code>series[f64]</code></li>
-</ul>
-<p><code>tensor[T, ...]</code> is currently parameter-only. Use fixed-shape tensor annotations for variables, fields, and return types until runtime-shaped storage and return semantics are defined. Runtime-shaped tensor parameters can be passed through, but indexed access currently requires a static-shape tensor annotation.</p>
-<p><code>dataframe[...]</code> follows the same current restriction: it is accepted only in function and extern parameter annotations. Static-schema DataFrames can be constructed with <code>dataframe({...})</code>, and their columns can be accessed with either <code>rows.score</code> or <code>rows["score"]</code>.</p>
+<section id="collection-annotations" class="level2">
+<h2 class="anchored" data-anchor-id="collection-annotations">Collection annotations</h2>
+<p>Runtime-shaped <code>tensor[T, ...]</code> remains parameter-only; indexed access requires a fixed shape. Runtime-schema <code>dataframe[...]</code> supports locals, aliases, parameters, and returns, but not unchecked named-column access. These are different restrictions. See <a href="../arx/collections.html">collections</a> for storage, construction, exact schema casts, and nullable operations.</p>
 </section>
 <section id="type-aliases-and-union-types" class="level2">
 <h2 class="anchored" data-anchor-id="type-aliases-and-union-types">Type Aliases And Union Types</h2>
@@ -795,22 +787,11 @@ fn identity(value: Number) -&gt; Number:
   summary: Returns a numeric union value.
   ```
   return value</code></pre>
-<p>Union annotations use <code>|</code>. Numeric unions currently lower through a shared numeric storage type. Runtime tagged unions and runtime narrowing are not part of the current model.</p>
+<p>Union annotations use <code>|</code>. Numeric unions currently lower through a shared lossless numeric storage type; incompatible runtime unions are rejected. Generic union bounds constrain template membership without allocating union storage. Runtime tagged unions and runtime narrowing are not part of the current model.</p>
 </section>
-<section id="built-in-type-reference" class="level2">
-<h2 class="anchored" data-anchor-id="built-in-type-reference">Built-in Type Reference</h2>
-<p>For the catalog of built-in types, aliases, and examples, see <a href="../arx/built-in-types.html">Built-in Types</a>.</p>
-<p>For native storage and the current Tensor, DataFrame, and Series boundaries, see <a href="../arx/collections.html">Collections and Apache Arrow</a>.</p>
-<p>That page covers:</p>
-<ul>
-<li>numeric types and aliases</li>
-<li><code>none</code> as the unit type and value</li>
-<li>string, character, and temporal types</li>
-<li>lists, tensors, dataframes, series, and current limitations</li>
-<li>the <code>cast(value, type)</code> helper</li>
-<li>the <code>isinstance(value, type)</code> and <code>type(value)</code> helpers</li>
-</ul>
-<p>Native text streams use the builtin <a href="../arx/file-io.html"><code>File</code> class</a>; lowercase <code>file</code> is a compatibility spelling. <code>File(...)</code> and <code>open(...)</code> open immediately. Copies share an object/stream, while the private native handle remains uniquely owned. File references support ordinary class parameters, returns, and fields.</p>
+<section id="choosing-a-type" class="level2">
+<h2 class="anchored" data-anchor-id="choosing-a-type">Choosing a type</h2>
+<p>See <a href="../arx/built-in-types.html">Built-in Types</a> for scalar choices and conversion boundaries. The lexical manifest owns accepted spellings; it is not an API support promise.</p>
 </section>
 <section id="class-references" class="level2">
 <h2 class="anchored" data-anchor-id="class-references">Class References</h2>

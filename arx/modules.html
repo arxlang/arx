@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -370,7 +370,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/modules.html">Modules</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/modules.html">Modules</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -432,7 +432,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -441,7 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -496,6 +496,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -708,6 +720,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -762,12 +780,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#relative-imports" id="toc-relative-imports" class="nav-link" data-scroll-target="#relative-imports">Relative Imports</a></li>
   </ul></li>
   <li><a href="#module-docstring" id="toc-module-docstring" class="nav-link" data-scroll-target="#module-docstring">Module Docstring</a></li>
+  <li><a href="#tabular-standard-library-modules" id="toc-tabular-standard-library-modules" class="nav-link" data-scroll-target="#tabular-standard-library-modules">Tabular standard-library modules</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/modules.html">Modules</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/modules.html">Modules</a></li></ol></nav></header>
 
 
 
@@ -893,37 +912,8 @@ fn main() -&gt; i32:
 </section>
 <section id="bundled-builtins" class="level2">
 <h2 class="anchored" data-anchor-id="bundled-builtins">Bundled <code>builtins</code></h2>
-<p>Arx also ships compiler-provided builtins backed by bundled Arx source modules.</p>
-<p>Builtins and stdlib are intentionally separate:</p>
-<ul>
-<li>builtins are compiler/language-provided facilities resolved by dedicated compiler logic</li>
-<li>stdlib is the importable library namespace under <code>stdlib</code></li>
-<li>builtin source files live under <code>packages/arx/src/arx/builtins/</code> in the compiler repo</li>
-<li>builtin source files use the <code>.x</code> extension and are bundled inside the installed <code>arx</code> Python package</li>
-<li>bundled builtin sources are loaded from package resources at compile time and are not copied into user projects</li>
-<li>builtin source modules are an internal compiler asset store, not a public stdlib-like import surface</li>
-<li>user code cannot import the internal <code>builtins</code> namespace directly</li>
-<li>local user modules are not allowed to shadow the reserved <code>builtins</code> namespace</li>
-</ul>
-<p>The first builtin module is <code>generators</code>. It is intentionally generic so future generator helpers, <code>yield</code>, and fuller generator semantics can live in the same conceptual area.</p>
-<p>Current MVP:</p>
-<ul>
-<li><code>range</code> is available automatically without an import</li>
-<li>supported callable shapes:
-<ul>
-<li><code>range(start, stop) -&gt; list[i32]</code></li>
-<li><code>range(start, stop, step) -&gt; list[i32]</code></li>
-</ul></li>
-<li><code>start</code> and <code>stop</code> are always explicit</li>
-<li><code>step</code> defaults to <code>1</code> when omitted</li>
-<li><code>step &gt; 0</code> counts up and <code>step &lt; 0</code> counts down</li>
-<li><code>step == 0</code> is rejected with an assertion failure</li>
-<li>for-in loops can iterate over <code>range(...)</code>, list literals, and list variables because they consume list-valued expressions</li>
-<li>ambient builtin names such as <code>range</code> are injected only when not shadowed by a local top-level declaration or import</li>
-</ul>
-<p>Example:</p>
-<pre class="arx"><code>fn main() -&gt; none:
-  print(range(0, 4)[2])</code></pre>
+<p>Compiler-provided builtins live in bundled <code>.x</code> package resources, separately from the importable <code>stdlib</code>. They are not copied into user projects, and local sources cannot replace the reserved namespace. Ambient names are injected only when not shadowed by a declaration or import. Explicit <code>builtins.files</code> imports resolve the canonical <a href="../arx/file-io.html">File class</a>, not a second implementation.</p>
+<p>Builtin <code>range</code> currently allocates a scalar list; its declaration lives in <code>packages/arx/src/arx/builtins/generators.x</code>. See <a href="../arx/control-flow.html#for-loop-for-in-style">for-in workflows</a> and <a href="../arx/collections.html#lists">list ownership</a>. The module name does not imply Arx supports general generators or <code>yield</code>.</p>
 <section id="namespace-imports" class="level3">
 <h3 class="anchored" data-anchor-id="namespace-imports">Namespace Imports</h3>
 <p>Use a module alias when you want to keep names grouped under a module namespace:</p>
@@ -983,6 +973,15 @@ fn main() -&gt; i32:
   return 1</code></pre>
 <p>For now, module docstrings are parsed and validated but ignored by AST/IR generation.</p>
 <p><code>stdlib.arrow</code> exports <code>Schema</code>, <code>BatchBuilder</code>, <code>RecordBatch</code>, <code>IPCReader</code> and <code>IPCWriter</code>. It uses ordinary classes and nominal opaque native handles, not new keywords. See the <a href="../apache-arrow.html">Arrow API and examples</a>. Native bindings are supplied only for the bundled reserved module; a user module cannot gain these bindings merely by declaring matching handle type names.</p>
+</section>
+<section id="tabular-standard-library-modules" class="level2">
+<h2 class="anchored" data-anchor-id="tabular-standard-library-modules">Tabular standard-library modules</h2>
+<ul>
+<li><code>stdlib.csv</code>: <code>read_csv</code>, <code>write_csv</code>, and the unified streaming <code>CSVStream</code> owner.</li>
+<li><code>stdlib.parquet</code>: <code>read_parquet</code>, <code>write_parquet</code>, <code>ParquetStream</code>, <code>ParquetOptions</code>, <code>ParquetFilter</code>, and <code>where</code>.</li>
+<li><code>stdlib.arrow</code>: canonical shared <code>Schema</code>, <code>RecordBatch</code>, <code>BatchBuilder</code>, IPC and Arrow interoperability.</li>
+</ul>
+<p>Format classes are not exported from <code>stdlib.arrow</code>. Import shared types from that canonical module rather than through a format module. Namespace-qualified calls and explicit aliases work normally. Format functions are not global builtins, and equally named user functions receive no native privileges. CSV/shared Arrow do not activate the optional Parquet feature.</p>
 
 
 </section>

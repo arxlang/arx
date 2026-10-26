@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -500,7 +500,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#support-and-toolchain-matrix" id="toc-support-and-toolchain-matrix" class="nav-link active" data-scroll-target="#support-and-toolchain-matrix">Support and Toolchain Matrix</a>
   <ul class="collapse">
   <li><a href="#status-labels" id="toc-status-labels" class="nav-link" data-scroll-target="#status-labels">Status labels</a></li>
-  <li><a href="#current-matrix" id="toc-current-matrix" class="nav-link" data-scroll-target="#current-matrix">Current matrix</a></li>
+  <li><a href="#current-matrix" id="toc-current-matrix" class="nav-link" data-scroll-target="#current-matrix">Current matrix</a>
+  <ul class="collapse">
+  <li><a href="#exception-capability-boundary" id="toc-exception-capability-boundary" class="nav-link" data-scroll-target="#exception-capability-boundary">Exception capability boundary</a></li>
+  </ul></li>
   <li><a href="#wheel-gate" id="toc-wheel-gate" class="nav-link" data-scroll-target="#wheel-gate">Wheel gate</a></li>
   <li><a href="#requirements-before-a-stable-support-claim" id="toc-requirements-before-a-stable-support-claim" class="nav-link" data-scroll-target="#requirements-before-a-stable-support-claim">Requirements before a stable support claim</a></li>
   <li><a href="#arrow-interoperability-qualification" id="toc-arrow-interoperability-qualification" class="nav-link" data-scroll-target="#arrow-interoperability-qualification">Arrow interoperability qualification</a></li>
@@ -602,6 +605,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 <p>“Pure-Python-tagged” describes the wheel container, not the runtime requirements. IRx compiles native C/C++ runtime features on demand and therefore requires a compatible compiler/linker for those features.</p>
+<section id="exception-capability-boundary" class="level3">
+<h3 class="anchored" data-anchor-id="exception-capability-boundary">Exception capability boundary</h3>
+<p>Arx and direct ASTx/IRx compilation support synchronous nominal exceptions: <code>raise</code>, ordered subtype/tuple catches, dynamically scoped bare re-raise, explicit causes, normal-only <code>else</code>, and all-exit <code>finally</code>. An exception is an owned class instance with a read-only message; aliases retained from a handler remain valid after its binding leaves scope.</p>
+<p>Generated calls use an explicit context, status, and success-only result slot. Cleanup is compiler-generated, not platform or C++ stack unwinding. Failed constructors roll back initialized owners. A failing implicit cleanup preserves an existing failure as primary; an explicit finalizer may replace it. Generator resume failures propagate separately from normal exhaustion. <code>else</code> may read definitely initialized direct try locals, not conditional/nested locals whose ownership cannot be proved. Move-only list restrictions still apply in finalizers.</p>
+<p>Checked arithmetic/conversion, assertions, list/Series bounds, file, and Arrow/CSV/Parquet operations participate in this model. Invalid source programs still fail compilation; ordinary IEEE floating arithmetic is unchanged. External C routines cannot raise through arbitrary foreign frames. Allocation failure in exception machinery and fatal native corruption are not recoverable.</p>
+<p>Not supported: protected regions spanning <code>yield</code>, asynchronous exceptions, exception groups/<code>except*</code>, mutable Python traceback attributes, and exception lowering in ArxJIT (whose decorator still runs Python fallback). Direct ASTx <code>WithStmt</code> cleanup calls its existing zero-argument exit method without exception suppression; this does not add Arx <code>with</code>, <code>break</code>, or <code>continue</code> syntax.</p>
+</section>
 </section>
 <section id="wheel-gate" class="level2">
 <h2 class="anchored" data-anchor-id="wheel-gate">Wheel gate</h2>

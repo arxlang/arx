@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -711,49 +729,47 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#arx-lexical-syntax-specification" id="toc-arx-lexical-syntax-specification" class="nav-link active" data-scroll-target="#arx-lexical-syntax-specification">Arx Lexical Syntax Specification</a>
+  <li><a href="#arx-lexical-syntax" id="toc-arx-lexical-syntax" class="nav-link active" data-scroll-target="#arx-lexical-syntax">Arx Lexical Syntax</a>
   <ul class="collapse">
   <li><a href="#source-files-and-whitespace" id="toc-source-files-and-whitespace" class="nav-link" data-scroll-target="#source-files-and-whitespace">Source files and whitespace</a></li>
   <li><a href="#comments-and-docstrings" id="toc-comments-and-docstrings" class="nav-link" data-scroll-target="#comments-and-docstrings">Comments and docstrings</a></li>
   <li><a href="#identifiers" id="toc-identifiers" class="nav-link" data-scroll-target="#identifiers">Identifiers</a></li>
-  <li><a href="#keywords" id="toc-keywords" class="nav-link" data-scroll-target="#keywords">Keywords</a></li>
+  <li><a href="#reserved-forms" id="toc-reserved-forms" class="nav-link" data-scroll-target="#reserved-forms">Reserved forms</a></li>
   <li><a href="#numeric-literals" id="toc-numeric-literals" class="nav-link" data-scroll-target="#numeric-literals">Numeric literals</a></li>
   <li><a href="#strings-and-characters" id="toc-strings-and-characters" class="nav-link" data-scroll-target="#strings-and-characters">Strings and characters</a></li>
-  <li><a href="#operators-and-punctuation" id="toc-operators-and-punctuation" class="nav-link" data-scroll-target="#operators-and-punctuation">Operators and punctuation</a></li>
   <li><a href="#structural-forms" id="toc-structural-forms" class="nav-link" data-scroll-target="#structural-forms">Structural forms</a>
   <ul class="collapse">
   <li><a href="#declaration-modifiers" id="toc-declaration-modifiers" class="nav-link" data-scroll-target="#declaration-modifiers">Declaration modifiers</a></li>
   <li><a href="#templates" id="toc-templates" class="nav-link" data-scroll-target="#templates">Templates</a></li>
   <li><a href="#imports" id="toc-imports" class="nav-link" data-scroll-target="#imports">Imports</a></li>
-  <li><a href="#collection-type-forms" id="toc-collection-type-forms" class="nav-link" data-scroll-target="#collection-type-forms">Collection type forms</a></li>
+  <li><a href="#collection-annotations" id="toc-collection-annotations" class="nav-link" data-scroll-target="#collection-annotations">Collection annotations</a></li>
   </ul></li>
-  <li><a href="#builtin-lexical-names" id="toc-builtin-lexical-names" class="nav-link" data-scroll-target="#builtin-lexical-names">Builtin lexical names</a></li>
   <li><a href="#consistency-rule" id="toc-consistency-rule" class="nav-link" data-scroll-target="#consistency-rule">Consistency rule</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/syntax.html">Lexical Syntax</a></li></ol></nav></header>
 
 
 
 
 
-<section id="arx-lexical-syntax-specification" class="level1">
-<h1>Arx Lexical Syntax Specification</h1>
-<p>Status: draft <code>0.2.0</code></p>
-<p>This page documents token-level behavior used by the lexer and editor tooling. The normative source is <code>packages/arx/src/arx/lexer/syntax.json</code>. Parser and semantic rules live in the <a href="../arx/index.html#language-reference">language reference</a>.</p>
+<section id="arx-lexical-syntax" class="level1">
+<h1>Arx Lexical Syntax</h1>
+<p>The authoritative token spellings, aliases, and editor-tooling inventory live in <code>packages/arx/src/arx/lexer/syntax.json</code>. This guide covers writing source and important restrictions, not a duplicate token catalog. Parser and semantic support is summarized in the <a href="../arx/capability-matrix.html">capability matrix</a>.</p>
 <section id="source-files-and-whitespace" class="level2">
 <h2 class="anchored" data-anchor-id="source-files-and-whitespace">Source files and whitespace</h2>
 <ul>
 <li>recognized extensions: <code>.x</code> and <code>.arx</code></li>
 <li>indentation is significant</li>
 <li>the canonical indentation unit is 2 spaces</li>
-<li>the syntax manifest forbids tabs; current lexer diagnostics do not enforce that rule consistently, so source must use spaces</li>
+<li>tabs outside quoted literal contents are rejected; use spaces</li>
 <li>newlines delimit logical lines</li>
 <li>blank lines do not create indentation transitions</li>
 </ul>
+<p>Files must be valid UTF-8 and no larger than 4 MiB of UTF-8 bytes. Token start locations use one-based lines and Unicode code-point columns. The lexer also limits delimiter nesting to 256, numeric tokens to 4,096 characters, and non-EOF tokens to 250,000. These are compiler-version resource limits, not a frozen language compatibility promise.</p>
 <pre class="arx"><code>fn absolute(value: i32) -&gt; i32:
   if value &lt; 0:
     return 0 - value
@@ -777,15 +793,9 @@ summary: Optional description.
 <pre class="regex"><code>(?:[_\p{L}])(?:[_\p{L}\p{N}])*</code></pre>
 <p>The exact Unicode categories currently follow the Python runtime. Matching is case-sensitive.</p>
 </section>
-<section id="keywords" class="level2">
-<h2 class="anchored" data-anchor-id="keywords">Keywords</h2>
-<p>Reserved lexical keywords:</p>
-<pre class="text"><code>assert class const else extern fn for if import in return then var while</code></pre>
-<p>Contextual keywords:</p>
-<pre class="text"><code>as binary from operator type unary</code></pre>
-<p>Literal keywords:</p>
-<pre class="text"><code>true false none</code></pre>
-<p>Lexical reservation does not by itself promise a complete parser or lowering for every word. In particular, <code>const</code>, <code>then</code>, and operator-declaration words remain reserved while their general language forms are incomplete.</p>
+<section id="reserved-forms" class="level2">
+<h2 class="anchored" data-anchor-id="reserved-forms">Reserved forms</h2>
+<p>Lexical reservation does not promise parsing or lowering. In particular, general <code>const</code>, <code>then</code>, and operator declarations remain unavailable even though their spellings are recognized.</p>
 </section>
 <section id="numeric-literals" class="level2">
 <h2 class="anchored" data-anchor-id="numeric-literals">Numeric literals</h2>
@@ -842,25 +852,6 @@ summary: Optional description.
 </table>
 <p>Raw strings, triple-quoted strings, and interpolation are not supported. Triple backticks are reserved for Douki docstrings, not ordinary string values.</p>
 </section>
-<section id="operators-and-punctuation" class="level2">
-<h2 class="anchored" data-anchor-id="operators-and-punctuation">Operators and punctuation</h2>
-<p>Single-character tokens:</p>
-<pre class="text"><code>= &lt; &gt; + - * / . : , ; @ | ! ( ) [ ] { }</code></pre>
-<p>Multi-character operators:</p>
-<pre class="text"><code>== != &lt;= &gt;= -&gt; &amp;&amp; || ++ --</code></pre>
-<p>Word-form logical operators:</p>
-<pre class="text"><code>and or</code></pre>
-<p>Current groups:</p>
-<ul>
-<li>assignment: <code>=</code></li>
-<li>comparison: <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>==</code>, <code>!=</code></li>
-<li>arithmetic: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code></li>
-<li>logical: <code>&amp;&amp;</code>, <code>||</code>, <code>and</code>, <code>or</code>, <code>!</code></li>
-<li>type union: <code>|</code></li>
-<li>punctuation: <code>@</code>, <code>:</code>, <code>,</code>, <code>;</code>, <code>.</code></li>
-</ul>
-<p><code>++</code> and <code>--</code> are lexed as unary operators. Availability in a particular semantic context depends on the parser and IRx type rules.</p>
-</section>
 <section id="structural-forms" class="level2">
 <h2 class="anchored" data-anchor-id="structural-forms">Structural forms</h2>
 <section id="declaration-modifiers" class="level3">
@@ -885,26 +876,15 @@ fn identity(value: T) -&gt; T:
   tan as tangent,
 ) from math</code></pre>
 </section>
-<section id="collection-type-forms" class="level3">
-<h3 class="anchored" data-anchor-id="collection-type-forms">Collection type forms</h3>
-<pre class="text"><code>list[T]
-tensor[T, D0, D1]
-tensor[T, ...]
-dataframe[name: T, ...]
-dataframe[...]
-series[T]</code></pre>
-<p>The literal <code>...</code> is accepted only in the runtime-layout parameter forms described by the type reference.</p>
+<section id="collection-annotations" class="level3">
+<h3 class="anchored" data-anchor-id="collection-annotations">Collection annotations</h3>
+<p>See <a href="../arx/datatypes.html#collection-annotations">type annotations</a>. Literal ellipsis has different support boundaries for runtime-shaped tensors and runtime-schema DataFrames; it is not uniformly parameter-only.</p>
 </section>
-</section>
-<section id="builtin-lexical-names" class="level2">
-<h2 class="anchored" data-anchor-id="builtin-lexical-names">Builtin lexical names</h2>
-<p>Builtin type names include numeric aliases, <code>bool</code>, <code>none</code>, text and temporal types, plus <code>list</code>, <code>tensor</code>, <code>dataframe</code>, and <code>series</code>. Builtin callable names include <code>cast</code>, <code>dataframe</code>, <code>isinstance</code>, <code>print</code>, <code>range</code>, and <code>type</code>.</p>
-<p>These names are recorded for syntax tooling. Parser resolution still decides whether a name is a type, constructor, ambient builtin, local binding, or ordinary identifier in context.</p>
 </section>
 <section id="consistency-rule" class="level2">
 <h2 class="anchored" data-anchor-id="consistency-rule">Consistency rule</h2>
-<p>Changes to lexical syntax must update <code>syntax.json</code> first, then the lexer, tests, this document, examples, and any derived editor grammars.</p>
-<p><code>File</code> and <code>open</code> remain identifiers. Lowercase <code>file</code> is a compatibility type spelling for the canonical builtin File class, not a native handle. Both public file constructors accept named arguments (<code>file=</code>, <code>mode=</code>, etc.), and class constructors accept names from their own <code>__init__</code> parameters. Dunder spellings remain identifier tokens, not lexer keywords. Class methods named <code>__name__</code> are reserved for documented language protocols. <code>__init__</code> and <code>__del__</code> are lifecycle hooks; existing IRx <code>__enter__</code> and <code>__exit__</code> names are also recognized without adding Arx <code>with</code> syntax. Plain <code>init</code> and <code>deinit</code> have no special meaning. See <a href="../arx/classes.html">Classes</a> and <a href="../arx/file-io.html">Text File I/O</a> for restrictions. Ordinary function/method calls also accept positional arguments followed by named values (<code>callee(value=expr)</code>). They reject positional-after- keyword calls, duplicates, unknown names, and argument unpacking. See <a href="../arx/functions.html#keyword-arguments">Functions</a>. Arx <code>with</code> statements remain unsupported.</p>
+<p>Changes to lexical syntax update the manifest first, then tokenization, parser, tests, and derived editor consumers. Update this short guide only for changed workflows or restrictions.</p>
+<p><code>File</code>, <code>open</code>, and dunder method names remain identifiers, not new keywords. <a href="../arx/classes.html#lifecycle-hooks">Class lifecycle hooks</a> do not add Arx <code>with</code> statements. <a href="../arx/functions.html#keyword-arguments">Named calls</a> use resolved signatures, not lexical privilege based on the callee’s spelling.</p>
 
 
 </section>

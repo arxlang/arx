@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -560,11 +560,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="documentation-and-examples" class="level2">
 <h2 class="anchored" data-anchor-id="documentation-and-examples">Documentation and examples</h2>
 <ul>
-<li>Update reference docs and examples with every behavior change.</li>
+<li>Keep public types, defaults, validation, ownership, and failure contracts next to code, with focused tests. Do not duplicate signatures, method catalogs, or parameter tables in handwritten pages.</li>
+<li>Update short guides only for changed workflows, architecture, restrictions, migration decisions, or data-loss/resource-safety contracts. Put common and advanced API examples in the PR description or executable tests.</li>
+<li>Leave generated API output to <code>scripts/gen_api_docs.py</code> and the Quarto pre-render hook. Keep that pipeline working without expanding it for an unrelated API change.</li>
 <li>Every committed <code>.x</code> file begins with a valid Douki module docstring.</li>
 <li>Class, function, and method docstrings use Douki YAML inside triple backticks.</li>
 <li>Use quadruple Markdown fences around Arx examples containing docstrings.</li>
-<li>Keep <code>packages/arx/src/arx/lexer/syntax.json</code>, lexer behavior, and the lexical syntax page aligned.</li>
+<li>Keep the syntax manifest, lexer behavior, tests, and editor consumers aligned; update the short syntax guide when a workflow or restriction changes.</li>
+<li>Examples used as support evidence must execute in tests.</li>
 <li>State experimental limits explicitly; do not document planned behavior as implemented.</li>
 </ul>
 </section>
@@ -586,7 +589,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pull-requests" class="level2">
 <h2 class="anchored" data-anchor-id="pull-requests">Pull requests</h2>
 <ul>
-<li>Include focused tests and documentation.</li>
+<li>Include focused tests, accurate source contracts, and necessary guide updates.</li>
+<li>Record intentional breaking changes in concise release notes rather than maintaining parallel deprecated API documentation.</li>
 <li>Report checks that could not run and why.</li>
 <li>Use a Conventional Commit title; releases use squash merge and semantic-release.</li>
 <li>Report bugs and proposals at <a href="https://github.com/arxlang/arx/issues" class="uri">https://github.com/arxlang/arx/issues</a>.</li>

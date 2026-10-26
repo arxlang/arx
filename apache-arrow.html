@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -513,6 +513,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#across-machines" id="toc-across-machines" class="nav-link" data-scroll-target="#across-machines">Across machines</a></li>
   <li><a href="#compatibility-and-limitations" id="toc-compatibility-and-limitations" class="nav-link" data-scroll-target="#compatibility-and-limitations">Compatibility and limitations</a></li>
   </ul></li>
+  <li><a href="#csv-streaming-and-checked-conversion" id="toc-csv-streaming-and-checked-conversion" class="nav-link" data-scroll-target="#csv-streaming-and-checked-conversion">CSV streaming and checked conversion</a></li>
+  <li><a href="#explicit-csv-and-parquet-streams" id="toc-explicit-csv-and-parquet-streams" class="nav-link" data-scroll-target="#explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</a>
+  <ul class="collapse">
+  <li><a href="#extended-data-file-support" id="toc-extended-data-file-support" class="nav-link" data-scroll-target="#extended-data-file-support">Extended data-file support</a></li>
+  </ul></li>
+  <li><a href="#dedicated-file-format-apis-and-table-interchange" id="toc-dedicated-file-format-apis-and-table-interchange" class="nav-link" data-scroll-target="#dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -547,9 +553,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="implemented-layers">Implemented layers</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 12%">
-<col style="width: 32%">
-<col style="width: 54%">
+<col style="width: 11%">
+<col style="width: 30%">
+<col style="width: 57%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -572,7 +578,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>DataFrame runtime</td>
 <td><code>arrow::Table</code></td>
-<td>Named fixed-width numeric/Boolean columns and row/column counts</td>
+<td>Static nullable/temporal columns; runtime schemas preserve RecordBatch-supported Arrow types</td>
 </tr>
 <tr class="even">
 <td>Series runtime</td>
@@ -582,7 +588,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>RecordBatch runtime</td>
 <td><code>arrow::RecordBatch</code> and Arrow IPC</td>
-<td>Schemas, builders, nullable values, file/buffer streams, PyArrow round trips</td>
+<td>Schemas, builders, nullable values, IPC/CSV streams, Parquet files, PyArrow round trips</td>
 </tr>
 </tbody>
 </table>
@@ -610,11 +616,11 @@ fn rows() -&gt; i32:
 </ul>
 <p>Current DataFrame constraints:</p>
 <ul>
-<li>columns: fixed-width numeric types and <code>bool</code></li>
+<li>static columns: numeric, Boolean, string and temporal types; nullable <code>T | none</code></li>
 <li>constructor input: equal-length list-literal columns matching a static schema</li>
 <li>access: <code>frame.name</code> or <code>frame["name"]</code> when the schema is statically known</li>
 <li>metadata: <code>nrows()</code> and <code>ncols()</code></li>
-<li>string, nullable, nested, and temporal columns are not yet exposed by the Arx DataFrame syntax, even though the lower-level RecordBatch API supports more Arrow types</li>
+<li>runtime-schema <code>dataframe[...]</code> locals, parameters and returns preserve RecordBatch-supported Arrow types/metadata through checked RecordBatch conversion; they do not provide unchecked static column access</li>
 </ul>
 </section>
 <section id="array-interoperability" class="level2">
@@ -686,9 +692,9 @@ import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
 fn main() -&gt; i32:
   var schema: Schema = Schema()
-  schema.add("id", 3)
-  schema.add("score", 9)
-  schema.add("active", 10)
+  schema.add("id", "int64")
+  schema.add("score", "float64")
+  schema.add("active", "bool")
   var builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_f64(1, 1.5)
@@ -699,59 +705,50 @@ fn main() -&gt; i32:
   writer.write(batch)
   writer.close()
   return 0</code></pre>
-<p><code>Schema.add(name, type_id, nullable=false)</code> uses the stable <code>IrxColumnType</code> IDs:</p>
+<p><code>Schema.add(name, type_name, nullable=false)</code> accepts validated scalar names:</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 40%">
-<col style="width: 54%">
+<col style="width: 60%">
+<col style="width: 39%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>IDs</th>
-<th>Arrow types</th>
+<th>Arrow scalar names</th>
 <th>Arx append/get suffix</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>0–3</td>
-<td>int8, int16, int32, int64</td>
+<td><code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></td>
 <td><code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code></td>
 </tr>
 <tr class="even">
-<td>4–7</td>
-<td>uint8, uint16, uint32, uint64</td>
-<td>Preserve/forward; no unsigned Arx scalar accessor</td>
+<td><code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td>
+<td>Preserve/forward; no unsigned scalar getter</td>
 </tr>
 <tr class="odd">
-<td>8–10</td>
-<td>float32, float64, Boolean</td>
+<td><code>float32</code>, <code>float64</code>, <code>bool</code></td>
 <td><code>f32</code>, <code>f64</code>, <code>bool</code></td>
 </tr>
 <tr class="even">
-<td>11–12</td>
-<td>UTF-8, large UTF-8</td>
+<td><code>utf8</code>, <code>large_utf8</code> (also <code>string</code>, <code>large_string</code>)</td>
 <td><code>utf8</code></td>
 </tr>
 <tr class="odd">
-<td>13–14</td>
-<td>date32 (days), date64 (milliseconds)</td>
+<td><code>date32[day]</code>, <code>date64[ms]</code></td>
 <td><code>date</code> (<code>i64</code> count)</td>
 </tr>
 <tr class="even">
-<td>15–18</td>
-<td>timestamp s, ms, us, ns</td>
+<td><code>timestamp[s]</code>, <code>timestamp[ms]</code>, <code>timestamp[us]</code>, <code>timestamp[ns]</code></td>
 <td><code>timestamp</code> (<code>i64</code> count)</td>
 </tr>
 <tr class="odd">
-<td>19–22</td>
-<td>time32 s/ms, time64 us/ns</td>
+<td><code>time32[s]</code>, <code>time32[ms]</code>, <code>time64[us]</code>, <code>time64[ns]</code></td>
 <td><code>time</code> (<code>i64</code> count)</td>
 </tr>
 </tbody>
 </table>
-<p>Types, units, timezones, field nullability and schema/field metadata are retained on imported batches, schema snapshots and IPC/C exports. Imported supported list/struct layouts can be forwarded intact, but the Arx scalar methods do not provide nested traversal or construction. IDs 23/24 are inspection results, not primitive arguments to <code>Schema.add</code>.</p>
+<p>Numeric native IDs are not arguments to <code>Schema.add</code>; complex schemas are imported from Arrow or read from Parquet. Types, units, timezones, nullability and metadata survive snapshots and IPC/C exports. Scalar builders/getters do not provide recursive construction or traversal.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
@@ -817,8 +814,8 @@ fn main() -&gt; i32:
 <h3 class="anchored" data-anchor-id="compatibility-and-limitations">Compatibility and limitations</h3>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 50%">
-<col style="width: 49%">
+<col style="width: 41%">
+<col style="width: 58%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -837,7 +834,7 @@ fn main() -&gt; i32:
 </tr>
 <tr class="odd">
 <td>Full field/schema metadata and timestamp timezone preservation</td>
-<td>IPC and C sharing; not projected into DataFrames</td>
+<td>IPC, C sharing and runtime-schema DataFrames; static casts use declared metadata</td>
 </tr>
 <tr class="even">
 <td>Zero-column input with nonzero rows</td>
@@ -853,11 +850,11 @@ fn main() -&gt; i32:
 </tr>
 <tr class="odd">
 <td>DataFrame ↔︎ RecordBatch conversion</td>
-<td>Not implemented; construct/use <code>RecordBatch</code> instead</td>
+<td>Checked exact scalar schemas, including nullable, unsigned, string and temporal columns</td>
 </tr>
 <tr class="even">
-<td>Dictionary, decimal, binary, extension and other unclassified Arrow types</td>
-<td>Rejected at import/open; no silent conversion</td>
+<td>Dictionary, decimal, binary and supported extensions</td>
+<td>Recursive C Data/IPC and Parquet forwarding; see format-specific limits</td>
 </tr>
 <tr class="odd">
 <td>Unsigned and supported nested values</td>
@@ -873,10 +870,28 @@ fn main() -&gt; i32:
 </tr>
 </tbody>
 </table>
-<p>The sanitizer harness is <code>packages/irx/tests/native/arrow_interop.cpp</code>. Compile it with <code>irx_record_batch.cpp</code>, <code>irx_arrow_transport.cc</code>, the Arrow include/link flags, and <code>-fsanitize=address,undefined -fno-omit-frame-pointer</code>. It exercises schema snapshots, exported lifetimes, import moves, repeated guarded releases, EOF and corrupt-input cleanup. Arrow’s prebuilt shared library itself is not sanitizer-instrumented by this command.</p>
-
-
+<p>The sanitizer harness is <code>packages/irx/tests/native/arrow_interop.cpp</code>. Compile it with <code>irx_record_batch.cpp</code>, <code>irx_arrow_transport.cc</code>, <code>irx_arrow_runtime.cc</code>, the Arrow and buffer-native include/link flags, and <code>-fsanitize=address,undefined -fno-omit-frame-pointer</code>. It exercises schema snapshots, exported lifetimes, import moves, repeated guarded releases, EOF, CSV and checked table conversions, and corrupt-input cleanup. Pass a workspace-local CSV output path as its single argument. Arrow’s prebuilt shared library itself is not sanitizer-instrumented by this command.</p>
 </section>
+</section>
+<section id="csv-streaming-and-checked-conversion" class="level2">
+<h2 class="anchored" data-anchor-id="csv-streaming-and-checked-conversion">CSV streaming and checked conversion</h2>
+<p><code>CSVStream</code> in <code>stdlib.csv</code> and Python <code>irx.record_batch</code> reuses Arrow C++ streaming readers and writers. Python generic stream factories remain supported. Both <code>cast(batch, dataframe[name:T, ...])</code> and <code>cast(frame, RecordBatch)</code> support exact static scalar schemas, including nullable columns. Literal-ellipsis <code>dataframe[...]</code> preserves runtime schemas with rich types and metadata. Conversion results own their references independently; DataFrame-to-RecordBatch export combines <strong>all</strong> chunks and may allocate. See <a href="./arx/csv.html">CSV files and DataFrames</a> for schemas, null rules, lifetime, streaming failure semantics and the intentionally restricted DataFrame subset.</p>
+</section>
+<section id="explicit-csv-and-parquet-streams" class="level2">
+<h2 class="anchored" data-anchor-id="explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</h2>
+<p><code>CSVStream</code> and <code>ParquetStream</code> expose <code>open_read</code>, <code>open_write</code>, batch operations, <code>schema</code> and <code>close</code>, with one active session per owner. Parquet uses Arrow’s native batch reader and buffered writer, not a whole-file Table or Python subprocess. The runtime owns the parent Parquet reader across C stream exports and checks footer finalization. Supported recursive types retain Arrow metadata; unsupported types and implicit temporal coercion are rejected. See <a href="./arx/parquet.html">Parquet files and DataFrames</a> for the precise contract.</p>
+<p>The <code>record_batch</code> runtime links <code>libarrow</code>; the dependent <code>parquet</code> feature adds the Parquet/Dataset/Compute/Acero libraries and format adapters. Use the registered feature artifacts and linker flags for native builds. The Python ctypes backend loads Parquet as a separate on-demand plugin. Arx analyzes all <code>stdlib.arrow</code> declarations but lowers only resolved reachable declarations; CSV-only programs do not activate Parquet. Do not mix system Arrow with PyArrow libraries or assume an unversioned <code>-lparquet</code> symlink exists.</p>
+<section id="extended-data-file-support" class="level3">
+<h3 class="anchored" data-anchor-id="extended-data-file-support">Extended data-file support</h3>
+<p><a href="./arx/parquet.html">Parquet options</a> add projection, row-group selection, predicate pushdown, Hive datasets, checked temporal normalization, codecs, local atomic replacement/rewrite append, encrypted snapshot datasets, nullable write-schema evolution, fsync durability and cooperating-writer exclusion. Rich recursive schemas cross the existing opaque native handles and Arrow C Data boundary. <code>CSVStream</code> and <code>ParquetStream</code> name the incremental session APIs explicitly; use the module-level <code>read_*</code> / <code>write_*</code> functions for whole DataFrames.</p>
+</section>
+</section>
+<section id="dedicated-file-format-apis-and-table-interchange" class="level2">
+<h2 class="anchored" data-anchor-id="dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</h2>
+<p><code>stdlib.csv</code> owns CSV and <code>stdlib.parquet</code> owns Parquet. Their paired <code>read_*</code> / <code>write_*</code> functions operate on DataFrames; their unified session classes support explicit streaming. Shared Arrow/IPC classes stay here, with no format re-exports or DataFrame <code>.to_*</code> methods. See the <a href="./arx/csv.html">CSV</a> and <a href="./arx/parquet.html">Parquet</a> guides.</p>
+<p>The matching <code>irx.table_io</code> Python helpers operate on <code>pyarrow.Table</code> through the native C Stream bridge, not Python CSV/Parquet engines. Whole-file reads drain validated batches into a chunked table, preserving empty schemas. Writes iterate <code>TableBatchReader</code>; neither path uses <code>CombineChunksToBatch()</code>. Direct checked table casts validate every chunk and retain metadata/buffers. The older explicit conversion of a whole table to one RecordBatch may still combine chunks; it is not used by these convenience functions.</p>
+
+
 </section>
 </section>
 

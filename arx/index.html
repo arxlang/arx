@@ -48,9 +48,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -396,7 +396,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -405,7 +405,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -460,6 +460,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -672,6 +684,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -713,10 +731,8 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#arx-programming-language" id="toc-arx-programming-language" class="nav-link active" data-scroll-target="#arx-programming-language">Arx Programming Language</a>
   <ul class="collapse">
   <li><a href="#start-here" id="toc-start-here" class="nav-link" data-scroll-target="#start-here">Start here</a></li>
-  <li><a href="#language-reference" id="toc-language-reference" class="nav-link" data-scroll-target="#language-reference">Language reference</a></li>
-  <li><a href="#implemented-areas" id="toc-implemented-areas" class="nav-link" data-scroll-target="#implemented-areas">Implemented areas</a></li>
-  <li><a href="#apache-arrow-types" id="toc-apache-arrow-types" class="nav-link" data-scroll-target="#apache-arrow-types">Apache Arrow types</a></li>
-  <li><a href="#current-limits" id="toc-current-limits" class="nav-link" data-scroll-target="#current-limits">Current limits</a></li>
+  <li><a href="#language-reference" id="toc-language-reference" class="nav-link" data-scroll-target="#language-reference">Language guides</a></li>
+  <li><a href="#support-and-contracts" id="toc-support-and-contracts" class="nav-link" data-scroll-target="#support-and-contracts">Support and contracts</a></li>
   <li><a href="#related-tools" id="toc-related-tools" class="nav-link" data-scroll-target="#related-tools">Related tools</a></li>
   </ul></li>
   </ul>
@@ -754,75 +770,25 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 <section id="language-reference" class="level2">
-<h2 class="anchored" data-anchor-id="language-reference">Language reference</h2>
+<h2 class="anchored" data-anchor-id="language-reference">Language guides</h2>
 <ul>
 <li><a href="../arx/modules.html">Modules and imports</a></li>
 <li><a href="../arx/functions.html">Functions</a></li>
 <li><a href="../arx/file-io.html">Text file I/O</a></li>
 <li><a href="../arx/classes.html">Classes</a></li>
 <li><a href="../arx/datatypes.html">Data types</a></li>
-<li><a href="../arx/built-in-types.html">Built-in types</a></li>
+<li><a href="../arx/built-in-types.html">Choosing built-in types</a></li>
 <li><a href="../arx/collections.html">Collections and Apache Arrow</a></li>
+<li><a href="../arx/csv.html">CSV files and DataFrame conversion</a></li>
+<li><a href="../arx/parquet.html">Parquet files and DataFrame conversion</a></li>
 <li><a href="../arx/control-flow.html">Control flow</a></li>
 <li><a href="../arx/docstrings.html">Douki docstrings</a></li>
 </ul>
 </section>
-<section id="implemented-areas" class="level2">
-<h2 class="anchored" data-anchor-id="implemented-areas">Implemented areas</h2>
-<p>The current frontend supports:</p>
-<ul>
-<li>typed functions, defaults, extern declarations, and function templates</li>
-<li>mutable variables, finite union aliases, casts, and type queries</li>
-<li><code>if</code>/<code>else</code>, <code>while</code>, count-style <code>for</code>, and list-valued <code>for ... in</code></li>
-<li>absolute, relative, grouped, namespace, standard-library, and installed package imports</li>
-<li>named function/method calls with source-order evaluation and call-time defaults</li>
-<li>classes, inheritance, fields, methods, constructor keywords, <code>__init__</code> and <code>__del__</code> hooks, and acyclic reference-managed lifetimes</li>
-<li>lists and builtin <code>range</code></li>
-<li>restricted native UTF-8 text files with builtin <code>File</code> and its <code>open</code> adapter</li>
-<li>fixed-shape numeric tensors and runtime-shaped tensor parameters</li>
-<li>static-schema DataFrames and typed Series</li>
-<li>runtime-schema RecordBatches, IPC and C Data/C Stream through <code>stdlib.arrow</code></li>
-<li>assertions and the compiled <code>arx test</code> runner</li>
-<li>token, ASTx, LLVM IR, object, executable, and run modes</li>
-</ul>
-</section>
-<section id="apache-arrow-types" class="level2">
-<h2 class="anchored" data-anchor-id="apache-arrow-types">Apache Arrow types</h2>
-<p>Arx exposes typed collection syntax backed by IRx’s native Arrow C++ runtime:</p>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Arx type</th>
-<th>Runtime representation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>tensor[T, D0, ...]</code></td>
-<td><code>arrow::Tensor</code></td>
-</tr>
-<tr class="even">
-<td><code>dataframe[name: T, ...]</code></td>
-<td><code>arrow::Table</code></td>
-</tr>
-<tr class="odd">
-<td><code>series[T]</code></td>
-<td><code>arrow::ChunkedArray</code></td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="../arx/collections.html">Collections and Apache Arrow</a> for language rules and <a href="../apache-arrow.html">Native Apache Arrow Support</a> for the runtime boundary and current interoperability features.</p>
-</section>
-<section id="current-limits" class="level2">
-<h2 class="anchored" data-anchor-id="current-limits">Current limits</h2>
-<ul>
-<li>Tensor elements are currently fixed-width signed integers or floats.</li>
-<li>Tensors are readonly, and runtime-shaped parameters cannot be indexed dynamically.</li>
-<li>DataFrame columns currently use fixed-width numeric or Boolean values.</li>
-<li>Runtime-schema DataFrame parameters do not expose columns by name.</li>
-<li>The standard library and general language surface remain limited.</li>
-<li>Arx does not define AST node types or feature lowering; those belong to ASTx and IRx respectively.</li>
-</ul>
+<section id="support-and-contracts" class="level2">
+<h2 class="anchored" data-anchor-id="support-and-contracts">Support and contracts</h2>
+<p>The <a href="../arx/capability-matrix.html">capability matrix</a> is the single compact summary of implemented support and exclusions. The <a href="../arx/specification.html">preview contracts</a> explain arithmetic, ownership, failure, and compatibility decisions; neither is a stability promise.</p>
+<p>Handwritten pages focus on workflows and safety. Python API reference is <a href="../api/arx.html">generated from source</a>, not maintained as copied signatures.</p>
 </section>
 <section id="related-tools" class="level2">
 <h2 class="anchored" data-anchor-id="related-tools">Related tools</h2>
@@ -833,6 +799,7 @@ ul.task-list li input[type="checkbox"] {
 <li><a href="../tools/douki.html">Douki</a> defines the YAML docstring tooling used by Arx.</li>
 </ul>
 <p>Source: <a href="https://github.com/arxlang/arx">github.com/arxlang/arx</a></p>
+<p>For tabular computation, <a href="../arx/collections.html">collections</a> covers nullable scalar and Series expressions and parameterized static DataFrame schemas.</p>
 
 
 </section>

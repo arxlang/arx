@@ -13,6 +13,21 @@ summary: >-
   expressions during semantic analysis.
 ```
 
+## Functions
+
+### `collection_probe_matches(expected: astx.DataType, actual: astx.DataType | None) -> bool`
+
+```yaml
+title: Numeric searches use comparison domains, not assignment domains.
+parameters:
+  expected:
+    type: astx.DataType
+  actual:
+    type: astx.DataType | None
+returns:
+  type: bool
+```
+
 ## Classes
 
 ### `ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase)`
@@ -39,6 +54,15 @@ title: Visit AliasExpr nodes.
 parameters:
   node:
     type: astx.AliasExpr
+```
+
+##### `visit(self, node: astx.LiteralDate) -> None`
+
+```yaml
+title: Validate calendar dates and resolve their epoch representation.
+parameters:
+  node:
+    type: astx.LiteralDate
 ```
 
 ##### `visit(self, node: astx.LiteralTime) -> None`

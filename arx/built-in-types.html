@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/built-in-types.html">Built-in Types</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/built-in-types.html">Built-in Types</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -713,21 +731,15 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#built-in-types" id="toc-built-in-types" class="nav-link active" data-scroll-target="#built-in-types">Built-in Types</a>
   <ul class="collapse">
-  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview">Overview</a></li>
-  <li><a href="#numeric-types" id="toc-numeric-types" class="nav-link" data-scroll-target="#numeric-types">Numeric Types</a></li>
-  <li><a href="#none" id="toc-none" class="nav-link" data-scroll-target="#none"><code>none</code></a></li>
-  <li><a href="#text-types" id="toc-text-types" class="nav-link" data-scroll-target="#text-types">Text Types</a></li>
-  <li><a href="#temporal-types" id="toc-temporal-types" class="nav-link" data-scroll-target="#temporal-types">Temporal Types</a></li>
-  <li><a href="#collections-tensors-and-dataframes" id="toc-collections-tensors-and-dataframes" class="nav-link" data-scroll-target="#collections-tensors-and-dataframes">Collections, tensors, and dataframes</a></li>
-  <li><a href="#type-aware-builtins" id="toc-type-aware-builtins" class="nav-link" data-scroll-target="#type-aware-builtins">Type-aware builtins</a></li>
-  <li><a href="#file" id="toc-file" class="nav-link" data-scroll-target="#file"><code>file</code></a></li>
-  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See Also</a></li>
+  <li><a href="#scalars-and-conversions" id="toc-scalars-and-conversions" class="nav-link" data-scroll-target="#scalars-and-conversions">Scalars and conversions</a></li>
+  <li><a href="#collections-and-nullable-values" id="toc-collections-and-nullable-values" class="nav-link" data-scroll-target="#collections-and-nullable-values">Collections and nullable values</a></li>
+  <li><a href="#file-references" id="toc-file-references" class="nav-link" data-scroll-target="#file-references">File references</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/built-in-types.html">Built-in Types</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/built-in-types.html">Built-in Types</a></li></ol></nav></header>
 
 
 
@@ -735,312 +747,21 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="built-in-types" class="level1">
 <h1>Built-in Types</h1>
-<p>Arx has a small set of built-in types that can be used in variable annotations, function parameters, and function return types, except for the local-only <code>file</code> type. This page is the reference for their canonical spellings, accepted aliases, and current surface syntax.</p>
-<section id="overview" class="level2">
-<h2 class="anchored" data-anchor-id="overview">Overview</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 19%">
-<col style="width: 10%">
-<col style="width: 6%">
-<col style="width: 36%">
-<col style="width: 27%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Canonical type</th>
-<th>Accepted aliases</th>
-<th>Category</th>
-<th>Example</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>i8</code></td>
-<td><code>int8</code></td>
-<td>integer</td>
-<td><code>var a: i8 = 8</code></td>
-<td>8-bit integer</td>
-</tr>
-<tr class="even">
-<td><code>i16</code></td>
-<td><code>int16</code></td>
-<td>integer</td>
-<td><code>var b: i16 = 16</code></td>
-<td>16-bit integer</td>
-</tr>
-<tr class="odd">
-<td><code>i32</code></td>
-<td><code>int32</code></td>
-<td>integer</td>
-<td><code>var c: i32 = 32</code></td>
-<td>32-bit integer</td>
-</tr>
-<tr class="even">
-<td><code>i64</code></td>
-<td><code>int64</code></td>
-<td>integer</td>
-<td><code>var d: i64 = 64</code></td>
-<td>64-bit integer</td>
-</tr>
-<tr class="odd">
-<td><code>f16</code></td>
-<td><code>float16</code></td>
-<td>float</td>
-<td><code>var x: f16 = 1.5</code></td>
-<td>16-bit float</td>
-</tr>
-<tr class="even">
-<td><code>f32</code></td>
-<td><code>float32</code></td>
-<td>float</td>
-<td><code>var y: f32 = 3.25</code></td>
-<td>32-bit float</td>
-</tr>
-<tr class="odd">
-<td><code>f64</code></td>
-<td><code>float64</code></td>
-<td>float</td>
-<td><code>var z: f64 = 9.5</code></td>
-<td>64-bit float</td>
-</tr>
-<tr class="even">
-<td><code>bool</code></td>
-<td><code>boolean</code></td>
-<td>boolean</td>
-<td><code>var ok: bool = true</code></td>
-<td>Uses <code>true</code> and <code>false</code> literals</td>
-</tr>
-<tr class="odd">
-<td><code>none</code></td>
-<td>—</td>
-<td>unit</td>
-<td><code>fn log() -&gt; none:</code></td>
-<td>Also the single value of the <code>none</code> type</td>
-</tr>
-<tr class="even">
-<td><code>str</code></td>
-<td><code>string</code></td>
-<td>text</td>
-<td><code>var s: str = "hi"</code></td>
-<td>UTF-8 string</td>
-</tr>
-<tr class="odd">
-<td><code>char</code></td>
-<td>—</td>
-<td>text</td>
-<td><code>var ch: char = 'A'</code></td>
-<td>Currently mapped to <code>i8</code></td>
-</tr>
-<tr class="even">
-<td><code>datetime</code></td>
-<td>—</td>
-<td>temporal</td>
-<td><code>datetime("2026-03-05T12:30:59")</code></td>
-<td>Constructor-style literal form</td>
-</tr>
-<tr class="odd">
-<td><code>timestamp</code></td>
-<td>—</td>
-<td>temporal</td>
-<td><code>timestamp("2026-03-05T12:30:59Z")</code></td>
-<td>Constructor-style literal form</td>
-</tr>
-<tr class="even">
-<td><code>date</code></td>
-<td>—</td>
-<td>temporal</td>
-<td><code>var d: date</code></td>
-<td>Recognized as a built-in type name</td>
-</tr>
-<tr class="odd">
-<td><code>time</code></td>
-<td>—</td>
-<td>temporal</td>
-<td><code>var t: time</code></td>
-<td>Recognized as a built-in type name</td>
-</tr>
-<tr class="even">
-<td><code>list[T]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>var ids: list[i32] = [1, 2, 3]</code></td>
-<td>Generic collection type</td>
-</tr>
-<tr class="odd">
-<td><code>tensor[T, N]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>var ids: tensor[i32, 4] = [1, 2, 3, 4]</code></td>
-<td>Fixed-shape 1D numeric tensor</td>
-</tr>
-<tr class="even">
-<td><code>tensor[T, d0, d1, ..., dN]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]</code></td>
-<td>Fixed-shape multidimensional tensor</td>
-</tr>
-<tr class="odd">
-<td><code>tensor[T, ...]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>fn sink(values: tensor[i32, ...]) -&gt; none:</code></td>
-<td>Runtime-shaped tensor parameter</td>
-</tr>
-<tr class="even">
-<td><code>dataframe[name: T, ...]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>var rows: dataframe[id: i32] = dataframe({id: [1]})</code></td>
-<td>Static-schema DataFrame</td>
-</tr>
-<tr class="odd">
-<td><code>dataframe[...]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>fn sink(rows: dataframe[...]) -&gt; none:</code></td>
-<td>Runtime-schema DataFrame parameter</td>
-</tr>
-<tr class="even">
-<td><code>series[T]</code></td>
-<td>—</td>
-<td>collection</td>
-<td><code>var ids: series[i32] = rows["id"]</code></td>
-<td>Typed DataFrame column</td>
-</tr>
-</tbody>
-</table>
+<p>Choose explicit scalar types for arithmetic and annotated collection types for stored data. Accepted type spellings live in <code>packages/arx/src/arx/lexer/syntax.json</code>; a lexical name alone does not establish executable support. See the <a href="../arx/capability-matrix.html">capability matrix</a> for that boundary and <a href="../arx/datatypes.html">type annotations</a> for placement.</p>
+<section id="scalars-and-conversions" class="level2">
+<h2 class="anchored" data-anchor-id="scalars-and-conversions">Scalars and conversions</h2>
+<p>Use fixed-width integers or floats when width matters, <code>bool</code> for conditions, and <code>str</code> for UTF-8 text. <code>char</code> is a low-level <code>i8</code> representation, not a Unicode grapheme. <code>none</code> is both the unit type and its sole value; a <code>-&gt; none</code> function may use bare <code>return</code>, <code>return none</code>, or fall through.</p>
+<p><code>cast(value, Type)</code> requests a supported conversion. <code>isinstance(value, Type)</code> checks the semantic type, including finite union aliases; <code>type(value)</code> returns its name. These do not introduce dynamic Python objects or runtime tagged unions. See the executable <a href="https://github.com/arxlang/arx/blob/main/packages/arx/tests/arx/test_datatypes.x">datatype tests</a> and <a href="../arx/specification.html#fixed-width-integer-overflow">preview arithmetic contract</a>.</p>
+<p>Strings have distinct static, borrowed, and owned lifetimes; consult the <a href="../irx/runtime-ownership.html#enforced-string-contract">string ownership contract</a> before returning or storing borrowed text. Native strings cannot represent embedded NUL safely.</p>
 </section>
-<section id="numeric-types" class="level2">
-<h2 class="anchored" data-anchor-id="numeric-types">Numeric Types</h2>
-<p>Arx accepts both short canonical names and longer aliases in type annotations:</p>
-<ul>
-<li>integers: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code></li>
-<li>integer aliases: <code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></li>
-<li>floats: <code>f16</code>, <code>f32</code>, <code>f64</code></li>
-<li>float aliases: <code>float16</code>, <code>float32</code>, <code>float64</code></li>
-</ul>
-<pre class="arx"><code>fn numeric_demo(a: int32, b: float32) -&gt; f64:
-  var count: i64 = 64
-  return cast(a, f64) + cast(b, f64)</code></pre>
+<section id="collections-and-nullable-values" class="level2">
+<h2 class="anchored" data-anchor-id="collections-and-nullable-values">Collections and nullable values</h2>
+<p><a href="../arx/collections.html">Collections and Apache Arrow</a> owns the list, tensor, DataFrame, and Series storage rules. In particular, runtime-schema DataFrames support locals and returns, while runtime-shaped tensors remain parameter-only. Temporal and rich Arrow column schemas do not imply general temporal or nested scalar operations.</p>
+<p><a href="../arx/collections.html#nullable-scalars-and-series-expressions">Nullable expressions</a> carry explicit validity, propagate nulls, and use checked arithmetic. They are not interchangeable with non-nullable scalar arithmetic or Boolean conditions.</p>
 </section>
-<section id="none" class="level2">
-<h2 class="anchored" data-anchor-id="none"><code>none</code></h2>
-<p><code>none</code> is the built-in unit type and also the single value of that type. Use it for functions that do not return a meaningful result.</p>
-<pre class="arx"><code>fn log_message() -&gt; none:
-  print("ok")
-  return
-
-fn done() -&gt; none:
-  return none
-
-var marker: none = none</code></pre>
-<p>For <code>-&gt; none</code> functions:</p>
-<ul>
-<li>the return type annotation is still mandatory</li>
-<li>bare <code>return</code> returns <code>none</code></li>
-<li>reaching the end of the function also implicitly returns <code>none</code></li>
-</ul>
-</section>
-<section id="text-types" class="level2">
-<h2 class="anchored" data-anchor-id="text-types">Text Types</h2>
-<p>Use <code>str</code> for strings and <code>char</code> for single-byte character values.</p>
-<pre class="arx"><code>fn text_demo() -&gt; none:
-  var greeting: str = "hello"
-  var initial: char = 'A'
-  return none</code></pre>
-<p><code>char</code> currently maps to <code>i8</code>, so it should be treated as a low-level character representation rather than a separate rich text type.</p>
-</section>
-<section id="temporal-types" class="level2">
-<h2 class="anchored" data-anchor-id="temporal-types">Temporal Types</h2>
-<p>Arx currently documents constructor-style surface syntax for <code>datetime</code> and <code>timestamp</code> values.</p>
-<pre class="arx"><code>fn time_demo() -&gt; none:
-  var dt: datetime = datetime("2026-03-05T12:30:59")
-  var ts: timestamp = timestamp("2026-03-05T12:30:59.123456789")
-  return none</code></pre>
-<p>The parser also recognizes <code>date</code> and <code>time</code> as built-in type names in annotations.</p>
-</section>
-<section id="collections-tensors-and-dataframes" class="level2">
-<h2 class="anchored" data-anchor-id="collections-tensors-and-dataframes">Collections, tensors, and dataframes</h2>
-<p>Arx exposes the following public collection type families:</p>
-<ul>
-<li><code>list[T]</code> for generic collection values</li>
-<li><code>tensor[T, N]</code> for fixed-shape 1D numeric tensors</li>
-<li><code>tensor[T, d0, d1, ..., dN]</code> for fixed-shape multidimensional tensors</li>
-<li><code>tensor[T, ...]</code> for runtime-shaped tensor parameters</li>
-<li><code>dataframe[name: T, ...]</code> for static-schema named-column DataFrames</li>
-<li><code>dataframe[...]</code> for runtime-schema DataFrame parameters</li>
-<li><code>series[T]</code> for typed DataFrame columns</li>
-</ul>
-<p>In the fixed-shape form, <code>...</code> is documentation prose for additional integer dimensions. The literal <code>...</code> marker is reserved for runtime-shaped tensor parameters and runtime-schema DataFrame parameters.</p>
-<p>The naming is intentional: Arx uses <code>Tensor</code> for homogeneous N-dimensional data, aligning with common data-science terminology and IRx’s Arrow C++ backed runtime. <code>DataFrame</code> is the heterogeneous named-column abstraction backed by Arrow C++ <code>Table</code>, and <code>Series</code> is the one-dimensional typed column view backed by Arrow C++ <code>ChunkedArray</code>.</p>
-<pre class="arx"><code>fn tensor_demo() -&gt; none:
-  var names: list[str] = ["a", "b"]
-  var ids: tensor[i32, 4] = [1, 2, 3, 4]
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  print(names[0])
-  print(ids[2])
-  print(grid[1, 0])
-  return none</code></pre>
-<p>Current tensor rules in this phase:</p>
-<ul>
-<li>element types are fixed-width numeric types (<code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>f32</code>, or <code>f64</code>)</li>
-<li>variable, field, and return tensor annotations must declare at least one static shape dimension</li>
-<li><code>tensor[T, ...]</code> is accepted only in parameter annotations; it means the element type is static and the shape/layout is runtime metadata</li>
-<li>literals must be rectangular and match the declared static shape</li>
-<li>indexing uses one index per declared static dimension</li>
-<li>indexing runtime-shaped tensor parameters is rejected until dynamic tensor indexing is supported by IRx</li>
-<li>current lowering is read-only and is focused on literal/default-initialized shaped tensors</li>
-</ul>
-<p>Current DataFrame rules in this phase:</p>
-<ul>
-<li>column types are fixed-width numeric types (<code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>f32</code>, <code>f64</code>) or <code>bool</code></li>
-<li>string, nullable, nested, temporal, and user-defined columns are not part of the MVP yet</li>
-<li>static-schema values use <code>dataframe[name: T, ...]</code> annotations and the column-oriented <code>dataframe({...})</code> constructor</li>
-<li>constructor columns must be list literals, use declared column names, and have equal row counts</li>
-<li>columns can be accessed as <code>rows.score</code> or <code>rows["score"]</code></li>
-<li><code>rows.nrows()</code> and <code>rows.ncols()</code> return row and column counts as <code>i64</code></li>
-<li>column access and metadata methods currently work on DataFrame identifiers and literals whose schema is known while parsing, not on arbitrary DataFrame-returning expressions</li>
-<li><code>dataframe[...]</code> is accepted only in function and extern parameter annotations for now; column access on runtime-schema parameters is not available yet</li>
-</ul>
-<pre class="arx"><code>fn dataframe_demo() -&gt; i32:
-  var rows: dataframe[id: i32, score: f64] = dataframe({
-    id: [1, 2, 3],
-    score: [0.5, 0.8, 1.0],
-  })
-  var scores: series[f64] = rows.score
-  var ids: series[i32] = rows["id"]
-  return cast(rows.nrows(), i32)</code></pre>
-</section>
-<section id="type-aware-builtins" class="level2">
-<h2 class="anchored" data-anchor-id="type-aware-builtins">Type-aware builtins</h2>
-<p>Use the built-in <code>cast(value, type)</code> helper to convert values between supported types.</p>
-<pre class="arx"><code>fn cast_demo(a: i32) -&gt; str:
-  return cast(a, str)</code></pre>
-<p>Use <code>isinstance(value, type)</code> to compare the static semantic type of a value with a concrete type, type alias, or finite union type.</p>
-<pre class="arx"><code>type Number = i32 | i64
-
-fn check(value: i32) -&gt; bool:
-  return isinstance(value, Number)</code></pre>
-<p>Use <code>type(value)</code> to produce the value’s semantic type name as <code>str</code>.</p>
-<pre class="arx"><code>type Count = i32
-
-fn type_name(value: Count) -&gt; str:
-  return type(value)</code></pre>
-</section>
-<section id="file" class="level2">
-<h2 class="anchored" data-anchor-id="file"><code>file</code></h2>
-<p><code>var stream: file = open("input.txt")</code> declares a single-owner native text file. It requires a direct initializer and cannot be copied, reassigned, passed, or returned. See <a href="../arx/file-io.html">Text File I/O</a> for its methods and limitations.</p>
-</section>
-<section id="see-also" class="level2">
-<h2 class="anchored" data-anchor-id="see-also">See Also</h2>
-<ul>
-<li><a href="../arx/datatypes.html">Data Types</a> for annotation rules and placement</li>
-<li><a href="../arx/collections.html">Collections and Apache Arrow</a> for runtime storage and current collection limits</li>
-<li><a href="../arx/functions.html">Functions</a> for function signatures and returns</li>
-</ul>
+<section id="file-references" class="level2">
+<h2 class="anchored" data-anchor-id="file-references">File references</h2>
+<p><a href="../arx/file-io.html"><code>File</code> and <code>open</code></a> create shared class references to one text stream; lowercase <code>file</code> denotes the same type. References can be aliased, passed, returned, and stored in supported class fields. Closing through any alias closes the shared stream. Only the hidden native handle is uniquely owned.</p>
 
 
 </section>

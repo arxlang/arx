@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/capability-matrix.html">Capability Matrix</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/capability-matrix.html">Capability Matrix</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -711,16 +729,12 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#arx-capability-matrix" id="toc-arx-capability-matrix" class="nav-link active" data-scroll-target="#arx-capability-matrix">Arx Capability Matrix</a>
-  <ul class="collapse">
-  <li><a href="#how-to-read-this-matrix" id="toc-how-to-read-this-matrix" class="nav-link" data-scroll-target="#how-to-read-this-matrix">How to read this matrix</a></li>
-  <li><a href="#cross-stage-rule" id="toc-cross-stage-rule" class="nav-link" data-scroll-target="#cross-stage-rule">Cross-stage rule</a></li>
-  </ul></li>
+  <li><a href="#arx-capability-matrix" id="toc-arx-capability-matrix" class="nav-link active" data-scroll-target="#arx-capability-matrix">Arx Capability Matrix</a></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/capability-matrix.html">Capability Matrix</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/capability-matrix.html">Capability Matrix</a></li></ol></nav></header>
 
 
 
@@ -728,281 +742,82 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="arx-capability-matrix" class="level1">
 <h1>Arx Capability Matrix</h1>
-<section id="how-to-read-this-matrix" class="level2">
-<h2 class="anchored" data-anchor-id="how-to-read-this-matrix">How to read this matrix</h2>
-<p>This matrix distinguishes end-to-end Arx support from lexical reservation and ASTx modeling. <code>Complete</code> means the checked-out repository has the relevant pipeline path and tests; it does not yet imply a frozen compatibility promise. <code>Partial</code> means users must follow the linked/current limitations. <code>Reserved</code> means the spelling is recognized but must not be advertised as usable.</p>
+<p>This is the compact end-to-end support boundary, not a method catalog or a stability promise. Tokenization or an ASTx node alone does not establish Arx support. Package APIs and syntax may change before Arx 2.0 with coordinated caller updates and concise migration notes.</p>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 14%">
-<col style="width: 19%">
-<col style="width: 17%">
-<col style="width: 17%">
-<col style="width: 31%">
-</colgroup>
 <thead>
 <tr class="header">
-<th>Construct</th>
-<th>Lex/parse</th>
-<th>Semantics</th>
-<th>LLVM/runtime</th>
-<th>Current status</th>
+<th>Area</th>
+<th>Supported boundary</th>
+<th>Important limits</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Typed scalar functions and returns</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate</td>
+<td><a href="../arx/functions.html">Functions</a> and <a href="../arx/datatypes.html">types</a></td>
+<td>Explicit annotations, defaults, named calls, bounded templates, finite numeric unions</td>
+<td>No inferred local declarations, argument unpacking, or keyword-only declarations; no runtime tagged unions</td>
 </tr>
 <tr class="even">
-<td>Default arguments</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate</td>
+<td><a href="../arx/specification.html#fixed-width-integer-overflow">Numeric safety</a></td>
+<td>Lossless promotion, checked integer arithmetic/casts, explicit wrapping</td>
+<td>8–64-bit integers; no bigint fallback; typed recoverable dynamic failures</td>
 </tr>
 <tr class="odd">
-<td>Named function/method calls</td>
-<td>Parsed call operands</td>
-<td>Declaration binding and default holes</td>
-<td>Source-order evaluation; positional ABI</td>
-<td>Supported subset; no unpacking or keyword-only declarations</td>
+<td><a href="../arx/control-flow.html">Control flow</a></td>
+<td><code>if</code>/<code>else</code>, <code>while</code>, count loops, scalar-list <code>for ... in</code>, <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code></td>
+<td>No Arx <code>break</code>, <code>continue</code>, general generators, or <code>with</code>; see the <a href="../support-matrix.html#exception-capability-boundary">exception boundary</a></td>
 </tr>
 <tr class="even">
-<td>C extern declarations</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete for supported scalar/pointer forms</td>
-<td>Partial pending stable FFI ABI</td>
+<td><a href="../arx/modules.html">Modules</a> and <a href="../arx/projects.html">projects</a></td>
+<td>One entry graph; local, relative, namespace, stdlib and installed imports</td>
+<td>Cycles fail; no multiple direct CLI entries or executable module-level initialization</td>
 </tr>
 <tr class="odd">
-<td>External native package dependencies</td>
-<td>Existing extern syntax</td>
-<td>Origin-bound capabilities; ABI validation</td>
-<td>Isolated registered native compilation/linking</td>
-<td>Declarative subset; no plugins, callbacks, public raw pointer syntax, or graphics runtime</td>
+<td><a href="../arx/classes.html">Classes</a> and <a href="../arx/file-io.html">files</a></td>
+<td>Acyclic shared identities, lifecycle hooks, string/File/class fields</td>
+<td>No owning list/Arrow fields, class containers, cycles, general foreign object ABI, or fatal cross-frame unwinding</td>
 </tr>
 <tr class="even">
-<td>Function templates</td>
-<td>Complete for current forms</td>
-<td>Complete for current forms</td>
-<td>Complete for tested instantiations</td>
-<td>Partial pending compatibility specification</td>
+<td><a href="../arx/collections.html#lists">Lists</a> and strings</td>
+<td>Enforced owner/borrow/move cleanup; builtin <code>range</code> returns an allocated list</td>
+<td>No general copy operation, mutable list parameters, or owning generator captures</td>
 </tr>
 <tr class="odd">
-<td>Typed mutable variables</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate</td>
+<td><a href="../arx/collections.html#tensors">Tensors</a></td>
+<td>Readonly fixed-shape numeric values; runtime-shaped parameters</td>
+<td>No dynamic indexing or general runtime-shaped returns</td>
 </tr>
 <tr class="even">
-<td>General <code>const</code> declaration</td>
-<td>Token reserved</td>
-<td>Incomplete</td>
-<td>Incomplete</td>
-<td>Reserved</td>
+<td><a href="../arx/collections.html#dataframes-and-series">DataFrames and Series</a></td>
+<td>Static/rich schemas, runtime-schema locals/returns, exact checked casts, numeric/Boolean nullable expressions</td>
+<td>No unchecked runtime column access; rich storage does not imply rich scalar arithmetic</td>
 </tr>
 <tr class="odd">
-<td>Scalar arithmetic/comparisons/casts</td>
-<td>Complete for documented operators</td>
-<td>Boolean operands and numeric conversions validated</td>
-<td>Wrapping integers, checked division, short circuit</td>
-<td>Partial pending floating non-finite/NaN rules; integer and Boolean rules specified</td>
+<td><a href="../arx/csv.html">CSV</a>, <a href="../arx/parquet.html">Parquet</a>, <a href="../apache-arrow.html">Arrow IPC</a></td>
+<td>Eager chunked frames, explicit streams, snapshots, C Data/C Stream interchange</td>
+<td>Native toolchain required; format restrictions apply; TCP is blocking/POSIX without TLS/Flight</td>
 </tr>
 <tr class="even">
-<td><code>if</code>/<code>else</code> and <code>while</code></td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate</td>
+<td><a href="../arx/native-packages.html">Native packages</a></td>
+<td>Declarative registered C ABI dependencies</td>
+<td>No raw-pointer source API, callbacks, plugins, or stable general FFI ABI</td>
 </tr>
 <tr class="odd">
-<td>Count and range <code>for</code></td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate</td>
+<td><a href="../arx/compiler-cli.html">CLI</a> and <a href="../arx/testing.html">tests</a></td>
+<td>Inspect, compile, run, and isolated compiled tests; structured diagnostics</td>
+<td>Host toolchain controls linking; no interactive shell</td>
 </tr>
 <tr class="even">
-<td>List <code>for ... in</code></td>
-<td>Complete</td>
-<td>Borrowed iteration over owned/static lists</td>
-<td>Complete for scalar list elements</td>
-<td>Partial; lifecycle is enforced outside generators</td>
-</tr>
-<tr class="odd">
-<td><code>break</code> and <code>continue</code> in Arx source</td>
-<td>Incomplete</td>
-<td>ASTx/IRx support exists</td>
-<td>IRx support exists</td>
-<td>Not an Arx feature yet</td>
-</tr>
-<tr class="even">
-<td>Modules and imports</td>
-<td>Complete from one entry graph</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Partial pending cycle/init specification</td>
-</tr>
-<tr class="odd">
-<td>Multiple direct CLI entry files</td>
-<td>Rejected early</td>
-<td>Not applicable</td>
-<td>Not applicable</td>
-<td>Unsupported; use imports</td>
-</tr>
-<tr class="even">
-<td>Source resource limits and locations</td>
-<td>UTF-8/size/token/nesting limits; one-based Unicode columns</td>
-<td>Not applicable</td>
-<td>Not applicable</td>
-<td>Implemented; compatibility freeze pending</td>
-</tr>
-<tr class="odd">
-<td>Classes, fields, methods, inheritance</td>
-<td>Complete for documented subset</td>
-<td>Complete for documented subset</td>
-<td>Complete for documented subset</td>
-<td>Partial; acyclic lifecycle supported, external ownership ABI deferred</td>
-</tr>
-<tr class="even">
-<td>Constructor arguments/bodies and destruction</td>
-<td>Positional, keyword, literal defaults</td>
-<td>Hooks, references, acyclic fields validated</td>
-<td>Checked reference counts and concrete drops</td>
-<td>Partial; no overloads, cycles, base forwarding, or fatal cross-frame unwind</td>
-</tr>
-<tr class="odd">
-<td>Finite union aliases/casts/type queries</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete for tested forms</td>
-<td>Experimental candidate</td>
-</tr>
-<tr class="even">
-<td>Strings, concatenation, casts, and returns</td>
-<td>Complete for current scalar forms</td>
-<td>Static/borrow/owner/copy/move rules enforced</td>
-<td>Checked allocation plus lexical cleanup</td>
-<td>Partial; immutable pointer ABI, owned class fields supported; no generators/external returns</td>
-</tr>
-<tr class="odd">
-<td>Literal and dynamic lists</td>
-<td>Complete</td>
-<td>Owner/borrow/move/return rules enforced</td>
-<td>Checked append/index plus lexical cleanup</td>
-<td>Partial; scalar elements and move-only values</td>
-</tr>
-<tr class="even">
-<td>Fixed-shape numeric tensors</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete for tested readonly paths</td>
-<td>Experimental candidate</td>
-</tr>
-<tr class="odd">
-<td>Runtime-shaped tensor parameters</td>
-<td>Complete for documented syntax</td>
-<td>Partial</td>
-<td>Partial</td>
-<td>No general dynamic indexing/return ownership</td>
-</tr>
-<tr class="even">
-<td>Static-schema DataFrame/Series</td>
-<td>Complete</td>
-<td>Complete for numeric/Boolean columns</td>
-<td>Complete for tested paths</td>
-<td>Experimental candidate</td>
-</tr>
-<tr class="odd">
-<td>Runtime-schema DataFrame named access</td>
-<td>Partial modeling</td>
-<td>Incomplete</td>
-<td>Incomplete</td>
-<td>Not supported</td>
-</tr>
-<tr class="even">
-<td><code>stdlib.arrow</code> RecordBatches and IPC</td>
-<td>Ordinary classes/imports</td>
-<td>Resolved native FFI and scoped class ownership</td>
-<td>IPC files/streams, C Data/C Stream</td>
-<td>Runtime schemas; nullable scalar access; no DataFrame conversion</td>
-</tr>
-<tr class="odd">
-<td><code>stdlib.arrow</code> TCP streams</td>
-<td>Ordinary methods</td>
-<td>Validated scalar arguments</td>
-<td>POSIX blocking client transport</td>
-<td>Multi-batch tests require socket access; no TLS/Flight</td>
-</tr>
-<tr class="even">
-<td>RecordBatch/PyArrow Python API</td>
-<td>Not Arx syntax</td>
-<td>Python validation</td>
-<td>Native Arrow C++ bridge</td>
-<td>Experimental Python API</td>
-</tr>
-<tr class="odd">
-<td>Native text files (<code>File</code>, <code>open</code>)</td>
-<td>Builtin File class and lowercase <code>file</code> alias</td>
-<td>Shared class refs; private unique native handle</td>
-<td>Checked C stdio, UTF-8, POSIX</td>
-<td>Partial; no binary/descriptors/with, nondefault options, reopening, subclassing, or NUL text</td>
-</tr>
-<tr class="even">
-<td>Assertions and <code>arx test</code></td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Complete</td>
-<td>Production candidate after error semantics freeze</td>
-</tr>
-<tr class="odd">
-<td>Douki docstrings</td>
-<td>Complete validation</td>
-<td>Omitted intentionally</td>
-<td>Not applicable</td>
-<td>Supported validation-only feature</td>
-</tr>
-<tr class="even">
-<td>Operator declarations</td>
-<td>Tokens reserved</td>
-<td>Incomplete</td>
-<td>Incomplete</td>
-<td>Reserved</td>
-</tr>
-<tr class="odd">
-<td><code>then</code> keyword</td>
-<td>Token reserved</td>
-<td>Incomplete</td>
-<td>Incomplete</td>
-<td>Reserved</td>
-</tr>
-<tr class="even">
-<td>Interactive shell</td>
-<td>Removed from CLI</td>
-<td>Not applicable</td>
-<td>Not applicable</td>
-<td>Non-goal for first production release</td>
-</tr>
-<tr class="odd">
-<td>ArxPy compiler facade</td>
-<td>Parse string/file complete</td>
-<td>Check complete</td>
-<td>Host IR/object/executable/run complete</td>
-<td>Pre-stable; cancellation/targets/queries remain</td>
+<td><a href="../arx/docstrings.html">Docstrings</a> and <a href="../arx/syntax.html">lexical syntax</a></td>
+<td>Douki validation, UTF-8 source limits, Unicode locations</td>
+<td>Docstrings are omitted from AST/IR; <code>const</code>, <code>then</code>, and operator declarations remain reserved</td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="cross-stage-rule" class="level2">
-<h2 class="anchored" data-anchor-id="cross-stage-rule">Cross-stage rule</h2>
-<p>A row can move to the stable Arx 1 set only when the syntax manifest, token definitions, parser, ASTx nodes, IRx analysis, LLVM lowering, native runtime, exports, positive and negative tests, examples, and documentation all agree as applicable. Unsupported input must fail at the earliest responsible boundary.</p>
+<p><a href="../arxpy/index.html">ArxPy</a> provides Python parse/check/compile/run workflows. <a href="../arxjit/index.html">ArxJIT</a> still executes Python fallback, not native dispatch.</p>
+<p>A support claim needs aligned frontend, ASTx, semantics, lowering/runtime, exports, and positive/negative tests. Unsupported input must fail at the earliest responsible boundary. Keep <a href="../arx/specification.html">preview safety contracts</a> and necessary workflow guidance synchronized; adding an API does not require another handwritten reference page.</p>
 
 
-</section>
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
@@ -1426,8 +1241,8 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../arx/specification.html" class="pagination-link" aria-label="Specification Status">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Specification Status</span>
+      <a href="../arx/specification.html" class="pagination-link" aria-label="Preview Contracts">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Preview Contracts</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -720,13 +738,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#template-functions" id="toc-template-functions" class="nav-link" data-scroll-target="#template-functions">Template Functions</a></li>
   <li><a href="#function-body-rules" id="toc-function-body-rules" class="nav-link" data-scroll-target="#function-body-rules">Function Body Rules</a></li>
   <li><a href="#extern-prototypes" id="toc-extern-prototypes" class="nav-link" data-scroll-target="#extern-prototypes">Extern Prototypes</a></li>
-  <li><a href="#builtin-open" id="toc-builtin-open" class="nav-link" data-scroll-target="#builtin-open">Builtin <code>open</code></a></li>
+  <li><a href="#native-file-construction" id="toc-native-file-construction" class="nav-link" data-scroll-target="#native-file-construction">Native file construction</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/functions.html">Functions</a></li></ol></nav></header>
 
 
 
@@ -803,12 +821,16 @@ fn main() -&gt; i32:
 </section>
 <section id="template-functions" class="level2">
 <h2 class="anchored" data-anchor-id="template-functions">Template Functions</h2>
-<p>Function templates use an <code>@&lt;...&gt;</code> block on the line immediately before <code>fn</code>. Each template parameter must declare a bound, and bounds may be a single type or a <code>|</code> union of concrete types. Explicit template arguments are written between the callee name and <code>(</code>.</p>
+<p>Function templates use an <code>@&lt;...&gt;</code> block on the line immediately before <code>fn</code>. Each template parameter must declare a bound, and bounds may be a single type or a <code>|</code> union of concrete types. Module-local type aliases can name and compose these bounds; importing aliases from another module is not supported. Explicit template arguments are written between the callee name and <code>(</code>.</p>
 <pre class="arx"><code>```
 title: Template function example
 summary: Uses one bounded template parameter with inferred and explicit calls.
 ```
-@&lt;T: i32 | f64&gt;
+type SignedInteger = i8 | i16 | i32 | i64
+type Float = f32 | f64
+type Real = SignedInteger | Float
+
+@&lt;T: Real&gt;
 fn add(x: T, y: T) -&gt; T:
   ```
   title: add
@@ -822,8 +844,9 @@ fn main() -&gt; i32:
   summary: Calls template specializations through inference and explicit args.
   ```
   print(add(1, 2))
-  print(add&lt;f64&gt;(1.5, 2.5))
+  assert add&lt;f64&gt;(1.5, 2.5) == 4.0
   return 0</code></pre>
+<p>Here <code>T</code> is one concrete type, not a union-valued argument. Inferred arguments for the same <code>T</code> must agree in type; use explicit specialization or casts to choose conversions. Each concrete member of a bound must support the function body, so define only the numeric group that the operation actually supports.</p>
 </section>
 <section id="function-body-rules" class="level2">
 <h2 class="anchored" data-anchor-id="function-body-rules">Function Body Rules</h2>
@@ -855,9 +878,9 @@ summary: Declares an external function signature.
 ```
 extern putchard(x: i32) -&gt; i32</code></pre>
 </section>
-<section id="builtin-open" class="level2">
-<h2 class="anchored" data-anchor-id="builtin-open">Builtin <code>open</code></h2>
-<p><code>open</code> is a compiler-backed adapter to the builtin <code>File</code> constructor. Both support the same eight-argument restricted native text-file profile and return ordinary File class references, including through positional and keyword calls. Class constructors also accept keywords from their <code>__init__</code> parameters (see <a href="../arx/classes.html">Classes</a>). Ordinary functions and methods also support keywords as described above; <code>File.write(text="hello")</code> uses its declared method parameter. The file creation profile retains its compile-time-only optional settings and checked construction path; it is not an ordinary source wrapper with arbitrary keyword forwarding. See <a href="../arx/file-io.html">Text File I/O</a> for supported defaults, methods, and ownership rules.</p>
+<section id="native-file-construction" class="level2">
+<h2 class="anchored" data-anchor-id="native-file-construction">Native file construction</h2>
+<p><a href="../arx/file-io.html"><code>File</code> and <code>open</code></a> share checked construction and return ordinary File references. Their restricted native settings are not arbitrary Python keyword forwarding. <a href="../arx/classes.html">Class constructors</a> bind keywords through <code>__init__</code>; ordinary function/method binding follows the rules above.</p>
 
 
 </section>

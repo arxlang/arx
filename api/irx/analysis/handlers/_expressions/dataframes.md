@@ -23,6 +23,33 @@ title: Expression DataFrame visitors.
 
 #### Methods
 
+##### `visit(self, node: astx.NullCheck) -> None`
+
+```yaml
+title: Resolve a scalar validity test or an owned Series null mask.
+parameters:
+  node:
+    type: astx.NullCheck
+```
+
+##### `visit(self, node: astx.NullFill) -> None`
+
+```yaml
+title: Resolve eager same-type scalar null replacement.
+parameters:
+  node:
+    type: astx.NullFill
+```
+
+##### `visit(self, node: astx.SeriesReduction) -> None`
+
+```yaml
+title: Resolve an explicitly named null-skipping Series reduction.
+parameters:
+  node:
+    type: astx.SeriesReduction
+```
+
 ##### `visit(self, node: astx.DataFrameLiteral) -> None`
 
 ```yaml

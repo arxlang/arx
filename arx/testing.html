@@ -84,9 +84,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -432,7 +432,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -441,7 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -496,6 +496,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -708,6 +720,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -752,6 +770,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#run-tests" id="toc-run-tests" class="nav-link" data-scroll-target="#run-tests">Run tests</a></li>
   <li><a href="#project-configuration" id="toc-project-configuration" class="nav-link" data-scroll-target="#project-configuration">Project configuration</a></li>
   <li><a href="#execution-model" id="toc-execution-model" class="nav-link" data-scroll-target="#execution-model">Execution model</a></li>
+  <li><a href="#arrow-and-parquet-ci-coverage" id="toc-arrow-and-parquet-ci-coverage" class="nav-link" data-scroll-target="#arrow-and-parquet-ci-coverage">Arrow and Parquet CI coverage</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -778,7 +797,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Test entry files must not define <code>main</code>, and executable module-level statements are not supported in test entry files.</p>
 <pre class="arx"><code>```
 title: Math tests
-summary: Uses fatal assertions in compiled tests.
+summary: Uses assertions in compiled tests.
 ```
 
 import math from stdlib
@@ -796,52 +815,7 @@ fn test_clamp() -&gt; none:
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">arx</span> test <span class="at">-k</span> square</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">arx</span> test <span class="at">-x</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">arx</span> test <span class="at">--keep-artifacts</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 37%">
-<col style="width: 62%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Option</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>--list</code></td>
-<td>list discovered tests without running them</td>
-</tr>
-<tr class="even">
-<td><code>-k TEXT</code></td>
-<td>select tests containing <code>TEXT</code></td>
-</tr>
-<tr class="odd">
-<td><code>-x</code>, <code>--fail-fast</code></td>
-<td>stop after the first failing test</td>
-</tr>
-<tr class="even">
-<td><code>--exclude GLOB</code></td>
-<td>exclude matching paths; may be repeated</td>
-</tr>
-<tr class="odd">
-<td><code>--file-pattern GLOB</code></td>
-<td>override the test file pattern</td>
-</tr>
-<tr class="even">
-<td><code>--function-pattern GLOB</code></td>
-<td>override the function name pattern</td>
-</tr>
-<tr class="odd">
-<td><code>--keep-artifacts</code></td>
-<td>retain generated wrappers and executables</td>
-</tr>
-<tr class="even">
-<td><code>--link-mode MODE</code></td>
-<td>use <code>auto</code>, <code>pie</code>, or <code>no-pie</code> linking</td>
-</tr>
-</tbody>
-</table>
+<p>Use <code>arx test --help</code> for discovery and execution options, including selection, exclusion, and artifact retention.</p>
 </section>
 <section id="project-configuration" class="level2">
 <h2 class="anchored" data-anchor-id="project-configuration">Project configuration</h2>
@@ -857,6 +831,12 @@ fn test_clamp() -&gt; none:
 <h2 class="anchored" data-anchor-id="execution-model">Execution model</h2>
 <p>For each selected test, the runner builds a synthetic module with a <code>main</code> function that calls exactly that test. IRx builds and links the executable. Assertion failures are returned through IRx’s machine-readable assertion protocol and converted into test results.</p>
 <p>Use <code>--keep-artifacts</code> when inspecting generated wrappers or compiler output for a failing test.</p>
+</section>
+<section id="arrow-and-parquet-ci-coverage" class="level2">
+<h2 class="anchored" data-anchor-id="arrow-and-parquet-ci-coverage">Arrow and Parquet CI coverage</h2>
+<p>CI collects the complete package suites and compiled-language tests on Python 3.10–3.14. Native prerequisites are checked explicitly in Arx/IRx jobs so missing compilers or expected codecs cannot silently omit those integration paths. Installed-wheel smoke tests run in clean environments on Python 3.10 and 3.14, including the nullable Series native header and compiled kernel calls.</p>
+<p>A separate Linux job runs <code>makim irx.test-sanitizers</code>: registered Arrow and Parquet runtime artifacts are compiled with AddressSanitizer and UBSan. Its standalone harness exercises ownership/release, nullable scalar and Series outputs, invalid indices, overflow, and durable atomic Parquet round trips. Leak detection is enabled in CI. Third-party Arrow libraries are not rebuilt with instrumentation. Restricted local environments may run <code>python scripts/test_native_sanitizers.py --no-leaks</code>; that is <strong>not</strong> evidence of a passing leak check.</p>
+<p>Live cloud-provider compatibility requires provisioned services and credentials and is not covered by these jobs. Local URI and unsupported transaction/error paths remain in the regular suites. No finite test suite proves every possible input or external-provider behavior.</p>
 
 
 </section>
@@ -1288,8 +1268,8 @@ fn test_clamp() -&gt; none:
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../arx/specification.html" class="pagination-link" aria-label="Specification Status">
-        <span class="nav-page-text">Specification Status</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../arx/specification.html" class="pagination-link" aria-label="Preview Contracts">
+        <span class="nav-page-text">Preview Contracts</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

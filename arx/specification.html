@@ -49,9 +49,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-c298e526c2716faabc309188cd65520f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c9ae8e62742ef11b78716ff2212c9612.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -335,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/specification.html">Specification Status</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/specification.html">Preview Contracts</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -397,7 +397,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Reference</span></a>
+ <span class="menu-text">Language Guides</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -406,7 +406,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../arx/specification.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Specification Status</span></a>
+ <span class="menu-text">Preview Contracts</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -461,6 +461,18 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="../arx/collections.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Collections and Arrow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CSV and DataFrames</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Parquet and DataFrames</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -673,6 +685,12 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">arx.parser.exceptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">arx.parser.expressions</span></a>
   </div>
@@ -711,139 +729,39 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#arx-language-specification-status" id="toc-arx-language-specification-status" class="nav-link active" data-scroll-target="#arx-language-specification-status">Arx Language Specification Status</a>
+  <li><a href="#arx-preview-contracts" id="toc-arx-preview-contracts" class="nav-link active" data-scroll-target="#arx-preview-contracts">Arx Preview Contracts</a>
   <ul class="collapse">
-  <li><a href="#status" id="toc-status" class="nav-link" data-scroll-target="#status">Status</a></li>
-  <li><a href="#candidate-production-scope" id="toc-candidate-production-scope" class="nav-link" data-scroll-target="#candidate-production-scope">Candidate production scope</a></li>
-  <li><a href="#lexical-contract-already-enforced" id="toc-lexical-contract-already-enforced" class="nav-link" data-scroll-target="#lexical-contract-already-enforced">Lexical contract already enforced</a></li>
-  <li><a href="#candidate-core-language" id="toc-candidate-core-language" class="nav-link" data-scroll-target="#candidate-core-language">Candidate core language</a></li>
-  <li><a href="#normative-decisions-still-required" id="toc-normative-decisions-still-required" class="nav-link" data-scroll-target="#normative-decisions-still-required">Normative decisions still required</a></li>
-  <li><a href="#decided-preview-semantics" id="toc-decided-preview-semantics" class="nav-link" data-scroll-target="#decided-preview-semantics">Decided preview semantics</a>
+  <li><a href="#arithmetic-and-evaluation" id="toc-arithmetic-and-evaluation" class="nav-link" data-scroll-target="#arithmetic-and-evaluation">Arithmetic and evaluation</a>
   <ul class="collapse">
   <li><a href="#boolean-evaluation" id="toc-boolean-evaluation" class="nav-link" data-scroll-target="#boolean-evaluation">Boolean evaluation</a></li>
   <li><a href="#fixed-width-integer-overflow" id="toc-fixed-width-integer-overflow" class="nav-link" data-scroll-target="#fixed-width-integer-overflow">Fixed-width integer overflow</a></li>
   <li><a href="#integer-division-and-remainder-failures" id="toc-integer-division-and-remainder-failures" class="nav-link" data-scroll-target="#integer-division-and-remainder-failures">Integer division and remainder failures</a></li>
-  <li><a href="#scalar-dynamic-list-ownership" id="toc-scalar-dynamic-list-ownership" class="nav-link" data-scroll-target="#scalar-dynamic-list-ownership">Scalar dynamic-list ownership</a></li>
-  <li><a href="#string-storage-and-ownership" id="toc-string-storage-and-ownership" class="nav-link" data-scroll-target="#string-storage-and-ownership">String storage and ownership</a></li>
+  </ul></li>
+  <li><a href="#ownership" id="toc-ownership" class="nav-link" data-scroll-target="#ownership">Ownership</a></li>
+  <li><a href="#modules-and-failures" id="toc-modules-and-failures" class="nav-link" data-scroll-target="#modules-and-failures">Modules and failures</a>
+  <ul class="collapse">
   <li><a href="#module-graph-failures" id="toc-module-graph-failures" class="nav-link" data-scroll-target="#module-graph-failures">Module graph failures</a></li>
   <li><a href="#compiler-and-process-failures" id="toc-compiler-and-process-failures" class="nav-link" data-scroll-target="#compiler-and-process-failures">Compiler and process failures</a></li>
   <li><a href="#compatibility-identifiers" id="toc-compatibility-identifiers" class="nav-link" data-scroll-target="#compatibility-identifiers">Compatibility identifiers</a></li>
   </ul></li>
   <li><a href="#diagnostics-contract" id="toc-diagnostics-contract" class="nav-link" data-scroll-target="#diagnostics-contract">Diagnostics contract</a></li>
-  <li><a href="#compatibility-and-editions" id="toc-compatibility-and-editions" class="nav-link" data-scroll-target="#compatibility-and-editions">Compatibility and editions</a></li>
+  <li><a href="#decisions-still-required" id="toc-decisions-still-required" class="nav-link" data-scroll-target="#decisions-still-required">Decisions still required</a></li>
   </ul></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Reference</a></li><li class="breadcrumb-item"><a href="../arx/specification.html">Specification Status</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/specification.html">Preview Contracts</a></li></ol></nav></header>
 
 
 
 
 
-<section id="arx-language-specification-status" class="level1">
-<h1>Arx Language Specification Status</h1>
-<section id="status" class="level2">
-<h2 class="anchored" data-anchor-id="status">Status</h2>
-<p>This page is the starting point for the normative Arx 1 specification. It is a <strong>working draft</strong>, not a stability promise. The checked-in compiler and the <a href="../arx/capability-matrix.html">capability matrix</a> remain the executable evidence for current behavior until every section below is complete and covered by the versioned conformance suite.</p>
-<p>Package release numbers and the language specification version are separate. The current packages report <code>1.24.1</code>. This document is specification draft <code>0.1.0</code> for the non-stable <code>2026-preview</code> edition; no stable Arx 1 language specification or edition has been published yet.</p>
-</section>
-<section id="candidate-production-scope" class="level2">
-<h2 class="anchored" data-anchor-id="candidate-production-scope">Candidate production scope</h2>
-<p>The initial production candidate is a statically typed, ahead-of-time compiled language for native command-line and data-oriented applications. The first support target will be selected from the tested platform matrix; platforms not in that matrix are experimental even when they happen to compile.</p>
-<p>The candidate stable package surface is:</p>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 31%">
-<col style="width: 68%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Component</th>
-<th>Candidate tier</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Arx source syntax, frontend, and CLI</td>
-<td>stable after the GA gates pass</td>
-</tr>
-<tr class="even">
-<td>ASTx nodes required by Arx 1</td>
-<td>stable cross-package contract</td>
-</tr>
-<tr class="odd">
-<td>IRx semantic and lowering APIs required by Arx 1</td>
-<td>stable internal compiler contract; public Python stability remains separately scoped</td>
-</tr>
-<tr class="even">
-<td>ArxPy compiler façade</td>
-<td>pre-stable parse/check/compile/run API; cancellation, targets, queries, and compatibility freeze remain</td>
-</tr>
-<tr class="odd">
-<td>ArxJIT</td>
-<td>experimental until decorated calls compile and dispatch natively</td>
-</tr>
-<tr class="even">
-<td>AIX</td>
-<td>excluded toy experiment</td>
-</tr>
-</tbody>
-</table>
-<p>Self-hosting, every ASTx node, a general query engine, and an interactive shell are not requirements for the first production release.</p>
-</section>
-<section id="lexical-contract-already-enforced" class="level2">
-<h2 class="anchored" data-anchor-id="lexical-contract-already-enforced">Lexical contract already enforced</h2>
-<ul>
-<li>Source is Unicode text supplied through the Arx input layer.</li>
-<li>Files must be valid UTF-8 and source is limited to 4 MiB of UTF-8 bytes.</li>
-<li>Indentation is significant and uses two ASCII spaces per nesting level.</li>
-<li>Tab characters outside quoted literal contents are rejected by the lexer.</li>
-<li>The lexical manifest is <code>packages/arx/src/arx/lexer/syntax.json</code>; a manifest entry only reserves or tokenizes a form and does not prove parser or backend support.</li>
-<li>Every committed <code>.x</code> module starts with a valid line-one Douki YAML module docstring. Docstrings are validated but are not currently emitted into ASTx or IRx.</li>
-<li>Token start locations use one-based lines and Unicode code-point columns.</li>
-<li>The lexer rejects nesting deeper than 256 delimiters, numeric tokens longer than 4,096 characters, and inputs exceeding 250,000 non-EOF tokens. These resource limits are compiler-version contracts until the language compatibility policy is frozen.</li>
-</ul>
-<p>See <a href="../arx/syntax.html">Lexical Syntax</a> and <a href="../arx/docstrings.html">Docstrings</a> for the current descriptive reference.</p>
-</section>
-<section id="candidate-core-language" class="level2">
-<h2 class="anchored" data-anchor-id="candidate-core-language">Candidate core language</h2>
-<p>The candidate subset is limited to constructs with an end-to-end row in the capability matrix:</p>
-<ul>
-<li>typed functions, arguments, defaults, returns, extern declarations, and the currently supported template subset;</li>
-<li>explicit typed variables and assignments;</li>
-<li>scalar Boolean, integer, floating-point, character, and string forms that have semantic and lowering coverage;</li>
-<li><code>if</code>/<code>else</code>, <code>while</code>, count-based <code>for</code>, and supported list iteration;</li>
-<li>modules and compiler-owned import resolution from one entry module;</li>
-<li>the currently documented class subset;</li>
-<li>lists, fixed-shape numeric tensors, and static-schema DataFrames only to the extent explicitly marked in the capability matrix;</li>
-<li>assertions and compiled test functions.</li>
-</ul>
-<p>Reserved declarations such as general <code>const</code> and operator declarations are not part of this candidate unless their complete pipeline rows are closed.</p>
-</section>
-<section id="normative-decisions-still-required" class="level2">
-<h2 class="anchored" data-anchor-id="normative-decisions-still-required">Normative decisions still required</h2>
-<p>The following are specification blockers. Current implementation behavior must not be promoted to a compatibility promise until each decision is made, implemented consistently, and represented in conformance tests:</p>
-<ol type="1">
-<li>floating-point-to-integer overflow and non-finite narrowing behavior;</li>
-<li>floating-point division/remainder by zero and non-finite results;</li>
-<li>floating-point mode, NaN comparison, and fast-math guarantees;</li>
-<li>Unicode character and string indexing, length, equality, and formatting;</li>
-<li>left-to-right evaluation and Boolean short-circuit rules;</li>
-<li>module initialization order, cycles, and repeated imports;</li>
-<li>allocation failure, assertion failure, panic/status, and process exit rules;</li>
-<li>copy, move, borrow, escape, and destruction behavior for owning values other than the scalar dynamic-list subset specified below;</li>
-<li>class identity, layout, construction, destruction, inheritance, and ABI;</li>
-<li>foreign calling conventions, supported FFI types, and ownership transfer;</li>
-<li>tensor shape compatibility and runtime validation;</li>
-<li>source, package API, runtime C ABI, and artifact compatibility policy.</li>
-</ol>
-<p>Each decision must be recorded next to its tests. Lowering consumes semantic metadata for the decision and must not rediscover it.</p>
-</section>
-<section id="decided-preview-semantics" class="level2">
-<h2 class="anchored" data-anchor-id="decided-preview-semantics">Decided preview semantics</h2>
-<p>The following rules are normative for draft <code>0.1.0</code> and have executable coverage. They may still change through the preview compatibility process, but the implementation and this document must change together.</p>
+<section id="arx-preview-contracts" class="level1">
+<h1>Arx Preview Contracts</h1>
+<p>These safety and compatibility decisions describe the non-stable <code>2026-preview</code> edition (language draft <code>0.1.0</code>). They are not a complete language specification. The <a href="../arx/capability-matrix.html">capability matrix</a> is the single support summary; executable conformance lives in the compiler tests.</p>
+<section id="arithmetic-and-evaluation" class="level2">
+<h2 class="anchored" data-anchor-id="arithmetic-and-evaluation">Arithmetic and evaluation</h2>
 <section id="boolean-evaluation" class="level3">
 <h3 class="anchored" data-anchor-id="boolean-evaluation">Boolean evaluation</h3>
 <ul>
@@ -856,31 +774,33 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="fixed-width-integer-overflow" class="level3">
 <h3 class="anchored" data-anchor-id="fixed-width-integer-overflow">Fixed-width integer overflow</h3>
-<p>Fixed-width integer addition, subtraction, and multiplication use modulo <code>2^N</code> arithmetic for an <code>N</code>-bit result. Narrowing to an integer discards high bits and therefore uses the same modulo rule. These operations do not trap on overflow and optimization must not assume that signed overflow is impossible. The compiled datatype conformance module covers signed boundary wrap, subtraction wrap, multiplication wrap, and narrowing.</p>
+<p>Fixed-width signed and unsigned 8–64-bit integer <code>+</code>, <code>-</code>, <code>*</code>, negation, and supported increment/decrement operations are checked in every build. IRx fixed-width range induction is checked too; the stdlib <code>range</code> helper uses wider endpoint arithmetic to terminate safely on an overshooting step. Overflow fails before storing or publishing a result; an unused expression is still checked. Provably evaluated invalid constant operations are semantic errors. Untaken branches and short-circuited operands do not execute checks.</p>
+<p>Implicit numeric conversions preserve the <strong>entire source type’s domain</strong>. Mixed operands use the smallest supported lossless common domain: <code>i32 + u32</code> computes in <code>i64</code>, and <code>i32 + f32</code> in <code>f64</code>; <code>i64 + u64</code> and <code>i64 + f64</code> require an explicit conversion. A destination annotation never widens a computation retroactively. Same-type templates keep their selected type; widen operands or select <code>math.square&lt;i64&gt;(narrow)</code> before multiplication, not afterward.</p>
+<p>Source integer literals use the declared/argument/peer type when representable, otherwise default to <code>i32</code>, then <code>i64</code>. Uncontextualized floating literals default to <code>f32</code>. Decimal literals retain their exact value until type selection, then round directly to the chosen binary format, nearest with ties to even. Explicitly typed ASTx literals are never recontextualized. Generic inference uses concrete arguments before contextualizing literal arguments, independently of argument order; literals do not make conflicting concrete same-<code>T</code> arguments compatible.</p>
+<p><code>cast(value, Type)</code> checks integer range, including equal-width signedness changes. Float-to-integer casts truncate toward zero, then require a finite, representable result. Explicit integer-to-float and float-narrowing casts may round; finite input must not become infinity. Existing floating NaN, infinity, signed zero, and ordinary IEEE floating arithmetic are preserved. Implicit integer-to-float conversions may not discard integer precision.</p>
+<p>Intentional modulo arithmetic requires <code>wrapping_add</code>, <code>wrapping_sub</code>, <code>wrapping_mul</code>, or <code>wrapping_cast(value, IntegerType)</code>. Binary wrapping operands must have the same integer type, or an explicit lossless specialization such as <code>wrapping_add&lt;i64&gt;(narrow, 1)</code>. Boolean and floating operands are rejected. These forms do not change surrounding expressions’ checked behavior.</p>
 </section>
 <section id="integer-division-and-remainder-failures" class="level3">
 <h3 class="anchored" data-anchor-id="integer-division-and-remainder-failures">Integer division and remainder failures</h3>
-<p>Signed integer division truncates toward zero. Integer division or remainder fails before executing the LLVM operation when the divisor is zero. Signed minimum divided by or reduced modulo negative one also fails because its quotient is not representable. Failure emits the machine-readable <code>ARX_RUNTIME_FAIL</code> record with code <code>ARX-RUNTIME-ARITHMETIC-001</code> and exits with status 1. The same guards apply to signed and unsigned scalar widths supported by the compiler. Floating-point division and vector division remain outside this rule until their non-finite and per-lane behavior is specified.</p>
+<p>Signed integer division truncates toward zero. Division and remainder reject zero divisors and signed minimum with negative one before LLVM executes the operation. Integer SIMD lowering checks every supplied active lane; no masked source-vector API is implied. Floating-point division follows IEEE behavior.</p>
+<p>Dynamic integer zero divisors raise <code>ZeroDivisionError</code>; out-of-range arithmetic and conversions raise <code>OverflowError</code>, at every optimization level. Diagnostic codes remain <code>ARX-RUNTIME-ARITHMETIC-001</code> and <code>ARX-RUNTIME-CONVERSION-001</code>. These failures propagate through generated cleanup edges and can be caught; uncaught exceptions produce structured reports and a nonzero exit status. Statically invalid expressions remain compile-time diagnostics. See the <a href="../support-matrix.html#exception-capability-boundary">exception support boundary</a>.</p>
+<p><a href="../arx/collections.html#nullable-scalars-and-series-expressions">Nullable and Series arithmetic</a> retains checked Arrow kernels, status checking, null propagation, and checked reduction accumulators. Nullable scalar casts skip invalid payloads entirely. Tensor element operations use scalar checks; bulk tensor arithmetic and nonidentity Series/tensor casts are rejected rather than reinterpreting storage. List length/search results must fit their public <code>i32</code> domain. Numeric runtime unions require lossless shared storage; generic union bounds are membership constraints and need no runtime storage. Raw FFI internals and external native functions remain outside these language guarantees.</p>
 </section>
-<section id="scalar-dynamic-list-ownership" class="level3">
-<h3 class="anchored" data-anchor-id="scalar-dynamic-list-ownership">Scalar dynamic-list ownership</h3>
-<p>Dynamic lists with one scalar element type use a move-only ownership model. List creation, list comprehensions, and list-returning calls produce an owner. A local declaration consumes that owner. Function list parameters and ordinary identifier expressions borrow storage and do not acquire a release obligation.</p>
-<p>Assignment to an owned local consumes a fresh owner and releases the previous storage first. Returning a fresh list or an owned local moves the release obligation to the caller. Returning borrowed parameter storage or a static list literal, copying a borrowed list into a local, and appending through borrowed or static storage are <code>IRX-S013</code> semantic errors.</p>
-<p>Owned local and non-transferred temporary storage is destroyed on normal block fallthrough, scalar return, <code>break</code>, and <code>continue</code>. Storage moved through a return is excluded from callee cleanup and becomes the caller’s obligation. Literal-list storage is static and is never dynamically destroyed. It may be indexed or iterated directly, but it cannot initialize a dynamic local, cross a function-call boundary, or serve as a list parameter default. Owning list elements, owned list locals in generators, object-field ownership, and a user-visible copy operation are outside this preview rule.</p>
 </section>
-<section id="string-storage-and-ownership" class="level3">
-<h3 class="anchored" data-anchor-id="string-storage-and-ownership">String storage and ownership</h3>
-<p>String literals, default empty strings, and <code>type(...)</code> results point to immutable process-lifetime storage. Concatenation, numeric-to-string casts, and calls to defined Arx functions returning <code>str</code> produce owned heap storage. String parameters and ordinary identifier expressions borrow their source binding for the duration of an expression or call.</p>
-<p>An owned local consumes a fresh heap result and releases it on lexical fallthrough, <code>return</code>, <code>break</code>, and <code>continue</code>. Replacing an owned local releases the previous pointer before storing a fresh owner. Returning an owned local moves the release obligation to the caller; returning static storage copies it into checked heap storage so every string-returning Arx call has one caller-owned result. Concatenation and formatting allocations fail with a versioned <code>ARX_RUNTIME_FAIL</code> record instead of dereferencing a null pointer.</p>
-<p>Static bindings may alias or replace other static strings without cleanup. Changing a binding between static and owned storage, aliasing a borrowed parameter into an owned local, returning a borrowed parameter, identity-casting an owned string, storing owned strings in object fields or generator frames, and accepting string results from an external function without an explicit ownership ABI are <code>IRX-S013</code> errors in this preview.</p>
+<section id="ownership" class="level2">
+<h2 class="anchored" data-anchor-id="ownership">Ownership</h2>
+<p>The <a href="../irx/runtime-ownership.html">runtime ownership contract</a> owns the detailed create/borrow/move/release rules for lists, strings, files, and class references. Dynamic lists are move-only and cleaned up on ordinary lexical exits, not process-lifetime allocations. Shared class references follow a different model. Use the <a href="../arx/classes.html">class lifecycle guide</a> for construction and field ownership, and the <a href="../arx/file-io.html">file guide</a> for shared cursor and close behavior.</p>
+<p>IRx cleanup paths for <code>break</code>/<code>continue</code> or generators do not establish Arx source support for those constructs. Fatal errors do not generally unwind caller frames. Do not depend on automatic cleanup to confirm successful writer finalization; follow the <a href="../arx/csv.html">CSV</a> or <a href="../arx/parquet.html">Parquet</a> close contract.</p>
 </section>
+<section id="modules-and-failures" class="level2">
+<h2 class="anchored" data-anchor-id="modules-and-failures">Modules and failures</h2>
 <section id="module-graph-failures" class="level3">
 <h3 class="anchored" data-anchor-id="module-graph-failures">Module graph failures</h3>
 <p>One entry module identifies a compiler-owned, canonical dependency graph. Missing modules are <code>IRX-S011</code> failures and import cycles are <code>IRX-S012</code> failures; a cycle is never executed or initialized partially. A canonical module is resolved and analyzed once per compilation session. Module-level runtime initialization order remains outside the stable subset until Arx admits and specifies executable module-level statements.</p>
 </section>
 <section id="compiler-and-process-failures" class="level3">
 <h3 class="anchored" data-anchor-id="compiler-and-process-failures">Compiler and process failures</h3>
-<p>Expected source/compiler failures exit the CLI with status 1, CLI usage failures use status 2, and sanitized internal compiler failures use status 70. <code>--traceback</code> is an explicit developer opt-in. Compiled assertion failure uses the versioned <code>ARX_ASSERT_FAIL</code> stderr record and exits nonzero. Fatal checked runtime operations use the versioned <code>ARX_RUNTIME_FAIL</code> record and an operation-specific stable code. Allocation failure and general language-level panic propagation remain undecided and are therefore not yet stable semantics.</p>
+<p>Expected source/compiler failures exit the CLI with status 1, CLI usage failures use status 2, and sanitized internal compiler failures use status 70. <code>--traceback</code> is an explicit developer opt-in. Compiled assertions raise <code>AssertionError</code>. Uncaught exceptions emit <code>ARX_EXCEPTION</code> records with stable operation codes and <code>ARX_EXCEPTION_FRAME</code> records for recorded call sites, then exit nonzero. The test runner and ArxPy decode these reports without treating completed subprocess failures as Python compiler errors. Unrecoverable native or exception-machinery allocation failures retain the <code>ARX_RUNTIME_FAIL</code> fallback; they do not promise recovery or cleanup.</p>
 </section>
 <section id="compatibility-identifiers" class="level3">
 <h3 class="anchored" data-anchor-id="compatibility-identifiers">Compatibility identifiers</h3>
@@ -888,9 +808,9 @@ ul.task-list li input[type="checkbox"] {
 <li>language draft: <code>0.1.0</code>;</li>
 <li>source edition: <code>2026-preview</code>;</li>
 <li>compiler diagnostic JSON schema: <code>1</code>;</li>
-<li>RecordBatch native C ABI: <code>1</code>.</li>
+<li>RecordBatch native C ABI: <code>2</code>.</li>
 </ul>
-<p>The language draft and preview edition do not grant source compatibility. Before Arx 1, a package release may revise them only with updated conformance tests, capability documentation, and migration notes. Stable-edition deprecation duration and the non-RecordBatch runtime ABI remain release gates.</p>
+<p>The language draft and preview edition do not grant source compatibility. Before Arx 2.0, replace APIs within the requested scope and update callers, tests, source contracts, and necessary guides together. Record intentional breaking changes in concise release notes rather than parallel deprecated API documentation. Native ABI producers and consumers must remain aligned.</p>
 </section>
 </section>
 <section id="diagnostics-contract" class="level2">
@@ -898,18 +818,10 @@ ul.task-list li input[type="checkbox"] {
 <p>Stable compiler failures will have a code, phase, message, and a trustworthy optional source location. Normal CLI use renders expected Arx and IRx failures without a Python traceback and exits nonzero. Unexpected internal failures are not relabeled as user errors.</p>
 <p>The source loader emits <code>ARX-SOURCE-*</code>, the lexer emits <code>ARX-LEX-*</code>, the parser emits <code>ARX-PARSE-*</code>, and IRx formats its diagnostic families as <code>IRX-*</code>. <code>--diagnostic-format json</code> emits schema version 1 for structured compiler-phase failures. The complete stable-code catalog remains GA work; schema versions must be checked rather than inferred.</p>
 </section>
-<section id="compatibility-and-editions" class="level2">
-<h2 class="anchored" data-anchor-id="compatibility-and-editions">Compatibility and editions</h2>
-<p>Before the first stable language release, the project will define:</p>
-<ul>
-<li>the language specification version and edition identifier;</li>
-<li>which source changes require a new edition;</li>
-<li>the deprecation window and warning behavior;</li>
-<li>package API and native C ABI versioning;</li>
-<li>the supported compiler/toolchain and artifact matrix;</li>
-<li>the lifetime and security support period for a release line.</li>
-</ul>
-<p>Until then, the language remains pre-production and source compatibility may change between lockstep package releases with documented migration notes.</p>
+<section id="decisions-still-required" class="level2">
+<h2 class="anchored" data-anchor-id="decisions-still-required">Decisions still required</h2>
+<p>A stable specification still needs floating-point non-finite/NaN and narrowing rules, broader Unicode operations, general resource/error propagation, FFI and artifact guarantees, and a versioned conformance suite. Do not promote a preview behavior to a compatibility promise without that evidence.</p>
+<p>At Arx 2.0, explicitly define source/package/native ABI compatibility, edition changes, any deprecation policy, supported toolchains, and release support periods. The pre-2.0 policy must not silently continue afterward.</p>
 
 
 </section>
