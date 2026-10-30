@@ -48,6 +48,7 @@ Before opening a pull request:
 makim all.typecheck
 makim all.lint
 makim all.ci
+makim docs.check
 makim docs.build
 ```
 
@@ -56,15 +57,23 @@ compiler.
 
 ## Documentation and examples
 
+The site uses [DoukiMD](https://github.com/arxlang/doukimd), configured in
+`doukimd.yaml`. `makim docs.build` generates the Python API Markdown and builds
+the site in `build/`; `makim docs.preview` builds and serves it at
+`http://localhost:8000`. Rebuild after editing; preview does not watch files.
+Saved notebook outputs are rendered without executing cells. The existing API
+generator remains in use; enabling DoukiMD native API extraction is a separate
+migration that requires source docstring and export cleanup.
+
 - Keep public types, defaults, validation, ownership, and failure contracts next
   to code, with focused tests. Do not duplicate signatures, method catalogs, or
   parameter tables in handwritten pages.
 - Update short guides only for changed workflows, architecture, restrictions,
   migration decisions, or data-loss/resource-safety contracts. Put common and
   advanced API examples in the PR description or executable tests.
-- Leave generated API output to `scripts/gen_api_docs.py` and the Quarto
-  pre-render hook. Keep that pipeline working without expanding it for an
-  unrelated API change.
+- Leave generated API output to `scripts/gen_api_docs.py` and the
+  `docs.generate-api` task. Keep that pipeline working without expanding it for
+  an unrelated API change.
 - Every committed `.x` file begins with a valid Douki module docstring.
 - Class, function, and method docstrings use Douki YAML inside triple backticks.
 - Use quadruple Markdown fences around Arx examples containing docstrings.

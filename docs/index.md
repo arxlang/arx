@@ -1,10 +1,8 @@
 ---
-title: ""
-pagetitle: ArxLang compiler ecosystem
-description: >-
-  Documentation for the Arx language, ASTx, IRx, LLVM compilation, and native
-  Apache Arrow support.
-page-layout: full
+title: ArxLang compiler ecosystem
+layout: landing
+template: arx.html
+html: true
 toc: false
 sidebar: false
 ---
@@ -33,8 +31,9 @@ provides runtime components for Apache Arrow-backed collections.
 
 <div class="arx-hero-actions">
 
-[Getting started](arx/getting-started.md){.btn .btn-primary}
-[Apache Arrow support](apache-arrow.md){.btn .btn-outline-primary}
+<a class="btn btn-primary" href="arx/getting-started.md">Getting started</a>
+<a class="btn btn-outline-primary" href="apache-arrow.md">Apache Arrow
+support</a>
 
 </div>
 

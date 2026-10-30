@@ -1,3 +1,7 @@
+---
+html: true
+---
+
 # Partners
 
 Organizations and communities collaborating with ArxLang are listed here.

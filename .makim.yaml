@@ -549,15 +549,30 @@ groups:
 
   docs:
     tasks:
+      generate-api:
+        help: generate API Markdown from Python source
+        run: python scripts/gen_api_docs.py
+
+      check:
+        help: validate documentation without writing site output
+        hooks:
+          pre-run:
+            - task: docs.generate-api
+        run: doukimd check --config doukimd.yaml
+
       build:
         help: build documentation
-        run: |
-          bash -lc 'mkdir -p .quarto-tmp .quarto-cache .deno-cache && rm -rf build && TMPDIR="$PWD/.quarto-tmp" XDG_CACHE_HOME="$PWD/.quarto-cache" DENO_DIR="$PWD/.deno-cache" quarto render docs && cp -a docs/_site build && echo "arxlang.org" > ./build/CNAME'
+        hooks:
+          pre-run:
+            - task: docs.generate-api
+        run: doukimd build --config doukimd.yaml
 
       preview:
-        help: preview documentation page locally
-        run: |
-          bash -lc 'mkdir -p .quarto-tmp .quarto-cache .deno-cache && TMPDIR="$PWD/.quarto-tmp" XDG_CACHE_HOME="$PWD/.quarto-cache" DENO_DIR="$PWD/.deno-cache" quarto preview docs'
+        help: build and serve documentation at http://localhost:8000
+        hooks:
+          pre-run:
+            - task: docs.build
+        run: python -m http.server --bind 127.0.0.1 --directory build 8000
 
   release:
     vars:

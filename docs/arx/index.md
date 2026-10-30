@@ -1,3 +1,7 @@
+---
+html: true
+---
+
 # Arx Programming Language
 
 Independent libraries can use [native package dependencies](native-packages.md)
@@ -32,7 +36,9 @@ Arx source
 - [Configure projects and imports](projects.md)
 - [Write and run compiled tests](testing.md)
 
-## Language guides {#language-reference}
+<span id="language-reference"></span>
+
+## Language guides
 
 - [Modules and imports](modules.md)
 - [Functions](functions.md)

@@ -1,0 +1,262 @@
+schema_version: 1
+site:
+  title: ArxLang
+  description:
+    A statically typed compiler ecosystem with LLVM and native Apache Arrow
+    support.
+  base_url: https://arxlang.org
+  logo: images/arx-logo-terracotta.png
+  logo_alt: ArxLang
+  favicon: favicon.ico
+project:
+  name: arx
+  version: 1.25.0
+docs_dir: docs
+output_dir: build
+assets:
+  - images/**
+  - favicon.ico
+  - styles.css
+  - CNAME
+theme:
+  framework: bootstrap
+  color_mode: auto
+  palette: terracotta
+  directory: docs-theme
+  stylesheets:
+    - styles.css
+navigation:
+  navbar:
+    - title: Home
+      path: index.md
+    - title: Arx
+      path: arx/index.md
+    - title: ASTx
+      path: astx/index.md
+    - title: IRx
+      path: irx/index.md
+    - title: ArxPy
+      path: arxpy/index.md
+    - title: ArxJIT
+      path: arxjit/index.md
+    - title: Tools
+      children:
+        - title: Tooling Overview
+          path: tools/index.md
+        - title: ArxPM
+          path: tools/arxpm.md
+        - title: VS Code
+          path: tools/vscode.md
+        - title: Jupyter Kernel
+          path: tools/jupyter.md
+        - title: Douki
+          path: tools/douki.md
+    - title: GitHub
+      url: https://github.com/arxlang/arx
+  default_sidebar: project
+  sidebars:
+    - id: project
+      title: ArxLang
+      items:
+        - title: Start
+          children:
+            - title: Ecosystem Status
+              path: ecosystem.md
+            - title: Native Apache Arrow
+              path: apache-arrow.md
+        - title: Project
+          children:
+            - title: Roadmap
+              path: roadmap.md
+            - title: Support Matrix
+              path: support-matrix.md
+            - title: Contributing
+              path: contributing.md
+            - title: API Documentation
+              path: api/index.md
+            - title: Changelog
+              path: changelog.md
+        - title: Community
+          children:
+            - title: Community Chat
+              path: discord.md
+            - title: Code of Conduct
+              path: coc.md
+            - title: Governance
+              path: governance.md
+            - title: Partners
+              path: partners.md
+            - title: Sponsor
+              path: sponsor.md
+    - id: arx
+      title: Arx
+      paths:
+        - arx/
+        - api/arx/
+        - api/arx.html
+      items:
+        - title: Arx Overview
+          path: arx/index.md
+        - title: Getting Started
+          path: arx/getting-started.md
+        - title: Compiler
+          children:
+            - title: Compiler CLI
+              path: arx/compiler-cli.md
+            - title: Projects and Imports
+              path: arx/projects.md
+            - title: External Native Packages
+              path: arx/native-packages.md
+            - title: Compiled Tests
+              path: arx/testing.md
+        - title: Language Guides
+          children:
+            - title: Preview Contracts
+              path: arx/specification.md
+            - title: Capability Matrix
+              path: arx/capability-matrix.md
+            - title: Lexical Syntax
+              path: arx/syntax.md
+            - title: Modules
+              path: arx/modules.md
+            - title: Functions
+              path: arx/functions.md
+            - title: Text File I/O
+              path: arx/file-io.md
+            - title: Classes
+              path: arx/classes.md
+            - title: Data Types
+              path: arx/datatypes.md
+            - title: Built-in Types
+              path: arx/built-in-types.md
+            - title: Collections and Arrow
+              path: arx/collections.md
+            - title: CSV and DataFrames
+              path: arx/csv.md
+            - title: Parquet and DataFrames
+              path: arx/parquet.md
+            - title: Control Flow
+              path: arx/control-flow.md
+            - title: Docstrings
+              path: arx/docstrings.md
+        - title: Python API
+          path: api/arx/index.md
+    - id: astx
+      title: ASTx
+      paths:
+        - astx/
+        - api/astx/
+        - api/astx.html
+      items:
+        - title: Overview
+          path: astx/index.md
+        - title: Installation
+          path: astx/installation.md
+        - title: Tutorials
+          children:
+            - title: Getting Started
+              path: astx/tutorials/get-started.ipynb
+            - title: Literals
+              path: astx/tutorials/literals.ipynb
+            - title: Variables
+              path: astx/tutorials/variables.ipynb
+            - title: Functions
+              path: astx/tutorials/functions.ipynb
+            - title: For Loops
+              path: astx/tutorials/for-loop.ipynb
+            - title: Context
+              path: astx/tutorials/context.ipynb
+            - title: Fibonacci
+              path: astx/tutorials/fibonacci.ipynb
+        - title: Development
+          children:
+            - title: Conventions
+              path: astx/conventions.md
+            - title: Contributing
+              path: astx/contributing.md
+            - title: Historical Changelog
+              path: astx/changelog.md
+        - title: Python API
+          path: api/astx/index.md
+    - id: irx
+      title: IRx
+      paths:
+        - irx/
+        - api/irx/
+        - api/irx.html
+      items:
+        - title: Overview
+          path: irx/index.md
+        - title: Installation
+          path: irx/installation.md
+        - title: Architecture
+          children:
+            - title: Architecture Overview
+              path: irx/architecture.md
+            - title: Semantic Contract
+              path: irx/semantic-contract.md
+            - title: Runtime Features
+              path: irx/runtime-features.md
+            - title: Runtime Ownership
+              path: irx/runtime-ownership.md
+            - title: Buffer View Model
+              path: irx/buffer-view-model.md
+            - title: Class Model
+              path: irx/class-model.md
+        - title: Learn and Contribute
+          children:
+            - title: Getting Started Tutorial
+              path: irx/tutorials/get-started.ipynb
+            - title: Contributing
+              path: irx/contributing.md
+            - title: Historical Changelog
+              path: irx/changelog.md
+        - title: Python API
+          path: api/irx/index.md
+    - id: arxpy
+      title: ArxPy
+      paths:
+        - arxpy/
+        - api/arxpy/
+        - api/arxpy.html
+      items:
+        - title: Overview
+          path: arxpy/index.md
+        - title: Python API
+          path: api/arxpy/index.md
+    - id: arxjit
+      title: ArxJIT
+      paths:
+        - arxjit/
+        - api/arxjit/
+        - api/arxjit.html
+      items:
+        - title: Overview
+          path: arxjit/index.md
+        - title: Python-to-ASTx Design
+          path: arxjit/design.md
+        - title: Python API
+          path: api/arxjit/index.md
+    - id: tools
+      title: Tools
+      paths:
+        - tools/
+        - api/tools/
+        - api/tools.html
+      items:
+        - title: Tooling Overview
+          path: tools/index.md
+        - title: Project Workflows
+          children:
+            - title: ArxPM
+              path: tools/arxpm.md
+        - title: Editors and Notebooks
+          children:
+            - title: VS Code Extension
+              path: tools/vscode.md
+            - title: Jupyter Kernel
+              path: tools/jupyter.md
+        - title: Documentation
+          children:
+            - title: Douki
+              path: tools/douki.md
