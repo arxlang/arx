@@ -1,813 +1,430 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-<meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.18">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>collections – ArxLang</title>
-<style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
-</style>
-
-
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../">
-<link href="../arx/csv.html" rel="next">
-<link href="../arx/built-in-types.html" rel="prev">
-<link href="../favicon.ico" rel="icon">
-<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/popper.min.js"></script>
-<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "navbar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "end",
-  "type": "overlay",
-  "limit": 8,
-  "keyboard-shortcut": [
-    "/",
-    "s"
-  ],
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
-<style>html{ scroll-behavior: smooth; }</style>
-
-
-</head>
-
-<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
-    const toggleBodyColorMode = (bsSheetEl) => {
-      const mode = bsSheetEl.getAttribute("data-mode");
-      const bodyEl = window.document.querySelector("body");
-      if (mode === "dark") {
-        bodyEl.classList.add("quarto-dark");
-        bodyEl.classList.remove("quarto-light");
-      } else {
-        bodyEl.classList.add("quarto-light");
-        bodyEl.classList.remove("quarto-dark");
-      }
-    }
-    const toggleBodyColorPrimary = () => {
-      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
-      if (bsSheetEl) {
-        toggleBodyColorMode(bsSheetEl);
-      }
-    }
-    const setColorSchemeToggle = (alternate) => {
-      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-      for (let i=0; i < toggles.length; i++) {
-        const toggle = toggles[i];
-        if (toggle) {
-          if (alternate) {
-            toggle.classList.add("alternate");
-          } else {
-            toggle.classList.remove("alternate");
-          }
-        }
-      }
-    };
-    const toggleColorMode = (alternate) => {
-      // Switch the stylesheets
-      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
-      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-      manageTransitions('#quarto-margin-sidebar .nav-link', false);
-      if (alternate) {
-        // note: dark is layered on light, we don't disable primary!
-        enableStylesheet(alternateStylesheets);
-        for (const sheetNode of alternateStylesheets) {
-          if (sheetNode.id === "quarto-bootstrap") {
-            toggleBodyColorMode(sheetNode);
-          }
-        }
-      } else {
-        disableStylesheet(alternateStylesheets);
-        enableStylesheet(primaryStylesheets)
-        toggleBodyColorPrimary();
-      }
-      manageTransitions('#quarto-margin-sidebar .nav-link', true);
-      // Switch the toggles
-      setColorSchemeToggle(alternate)
-      // Hack to workaround the fact that safari doesn't
-      // properly recolor the scrollbar when toggling (#1455)
-      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-        manageTransitions("body", false);
-        window.scrollTo(0, 1);
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          manageTransitions("body", true);
-        }, 40);
-      }
-    }
-    const disableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        stylesheet.rel = 'disabled-stylesheet';
-      }
-    }
-    const enableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
-          stylesheet.rel = 'stylesheet';
-        }
-      }
-    }
-    const manageTransitions = (selector, allowTransitions) => {
-      const els = window.document.querySelectorAll(selector);
-      for (let i=0; i < els.length; i++) {
-        const el = els[i];
-        if (allowTransitions) {
-          el.classList.remove('notransition');
-        } else {
-          el.classList.add('notransition');
-        }
-      }
-    }
-    const isFileUrl = () => {
-      return window.location.protocol === 'file:';
-    }
-    const hasAlternateSentinel = () => {
-      let styleSentinel = getColorSchemeSentinel();
-      if (styleSentinel !== null) {
-        return styleSentinel === "alternate";
-      } else {
-        return false;
-      }
-    }
-    const setStyleSentinel = (alternate) => {
-      const value = alternate ? "alternate" : "default";
-      if (!isFileUrl()) {
-        window.localStorage.setItem("quarto-color-scheme", value);
-      } else {
-        localAlternateSentinel = value;
-      }
-    }
-    const getColorSchemeSentinel = () => {
-      if (!isFileUrl()) {
-        const storageValue = window.localStorage.getItem("quarto-color-scheme");
-        return storageValue != null ? storageValue : localAlternateSentinel;
-      } else {
-        return localAlternateSentinel;
-      }
-    }
-    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-      let newTheme = '';
-      if(authorPrefersDark) {
-        newTheme = isAlternate ? baseTheme : alternateTheme;
-      } else {
-        newTheme = isAlternate ? alternateTheme : baseTheme;
-      }
-      const changeGiscusTheme = () => {
-        // From: https://github.com/giscus/giscus/issues/336
-        const sendMessage = (message) => {
-          const iframe = document.querySelector('iframe.giscus-frame');
-          if (!iframe) return;
-          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-        }
-        sendMessage({
-          setConfig: {
-            theme: newTheme
-          }
-        });
-      }
-      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-      if (isGiscussLoaded) {
-        changeGiscusTheme();
-      }
-    };
-    const authorPrefersDark = false;
-    const darkModeDefault = authorPrefersDark;
-      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-    // Dark / light mode switch
-    window.quartoToggleColorScheme = () => {
-      // Read the current dark / light value
-      let toAlternate = !hasAlternateSentinel();
-      toggleColorMode(toAlternate);
-      setStyleSentinel(toAlternate);
-      toggleGiscusIfUsed(toAlternate, darkModeDefault);
-      window.dispatchEvent(new Event('resize'));
-    };
-    // Switch to dark mode if need be
-    if (hasAlternateSentinel()) {
-      toggleColorMode(true);
-    } else {
-      toggleColorMode(false);
-    }
-  </script>
-
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
-    </a>
-    <a class="navbar-brand" href="../index.html">
-    <span class="navbar-title">ArxLang</span>
-    </a>
-  </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-  <span class="navbar-toggler-icon"></span>
-</button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../index.html"> 
-<span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="../arx/index.html" aria-current="page"> 
-<span class="menu-text">Arx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../astx/index.html"> 
-<span class="menu-text">ASTx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../irx/index.html"> 
-<span class="menu-text">IRx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../arxpy/index.html"> 
-<span class="menu-text">ArxPy</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../arxjit/index.html"> 
-<span class="menu-text">ArxJIT</span></a>
-  </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tools</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
-        <li>
-    <a class="dropdown-item" href="../tools/index.html">
- <span class="dropdown-text">Tooling Overview</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tools/arxpm.html">
- <span class="dropdown-text">ArxPM</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tools/vscode.html">
- <span class="dropdown-text">VS Code</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tools/jupyter.html">
- <span class="dropdown-text">Jupyter Kernel</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tools/douki.html">
- <span class="dropdown-text">Douki</span></a>
-  </li>  
-    </ul>
-  </li>
-</ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
-</i> 
-<span class="menu-text"></span></a>
-  </li>  
-</ul>
-          </div> <!-- /navcollapse -->
-            <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-</div>
-      </div> <!-- /container-fluid -->
-    </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/collections.html">Collections and Arrow</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Arx Overview</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/getting-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false">
- <span class="menu-text">Compiler</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Collections and Apache Arrow · ArxLang</title>
+    <script src="../theme.js"></script>
+    <script src="../search.js" defer></script>
+    
+    <link rel="stylesheet" href="../_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="../theme.css">
+    <link rel="stylesheet" href="../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../index.html">
+        <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li class="nav-active">
+            
+            <a href="index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="../tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/compiler-cli.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Compiler CLI</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/projects.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Projects and Imports</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/native-packages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">External Native Packages</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/testing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Compiled Tests</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Language Guides</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/specification.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Preview Contracts</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/capability-matrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Capability Matrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Lexical Syntax</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/modules.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Modules</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/file-io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Text File I/O</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/datatypes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Data Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/built-in-types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Built-in Types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/collections.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Collections and Arrow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/csv.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">CSV and DataFrames</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/parquet.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Parquet and DataFrames</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/control-flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Control Flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../arx/docstrings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Docstrings</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Python API</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a href="../api/arx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx API</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/arrow_stdlib.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.arrow_stdlib</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/builtin_files.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.builtin_files</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/builtins.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.builtins</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/cli.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.cli</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/codegen.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.codegen</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/dataframe.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.dataframe</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/docstrings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.docstrings</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/lexer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.lexer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/logs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.logs</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/main.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.main</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/native_config.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.native_config</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/native_packages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.native_packages</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/package_index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.package_index</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/schema.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.schema</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/settings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.settings</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/tensor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.tensor</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/testing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.testing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
- <span class="menu-text">Lexer</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/lexer/core.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.lexer.core</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/lexer/syntax.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.lexer.syntax</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
- <span class="menu-text">Parser</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/control_flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.control_flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/core.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.core</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/declarations.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.declarations</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/expressions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.expressions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/imports.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.imports</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/state.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.state</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../api/arx/parser/types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">arx.parser.types</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#collections-and-apache-arrow" id="toc-collections-and-apache-arrow" class="nav-link active" data-scroll-target="#collections-and-apache-arrow">Collections and Apache Arrow</a>
-  <ul class="collapse">
-  <li><a href="#lists" id="toc-lists" class="nav-link" data-scroll-target="#lists">Lists</a></li>
-  <li><a href="#tensors" id="toc-tensors" class="nav-link" data-scroll-target="#tensors">Tensors</a></li>
-  <li><a href="#dataframes-and-series" id="toc-dataframes-and-series" class="nav-link" data-scroll-target="#dataframes-and-series">DataFrames and Series</a></li>
-  <li><a href="#checked-dataframe-conversion" id="toc-checked-dataframe-conversion" class="nav-link" data-scroll-target="#checked-dataframe-conversion">Checked DataFrame conversion</a></li>
-  <li><a href="#runtime-boundary" id="toc-runtime-boundary" class="nav-link" data-scroll-target="#runtime-boundary">Runtime boundary</a></li>
-  <li><a href="#nullable-scalars-and-series-expressions" id="toc-nullable-scalars-and-series-expressions" class="nav-link" data-scroll-target="#nullable-scalars-and-series-expressions">Nullable scalars and Series expressions</a></li>
-  <li><a href="#parameterized-static-dataframe-schemas" id="toc-parameterized-static-dataframe-schemas" class="nav-link" data-scroll-target="#parameterized-static-dataframe-schemas">Parameterized static DataFrame schemas</a></li>
-  </ul></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../arx/specification.html">Language Guides</a></li><li class="breadcrumb-item"><a href="../arx/collections.html">Collections and Arrow</a></li></ol></nav></header>
-
-
-
-
-
-<section id="collections-and-apache-arrow" class="level1">
-<h1>Collections and Apache Arrow</h1>
-<p>Arx exposes four built-in collection families with deliberately different semantics:</p>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 15%">
-<col style="width: 48%">
-<col style="width: 36%">
-</colgroup>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">Arx</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li class="nav-active">
+            
+            <a href="index.html"><span class="nav-label">Arx Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="getting-started.html"><span class="nav-label">Getting Started</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Compiler</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="compiler-cli.html"><span class="nav-label">Compiler CLI</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="projects.html"><span class="nav-label">Projects and Imports</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="native-packages.html"><span class="nav-label">External Native Packages</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="testing.html"><span class="nav-label">Compiled Tests</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <details class="sidebar-group" open>
+              <summary class="sidebar-group-title"><span class="nav-label">Language Guides</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="specification.html"><span class="nav-label">Preview Contracts</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="capability-matrix.html"><span class="nav-label">Capability Matrix</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="syntax.html"><span class="nav-label">Lexical Syntax</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="modules.html"><span class="nav-label">Modules</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="functions.html"><span class="nav-label">Functions</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="file-io.html"><span class="nav-label">Text File I/O</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="classes.html"><span class="nav-label">Classes</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="datatypes.html"><span class="nav-label">Data Types</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="built-in-types.html"><span class="nav-label">Built-in Types</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="collections.html" aria-current="page"><span class="nav-label">Collections and Arrow</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="csv.html"><span class="nav-label">CSV and DataFrames</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="parquet.html"><span class="nav-label">Parquet and DataFrames</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="control-flow.html"><span class="nav-label">Control Flow</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="docstrings.html"><span class="nav-label">Docstrings</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../api/arx/index.html"><span class="nav-label">Python API</span></a>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>Collections and Apache Arrow</h1>
+          
+        </div>
+        
+        
+        <h1 id="collections-and-apache-arrow">Collections and Apache Arrow</h1>
+<p>Arx exposes four built-in collection families with deliberately different
+semantics:</p>
+<table>
 <thead>
-<tr class="header">
+<tr>
 <th>Surface type</th>
 <th>Purpose</th>
 <th>Runtime representation</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>list[T]</code></td>
 <td>General ordered values and builtin <code>range</code> results</td>
 <td>IRx dynamic-list runtime</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>tensor[T, ...]</code></td>
 <td>Homogeneous N-dimensional numeric data</td>
 <td>Apache Arrow C++ <code>arrow::Tensor</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>dataframe[...]</code></td>
 <td>Heterogeneous named columns</td>
 <td>Apache Arrow C++ <code>arrow::Table</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>series[T]</code></td>
 <td>One typed DataFrame column</td>
 <td>Apache Arrow C++ <code>arrow::ChunkedArray</code></td>
 </tr>
 </tbody>
 </table>
-<p><code>list</code> is not an Arrow container. Tensor, DataFrame, and Series storage is provided by IRx’s native Arrow C++ runtime.</p>
-<section id="lists" class="level2">
-<h2 class="anchored" data-anchor-id="lists">Lists</h2>
-<pre class="arx"><code>fn sum_values() -&gt; i32:
+<p><code>list</code> is not an Arrow container. Tensor, DataFrame, and Series storage is
+provided by IRx's native Arrow C++ runtime.</p>
+<h2 id="lists">Lists</h2>
+<pre class="highlight"><code>fn sum_values() -&gt; i32:
   var values: list[i32] = range(0, 4)
   var total: i32 = 0
   for value in values:
     total = total + value
-  return total</code></pre>
-<p>Dynamic lists are move-only: owned locals and non-transferred temporaries are released on normal and exceptional lexical exits and replacement; returning an owned list moves it to the caller. A list moved into a pending return cannot be read or reassigned through that binding in <code>finally</code>; a separate fresh owned return value is allowed. Parameters borrow storage and cannot append or return that borrow. Literal-list views are non-owning and cannot escape into dynamic owners or call arguments. See the <a href="../irx/runtime-ownership.html#enforced-scalar-dynamic-list-contract">enforced list contract</a> for the ownership boundary. <code>range</code> currently materializes a list, not a lazy iterator.</p>
-</section>
-<section id="tensors" class="level2">
-<h2 class="anchored" data-anchor-id="tensors">Tensors</h2>
+  return total
+</code></pre>
+<p>Dynamic lists are move-only: owned locals and non-transferred temporaries are
+released on normal and exceptional lexical exits and replacement; returning an
+owned list moves it to the caller. A list moved into a pending return cannot be
+read or reassigned through that binding in <code>finally</code>; a separate fresh owned
+return value is allowed. Parameters borrow storage and cannot append or return
+that borrow. Literal-list views are non-owning and cannot escape into dynamic
+owners or call arguments. See the
+<a href="../irx/runtime-ownership.html#enforced-scalar-dynamic-list-contract">enforced list contract</a>
+for the ownership boundary. <code>range</code> currently materializes a list, not a lazy
+iterator.</p>
+<h2 id="tensors">Tensors</h2>
 <p>Fixed-shape tensors use one or more integer dimensions:</p>
-<pre class="arx"><code>fn pick(grid: tensor[i32, 2, 2]) -&gt; i32:
+<pre class="highlight"><code>fn pick(grid: tensor[i32, 2, 2]) -&gt; i32:
   return grid[1, 0]
 
 fn main() -&gt; i32:
   var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  return pick(grid)</code></pre>
+  return pick(grid)
+</code></pre>
 <p>Rules:</p>
 <ul>
 <li>supported elements: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>f32</code>, and <code>f64</code></li>
@@ -816,50 +433,78 @@ fn main() -&gt; i32:
 <li>variables, fields, and returns require at least one static dimension</li>
 <li>Tensor storage is readonly in the current implementation</li>
 </ul>
-<p><code>tensor[T, ...]</code> accepts runtime shape/stride metadata at a function or extern parameter boundary:</p>
-<pre class="arx"><code>fn accept(values: tensor[i32, ...]) -&gt; none:
-  return none</code></pre>
-<p>Passing the value through is supported. Dynamic indexing is not yet available, so indexed access requires a static-shape annotation.</p>
-</section>
-<section id="dataframes-and-series" class="level2">
-<h2 class="anchored" data-anchor-id="dataframes-and-series">DataFrames and Series</h2>
-<pre class="arx"><code>fn main() -&gt; i32:
+<p><code>tensor[T, ...]</code> accepts runtime shape/stride metadata at a function or extern
+parameter boundary:</p>
+<pre class="highlight"><code>fn accept(values: tensor[i32, ...]) -&gt; none:
+  return none
+</code></pre>
+<p>Passing the value through is supported. Dynamic indexing is not yet available,
+so indexed access requires a static-shape annotation.</p>
+<h2 id="dataframes-and-series">DataFrames and Series</h2>
+<pre class="highlight"><code>fn main() -&gt; i32:
   var rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })
   var scores: series[f64] = rows.score
-  var ids: series[i32] = rows["id"]
+  var ids: series[i32] = rows[&quot;id&quot;]
   print(rows.ncols())
-  return cast(rows.nrows(), i32)</code></pre>
+  return cast(rows.nrows(), i32)
+</code></pre>
 <p>Rules:</p>
 <ul>
 <li>columns support signed/unsigned numeric, Boolean and string values</li>
-<li>nullable columns use <code>T | none</code>; date/time/timestamp columns can be populated through literal constructors or checked RecordBatch conversions</li>
-<li>the constructor accepts list-literal columns with equal row counts; it does not add implicit signed-to-unsigned coercion</li>
+<li>nullable columns use <code>T | none</code>; date/time/timestamp columns can be populated
+through literal constructors or checked RecordBatch conversions</li>
+<li>the constructor accepts list-literal columns with equal row counts; it does
+not add implicit signed-to-unsigned coercion</li>
 <li>names and types must match the declared static schema</li>
-<li>statically known columns use <code>rows.name</code> or <code>rows["name"]</code></li>
+<li>statically known columns use <code>rows.name</code> or <code>rows[&quot;name&quot;]</code></li>
 <li><code>nrows()</code> and <code>ncols()</code> return <code>i64</code></li>
-<li><code>dataframe[...]</code> supports runtime-schema locals, parameters and returns, preserving rich Arrow types/metadata through RecordBatch casts; its columns cannot be accessed statically by name or silently narrowed</li>
+<li><code>dataframe[...]</code> supports runtime-schema locals, parameters and returns,
+preserving rich Arrow types/metadata through RecordBatch casts; its columns
+cannot be accessed statically by name or silently narrowed</li>
 </ul>
-<p>Use <code>read_csv</code> / <code>write_csv</code> from <code>stdlib.csv</code> and <code>read_parquet</code> / <code>write_parquet</code> from <code>stdlib.parquet</code> for file I/O. Reads return independently owned runtime-schema frames; writes borrow frames and check finalization. No format-specific DataFrame methods or <code>to_*</code> aliases are added. <code>CSVStream</code> and <code>ParquetStream</code> in those modules support explicit streaming via <code>frame()</code> and <code>write(frame)</code>.</p>
-<p><code>Schema</code>, <code>BatchBuilder</code>, <code>RecordBatch</code> and IPC remain in <code>stdlib.arrow</code>. File workflows and format-specific safety limits live in <a href="../arx/csv.html">CSV</a> and <a href="../arx/parquet.html">Parquet</a>; exact casts follow the shared conversion contract below.</p>
-<p><code>IPCReader.next()</code> advances one batch; <code>batch()</code> and <code>schema()</code> return independent snapshots. <code>open_file</code> selects IPC file format, <code>open_stream</code> selects streaming format at a path, and <code>connect</code> exchanges IPC streaming bytes over TCP. Writers reject schema mismatches, including metadata and nullability. Check <code>is_null</code> before typed getters. Objects close on their last scoped reference; explicit <code>close()</code> is idempotent. See the <a href="../apache-arrow.html#compiled-arx-interoperability-stdlib.arrow">interoperability workflow and ownership contract</a>.</p>
-</section>
-<section id="checked-dataframe-conversion" class="level2">
-<h2 class="anchored" data-anchor-id="checked-dataframe-conversion">Checked DataFrame conversion</h2>
-<p><code>cast(frame, dataframe[id:i64])</code> and <code>cast(batch, dataframe[id:i64])</code> assert exact names, order, physical types, and every chunk’s reachable nullability. They do not project, coerce, fill nulls, or infer compile-time types. Metadata and independent ownership are preserved; <code>cast(frame, RecordBatch)</code> bridges back to batch APIs. Runtime-schema frames preserve rich Arrow data without permitting unchecked static column access.</p>
-<p>Fixed-row-count casts, owned globals, generator locals, aggregate-owned fields, and arbitrary DataFrame FFI are unsupported. See <a href="#parameterized-static-dataframe-schemas">parameterized schemas</a> for nested nullability and exact physical parameters. File-format restrictions still apply independently of what an in-memory frame can hold.</p>
-</section>
-<section id="runtime-boundary" class="level2">
-<h2 class="anchored" data-anchor-id="runtime-boundary">Runtime boundary</h2>
-<p>IRx activates native Arrow features only when lowering requires them. Generated LLVM calls opaque C ABI functions; Arrow C++ object layouts and ownership do not leak into LLVM structs or Arx syntax.</p>
-<p>See <a href="../apache-arrow.html">Native Apache Arrow Support</a> for arrays, Arrow C Data, RecordBatch IPC, and current interoperability details.</p>
-</section>
-<section id="nullable-scalars-and-series-expressions" class="level2">
-<h2 class="anchored" data-anchor-id="nullable-scalars-and-series-expressions">Nullable scalars and Series expressions</h2>
-<p><code>nullable[T]</code> stores a fixed-width numeric or Boolean scalar plus a validity bit. A nullable column is spelled <code>series[T | none]</code>. Indexing a nullable column returns <code>nullable[T]</code>; indexing a non-nullable column returns <code>T</code>. Indices are zero-based; negative or out-of-range indices fail at runtime.</p>
-<pre class="arx"><code>```
+<p>Use <code>read_csv</code> / <code>write_csv</code> from <code>stdlib.csv</code> and <code>read_parquet</code> /
+<code>write_parquet</code> from <code>stdlib.parquet</code> for file I/O. Reads return independently
+owned runtime-schema frames; writes borrow frames and check finalization. No
+format-specific DataFrame methods or <code>to_*</code> aliases are added. <code>CSVStream</code> and
+<code>ParquetStream</code> in those modules support explicit streaming via <code>frame()</code> and
+<code>write(frame)</code>.</p>
+<p><code>Schema</code>, <code>BatchBuilder</code>, <code>RecordBatch</code> and IPC remain in <code>stdlib.arrow</code>. File
+workflows and format-specific safety limits live in <a href="csv.html">CSV</a> and
+<a href="parquet.html">Parquet</a>; exact casts follow the shared conversion contract below.</p>
+<p><code>IPCReader.next()</code> advances one batch; <code>batch()</code> and <code>schema()</code> return
+independent snapshots. <code>open_file</code> selects IPC file format, <code>open_stream</code>
+selects streaming format at a path, and <code>connect</code> exchanges IPC streaming bytes
+over TCP. Writers reject schema mismatches, including metadata and nullability.
+Check <code>is_null</code> before typed getters. Objects close on their last scoped
+reference; explicit <code>close()</code> is idempotent. See the
+<a href="../apache-arrow.html#compiled-arx-interoperability-stdlib-arrow">interoperability workflow and ownership contract</a>.</p>
+<h2 id="checked-dataframe-conversion">Checked DataFrame conversion</h2>
+<p><code>cast(frame, dataframe[id:i64])</code> and <code>cast(batch, dataframe[id:i64])</code> assert
+exact names, order, physical types, and every chunk's reachable nullability.
+They do not project, coerce, fill nulls, or infer compile-time types. Metadata
+and independent ownership are preserved; <code>cast(frame, RecordBatch)</code> bridges back
+to batch APIs. Runtime-schema frames preserve rich Arrow data without permitting
+unchecked static column access.</p>
+<p>Fixed-row-count casts, owned globals, generator locals, aggregate-owned fields,
+and arbitrary DataFrame FFI are unsupported. See
+<a href="#parameterized-static-dataframe-schemas">parameterized schemas</a> for nested
+nullability and exact physical parameters. File-format restrictions still apply
+independently of what an in-memory frame can hold.</p>
+<h2 id="runtime-boundary">Runtime boundary</h2>
+<p>IRx activates native Arrow features only when lowering requires them. Generated
+LLVM calls opaque C ABI functions; Arrow C++ object layouts and ownership do not
+leak into LLVM structs or Arx syntax.</p>
+<p>See <a href="../apache-arrow.html">Native Apache Arrow Support</a> for arrays, Arrow C Data,
+RecordBatch IPC, and current interoperability details.</p>
+<h2 id="nullable-scalars-and-series-expressions">Nullable scalars and Series expressions</h2>
+<p><code>nullable[T]</code> stores a fixed-width numeric or Boolean scalar plus a validity
+bit. A nullable column is spelled <code>series[T | none]</code>. Indexing a nullable column
+returns <code>nullable[T]</code>; indexing a non-nullable column returns <code>T</code>. Indices are
+zero-based; negative or out-of-range indices fail at runtime.</p>
+<pre class="highlight"><code>```
 title: Nullable column expressions
 ```
 fn main() -&gt; i32:
@@ -872,499 +517,115 @@ fn main() -&gt; i32:
   assert filled[1] == 7
   var empty: nullable[i32] = none
   assert is_null(empty)
-  return 0</code></pre>
-<p>Supported operators are <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code> and <code>&gt;=</code>. Numeric operands use IRx common-type promotion. Column casts are checked; values that cannot be represented by the promoted type fail explicitly. Series/scalar operations broadcast the scalar. Series/Series operations require equal lengths. Integer arithmetic is checked: overflow and division by zero fail instead of wrapping. Null operands produce null outputs, including comparisons. Boolean <code>&amp;&amp;</code>/<code>and</code> and <code>||</code>/<code>or</code> propagate nulls strictly, not with Kleene semantics. These operations are eager, not short-circuiting.</p>
-<p><code>is_null</code> returns <code>bool</code> for a nullable scalar or a non-nullable Boolean Series mask. <code>fill_null(value, replacement)</code> eagerly evaluates a matching non-null scalar replacement and returns a non-nullable scalar or Series. Nullable scalars cannot implicitly become non-nullable values or conditions. Nullable scalar globals support numeric/Boolean literal or <code>none</code> initializers. Direct <code>none</code> is accepted in nullable declarations, assignments, returns, and function arguments/defaults. It never implicitly fills a non-nullable value.</p>
-<p>These scalar operations currently cover <code>i8</code>–<code>i64</code>, <code>u8</code>–<code>u64</code>, <code>f32</code>, <code>f64</code> and <code>bool</code>. String, temporal, decimal and nested Series retain their data and schema but cannot yet be indexed into language scalars or used in these operators. Unary <code>+</code> and checked <code>-</code> support signed numeric values; Boolean <code>!</code>/<code>not</code> invert validity-preserving masks. Unsigned negation requires an explicit cast. <code>column[start:stop:step]</code> follows Python’s bound clipping and negative-stride rules; omitted bounds are allowed and a zero step fails. Slicing, <code>is_null</code> and <code>series_count</code> also work on rich column storage.</p>
-<p><code>series_sum</code>, <code>series_min</code>, <code>series_max</code>, <code>series_mean</code>, <code>series_any</code> and <code>series_all</code> skip nulls and return nullable scalars: empty/all-null input has a null result. <code>series_count</code> returns the non-null count as <code>i64</code>. Integer sums use checked <code>i64</code>/<code>u64</code> accumulators; floating sums and means return <code>f64</code>. Boolean reductions require Boolean columns.</p>
-<p><code>column[index] = value</code> updates a mutable numeric/Boolean Series binding with bounds, type and nullability checks. Aliases of that handle observe updates; the originating DataFrame and previously computed/sliced Series do not. Construction completes before publication, so failed updates leave the old column intact. Concurrent access to a mutated handle is unsupported. Updates are statements, not value-producing assignment expressions.</p>
-<p>Returned Series own independent references; temporary columns and aliases are released by normal scope-lifetime cleanup.</p>
-</section>
-<section id="parameterized-static-dataframe-schemas" class="level2">
-<h2 class="anchored" data-anchor-id="parameterized-static-dataframe-schemas">Parameterized static DataFrame schemas</h2>
+  return 0
+</code></pre>
+<p>Supported operators are <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code> and <code>&gt;=</code>.
+Numeric operands use IRx common-type promotion. Column casts are checked; values
+that cannot be represented by the promoted type fail explicitly. Series/scalar
+operations broadcast the scalar. Series/Series operations require equal lengths.
+Integer arithmetic is checked: overflow and division by zero fail instead of
+wrapping. Null operands produce null outputs, including comparisons. Boolean
+<code>&amp;&amp;</code>/<code>and</code> and <code>||</code>/<code>or</code> propagate nulls strictly, not with Kleene semantics.
+These operations are eager, not short-circuiting.</p>
+<p><code>is_null</code> returns <code>bool</code> for a nullable scalar or a non-nullable Boolean Series
+mask. <code>fill_null(value, replacement)</code> eagerly evaluates a matching non-null
+scalar replacement and returns a non-nullable scalar or Series. Nullable scalars
+cannot implicitly become non-nullable values or conditions. Nullable scalar
+globals support numeric/Boolean literal or <code>none</code> initializers. Direct <code>none</code> is
+accepted in nullable declarations, assignments, returns, and function
+arguments/defaults. It never implicitly fills a non-nullable value.</p>
+<p>These scalar operations currently cover <code>i8</code>–<code>i64</code>, <code>u8</code>–<code>u64</code>, <code>f32</code>, <code>f64</code> and
+<code>bool</code>. String, temporal, decimal and nested Series retain their data and schema
+but cannot yet be indexed into language scalars or used in these operators.
+Unary <code>+</code> and checked <code>-</code> support signed numeric values; Boolean <code>!</code>/<code>not</code>
+invert validity-preserving masks. Unsigned negation requires an explicit cast.
+<code>column[start:stop:step]</code> follows Python's bound clipping and negative-stride
+rules; omitted bounds are allowed and a zero step fails. Slicing, <code>is_null</code> and
+<code>series_count</code> also work on rich column storage.</p>
+<p><code>series_sum</code>, <code>series_min</code>, <code>series_max</code>, <code>series_mean</code>, <code>series_any</code> and
+<code>series_all</code> skip nulls and return nullable scalars: empty/all-null input has a
+null result. <code>series_count</code> returns the non-null count as <code>i64</code>. Integer sums
+use checked <code>i64</code>/<code>u64</code> accumulators; floating sums and means return <code>f64</code>.
+Boolean reductions require Boolean columns.</p>
+<p><code>column[index] = value</code> updates a mutable numeric/Boolean Series binding with
+bounds, type and nullability checks. Aliases of that handle observe updates; the
+originating DataFrame and previously computed/sliced Series do not. Construction
+completes before publication, so failed updates leave the old column intact.
+Concurrent access to a mutated handle is unsupported. Updates are statements,
+not value-producing assignment expressions.</p>
+<p>Returned Series own independent references; temporary columns and aliases are
+released by normal scope-lifetime cleanup.</p>
+<h2 id="parameterized-static-dataframe-schemas">Parameterized static DataFrame schemas</h2>
 <p>Checked RecordBatch casts additionally accept:</p>
 <ul>
 <li><code>decimal128[precision, scale]</code> and <code>decimal256[precision, scale]</code>.</li>
-<li><code>timestamp["unit"]</code>, <code>timestamp["unit", "timezone"]</code>, and <code>time["unit"]</code>, with units <code>s</code>, <code>ms</code>, <code>us</code> or <code>ns</code>.</li>
+<li><code>timestamp[&quot;unit&quot;]</code>, <code>timestamp[&quot;unit&quot;, &quot;timezone&quot;]</code>, and <code>time[&quot;unit&quot;]</code>, with
+units <code>s</code>, <code>ms</code>, <code>us</code> or <code>ns</code>.</li>
 <li><code>binary</code>, <code>binary[positive_size]</code>, <code>large_binary</code>, and <code>large_string</code>.</li>
 <li><code>arrow_list[T]</code>, <code>large_list[T]</code>, and <code>fixed_list[T, positive_size]</code>.</li>
 <li><code>dictionary[index_type, value_type]</code> (unordered).</li>
 <li><code>arrow_map[key_type, value_type]</code> and <code>arrow_struct[name:T, ...]</code>.</li>
 </ul>
-<p>For example, <code>dataframe[amount:decimal128[12, 3] | none, items:arrow_list[nullable[i32]] | none]</code> declares nullable decimal and list columns. Nested children are non-nullable unless wrapped in <code>nullable[T]</code>; this wrapper models child nullability even for types that cannot be language scalars. Map keys cannot be nullable.</p>
-<p>Rich schemas work in aliases, parameters, returns and checked RecordBatch casts. Casts check names, order, exact physical parameters and nested nullability; non-nullable top-level columns also check actual batch null counts. They do not rescale decimals, change time units, or decode dictionaries implicitly. Input schema and field metadata are preserved.</p>
-<p>Unparameterized <code>time</code> uses time64 microseconds; <code>timestamp</code>/<code>datetime</code> use timezone-naive timestamp microseconds. Their text literal constructors accept whole seconds without timezone or fractional components. Use parameterized storage or checked Arrow imports for other units or zones.</p>
-<p>Rich DataFrame literals use the declared schema rather than inference. Decimal cells use exact strings or integers (not binary floats); binary cells use UTF-8 strings, with fixed widths checked in bytes. Parameterized temporal cells use integer storage units, without timezone conversion. Lists use nested lists; structs use positional lists matching declared field order; maps use lists of <code>[key, value]</code> pairs. Dictionaries encode literal values with checked index capacity. Nested nullability, widths, precision, scale and shape are validated during semantic analysis. Lowering embeds validated Arrow IPC bytes, not a Python interpreter or handwritten serialization format. Standalone rich scalar variables remain unsupported.</p>
+<p>For example,
+<code>dataframe[amount:decimal128[12, 3] | none, items:arrow_list[nullable[i32]] | none]</code>
+declares nullable decimal and list columns. Nested children are non-nullable
+unless wrapped in <code>nullable[T]</code>; this wrapper models child nullability even for
+types that cannot be language scalars. Map keys cannot be nullable.</p>
+<p>Rich schemas work in aliases, parameters, returns and checked RecordBatch casts.
+Casts check names, order, exact physical parameters and nested nullability;
+non-nullable top-level columns also check actual batch null counts. They do not
+rescale decimals, change time units, or decode dictionaries implicitly. Input
+schema and field metadata are preserved.</p>
+<p>Unparameterized <code>time</code> uses time64 microseconds; <code>timestamp</code>/<code>datetime</code> use
+timezone-naive timestamp microseconds. Their text literal constructors accept
+whole seconds without timezone or fractional components. Use parameterized
+storage or checked Arrow imports for other units or zones.</p>
+<p>Rich DataFrame literals use the declared schema rather than inference. Decimal
+cells use exact strings or integers (not binary floats); binary cells use UTF-8
+strings, with fixed widths checked in bytes. Parameterized temporal cells use
+integer storage units, without timezone conversion. Lists use nested lists;
+structs use positional lists matching declared field order; maps use lists of
+<code>[key, value]</code> pairs. Dictionaries encode literal values with checked index
+capacity. Nested nullability, widths, precision, scale and shape are validated
+during semantic analysis. Lowering embeds validated Arrow IPC bytes, not a
+Python interpreter or handwritten serialization format. Standalone rich scalar
+variables remain unsupported.</p>
 
-
-</section>
-</section>
-
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    // Ensure there is a toggle, if there isn't float one in the top right
-    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-      const a = window.document.createElement('a');
-      a.classList.add('top-right');
-      a.classList.add('quarto-color-scheme-toggle');
-      a.href = "";
-      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-      const i = window.document.createElement("i");
-      i.classList.add('bi');
-      a.appendChild(i);
-      window.document.body.appendChild(a);
-    }
-    setColorSchemeToggle(hasAlternateSentinel())
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
-        }
-      }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
-    });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
-    }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/arxlang\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
-            // target, if specified
-            link.setAttribute("target", "_blank");
-            if (link.getAttribute("rel") === null) {
-              link.setAttribute("rel", "noopener");
-            }
-        }
-      }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
-    }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
-    }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
-      } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
-        }
-        if (window.Quarto?.typesetMath) {
-          window.Quarto.typesetMath(note);
-        }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
-      }
-    }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
-          }
-        } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
-          .then(res => res.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
-            if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
-              instance.setContent(html);
-            } 
-          }).finally(() => {
-            instance.enable();
-            instance.show();
-          });
-        }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
-      } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
-        });
-      }
-    }
-  });
-  </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="../arx/built-in-types.html" class="pagination-link" aria-label="Built-in Types">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Built-in Types</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-      <a href="../arx/csv.html" class="pagination-link" aria-label="CSV and DataFrames">
-        <span class="nav-page-text">CSV and DataFrames</span> <i class="bi bi-arrow-right-short"></i>
-      </a>
-  </div>
-</nav>
-</div> <!-- /content -->
-<footer class="footer">
-  <div class="nav-footer">
-    <div class="nav-footer-left">
-<p>Copyright © 2022-2026 ArxLang</p>
-</div>   
-    <div class="nav-footer-center">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
-<p>Apache-2.0</p>
-</a>
-  </li>  
-</ul>
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h2"><a href="#lists">Lists</a></li>
+            
+            <li class="toc-h2"><a href="#tensors">Tensors</a></li>
+            
+            <li class="toc-h2"><a href="#dataframes-and-series">DataFrames and Series</a></li>
+            
+            <li class="toc-h2"><a href="#checked-dataframe-conversion">Checked DataFrame conversion</a></li>
+            
+            <li class="toc-h2"><a href="#runtime-boundary">Runtime boundary</a></li>
+            
+            <li class="toc-h2"><a href="#nullable-scalars-and-series-expressions">Nullable scalars and Series expressions</a></li>
+            
+            <li class="toc-h2"><a href="#parameterized-static-dataframe-schemas">Parameterized static DataFrame schemas</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
     </div>
-    <div class="nav-footer-right">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx">
-<p>GitHub</p>
-</a>
-  </li>  
-    <li class="nav-item">
-    <a class="nav-link" href="../coc.html">
-<p>Code of Conduct</p>
-</a>
-  </li>  
-</ul>
-    </div>
-  </div>
-</footer>
-
-
-
-
-<script src="../site_libs/quarto-html/zenscroll-min.js"></script>
-</body></html>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

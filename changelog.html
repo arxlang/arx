@@ -1,644 +1,337 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-<meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.18">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>changelog – ArxLang</title>
-<style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
-</style>
-
-
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<link href="./discord.html" rel="next">
-<link href="./api/index.html" rel="prev">
-<link href="./favicon.ico" rel="icon">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "navbar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "end",
-  "type": "overlay",
-  "limit": 8,
-  "keyboard-shortcut": [
-    "/",
-    "s"
-  ],
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
-<style>html{ scroll-behavior: smooth; }</style>
-
-
-</head>
-
-<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
-    const toggleBodyColorMode = (bsSheetEl) => {
-      const mode = bsSheetEl.getAttribute("data-mode");
-      const bodyEl = window.document.querySelector("body");
-      if (mode === "dark") {
-        bodyEl.classList.add("quarto-dark");
-        bodyEl.classList.remove("quarto-light");
-      } else {
-        bodyEl.classList.add("quarto-light");
-        bodyEl.classList.remove("quarto-dark");
-      }
-    }
-    const toggleBodyColorPrimary = () => {
-      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
-      if (bsSheetEl) {
-        toggleBodyColorMode(bsSheetEl);
-      }
-    }
-    const setColorSchemeToggle = (alternate) => {
-      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-      for (let i=0; i < toggles.length; i++) {
-        const toggle = toggles[i];
-        if (toggle) {
-          if (alternate) {
-            toggle.classList.add("alternate");
-          } else {
-            toggle.classList.remove("alternate");
-          }
-        }
-      }
-    };
-    const toggleColorMode = (alternate) => {
-      // Switch the stylesheets
-      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
-      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-      manageTransitions('#quarto-margin-sidebar .nav-link', false);
-      if (alternate) {
-        // note: dark is layered on light, we don't disable primary!
-        enableStylesheet(alternateStylesheets);
-        for (const sheetNode of alternateStylesheets) {
-          if (sheetNode.id === "quarto-bootstrap") {
-            toggleBodyColorMode(sheetNode);
-          }
-        }
-      } else {
-        disableStylesheet(alternateStylesheets);
-        enableStylesheet(primaryStylesheets)
-        toggleBodyColorPrimary();
-      }
-      manageTransitions('#quarto-margin-sidebar .nav-link', true);
-      // Switch the toggles
-      setColorSchemeToggle(alternate)
-      // Hack to workaround the fact that safari doesn't
-      // properly recolor the scrollbar when toggling (#1455)
-      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-        manageTransitions("body", false);
-        window.scrollTo(0, 1);
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          manageTransitions("body", true);
-        }, 40);
-      }
-    }
-    const disableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        stylesheet.rel = 'disabled-stylesheet';
-      }
-    }
-    const enableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
-          stylesheet.rel = 'stylesheet';
-        }
-      }
-    }
-    const manageTransitions = (selector, allowTransitions) => {
-      const els = window.document.querySelectorAll(selector);
-      for (let i=0; i < els.length; i++) {
-        const el = els[i];
-        if (allowTransitions) {
-          el.classList.remove('notransition');
-        } else {
-          el.classList.add('notransition');
-        }
-      }
-    }
-    const isFileUrl = () => {
-      return window.location.protocol === 'file:';
-    }
-    const hasAlternateSentinel = () => {
-      let styleSentinel = getColorSchemeSentinel();
-      if (styleSentinel !== null) {
-        return styleSentinel === "alternate";
-      } else {
-        return false;
-      }
-    }
-    const setStyleSentinel = (alternate) => {
-      const value = alternate ? "alternate" : "default";
-      if (!isFileUrl()) {
-        window.localStorage.setItem("quarto-color-scheme", value);
-      } else {
-        localAlternateSentinel = value;
-      }
-    }
-    const getColorSchemeSentinel = () => {
-      if (!isFileUrl()) {
-        const storageValue = window.localStorage.getItem("quarto-color-scheme");
-        return storageValue != null ? storageValue : localAlternateSentinel;
-      } else {
-        return localAlternateSentinel;
-      }
-    }
-    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-      let newTheme = '';
-      if(authorPrefersDark) {
-        newTheme = isAlternate ? baseTheme : alternateTheme;
-      } else {
-        newTheme = isAlternate ? alternateTheme : baseTheme;
-      }
-      const changeGiscusTheme = () => {
-        // From: https://github.com/giscus/giscus/issues/336
-        const sendMessage = (message) => {
-          const iframe = document.querySelector('iframe.giscus-frame');
-          if (!iframe) return;
-          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-        }
-        sendMessage({
-          setConfig: {
-            theme: newTheme
-          }
-        });
-      }
-      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-      if (isGiscussLoaded) {
-        changeGiscusTheme();
-      }
-    };
-    const authorPrefersDark = false;
-    const darkModeDefault = authorPrefersDark;
-      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-    // Dark / light mode switch
-    window.quartoToggleColorScheme = () => {
-      // Read the current dark / light value
-      let toAlternate = !hasAlternateSentinel();
-      toggleColorMode(toAlternate);
-      setStyleSentinel(toAlternate);
-      toggleGiscusIfUsed(toAlternate, darkModeDefault);
-      window.dispatchEvent(new Event('resize'));
-    };
-    // Switch to dark mode if need be
-    if (hasAlternateSentinel()) {
-      toggleColorMode(true);
-    } else {
-      toggleColorMode(false);
-    }
-  </script>
-
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
-    </a>
-    <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">ArxLang</span>
-    </a>
-  </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-  <span class="navbar-toggler-icon"></span>
-</button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="./index.html"> 
-<span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arx/index.html"> 
-<span class="menu-text">Arx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./astx/index.html"> 
-<span class="menu-text">ASTx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./irx/index.html"> 
-<span class="menu-text">IRx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arxpy/index.html"> 
-<span class="menu-text">ArxPy</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arxjit/index.html"> 
-<span class="menu-text">ArxJIT</span></a>
-  </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tools</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
-        <li>
-    <a class="dropdown-item" href="./tools/index.html">
- <span class="dropdown-text">Tooling Overview</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/arxpm.html">
- <span class="dropdown-text">ArxPM</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/vscode.html">
- <span class="dropdown-text">VS Code</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/jupyter.html">
- <span class="dropdown-text">Jupyter Kernel</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/douki.html">
- <span class="dropdown-text">Douki</span></a>
-  </li>  
-    </ul>
-  </li>
-</ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
-</i> 
-<span class="menu-text"></span></a>
-  </li>  
-</ul>
-          </div> <!-- /navcollapse -->
-            <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-</div>
-      </div> <!-- /container-fluid -->
-    </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./roadmap.html">Project</a></li><li class="breadcrumb-item"><a href="./changelog.html">Changelog</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false">
- <span class="menu-text">Start</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Release Notes · ArxLang</title>
+    <script src="theme.js"></script>
+    <script src="search.js" defer></script>
+    
+    <link rel="stylesheet" href="_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="index.html">
+        <img class="brand-logo" src="images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./ecosystem.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Ecosystem Status</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./apache-arrow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Native Apache Arrow</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Project</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./roadmap.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Roadmap</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./support-matrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Support Matrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">API Documentation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./changelog.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Community</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./discord.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Community Chat</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./coc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Code of Conduct</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./governance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Governance</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./partners.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Partners</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Sponsor</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#release-notes" id="toc-release-notes" class="nav-link active" data-scroll-target="#release-notes"># Release Notes</a></li>
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">1.25.0 (2026-10-26)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug Fixes</a></li>
-  <li><a href="#features" id="toc-features" class="nav-link" data-scroll-target="#features">Features</a></li>
-  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
-  <ul class="collapse">
-  <li><a href="#python-inspired-exceptions-breaking" id="toc-python-inspired-exceptions-breaking" class="nav-link" data-scroll-target="#python-inspired-exceptions-breaking">Python-inspired exceptions (breaking)</a></li>
-  <li><a href="#checked-numeric-promotion-breaking" id="toc-checked-numeric-promotion-breaking" class="nav-link" data-scroll-target="#checked-numeric-promotion-breaking">Checked numeric promotion (breaking)</a></li>
-  <li><a href="#integer-helper-safety-and-templates" id="toc-integer-helper-safety-and-templates" class="nav-link" data-scroll-target="#integer-helper-safety-and-templates">Integer helper safety and templates</a></li>
-  <li><a href="#migration-notes" id="toc-migration-notes" class="nav-link" data-scroll-target="#migration-notes">Migration notes</a></li>
-  </ul></li>
-  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">1.24.1 (2026-08-05)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">1.24.0 (2026-08-04)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug Fixes</a></li>
-  <li><a href="#features-1" id="toc-features-1" class="nav-link" data-scroll-target="#features-1">Features</a></li>
-  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">1.23.1 (2026-04-29)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-3" id="toc-bug-fixes-3" class="nav-link" data-scroll-target="#bug-fixes-3">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">1.23.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features-2" id="toc-features-2" class="nav-link" data-scroll-target="#features-2">Features</a></li>
-  </ul></li>
-  <li><a href="#section-5" id="toc-section-5" class="nav-link" data-scroll-target="#section-5">1.22.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features-3" id="toc-features-3" class="nav-link" data-scroll-target="#features-3">Features</a></li>
-  </ul></li>
-  <li><a href="#section-6" id="toc-section-6" class="nav-link" data-scroll-target="#section-6">1.21.0 (2026-04-28)</a>
-  <ul class="collapse">
-  <li><a href="#features-4" id="toc-features-4" class="nav-link" data-scroll-target="#features-4">Features</a></li>
-  </ul></li>
-  <li><a href="#section-7" id="toc-section-7" class="nav-link" data-scroll-target="#section-7">1.20.0 (2026-04-27)</a>
-  <ul class="collapse">
-  <li><a href="#features-5" id="toc-features-5" class="nav-link" data-scroll-target="#features-5">Features</a></li>
-  <li><a href="#section-8" id="toc-section-8" class="nav-link" data-scroll-target="#section-8">1.19.2 (2026-04-27)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-4" id="toc-bug-fixes-4" class="nav-link" data-scroll-target="#bug-fixes-4">Bug Fixes</a></li>
-  </ul></li>
-  <li><a href="#section-9" id="toc-section-9" class="nav-link" data-scroll-target="#section-9">1.19.1 (2026-04-27)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-5" id="toc-bug-fixes-5" class="nav-link" data-scroll-target="#bug-fixes-5">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#section-10" id="toc-section-10" class="nav-link" data-scroll-target="#section-10">1.19.0 (2026-04-26)</a>
-  <ul class="collapse">
-  <li><a href="#features-6" id="toc-features-6" class="nav-link" data-scroll-target="#features-6">Features</a></li>
-  </ul></li>
-  <li><a href="#section-11" id="toc-section-11" class="nav-link" data-scroll-target="#section-11">0.16.0 (2026-04-25)</a>
-  <ul class="collapse">
-  <li><a href="#features-7" id="toc-features-7" class="nav-link" data-scroll-target="#features-7">Features</a></li>
-  </ul></li>
-  <li><a href="#unreleased-1" id="toc-unreleased-1" class="nav-link" data-scroll-target="#unreleased-1">Unreleased</a>
-  <ul class="collapse">
-  <li><a href="#features-8" id="toc-features-8" class="nav-link" data-scroll-target="#features-8">Features</a></li>
-  </ul></li>
-  <li><a href="#section-12" id="toc-section-12" class="nav-link" data-scroll-target="#section-12">0.15.0 (2026-04-22)</a>
-  <ul class="collapse">
-  <li><a href="#features-9" id="toc-features-9" class="nav-link" data-scroll-target="#features-9">Features</a></li>
-  </ul></li>
-  <li><a href="#section-13" id="toc-section-13" class="nav-link" data-scroll-target="#section-13">0.14.0 (2026-04-21)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-6" id="toc-bug-fixes-6" class="nav-link" data-scroll-target="#bug-fixes-6">Bug Fixes</a></li>
-  <li><a href="#features-10" id="toc-features-10" class="nav-link" data-scroll-target="#features-10">Features</a></li>
-  </ul></li>
-  <li><a href="#section-14" id="toc-section-14" class="nav-link" data-scroll-target="#section-14">0.13.0 (2026-04-20)</a>
-  <ul class="collapse">
-  <li><a href="#features-11" id="toc-features-11" class="nav-link" data-scroll-target="#features-11">Features</a></li>
-  </ul></li>
-  <li><a href="#section-15" id="toc-section-15" class="nav-link" data-scroll-target="#section-15">0.12.0 (2026-04-20)</a>
-  <ul class="collapse">
-  <li><a href="#features-12" id="toc-features-12" class="nav-link" data-scroll-target="#features-12">Features</a></li>
-  </ul></li>
-  <li><a href="#section-16" id="toc-section-16" class="nav-link" data-scroll-target="#section-16">0.11.0 (2026-04-19)</a>
-  <ul class="collapse">
-  <li><a href="#features-13" id="toc-features-13" class="nav-link" data-scroll-target="#features-13">Features</a></li>
-  </ul></li>
-  <li><a href="#section-17" id="toc-section-17" class="nav-link" data-scroll-target="#section-17">0.10.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-14" id="toc-features-14" class="nav-link" data-scroll-target="#features-14">Features</a></li>
-  </ul></li>
-  <li><a href="#section-18" id="toc-section-18" class="nav-link" data-scroll-target="#section-18">0.9.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-15" id="toc-features-15" class="nav-link" data-scroll-target="#features-15">Features</a></li>
-  </ul></li>
-  <li><a href="#section-19" id="toc-section-19" class="nav-link" data-scroll-target="#section-19">0.8.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-16" id="toc-features-16" class="nav-link" data-scroll-target="#features-16">Features</a></li>
-  </ul></li>
-  <li><a href="#section-20" id="toc-section-20" class="nav-link" data-scroll-target="#section-20">0.7.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-17" id="toc-features-17" class="nav-link" data-scroll-target="#features-17">Features</a></li>
-  <li><a href="#section-21" id="toc-section-21" class="nav-link" data-scroll-target="#section-21">0.6.1 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-7" id="toc-bug-fixes-7" class="nav-link" data-scroll-target="#bug-fixes-7">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#section-22" id="toc-section-22" class="nav-link" data-scroll-target="#section-22">0.6.0 (2026-04-18)</a>
-  <ul class="collapse">
-  <li><a href="#features-18" id="toc-features-18" class="nav-link" data-scroll-target="#features-18">Features</a></li>
-  </ul></li>
-  <li><a href="#section-23" id="toc-section-23" class="nav-link" data-scroll-target="#section-23">0.5.0 (2026-04-16)</a>
-  <ul class="collapse">
-  <li><a href="#features-19" id="toc-features-19" class="nav-link" data-scroll-target="#features-19">Features</a></li>
-  </ul></li>
-  <li><a href="#section-24" id="toc-section-24" class="nav-link" data-scroll-target="#section-24">0.4.0 (2026-04-16)</a>
-  <ul class="collapse">
-  <li><a href="#features-20" id="toc-features-20" class="nav-link" data-scroll-target="#features-20">Features</a></li>
-  <li><a href="#section-25" id="toc-section-25" class="nav-link" data-scroll-target="#section-25">0.3.4 (2026-04-02)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-8" id="toc-bug-fixes-8" class="nav-link" data-scroll-target="#bug-fixes-8">Bug Fixes</a></li>
-  </ul></li>
-  <li><a href="#section-26" id="toc-section-26" class="nav-link" data-scroll-target="#section-26">0.3.3 (2026-03-06)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-9" id="toc-bug-fixes-9" class="nav-link" data-scroll-target="#bug-fixes-9">Bug Fixes</a></li>
-  </ul></li>
-  <li><a href="#section-27" id="toc-section-27" class="nav-link" data-scroll-target="#section-27">0.3.2 (2026-03-06)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-10" id="toc-bug-fixes-10" class="nav-link" data-scroll-target="#bug-fixes-10">Bug Fixes</a></li>
-  </ul></li>
-  <li><a href="#section-28" id="toc-section-28" class="nav-link" data-scroll-target="#section-28">0.3.1 (2026-03-06)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-11" id="toc-bug-fixes-11" class="nav-link" data-scroll-target="#bug-fixes-11">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  <li><a href="#section-29" id="toc-section-29" class="nav-link" data-scroll-target="#section-29">0.3.0 (2026-03-06)</a>
-  <ul class="collapse">
-  <li><a href="#features-21" id="toc-features-21" class="nav-link" data-scroll-target="#features-21">Features</a></li>
-  </ul></li>
-  <li><a href="#section-30" id="toc-section-30" class="nav-link" data-scroll-target="#section-30">0.2.0 (2025-08-07)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-12" id="toc-bug-fixes-12" class="nav-link" data-scroll-target="#bug-fixes-12">Bug Fixes</a></li>
-  <li><a href="#features-22" id="toc-features-22" class="nav-link" data-scroll-target="#features-22">Features</a></li>
-  <li><a href="#section-31" id="toc-section-31" class="nav-link" data-scroll-target="#section-31">0.1.1 (2023-06-26)</a>
-  <ul class="collapse">
-  <li><a href="#bug-fixes-13" id="toc-bug-fixes-13" class="nav-link" data-scroll-target="#bug-fixes-13">Bug Fixes</a></li>
-  </ul></li>
-  </ul></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./roadmap.html">Project</a></li><li class="breadcrumb-item"><a href="./changelog.html">Changelog</a></li></ol></nav></header>
-
-
-
-
-
-<section id="release-notes" class="level2">
-<h2 class="anchored" data-anchor-id="release-notes"># Release Notes</h2>
-</section>
-<section id="section" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.24.1...1.25.0">1.25.0</a> (2026-10-26)</h1>
-<section id="bug-fixes" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes">Bug Fixes</h3>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">ArxLang</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Start</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="ecosystem.html"><span class="nav-label">Ecosystem Status</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="apache-arrow.html"><span class="nav-label">Native Apache Arrow</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <details class="sidebar-group" open>
+              <summary class="sidebar-group-title"><span class="nav-label">Project</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="roadmap.html"><span class="nav-label">Roadmap</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="support-matrix.html"><span class="nav-label">Support Matrix</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="api/index.html"><span class="nav-label">API Documentation</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="changelog.html" aria-current="page"><span class="nav-label">Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Community</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="discord.html"><span class="nav-label">Community Chat</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="coc.html"><span class="nav-label">Code of Conduct</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="governance.html"><span class="nav-label">Governance</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="partners.html"><span class="nav-label">Partners</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="sponsor.html"><span class="nav-label">Sponsor</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>Release Notes</h1>
+          
+        </div>
+        
+        
+        <h1 id="release-notes">Release Notes</h1>
+<hr />
+<h1 id="1-25-0-https-github-com-arxlang-arx-compare-1-24-1-1-25-0-2026-10-26"><a href="https://github.com/arxlang/arx/compare/1.24.1...1.25.0">1.25.0</a> (2026-10-26)</h1>
+<h3 id="bug-fixes">Bug Fixes</h3>
 <ul>
-<li><strong>aix:</strong> lower ¬ to IRx’s ! operator (<a href="https://github.com/arxlang/arx/issues/120">#120</a>) (<a href="https://github.com/arxlang/arx/commit/c17f0cd1113ed99bbd978ea0d013f1bde0a22b7e">c17f0cd</a>)</li>
+<li><strong>aix:</strong> lower ¬ to IRx's ! operator (<a href="https://github.com/arxlang/arx/issues/120">#120</a>) (<a href="https://github.com/arxlang/arx/commit/c17f0cd1113ed99bbd978ea0d013f1bde0a22b7e">c17f0cd</a>)</li>
 <li><strong>arxjit:</strong> preserve Python expression semantics in lowering (<a href="https://github.com/arxlang/arx/issues/114">#114</a>) (<a href="https://github.com/arxlang/arx/commit/0a68b0bbb53de8c352bf14df2d5fbdd33637e9fe">0a68b0b</a>)</li>
 <li><strong>stdlib:</strong> validate integer helper boundaries (<a href="https://github.com/arxlang/arx/issues/137">#137</a>) (<a href="https://github.com/arxlang/arx/commit/3695ef648c9d61aeac1f45f81dc29b229f148d63">3695ef6</a>)</li>
 <li>Update AGENTS.md (<a href="https://github.com/arxlang/arx/issues/113">#113</a>) (<a href="https://github.com/arxlang/arx/commit/641eb1a59708f33d662dff31e18671c190bf6995">641eb1a</a>)</li>
 </ul>
-</section>
-<section id="features" class="level3">
-<h3 class="anchored" data-anchor-id="features">Features</h3>
+<h3 id="features">Features</h3>
 <ul>
 <li>add Arrow-backed CSV I/O and checked DataFrame conversion (<a href="https://github.com/arxlang/arx/issues/130">#130</a>) (<a href="https://github.com/arxlang/arx/commit/ca935877b503720726f747474db1d41e45c941f2">ca93587</a>)</li>
 <li>add nullable Series operations and rich DataFrame schemas (<a href="https://github.com/arxlang/arx/issues/133">#133</a>) (<a href="https://github.com/arxlang/arx/commit/7ee36fc64a2dbeb6f32bdc85fbfc011842cae22d">7ee36fc</a>)</li>
 <li>add Python-style exceptions across compiler and runtime (<a href="https://github.com/arxlang/arx/issues/139">#139</a>) (<a href="https://github.com/arxlang/arx/commit/e65e38c0b09d174c19f5caa6727c071ffb8cd3c7">e65e38c</a>)</li>
 <li>Add support for file management (<a href="https://github.com/arxlang/arx/issues/122">#122</a>) (<a href="https://github.com/arxlang/arx/commit/877651d724f896d30ad4cdb5bd38a2bc2af2f259">877651d</a>)</li>
 <li>Add support for keyword argument for method and function calls (<a href="https://github.com/arxlang/arx/issues/125">#125</a>) (<a href="https://github.com/arxlang/arx/commit/7be3b7682de3f27e9f6ddfccd27f2d809e449325">7be3b76</a>)</li>
-<li><strong>arxjit:</strong> lower a validated function’s shell to an astx module (<a href="https://github.com/arxlang/arx/issues/107">#107</a>) (<a href="https://github.com/arxlang/arx/commit/b8e82b177caecbff60bd0134a4458539cd9c88cd">b8e82b1</a>), closes <a href="https://github.com/arxlang/arx/issues/99">#99</a></li>
+<li><strong>arxjit:</strong> lower a validated function's shell to an astx module (<a href="https://github.com/arxlang/arx/issues/107">#107</a>) (<a href="https://github.com/arxlang/arx/commit/b8e82b177caecbff60bd0134a4458539cd9c88cd">b8e82b1</a>), closes <a href="https://github.com/arxlang/arx/issues/99">#99</a></li>
 <li><strong>arxjit:</strong> lower comparisons and boolean operators to astx (<a href="https://github.com/arxlang/arx/issues/112">#112</a>) (<a href="https://github.com/arxlang/arx/commit/e6ba8808a2a12a8ad94ccd4292e32dfb66276845">e6ba880</a>)</li>
 <li><strong>arxjit:</strong> lower expressions to astx (<a href="https://github.com/arxlang/arx/issues/109">#109</a>) (<a href="https://github.com/arxlang/arx/commit/b0117287de7bab8edecb5d85e4d1d94f8c221e4e">b011728</a>), closes <a href="https://github.com/arxlang/arx/issues/107">#107</a> <a href="https://github.com/arxlang/arx/issues/107">#107</a></li>
 <li><strong>arxjit:</strong> resolve a compilable signature from Python annotations (<a href="https://github.com/arxlang/arx/issues/103">#103</a>) (<a href="https://github.com/arxlang/arx/commit/61d48c2bfc80696f02a9b5fb4f3d90663d292002">61d48c2</a>)</li>
@@ -652,66 +345,83 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>stdlib:</strong> add CSV and Parquet modules with DataFrame I/O (<a href="https://github.com/arxlang/arx/issues/135">#135</a>) (<a href="https://github.com/arxlang/arx/commit/b8c7e0d78c63a525a2730d43dd0627c94d06ba1b">b8c7e0d</a>)</li>
 <li>support native dependencies for external Arx packages (<a href="https://github.com/arxlang/arx/issues/126">#126</a>) (<a href="https://github.com/arxlang/arx/commit/f1cda76d669a214c8c8787b5015052e03c53d1d8">f1cda76</a>)</li>
 </ul>
-</section>
-<section id="unreleased" class="level2">
-<h2 class="anchored" data-anchor-id="unreleased">Unreleased</h2>
-<section id="python-inspired-exceptions-breaking" class="level3">
-<h3 class="anchored" data-anchor-id="python-inspired-exceptions-breaking">Python-inspired exceptions (breaking)</h3>
+<h2 id="unreleased">Unreleased</h2>
+<h3 id="python-inspired-exceptions-breaking">Python-inspired exceptions (breaking)</h3>
 <ul>
-<li><code>raise</code>, ordered <code>except</code> handlers, <code>else</code>, and <code>finally</code> now propagate across generated calls. Builtin and single-inheritance user exception classes use ordinary nominal identities; causes and dynamic bare re-raise are supported.</li>
-<li>Checked numeric, assertion, bounds, file, and Arrow/CSV/Parquet failures are catchable. Finalizers and owned-resource cleanup run before propagation; implicit cleanup preserves a primary failure and records secondary failures.</li>
-<li><code>try</code>, <code>except</code>, <code>finally</code>, and <code>raise</code> are reserved keywords. ASTx now models cause/else clauses and qualified handler references; <code>ThrowStmt.get_struct()</code> names its children. Empty handler type lists are not catch-all handlers.</li>
-<li>Generated functions and runtime callbacks use a context/status/result-slot ABI; rebuild all native producers and consumers together. Ordinary external C signatures remain unchanged. Uncaught failures use structured exception reports; ArxPy exposes them as execution-result data, not Python exceptions.</li>
-<li>Protected regions spanning generator suspension, Python traceback mutation, exception groups, asynchronous exceptions, and ArxJIT exception lowering remain unsupported. See the <a href="./support-matrix.html#exception-capability-boundary">support boundary</a>.</li>
+<li><code>raise</code>, ordered <code>except</code> handlers, <code>else</code>, and <code>finally</code> now propagate across
+generated calls. Builtin and single-inheritance user exception classes use
+ordinary nominal identities; causes and dynamic bare re-raise are supported.</li>
+<li>Checked numeric, assertion, bounds, file, and Arrow/CSV/Parquet failures are
+catchable. Finalizers and owned-resource cleanup run before propagation;
+implicit cleanup preserves a primary failure and records secondary failures.</li>
+<li><code>try</code>, <code>except</code>, <code>finally</code>, and <code>raise</code> are reserved keywords. ASTx now models
+cause/else clauses and qualified handler references; <code>ThrowStmt.get_struct()</code>
+names its children. Empty handler type lists are not catch-all handlers.</li>
+<li>Generated functions and runtime callbacks use a context/status/result-slot
+ABI; rebuild all native producers and consumers together. Ordinary external
+C signatures remain unchanged. Uncaught failures use structured exception
+reports; ArxPy exposes them as execution-result data, not Python exceptions.</li>
+<li>Protected regions spanning generator suspension, Python traceback mutation,
+exception groups, asynchronous exceptions, and ArxJIT exception lowering
+remain unsupported. See the <a href="support-matrix.html#exception-capability-boundary">support boundary</a>.</li>
 </ul>
-</section>
-<section id="checked-numeric-promotion-breaking" class="level3">
-<h3 class="anchored" data-anchor-id="checked-numeric-promotion-breaking">Checked numeric promotion (breaking)</h3>
+<h3 id="checked-numeric-promotion-breaking">Checked numeric promotion (breaking)</h3>
 <ul>
-<li>Numeric promotion and implicit conversions are now lossless across the whole source domain. Mixed signed/unsigned comparisons no longer reinterpret negatives; combinations without a common domain require an explicit cast.</li>
-<li>Integer arithmetic and numeric casts now fail on out-of-range results in all builds. Source literals retain context and signed minima until type checking. <code>math.square</code> preserves its selected type and fails on overflow; widen its input or explicitly select a wider specialization before computing.</li>
-<li>Use <code>wrapping_add</code>, <code>wrapping_sub</code>, <code>wrapping_mul</code>, and <code>wrapping_cast</code> only where modulo arithmetic is intended. Ordinary narrowing no longer truncates silently. Nonidentity Series/tensor casts are explicitly unsupported.</li>
-<li>ArxJIT lowering shares IRx numeric promotion; integer source literals use i32-then-i64 inference and must remain exact in floating contexts. Python <code>@jit</code> fallback and the reserved <code>int</code> annotation (i64) are unchanged.</li>
-<li>ASTx contextual numeric nodes are <code>LiteralInteger</code> and <code>LiteralFloat</code>, in <code>astx.literals</code>. <code>LiteralFloat</code> accepts exact decimal text or <code>Decimal</code>, not Python <code>float</code>. These replace <code>SourceInteger</code>/<code>SourceFloat</code> without aliases. IRx preserves literal payloads and resolves types and rounded values only in semantic metadata, avoiding decimal-to-f32/f16 double rounding.</li>
-<li>Direct ASTx/IRx clients must analyze numeric nodes before lowering. Arithmetic and conversion plans, including union storage, are authoritative sidecars. See the <a href="./arx/specification.html#fixed-width-integer-overflow">numeric safety contract</a>.</li>
+<li>Numeric promotion and implicit conversions are now lossless across the whole
+source domain. Mixed signed/unsigned comparisons no longer reinterpret
+negatives; combinations without a common domain require an explicit cast.</li>
+<li>Integer arithmetic and numeric casts now fail on out-of-range results in all
+builds. Source literals retain context and signed minima until type checking.
+<code>math.square</code> preserves its selected type and fails on overflow; widen its
+input or explicitly select a wider specialization before computing.</li>
+<li>Use <code>wrapping_add</code>, <code>wrapping_sub</code>, <code>wrapping_mul</code>, and <code>wrapping_cast</code> only
+where modulo arithmetic is intended. Ordinary narrowing no longer truncates
+silently. Nonidentity Series/tensor casts are explicitly unsupported.</li>
+<li>ArxJIT lowering shares IRx numeric promotion; integer source literals use
+i32-then-i64 inference and must remain exact in floating contexts. Python
+<code>@jit</code> fallback and the reserved <code>int</code> annotation (i64) are unchanged.</li>
+<li>ASTx contextual numeric nodes are <code>LiteralInteger</code> and <code>LiteralFloat</code>, in
+<code>astx.literals</code>. <code>LiteralFloat</code> accepts exact decimal text or <code>Decimal</code>, not
+Python <code>float</code>. These replace <code>SourceInteger</code>/<code>SourceFloat</code> without aliases.
+IRx preserves literal payloads and resolves types and rounded values only in
+semantic metadata, avoiding decimal-to-f32/f16 double rounding.</li>
+<li>Direct ASTx/IRx clients must analyze numeric nodes before lowering. Arithmetic
+and conversion plans, including union storage, are authoritative sidecars.
+See the <a href="arx/specification.html#fixed-width-integer-overflow">numeric safety contract</a>.</li>
 </ul>
-</section>
-<section id="integer-helper-safety-and-templates" class="level3">
-<h3 class="anchored" data-anchor-id="integer-helper-safety-and-templates">Integer helper safety and templates</h3>
+<h3 id="integer-helper-safety-and-templates">Integer helper safety and templates</h3>
 <ul>
-<li><code>range</code> now terminates without wrapping when a step crosses an i32 endpoint; it still returns an eagerly allocated <code>list[i32]</code>.</li>
-<li><code>stdlib.math</code> scalar helpers now use a shared signed-integer template bound for <code>i8</code>, <code>i16</code>, <code>i32</code>, and <code>i64</code>, preserving the selected result type.</li>
-<li><code>stdlib.math.abs</code> on the selected type’s minimum now fails checked arithmetic; <code>clamp</code> with reversed bounds raises <code>AssertionError</code>; <code>abs</code> overflow raises <code>OverflowError</code>. These failures can be handled by exception statements.</li>
+<li><code>range</code> now terminates without wrapping when a step crosses an i32 endpoint;
+it still returns an eagerly allocated <code>list[i32]</code>.</li>
+<li><code>stdlib.math</code> scalar helpers now use a shared signed-integer template bound
+for <code>i8</code>, <code>i16</code>, <code>i32</code>, and <code>i64</code>, preserving the selected result type.</li>
+<li><code>stdlib.math.abs</code> on the selected type's minimum now fails checked arithmetic;
+<code>clamp</code> with reversed bounds raises <code>AssertionError</code>; <code>abs</code> overflow raises
+<code>OverflowError</code>. These failures can be handled by exception statements.</li>
 </ul>
-</section>
-<section id="migration-notes" class="level3">
-<h3 class="anchored" data-anchor-id="migration-notes">Migration notes</h3>
+<h3 id="migration-notes">Migration notes</h3>
 <ul>
-<li>Math helpers no longer convert every call to <code>i32</code>. Inferred arguments must have the same concrete signed type; use casts or explicit specialization, such as <code>math.min&lt;i64&gt;(small, wide)</code>, when mixing widths. Floating-point, unsigned, Boolean, and nullable specializations remain unsupported.</li>
-<li>CSV and Parquet operations live in <code>stdlib.csv</code> and <code>stdlib.parquet</code>; <code>stdlib.arrow</code> retains shared schemas, batches, and IPC. Use <code>CSVStream</code> and <code>ParquetStream</code> for explicit sessions instead of the removed <code>CSV</code> and <code>Parquet</code> class names. No compatibility aliases are provided. Module-level <code>read_csv</code>/<code>write_csv</code> and <code>read_parquet</code>/<code>write_parquet</code> remain the eager path.</li>
+<li>Math helpers no longer convert every call to <code>i32</code>. Inferred arguments must
+have the same concrete signed type; use casts or explicit specialization,
+such as <code>math.min&lt;i64&gt;(small, wide)</code>, when mixing widths. Floating-point,
+unsigned, Boolean, and nullable specializations remain unsupported.</li>
+<li>CSV and Parquet operations live in <code>stdlib.csv</code> and <code>stdlib.parquet</code>;
+<code>stdlib.arrow</code> retains shared schemas, batches, and IPC. Use <code>CSVStream</code> and
+<code>ParquetStream</code> for explicit sessions instead of the removed <code>CSV</code> and
+<code>Parquet</code> class names. No compatibility aliases are provided. Module-level
+<code>read_csv</code>/<code>write_csv</code> and <code>read_parquet</code>/<code>write_parquet</code> remain the eager path.</li>
 </ul>
-</section>
-</section>
-<section id="section-1" class="level2">
-<h2 class="anchored" data-anchor-id="section-1"><a href="https://github.com/arxlang/arx/compare/1.24.0...1.24.1">1.24.1</a> (2026-08-05)</h2>
-<section id="bug-fixes-1" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug Fixes</h3>
+<h2 id="1-24-1-https-github-com-arxlang-arx-compare-1-24-0-1-24-1-2026-08-05"><a href="https://github.com/arxlang/arx/compare/1.24.0...1.24.1">1.24.1</a> (2026-08-05)</h2>
+<h3 id="bug-fixes-1">Bug Fixes</h3>
 <ul>
 <li>Fix arxpy release (<a href="https://github.com/arxlang/arx/issues/106">#106</a>) (<a href="https://github.com/arxlang/arx/commit/66de68d467477aa5fc93ffd11c4c8a180df63e87">66de68d</a>)</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="section-2" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.23.1...1.24.0">1.24.0</a> (2026-08-04)</h1>
-<section id="bug-fixes-2" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug Fixes</h3>
+<h1 id="1-24-0-https-github-com-arxlang-arx-compare-1-23-1-1-24-0-2026-08-04"><a href="https://github.com/arxlang/arx/compare/1.23.1...1.24.0">1.24.0</a> (2026-08-04)</h1>
+<h3 id="bug-fixes-2">Bug Fixes</h3>
 <ul>
 <li>Improve the syntax.json definition (<a href="https://github.com/arxlang/arx/issues/83">#83</a>) (<a href="https://github.com/arxlang/arx/commit/7e2ecccd4202953dd3397427152170a5be253b31">7e2eccc</a>)</li>
 </ul>
-</section>
-<section id="features-1" class="level3">
-<h3 class="anchored" data-anchor-id="features-1">Features</h3>
+<h3 id="features-1">Features</h3>
 <ul>
 <li>Add initial version of aix (<a href="https://github.com/arxlang/arx/issues/84">#84</a>) (<a href="https://github.com/arxlang/arx/commit/008a7dd70b831769c2f8a9c440bbd73976efc311">008a7dd</a>)</li>
 <li><strong>arxjit:</strong> add clear errors when source extraction is unavailable (<a href="https://github.com/arxlang/arx/issues/98">#98</a>) (<a href="https://github.com/arxlang/arx/commit/0cc3c128f9c8f1923247dc224df8f6edf44701c2">0cc3c12</a>)</li>
@@ -720,303 +430,180 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>arxjit:</strong> add source extraction for decorated functions (<a href="https://github.com/arxlang/arx/issues/96">#96</a>) (<a href="https://github.com/arxlang/arx/commit/f2580d5c26f8f781146490d066574e29fc260712">f2580d5</a>)</li>
 <li><strong>arxjit:</strong> add source extraction for decorated functions (<a href="https://github.com/arxlang/arx/issues/96">#96</a>) (<a href="https://github.com/arxlang/arx/commit/77536dcda25bcd64f5d1574b61045aab1b3e5d75">77536dc</a>)</li>
 <li><strong>arxjit:</strong> add structured diagnostics and the public error hierarchy (<a href="https://github.com/arxlang/arx/issues/95">#95</a>) (<a href="https://github.com/arxlang/arx/commit/b6b35e06c0b52a50cdeaa7fae48c9804432d1cf2">b6b35e0</a>)</li>
-<li><strong>arxjit:</strong> add the <a href="https://github.com/jit"><span class="citation" data-cites="jit">@jit</span></a> decorator + Python-to-ASTx design notes (<a href="https://github.com/arxlang/arx/issues/92">#92</a>) (<a href="https://github.com/arxlang/arx/commit/f3e8f3bc935ae5a39a2b1718b161c8dc5e287607">f3e8f3b</a>)</li>
+<li><strong>arxjit:</strong> add the <a href="https://github.com/jit">@jit</a> decorator + Python-to-ASTx design notes (<a href="https://github.com/arxlang/arx/issues/92">#92</a>) (<a href="https://github.com/arxlang/arx/commit/f3e8f3bc935ae5a39a2b1718b161c8dc5e287607">f3e8f3b</a>)</li>
 <li><strong>arxjit:</strong> reject methods and make the rejection matrix exhaustive (<a href="https://github.com/arxlang/arx/issues/102">#102</a>) (<a href="https://github.com/arxlang/arx/commit/2fcd6611e45c1bbb90dcc076ed3e860260060a17">2fcd661</a>)</li>
 <li><strong>arxjit:</strong> scaffold arxjit JIT decorator package (<a href="https://github.com/arxlang/arx/issues/90">#90</a>) (<a href="https://github.com/arxlang/arx/commit/48508c363329f88ab90f220271098f915417a79f">48508c3</a>)</li>
 <li><strong>irx:</strong> add utf8 and large_utf8 string columns to record batch (<a href="https://github.com/arxlang/arx/issues/93">#93</a>) (<a href="https://github.com/arxlang/arx/commit/31c409c11f00a25e21bbecb1729da65e96de6e8c">31c409c</a>)</li>
 <li><strong>pyarx:</strong> add error and diagnostic layer (<a href="https://github.com/arxlang/arx/issues/86">#86</a>) (<a href="https://github.com/arxlang/arx/commit/3c3602c72fd4d849a694033d06e72559737cfca5">3c3602c</a>)</li>
 <li>scaffold pyarx Python API package (<a href="https://github.com/arxlang/arx/issues/85">#85</a>) (<a href="https://github.com/arxlang/arx/commit/336eabf42eac59ce03fe7794b63e9b7788be94c9">336eabf</a>)</li>
 </ul>
-</section>
-<section id="section-3" class="level2">
-<h2 class="anchored" data-anchor-id="section-3"><a href="https://github.com/arxlang/arx/compare/1.23.0...1.23.1">1.23.1</a> (2026-04-29)</h2>
-<section id="bug-fixes-3" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-3">Bug Fixes</h3>
+<h2 id="1-23-1-https-github-com-arxlang-arx-compare-1-23-0-1-23-1-2026-04-29"><a href="https://github.com/arxlang/arx/compare/1.23.0...1.23.1">1.23.1</a> (2026-04-29)</h2>
+<h3 id="bug-fixes-3">Bug Fixes</h3>
 <ul>
 <li>Fix the config dependencies format (<a href="https://github.com/arxlang/arx/issues/81">#81</a>) (<a href="https://github.com/arxlang/arx/commit/309091a37fe30a654696ced2a512f7aebfc5956a">309091a</a>)</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="section-4" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.22.0...1.23.0">1.23.0</a> (2026-04-28)</h1>
-<section id="features-2" class="level3">
-<h3 class="anchored" data-anchor-id="features-2">Features</h3>
+<h1 id="1-23-0-https-github-com-arxlang-arx-compare-1-22-0-1-23-0-2026-04-28"><a href="https://github.com/arxlang/arx/compare/1.22.0...1.23.0">1.23.0</a> (2026-04-28)</h1>
+<h3 id="features-2">Features</h3>
 <ul>
 <li><strong>config:</strong> Add support for requires-arx in the .arxproject.toml (<a href="https://github.com/arxlang/arx/issues/79">#79</a>) (<a href="https://github.com/arxlang/arx/commit/d0ab51327d329649003a1df55dc35035dc20200b">d0ab513</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-5" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.21.0...1.22.0">1.22.0</a> (2026-04-28)</h1>
-<section id="features-3" class="level3">
-<h3 class="anchored" data-anchor-id="features-3">Features</h3>
+<h1 id="1-22-0-https-github-com-arxlang-arx-compare-1-21-0-1-22-0-2026-04-28"><a href="https://github.com/arxlang/arx/compare/1.21.0...1.22.0">1.22.0</a> (2026-04-28)</h1>
+<h3 id="features-3">Features</h3>
 <ul>
 <li>Improve the discovery of installed libraries (<a href="https://github.com/arxlang/arx/issues/78">#78</a>) (<a href="https://github.com/arxlang/arx/commit/c00776d76e2d7e8e0040da88bcbadeed315763bc">c00776d</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-6" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.20.0...1.21.0">1.21.0</a> (2026-04-28)</h1>
-<section id="features-4" class="level3">
-<h3 class="anchored" data-anchor-id="features-4">Features</h3>
+<h1 id="1-21-0-https-github-com-arxlang-arx-compare-1-20-0-1-21-0-2026-04-28"><a href="https://github.com/arxlang/arx/compare/1.20.0...1.21.0">1.21.0</a> (2026-04-28)</h1>
+<h3 id="features-4">Features</h3>
 <ul>
 <li>Add type alias, builtin functions about typing (<a href="https://github.com/arxlang/arx/issues/77">#77</a>) (<a href="https://github.com/arxlang/arx/commit/87b7e2817df3b4360c163ce7efea16c83e35289e">87b7e28</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-7" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.19.2...1.20.0">1.20.0</a> (2026-04-27)</h1>
-<section id="features-5" class="level3">
-<h3 class="anchored" data-anchor-id="features-5">Features</h3>
+<h1 id="1-20-0-https-github-com-arxlang-arx-compare-1-19-2-1-20-0-2026-04-27"><a href="https://github.com/arxlang/arx/compare/1.19.2...1.20.0">1.20.0</a> (2026-04-27)</h1>
+<h3 id="features-5">Features</h3>
 <ul>
 <li>Add support for dataframes/series (<a href="https://github.com/arxlang/arx/issues/75">#75</a>) (<a href="https://github.com/arxlang/arx/commit/bbc76e44070dcf03b25bf5b0b78948fd151c2d0a">bbc76e4</a>)</li>
 <li>Standardize unsize types for collections/tensors/dataframes etc (<a href="https://github.com/arxlang/arx/issues/76">#76</a>) (<a href="https://github.com/arxlang/arx/commit/99bf4f2b7d60c2ecff0288ece0b198a5b0f85e6b">99bf4f2</a>)</li>
 </ul>
-</section>
-<section id="section-8" class="level2">
-<h2 class="anchored" data-anchor-id="section-8"><a href="https://github.com/arxlang/arx/compare/1.19.1...1.19.2">1.19.2</a> (2026-04-27)</h2>
-<section id="bug-fixes-4" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-4">Bug Fixes</h3>
+<h2 id="1-19-2-https-github-com-arxlang-arx-compare-1-19-1-1-19-2-2026-04-27"><a href="https://github.com/arxlang/arx/compare/1.19.1...1.19.2">1.19.2</a> (2026-04-27)</h2>
+<h3 id="bug-fixes-4">Bug Fixes</h3>
 <ul>
 <li>Move irx.astx wrappers back to astx (<a href="https://github.com/arxlang/arx/issues/74">#74</a>) (<a href="https://github.com/arxlang/arx/commit/0c37e1b2e0f18fe2306fc4e3416c779554eb00a1">0c37e1b</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-9" class="level2">
-<h2 class="anchored" data-anchor-id="section-9"><a href="https://github.com/arxlang/arx/compare/1.19.0...1.19.1">1.19.1</a> (2026-04-27)</h2>
-<section id="bug-fixes-5" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-5">Bug Fixes</h3>
+<h2 id="1-19-1-https-github-com-arxlang-arx-compare-1-19-0-1-19-1-2026-04-27"><a href="https://github.com/arxlang/arx/compare/1.19.0...1.19.1">1.19.1</a> (2026-04-27)</h2>
+<h3 id="bug-fixes-5">Bug Fixes</h3>
 <ul>
 <li>Fix readme files (<a href="https://github.com/arxlang/arx/issues/73">#73</a>) (<a href="https://github.com/arxlang/arx/commit/48df1fe7637ee8f66ce92b6b239d5093d48fc6cc">48df1fe</a>)</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="section-10" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/1.18.1...1.19.0">1.19.0</a> (2026-04-26)</h1>
-<section id="features-6" class="level3">
-<h3 class="anchored" data-anchor-id="features-6">Features</h3>
+<h1 id="1-19-0-https-github-com-arxlang-arx-compare-1-18-1-1-19-0-2026-04-26"><a href="https://github.com/arxlang/arx/compare/1.18.1...1.19.0">1.19.0</a> (2026-04-26)</h1>
+<h3 id="features-6">Features</h3>
 <ul>
 <li>Add initial version for monorepo for Arx, IRx, and ASTx (<a href="https://github.com/arxlang/arx/issues/72">#72</a>) (<a href="https://github.com/arxlang/arx/commit/d7a6bcfb99302fd9c0f8eef9763257aeca1a874c">d7a6bcf</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-11" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.15.0...0.16.0">0.16.0</a> (2026-04-25)</h1>
-<section id="features-7" class="level3">
-<h3 class="anchored" data-anchor-id="features-7">Features</h3>
+<h1 id="0-16-0-https-github-com-arxlang-arx-compare-0-15-0-0-16-0-2026-04-25"><a href="https://github.com/arxlang/arx/compare/0.15.0...0.16.0">0.16.0</a> (2026-04-25)</h1>
+<h3 id="features-7">Features</h3>
 <ul>
 <li>Add initial stdlib (<a href="https://github.com/arxlang/arx/issues/67">#67</a>) (<a href="https://github.com/arxlang/arx/commit/3e74ca7ae858533865f9139c6310bdd9c68aed35">3e74ca7</a>)</li>
 <li>Add support for NDArray (<a href="https://github.com/arxlang/arx/issues/66">#66</a>) (<a href="https://github.com/arxlang/arx/commit/d473ae3ef572549cf7095da0decf4f8fc5a5e806">d473ae3</a>)</li>
 <li>Create initial structure for builtins (<a href="https://github.com/arxlang/arx/issues/69">#69</a>) (<a href="https://github.com/arxlang/arx/commit/5f7bb17a2f84a3e8e6812b175c7bbf2c83ca0f65">5f7bb17</a>)</li>
 <li>Move from ndarray to tensors with arrow c++ (<a href="https://github.com/arxlang/arx/issues/70">#70</a>) (<a href="https://github.com/arxlang/arx/commit/c2f68e87b788efe9b0a9e539283bdd94c7d8ae8e">c2f68e8</a>)</li>
 </ul>
-</section>
-</section>
-<section id="unreleased-1" class="level1">
-<h1>Unreleased</h1>
-<section id="features-8" class="level3">
-<h3 class="anchored" data-anchor-id="features-8">Features</h3>
+<h1 id="unreleased-1">Unreleased</h1>
+<h3 id="features-8">Features</h3>
 <ul>
 <li>migrate Arx tensor syntax to IRx Tensor APIs and Arrow C++ runtime terminology</li>
 </ul>
-</section>
-</section>
-<section id="section-12" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.14.0...0.15.0">0.15.0</a> (2026-04-22)</h1>
-<section id="features-9" class="level3">
-<h3 class="anchored" data-anchor-id="features-9">Features</h3>
+<h1 id="0-15-0-https-github-com-arxlang-arx-compare-0-14-0-0-15-0-2026-04-22"><a href="https://github.com/arxlang/arx/compare/0.14.0...0.15.0">0.15.0</a> (2026-04-22)</h1>
+<h3 id="features-9">Features</h3>
 <ul>
 <li>align Arx surface syntax with IRx array-first naming (<a href="https://github.com/arxlang/arx/issues/65">#65</a>) (<a href="https://github.com/arxlang/arx/commit/b7ae1b1b8996cfbff908f24e133acbf509301cfa">b7ae1b1</a>)</li>
 <li>Improve lexer layout; Update syntax.json (<a href="https://github.com/arxlang/arx/issues/64">#64</a>) (<a href="https://github.com/arxlang/arx/commit/a3e6285c4b74fceb377cd24552ece09a3e5ca519">a3e6285</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-13" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.13.0...0.14.0">0.14.0</a> (2026-04-21)</h1>
-<section id="bug-fixes-6" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-6">Bug Fixes</h3>
+<h1 id="0-14-0-https-github-com-arxlang-arx-compare-0-13-0-0-14-0-2026-04-21"><a href="https://github.com/arxlang/arx/compare/0.13.0...0.14.0">0.14.0</a> (2026-04-21)</h1>
+<h3 id="bug-fixes-6">Bug Fixes</h3>
 <ul>
 <li><strong>parser:</strong> harden template call parsing (<a href="https://github.com/arxlang/arx/issues/62">#62</a>) (<a href="https://github.com/arxlang/arx/commit/8f1a5ff263cd6cb42578c96f07d6eb929c50fb32">8f1a5ff</a>)</li>
 </ul>
-</section>
-<section id="features-10" class="level3">
-<h3 class="anchored" data-anchor-id="features-10">Features</h3>
+<h3 id="features-10">Features</h3>
 <ul>
 <li>Split Parser into multiple files with mixin (<a href="https://github.com/arxlang/arx/issues/63">#63</a>) (<a href="https://github.com/arxlang/arx/commit/e704fb6e03aecdbc62d6aa36b6ea79f53f46561c">e704fb6</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-14" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.12.0...0.13.0">0.13.0</a> (2026-04-20)</h1>
-<section id="features-11" class="level3">
-<h3 class="anchored" data-anchor-id="features-11">Features</h3>
+<h1 id="0-13-0-https-github-com-arxlang-arx-compare-0-12-0-0-13-0-2026-04-20"><a href="https://github.com/arxlang/arx/compare/0.12.0...0.13.0">0.13.0</a> (2026-04-20)</h1>
+<h3 id="features-11">Features</h3>
 <ul>
 <li>Improve arx settings for build (<a href="https://github.com/arxlang/arx/issues/61">#61</a>) (<a href="https://github.com/arxlang/arx/commit/fba708aba980e2e7e2cf6a6bb40403a516132237">fba708a</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-15" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.11.0...0.12.0">0.12.0</a> (2026-04-20)</h1>
-<section id="features-12" class="level3">
-<h3 class="anchored" data-anchor-id="features-12">Features</h3>
+<h1 id="0-12-0-https-github-com-arxlang-arx-compare-0-11-0-0-12-0-2026-04-20"><a href="https://github.com/arxlang/arx/compare/0.11.0...0.12.0">0.12.0</a> (2026-04-20)</h1>
+<h3 id="features-12">Features</h3>
 <ul>
 <li>Improve the import statement (<a href="https://github.com/arxlang/arx/issues/59">#59</a>) (<a href="https://github.com/arxlang/arx/commit/7199c83558d0f6fe0ed55de2b2161c5995b31401">7199c83</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-16" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.10.0...0.11.0">0.11.0</a> (2026-04-19)</h1>
-<section id="features-13" class="level3">
-<h3 class="anchored" data-anchor-id="features-13">Features</h3>
+<h1 id="0-11-0-https-github-com-arxlang-arx-compare-0-10-0-0-11-0-2026-04-19"><a href="https://github.com/arxlang/arx/compare/0.10.0...0.11.0">0.11.0</a> (2026-04-19)</h1>
+<h3 id="features-13">Features</h3>
 <ul>
 <li>Improve usage of none type; fix tests (<a href="https://github.com/arxlang/arx/issues/58">#58</a>) (<a href="https://github.com/arxlang/arx/commit/3e52e6e8c44f25601de264479ae15beaf159e728">3e52e6e</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-17" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.9.0...0.10.0">0.10.0</a> (2026-04-18)</h1>
-<section id="features-14" class="level3">
-<h3 class="anchored" data-anchor-id="features-14">Features</h3>
+<h1 id="0-10-0-https-github-com-arxlang-arx-compare-0-9-0-0-10-0-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.9.0...0.10.0">0.10.0</a> (2026-04-18)</h1>
+<h3 id="features-14">Features</h3>
 <ul>
 <li><strong>settings:</strong> Add support for dependency-groups (<a href="https://github.com/arxlang/arx/issues/57">#57</a>) (<a href="https://github.com/arxlang/arx/commit/926084b69de8b7e640140af60fc9735d8609ad58">926084b</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-18" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.8.0...0.9.0">0.9.0</a> (2026-04-18)</h1>
-<section id="features-15" class="level3">
-<h3 class="anchored" data-anchor-id="features-15">Features</h3>
+<h1 id="0-9-0-https-github-com-arxlang-arx-compare-0-8-0-0-9-0-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.8.0...0.9.0">0.9.0</a> (2026-04-18)</h1>
+<h3 id="features-15">Features</h3>
 <ul>
 <li>Add typing support with py.typed (<a href="https://github.com/arxlang/arx/issues/56">#56</a>) (<a href="https://github.com/arxlang/arx/commit/4045c41a0e9a6d7ff7bc6d8df8db820d066afc75">4045c41</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-19" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.7.0...0.8.0">0.8.0</a> (2026-04-18)</h1>
-<section id="features-16" class="level3">
-<h3 class="anchored" data-anchor-id="features-16">Features</h3>
+<h1 id="0-8-0-https-github-com-arxlang-arx-compare-0-7-0-0-8-0-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.7.0...0.8.0">0.8.0</a> (2026-04-18)</h1>
+<h3 id="features-16">Features</h3>
 <ul>
 <li>Improve arx.settings to handle requirements fro arxpm (<a href="https://github.com/arxlang/arx/issues/55">#55</a>) (<a href="https://github.com/arxlang/arx/commit/c18d52e499e9c51fc1a5460161864e46f0c309b7">c18d52e</a>)</li>
 <li>Improve test configuration (<a href="https://github.com/arxlang/arx/issues/54">#54</a>) (<a href="https://github.com/arxlang/arx/commit/b97c9eb6dc3287988b99f01b451e55dc06e1c3e0">b97c9eb</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-20" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.6.1...0.7.0">0.7.0</a> (2026-04-18)</h1>
-<section id="features-17" class="level3">
-<h3 class="anchored" data-anchor-id="features-17">Features</h3>
+<h1 id="0-7-0-https-github-com-arxlang-arx-compare-0-6-1-0-7-0-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.6.1...0.7.0">0.7.0</a> (2026-04-18)</h1>
+<h3 id="features-17">Features</h3>
 <ul>
 <li>Improve unknown subcommand handling; add settings API (<a href="https://github.com/arxlang/arx/issues/53">#53</a>) (<a href="https://github.com/arxlang/arx/commit/701bd7874f42081cc8adbffa76f5978b940af12f">701bd78</a>)</li>
 </ul>
-</section>
-<section id="section-21" class="level2">
-<h2 class="anchored" data-anchor-id="section-21"><a href="https://github.com/arxlang/arx/compare/0.6.0...0.6.1">0.6.1</a> (2026-04-18)</h2>
-<section id="bug-fixes-7" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-7">Bug Fixes</h3>
+<h2 id="0-6-1-https-github-com-arxlang-arx-compare-0-6-0-0-6-1-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.6.0...0.6.1">0.6.1</a> (2026-04-18)</h2>
+<h3 id="bug-fixes-7">Bug Fixes</h3>
 <ul>
 <li>Fix arx test implementation (<a href="https://github.com/arxlang/arx/issues/52">#52</a>) (<a href="https://github.com/arxlang/arx/commit/4fe9e85c160fa1fd997b2e0a099a98d67b9dc174">4fe9e85</a>)</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="section-22" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.5.0...0.6.0">0.6.0</a> (2026-04-18)</h1>
-<section id="features-18" class="level3">
-<h3 class="anchored" data-anchor-id="features-18">Features</h3>
+<h1 id="0-6-0-https-github-com-arxlang-arx-compare-0-5-0-0-6-0-2026-04-18"><a href="https://github.com/arxlang/arx/compare/0.5.0...0.6.0">0.6.0</a> (2026-04-18)</h1>
+<h3 id="features-18">Features</h3>
 <ul>
 <li><strong>testing:</strong> preserve shared top-level declarations in arx test wrappers; Add assert statement (<a href="https://github.com/arxlang/arx/issues/51">#51</a>) (<a href="https://github.com/arxlang/arx/commit/83a6591c2317dc6d6ea52d12ad4a95096a5a8443">83a6591</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-23" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.4.0...0.5.0">0.5.0</a> (2026-04-16)</h1>
-<section id="features-19" class="level3">
-<h3 class="anchored" data-anchor-id="features-19">Features</h3>
+<h1 id="0-5-0-https-github-com-arxlang-arx-compare-0-4-0-0-5-0-2026-04-16"><a href="https://github.com/arxlang/arx/compare/0.4.0...0.5.0">0.5.0</a> (2026-04-16)</h1>
+<h3 id="features-19">Features</h3>
 <ul>
 <li>Add support for import/import-from (<a href="https://github.com/arxlang/arx/issues/50">#50</a>) (<a href="https://github.com/arxlang/arx/commit/08c53ab1aed5c21399193f9387f9cd93f8bb91ae">08c53ab</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-24" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.3.4...0.4.0">0.4.0</a> (2026-04-16)</h1>
-<section id="features-20" class="level3">
-<h3 class="anchored" data-anchor-id="features-20">Features</h3>
+<h1 id="0-4-0-https-github-com-arxlang-arx-compare-0-3-4-0-4-0-2026-04-16"><a href="https://github.com/arxlang/arx/compare/0.3.4...0.4.0">0.4.0</a> (2026-04-16)</h1>
+<h3 id="features-20">Features</h3>
 <ul>
-<li>Add support for classes (<a href="https://github.com/arxlang/arx/issues/49">#49</a>) (<a href="https://github.com/arxlang/arx/commit/7c8b073a2aeb780b3601f683478c0a6b17511477">7c8b073</a>)</li>
+<li>Add support for  classes (<a href="https://github.com/arxlang/arx/issues/49">#49</a>) (<a href="https://github.com/arxlang/arx/commit/7c8b073a2aeb780b3601f683478c0a6b17511477">7c8b073</a>)</li>
 </ul>
-</section>
-<section id="section-25" class="level2">
-<h2 class="anchored" data-anchor-id="section-25"><a href="https://github.com/arxlang/arx/compare/0.3.3...0.3.4">0.3.4</a> (2026-04-02)</h2>
-<section id="bug-fixes-8" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-8">Bug Fixes</h3>
+<h2 id="0-3-4-https-github-com-arxlang-arx-compare-0-3-3-0-3-4-2026-04-02"><a href="https://github.com/arxlang/arx/compare/0.3.3...0.3.4">0.3.4</a> (2026-04-02)</h2>
+<h3 id="bug-fixes-8">Bug Fixes</h3>
 <ul>
 <li>correct _default_value_for_type for temporal and unsupported types (<a href="https://github.com/arxlang/arx/issues/36">#36</a>) (<a href="https://github.com/arxlang/arx/commit/93d7b13fdd4626c75cd7c722ea473392b2f3e650">93d7b13</a>)</li>
 <li><strong>refactor:</strong> Update irx and update its usage; rename classes (<a href="https://github.com/arxlang/arx/issues/39">#39</a>) (<a href="https://github.com/arxlang/arx/commit/c95c47ce320069759a022623a6b1064280d0459b">c95c47c</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-26" class="level2">
-<h2 class="anchored" data-anchor-id="section-26"><a href="https://github.com/arxlang/arx/compare/0.3.2...0.3.3">0.3.3</a> (2026-03-06)</h2>
-<section id="bug-fixes-9" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-9">Bug Fixes</h3>
+<h2 id="0-3-3-https-github-com-arxlang-arx-compare-0-3-2-0-3-3-2026-03-06"><a href="https://github.com/arxlang/arx/compare/0.3.2...0.3.3">0.3.3</a> (2026-03-06)</h2>
+<h3 id="bug-fixes-9">Bug Fixes</h3>
 <ul>
 <li>Update astx and irx; mermaid is optional now (<a href="https://github.com/arxlang/arx/issues/35">#35</a>) (<a href="https://github.com/arxlang/arx/commit/37b341539eb4dd6989721dc43beb0d1d0e4d2327">37b3415</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-27" class="level2">
-<h2 class="anchored" data-anchor-id="section-27"><a href="https://github.com/arxlang/arx/compare/0.3.1...0.3.2">0.3.2</a> (2026-03-06)</h2>
-<section id="bug-fixes-10" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-10">Bug Fixes</h3>
+<h2 id="0-3-2-https-github-com-arxlang-arx-compare-0-3-1-0-3-2-2026-03-06"><a href="https://github.com/arxlang/arx/compare/0.3.1...0.3.2">0.3.2</a> (2026-03-06)</h2>
+<h3 id="bug-fixes-10">Bug Fixes</h3>
 <ul>
 <li>Fix compilation issues with PIE (<a href="https://github.com/arxlang/arx/issues/34">#34</a>) (<a href="https://github.com/arxlang/arx/commit/4d043b20f9d175e29d0469e563b543ccc1eff536">4d043b2</a>)</li>
 <li>Returning type is now required (<a href="https://github.com/arxlang/arx/issues/33">#33</a>) (<a href="https://github.com/arxlang/arx/commit/938a8b1b847983fea06576e88324785c090f0c19">938a8b1</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-28" class="level2">
-<h2 class="anchored" data-anchor-id="section-28"><a href="https://github.com/arxlang/arx/compare/0.3.0...0.3.1">0.3.1</a> (2026-03-06)</h2>
-<section id="bug-fixes-11" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-11">Bug Fixes</h3>
+<h2 id="0-3-1-https-github-com-arxlang-arx-compare-0-3-0-0-3-1-2026-03-06"><a href="https://github.com/arxlang/arx/compare/0.3.0...0.3.1">0.3.1</a> (2026-03-06)</h2>
+<h3 id="bug-fixes-11">Bug Fixes</h3>
 <ul>
 <li>Fix typing, tests, print, system; add more tests (<a href="https://github.com/arxlang/arx/issues/32">#32</a>) (<a href="https://github.com/arxlang/arx/commit/21e4639c416666f3cf09a345350c1da9ab5e090e">21e4639</a>)</li>
 </ul>
-</section>
-</section>
-</section>
-<section id="section-29" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.2.0...0.3.0">0.3.0</a> (2026-03-06)</h1>
-<section id="features-21" class="level3">
-<h3 class="anchored" data-anchor-id="features-21">Features</h3>
+<h1 id="0-3-0-https-github-com-arxlang-arx-compare-0-2-0-0-3-0-2026-03-06"><a href="https://github.com/arxlang/arx/compare/0.2.0...0.3.0">0.3.0</a> (2026-03-06)</h1>
+<h3 id="features-21">Features</h3>
 <ul>
 <li>Add support for loops, cast, print, datatypes, etc (<a href="https://github.com/arxlang/arx/issues/31">#31</a>) (<a href="https://github.com/arxlang/arx/commit/3b9b27ab068ed5cd8eeafbae79d5d11372bc63c3">3b9b27a</a>)</li>
 <li><strong>syntax:</strong> Support for Docstring syntax (<a href="https://github.com/arxlang/arx/issues/29">#29</a>) (<a href="https://github.com/arxlang/arx/commit/2bb1f8b0a784efe221d2ad890edc0a55014e741e">2bb1f8b</a>)</li>
 </ul>
-</section>
-</section>
-<section id="section-30" class="level1">
-<h1><a href="https://github.com/arxlang/arx/compare/0.1.1...0.2.0">0.2.0</a> (2025-08-07)</h1>
-<section id="bug-fixes-12" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-12">Bug Fixes</h3>
+<h1 id="0-2-0-https-github-com-arxlang-arx-compare-0-1-1-0-2-0-2025-08-07"><a href="https://github.com/arxlang/arx/compare/0.1.1...0.2.0">0.2.0</a> (2025-08-07)</h1>
+<h3 id="bug-fixes-12">Bug Fixes</h3>
 <ul>
 <li>Fix usage of FunctionCall (<a href="https://github.com/arxlang/arx/issues/15">#15</a>) (<a href="https://github.com/arxlang/arx/commit/f7f61c014cc7f400ae6af2e89cbbf9f3907f9b3a">f7f61c0</a>)</li>
 </ul>
-</section>
-<section id="features-22" class="level3">
-<h3 class="anchored" data-anchor-id="features-22">Features</h3>
+<h3 id="features-22">Features</h3>
 <ul>
 <li>Add support for blocks of nodes (<a href="https://github.com/arxlang/arx/issues/6">#6</a>) (<a href="https://github.com/arxlang/arx/commit/1fd099fa7b505998e853b867039c6041005afe87">1fd099f</a>)</li>
 <li>Move the AST output to YAML format (<a href="https://github.com/arxlang/arx/issues/7">#7</a>) (<a href="https://github.com/arxlang/arx/commit/6a8e10f8a3a7d49af466342483cc42849b263153">6a8e10f</a>)</li>
 <li>Support multiple input files (<a href="https://github.com/arxlang/arx/issues/8">#8</a>) (<a href="https://github.com/arxlang/arx/commit/ad31064baaf341a0a90da98016acc126c2e308e0">ad31064</a>)</li>
 <li>Use ASTx and IRx as core libraries for AST and code generation (<a href="https://github.com/arxlang/arx/issues/14">#14</a>) (<a href="https://github.com/arxlang/arx/commit/b730859e98ecc1f3e09a346ba634377d777e6617">b730859</a>)</li>
 </ul>
-</section>
-<section id="section-31" class="level2">
-<h2 class="anchored" data-anchor-id="section-31"><a href="https://github.com/arxlang/arx/compare/0.1.0...0.1.1">0.1.1</a> (2023-06-26)</h2>
-<section id="bug-fixes-13" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-13">Bug Fixes</h3>
+<h2 id="0-1-1-https-github-com-arxlang-arx-compare-0-1-0-0-1-1-2023-06-26"><a href="https://github.com/arxlang/arx/compare/0.1.0...0.1.1">0.1.1</a> (2023-06-26)</h2>
+<h3 id="bug-fixes-13">Bug Fixes</h3>
 <ul>
 <li>Change package name to arxlang (<a href="https://github.com/arxlang/arx/issues/2">#2</a>) (<a href="https://github.com/arxlang/arx/commit/e30c9378ed9489887eb19786e1d8810af91267e9">e30c937</a>)</li>
 <li>Fix semantic release configuration (<a href="https://github.com/arxlang/arx/issues/5">#5</a>) (<a href="https://github.com/arxlang/arx/commit/78ca1df453df91a59b8d1d1d763c9382a4d9e958">78ca1df</a>)</li>
@@ -1024,476 +611,131 @@ ul.task-list li input[type="checkbox"] {
 <li>Fix the semantic release workflow (<a href="https://github.com/arxlang/arx/issues/4">#4</a>) (<a href="https://github.com/arxlang/arx/commit/b5fb75c1f2146d455b058daee8a8f897e54eea79">b5fb75c</a>)</li>
 </ul>
 
-
-</section>
-</section>
-</section>
-
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    // Ensure there is a toggle, if there isn't float one in the top right
-    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-      const a = window.document.createElement('a');
-      a.classList.add('top-right');
-      a.classList.add('quarto-color-scheme-toggle');
-      a.href = "";
-      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-      const i = window.document.createElement("i");
-      i.classList.add('bi');
-      a.appendChild(i);
-      window.document.body.appendChild(a);
-    }
-    setColorSchemeToggle(hasAlternateSentinel())
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
-        }
-      }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
-    });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
-    }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/arxlang\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
-            // target, if specified
-            link.setAttribute("target", "_blank");
-            if (link.getAttribute("rel") === null) {
-              link.setAttribute("rel", "noopener");
-            }
-        }
-      }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
-    }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
-    }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
-      } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
-        }
-        if (window.Quarto?.typesetMath) {
-          window.Quarto.typesetMath(note);
-        }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
-      }
-    }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
-          }
-        } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
-          .then(res => res.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
-            if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
-              instance.setContent(html);
-            } 
-          }).finally(() => {
-            instance.enable();
-            instance.show();
-          });
-        }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
-      } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
-        });
-      }
-    }
-  });
-  </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="./api/index.html" class="pagination-link" aria-label="API Documentation">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">API Documentation</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-      <a href="./discord.html" class="pagination-link" aria-label="Community Chat">
-        <span class="nav-page-text">Community Chat</span> <i class="bi bi-arrow-right-short"></i>
-      </a>
-  </div>
-</nav>
-</div> <!-- /content -->
-<footer class="footer">
-  <div class="nav-footer">
-    <div class="nav-footer-left">
-<p>Copyright © 2022-2026 ArxLang</p>
-</div>   
-    <div class="nav-footer-center">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
-<p>Apache-2.0</p>
-</a>
-  </li>  
-</ul>
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h3"><a href="#bug-fixes">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features">Features</a></li>
+            
+            <li class="toc-h2"><a href="#unreleased">Unreleased</a></li>
+            
+            <li class="toc-h3"><a href="#python-inspired-exceptions-breaking">Python-inspired exceptions (breaking)</a></li>
+            
+            <li class="toc-h3"><a href="#checked-numeric-promotion-breaking">Checked numeric promotion (breaking)</a></li>
+            
+            <li class="toc-h3"><a href="#integer-helper-safety-and-templates">Integer helper safety and templates</a></li>
+            
+            <li class="toc-h3"><a href="#migration-notes">Migration notes</a></li>
+            
+            <li class="toc-h2"><a href="#1-24-1-https-github-com-arxlang-arx-compare-1-24-0-1-24-1-2026-08-05">1.24.1 (2026-08-05)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-1">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-2">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-1">Features</a></li>
+            
+            <li class="toc-h2"><a href="#1-23-1-https-github-com-arxlang-arx-compare-1-23-0-1-23-1-2026-04-29">1.23.1 (2026-04-29)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-3">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-2">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-3">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-4">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-5">Features</a></li>
+            
+            <li class="toc-h2"><a href="#1-19-2-https-github-com-arxlang-arx-compare-1-19-1-1-19-2-2026-04-27">1.19.2 (2026-04-27)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-4">Bug Fixes</a></li>
+            
+            <li class="toc-h2"><a href="#1-19-1-https-github-com-arxlang-arx-compare-1-19-0-1-19-1-2026-04-27">1.19.1 (2026-04-27)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-5">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-6">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-7">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-8">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-9">Features</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-6">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-10">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-11">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-12">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-13">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-14">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-15">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-16">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-17">Features</a></li>
+            
+            <li class="toc-h2"><a href="#0-6-1-https-github-com-arxlang-arx-compare-0-6-0-0-6-1-2026-04-18">0.6.1 (2026-04-18)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-7">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-18">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-19">Features</a></li>
+            
+            <li class="toc-h3"><a href="#features-20">Features</a></li>
+            
+            <li class="toc-h2"><a href="#0-3-4-https-github-com-arxlang-arx-compare-0-3-3-0-3-4-2026-04-02">0.3.4 (2026-04-02)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-8">Bug Fixes</a></li>
+            
+            <li class="toc-h2"><a href="#0-3-3-https-github-com-arxlang-arx-compare-0-3-2-0-3-3-2026-03-06">0.3.3 (2026-03-06)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-9">Bug Fixes</a></li>
+            
+            <li class="toc-h2"><a href="#0-3-2-https-github-com-arxlang-arx-compare-0-3-1-0-3-2-2026-03-06">0.3.2 (2026-03-06)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-10">Bug Fixes</a></li>
+            
+            <li class="toc-h2"><a href="#0-3-1-https-github-com-arxlang-arx-compare-0-3-0-0-3-1-2026-03-06">0.3.1 (2026-03-06)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-11">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-21">Features</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-12">Bug Fixes</a></li>
+            
+            <li class="toc-h3"><a href="#features-22">Features</a></li>
+            
+            <li class="toc-h2"><a href="#0-1-1-https-github-com-arxlang-arx-compare-0-1-0-0-1-1-2023-06-26">0.1.1 (2023-06-26)</a></li>
+            
+            <li class="toc-h3"><a href="#bug-fixes-13">Bug Fixes</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
     </div>
-    <div class="nav-footer-right">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx">
-<p>GitHub</p>
-</a>
-  </li>  
-    <li class="nav-item">
-    <a class="nav-link active" href="./coc.html" aria-current="page">
-<p>Code of Conduct</p>
-</a>
-  </li>  
-</ul>
-    </div>
-  </div>
-</footer>
-
-
-
-
-<script src="site_libs/quarto-html/zenscroll-min.js"></script>
-</body></html>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

@@ -1,0 +1,392 @@
+
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>irx.analysis.handlers._expressions.class_access · ArxLang</title>
+    <script src="../../../../../theme.js"></script>
+    <script src="../../../../../search.js" defer></script>
+    
+    <link rel="stylesheet" href="../../../../../_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="../../../../../theme.css">
+    <link rel="stylesheet" href="../../../../../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../../../../../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../../../../../index.html">
+        <img class="brand-logo" src="../../../../../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../../../../../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="../../../../../tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">IRx</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/index.html"><span class="nav-label">Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/installation.html"><span class="nav-label">Installation</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Architecture</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/architecture.html"><span class="nav-label">Architecture Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/semantic-contract.html"><span class="nav-label">Semantic Contract</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/runtime-features.html"><span class="nav-label">Runtime Features</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/runtime-ownership.html"><span class="nav-label">Runtime Ownership</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/buffer-view-model.html"><span class="nav-label">Buffer View Model</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/class-model.html"><span class="nav-label">Class Model</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Learn and Contribute</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/tutorials/get-started.html"><span class="nav-label">Getting Started Tutorial</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../../irx/changelog.html"><span class="nav-label">Historical Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="../../../index.html"><span class="nav-label">Python API</span></a>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>irx.analysis.handlers._expressions.class_access</h1>
+          
+        </div>
+        
+        
+        <h1 id="irx-analysis-handlers-_expressions-class_access"><code>irx.analysis.handlers._expressions.class_access</code></h1>
+<p>Source: <code>packages/irx/src/irx/analysis/handlers/_expressions/class_access.py</code></p>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expression class-access visitors.</span>
+<span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">&gt;-</span>
+<span class="w">  </span><span class="no">Handle class construction, method calls, and field access using the shared</span>
+<span class="w">  </span><span class="no">class-resolution helpers.</span>
+</code></pre>
+<h2 id="classes">Classes</h2>
+<h3 id="expressionclassaccessvisitormixin-expressionclasssupportvisitormixin"><code>ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin)</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expression class-access visitors.</span>
+</code></pre>
+<h4 id="methods">Methods</h4>
+<h5 id="visit-self-node-astx-classconstruct---none"><code>visit(self, node: astx.ClassConstruct) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit ClassConstruct nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.ClassConstruct</span>
+</code></pre>
+<h5 id="resolve_class_construction-self-node-astx-classconstruct-astx-functioncall-astx-methodcall-class_-semanticclass---none"><code>resolve_class_construction(self, node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall, class_: SemanticClass) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Resolve a class-valued callable after ordinary symbol lookup.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.ClassConstruct | astx.FunctionCall | astx.MethodCall</span>
+<span class="w">  </span><span class="nt">class_</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SemanticClass</span>
+</code></pre>
+<h5 id="visit-self-node-astx-methodcall---none"><code>visit(self, node: astx.MethodCall) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit MethodCall nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.MethodCall</span>
+</code></pre>
+<h5 id="visit-self-node-astx-basemethodcall---none"><code>visit(self, node: astx.BaseMethodCall) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit BaseMethodCall nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.BaseMethodCall</span>
+</code></pre>
+<h5 id="visit-self-node-astx-staticmethodcall---none"><code>visit(self, node: astx.StaticMethodCall) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit StaticMethodCall nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.StaticMethodCall</span>
+</code></pre>
+<h5 id="visit-self-node-astx-basefieldaccess---none"><code>visit(self, node: astx.BaseFieldAccess) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit BaseFieldAccess nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.BaseFieldAccess</span>
+</code></pre>
+<h5 id="visit-self-node-astx-staticfieldaccess---none"><code>visit(self, node: astx.StaticFieldAccess) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit StaticFieldAccess nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.StaticFieldAccess</span>
+</code></pre>
+<h5 id="visit-self-node-astx-fieldaccess---none"><code>visit(self, node: astx.FieldAccess) -&gt; None</code></h5>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Visit FieldAccess nodes.</span>
+<span class="nt">parameters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">node</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">astx.FieldAccess</span>
+</code></pre>
+
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h2"><a href="#classes">Classes</a></li>
+            
+            <li class="toc-h3"><a href="#expressionclassaccessvisitormixin-expressionclasssupportvisitormixin">ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin)</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
+    </div>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../../../../../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

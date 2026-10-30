@@ -1,2028 +1,368 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-<meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.18">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>irx.builder.runtime.arrowcpp – ArxLang</title>
-<style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
-</style>
-
-
-<script src="../../../../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../../../../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../../../../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../../../../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../../../../">
-<link href="../../../../api/irx/builder/runtime/buffer.html" rel="next">
-<link href="../../../../api/irx/builder/runtime/array.html" rel="prev">
-<link href="../../../../favicon.ico" rel="icon">
-<script src="../../../../site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="../../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../../../../site_libs/quarto-html/popper.min.js"></script>
-<script src="../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../../../../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../../../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../../../../site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../../../../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="../../../../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../../../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../../../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../../../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "navbar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "end",
-  "type": "overlay",
-  "limit": 8,
-  "keyboard-shortcut": [
-    "/",
-    "s"
-  ],
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
-<style>html{ scroll-behavior: smooth; }</style>
-
-
-</head>
-
-<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
-    const toggleBodyColorMode = (bsSheetEl) => {
-      const mode = bsSheetEl.getAttribute("data-mode");
-      const bodyEl = window.document.querySelector("body");
-      if (mode === "dark") {
-        bodyEl.classList.add("quarto-dark");
-        bodyEl.classList.remove("quarto-light");
-      } else {
-        bodyEl.classList.add("quarto-light");
-        bodyEl.classList.remove("quarto-dark");
-      }
-    }
-    const toggleBodyColorPrimary = () => {
-      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
-      if (bsSheetEl) {
-        toggleBodyColorMode(bsSheetEl);
-      }
-    }
-    const setColorSchemeToggle = (alternate) => {
-      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-      for (let i=0; i < toggles.length; i++) {
-        const toggle = toggles[i];
-        if (toggle) {
-          if (alternate) {
-            toggle.classList.add("alternate");
-          } else {
-            toggle.classList.remove("alternate");
-          }
-        }
-      }
-    };
-    const toggleColorMode = (alternate) => {
-      // Switch the stylesheets
-      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
-      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-      manageTransitions('#quarto-margin-sidebar .nav-link', false);
-      if (alternate) {
-        // note: dark is layered on light, we don't disable primary!
-        enableStylesheet(alternateStylesheets);
-        for (const sheetNode of alternateStylesheets) {
-          if (sheetNode.id === "quarto-bootstrap") {
-            toggleBodyColorMode(sheetNode);
-          }
-        }
-      } else {
-        disableStylesheet(alternateStylesheets);
-        enableStylesheet(primaryStylesheets)
-        toggleBodyColorPrimary();
-      }
-      manageTransitions('#quarto-margin-sidebar .nav-link', true);
-      // Switch the toggles
-      setColorSchemeToggle(alternate)
-      // Hack to workaround the fact that safari doesn't
-      // properly recolor the scrollbar when toggling (#1455)
-      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-        manageTransitions("body", false);
-        window.scrollTo(0, 1);
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          manageTransitions("body", true);
-        }, 40);
-      }
-    }
-    const disableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        stylesheet.rel = 'disabled-stylesheet';
-      }
-    }
-    const enableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
-          stylesheet.rel = 'stylesheet';
-        }
-      }
-    }
-    const manageTransitions = (selector, allowTransitions) => {
-      const els = window.document.querySelectorAll(selector);
-      for (let i=0; i < els.length; i++) {
-        const el = els[i];
-        if (allowTransitions) {
-          el.classList.remove('notransition');
-        } else {
-          el.classList.add('notransition');
-        }
-      }
-    }
-    const isFileUrl = () => {
-      return window.location.protocol === 'file:';
-    }
-    const hasAlternateSentinel = () => {
-      let styleSentinel = getColorSchemeSentinel();
-      if (styleSentinel !== null) {
-        return styleSentinel === "alternate";
-      } else {
-        return false;
-      }
-    }
-    const setStyleSentinel = (alternate) => {
-      const value = alternate ? "alternate" : "default";
-      if (!isFileUrl()) {
-        window.localStorage.setItem("quarto-color-scheme", value);
-      } else {
-        localAlternateSentinel = value;
-      }
-    }
-    const getColorSchemeSentinel = () => {
-      if (!isFileUrl()) {
-        const storageValue = window.localStorage.getItem("quarto-color-scheme");
-        return storageValue != null ? storageValue : localAlternateSentinel;
-      } else {
-        return localAlternateSentinel;
-      }
-    }
-    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-      let newTheme = '';
-      if(authorPrefersDark) {
-        newTheme = isAlternate ? baseTheme : alternateTheme;
-      } else {
-        newTheme = isAlternate ? alternateTheme : baseTheme;
-      }
-      const changeGiscusTheme = () => {
-        // From: https://github.com/giscus/giscus/issues/336
-        const sendMessage = (message) => {
-          const iframe = document.querySelector('iframe.giscus-frame');
-          if (!iframe) return;
-          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-        }
-        sendMessage({
-          setConfig: {
-            theme: newTheme
-          }
-        });
-      }
-      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-      if (isGiscussLoaded) {
-        changeGiscusTheme();
-      }
-    };
-    const authorPrefersDark = false;
-    const darkModeDefault = authorPrefersDark;
-      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-    // Dark / light mode switch
-    window.quartoToggleColorScheme = () => {
-      // Read the current dark / light value
-      let toAlternate = !hasAlternateSentinel();
-      toggleColorMode(toAlternate);
-      setStyleSentinel(toAlternate);
-      toggleGiscusIfUsed(toAlternate, darkModeDefault);
-      window.dispatchEvent(new Event('resize'));
-    };
-    // Switch to dark mode if need be
-    if (hasAlternateSentinel()) {
-      toggleColorMode(true);
-    } else {
-      toggleColorMode(false);
-    }
-  </script>
-
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../../../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../../../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../../../../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
-    </a>
-    <a class="navbar-brand" href="../../../../index.html">
-    <span class="navbar-title">ArxLang</span>
-    </a>
-  </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-  <span class="navbar-toggler-icon"></span>
-</button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../../../../index.html"> 
-<span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../../../arx/index.html"> 
-<span class="menu-text">Arx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../../../astx/index.html"> 
-<span class="menu-text">ASTx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="../../../../irx/index.html" aria-current="page"> 
-<span class="menu-text">IRx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../../../arxpy/index.html"> 
-<span class="menu-text">ArxPy</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../../../arxjit/index.html"> 
-<span class="menu-text">ArxJIT</span></a>
-  </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tools</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
-        <li>
-    <a class="dropdown-item" href="../../../../tools/index.html">
- <span class="dropdown-text">Tooling Overview</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../../../tools/arxpm.html">
- <span class="dropdown-text">ArxPM</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../../../tools/vscode.html">
- <span class="dropdown-text">VS Code</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../../../tools/jupyter.html">
- <span class="dropdown-text">Jupyter Kernel</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../../../tools/douki.html">
- <span class="dropdown-text">Douki</span></a>
-  </li>  
-    </ul>
-  </li>
-</ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
-</i> 
-<span class="menu-text"></span></a>
-  </li>  
-</ul>
-          </div> <!-- /navcollapse -->
-            <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-</div>
-      </div> <!-- /container-fluid -->
-    </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../../../api/irx/index.html">Python API</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/index.html">irx API</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/backend.html">Builder</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/runtime/array.html">Runtime</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/runtime/arrowcpp.html">irx.builder.runtime.arrowcpp</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false">
- <span class="menu-text">Architecture</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/architecture.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Architecture Overview</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/semantic-contract.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Semantic Contract</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/runtime-features.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Runtime Features</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/runtime-ownership.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Runtime Ownership</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/buffer-view-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Buffer View Model</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/class-model.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Class Model</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Learn and Contribute</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started Tutorial</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../irx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Python API</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a href="../../../../api/irx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx API</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/buffer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.buffer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/diagnostics.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.diagnostics</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/native.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.native</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/parquet_options.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.parquet_options</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/record_batch.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.record_batch</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/record_batch_abi.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.record_batch_abi</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/symbol_table.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.symbol_table</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/system.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.system</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/table_io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.table_io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/typecheck.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.typecheck</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
- <span class="menu-text">Analysis</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/analyzer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.analyzer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/api.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.api</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/arrow_conversion.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.arrow_conversion</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/bindings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.bindings</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/builtin_file.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.builtin_file</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/call_arguments.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.call_arguments</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/class_lifecycle.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.class_lifecycle</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/context.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.context</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/contract.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.contract</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/dataframe_literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.dataframe_literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/exception_types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.exception_types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/factories.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.factories</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/ffi.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.ffi</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/file_io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.file_io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/float_literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.float_literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/iterables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.iterables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/module_interfaces.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.module_interfaces</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/module_symbols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.module_symbols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/normalization.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.normalization</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/nullable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.nullable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/numeric_literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.numeric_literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/numeric_policy.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.numeric_policy</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/ownership.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.ownership</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/reachability.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.reachability</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/registry.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.registry</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/resolved_nodes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.resolved_nodes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/scopes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.scopes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/session.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.session</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/symbols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.symbols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/table_io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.table_io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/typing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.typing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/validation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.validation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
- <span class="menu-text">Handlers</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth4 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/class_helpers.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.class_helpers</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/control_flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.control_flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/declarations.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.declarations</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/expressions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.expressions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/imports.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.imports</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/analysis/handlers/templates.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.analysis.handlers.templates</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false">
- <span class="menu-text">Base</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/base/visitors.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.base.visitors</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false">
- <span class="menu-text">Visitors</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth4 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/base/visitors/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.base.visitors.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/base/visitors/protocols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.base.visitors.protocols</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
- <span class="menu-text">Builder</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth3 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/backend.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.backend</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/casting.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.casting</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/core.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.core</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/diagnostics.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.diagnostics</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/numeric.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.numeric</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/protocols.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.protocols</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/state.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.state</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/strings.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.strings</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/vector.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.vector</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false">
- <span class="menu-text">Lowering</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth4 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/array.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.array</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/binary_ops.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.binary_ops</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/buffer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.buffer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/control_flow.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.control_flow</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/dataframe.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.dataframe</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/file.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.file</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/generators.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.generators</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/list.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.list</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/modules.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.modules</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/nullable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.nullable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/system.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.system</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/table_io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.table_io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/temporal.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.temporal</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/tensor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.tensor</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/unary_ops.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.unary_ops</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/lowering/variables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.lowering.variables</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true">
- <span class="menu-text">Runtime</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth4 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/array.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.array</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/arrowcpp.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">irx.builder.runtime.arrowcpp</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/buffer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.buffer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/dataframe.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.dataframe</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/errors.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.errors</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/feature_libc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.feature_libc</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/feature_libm.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.feature_libm</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/features.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.features</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/file.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.file</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/linking.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.linking</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/list.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.list</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/parquet.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.parquet</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/record_batch.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.record_batch</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/record_batch_api.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.record_batch_api</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/registry.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.registry</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/tensor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.tensor</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false">
- <span class="menu-text">Array</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-12" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/array/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.array.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false">
- <span class="menu-text">Buffer</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-13" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/buffer/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.buffer.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="false">
- <span class="menu-text">Classes</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-14" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/classes/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.classes.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false">
- <span class="menu-text">Dataframe</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-15" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/dataframe/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.dataframe.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false">
- <span class="menu-text">Errors</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-16" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/errors/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.errors.feature</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/errors/reporting.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.errors.reporting</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false">
- <span class="menu-text">Exceptions</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-17" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/exceptions/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.exceptions.feature</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/exceptions/reporting.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.exceptions.reporting</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false">
- <span class="menu-text">File</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-18" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/file/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.file.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false">
- <span class="menu-text">List</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-19" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/list/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.list.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false">
- <span class="menu-text">Tensor</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-20" class="collapse list-unstyled sidebar-section depth5 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builder/runtime/tensor/feature.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builder.runtime.tensor.feature</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false">
- <span class="menu-text">Builtins</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-21" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false">
- <span class="menu-text">Collections</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-22" class="collapse list-unstyled sidebar-section depth4 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections/array_primitives.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections.array_primitives</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections/column_types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections.column_types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections/dataframe.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections.dataframe</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections/list.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections.list</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../../../api/irx/builtins/collections/tensor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">irx.builtins.collections.tensor</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#irx.builder.runtime.arrowcpp" id="toc-irx.builder.runtime.arrowcpp" class="nav-link active" data-scroll-target="#irx.builder.runtime.arrowcpp"><code>irx.builder.runtime.arrowcpp</code></a>
-  <ul class="collapse">
-  <li><a href="#functions" id="toc-functions" class="nav-link" data-scroll-target="#functions">Functions</a>
-  <ul class="collapse">
-  <li><a href="#arrowcpp_include_dirs---tuplepath-..." id="toc-arrowcpp_include_dirs---tuplepath-..." class="nav-link" data-scroll-target="#arrowcpp_include_dirs---tuplepath-..."><code>arrowcpp_include_dirs() -&gt; tuple[Path, ...]</code></a></li>
-  <li><a href="#arrowcpp_compile_flags---tuplestr-..." id="toc-arrowcpp_compile_flags---tuplestr-..." class="nav-link" data-scroll-target="#arrowcpp_compile_flags---tuplestr-..."><code>arrowcpp_compile_flags() -&gt; tuple[str, ...]</code></a></li>
-  <li><a href="#arrowcpp_linker_flags---tuplestr-..." id="toc-arrowcpp_linker_flags---tuplestr-..." class="nav-link" data-scroll-target="#arrowcpp_linker_flags---tuplestr-..."><code>arrowcpp_linker_flags() -&gt; tuple[str, ...]</code></a></li>
-  <li><a href="#parquet_linker_flags---tuplestr-..." id="toc-parquet_linker_flags---tuplestr-..." class="nav-link" data-scroll-target="#parquet_linker_flags---tuplestr-..."><code>parquet_linker_flags() -&gt; tuple[str, ...]</code></a></li>
-  <li><a href="#arrowcpp_runtime_metadata---dictstr-object" id="toc-arrowcpp_runtime_metadata---dictstr-object" class="nav-link" data-scroll-target="#arrowcpp_runtime_metadata---dictstr-object"><code>arrowcpp_runtime_metadata() -&gt; dict[str, object]</code></a></li>
-  </ul></li>
-  </ul></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../../../api/irx/index.html">Python API</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/index.html">irx API</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/backend.html">Builder</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/runtime/array.html">Runtime</a></li><li class="breadcrumb-item"><a href="../../../../api/irx/builder/runtime/arrowcpp.html">irx.builder.runtime.arrowcpp</a></li></ol></nav>
-<div class="quarto-title">
-<h1 class="title">irx.builder.runtime.arrowcpp</h1>
-</div>
-
-
-
-<div class="quarto-title-meta">
-
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>irx.builder.runtime.arrowcpp · ArxLang</title>
+    <script src="../../../../theme.js"></script>
+    <script src="../../../../search.js" defer></script>
     
-  
+    <link rel="stylesheet" href="../../../../_doukimd/bootstrap/bootstrap.min.css">
     
-  </div>
-  
-
-
-</header>
-
-
-<section id="irx.builder.runtime.arrowcpp" class="level1">
-<h1><code>irx.builder.runtime.arrowcpp</code></h1>
-<p>Source: <code>packages/irx/src/irx/builder/runtime/arrowcpp.py</code></p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Arrow C++ runtime build helpers.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<section id="functions" class="level2">
-<h2 class="anchored" data-anchor-id="functions">Functions</h2>
-<section id="arrowcpp_include_dirs---tuplepath-..." class="level3">
-<h3 class="anchored" data-anchor-id="arrowcpp_include_dirs---tuplepath-..."><code>arrowcpp_include_dirs() -&gt; tuple[Path, ...]</code></h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Return Arrow C++ include directories for native runtime builds.</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">returns</span><span class="kw">:</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">type</span><span class="kw">:</span><span class="at"> tuple[Path, Ellipsis]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="arrowcpp_compile_flags---tuplestr-..." class="level3">
-<h3 class="anchored" data-anchor-id="arrowcpp_compile_flags---tuplestr-..."><code>arrowcpp_compile_flags() -&gt; tuple[str, ...]</code></h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Return compiler flags required by Arrow C++ headers.</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">returns</span><span class="kw">:</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">type</span><span class="kw">:</span><span class="at"> tuple[str, Ellipsis]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="arrowcpp_linker_flags---tuplestr-..." class="level3">
-<h3 class="anchored" data-anchor-id="arrowcpp_linker_flags---tuplestr-..."><code>arrowcpp_linker_flags() -&gt; tuple[str, ...]</code></h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Return linker flags for the bundled Arrow C++ runtime.</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">returns</span><span class="kw">:</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">type</span><span class="kw">:</span><span class="at"> tuple[str, Ellipsis]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="parquet_linker_flags---tuplestr-..." class="level3">
-<h3 class="anchored" data-anchor-id="parquet_linker_flags---tuplestr-..."><code>parquet_linker_flags() -&gt; tuple[str, ...]</code></h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Link RecordBatch artifacts to PyArrow's matching Parquet library.</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">returns</span><span class="kw">:</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">type</span><span class="kw">:</span><span class="at"> tuple[str, Ellipsis]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="arrowcpp_runtime_metadata---dictstr-object" class="level3">
-<h3 class="anchored" data-anchor-id="arrowcpp_runtime_metadata---dictstr-object"><code>arrowcpp_runtime_metadata() -&gt; dict[str, object]</code></h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span><span class="kw">:</span><span class="at"> Return Arrow C++ runtime implementation metadata.</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">returns</span><span class="kw">:</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">type</span><span class="kw">:</span><span class="at"> dict[str, object]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-
-
-</section>
-</section>
-</section>
-
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    // Ensure there is a toggle, if there isn't float one in the top right
-    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-      const a = window.document.createElement('a');
-      a.classList.add('top-right');
-      a.classList.add('quarto-color-scheme-toggle');
-      a.href = "";
-      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-      const i = window.document.createElement("i");
-      i.classList.add('bi');
-      a.appendChild(i);
-      window.document.body.appendChild(a);
-    }
-    setColorSchemeToggle(hasAlternateSentinel())
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
-        }
-      }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
-    });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
-    }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/arxlang\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
-            // target, if specified
-            link.setAttribute("target", "_blank");
-            if (link.getAttribute("rel") === null) {
-              link.setAttribute("rel", "noopener");
-            }
-        }
-      }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
-    }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
-    }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
-      } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
-        }
-        if (window.Quarto?.typesetMath) {
-          window.Quarto.typesetMath(note);
-        }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
-      }
-    }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
-          }
-        } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
-          .then(res => res.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
-            if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
-              instance.setContent(html);
-            } 
-          }).finally(() => {
-            instance.enable();
-            instance.show();
-          });
-        }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
-      } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
-        });
-      }
-    }
-  });
-  </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="../../../../api/irx/builder/runtime/array.html" class="pagination-link" aria-label="irx.builder.runtime.array">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">irx.builder.runtime.array</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-      <a href="../../../../api/irx/builder/runtime/buffer.html" class="pagination-link" aria-label="irx.builder.runtime.buffer">
-        <span class="nav-page-text">irx.builder.runtime.buffer</span> <i class="bi bi-arrow-right-short"></i>
+    <link rel="stylesheet" href="../../../../theme.css">
+    <link rel="stylesheet" href="../../../../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../../../../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../../../../index.html">
+        <img class="brand-logo" src="../../../../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
       </a>
-  </div>
-</nav>
-</div> <!-- /content -->
-<footer class="footer">
-  <div class="nav-footer">
-    <div class="nav-footer-left">
-<p>Copyright © 2022-2026 ArxLang</p>
-</div>   
-    <div class="nav-footer-center">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
-<p>Apache-2.0</p>
-</a>
-  </li>  
-</ul>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../../../../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="../../../../tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">IRx</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../irx/index.html"><span class="nav-label">Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/installation.html"><span class="nav-label">Installation</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Architecture</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../irx/architecture.html"><span class="nav-label">Architecture Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/semantic-contract.html"><span class="nav-label">Semantic Contract</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/runtime-features.html"><span class="nav-label">Runtime Features</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/runtime-ownership.html"><span class="nav-label">Runtime Ownership</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/buffer-view-model.html"><span class="nav-label">Buffer View Model</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/class-model.html"><span class="nav-label">Class Model</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Learn and Contribute</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../../irx/tutorials/get-started.html"><span class="nav-label">Getting Started Tutorial</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../../irx/changelog.html"><span class="nav-label">Historical Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="../../index.html"><span class="nav-label">Python API</span></a>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>irx.builder.runtime.arrowcpp</h1>
+          
+        </div>
+        
+        
+        <h1 id="irx-builder-runtime-arrowcpp"><code>irx.builder.runtime.arrowcpp</code></h1>
+<p>Source: <code>packages/irx/src/irx/builder/runtime/arrowcpp.py</code></p>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Arrow C++ runtime build helpers.</span>
+</code></pre>
+<h2 id="functions">Functions</h2>
+<h3 id="arrowcpp_include_dirs---tuple-path"><code>arrowcpp_include_dirs() -&gt; tuple[Path, ...]</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Return Arrow C++ include directories for native runtime builds.</span>
+<span class="nt">returns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tuple[Path, Ellipsis]</span>
+</code></pre>
+<h3 id="arrowcpp_compile_flags---tuple-str"><code>arrowcpp_compile_flags() -&gt; tuple[str, ...]</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Return compiler flags required by Arrow C++ headers.</span>
+<span class="nt">returns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tuple[str, Ellipsis]</span>
+</code></pre>
+<h3 id="arrowcpp_linker_flags---tuple-str"><code>arrowcpp_linker_flags() -&gt; tuple[str, ...]</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Return linker flags for the bundled Arrow C++ runtime.</span>
+<span class="nt">returns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tuple[str, Ellipsis]</span>
+</code></pre>
+<h3 id="parquet_linker_flags---tuple-str"><code>parquet_linker_flags() -&gt; tuple[str, ...]</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Link RecordBatch artifacts to PyArrow&#39;s matching Parquet library.</span>
+<span class="nt">returns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tuple[str, Ellipsis]</span>
+</code></pre>
+<h3 id="arrowcpp_runtime_metadata---dict-str-object"><code>arrowcpp_runtime_metadata() -&gt; dict[str, object]</code></h3>
+<pre class="highlight"><code><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Return Arrow C++ runtime implementation metadata.</span>
+<span class="nt">returns</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dict[str, object]</span>
+</code></pre>
+
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h2"><a href="#functions">Functions</a></li>
+            
+            <li class="toc-h3"><a href="#arrowcpp_include_dirs---tuple-path">arrowcpp_include_dirs() -&gt; tuple[Path, ...]</a></li>
+            
+            <li class="toc-h3"><a href="#arrowcpp_compile_flags---tuple-str">arrowcpp_compile_flags() -&gt; tuple[str, ...]</a></li>
+            
+            <li class="toc-h3"><a href="#arrowcpp_linker_flags---tuple-str">arrowcpp_linker_flags() -&gt; tuple[str, ...]</a></li>
+            
+            <li class="toc-h3"><a href="#parquet_linker_flags---tuple-str">parquet_linker_flags() -&gt; tuple[str, ...]</a></li>
+            
+            <li class="toc-h3"><a href="#arrowcpp_runtime_metadata---dict-str-object">arrowcpp_runtime_metadata() -&gt; dict[str, object]</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
     </div>
-    <div class="nav-footer-right">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx">
-<p>GitHub</p>
-</a>
-  </li>  
-    <li class="nav-item">
-    <a class="nav-link" href="../../../../coc.html">
-<p>Code of Conduct</p>
-</a>
-  </li>  
-</ul>
-    </div>
-  </div>
-</footer>
-
-
-
-
-<script src="../../../../site_libs/quarto-html/zenscroll-min.js"></script>
-</body></html>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../../../../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

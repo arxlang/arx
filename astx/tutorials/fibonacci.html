@@ -1,1549 +1,462 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-<meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.18">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>Fibonacci Sequence with ASTx – ArxLang</title>
-<style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
-</style>
-
-
-<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../../">
-<link href="../../astx/conventions.html" rel="next">
-<link href="../../astx/tutorials/context.html" rel="prev">
-<link href="../../favicon.ico" rel="icon">
-<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../../site_libs/quarto-html/popper.min.js"></script>
-<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "navbar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "end",
-  "type": "overlay",
-  "limit": 8,
-  "keyboard-shortcut": [
-    "/",
-    "s"
-  ],
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
-<style>html{ scroll-behavior: smooth; }</style>
-
-  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
-
-</head>
-
-<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
-    const toggleBodyColorMode = (bsSheetEl) => {
-      const mode = bsSheetEl.getAttribute("data-mode");
-      const bodyEl = window.document.querySelector("body");
-      if (mode === "dark") {
-        bodyEl.classList.add("quarto-dark");
-        bodyEl.classList.remove("quarto-light");
-      } else {
-        bodyEl.classList.add("quarto-light");
-        bodyEl.classList.remove("quarto-dark");
-      }
-    }
-    const toggleBodyColorPrimary = () => {
-      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
-      if (bsSheetEl) {
-        toggleBodyColorMode(bsSheetEl);
-      }
-    }
-    const setColorSchemeToggle = (alternate) => {
-      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-      for (let i=0; i < toggles.length; i++) {
-        const toggle = toggles[i];
-        if (toggle) {
-          if (alternate) {
-            toggle.classList.add("alternate");
-          } else {
-            toggle.classList.remove("alternate");
-          }
-        }
-      }
-    };
-    const toggleColorMode = (alternate) => {
-      // Switch the stylesheets
-      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
-      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-      manageTransitions('#quarto-margin-sidebar .nav-link', false);
-      if (alternate) {
-        // note: dark is layered on light, we don't disable primary!
-        enableStylesheet(alternateStylesheets);
-        for (const sheetNode of alternateStylesheets) {
-          if (sheetNode.id === "quarto-bootstrap") {
-            toggleBodyColorMode(sheetNode);
-          }
-        }
-      } else {
-        disableStylesheet(alternateStylesheets);
-        enableStylesheet(primaryStylesheets)
-        toggleBodyColorPrimary();
-      }
-      manageTransitions('#quarto-margin-sidebar .nav-link', true);
-      // Switch the toggles
-      setColorSchemeToggle(alternate)
-      // Hack to workaround the fact that safari doesn't
-      // properly recolor the scrollbar when toggling (#1455)
-      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-        manageTransitions("body", false);
-        window.scrollTo(0, 1);
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          manageTransitions("body", true);
-        }, 40);
-      }
-    }
-    const disableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        stylesheet.rel = 'disabled-stylesheet';
-      }
-    }
-    const enableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
-          stylesheet.rel = 'stylesheet';
-        }
-      }
-    }
-    const manageTransitions = (selector, allowTransitions) => {
-      const els = window.document.querySelectorAll(selector);
-      for (let i=0; i < els.length; i++) {
-        const el = els[i];
-        if (allowTransitions) {
-          el.classList.remove('notransition');
-        } else {
-          el.classList.add('notransition');
-        }
-      }
-    }
-    const isFileUrl = () => {
-      return window.location.protocol === 'file:';
-    }
-    const hasAlternateSentinel = () => {
-      let styleSentinel = getColorSchemeSentinel();
-      if (styleSentinel !== null) {
-        return styleSentinel === "alternate";
-      } else {
-        return false;
-      }
-    }
-    const setStyleSentinel = (alternate) => {
-      const value = alternate ? "alternate" : "default";
-      if (!isFileUrl()) {
-        window.localStorage.setItem("quarto-color-scheme", value);
-      } else {
-        localAlternateSentinel = value;
-      }
-    }
-    const getColorSchemeSentinel = () => {
-      if (!isFileUrl()) {
-        const storageValue = window.localStorage.getItem("quarto-color-scheme");
-        return storageValue != null ? storageValue : localAlternateSentinel;
-      } else {
-        return localAlternateSentinel;
-      }
-    }
-    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-      let newTheme = '';
-      if(authorPrefersDark) {
-        newTheme = isAlternate ? baseTheme : alternateTheme;
-      } else {
-        newTheme = isAlternate ? alternateTheme : baseTheme;
-      }
-      const changeGiscusTheme = () => {
-        // From: https://github.com/giscus/giscus/issues/336
-        const sendMessage = (message) => {
-          const iframe = document.querySelector('iframe.giscus-frame');
-          if (!iframe) return;
-          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-        }
-        sendMessage({
-          setConfig: {
-            theme: newTheme
-          }
-        });
-      }
-      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-      if (isGiscussLoaded) {
-        changeGiscusTheme();
-      }
-    };
-    const authorPrefersDark = false;
-    const darkModeDefault = authorPrefersDark;
-      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-    // Dark / light mode switch
-    window.quartoToggleColorScheme = () => {
-      // Read the current dark / light value
-      let toAlternate = !hasAlternateSentinel();
-      toggleColorMode(toAlternate);
-      setStyleSentinel(toAlternate);
-      toggleGiscusIfUsed(toAlternate, darkModeDefault);
-      window.dispatchEvent(new Event('resize'));
-    };
-    // Switch to dark mode if need be
-    if (hasAlternateSentinel()) {
-      toggleColorMode(true);
-    } else {
-      toggleColorMode(false);
-    }
-  </script>
-
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="../../index.html" class="navbar-brand navbar-brand-logo">
-    <img src="../../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="../../images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
-    </a>
-    <a class="navbar-brand" href="../../index.html">
-    <span class="navbar-title">ArxLang</span>
-    </a>
-  </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-  <span class="navbar-toggler-icon"></span>
-</button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../../index.html"> 
-<span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../arx/index.html"> 
-<span class="menu-text">Arx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="../../astx/index.html" aria-current="page"> 
-<span class="menu-text">ASTx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../irx/index.html"> 
-<span class="menu-text">IRx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../arxpy/index.html"> 
-<span class="menu-text">ArxPy</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../../arxjit/index.html"> 
-<span class="menu-text">ArxJIT</span></a>
-  </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tools</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
-        <li>
-    <a class="dropdown-item" href="../../tools/index.html">
- <span class="dropdown-text">Tooling Overview</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../tools/arxpm.html">
- <span class="dropdown-text">ArxPM</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../tools/vscode.html">
- <span class="dropdown-text">VS Code</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../tools/jupyter.html">
- <span class="dropdown-text">Jupyter Kernel</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../tools/douki.html">
- <span class="dropdown-text">Douki</span></a>
-  </li>  
-    </ul>
-  </li>
-</ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
-</i> 
-<span class="menu-text"></span></a>
-  </li>  
-</ul>
-          </div> <!-- /navcollapse -->
-            <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-</div>
-      </div> <!-- /container-fluid -->
-    </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../astx/tutorials/get-started.html">Tutorials</a></li><li class="breadcrumb-item"><a href="../../astx/tutorials/fibonacci.html">Fibonacci</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Overview</span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/installation.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Installation</span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Tutorials</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/get-started.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Getting Started</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/variables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Variables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/functions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Functions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/for-loop.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">For Loops</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/context.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Context</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/tutorials/fibonacci.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Fibonacci</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Development</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/conventions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Conventions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../astx/changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Historical Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Python API</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a href="../../api/astx/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx API</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/array.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.array</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/binary_op.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.binary_op</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/blocks.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.blocks</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/buffer.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.buffer</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/callables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.callables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/classes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.classes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/classes_ext.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.classes_ext</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/comprehensions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.comprehensions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/context.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.context</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/context_manager.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.context_manager</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/data.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.data</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/dataframe.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.dataframe</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/exceptions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.exceptions</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/ffi.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.ffi</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/flows.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.flows</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/io.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.io</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/iterables.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.iterables</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/mixes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.mixes</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/modifiers.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.modifiers</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/modules.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.modules</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/nullable.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.nullable</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/numeric_mode.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.numeric_mode</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/operators.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.operators</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/packages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.packages</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/structs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.structs</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/subscript.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.subscript</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/symbol_table.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.symbol_table</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/system.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.system</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/templates.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.templates</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/tensor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.tensor</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/tools.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.tools</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/viz.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.viz</span></a>
-  </div>
-</li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
- <span class="menu-text">Collections</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/collections/common.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.collections.common</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/collections/list.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.collections.list</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
- <span class="menu-text">Literals</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/boolean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.boolean</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/numeric.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.numeric</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/string.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.string</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/literals/temporal.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.literals.temporal</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false">
- <span class="menu-text">Tools</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/tools/typing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.tools.typing</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-          <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false">
- <span class="menu-text">Types</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth3 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/base.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.base</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/boolean.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.boolean</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/casting.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.casting</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/collections.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.collections</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/generic.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.generic</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/numeric.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.numeric</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/operators.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.operators</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/string.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.string</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/temporal.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.temporal</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../../api/astx/types/ttypes.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">astx.types.ttypes</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
-  <ul class="collapse">
-  <li><a href="#steps-to-implement-fibonacci-with-astx" id="toc-steps-to-implement-fibonacci-with-astx" class="nav-link" data-scroll-target="#steps-to-implement-fibonacci-with-astx">Steps to Implement Fibonacci with ASTx</a></li>
-  <li><a href="#implementation" id="toc-implementation" class="nav-link" data-scroll-target="#implementation">Implementation</a></li>
-  <li><a href="#explanation" id="toc-explanation" class="nav-link" data-scroll-target="#explanation">Explanation</a></li>
-  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
-  </ul></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../astx/tutorials/get-started.html">Tutorials</a></li><li class="breadcrumb-item"><a href="../../astx/tutorials/fibonacci.html">Fibonacci</a></li></ol></nav>
-<div class="quarto-title">
-<h1 class="title">Fibonacci Sequence with ASTx</h1>
-</div>
-
-
-
-<div class="quarto-title-meta">
-
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Fibonacci Sequence with ASTx · ArxLang</title>
+    <script src="../../theme.js"></script>
+    <script src="../../search.js" defer></script>
     
-  
+    <link rel="stylesheet" href="../../_doukimd/bootstrap/bootstrap.min.css">
     
-  </div>
-  
-
-
-</header>
-
-
-<section id="introduction" class="level1">
-<h1>Introduction</h1>
+    <link rel="stylesheet" href="../../theme.css">
+    <link rel="stylesheet" href="../../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../../index.html">
+        <img class="brand-logo" src="../../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li class="nav-active">
+            
+            <a href="../index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="../../tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">ASTx</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li class="nav-active">
+            
+            <a href="../index.html"><span class="nav-label">Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../installation.html"><span class="nav-label">Installation</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <details class="sidebar-group" open>
+              <summary class="sidebar-group-title"><span class="nav-label">Tutorials</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="get-started.html"><span class="nav-label">Getting Started</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="literals.html"><span class="nav-label">Literals</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="variables.html"><span class="nav-label">Variables</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="functions.html"><span class="nav-label">Functions</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="for-loop.html"><span class="nav-label">For Loops</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="context.html"><span class="nav-label">Context</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="fibonacci.html" aria-current="page"><span class="nav-label">Fibonacci</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Development</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../conventions.html"><span class="nav-label">Conventions</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../changelog.html"><span class="nav-label">Historical Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../api/astx/index.html"><span class="nav-label">Python API</span></a>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>Fibonacci Sequence with ASTx</h1>
+          
+        </div>
+        
+        
+        <h1 id="fibonacci-sequence-with-astx">Fibonacci Sequence with ASTx</h1>
+<h1 id="introduction">Introduction</h1>
 <p>The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding ones, usually starting with 0 and 1. The sequence typically looks like this: 0, 1, 1, 2, 3, 5, 8, 13, 21, and so on. It is a common example used to illustrate concepts in programming, including recursion and iterative loops.</p>
 <p>As mentioned by <a href="https://en.wikipedia.org/wiki/Fibonacci_sequence">Fibonacci Sequence Wiki</a>, the Fibonacci numbers may be defined by the recurrence relation:</p>
-<p><span class="math inline">\(F_0 = 0\)</span>, <span class="math inline">\(F_1 = 1\)</span>,</p>
+<p>$F_0 = 0$, $F_1 = 1$,</p>
 <p>and</p>
-<p><span class="math inline">\(F_n = F_{n−1} + F_{n−2}\)</span></p>
+<p>$F_n = F_{n−1} + F_{n−2}$</p>
 <p>for n &gt; 1.</p>
-<p>Under some older definitions, the value <span class="math inline">\(F_0= 0\)</span> is omitted, so that the sequence starts with <span class="math inline">\(F_1 = F_2 = 1\)</span>, and the recurrence <span class="math inline">\(F_n = F_{n-1} + F_{n-2}\)</span> is valid for n &gt; 2.</p>
-<p>In this section, we’ll demonstrate how to implement a Fibonacci sequence generator using ASTx. We’ll focus on creating an AST for a function that computes Fibonacci numbers using an iterative approach.</p>
-<p>As a reference, let’s use the following Python code:</p>
-<div id="d821e438-48f6-47fc-aab4-559c5a030b65" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fib(n: <span class="bu">int</span>):</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n <span class="kw">in</span> {<span class="dv">0</span>, <span class="dv">1</span>}:</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> n</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fib(n <span class="op">-</span> <span class="dv">1</span>) <span class="op">+</span> fib(n <span class="op">-</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Under some older definitions, the value $F_0= 0$ is omitted, so that the sequence starts with $F_1 = F_2 = 1$, and the recurrence $F_n = F_{n-1} + F_{n-2}$ is valid for n &gt; 2.</p>
+<p>In this section, we'll demonstrate how to implement a Fibonacci sequence generator using ASTx. We'll focus on creating an AST for a function that computes Fibonacci numbers using an iterative approach.</p>
+<p>As a reference, let's use the following Python code:</p>
+<div class="notebook-cell notebook-cell--code">
+<div class="notebook-prompt">In [1]</div>
+<pre class="highlight"><code><span class="k">def</span><span class="w"> </span><span class="nf">fib</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">}:</span>
+        <span class="k">return</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+</code></pre>
 </div>
-<div id="c4551b81-26a2-43cf-b681-6b14554e5e15" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># skip warnings</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="notebook-cell notebook-cell--code">
+<div class="notebook-prompt">In [2]</div>
+<pre class="highlight"><code><span class="c1"># skip warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+</code></pre>
 </div>
-<section id="steps-to-implement-fibonacci-with-astx" class="level2">
-<h2 class="anchored" data-anchor-id="steps-to-implement-fibonacci-with-astx">Steps to Implement Fibonacci with ASTx</h2>
-<ol type="1">
+<h2 id="steps-to-implement-fibonacci-with-astx">Steps to Implement Fibonacci with ASTx</h2>
+<ol>
 <li><strong>Define the Function Prototype</strong>: This includes the function name and parameters.</li>
 <li><strong>Declare Variables</strong>: Variables needed for the iterative computation.</li>
 <li><strong>Create the Loop</strong>: Implement the loop to compute the Fibonacci sequence.</li>
 <li><strong>Return the Result</strong>: Return the computed Fibonacci number.</li>
 </ol>
-</section>
-<section id="implementation" class="level2">
-<h2 class="anchored" data-anchor-id="implementation">Implementation</h2>
+<h2 id="implementation">Implementation</h2>
 <p>Below is the Python code to create an AST for a Fibonacci function using ASTx. Note that the ASTx library and its components need to be defined as per your setup.</p>
-<div id="302bf31b-5e1f-4d34-97c0-7cfee2befa2e" class="cell" data-execution_count="3">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> astx</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize the ASTx module</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>module <span class="op">=</span> astx.Module()</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the Fibonacci function prototype</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>fib_proto <span class="op">=</span> astx.FunctionPrototype(</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"fib"</span>, </span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>astx.Arguments(astx.Argument(<span class="st">"n"</span>, astx.Int32())), </span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    return_type<span class="op">=</span>astx.Int32()</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the function body block</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>fib_block <span class="op">=</span> astx.Block()</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the function with its body</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>fib_fn <span class="op">=</span> astx.FunctionDef(prototype<span class="op">=</span>fib_proto, body<span class="op">=</span>fib_block)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Base case: if (n &lt;= 1) return n;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>base_case_cond <span class="op">=</span> astx.BinaryOp(</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    op_code<span class="op">=</span><span class="st">"&lt;="</span>, </span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    lhs<span class="op">=</span>astx.Variable(name<span class="op">=</span><span class="st">"n"</span>), </span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    rhs<span class="op">=</span>astx.LiteralInt32(<span class="dv">1</span>)</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>base_case_block <span class="op">=</span> astx.Block()</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>base_case_return <span class="op">=</span> astx.FunctionReturn(astx.Variable(name<span class="op">=</span><span class="st">"n"</span>))</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>base_case_block.append(base_case_return)</span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>base_case_if <span class="op">=</span> astx.IfStmt(condition<span class="op">=</span>base_case_cond, then<span class="op">=</span>base_case_block)</span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Recursive case: return fib(n - 1) + fib(n - 2);</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>fib_n1_call <span class="op">=</span> astx.FunctionCall(</span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    fib_fn, </span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>(</span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        astx.BinaryOp(</span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>            op_code<span class="op">=</span><span class="st">"-"</span>, </span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>            lhs<span class="op">=</span>astx.Variable(name<span class="op">=</span><span class="st">"n"</span>), </span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>            rhs<span class="op">=</span>astx.LiteralInt32(<span class="dv">1</span>)</span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>fib_n2_call <span class="op">=</span> astx.FunctionCall(</span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    fib_fn, </span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    args<span class="op">=</span>(</span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>        astx.BinaryOp(</span>
-<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>            op_code<span class="op">=</span><span class="st">"-"</span>, </span>
-<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>            lhs<span class="op">=</span>astx.Variable(name<span class="op">=</span><span class="st">"n"</span>), </span>
-<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>            rhs<span class="op">=</span>astx.LiteralInt32(<span class="dv">2</span>)</span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>recursive_return <span class="op">=</span> astx.FunctionReturn(</span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>    astx.BinaryOp(</span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>        op_code<span class="op">=</span><span class="st">"+"</span>,</span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>        lhs<span class="op">=</span>fib_n1_call,</span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>        rhs<span class="op">=</span>fib_n2_call</span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Append base case and recursive case to the function body</span></span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>fib_block.append(base_case_if)</span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>fib_block.append(recursive_return)</span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Append the Fibonacci function to the module block</span></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>module.block.append(fib_fn)</span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the module's structure</span></span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>module</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="fibonacci_files/figure-html/cell-4-output-1.svg" class="img-fluid figure-img"></p>
-</figure>
+<div class="notebook-cell notebook-cell--code">
+<div class="notebook-prompt">In [3]</div>
+<pre class="highlight"><code><span class="kn">import</span><span class="w"> </span><span class="nn">astx</span>
+
+<span class="c1"># Initialize the ASTx module</span>
+<span class="n">module</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Module</span><span class="p">()</span>
+
+<span class="c1"># Define the Fibonacci function prototype</span>
+<span class="n">fib_proto</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionPrototype</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;fib&quot;</span><span class="p">,</span> 
+    <span class="n">args</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Arguments</span><span class="p">(</span><span class="n">astx</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">())),</span> 
+    <span class="n">return_type</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Int32</span><span class="p">()</span>
+<span class="p">)</span>
+
+<span class="c1"># Create the function body block</span>
+<span class="n">fib_block</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Block</span><span class="p">()</span>
+
+<span class="c1"># Define the function with its body</span>
+<span class="n">fib_fn</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionDef</span><span class="p">(</span><span class="n">prototype</span><span class="o">=</span><span class="n">fib_proto</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">fib_block</span><span class="p">)</span>
+
+<span class="c1"># Base case: if (n &lt;= 1) return n;</span>
+<span class="n">base_case_cond</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">(</span>
+    <span class="n">op_code</span><span class="o">=</span><span class="s2">&quot;&lt;=&quot;</span><span class="p">,</span> 
+    <span class="n">lhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;n&quot;</span><span class="p">),</span> 
+    <span class="n">rhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">base_case_block</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">Block</span><span class="p">()</span>
+<span class="n">base_case_return</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">(</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;n&quot;</span><span class="p">))</span>
+<span class="n">base_case_block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">base_case_return</span><span class="p">)</span>
+
+<span class="n">base_case_if</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">IfStmt</span><span class="p">(</span><span class="n">condition</span><span class="o">=</span><span class="n">base_case_cond</span><span class="p">,</span> <span class="n">then</span><span class="o">=</span><span class="n">base_case_block</span><span class="p">)</span>
+
+<span class="c1"># Recursive case: return fib(n - 1) + fib(n - 2);</span>
+<span class="n">fib_n1_call</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionCall</span><span class="p">(</span>
+    <span class="n">fib_fn</span><span class="p">,</span> 
+    <span class="n">args</span><span class="o">=</span><span class="p">(</span>
+        <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">(</span>
+            <span class="n">op_code</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> 
+            <span class="n">lhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;n&quot;</span><span class="p">),</span> 
+            <span class="n">rhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">fib_n2_call</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionCall</span><span class="p">(</span>
+    <span class="n">fib_fn</span><span class="p">,</span> 
+    <span class="n">args</span><span class="o">=</span><span class="p">(</span>
+        <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">(</span>
+            <span class="n">op_code</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> 
+            <span class="n">lhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;n&quot;</span><span class="p">),</span> 
+            <span class="n">rhs</span><span class="o">=</span><span class="n">astx</span><span class="o">.</span><span class="n">LiteralInt32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">recursive_return</span> <span class="o">=</span> <span class="n">astx</span><span class="o">.</span><span class="n">FunctionReturn</span><span class="p">(</span>
+    <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">(</span>
+        <span class="n">op_code</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span>
+        <span class="n">lhs</span><span class="o">=</span><span class="n">fib_n1_call</span><span class="p">,</span>
+        <span class="n">rhs</span><span class="o">=</span><span class="n">fib_n2_call</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Append base case and recursive case to the function body</span>
+<span class="n">fib_block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">base_case_if</span><span class="p">)</span>
+<span class="n">fib_block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">recursive_return</span><span class="p">)</span>
+
+<span class="c1"># Append the Fibonacci function to the module block</span>
+<span class="n">module</span><span class="o">.</span><span class="n">block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fib_fn</span><span class="p">)</span>
+
+<span class="c1"># Display the module&#39;s structure</span>
+<span class="n">module</span>
+</code></pre>
+<figure class="notebook-image notebook-image--svg"><img alt="Saved notebook output" src="data:image/svg+xml;base64,PHN2ZyBhcmlhLXJvbGVkZXNjcmlwdGlvbj0iZmxvd2NoYXJ0LXYyIiByb2xlPSJncmFwaGljcy1kb2N1bWVudCBkb2N1bWVudCIgdmlld0JveD0iLTggLTggMTE1NC45MDYyNSA3NTAiIHN0eWxlPSJtYXgtd2lkdGg6IDExNTQuOTA2MjVweDsiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBpZD0ianAtbWVybWFpZC0wIj48c3R5bGU+I2pwLW1lcm1haWQtMHtmb250LWZhbWlseTpzeXN0ZW0tdWksLWFwcGxlLXN5c3RlbSxibGlua21hY3N5c3RlbWZvbnQsJ1NlZ29lIFVJJyxoZWx2ZXRpY2EsYXJpYWwsc2Fucy1zZXJpZiwnQXBwbGUgQ29sb3IgRW1vamknLCdTZWdvZSBVSSBFbW9qaScsJ1NlZ29lIFVJIFN5bWJvbCc7Zm9udC1zaXplOjE2cHg7ZmlsbDojMzMzO30janAtbWVybWFpZC0wIC5lcnJvci1pY29ue2ZpbGw6IzU1MjIyMjt9I2pwLW1lcm1haWQtMCAuZXJyb3ItdGV4dHtmaWxsOiM1NTIyMjI7c3Ryb2tlOiM1NTIyMjI7fSNqcC1tZXJtYWlkLTAgLmVkZ2UtdGhpY2tuZXNzLW5vcm1hbHtzdHJva2Utd2lkdGg6MnB4O30janAtbWVybWFpZC0wIC5lZGdlLXRoaWNrbmVzcy10aGlja3tzdHJva2Utd2lkdGg6My41cHg7fSNqcC1tZXJtYWlkLTAgLmVkZ2UtcGF0dGVybi1zb2xpZHtzdHJva2UtZGFzaGFycmF5OjA7fSNqcC1tZXJtYWlkLTAgLmVkZ2UtcGF0dGVybi1kYXNoZWR7c3Ryb2tlLWRhc2hhcnJheTozO30janAtbWVybWFpZC0wIC5lZGdlLXBhdHRlcm4tZG90dGVke3N0cm9rZS1kYXNoYXJyYXk6Mjt9I2pwLW1lcm1haWQtMCAubWFya2Vye2ZpbGw6IzMzMzMzMztzdHJva2U6IzMzMzMzMzt9I2pwLW1lcm1haWQtMCAubWFya2VyLmNyb3Nze3N0cm9rZTojMzMzMzMzO30janAtbWVybWFpZC0wIHN2Z3tmb250LWZhbWlseTpzeXN0ZW0tdWksLWFwcGxlLXN5c3RlbSxibGlua21hY3N5c3RlbWZvbnQsJ1NlZ29lIFVJJyxoZWx2ZXRpY2EsYXJpYWwsc2Fucy1zZXJpZiwnQXBwbGUgQ29sb3IgRW1vamknLCdTZWdvZSBVSSBFbW9qaScsJ1NlZ29lIFVJIFN5bWJvbCc7Zm9udC1zaXplOjE2cHg7fSNqcC1tZXJtYWlkLTAgLmxhYmVse2ZvbnQtZmFtaWx5OnN5c3RlbS11aSwtYXBwbGUtc3lzdGVtLGJsaW5rbWFjc3lzdGVtZm9udCwnU2Vnb2UgVUknLGhlbHZldGljYSxhcmlhbCxzYW5zLXNlcmlmLCdBcHBsZSBDb2xvciBFbW9qaScsJ1NlZ29lIFVJIEVtb2ppJywnU2Vnb2UgVUkgU3ltYm9sJztjb2xvcjojMzMzO30janAtbWVybWFpZC0wIC5jbHVzdGVyLWxhYmVsIHRleHR7ZmlsbDojMzMzO30janAtbWVybWFpZC0wIC5jbHVzdGVyLWxhYmVsIHNwYW4sI2pwLW1lcm1haWQtMCBwe2NvbG9yOiMzMzM7fSNqcC1tZXJtYWlkLTAgLmxhYmVsIHRleHQsI2pwLW1lcm1haWQtMCBzcGFuLCNqcC1tZXJtYWlkLTAgcHtmaWxsOiMzMzM7Y29sb3I6IzMzMzt9I2pwLW1lcm1haWQtMCAubm9kZSByZWN0LCNqcC1tZXJtYWlkLTAgLm5vZGUgY2lyY2xlLCNqcC1tZXJtYWlkLTAgLm5vZGUgZWxsaXBzZSwjanAtbWVybWFpZC0wIC5ub2RlIHBvbHlnb24sI2pwLW1lcm1haWQtMCAubm9kZSBwYXRoe2ZpbGw6I0VDRUNGRjtzdHJva2U6IzkzNzBEQjtzdHJva2Utd2lkdGg6MXB4O30janAtbWVybWFpZC0wIC5mbG93Y2hhcnQtbGFiZWwgdGV4dHt0ZXh0LWFuY2hvcjptaWRkbGU7fSNqcC1tZXJtYWlkLTAgLm5vZGUgLmxhYmVse3RleHQtYWxpZ246Y2VudGVyO30janAtbWVybWFpZC0wIC5ub2RlLmNsaWNrYWJsZXtjdXJzb3I6cG9pbnRlcjt9I2pwLW1lcm1haWQtMCAuYXJyb3doZWFkUGF0aHtmaWxsOiMzMzMzMzM7fSNqcC1tZXJtYWlkLTAgLmVkZ2VQYXRoIC5wYXRoe3N0cm9rZTojMzMzMzMzO3N0cm9rZS13aWR0aDoyLjBweDt9I2pwLW1lcm1haWQtMCAuZmxvd2NoYXJ0LWxpbmt7c3Ryb2tlOiMzMzMzMzM7ZmlsbDpub25lO30janAtbWVybWFpZC0wIC5lZGdlTGFiZWx7YmFja2dyb3VuZC1jb2xvcjojZThlOGU4O3RleHQtYWxpZ246Y2VudGVyO30janAtbWVybWFpZC0wIC5lZGdlTGFiZWwgcmVjdHtvcGFjaXR5OjAuNTtiYWNrZ3JvdW5kLWNvbG9yOiNlOGU4ZTg7ZmlsbDojZThlOGU4O30janAtbWVybWFpZC0wIC5sYWJlbEJrZ3tiYWNrZ3JvdW5kLWNvbG9yOnJnYmEoMjMyLCAyMzIsIDIzMiwgMC41KTt9I2pwLW1lcm1haWQtMCAuY2x1c3RlciByZWN0e2ZpbGw6I2ZmZmZkZTtzdHJva2U6I2FhYWEzMztzdHJva2Utd2lkdGg6MXB4O30janAtbWVybWFpZC0wIC5jbHVzdGVyIHRleHR7ZmlsbDojMzMzO30janAtbWVybWFpZC0wIC5jbHVzdGVyIHNwYW4sI2pwLW1lcm1haWQtMCBwe2NvbG9yOiMzMzM7fSNqcC1tZXJtYWlkLTAgZGl2Lm1lcm1haWRUb29sdGlwe3Bvc2l0aW9uOmFic29sdXRlO3RleHQtYWxpZ246Y2VudGVyO21heC13aWR0aDoyMDBweDtwYWRkaW5nOjJweDtmb250LWZhbWlseTpzeXN0ZW0tdWksLWFwcGxlLXN5c3RlbSxibGlua21hY3N5c3RlbWZvbnQsJ1NlZ29lIFVJJyxoZWx2ZXRpY2EsYXJpYWwsc2Fucy1zZXJpZiwnQXBwbGUgQ29sb3IgRW1vamknLCdTZWdvZSBVSSBFbW9qaScsJ1NlZ29lIFVJIFN5bWJvbCc7Zm9udC1zaXplOjEycHg7YmFja2dyb3VuZDpoc2woODAsIDEwMCUsIDk2LjI3NDUwOTgwMzklKTtib3JkZXI6MXB4IHNvbGlkICNhYWFhMzM7Ym9yZGVyLXJhZGl1czoycHg7cG9pbnRlci1ldmVudHM6bm9uZTt6LWluZGV4OjEwMDt9I2pwLW1lcm1haWQtMCAuZmxvd2NoYXJ0VGl0bGVUZXh0e3RleHQtYW5jaG9yOm1pZGRsZTtmb250LXNpemU6MThweDtmaWxsOiMzMzM7fSNqcC1tZXJtYWlkLTAgOnJvb3R7LS1tZXJtYWlkLWZvbnQtZmFtaWx5OnN5c3RlbS11aSwtYXBwbGUtc3lzdGVtLGJsaW5rbWFjc3lzdGVtZm9udCwnU2Vnb2UgVUknLGhlbHZldGljYSxhcmlhbCxzYW5zLXNlcmlmLCdBcHBsZSBDb2xvciBFbW9qaScsJ1NlZ29lIFVJIEVtb2ppJywnU2Vnb2UgVUkgU3ltYm9sJzt9PC9zdHlsZT48Zz48bWFya2VyIG9yaWVudD0iYXV0byIgbWFya2VySGVpZ2h0PSIxMiIgbWFya2VyV2lkdGg9IjEyIiBtYXJrZXJVbml0cz0idXNlclNwYWNlT25Vc2UiIHJlZlk9IjUiIHJlZlg9IjYiIHZpZXdCb3g9IjAgMCAxMCAxMCIgY2xhc3M9Im1hcmtlciBmbG93Y2hhcnQiIGlkPSJqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kIj48cGF0aCBzdHlsZT0ic3Ryb2tlLXdpZHRoOiAxOyBzdHJva2UtZGFzaGFycmF5OiAxLCAwOyIgY2xhc3M9ImFycm93TWFya2VyUGF0aCIgZD0iTSAwIDAgTCAxMCA1IEwgMCAxMCB6Ij48L3BhdGg+PC9tYXJrZXI+PG1hcmtlciBvcmllbnQ9ImF1dG8iIG1hcmtlckhlaWdodD0iMTIiIG1hcmtlcldpZHRoPSIxMiIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiByZWZZPSI1IiByZWZYPSI0LjUiIHZpZXdCb3g9IjAgMCAxMCAxMCIgY2xhc3M9Im1hcmtlciBmbG93Y2hhcnQiIGlkPSJqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50U3RhcnQiPjxwYXRoIHN0eWxlPSJzdHJva2Utd2lkdGg6IDE7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiBkPSJNIDAgNSBMIDEwIDEwIEwgMTAgMCB6Ij48L3BhdGg+PC9tYXJrZXI+PG1hcmtlciBvcmllbnQ9ImF1dG8iIG1hcmtlckhlaWdodD0iMTEiIG1hcmtlcldpZHRoPSIxMSIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiByZWZZPSI1IiByZWZYPSIxMSIgdmlld0JveD0iMCAwIDEwIDEwIiBjbGFzcz0ibWFya2VyIGZsb3djaGFydCIgaWQ9ImpwLW1lcm1haWQtMF9mbG93Y2hhcnQtY2lyY2xlRW5kIj48Y2lyY2xlIHN0eWxlPSJzdHJva2Utd2lkdGg6IDE7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiByPSI1IiBjeT0iNSIgY3g9IjUiPjwvY2lyY2xlPjwvbWFya2VyPjxtYXJrZXIgb3JpZW50PSJhdXRvIiBtYXJrZXJIZWlnaHQ9IjExIiBtYXJrZXJXaWR0aD0iMTEiIG1hcmtlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcmVmWT0iNSIgcmVmWD0iLTEiIHZpZXdCb3g9IjAgMCAxMCAxMCIgY2xhc3M9Im1hcmtlciBmbG93Y2hhcnQiIGlkPSJqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LWNpcmNsZVN0YXJ0Ij48Y2lyY2xlIHN0eWxlPSJzdHJva2Utd2lkdGg6IDE7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiByPSI1IiBjeT0iNSIgY3g9IjUiPjwvY2lyY2xlPjwvbWFya2VyPjxtYXJrZXIgb3JpZW50PSJhdXRvIiBtYXJrZXJIZWlnaHQ9IjExIiBtYXJrZXJXaWR0aD0iMTEiIG1hcmtlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcmVmWT0iNS4yIiByZWZYPSIxMiIgdmlld0JveD0iMCAwIDExIDExIiBjbGFzcz0ibWFya2VyIGNyb3NzIGZsb3djaGFydCIgaWQ9ImpwLW1lcm1haWQtMF9mbG93Y2hhcnQtY3Jvc3NFbmQiPjxwYXRoIHN0eWxlPSJzdHJva2Utd2lkdGg6IDI7IHN0cm9rZS1kYXNoYXJyYXk6IDEsIDA7IiBjbGFzcz0iYXJyb3dNYXJrZXJQYXRoIiBkPSJNIDEsMSBsIDksOSBNIDEwLDEgbCAtOSw5Ij48L3BhdGg+PC9tYXJrZXI+PG1hcmtlciBvcmllbnQ9ImF1dG8iIG1hcmtlckhlaWdodD0iMTEiIG1hcmtlcldpZHRoPSIxMSIgbWFya2VyVW5pdHM9InVzZXJTcGFjZU9uVXNlIiByZWZZPSI1LjIiIHJlZlg9Ii0xIiB2aWV3Qm94PSIwIDAgMTEgMTEiIGNsYXNzPSJtYXJrZXIgY3Jvc3MgZmxvd2NoYXJ0IiBpZD0ianAtbWVybWFpZC0wX2Zsb3djaGFydC1jcm9zc1N0YXJ0Ij48cGF0aCBzdHlsZT0ic3Ryb2tlLXdpZHRoOiAyOyBzdHJva2UtZGFzaGFycmF5OiAxLCAwOyIgY2xhc3M9ImFycm93TWFya2VyUGF0aCIgZD0iTSAxLDEgbCA5LDkgTSAxMCwxIGwgLTksOSI+PC9wYXRoPjwvbWFya2VyPjxnIGNsYXNzPSJyb290Ij48ZyBjbGFzcz0iY2x1c3RlcnMiPjwvZz48ZyBjbGFzcz0iZWRnZVBhdGhzIj48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjQxYzA0MWU0MTEgTEUtTjNiMjA5YmI4ODQiIGlkPSJMLU40MWMwNDFlNDExLU4zYjIwOWJiODg0LTAiIGQ9Ik01MzkuMjc3LDM3TDUzOS4yNzcsNDEuMTY3QzUzOS4yNzcsNDUuMzMzLDUzOS4yNzcsNTMuNjY3LDUzOS4yNzcsNjEuMTE3QzUzOS4yNzcsNjguNTY3LDUzOS4yNzcsNzUuMTMzLDUzOS4yNzcsNzguNDE3TDUzOS4yNzcsODEuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OM2IyMDliYjg4NCBMRS1OODMxODJhYTYwOSIgaWQ9IkwtTjNiMjA5YmI4ODQtTjgzMTgyYWE2MDktMCIgZD0iTTQ1OS4xMzcsMTE3LjAxNUw0MDkuMjc0LDEyNC4xNzlDMzU5LjQxMSwxMzEuMzQzLDI1OS42ODYsMTQ1LjY3MiwyMDkuODI0LDE1Ny45NTJDMTU5Ljk2MSwxNzAuMjMzLDE1OS45NjEsMTgwLjQ2NywxNTkuOTYxLDE4NS41ODNMMTU5Ljk2MSwxOTAuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OODMxODJhYTYwOSBMRS1OOTA4ZjYyNTk2YiIgaWQ9IkwtTjgzMTgyYWE2MDktTjkwOGY2MjU5NmItMCIgZD0iTTE1OS45NjEsMjMzTDE1OS45NjEsMjM3LjE2N0MxNTkuOTYxLDI0MS4zMzMsMTU5Ljk2MSwyNDkuNjY3LDE1OS45NjEsMjU3LjExN0MxNTkuOTYxLDI2NC41NjcsMTU5Ljk2MSwyNzEuMTMzLDE1OS45NjEsMjc0LjQxN0wxNTkuOTYxLDI3Ny43Ij48L3BhdGg+PHBhdGggbWFya2VyLWVuZD0idXJsKCNqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kKSIgc3R5bGU9ImZpbGw6bm9uZTsiIGNsYXNzPSJlZGdlLXRoaWNrbmVzcy1ub3JtYWwgZWRnZS1wYXR0ZXJuLXNvbGlkIGZsb3djaGFydC1saW5rIExTLU45MDhmNjI1OTZiIExFLU4yM2Y3MTQ4NmY4IiBpZD0iTC1OOTA4ZjYyNTk2Yi1OMjNmNzE0ODZmOC0wIiBkPSJNMTU5Ljk2MSwzMjBMMTU5Ljk2MSwzMjQuMTY3QzE1OS45NjEsMzI4LjMzMywxNTkuOTYxLDMzNi42NjcsMTU5Ljk2MSwzNDQuMTE3QzE1OS45NjEsMzUxLjU2NywxNTkuOTYxLDM1OC4xMzMsMTU5Ljk2MSwzNjEuNDE3TDE1OS45NjEsMzY0LjciPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjNiMjA5YmI4ODQgTEUtTmI5ZDVkODRhNjUiIGlkPSJMLU4zYjIwOWJiODg0LU5iOWQ1ZDg0YTY1LTAiIGQ9Ik01NzkuNjYxLDEyNEw1OTIuNzU5LDEzMEM2MDUuODU2LDEzNiw2MzIuMDUxLDE0OCw2NDUuMTQ5LDE1OS4xMTdDNjU4LjI0NiwxNzAuMjMzLDY1OC4yNDYsMTgwLjQ2Nyw2NTguMjQ2LDE4NS41ODNMNjU4LjI0NiwxOTAuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYjlkNWQ4NGE2NSBMRS1OYzFiYmNmNGQ5ZSIgaWQ9IkwtTmI5ZDVkODRhNjUtTmMxYmJjZjRkOWUtMCIgZD0iTTU0Ny41MjQsMjMzTDUyMi41ODYsMjM3LjE2N0M0OTcuNjQ4LDI0MS4zMzMsNDQ3Ljc3MywyNDkuNjY3LDQyMi44MzYsMjYxLjA4M0MzOTcuODk4LDI3Mi41LDM5Ny44OTgsMjg3LDM5Ny44OTgsMzAxLjVDMzk3Ljg5OCwzMTYsMzk3Ljg5OCwzMzAuNSwzOTcuODk4LDM0MS4wMzNDMzk3Ljg5OCwzNTEuNTY3LDM5Ny44OTgsMzU4LjEzMywzOTcuODk4LDM2MS40MTdMMzk3Ljg5OCwzNjQuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYzFiYmNmNGQ5ZSBMRS1OYWE0NDdjMWI1NyIgaWQ9IkwtTmMxYmJjZjRkOWUtTmFhNDQ3YzFiNTctMCIgZD0iTTM2NC44MDEsNDA3TDM1NC4wNjYsNDEzQzM0My4zMzIsNDE5LDMyMS44NjMsNDMxLDMxMS4xMjksNDQ2LjA4M0MzMDAuMzk1LDQ2MS4xNjcsMzAwLjM5NSw0NzkuMzMzLDMwMC4zOTUsNDk3LjVDMzAwLjM5NSw1MTUuNjY3LDMwMC4zOTUsNTMzLjgzMywzMDAuMzk1LDU0OC4wMzNDMzAwLjM5NSw1NjIuMjMzLDMwMC4zOTUsNTcyLjQ2NywzMDAuMzk1LDU3Ny41ODNMMzAwLjM5NSw1ODIuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYWE0NDdjMWI1NyBMRS1OOTJlMTIzNzg0NiIgaWQ9IkwtTmFhNDQ3YzFiNTctTjkyZTEyMzc4NDYtMCIgZD0iTTI5My4xMDgsNjI1TDI5MC43NDUsNjMxQzI4OC4zODIsNjM3LDI4My42NTYsNjQ5LDMwMC45MDIsNjYxLjI1M0MzMTguMTQ4LDY3My41MDcsMzU3LjM2NSw2ODYuMDEzLDM3Ni45NzQsNjkyLjI2N0wzOTYuNTgzLDY5OC41MiI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYWE0NDdjMWI1NyBMRS1OODY0NzhlMTdmMCIgaWQ9IkwtTmFhNDQ3YzFiNTctTjg2NDc4ZTE3ZjAtMCIgZD0iTTMwNy42ODEsNjI1TDMxMC4wNDQsNjMxQzMxMi40MDcsNjM3LDMxNy4xMzMsNjQ5LDMwNy4yMDQsNjYwLjYzMkMyOTcuMjc2LDY3Mi4yNjQsMjcyLjY5Miw2ODMuNTI4LDI2MC40LDY4OS4xNkwyNDguMTA4LDY5NC43OTIiPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTmMxYmJjZjRkOWUgTEUtTjhjODU1NWYxYmUiIGlkPSJMLU5jMWJiY2Y0ZDllLU44Yzg1NTVmMWJlLTAiIGQ9Ik00MzIuNTQsNDA3TDQ0My43NzQsNDEzQzQ1NS4wMDksNDE5LDQ3Ny40NzksNDMxLDQ4OC43MTQsNDQyLjExN0M0OTkuOTQ5LDQ1My4yMzMsNDk5Ljk0OSw0NjMuNDY3LDQ5OS45NDksNDY4LjU4M0w0OTkuOTQ5LDQ3My43Ij48L3BhdGg+PHBhdGggbWFya2VyLWVuZD0idXJsKCNqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kKSIgc3R5bGU9ImZpbGw6bm9uZTsiIGNsYXNzPSJlZGdlLXRoaWNrbmVzcy1ub3JtYWwgZWRnZS1wYXR0ZXJuLXNvbGlkIGZsb3djaGFydC1saW5rIExTLU44Yzg1NTVmMWJlIExFLU42NTEyNWU5ODQ0IiBpZD0iTC1OOGM4NTU1ZjFiZS1ONjUxMjVlOTg0NC0wIiBkPSJNNDk5Ljk0OSw1MTZMNDk5Ljk0OSw1MjJDNDk5Ljk0OSw1MjgsNDk5Ljk0OSw1NDAsNDk5Ljk0OSw1NTEuMTE3QzQ5OS45NDksNTYyLjIzMyw0OTkuOTQ5LDU3Mi40NjcsNDk5Ljk0OSw1NzcuNTgzTDQ5OS45NDksNTgyLjciPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjY1MTI1ZTk4NDQgTEUtTjkyZTEyMzc4NDYiIGlkPSJMLU42NTEyNWU5ODQ0LU45MmUxMjM3ODQ2LTAiIGQ9Ik00OTkuOTQ5LDYyNUw0OTkuOTQ5LDYzMUM0OTkuOTQ5LDYzNyw0OTkuOTQ5LDY0OSw0OTUuMDI5LDY2MC4zNUM0OTAuMTA5LDY3MS43LDQ4MC4yNjksNjgyLjM5OSw0NzUuMzQ5LDY4Ny43NDlMNDcwLjQyOSw2OTMuMDk5Ij48L3BhdGg+PHBhdGggbWFya2VyLWVuZD0idXJsKCNqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kKSIgc3R5bGU9ImZpbGw6bm9uZTsiIGNsYXNzPSJlZGdlLXRoaWNrbmVzcy1ub3JtYWwgZWRnZS1wYXR0ZXJuLXNvbGlkIGZsb3djaGFydC1saW5rIExTLU5iOWQ1ZDg0YTY1IExFLU4zNzdhNDlkNWVkIiBpZD0iTC1OYjlkNWQ4NGE2NS1OMzc3YTQ5ZDVlZC0wIiBkPSJNNzY0Ljg1NSwyMzNMNzg4Ljg2NiwyMzcuMTY3QzgxMi44NzgsMjQxLjMzMyw4NjAuOSwyNDkuNjY3LDg4NC45MTEsMjU3LjExN0M5MDguOTIyLDI2NC41NjcsOTA4LjkyMiwyNzEuMTMzLDkwOC45MjIsMjc0LjQxN0w5MDguOTIyLDI3Ny43Ij48L3BhdGg+PHBhdGggbWFya2VyLWVuZD0idXJsKCNqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kKSIgc3R5bGU9ImZpbGw6bm9uZTsiIGNsYXNzPSJlZGdlLXRoaWNrbmVzcy1ub3JtYWwgZWRnZS1wYXR0ZXJuLXNvbGlkIGZsb3djaGFydC1saW5rIExTLU4zNzdhNDlkNWVkIExFLU44NzUwZGFlZTY2IiBpZD0iTC1OMzc3YTQ5ZDVlZC1OODc1MGRhZWU2Ni0wIiBkPSJNOTA4LjkyMiwzMjBMOTA4LjkyMiwzMjQuMTY3QzkwOC45MjIsMzI4LjMzMyw5MDguOTIyLDMzNi42NjcsOTA4LjkyMiwzNDQuMTE3QzkwOC45MjIsMzUxLjU2Nyw5MDguOTIyLDM1OC4xMzMsOTA4LjkyMiwzNjEuNDE3TDkwOC45MjIsMzY0LjciPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjg3NTBkYWVlNjYgTEUtTjE4YjRlYTYyMzMiIGlkPSJMLU44NzUwZGFlZTY2LU4xOGI0ZWE2MjMzLTAiIGQ9Ik04NjIuOTY5LDQwNS43MTFMODQ2LjM3Niw0MTEuOTI2QzgyOS43ODMsNDE4LjE0MSw3OTYuNTk2LDQzMC41Nyw3ODAuMDAzLDQ0MS45MDJDNzYzLjQxLDQ1My4yMzMsNzYzLjQxLDQ2My40NjcsNzYzLjQxLDQ2OC41ODNMNzYzLjQxLDQ3My43Ij48L3BhdGg+PHBhdGggbWFya2VyLWVuZD0idXJsKCNqcC1tZXJtYWlkLTBfZmxvd2NoYXJ0LXBvaW50RW5kKSIgc3R5bGU9ImZpbGw6bm9uZTsiIGNsYXNzPSJlZGdlLXRoaWNrbmVzcy1ub3JtYWwgZWRnZS1wYXR0ZXJuLXNvbGlkIGZsb3djaGFydC1saW5rIExTLU4xOGI0ZWE2MjMzIExFLU43NWI0Y2RlNmFmIiBpZD0iTC1OMThiNGVhNjIzMy1ONzViNGNkZTZhZi0wIiBkPSJNNzYzLjQxLDUxNkw3NjMuNDEsNTIyQzc2My40MSw1MjgsNzYzLjQxLDU0MCw3NjMuNDEsNTUxLjExN0M3NjMuNDEsNTYyLjIzMyw3NjMuNDEsNTcyLjQ2Nyw3NjMuNDEsNTc3LjU4M0w3NjMuNDEsNTgyLjciPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjc1YjRjZGU2YWYgTEUtTjkyZTEyMzc4NDYiIGlkPSJMLU43NWI0Y2RlNmFmLU45MmUxMjM3ODQ2LTAiIGQ9Ik03MjMuOTI5LDYyNUw3MTEuMTI1LDYzMUM2OTguMzIsNjM3LDY3Mi43MTEsNjQ5LDYzNS45MTEsNjYxLjYyOUM1OTkuMTEyLDY3NC4yNTgsNTUxLjEyMiw2ODcuNTE2LDUyNy4xMjcsNjk0LjE0NUw1MDMuMTMyLDcwMC43NzQiPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTjc1YjRjZGU2YWYgTEUtTjRjNTE0YmU2NDIiIGlkPSJMLU43NWI0Y2RlNmFmLU40YzUxNGJlNjQyLTAiIGQ9Ik03NzAuNjk2LDYyNUw3NzMuMDU5LDYzMUM3NzUuNDIzLDYzNyw3ODAuMTQ5LDY0OSw3ODIuNTEyLDY2MC4xMTdDNzg0Ljg3NSw2NzEuMjMzLDc4NC44NzUsNjgxLjQ2Nyw3ODQuODc1LDY4Ni41ODNMNzg0Ljg3NSw2OTEuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OODc1MGRhZWU2NiBMRS1OYTJhN2EwZTRhOCIgaWQ9IkwtTjg3NTBkYWVlNjYtTmEyYTdhMGU0YTgtMCIgZD0iTTk0NS4zMDMsNDA3TDk1Ny4xMDIsNDEzQzk2OC45MDEsNDE5LDk5Mi40OTksNDMxLDEwMDQuMjk4LDQ0Mi4xMTdDMTAxNi4wOTgsNDUzLjIzMywxMDE2LjA5OCw0NjMuNDY3LDEwMTYuMDk4LDQ2OC41ODNMMTAxNi4wOTgsNDczLjciPjwvcGF0aD48cGF0aCBtYXJrZXItZW5kPSJ1cmwoI2pwLW1lcm1haWQtMF9mbG93Y2hhcnQtcG9pbnRFbmQpIiBzdHlsZT0iZmlsbDpub25lOyIgY2xhc3M9ImVkZ2UtdGhpY2tuZXNzLW5vcm1hbCBlZGdlLXBhdHRlcm4tc29saWQgZmxvd2NoYXJ0LWxpbmsgTFMtTmEyYTdhMGU0YTggTEUtTmM5NTNjODMxMzkiIGlkPSJMLU5hMmE3YTBlNGE4LU5jOTUzYzgzMTM5LTAiIGQ9Ik0xMDE2LjA5OCw1MTZMMTAxNi4wOTgsNTIyQzEwMTYuMDk4LDUyOCwxMDE2LjA5OCw1NDAsMTAxNi4wOTgsNTUxLjExN0MxMDE2LjA5OCw1NjIuMjMzLDEwMTYuMDk4LDU3Mi40NjcsMTAxNi4wOTgsNTc3LjU4M0wxMDE2LjA5OCw1ODIuNyI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYzk1M2M4MzEzOSBMRS1OOTJlMTIzNzg0NiIgaWQ9IkwtTmM5NTNjODMxMzktTjkyZTEyMzc4NDYtMCIgZD0iTTk4MC40OTcsNjI1TDk2OC45NSw2MzFDOTU3LjQwNCw2MzcsOTM0LjMxMSw2NDksODU0Ljc3Niw2NjMuMDMxQzc3NS4yNDEsNjc3LjA2Miw2MzkuMjY0LDY5My4xMjQsNTcxLjI3NSw3MDEuMTU0TDUwMy4yODcsNzA5LjE4NSI+PC9wYXRoPjxwYXRoIG1hcmtlci1lbmQ9InVybCgjanAtbWVybWFpZC0wX2Zsb3djaGFydC1wb2ludEVuZCkiIHN0eWxlPSJmaWxsOm5vbmU7IiBjbGFzcz0iZWRnZS10aGlja25lc3Mtbm9ybWFsIGVkZ2UtcGF0dGVybi1zb2xpZCBmbG93Y2hhcnQtbGluayBMUy1OYzk1M2M4MzEzOSBMRS1ONmQ5MmM1OGY4ZSIgaWQ9IkwtTmM5NTNjODMxMzktTjZkOTJjNThmOGUtMCIgZD0iTTEwMjMuMzg0LDYyNUwxMDI1Ljc0Nyw2MzFDMTAyOC4xMSw2MzcsMTAzMi44MzYsNjQ5LDEwMzUuMTk5LDY2MC4xMTdDMTAzNy41NjMsNjcxLjIzMywxMDM3LjU2Myw2ODEuNDY3LDEwMzcuNTYzLDY4Ni41ODNMMTAzNy41NjMsNjkxLjciPjwvcGF0aD48L2c+PGcgY2xhc3M9ImVkZ2VMYWJlbHMiPjxnIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsIDApIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMCIgd2lkdGg9IjAiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj48L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTU5Ljk2MDkzNzUsIDE2MCkiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xNi40Njg3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMzIuOTM3NSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPmFyZ3M8L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwgMCkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIwIiB3aWR0aD0iMCI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPjwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLCAwKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjAiIHdpZHRoPSIwIj48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+PC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDY1OC4yNDYwOTM3NSwgMTYwKSIgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTE4Ljc2NTYyNSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMzcuNTMxMjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj5ib2R5PC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsIDApIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMCIgd2lkdGg9IjAiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj48L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzAwLjM5NDUzMTI1LCA0OTcuNSkiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zNS4zNTE1NjI1LCAtMTEpIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSI3MC43MDMxMjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj5jb25kaXRpb248L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjc4LjkyOTY4NzUsIDY2MSkiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xMC44NDM3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMjEuNjg3NSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPmxoczwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzMjEuODU5Mzc1LCA2NjEpIiBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTIuMDg1OTM3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMjQuMTcxODc1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+cmhzPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQ5OS45NDkyMTg3NSwgNDQzKSIgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTM5LjgwNDY4NzUsIC0xMSkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9Ijc5LjYwOTM3NSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPnRoZW4tYmxvY2s8L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwgMCkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIwIiB3aWR0aD0iMCI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPjwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLCAwKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjAiIHdpZHRoPSIwIj48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+PC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDAsIDApIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMCIgd2lkdGg9IjAiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj48L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwgMCkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIwIiB3aWR0aD0iMCI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPjwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3NjMuNDEwMTU2MjUsIDQ0MykiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xMC44NDM3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMjEuNjg3NSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPmxoczwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3NjMuNDEwMTU2MjUsIDU1MikiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zMy44OTg0Mzc1LCAtMTEpIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSI2Ny43OTY4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj5wYXJhbSgwKTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg2NDcuMTAxNTYyNSwgNjYxKSIgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTEwLjg0Mzc1LCAtMTEpIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSIyMS42ODc1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+bGhzPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDc4NC44NzUsIDY2MSkiIGNsYXNzPSJlZGdlTGFiZWwiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xMi4wODU5Mzc1LCAtMTEpIiBjbGFzcz0ibGFiZWwiPjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSIyNC4xNzE4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj5yaHM8L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAxNi4wOTc2NTYyNSwgNDQzKSIgY2xhc3M9ImVkZ2VMYWJlbCI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTEyLjA4NTkzNzUsIC0xMSkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjI0LjE3MTg3NSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJlZGdlTGFiZWwiPnJoczwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDE2LjA5NzY1NjI1LCA1NTIpIiBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMzMuODk4NDM3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iNjcuNzk2ODc1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+cGFyYW0oMCk8L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTExLjIxODc1LCA2NjEpIiBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTAuODQzNzUsIC0xMSkiIGNsYXNzPSJsYWJlbCI+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjIxLjY4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0iZWRnZUxhYmVsIj5saHM8L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAzNy41NjI1LCA2NjEpIiBjbGFzcz0iZWRnZUxhYmVsIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTIuMDg1OTM3NSwgLTExKSIgY2xhc3M9ImxhYmVsIj48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMjQuMTcxODc1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9ImVkZ2VMYWJlbCI+cmhzPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjwvZz48ZyBjbGFzcz0ibm9kZXMiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUzOS4yNzczNDM3NSwgMTguNSkiIGlkPSJmbG93Y2hhcnQtTjQxYzA0MWU0MTEtMCIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjEzMS4xNTYyNSIgeT0iLTE4LjUiIHg9Ii02NS41NzgxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC01OC4wNzgxMjUsIC0xMSkiIHN0eWxlPSIiIGNsYXNzPSJsYWJlbCI+PHJlY3Q+PC9yZWN0Pjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSIxMTYuMTU2MjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5NT0RVTEVbbWFpbl08L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTM5LjI3NzM0Mzc1LCAxMDUuNSkiIGlkPSJmbG93Y2hhcnQtTjNiMjA5YmI4ODQtMSIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjE2MC4yODEyNSIgeT0iLTE4LjUiIHg9Ii04MC4xNDA2MjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC03Mi42NDA2MjUsIC0xMSkiIHN0eWxlPSIiIGNsYXNzPSJsYWJlbCI+PHJlY3Q+PC9yZWN0Pjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSIxNDUuMjgxMjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5GVU5DVElPTi1ERUZbZmliXTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNTkuOTYwOTM3NSwgMjE0LjUpIiBpZD0iZmxvd2NoYXJ0LU44MzE4MmFhNjA5LTQiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSIxMTcuNDY4NzUiIHk9Ii0xOC41IiB4PSItNTguNzM0Mzc1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNTEuMjM0Mzc1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTAyLjQ2ODc1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+QXJndW1lbnRzKDEpPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1OS45NjA5Mzc1LCAzMDEuNSkiIGlkPSJmbG93Y2hhcnQtTjkwOGY2MjU5NmItNyIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjMxOS45MjE4NzUiIHk9Ii0xOC41IiB4PSItMTU5Ljk2MDkzNzUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xNTIuNDYwOTM3NSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjMwNC45MjE4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5Bcmd1bWVudFtuLCBJbnQzMjogdGVtcF80XSA9IFVuZGVmaW5lZDwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNTkuOTYwOTM3NSwgMzg4LjUpIiBpZD0iZmxvd2NoYXJ0LU4yM2Y3MTQ4NmY4LTEwIiBjbGFzcz0ibm9kZSBkZWZhdWx0IGRlZmF1bHQgZmxvd2NoYXJ0LWxhYmVsIj48cmVjdCBoZWlnaHQ9IjM3IiB3aWR0aD0iMTA1LjkwNjI1IiB5PSItMTguNSIgeD0iLTUyLjk1MzEyNSIgcnk9IjAiIHJ4PSIwIiBzdHlsZT0iIiBjbGFzcz0iYmFzaWMgbGFiZWwtY29udGFpbmVyIj48L3JlY3Q+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTQ1LjQ1MzEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjkwLjkwNjI1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+VU5ERUZJTkVEPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDY1OC4yNDYwOTM3NSwgMjE0LjUpIiBpZD0iZmxvd2NoYXJ0LU5iOWQ1ZDg0YTY1LTEzIiBjbGFzcz0ibm9kZSBkZWZhdWx0IGRlZmF1bHQgZmxvd2NoYXJ0LWxhYmVsIj48cmVjdCBoZWlnaHQ9IjM3IiB3aWR0aD0iMjU4LjQwNjI1IiB5PSItMTguNSIgeD0iLTEyOS4yMDMxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xMjEuNzAzMTI1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMjQzLjQwNjI1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+QkxPQ0tbZW50cnktMTM3NzA4MzczODAyMzg0XTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzOTcuODk4NDM3NSwgMzg4LjUpIiBpZD0iZmxvd2NoYXJ0LU5jMWJiY2Y0ZDllLTE2IiBjbGFzcz0ibm9kZSBkZWZhdWx0IGRlZmF1bHQgZmxvd2NoYXJ0LWxhYmVsIj48cmVjdCBoZWlnaHQ9IjM3IiB3aWR0aD0iNzQuOTY4NzUiIHk9Ii0xOC41IiB4PSItMzcuNDg0Mzc1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjkuOTg0Mzc1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iNTkuOTY4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5JRi1TVE1UPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMwMC4zOTQ1MzEyNSwgNjA2LjUpIiBpZD0iZmxvd2NoYXJ0LU5hYTQ0N2MxYjU3LTE5IiBjbGFzcz0ibm9kZSBkZWZhdWx0IGRlZmF1bHQgZmxvd2NoYXJ0LWxhYmVsIj48cmVjdCBoZWlnaHQ9IjM3IiB3aWR0aD0iMTAxLjA2MjUiIHk9Ii0xOC41IiB4PSItNTAuNTMxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC00My4wMzEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9Ijg2LjA2MjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5CSU5BUllbJmx0Oz1dPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQ0OS44MjgxMjUsIDcxNS41KSIgaWQ9ImZsb3djaGFydC1OOTJlMTIzNzg0Ni0yMiIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9Ijk2LjM5MDYyNSIgeT0iLTE4LjUiIHg9Ii00OC4xOTUzMTI1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNDAuNjk1MzEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjgxLjM5MDYyNSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJub2RlTGFiZWwiPlZhcmlhYmxlW25dPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIwMi45MTQwNjI1LCA3MTUuNSkiIGlkPSJmbG93Y2hhcnQtTjg2NDc4ZTE3ZjAtMjUiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSIxOTMuNTMxMjUiIHk9Ii0xOC41IiB4PSItOTYuNzY1NjI1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtODkuMjY1NjI1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTc4LjUzMTI1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+TGl0ZXJhbFtJbnQzMjogdGVtcF85XTogMTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0OTkuOTQ5MjE4NzUsIDQ5Ny41KSIgaWQ9ImZsb3djaGFydC1OOGM4NTU1ZjFiZS0yOCIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjI1OC40MDYyNSIgeT0iLTE4LjUiIHg9Ii0xMjkuMjAzMTI1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTIxLjcwMzEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjI0My40MDYyNSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJub2RlTGFiZWwiPkJMT0NLW2VudHJ5LTEzNzcwODM0MjE3NjQ2NF08L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDk5Ljk0OTIxODc1LCA2MDYuNSkiIGlkPSJmbG93Y2hhcnQtTjY1MTI1ZTk4NDQtMzEiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSI3Ni41NjI1IiB5PSItMTguNSIgeD0iLTM4LjI4MTI1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMzAuNzgxMjUsIC0xMSkiIHN0eWxlPSIiIGNsYXNzPSJsYWJlbCI+PHJlY3Q+PC9yZWN0Pjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSI2MS41NjI1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+UkVUVVJOPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDkwOC45MjE4NzUsIDMwMS41KSIgaWQ9ImZsb3djaGFydC1OMzc3YTQ5ZDVlZC0zNyIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9Ijc2LjU2MjUiIHk9Ii0xOC41IiB4PSItMzguMjgxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zMC43ODEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjYxLjU2MjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5SRVRVUk48L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTA4LjkyMTg3NSwgMzg4LjUpIiBpZD0iZmxvd2NoYXJ0LU44NzUwZGFlZTY2LTQwIiBjbGFzcz0ibm9kZSBkZWZhdWx0IGRlZmF1bHQgZmxvd2NoYXJ0LWxhYmVsIj48cmVjdCBoZWlnaHQ9IjM3IiB3aWR0aD0iOTEuOTA2MjUiIHk9Ii0xOC41IiB4PSItNDUuOTUzMTI1IiByeT0iMCIgcng9IjAiIHN0eWxlPSIiIGNsYXNzPSJiYXNpYyBsYWJlbC1jb250YWluZXIiPjwvcmVjdD48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMzguNDUzMTI1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iNzYuOTA2MjUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5CSU5BUllbK108L3NwYW4+PC9kaXY+PC9mb3JlaWduT2JqZWN0PjwvZz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNzYzLjQxMDE1NjI1LCA0OTcuNSkiIGlkPSJmbG93Y2hhcnQtTjE4YjRlYTYyMzMtNDMiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSIxNjguNTE1NjI1IiB5PSItMTguNSIgeD0iLTg0LjI1NzgxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC03Ni43NTc4MTI1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTUzLjUxNTYyNSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJub2RlTGFiZWwiPkZVTkNUSU9OLUNBTExbZmliXTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3NjMuNDEwMTU2MjUsIDYwNi41KSIgaWQ9ImZsb3djaGFydC1ONzViNGNkZTZhZi00NiIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9Ijg3LjkwNjI1IiB5PSItMTguNSIgeD0iLTQzLjk1MzEyNSIgcnk9IjAiIHJ4PSIwIiBzdHlsZT0iIiBjbGFzcz0iYmFzaWMgbGFiZWwtY29udGFpbmVyIj48L3JlY3Q+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTM2LjQ1MzEyNSwgLTExKSIgc3R5bGU9IiIgY2xhc3M9ImxhYmVsIj48cmVjdD48L3JlY3Q+PGZvcmVpZ25PYmplY3QgaGVpZ2h0PSIyMiIgd2lkdGg9IjcyLjkwNjI1Ij48ZGl2IHN0eWxlPSJkaXNwbGF5OiBpbmxpbmUtYmxvY2s7IHdoaXRlLXNwYWNlOiBub3dyYXA7IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCI+PHNwYW4gY2xhc3M9Im5vZGVMYWJlbCI+QklOQVJZWy1dPC9zcGFuPjwvZGl2PjwvZm9yZWlnbk9iamVjdD48L2c+PC9nPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDc4NC44NzUsIDcxNS41KSIgaWQ9ImZsb3djaGFydC1ONGM1MTRiZTY0Mi01MiIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjIwMi42ODc1IiB5PSItMTguNSIgeD0iLTEwMS4zNDM3NSIgcnk9IjAiIHJ4PSIwIiBzdHlsZT0iIiBjbGFzcz0iYmFzaWMgbGFiZWwtY29udGFpbmVyIj48L3JlY3Q+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTkzLjg0Mzc1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTg3LjY4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5MaXRlcmFsW0ludDMyOiB0ZW1wXzE0XTogMTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDE2LjA5NzY1NjI1LCA0OTcuNSkiIGlkPSJmbG93Y2hhcnQtTmEyYTdhMGU0YTgtNTUiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSIxNjguNTE1NjI1IiB5PSItMTguNSIgeD0iLTg0LjI1NzgxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC03Ni43NTc4MTI1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTUzLjUxNTYyNSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJub2RlTGFiZWwiPkZVTkNUSU9OLUNBTExbZmliXTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDE2LjA5NzY1NjI1LCA2MDYuNSkiIGlkPSJmbG93Y2hhcnQtTmM5NTNjODMxMzktNTgiIGNsYXNzPSJub2RlIGRlZmF1bHQgZGVmYXVsdCBmbG93Y2hhcnQtbGFiZWwiPjxyZWN0IGhlaWdodD0iMzciIHdpZHRoPSI4Ny45MDYyNSIgeT0iLTE4LjUiIHg9Ii00My45NTMxMjUiIHJ5PSIwIiByeD0iMCIgc3R5bGU9IiIgY2xhc3M9ImJhc2ljIGxhYmVsLWNvbnRhaW5lciI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0zNi40NTMxMjUsIC0xMSkiIHN0eWxlPSIiIGNsYXNzPSJsYWJlbCI+PHJlY3Q+PC9yZWN0Pjxmb3JlaWduT2JqZWN0IGhlaWdodD0iMjIiIHdpZHRoPSI3Mi45MDYyNSI+PGRpdiBzdHlsZT0iZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aGl0ZS1zcGFjZTogbm93cmFwOyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGh0bWwiPjxzcGFuIGNsYXNzPSJub2RlTGFiZWwiPkJJTkFSWVstXTwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDM3LjU2MjUsIDcxNS41KSIgaWQ9ImZsb3djaGFydC1ONmQ5MmM1OGY4ZS02NCIgY2xhc3M9Im5vZGUgZGVmYXVsdCBkZWZhdWx0IGZsb3djaGFydC1sYWJlbCI+PHJlY3QgaGVpZ2h0PSIzNyIgd2lkdGg9IjIwMi42ODc1IiB5PSItMTguNSIgeD0iLTEwMS4zNDM3NSIgcnk9IjAiIHJ4PSIwIiBzdHlsZT0iIiBjbGFzcz0iYmFzaWMgbGFiZWwtY29udGFpbmVyIj48L3JlY3Q+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTkzLjg0Mzc1LCAtMTEpIiBzdHlsZT0iIiBjbGFzcz0ibGFiZWwiPjxyZWN0PjwvcmVjdD48Zm9yZWlnbk9iamVjdCBoZWlnaHQ9IjIyIiB3aWR0aD0iMTg3LjY4NzUiPjxkaXYgc3R5bGU9ImRpc3BsYXk6IGlubGluZS1ibG9jazsgd2hpdGUtc3BhY2U6IG5vd3JhcDsiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48c3BhbiBjbGFzcz0ibm9kZUxhYmVsIj5MaXRlcmFsW0ludDMyOiB0ZW1wXzE5XTogMjwvc3Bhbj48L2Rpdj48L2ZvcmVpZ25PYmplY3Q+PC9nPjwvZz48L2c+PC9nPjwvZz48L3N2Zz4="></figure>
+<pre class="notebook-output notebook-output--text"></pre>
 </div>
-</div>
-<div class="cell-output cell-output-display" data-execution_count="3">
-<pre><code></code></pre>
-</div>
-</div>
-</section>
-<section id="explanation" class="level2">
-<h2 class="anchored" data-anchor-id="explanation">Explanation</h2>
-<ol type="1">
+<h2 id="explanation">Explanation</h2>
+<ol>
 <li><strong>Module Initialization</strong>: We start by initializing the ASTx module.</li>
 <li><strong>Function Prototype</strong>: We define the prototype of the Fibonacci function, which takes an integer <code>n</code> and returns an integer.</li>
 <li><strong>Variable Declarations</strong>: We declare the necessary variables for the computation: <code>a</code>, <code>b</code>, and <code>i</code>.</li>
 <li><strong>Loop Construction</strong>: We create a while loop that iterates until <code>i</code> is less than <code>n</code>. Inside the loop, we update the variables <code>a</code>, <code>b</code>, and <code>i</code> to compute the Fibonacci sequence.</li>
 <li><strong>Return Statement</strong>: We add a return statement to return the computed Fibonacci number (<code>b</code>).</li>
-<li><strong>Appending to the Module</strong>: Finally, we append the function definition to the module and print the module’s structure to visualize the AST.</li>
+<li><strong>Appending to the Module</strong>: Finally, we append the function definition to the module and print the module's structure to visualize the AST.</li>
 </ol>
-</section>
-<section id="conclusion" class="level2">
-<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 <p>By following these steps, you can implement the Fibonacci sequence generator using ASTx. This example demonstrates how to use ASTx to create an AST for a simple function, showcasing the flexibility and power of the library. You can extend this example with additional features or optimizations as needed.</p>
 
-
-</section>
-</section>
-
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    // Ensure there is a toggle, if there isn't float one in the top right
-    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-      const a = window.document.createElement('a');
-      a.classList.add('top-right');
-      a.classList.add('quarto-color-scheme-toggle');
-      a.href = "";
-      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-      const i = window.document.createElement("i");
-      i.classList.add('bi');
-      a.appendChild(i);
-      window.document.body.appendChild(a);
-    }
-    setColorSchemeToggle(hasAlternateSentinel())
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
-        }
-      }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
-    });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
-    }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/arxlang\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
-            // target, if specified
-            link.setAttribute("target", "_blank");
-            if (link.getAttribute("rel") === null) {
-              link.setAttribute("rel", "noopener");
-            }
-        }
-      }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
-    }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
-    }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
-      } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
-        }
-        if (window.Quarto?.typesetMath) {
-          window.Quarto.typesetMath(note);
-        }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
-      }
-    }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
-          }
-        } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
-          .then(res => res.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
-            if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
-              instance.setContent(html);
-            } 
-          }).finally(() => {
-            instance.enable();
-            instance.show();
-          });
-        }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
-      } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
-        });
-      }
-    }
-  });
-  </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="../../astx/tutorials/context.html" class="pagination-link" aria-label="Context">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Context</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-      <a href="../../astx/conventions.html" class="pagination-link" aria-label="Conventions">
-        <span class="nav-page-text">Conventions</span> <i class="bi bi-arrow-right-short"></i>
-      </a>
-  </div>
-</nav>
-</div> <!-- /content -->
-<footer class="footer">
-  <div class="nav-footer">
-    <div class="nav-footer-left">
-<p>Copyright © 2022-2026 ArxLang</p>
-</div>   
-    <div class="nav-footer-center">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
-<p>Apache-2.0</p>
-</a>
-  </li>  
-</ul>
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h2"><a href="#steps-to-implement-fibonacci-with-astx">Steps to Implement Fibonacci with ASTx</a></li>
+            
+            <li class="toc-h2"><a href="#implementation">Implementation</a></li>
+            
+            <li class="toc-h2"><a href="#explanation">Explanation</a></li>
+            
+            <li class="toc-h2"><a href="#conclusion">Conclusion</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
     </div>
-    <div class="nav-footer-right">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx">
-<p>GitHub</p>
-</a>
-  </li>  
-    <li class="nav-item">
-    <a class="nav-link" href="../../coc.html">
-<p>Code of Conduct</p>
-</a>
-  </li>  
-</ul>
-    </div>
-  </div>
-</footer>
-
-
-
-
-<script src="../../site_libs/quarto-html/zenscroll-min.js"></script>
-</body></html>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

@@ -1,602 +1,383 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-<meta charset="utf-8">
-<meta name="generator" content="quarto-1.10.18">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>apache-arrow – ArxLang</title>
-<style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: 1.5em;}
-div.column{flex: auto;}
-@media screen {
-div.columns{gap: min(4vw, 1.5em);}
-div.column{overflow-x: auto;}
-}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
-</style>
-
-
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<link href="./roadmap.html" rel="next">
-<link href="./ecosystem.html" rel="prev">
-<link href="./favicon.ico" rel="icon">
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-85a3acc908edc3a11a86c47ee3a95dc2.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-54ab4118b304813d167fa7d1486c56f6.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-4967cb7b2911e5e73af714b783f0eecc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="site_libs/bootstrap/bootstrap-065077b270f8e29bb45cedca730e8da7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "navbar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "end",
-  "type": "overlay",
-  "limit": 8,
-  "keyboard-shortcut": [
-    "/",
-    "s"
-  ],
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
-<style>html{ scroll-behavior: smooth; }</style>
-
-
-</head>
-
-<body class="nav-sidebar floating nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
-    const toggleBodyColorMode = (bsSheetEl) => {
-      const mode = bsSheetEl.getAttribute("data-mode");
-      const bodyEl = window.document.querySelector("body");
-      if (mode === "dark") {
-        bodyEl.classList.add("quarto-dark");
-        bodyEl.classList.remove("quarto-light");
-      } else {
-        bodyEl.classList.add("quarto-light");
-        bodyEl.classList.remove("quarto-dark");
-      }
-    }
-    const toggleBodyColorPrimary = () => {
-      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
-      if (bsSheetEl) {
-        toggleBodyColorMode(bsSheetEl);
-      }
-    }
-    const setColorSchemeToggle = (alternate) => {
-      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
-      for (let i=0; i < toggles.length; i++) {
-        const toggle = toggles[i];
-        if (toggle) {
-          if (alternate) {
-            toggle.classList.add("alternate");
-          } else {
-            toggle.classList.remove("alternate");
-          }
-        }
-      }
-    };
-    const toggleColorMode = (alternate) => {
-      // Switch the stylesheets
-      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
-      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
-      manageTransitions('#quarto-margin-sidebar .nav-link', false);
-      if (alternate) {
-        // note: dark is layered on light, we don't disable primary!
-        enableStylesheet(alternateStylesheets);
-        for (const sheetNode of alternateStylesheets) {
-          if (sheetNode.id === "quarto-bootstrap") {
-            toggleBodyColorMode(sheetNode);
-          }
-        }
-      } else {
-        disableStylesheet(alternateStylesheets);
-        enableStylesheet(primaryStylesheets)
-        toggleBodyColorPrimary();
-      }
-      manageTransitions('#quarto-margin-sidebar .nav-link', true);
-      // Switch the toggles
-      setColorSchemeToggle(alternate)
-      // Hack to workaround the fact that safari doesn't
-      // properly recolor the scrollbar when toggling (#1455)
-      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
-        manageTransitions("body", false);
-        window.scrollTo(0, 1);
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          manageTransitions("body", true);
-        }, 40);
-      }
-    }
-    const disableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        stylesheet.rel = 'disabled-stylesheet';
-      }
-    }
-    const enableStylesheet = (stylesheets) => {
-      for (let i=0; i < stylesheets.length; i++) {
-        const stylesheet = stylesheets[i];
-        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
-          stylesheet.rel = 'stylesheet';
-        }
-      }
-    }
-    const manageTransitions = (selector, allowTransitions) => {
-      const els = window.document.querySelectorAll(selector);
-      for (let i=0; i < els.length; i++) {
-        const el = els[i];
-        if (allowTransitions) {
-          el.classList.remove('notransition');
-        } else {
-          el.classList.add('notransition');
-        }
-      }
-    }
-    const isFileUrl = () => {
-      return window.location.protocol === 'file:';
-    }
-    const hasAlternateSentinel = () => {
-      let styleSentinel = getColorSchemeSentinel();
-      if (styleSentinel !== null) {
-        return styleSentinel === "alternate";
-      } else {
-        return false;
-      }
-    }
-    const setStyleSentinel = (alternate) => {
-      const value = alternate ? "alternate" : "default";
-      if (!isFileUrl()) {
-        window.localStorage.setItem("quarto-color-scheme", value);
-      } else {
-        localAlternateSentinel = value;
-      }
-    }
-    const getColorSchemeSentinel = () => {
-      if (!isFileUrl()) {
-        const storageValue = window.localStorage.getItem("quarto-color-scheme");
-        return storageValue != null ? storageValue : localAlternateSentinel;
-      } else {
-        return localAlternateSentinel;
-      }
-    }
-    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
-      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
-      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
-      let newTheme = '';
-      if(authorPrefersDark) {
-        newTheme = isAlternate ? baseTheme : alternateTheme;
-      } else {
-        newTheme = isAlternate ? alternateTheme : baseTheme;
-      }
-      const changeGiscusTheme = () => {
-        // From: https://github.com/giscus/giscus/issues/336
-        const sendMessage = (message) => {
-          const iframe = document.querySelector('iframe.giscus-frame');
-          if (!iframe) return;
-          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
-        }
-        sendMessage({
-          setConfig: {
-            theme: newTheme
-          }
-        });
-      }
-      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
-      if (isGiscussLoaded) {
-        changeGiscusTheme();
-      }
-    };
-    const authorPrefersDark = false;
-    const darkModeDefault = authorPrefersDark;
-      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
-    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
-    // Dark / light mode switch
-    window.quartoToggleColorScheme = () => {
-      // Read the current dark / light value
-      let toAlternate = !hasAlternateSentinel();
-      toggleColorMode(toAlternate);
-      setStyleSentinel(toAlternate);
-      toggleGiscusIfUsed(toAlternate, darkModeDefault);
-      window.dispatchEvent(new Event('resize'));
-    };
-    // Switch to dark mode if need be
-    if (hasAlternateSentinel()) {
-      toggleColorMode(true);
-    } else {
-      toggleColorMode(false);
-    }
-  </script>
-
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
-      <div class="navbar-brand-container mx-auto">
-    <a href="./index.html" class="navbar-brand navbar-brand-logo">
-    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo light-content">
-    <img src="./images/arx-logo-terracotta.png" alt="ArxLang" class="navbar-logo dark-content">
-    </a>
-    <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">ArxLang</span>
-    </a>
-  </div>
-            <div id="quarto-search" class="" title="Search"></div>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-  <span class="navbar-toggler-icon"></span>
-</button>
-          <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="./index.html"> 
-<span class="menu-text">Home</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arx/index.html"> 
-<span class="menu-text">Arx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./astx/index.html"> 
-<span class="menu-text">ASTx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./irx/index.html"> 
-<span class="menu-text">IRx</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arxpy/index.html"> 
-<span class="menu-text">ArxPy</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./arxjit/index.html"> 
-<span class="menu-text">ArxJIT</span></a>
-  </li>  
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tools" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tools</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tools">    
-        <li>
-    <a class="dropdown-item" href="./tools/index.html">
- <span class="dropdown-text">Tooling Overview</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/arxpm.html">
- <span class="dropdown-text">ArxPM</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/vscode.html">
- <span class="dropdown-text">VS Code</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/jupyter.html">
- <span class="dropdown-text">Jupyter Kernel</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./tools/douki.html">
- <span class="dropdown-text">Douki</span></a>
-  </li>  
-    </ul>
-  </li>
-</ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/arxlang/arx"> <i class="bi bi-github" role="img" aria-label="ArxLang on GitHub">
-</i> 
-<span class="menu-text"></span></a>
-  </li>  
-</ul>
-          </div> <!-- /navcollapse -->
-            <div class="quarto-navbar-tools">
-  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
-</div>
-      </div> <!-- /container-fluid -->
-    </nav>
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ecosystem.html">Start</a></li><li class="breadcrumb-item"><a href="./apache-arrow.html">Native Apache Arrow</a></li></ol></nav>
-        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Start</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Native Apache Arrow Support · ArxLang</title>
+    <script src="theme.js"></script>
+    <script src="search.js" defer></script>
+    
+    <link rel="stylesheet" href="_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="index.html">
+        <img class="brand-logo" src="images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.25.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <details>
+              <summary><span class="nav-group"><span class="nav-label">Tools</span></span></summary>
+              
+        <ul>
+          
+          <li>
+            
+            <a href="tools/index.html"><span class="nav-label">Tooling Overview</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./ecosystem.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Ecosystem Status</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./apache-arrow.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Native Apache Arrow</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false">
- <span class="menu-text">Project</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./roadmap.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Roadmap</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./support-matrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Support Matrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./contributing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Contributing</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./api/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">API Documentation</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./changelog.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Changelog</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
- <span class="menu-text">Community</span></a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 ">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./discord.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Community Chat</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./coc.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Code of Conduct</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./governance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Governance</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./partners.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Partners</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./sponsor.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Sponsor</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#native-apache-arrow-support" id="toc-native-apache-arrow-support" class="nav-link active" data-scroll-target="#native-apache-arrow-support">Native Apache Arrow Support</a>
-  <ul class="collapse">
-  <li><a href="#architecture" id="toc-architecture" class="nav-link" data-scroll-target="#architecture">Architecture</a></li>
-  <li><a href="#implemented-layers" id="toc-implemented-layers" class="nav-link" data-scroll-target="#implemented-layers">Implemented layers</a></li>
-  <li><a href="#arx-tensors-and-dataframes" id="toc-arx-tensors-and-dataframes" class="nav-link" data-scroll-target="#arx-tensors-and-dataframes">Arx tensors and DataFrames</a></li>
-  <li><a href="#array-interoperability" id="toc-array-interoperability" class="nav-link" data-scroll-target="#array-interoperability">Array interoperability</a></li>
-  <li><a href="#recordbatch-ipc-and-pyarrow" id="toc-recordbatch-ipc-and-pyarrow" class="nav-link" data-scroll-target="#recordbatch-ipc-and-pyarrow">RecordBatch IPC and PyArrow</a></li>
-  <li><a href="#deliberate-boundaries" id="toc-deliberate-boundaries" class="nav-link" data-scroll-target="#deliberate-boundaries">Deliberate boundaries</a></li>
-  <li><a href="#compiled-arx-interoperability-stdlib.arrow" id="toc-compiled-arx-interoperability-stdlib.arrow" class="nav-link" data-scroll-target="#compiled-arx-interoperability-stdlib.arrow">Compiled Arx interoperability (<code>stdlib.arrow</code>)</a>
-  <ul class="collapse">
-  <li><a href="#build-requirements-and-demonstrations" id="toc-build-requirements-and-demonstrations" class="nav-link" data-scroll-target="#build-requirements-and-demonstrations">Build requirements and demonstrations</a></li>
-  <li><a href="#public-api" id="toc-public-api" class="nav-link" data-scroll-target="#public-api">Public API</a></li>
-  <li><a href="#same-process-c-data-and-c-stream" id="toc-same-process-c-data-and-c-stream" class="nav-link" data-scroll-target="#same-process-c-data-and-c-stream">Same-process C Data and C Stream</a></li>
-  <li><a href="#across-machines" id="toc-across-machines" class="nav-link" data-scroll-target="#across-machines">Across machines</a></li>
-  <li><a href="#compatibility-and-limitations" id="toc-compatibility-and-limitations" class="nav-link" data-scroll-target="#compatibility-and-limitations">Compatibility and limitations</a></li>
-  </ul></li>
-  <li><a href="#csv-streaming-and-checked-conversion" id="toc-csv-streaming-and-checked-conversion" class="nav-link" data-scroll-target="#csv-streaming-and-checked-conversion">CSV streaming and checked conversion</a></li>
-  <li><a href="#explicit-csv-and-parquet-streams" id="toc-explicit-csv-and-parquet-streams" class="nav-link" data-scroll-target="#explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</a>
-  <ul class="collapse">
-  <li><a href="#extended-data-file-support" id="toc-extended-data-file-support" class="nav-link" data-scroll-target="#extended-data-file-support">Extended data-file support</a></li>
-  </ul></li>
-  <li><a href="#dedicated-file-format-apis-and-table-interchange" id="toc-dedicated-file-format-apis-and-table-interchange" class="nav-link" data-scroll-target="#dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</a></li>
-  </ul></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ecosystem.html">Start</a></li><li class="breadcrumb-item"><a href="./apache-arrow.html">Native Apache Arrow</a></li></ol></nav></header>
-
-
-
-
-
-<section id="native-apache-arrow-support" class="level1">
-<h1>Native Apache Arrow Support</h1>
-<p>Apache Arrow is the storage and interoperability foundation for ArxLang’s data-oriented runtime. IRx implements the integration in native C++ and exposes it to generated LLVM through a stable C ABI.</p>
-<section id="architecture" class="level2">
-<h2 class="anchored" data-anchor-id="architecture">Architecture</h2>
-<pre class="text"><code>Arx collection syntax or IRx API
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">ArxLang</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li class="nav-active">
+            
+            <details class="sidebar-group" open>
+              <summary class="sidebar-group-title"><span class="nav-label">Start</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="ecosystem.html"><span class="nav-label">Ecosystem Status</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            <a href="apache-arrow.html" aria-current="page"><span class="nav-label">Native Apache Arrow</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Project</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="roadmap.html"><span class="nav-label">Roadmap</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="support-matrix.html"><span class="nav-label">Support Matrix</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="api/index.html"><span class="nav-label">API Documentation</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="changelog.html"><span class="nav-label">Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Community</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="discord.html"><span class="nav-label">Community Chat</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="coc.html"><span class="nav-label">Code of Conduct</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="governance.html"><span class="nav-label">Governance</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="partners.html"><span class="nav-label">Partners</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="sponsor.html"><span class="nav-label">Sponsor</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">Documentation</p>
+          
+          <h1>Native Apache Arrow Support</h1>
+          
+        </div>
+        
+        
+        <h1 id="native-apache-arrow-support">Native Apache Arrow Support</h1>
+<p>Apache Arrow is the storage and interoperability foundation for ArxLang's
+data-oriented runtime. IRx implements the integration in native C++ and exposes
+it to generated LLVM through a stable C ABI.</p>
+<h2 id="architecture">Architecture</h2>
+<pre class="highlight"><code>Arx collection syntax or IRx API
   -&gt; ASTx collection nodes
   -&gt; IRx semantic analysis and lowering
   -&gt; IRx runtime feature activation
   -&gt; generated LLVM calls irx_arrow_* / irx_rb_* symbols
-  -&gt; native Arrow C++ arrays, tensors, tables, and RecordBatches</code></pre>
+  -&gt; native Arrow C++ arrays, tensors, tables, and RecordBatches
+</code></pre>
 <p>This boundary provides three useful properties:</p>
-<ol type="1">
+<ol>
 <li>LLVM IR does not reproduce Arrow container layouts or ownership rules.</li>
-<li>Native runtime artifacts are compiled and linked only when a module needs them.</li>
-<li>Arrow C Data and Arrow IPC provide interoperable boundaries instead of a project-specific serialization format.</li>
+<li>Native runtime artifacts are compiled and linked only when a module needs
+them.</li>
+<li>Arrow C Data and Arrow IPC provide interoperable boundaries instead of a
+project-specific serialization format.</li>
 </ol>
-<p>IRx installs <code>pyarrow</code> and <code>arx-arrowcpp-sources</code> as runtime dependencies. They provide PyArrow interoperability plus the Arrow C++ headers, sources, library locations, and linker metadata used by native builds.</p>
-</section>
-<section id="implemented-layers" class="level2">
-<h2 class="anchored" data-anchor-id="implemented-layers">Implemented layers</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 11%">
-<col style="width: 30%">
-<col style="width: 57%">
-</colgroup>
+<p>IRx installs <code>pyarrow</code> and <code>arx-arrowcpp-sources</code> as runtime dependencies. They
+provide PyArrow interoperability plus the Arrow C++ headers, sources, library
+locations, and linker metadata used by native builds.</p>
+<h2 id="implemented-layers">Implemented layers</h2>
+<table>
 <thead>
-<tr class="header">
+<tr>
 <th>Layer</th>
 <th>Native representation</th>
 <th>Current capability</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Array runtime</td>
 <td>Arrow arrays behind opaque <code>irx_arrow_*</code> handles</td>
 <td>Build, inspect, import/export, null metadata, readonly buffer views</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Tensor runtime</td>
 <td><code>arrow::Tensor</code></td>
 <td>Fixed-width numeric construction, shape/stride metadata, indexing, shallow views</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>DataFrame runtime</td>
 <td><code>arrow::Table</code></td>
 <td>Static nullable/temporal columns; runtime schemas preserve RecordBatch-supported Arrow types</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Series runtime</td>
 <td><code>arrow::ChunkedArray</code></td>
 <td>Typed column views selected from DataFrames</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>RecordBatch runtime</td>
 <td><code>arrow::RecordBatch</code> and Arrow IPC</td>
 <td>Schemas, builders, nullable values, IPC/CSV streams, Parquet files, PyArrow round trips</td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="arx-tensors-and-dataframes" class="level2">
-<h2 class="anchored" data-anchor-id="arx-tensors-and-dataframes">Arx tensors and DataFrames</h2>
-<p>Arx exposes the native runtime without exposing Arrow implementation types in the language syntax:</p>
-<pre class="arx"><code>fn first(grid: tensor[i32, 2, 2]) -&gt; i32:
+<h2 id="arx-tensors-and-dataframes">Arx tensors and DataFrames</h2>
+<p>Arx exposes the native runtime without exposing Arrow implementation types in
+the language syntax:</p>
+<pre class="highlight"><code>fn first(grid: tensor[i32, 2, 2]) -&gt; i32:
   return grid[0, 0]
 
 fn rows() -&gt; i32:
@@ -605,7 +386,8 @@ fn rows() -&gt; i32:
     score: [0.5, 0.8, 1.0],
   })
   var scores: series[f64] = frame.score
-  return cast(frame.nrows(), i32)</code></pre>
+  return cast(frame.nrows(), i32)
+</code></pre>
 <p>Current tensor constraints:</p>
 <ul>
 <li>element types: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>f32</code>, and <code>f64</code></li>
@@ -616,15 +398,16 @@ fn rows() -&gt; i32:
 </ul>
 <p>Current DataFrame constraints:</p>
 <ul>
-<li>static columns: numeric, Boolean, string and temporal types; nullable <code>T | none</code></li>
+<li>static columns: numeric, Boolean, string and temporal types; nullable
+<code>T | none</code></li>
 <li>constructor input: equal-length list-literal columns matching a static schema</li>
-<li>access: <code>frame.name</code> or <code>frame["name"]</code> when the schema is statically known</li>
+<li>access: <code>frame.name</code> or <code>frame[&quot;name&quot;]</code> when the schema is statically known</li>
 <li>metadata: <code>nrows()</code> and <code>ncols()</code></li>
-<li>runtime-schema <code>dataframe[...]</code> locals, parameters and returns preserve RecordBatch-supported Arrow types/metadata through checked RecordBatch conversion; they do not provide unchecked static column access</li>
+<li>runtime-schema <code>dataframe[...]</code> locals, parameters and returns preserve
+RecordBatch-supported Arrow types/metadata through checked RecordBatch
+conversion; they do not provide unchecked static column access</li>
 </ul>
-</section>
-<section id="array-interoperability" class="level2">
-<h2 class="anchored" data-anchor-id="array-interoperability">Array interoperability</h2>
+<h2 id="array-interoperability">Array interoperability</h2>
 <p>The lower-level IRx array runtime supports:</p>
 <ul>
 <li>signed and unsigned 8-, 16-, 32-, and 64-bit integers</li>
@@ -634,11 +417,11 @@ fn rows() -&gt; i32:
 <li>null count and validity-bitmap inspection</li>
 <li>readonly <code>irx_buffer_view</code> projection for byte-addressable fixed-width arrays</li>
 </ul>
-<p>Boolean values are bit-packed in Arrow and therefore do not use the generic byte-addressable buffer-view bridge.</p>
-</section>
-<section id="recordbatch-ipc-and-pyarrow" class="level2">
-<h2 class="anchored" data-anchor-id="recordbatch-ipc-and-pyarrow">RecordBatch IPC and PyArrow</h2>
-<p>The Python API in <code>irx.record_batch</code> is backed by a standalone native Arrow C++ shared library. It supports:</p>
+<p>Boolean values are bit-packed in Arrow and therefore do not use the generic
+byte-addressable buffer-view bridge.</p>
+<h2 id="recordbatch-ipc-and-pyarrow">RecordBatch IPC and PyArrow</h2>
+<p>The Python API in <code>irx.record_batch</code> is backed by a standalone native Arrow C++
+shared library. It supports:</p>
 <ul>
 <li>signed/unsigned integers, <code>float32</code>, <code>float64</code>, and <code>bool</code></li>
 <li><code>utf8</code> and <code>large_utf8</code></li>
@@ -648,148 +431,189 @@ fn rows() -&gt; i32:
 <li>nullable fields and null values</li>
 <li>Arrow IPC streams in files and in-memory buffers</li>
 </ul>
-<p>The test suite verifies both directions of interoperability: IRx-written IPC is read by PyArrow, and PyArrow-written IPC is read by IRx.</p>
-<p>The direct Python API builds a fingerprinted native shared library on first use. To pre-warm that cache explicitly:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-c</span> <span class="st">"from irx.builder.runtime.record_batch import ensure_record_batch_shared_library; ensure_record_batch_shared_library()"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Generated IRx programs use the runtime-feature system instead; their required native artifacts are collected during the normal build/link flow.</p>
-</section>
-<section id="deliberate-boundaries" class="level2">
-<h2 class="anchored" data-anchor-id="deliberate-boundaries">Deliberate boundaries</h2>
-<p>Native Arrow support does not yet imply a complete Arrow product surface. The current implementation does not provide:</p>
+<p>The test suite verifies both directions of interoperability: IRx-written IPC is
+read by PyArrow, and PyArrow-written IPC is read by IRx.</p>
+<p>The direct Python API builds a fingerprinted native shared library on first use.
+To pre-warm that cache explicitly:</p>
+<pre class="highlight"><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from irx.builder.runtime.record_batch import ensure_record_batch_shared_library; ensure_record_batch_shared_library()&quot;</span>
+</code></pre>
+<p>Generated IRx programs use the runtime-feature system instead; their required
+native artifacts are collected during the normal build/link flow.</p>
+<h2 id="deliberate-boundaries">Deliberate boundaries</h2>
+<p>Native Arrow support does not yet imply a complete Arrow product surface. The
+current implementation does not provide:</p>
 <ul>
 <li>an Arx query language or Arrow Compute kernel API</li>
 <li>dedicated RecordBatch syntax (use <code>stdlib.arrow</code> classes instead)</li>
-<li>general nested scalar access, dictionary, decimal, or arbitrary extension types</li>
+<li>general nested scalar access, dictionary, decimal, or arbitrary extension
+types</li>
 <li>mutable Tensor storage or a NumPy-compatible tensor algebra API</li>
 <li>automatic zero-copy guarantees for every import/export path</li>
 </ul>
-<p>These limits keep ownership, semantics, and compiler lowering explicit while the public APIs mature.</p>
-</section>
-<section id="compiled-arx-interoperability-stdlib.arrow" class="level2">
-<h2 class="anchored" data-anchor-id="compiled-arx-interoperability-stdlib.arrow">Compiled Arx interoperability (<code>stdlib.arrow</code>)</h2>
-<p><code>stdlib.arrow</code> exposes runtime-schema RecordBatches without changing the language grammar or converting them to statically typed DataFrames. It reuses the <code>irx_rb_*</code> implementation; the small <code>irx_rb_api_*</code> facade checks statuses before reading output slots and supplies scoped class-owned handles. The frontend only binds ASTx opaque types and native capabilities for the reserved bundled module. IRx performs normal class, call, FFI, ownership analysis and lowering. Importing unrelated standard-library modules does not activate the RecordBatch runtime.</p>
-<section id="build-requirements-and-demonstrations" class="level3">
-<h3 class="anchored" data-anchor-id="build-requirements-and-demonstrations">Build requirements and demonstrations</h3>
-<p>Use the normal Arx development environment, including Clang, a <strong>C++20</strong> compiler, PyArrow and <code>arx-arrowcpp-sources</code>. Native sources are compiled on demand through the existing runtime feature registry. The executable must be able to load the Arrow shared library used at link time; it does not start Python to serialize or deserialize data. The Python peer needs PyArrow; the demonstration runner also uses the compiler to build the Arx programs.</p>
+<p>These limits keep ownership, semantics, and compiler lowering explicit while the
+public APIs mature.</p>
+<h2 id="compiled-arx-interoperability-stdlib-arrow">Compiled Arx interoperability (<code>stdlib.arrow</code>)</h2>
+<p><code>stdlib.arrow</code> exposes runtime-schema RecordBatches without changing the
+language grammar or converting them to statically typed DataFrames. It reuses
+the <code>irx_rb_*</code> implementation; the small <code>irx_rb_api_*</code> facade checks statuses
+before reading output slots and supplies scoped class-owned handles. The
+frontend only binds ASTx opaque types and native capabilities for the reserved
+bundled module. IRx performs normal class, call, FFI, ownership analysis and
+lowering. Importing unrelated standard-library modules does not activate the
+RecordBatch runtime.</p>
+<h3 id="build-requirements-and-demonstrations">Build requirements and demonstrations</h3>
+<p>Use the normal Arx development environment, including Clang, a <strong>C++20</strong>
+compiler, PyArrow and <code>arx-arrowcpp-sources</code>. Native sources are compiled on
+demand through the existing runtime feature registry. The executable must be
+able to load the Arrow shared library used at link time; it does not start
+Python to serialize or deserialize data. The Python peer needs PyArrow; the
+demonstration runner also uses the compiler to build the Arx programs.</p>
 <p>From the repository root:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> examples/arrow/run.py <span class="at">--directory</span> .tmp/arrow-demo</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Or choose --scenario files, --scenario c, or --scenario tcp.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The runner uses temporary build/output paths chosen by <code>--directory</code> and <strong>ephemeral loopback ports</strong>. Its examples are also integration-test inputs:</p>
+<pre class="highlight"><code>python<span class="w"> </span>examples/arrow/run.py<span class="w"> </span>--directory<span class="w"> </span>.tmp/arrow-demo
+<span class="c1"># Or choose --scenario files, --scenario c, or --scenario tcp.</span>
+</code></pre>
+<p>The runner uses temporary build/output paths chosen by <code>--directory</code> and
+<strong>ephemeral loopback ports</strong>. Its examples are also integration-test inputs:</p>
 <ul>
-<li><code>examples/arrow/write_file.x</code> creates integer, floating-point and Boolean columns in compiled Arx and writes <code>arx.arrow</code>. Python uses <code>pa.ipc.open_file</code> and checks the schema and every value.</li>
-<li><code>examples/arrow/read_file.x</code> reads <code>python.arrow</code>, created by Python with <code>pa.ipc.new_file</code>, and checks the full schema and every value. A separate test supplies a mismatched schema and requires failure.</li>
-<li><code>examples/arrow/tcp.x</code> sends or receives <strong>two distinct RecordBatches</strong>. The runner builds real Arx launchers and exchanges standard IPC streaming bytes with a Python process over TCP in both directions.</li>
-<li><code>examples/arrow/types.x</code> exercises every scalar append/get family, schema inspection, nullable values, empty batches, builder reuse and repeated close.</li>
-<li><code>examples/arrow/component.x</code> builds a shared native component. Python invokes <code>component__produce_stream</code> / <code>component__produce_array</code>, then imports their outputs using PyArrow’s <code>_import_from_c</code> APIs. The producing Arx locals have already been destroyed. The reverse functions consume PyArrow-exported data. This is compiled Arx, not the <code>irx.record_batch</code> Python wrapper.</li>
+<li><code>examples/arrow/write_file.x</code> creates integer, floating-point and Boolean
+columns in compiled Arx and writes <code>arx.arrow</code>. Python uses <code>pa.ipc.open_file</code>
+and checks the schema and every value.</li>
+<li><code>examples/arrow/read_file.x</code> reads <code>python.arrow</code>, created by Python with
+<code>pa.ipc.new_file</code>, and checks the full schema and every value. A separate test
+supplies a mismatched schema and requires failure.</li>
+<li><code>examples/arrow/tcp.x</code> sends or receives <strong>two distinct RecordBatches</strong>. The
+runner builds real Arx launchers and exchanges standard IPC streaming bytes
+with a Python process over TCP in both directions.</li>
+<li><code>examples/arrow/types.x</code> exercises every scalar append/get family, schema
+inspection, nullable values, empty batches, builder reuse and repeated close.</li>
+<li><code>examples/arrow/component.x</code> builds a shared native component. Python invokes
+<code>component__produce_stream</code> / <code>component__produce_array</code>, then imports their
+outputs using PyArrow's <code>_import_from_c</code> APIs. The producing Arx locals have
+already been destroyed. The reverse functions consume PyArrow-exported data.
+This is compiled Arx, not the <code>irx.record_batch</code> Python wrapper.</li>
 </ul>
-</section>
-<section id="public-api" class="level3">
-<h3 class="anchored" data-anchor-id="public-api">Public API</h3>
-<pre class="arx"><code>```
+<h3 id="public-api">Public API</h3>
+<pre class="highlight"><code>```
 title: Write a RecordBatch
 ```
 import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
 fn main() -&gt; i32:
   var schema: Schema = Schema()
-  schema.add("id", "int64")
-  schema.add("score", "float64")
-  schema.add("active", "bool")
+  schema.add(&quot;id&quot;, &quot;int64&quot;)
+  schema.add(&quot;score&quot;, &quot;float64&quot;)
+  schema.add(&quot;active&quot;, &quot;bool&quot;)
   var builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_f64(1, 1.5)
   builder.append_bool(2, true)
   var batch: RecordBatch = builder.finish()
   var writer: IPCWriter = IPCWriter(schema)
-  writer.open_file("example.arrow")
+  writer.open_file(&quot;example.arrow&quot;)
   writer.write(batch)
   writer.close()
-  return 0</code></pre>
+  return 0
+</code></pre>
 <p><code>Schema.add(name, type_name, nullable=false)</code> accepts validated scalar names:</p>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 60%">
-<col style="width: 39%">
-</colgroup>
+<table>
 <thead>
-<tr class="header">
+<tr>
 <th>Arrow scalar names</th>
 <th>Arx append/get suffix</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>int8</code>, <code>int16</code>, <code>int32</code>, <code>int64</code></td>
 <td><code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>uint64</code></td>
 <td>Preserve/forward; no unsigned scalar getter</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>float32</code>, <code>float64</code>, <code>bool</code></td>
 <td><code>f32</code>, <code>f64</code>, <code>bool</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>utf8</code>, <code>large_utf8</code> (also <code>string</code>, <code>large_string</code>)</td>
 <td><code>utf8</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>date32[day]</code>, <code>date64[ms]</code></td>
 <td><code>date</code> (<code>i64</code> count)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>timestamp[s]</code>, <code>timestamp[ms]</code>, <code>timestamp[us]</code>, <code>timestamp[ns]</code></td>
 <td><code>timestamp</code> (<code>i64</code> count)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>time32[s]</code>, <code>time32[ms]</code>, <code>time64[us]</code>, <code>time64[ns]</code></td>
 <td><code>time</code> (<code>i64</code> count)</td>
 </tr>
 </tbody>
 </table>
-<p>Numeric native IDs are not arguments to <code>Schema.add</code>; complex schemas are imported from Arrow or read from Parquet. Types, units, timezones, nullability and metadata survive snapshots and IPC/C exports. Scalar builders/getters do not provide recursive construction or traversal.</p>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 16%">
-<col style="width: 83%">
-</colgroup>
+<p>Numeric native IDs are not arguments to <code>Schema.add</code>; complex schemas are
+imported from Arrow or read from Parquet. Types, units, timezones, nullability
+and metadata survive snapshots and IPC/C exports. Scalar builders/getters do not
+provide recursive construction or traversal.</p>
+<table>
 <thead>
-<tr class="header">
+<tr>
 <th>Class</th>
 <th>Operations</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>Schema()</code></td>
 <td><code>add</code>, <code>nfields</code>, <code>name(col)</code>, <code>type(col)</code>, <code>type_name(col)</code>, <code>nullable(col)</code>, <code>equals(other)</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>BatchBuilder(schema)</code></td>
 <td><code>append_&lt;suffix&gt;(col, value)</code>, <code>append_null(col)</code>, <code>finish()</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>RecordBatch()</code></td>
 <td>Empty output holder; <code>nrows</code>, <code>ncols</code>, <code>schema</code>, <code>is_null(col,row)</code>, <code>get_&lt;suffix&gt;(col,row)</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>IPCReader()</code></td>
 <td><code>open_file(path)</code>, <code>open_stream(path)</code>, <code>connect(host,port,timeout_ms=30000)</code>, <code>next()</code>, <code>batch()</code>, <code>schema()</code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>IPCWriter(schema)</code></td>
 <td><code>open_file(path)</code>, <code>open_stream(path)</code>, <code>connect(host,port,timeout_ms=30000)</code>, <code>write(batch)</code></td>
 </tr>
 </tbody>
 </table>
-<p>All five classes have idempotent <code>close()</code> and automatic destruction at their last class reference. <code>finish()</code> resets the builder’s column buffers for reuse; it does not destroy the builder. <code>next()</code> returns false only at end of stream, not for an empty batch. <code>batch()</code> returns an independent batch snapshot and is valid only after a successful <code>next()</code>. A reader’s schema can be inspected before reading any batches. <code>equals</code> and <code>write</code> compare metadata as well as types and nullability. Close readers/writers before reopening them.</p>
-<p>Use <code>open_file</code> for the Arrow random-access <strong>file format</strong>, and <code>open_stream</code> for <strong>streaming format stored at a path</strong>. Both support multiple batches. Zero-field builders produce zero rows; imported zero-column batches retain their original row count. For nullable data, test <code>is_null</code> before a getter. Typed getters reject nulls and wrong types rather than inventing default values. Arx <code>str</code> cannot represent embedded NUL: getters reject such text explicitly; IPC and C sharing still preserve string values without conversion. Field names and timestamp timezone strings containing NUL can round-trip through IPC, but C schema export rejects them rather than silently truncating them.</p>
-<p>Arx operations use <code>ARX-RUNTIME-ARROW-001</code> on failure and terminate the process, consistent with the current File API. No source location is invented for native failures (line/column are zero). Native embedding callers needing <strong>recoverable</strong> errors should use the status-returning <code>irx_rb_*</code> ABI, inspect <code>irx_record_batch_errmsg()</code> immediately, and never read output slots on error.</p>
-</section>
-<section id="same-process-c-data-and-c-stream" class="level3">
-<h3 class="anchored" data-anchor-id="same-process-c-data-and-c-stream">Same-process C Data and C Stream</h3>
-<p>The native header <code>irx_record_batch.h</code> provides schema/batch export and move import, batch-to-stream export, and reader-to-stream export/import. It reuses <code>irx_arrow_c_abi.h</code>. Arrow C++ supplies the standard <code>get_schema</code>, <code>get_next</code>, <code>get_last_error</code> and <code>release</code> callbacks. No Arrow C++ layouts appear in LLVM. The pre-existing array C Data copy/move APIs remain available unchanged.</p>
+<p>All five classes have idempotent <code>close()</code> and automatic destruction at their
+last class reference. <code>finish()</code> resets the builder's column buffers for reuse;
+it does not destroy the builder. <code>next()</code> returns false only at end of stream,
+not for an empty batch. <code>batch()</code> returns an independent batch snapshot and is
+valid only after a successful <code>next()</code>. A reader's schema can be inspected
+before reading any batches. <code>equals</code> and <code>write</code> compare metadata as well as
+types and nullability. Close readers/writers before reopening them.</p>
+<p>Use <code>open_file</code> for the Arrow random-access <strong>file format</strong>, and <code>open_stream</code>
+for <strong>streaming format stored at a path</strong>. Both support multiple batches.
+Zero-field builders produce zero rows; imported zero-column batches retain their
+original row count. For nullable data, test <code>is_null</code> before a getter. Typed
+getters reject nulls and wrong types rather than inventing default values. Arx
+<code>str</code> cannot represent embedded NUL: getters reject such text explicitly; IPC
+and C sharing still preserve string values without conversion. Field names and
+timestamp timezone strings containing NUL can round-trip through IPC, but C
+schema export rejects them rather than silently truncating them.</p>
+<p>Arx operations use <code>ARX-RUNTIME-ARROW-001</code> on failure and terminate the process,
+consistent with the current File API. No source location is invented for native
+failures (line/column are zero). Native embedding callers needing
+<strong>recoverable</strong> errors should use the status-returning <code>irx_rb_*</code> ABI, inspect
+<code>irx_record_batch_errmsg()</code> immediately, and never read output slots on error.</p>
+<h3 id="same-process-c-data-and-c-stream">Same-process C Data and C Stream</h3>
+<p>The native header <code>irx_record_batch.h</code> provides schema/batch export and move
+import, batch-to-stream export, and reader-to-stream export/import. It reuses
+<code>irx_arrow_c_abi.h</code>. Arrow C++ supplies the standard <code>get_schema</code>, <code>get_next</code>,
+<code>get_last_error</code> and <code>release</code> callbacks. No Arrow C++ layouts appear in LLVM.
+The pre-existing array C Data copy/move APIs remain available unchanged.</p>
 <p>Arx additionally provides:</p>
 <ul>
 <li><code>batch.export_c(array_address, schema_address) -&gt; i32</code></li>
@@ -797,569 +621,225 @@ fn main() -&gt; i32:
 <li><code>batch.import_c(array_address, schema_address)</code></li>
 <li><code>reader.import_stream(stream_address)</code></li>
 </ul>
-<p>These addresses are <strong>trusted, same-process pointers</strong> encoded as <code>i64</code> for the current 64-bit native targets. They are not serialized handles. Allocate zero-initialized standard structs in the host, keep their outer storage alive, and check export status before importing into PyArrow. Arbitrary addresses are unsafe. <code>native_handle()</code> is a borrowed opaque FFI escape hatch, not a transferable owner; never destroy it, wrap it in a second owning object, or use it after the class closes. Normal Arx code does not need this method.</p>
-<p>Exports retain Arrow buffers independently of the producing handle. Importing moves C ownership; after any attempted import, call a release callback only if it is still non-null. Import failures may already have consumed inputs. Native <code>irx_rb_c_{array,schema,stream}_release</code> helpers guard repeated release attempts on <strong>still-allocated outer structs</strong>, not on freed pointers. Raw opaque-handle release functions still free once and must not be called twice.</p>
-<p><code>irx_rb_stream_reader_export</code> transfers the remaining iteration to the C stream; the original reader becomes exhausted and may be closed. Schema and array outputs outlive the stream. An array with <code>release == NULL</code> denotes end of stream; an empty batch has a live release callback. Stream callbacks are not thread-safe: serialize calls. Keep the producer shared library loaded until all exported objects have been released.</p>
-<p>RecordBatch C exports/imports share or adopt buffers without serialization; schema descriptors and wrapper objects allocate. IPC serializes data, socket reads allocate per-message buffers, and the existing buffer-input API copies its input. Existing array copy APIs also copy. These are <strong>not universal zero-copy guarantees</strong>. See the standard <a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data</a> and <a href="https://arrow.apache.org/docs/format/CStreamInterface.html">C Stream</a> contracts.</p>
-</section>
-<section id="across-machines" class="level3">
-<h3 class="anchored" data-anchor-id="across-machines">Across machines</h3>
-<p>The Python peer listens and Arx connects, in either data direction. To move the loopback demonstration across hosts, run the Python listener on the receiving host (bind to its chosen interface), and compile the generated Arx launcher with that host’s <strong>numeric IPv4 or IPv6 address</strong> and agreed port instead of loopback. Use <code>send</code> when Python reads with <code>pa.ipc.open_stream(socket_file)</code>, or <code>receive</code> when Python writes with <code>pa.ipc.new_stream(socket_file, schema)</code>. Close the Arrow writer before closing the socket so it emits the end marker. The runner’s <code>tcp()</code> contains the complete Python peer and launcher implementation.</p>
-<p>Transport is separate from serialization (<code>irx_arrow_transport.*</code>). Native <code>irx_rb_fd_reader_open</code> / <code>irx_rb_fd_writer_open</code> duplicate a borrowed POSIX file descriptor, allowing host-supplied files/pipes as streaming endpoints. Closing these streams does not close the caller’s descriptor; offsets are shared. For pipe writes, the host must arrange its SIGPIPE policy. TCP writes suppress SIGPIPE and handle partial writes, interrupted calls and connection failures.</p>
-<p>TCP is blocking, POSIX-only, numeric-address-only, with a positive connect and per-I/O timeout. It buffers messages/batches rather than an entire unbounded stream. This is <strong>not an untrusted network service</strong>: there is no authentication, TLS, batch-size quota, hostname resolution, listener API in Arx, or Flight. Use trusted peers and network controls. A slow peer can extend total transfer time by making progress; the timeout is not a whole-transfer deadline.</p>
-<p>Interop stream readers require an explicit Arrow end marker, even though some Arrow implementations accept transport EOF in its place. This detects a connection cut exactly between batches as well as truncated messages. Both PyArrow’s normal writer close and the Arx writer emit this marker.</p>
-<p>A future Flight adapter can feed the same opaque batches/readers without changing the public data representation; Flight authentication and RPC are not part of this transport.</p>
-</section>
-<section id="compatibility-and-limitations" class="level3">
-<h3 class="anchored" data-anchor-id="compatibility-and-limitations">Compatibility and limitations</h3>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 41%">
-<col style="width: 58%">
-</colgroup>
+<p>These addresses are <strong>trusted, same-process pointers</strong> encoded as <code>i64</code> for the
+current 64-bit native targets. They are not serialized handles. Allocate
+zero-initialized standard structs in the host, keep their outer storage alive,
+and check export status before importing into PyArrow. Arbitrary addresses are
+unsafe. <code>native_handle()</code> is a borrowed opaque FFI escape hatch, not a
+transferable owner; never destroy it, wrap it in a second owning object, or use
+it after the class closes. Normal Arx code does not need this method.</p>
+<p>Exports retain Arrow buffers independently of the producing handle. Importing
+moves C ownership; after any attempted import, call a release callback only if
+it is still non-null. Import failures may already have consumed inputs. Native
+<code>irx_rb_c_{array,schema,stream}_release</code> helpers guard repeated release attempts
+on <strong>still-allocated outer structs</strong>, not on freed pointers. Raw opaque-handle
+release functions still free once and must not be called twice.</p>
+<p><code>irx_rb_stream_reader_export</code> transfers the remaining iteration to the C stream;
+the original reader becomes exhausted and may be closed. Schema and array
+outputs outlive the stream. An array with <code>release == NULL</code> denotes end of
+stream; an empty batch has a live release callback. Stream callbacks are not
+thread-safe: serialize calls. Keep the producer shared library loaded until all
+exported objects have been released.</p>
+<p>RecordBatch C exports/imports share or adopt buffers without serialization;
+schema descriptors and wrapper objects allocate. IPC serializes data, socket
+reads allocate per-message buffers, and the existing buffer-input API copies its
+input. Existing array copy APIs also copy. These are <strong>not universal zero-copy
+guarantees</strong>. See the standard
+<a href="https://arrow.apache.org/docs/format/CDataInterface.html">C Data</a> and
+<a href="https://arrow.apache.org/docs/format/CStreamInterface.html">C Stream</a>
+contracts.</p>
+<h3 id="across-machines">Across machines</h3>
+<p>The Python peer listens and Arx connects, in either data direction. To move the
+loopback demonstration across hosts, run the Python listener on the receiving
+host (bind to its chosen interface), and compile the generated Arx launcher with
+that host's <strong>numeric IPv4 or IPv6 address</strong> and agreed port instead of
+loopback. Use <code>send</code> when Python reads with <code>pa.ipc.open_stream(socket_file)</code>,
+or <code>receive</code> when Python writes with <code>pa.ipc.new_stream(socket_file, schema)</code>.
+Close the Arrow writer before closing the socket so it emits the end marker. The
+runner's <code>tcp()</code> contains the complete Python peer and launcher implementation.</p>
+<p>Transport is separate from serialization (<code>irx_arrow_transport.*</code>). Native
+<code>irx_rb_fd_reader_open</code> / <code>irx_rb_fd_writer_open</code> duplicate a borrowed POSIX
+file descriptor, allowing host-supplied files/pipes as streaming endpoints.
+Closing these streams does not close the caller's descriptor; offsets are
+shared. For pipe writes, the host must arrange its SIGPIPE policy. TCP writes
+suppress SIGPIPE and handle partial writes, interrupted calls and connection
+failures.</p>
+<p>TCP is blocking, POSIX-only, numeric-address-only, with a positive connect and
+per-I/O timeout. It buffers messages/batches rather than an entire unbounded
+stream. This is <strong>not an untrusted network service</strong>: there is no
+authentication, TLS, batch-size quota, hostname resolution, listener API in Arx,
+or Flight. Use trusted peers and network controls. A slow peer can extend total
+transfer time by making progress; the timeout is not a whole-transfer deadline.</p>
+<p>Interop stream readers require an explicit Arrow end marker, even though some
+Arrow implementations accept transport EOF in its place. This detects a
+connection cut exactly between batches as well as truncated messages. Both
+PyArrow's normal writer close and the Arx writer emit this marker.</p>
+<p>A future Flight adapter can feed the same opaque batches/readers without
+changing the public data representation; Flight authentication and RPC are not
+part of this transport.</p>
+<h3 id="compatibility-and-limitations">Compatibility and limitations</h3>
+<table>
 <thead>
-<tr class="header">
+<tr>
 <th>Capability</th>
 <th>Status</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td>Standalone Arx ↔︎ PyArrow IPC files and streams</td>
+<tr>
+<td>Standalone Arx ↔ PyArrow IPC files and streams</td>
 <td>Implemented, multiple/empty batches</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Nullable numeric/Boolean, UTF-8 and temporal batches</td>
 <td>Runtime-schema API; checked typed methods</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Full field/schema metadata and timestamp timezone preservation</td>
 <td>IPC, C sharing and runtime-schema DataFrames; static casts use declared metadata</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Zero-column input with nonzero rows</td>
 <td>Preserved</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>C Data/C Stream, both directions</td>
 <td>Standard structs; explicit ownership transfer</td>
 </tr>
-<tr class="even">
+<tr>
 <td>TCP, both directions</td>
 <td>POSIX blocking clients; trusted numeric-address peers</td>
 </tr>
-<tr class="odd">
-<td>DataFrame ↔︎ RecordBatch conversion</td>
+<tr>
+<td>DataFrame ↔ RecordBatch conversion</td>
 <td>Checked exact scalar schemas, including nullable, unsigned, string and temporal columns</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Dictionary, decimal, binary and supported extensions</td>
 <td>Recursive C Data/IPC and Parquet forwarding; see format-specific limits</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Unsigned and supported nested values</td>
 <td>Forwarding supported; Arx scalar access/construction limited as above</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Arbitrary metadata editing, timestamp timezone creation in Arx</td>
 <td>Not exposed; imported schemas retain them</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Memory safety</td>
 <td>Functional ownership tests and a sanitizer harness; no blanket guarantee</td>
 </tr>
 </tbody>
 </table>
-<p>The sanitizer harness is <code>packages/irx/tests/native/arrow_interop.cpp</code>. Compile it with <code>irx_record_batch.cpp</code>, <code>irx_arrow_transport.cc</code>, <code>irx_arrow_runtime.cc</code>, the Arrow and buffer-native include/link flags, and <code>-fsanitize=address,undefined -fno-omit-frame-pointer</code>. It exercises schema snapshots, exported lifetimes, import moves, repeated guarded releases, EOF, CSV and checked table conversions, and corrupt-input cleanup. Pass a workspace-local CSV output path as its single argument. Arrow’s prebuilt shared library itself is not sanitizer-instrumented by this command.</p>
-</section>
-</section>
-<section id="csv-streaming-and-checked-conversion" class="level2">
-<h2 class="anchored" data-anchor-id="csv-streaming-and-checked-conversion">CSV streaming and checked conversion</h2>
-<p><code>CSVStream</code> in <code>stdlib.csv</code> and Python <code>irx.record_batch</code> reuses Arrow C++ streaming readers and writers. Python generic stream factories remain supported. Both <code>cast(batch, dataframe[name:T, ...])</code> and <code>cast(frame, RecordBatch)</code> support exact static scalar schemas, including nullable columns. Literal-ellipsis <code>dataframe[...]</code> preserves runtime schemas with rich types and metadata. Conversion results own their references independently; DataFrame-to-RecordBatch export combines <strong>all</strong> chunks and may allocate. See <a href="./arx/csv.html">CSV files and DataFrames</a> for schemas, null rules, lifetime, streaming failure semantics and the intentionally restricted DataFrame subset.</p>
-</section>
-<section id="explicit-csv-and-parquet-streams" class="level2">
-<h2 class="anchored" data-anchor-id="explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</h2>
-<p><code>CSVStream</code> and <code>ParquetStream</code> expose <code>open_read</code>, <code>open_write</code>, batch operations, <code>schema</code> and <code>close</code>, with one active session per owner. Parquet uses Arrow’s native batch reader and buffered writer, not a whole-file Table or Python subprocess. The runtime owns the parent Parquet reader across C stream exports and checks footer finalization. Supported recursive types retain Arrow metadata; unsupported types and implicit temporal coercion are rejected. See <a href="./arx/parquet.html">Parquet files and DataFrames</a> for the precise contract.</p>
-<p>The <code>record_batch</code> runtime links <code>libarrow</code>; the dependent <code>parquet</code> feature adds the Parquet/Dataset/Compute/Acero libraries and format adapters. Use the registered feature artifacts and linker flags for native builds. The Python ctypes backend loads Parquet as a separate on-demand plugin. Arx analyzes all <code>stdlib.arrow</code> declarations but lowers only resolved reachable declarations; CSV-only programs do not activate Parquet. Do not mix system Arrow with PyArrow libraries or assume an unversioned <code>-lparquet</code> symlink exists.</p>
-<section id="extended-data-file-support" class="level3">
-<h3 class="anchored" data-anchor-id="extended-data-file-support">Extended data-file support</h3>
-<p><a href="./arx/parquet.html">Parquet options</a> add projection, row-group selection, predicate pushdown, Hive datasets, checked temporal normalization, codecs, local atomic replacement/rewrite append, encrypted snapshot datasets, nullable write-schema evolution, fsync durability and cooperating-writer exclusion. Rich recursive schemas cross the existing opaque native handles and Arrow C Data boundary. <code>CSVStream</code> and <code>ParquetStream</code> name the incremental session APIs explicitly; use the module-level <code>read_*</code> / <code>write_*</code> functions for whole DataFrames.</p>
-</section>
-</section>
-<section id="dedicated-file-format-apis-and-table-interchange" class="level2">
-<h2 class="anchored" data-anchor-id="dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</h2>
-<p><code>stdlib.csv</code> owns CSV and <code>stdlib.parquet</code> owns Parquet. Their paired <code>read_*</code> / <code>write_*</code> functions operate on DataFrames; their unified session classes support explicit streaming. Shared Arrow/IPC classes stay here, with no format re-exports or DataFrame <code>.to_*</code> methods. See the <a href="./arx/csv.html">CSV</a> and <a href="./arx/parquet.html">Parquet</a> guides.</p>
-<p>The matching <code>irx.table_io</code> Python helpers operate on <code>pyarrow.Table</code> through the native C Stream bridge, not Python CSV/Parquet engines. Whole-file reads drain validated batches into a chunked table, preserving empty schemas. Writes iterate <code>TableBatchReader</code>; neither path uses <code>CombineChunksToBatch()</code>. Direct checked table casts validate every chunk and retain metadata/buffers. The older explicit conversion of a whole table to one RecordBatch may still combine chunks; it is not used by these convenience functions.</p>
+<p>The sanitizer harness is <code>packages/irx/tests/native/arrow_interop.cpp</code>. Compile
+it with <code>irx_record_batch.cpp</code>, <code>irx_arrow_transport.cc</code>,
+<code>irx_arrow_runtime.cc</code>, the Arrow and buffer-native include/link flags, and
+<code>-fsanitize=address,undefined -fno-omit-frame-pointer</code>. It exercises schema
+snapshots, exported lifetimes, import moves, repeated guarded releases, EOF, CSV
+and checked table conversions, and corrupt-input cleanup. Pass a workspace-local
+CSV output path as its single argument. Arrow's prebuilt shared library itself
+is not sanitizer-instrumented by this command.</p>
+<h2 id="csv-streaming-and-checked-conversion">CSV streaming and checked conversion</h2>
+<p><code>CSVStream</code> in <code>stdlib.csv</code> and Python <code>irx.record_batch</code> reuses Arrow C++
+streaming readers and writers. Python generic stream factories remain supported.
+Both <code>cast(batch, dataframe[name:T, ...])</code> and <code>cast(frame, RecordBatch)</code>
+support exact static scalar schemas, including nullable columns.
+Literal-ellipsis <code>dataframe[...]</code> preserves runtime schemas with rich types and
+metadata. Conversion results own their references independently;
+DataFrame-to-RecordBatch export combines <strong>all</strong> chunks and may allocate. See
+<a href="arx/csv.html">CSV files and DataFrames</a> for schemas, null rules, lifetime,
+streaming failure semantics and the intentionally restricted DataFrame subset.</p>
+<h2 id="explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</h2>
+<p><code>CSVStream</code> and <code>ParquetStream</code> expose <code>open_read</code>, <code>open_write</code>, batch
+operations, <code>schema</code> and <code>close</code>, with one active session per owner. Parquet
+uses Arrow's native batch reader and buffered writer, not a whole-file Table or
+Python subprocess. The runtime owns the parent Parquet reader across C stream
+exports and checks footer finalization. Supported recursive types retain Arrow
+metadata; unsupported types and implicit temporal coercion are rejected. See
+<a href="arx/parquet.html">Parquet files and DataFrames</a> for the precise contract.</p>
+<p>The <code>record_batch</code> runtime links <code>libarrow</code>; the dependent <code>parquet</code> feature
+adds the Parquet/Dataset/Compute/Acero libraries and format adapters. Use the
+registered feature artifacts and linker flags for native builds. The Python
+ctypes backend loads Parquet as a separate on-demand plugin. Arx analyzes all
+<code>stdlib.arrow</code> declarations but lowers only resolved reachable declarations;
+CSV-only programs do not activate Parquet. Do not mix system Arrow with PyArrow
+libraries or assume an unversioned <code>-lparquet</code> symlink exists.</p>
+<h3 id="extended-data-file-support">Extended data-file support</h3>
+<p><a href="arx/parquet.html">Parquet options</a> add projection, row-group selection, predicate
+pushdown, Hive datasets, checked temporal normalization, codecs, local atomic
+replacement/rewrite append, encrypted snapshot datasets, nullable write-schema
+evolution, fsync durability and cooperating-writer exclusion. Rich recursive
+schemas cross the existing opaque native handles and Arrow C Data boundary.
+<code>CSVStream</code> and <code>ParquetStream</code> name the incremental session APIs explicitly;
+use the module-level <code>read_*</code> / <code>write_*</code> functions for whole DataFrames.</p>
+<h2 id="dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</h2>
+<p><code>stdlib.csv</code> owns CSV and <code>stdlib.parquet</code> owns Parquet. Their paired <code>read_*</code> /
+<code>write_*</code> functions operate on DataFrames; their unified session classes support
+explicit streaming. Shared Arrow/IPC classes stay here, with no format
+re-exports or DataFrame <code>.to_*</code> methods. See the <a href="arx/csv.html">CSV</a> and
+<a href="arx/parquet.html">Parquet</a> guides.</p>
+<p>The matching <code>irx.table_io</code> Python helpers operate on <code>pyarrow.Table</code> through
+the native C Stream bridge, not Python CSV/Parquet engines. Whole-file reads
+drain validated batches into a chunked table, preserving empty schemas. Writes
+iterate <code>TableBatchReader</code>; neither path uses <code>CombineChunksToBatch()</code>. Direct
+checked table casts validate every chunk and retain metadata/buffers. The older
+explicit conversion of a whole table to one RecordBatch may still combine
+chunks; it is not used by these convenience functions.</p>
 
-
-</section>
-</section>
-
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
-  window.document.addEventListener("DOMContentLoaded", function (event) {
-    // Ensure there is a toggle, if there isn't float one in the top right
-    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
-      const a = window.document.createElement('a');
-      a.classList.add('top-right');
-      a.classList.add('quarto-color-scheme-toggle');
-      a.href = "";
-      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
-      const i = window.document.createElement("i");
-      i.classList.add('bi');
-      a.appendChild(i);
-      window.document.body.appendChild(a);
-    }
-    setColorSchemeToggle(hasAlternateSentinel())
-    const icon = "";
-    const anchorJS = new window.AnchorJS();
-    anchorJS.options = {
-      placement: 'right',
-      icon: icon
-    };
-    anchorJS.add('.anchored');
-    const isCodeAnnotation = (el) => {
-      for (const clz of el.classList) {
-        if (clz.startsWith('code-annotation-')) {                     
-          return true;
-        }
-      }
-      return false;
-    }
-    const onCopySuccess = function(e) {
-      // button target
-      const button = e.trigger;
-      // don't keep focus
-      button.blur();
-      // flash "checked"
-      button.classList.add('code-copy-button-checked');
-      var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
-      let tooltip;
-      if (window.bootstrap) {
-        button.setAttribute("data-bs-toggle", "tooltip");
-        button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
-        tooltip = new bootstrap.Tooltip(button, 
-          { trigger: "manual", 
-            customClass: "code-copy-button-tooltip",
-            offset: [0, -8]});
-        tooltip.show();    
-      }
-      setTimeout(function() {
-        if (tooltip) {
-          tooltip.hide();
-          button.removeAttribute("data-bs-title");
-          button.removeAttribute("data-bs-toggle");
-          button.removeAttribute("data-bs-placement");
-        }
-        button.setAttribute("title", currentTitle);
-        button.classList.remove('code-copy-button-checked');
-      }, 1000);
-      // clear code selection
-      e.clearSelection();
-    }
-    const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
-        }
-      }
-      return codeEl.innerText;
-    }
-    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
-      text: getTextToCopy
-    });
-    clipboard.on('success', onCopySuccess);
-    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
-      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
-        text: getTextToCopy,
-        container: window.document.getElementById('quarto-embedded-source-code-modal')
-      });
-      clipboardModal.on('success', onCopySuccess);
-    }
-      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
-      var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/arxlang\.org");
-      var isInternal = (href) => {
-          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
-      }
-      // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
-      for (var i=0; i<links.length; i++) {
-        const link = links[i];
-        if (!isInternal(link.href)) {
-          // undo the damage that might have been done by quarto-nav.js in the case of
-          // links that we want to consider external
-          if (link.dataset.originalHref !== undefined) {
-            link.href = link.dataset.originalHref;
-          }
-            // target, if specified
-            link.setAttribute("target", "_blank");
-            if (link.getAttribute("rel") === null) {
-              link.setAttribute("rel", "noopener");
-            }
-        }
-      }
-    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
-      const config = {
-        allowHTML: true,
-        maxWidth: 500,
-        delay: 100,
-        arrow: false,
-        appendTo: function(el) {
-            return el.parentElement;
-        },
-        interactive: true,
-        interactiveBorder: 10,
-        theme: 'quarto',
-        placement: 'bottom-start',
-      };
-      if (contentFn) {
-        config.content = contentFn;
-      }
-      if (onTriggerFn) {
-        config.onTrigger = onTriggerFn;
-      }
-      if (onUntriggerFn) {
-        config.onUntrigger = onUntriggerFn;
-      }
-      window.tippy(el, config); 
-    }
-    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
-    for (var i=0; i<noterefs.length; i++) {
-      const ref = noterefs[i];
-      tippyHover(ref, function() {
-        // use id or data attribute instead here
-        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
-        try { href = new URL(href).hash; } catch {}
-        const id = href.replace(/^#\/?/, "");
-        const note = window.document.getElementById(id);
-        if (note) {
-          return note.innerHTML;
-        } else {
-          return "";
-        }
-      });
-    }
-    const xrefs = window.document.querySelectorAll('a.quarto-xref');
-    const processXRef = (id, note) => {
-      // Strip column container classes
-      const stripColumnClz = (el) => {
-        el.classList.remove("page-full", "page-columns");
-        if (el.children) {
-          for (const child of el.children) {
-            stripColumnClz(child);
-          }
-        }
-      }
-      stripColumnClz(note)
-      if (id === null || id.startsWith('sec-')) {
-        // Special case sections, only their first couple elements
-        const container = document.createElement("div");
-        if (note.children && note.children.length > 2) {
-          container.appendChild(note.children[0].cloneNode(true));
-          for (let i = 1; i < note.children.length; i++) {
-            const child = note.children[i];
-            if (child.tagName === "P" && child.innerText === "") {
-              continue;
-            } else {
-              container.appendChild(child.cloneNode(true));
-              break;
-            }
-          }
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(container);
-          }
-          return container.innerHTML
-        } else {
-          if (window.Quarto?.typesetMath) {
-            window.Quarto.typesetMath(note);
-          }
-          return note.innerHTML;
-        }
-      } else {
-        // Remove any anchor links if they are present
-        const anchorLink = note.querySelector('a.anchorjs-link');
-        if (anchorLink) {
-          anchorLink.remove();
-        }
-        if (window.Quarto?.typesetMath) {
-          window.Quarto.typesetMath(note);
-        }
-        if (note.classList.contains("callout")) {
-          return note.outerHTML;
-        } else {
-          return note.innerHTML;
-        }
-      }
-    }
-    for (var i=0; i<xrefs.length; i++) {
-      const xref = xrefs[i];
-      tippyHover(xref, undefined, function(instance) {
-        instance.disable();
-        let url = xref.getAttribute('href');
-        let hash = undefined; 
-        if (url.startsWith('#')) {
-          hash = url;
-        } else {
-          try { hash = new URL(url).hash; } catch {}
-        }
-        if (hash) {
-          const id = hash.replace(/^#\/?/, "");
-          const note = window.document.getElementById(id);
-          if (note !== null) {
-            try {
-              const html = processXRef(id, note.cloneNode(true));
-              instance.setContent(html);
-            } finally {
-              instance.enable();
-              instance.show();
-            }
-          } else {
-            // See if we can fetch this
-            fetch(url.split('#')[0])
-            .then(res => res.text())
-            .then(html => {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(html, "text/html");
-              const note = htmlDoc.getElementById(id);
-              if (note !== null) {
-                const html = processXRef(id, note);
-                instance.setContent(html);
-              } 
-            }).finally(() => {
-              instance.enable();
-              instance.show();
-            });
-          }
-        } else {
-          // See if we can fetch a full url (with no hash to target)
-          // This is a special case and we should probably do some content thinning / targeting
-          fetch(url)
-          .then(res => res.text())
-          .then(html => {
-            const parser = new DOMParser();
-            const htmlDoc = parser.parseFromString(html, "text/html");
-            const note = htmlDoc.querySelector('main.content');
-            if (note !== null) {
-              // This should only happen for chapter cross references
-              // (since there is no id in the URL)
-              // remove the first header
-              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
-                note.children[0].remove();
-              }
-              const html = processXRef(null, note);
-              instance.setContent(html);
-            } 
-          }).finally(() => {
-            instance.enable();
-            instance.show();
-          });
-        }
-      }, function(instance) {
-      });
-    }
-        let selectedAnnoteEl;
-        const selectorForAnnotation = ( cell, annotation) => {
-          let cellAttr = 'data-code-cell="' + cell + '"';
-          let lineAttr = 'data-code-annotation="' +  annotation + '"';
-          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
-          return selector;
-        }
-        const selectCodeLines = (annoteEl) => {
-          const doc = window.document;
-          const targetCell = annoteEl.getAttribute("data-target-cell");
-          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
-          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
-          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
-          const lineIds = lines.map((line) => {
-            return targetCell + "-" + line;
-          })
-          let top = null;
-          let height = null;
-          let parent = null;
-          if (lineIds.length > 0) {
-              //compute the position of the single el (top and bottom and make a div)
-              const el = window.document.getElementById(lineIds[0]);
-              top = el.offsetTop;
-              height = el.offsetHeight;
-              parent = el.parentElement.parentElement;
-            if (lineIds.length > 1) {
-              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
-              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
-              height = bottom - top;
-            }
-            if (top !== null && height !== null && parent !== null) {
-              // cook up a div (if necessary) and position it 
-              let div = window.document.getElementById("code-annotation-line-highlight");
-              if (div === null) {
-                div = window.document.createElement("div");
-                div.setAttribute("id", "code-annotation-line-highlight");
-                div.style.position = 'absolute';
-                parent.appendChild(div);
-              }
-              div.style.top = top - 2 + "px";
-              div.style.height = height + 4 + "px";
-              div.style.left = 0;
-              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
-              if (gutterDiv === null) {
-                gutterDiv = window.document.createElement("div");
-                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
-                gutterDiv.style.position = 'absolute';
-                const codeCell = window.document.getElementById(targetCell);
-                const gutter = codeCell.querySelector('.code-annotation-gutter');
-                gutter.appendChild(gutterDiv);
-              }
-              gutterDiv.style.top = top - 2 + "px";
-              gutterDiv.style.height = height + 4 + "px";
-            }
-            selectedAnnoteEl = annoteEl;
-          }
-        };
-        const unselectCodeLines = () => {
-          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
-          elementsIds.forEach((elId) => {
-            const div = window.document.getElementById(elId);
-            if (div) {
-              div.remove();
-            }
-          });
-          selectedAnnoteEl = undefined;
-        };
-          // Handle positioning of the toggle
-      window.addEventListener(
-        "resize",
-        throttle(() => {
-          elRect = undefined;
-          if (selectedAnnoteEl) {
-            selectCodeLines(selectedAnnoteEl);
-          }
-        }, 10)
-      );
-      function throttle(fn, ms) {
-      let throttle = false;
-      let timer;
-        return (...args) => {
-          if(!throttle) { // first call gets through
-              fn.apply(this, args);
-              throttle = true;
-          } else { // all the others get throttled
-              if(timer) clearTimeout(timer); // cancel #2
-              timer = setTimeout(() => {
-                fn.apply(this, args);
-                timer = throttle = false;
-              }, ms);
-          }
-        };
-      }
-        // Attach click handler to the DT
-        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
-        for (const annoteDlNode of annoteDls) {
-          annoteDlNode.addEventListener('click', (event) => {
-            const clickedEl = event.target;
-            if (clickedEl !== selectedAnnoteEl) {
-              unselectCodeLines();
-              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
-              if (activeEl) {
-                activeEl.classList.remove('code-annotation-active');
-              }
-              selectCodeLines(clickedEl);
-              clickedEl.classList.add('code-annotation-active');
-            } else {
-              // Unselect the line
-              unselectCodeLines();
-              clickedEl.classList.remove('code-annotation-active');
-            }
-          });
-        }
-    const findCites = (el) => {
-      const parentEl = el.parentElement;
-      if (parentEl) {
-        const cites = parentEl.dataset.cites;
-        if (cites) {
-          return {
-            el,
-            cites: cites.split(' ')
-          };
-        } else {
-          return findCites(el.parentElement)
-        }
-      } else {
-        return undefined;
-      }
-    };
-    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
-    for (var i=0; i<bibliorefs.length; i++) {
-      const ref = bibliorefs[i];
-      const citeInfo = findCites(ref);
-      if (citeInfo) {
-        tippyHover(citeInfo.el, function() {
-          var popup = window.document.createElement('div');
-          citeInfo.cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
-          });
-          return popup.innerHTML;
-        });
-      }
-    }
-  });
-  </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="./ecosystem.html" class="pagination-link" aria-label="Ecosystem Status">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Ecosystem Status</span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-      <a href="./roadmap.html" class="pagination-link" aria-label="Roadmap">
-        <span class="nav-page-text">Roadmap</span> <i class="bi bi-arrow-right-short"></i>
-      </a>
-  </div>
-</nav>
-</div> <!-- /content -->
-<footer class="footer">
-  <div class="nav-footer">
-    <div class="nav-footer-left">
-<p>Copyright © 2022-2026 ArxLang</p>
-</div>   
-    <div class="nav-footer-center">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx/blob/main/LICENSE">
-<p>Apache-2.0</p>
-</a>
-  </li>  
-</ul>
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h2"><a href="#architecture">Architecture</a></li>
+            
+            <li class="toc-h2"><a href="#implemented-layers">Implemented layers</a></li>
+            
+            <li class="toc-h2"><a href="#arx-tensors-and-dataframes">Arx tensors and DataFrames</a></li>
+            
+            <li class="toc-h2"><a href="#array-interoperability">Array interoperability</a></li>
+            
+            <li class="toc-h2"><a href="#recordbatch-ipc-and-pyarrow">RecordBatch IPC and PyArrow</a></li>
+            
+            <li class="toc-h2"><a href="#deliberate-boundaries">Deliberate boundaries</a></li>
+            
+            <li class="toc-h2"><a href="#compiled-arx-interoperability-stdlib-arrow">Compiled Arx interoperability (stdlib.arrow)</a></li>
+            
+            <li class="toc-h3"><a href="#build-requirements-and-demonstrations">Build requirements and demonstrations</a></li>
+            
+            <li class="toc-h3"><a href="#public-api">Public API</a></li>
+            
+            <li class="toc-h3"><a href="#same-process-c-data-and-c-stream">Same-process C Data and C Stream</a></li>
+            
+            <li class="toc-h3"><a href="#across-machines">Across machines</a></li>
+            
+            <li class="toc-h3"><a href="#compatibility-and-limitations">Compatibility and limitations</a></li>
+            
+            <li class="toc-h2"><a href="#csv-streaming-and-checked-conversion">CSV streaming and checked conversion</a></li>
+            
+            <li class="toc-h2"><a href="#explicit-csv-and-parquet-streams">Explicit CSV and Parquet streams</a></li>
+            
+            <li class="toc-h3"><a href="#extended-data-file-support">Extended data-file support</a></li>
+            
+            <li class="toc-h2"><a href="#dedicated-file-format-apis-and-table-interchange">Dedicated file-format APIs and table interchange</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
     </div>
-    <div class="nav-footer-right">
-      <ul class="footer-items list-unstyled">
-    <li class="nav-item">
-    <a class="nav-link" href="https://github.com/arxlang/arx">
-<p>GitHub</p>
-</a>
-  </li>  
-    <li class="nav-item">
-    <a class="nav-link active" href="./coc.html" aria-current="page">
-<p>Code of Conduct</p>
-</a>
-  </li>  
-</ul>
-    </div>
-  </div>
-</footer>
-
-
-
-
-<script src="site_libs/quarto-html/zenscroll-min.js"></script>
-</body></html>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>
