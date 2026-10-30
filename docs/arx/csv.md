@@ -40,8 +40,8 @@ choices affect interpretation, not just performance.
 
 The eager option schema lives in `irx.analysis.table_io`; defaults and
 validation are implemented by the native CSV options code. Python signatures are
-in the [generated table I/O reference](../api/irx/table_io.md). Stream
-declarations and contracts live in `packages/arx/src/arx/stdlib/csv.x`.
+in the generated {@api python:irx:irx.table_io} reference. Stream declarations
+and contracts live in `packages/arx/src/arx/stdlib/csv.x`.
 
 Arx name/column/token arguments are literal lists, not arbitrary iterable
 objects. Unknown options and unsupported types fail explicitly. Delimiter, quote

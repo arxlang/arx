@@ -22,7 +22,7 @@ theme:
   framework: bootstrap
   color_mode: auto
   palette: terracotta
-  directory: docs-theme
+  directory: docs/theme
   stylesheets:
     - styles.css
 navigation:
@@ -39,18 +39,14 @@ navigation:
       path: arxpy/index.md
     - title: ArxJIT
       path: arxjit/index.md
-    - title: Tools
-      children:
-        - title: Tooling Overview
-          path: tools/index.md
-        - title: ArxPM
-          path: tools/arxpm.md
-        - title: VS Code
-          path: tools/vscode.md
-        - title: Jupyter Kernel
-          path: tools/jupyter.md
-        - title: Douki
-          path: tools/douki.md
+    - title: ArxPM
+      path: tools/arxpm.md
+    - title: VS Code
+      path: tools/vscode.md
+    - title: Jupyter Kernel
+      path: tools/jupyter.md
+    - title: Douki
+      path: tools/douki.md
     - title: GitHub
       url: https://github.com/arxlang/arx
   default_sidebar: project
@@ -73,7 +69,7 @@ navigation:
             - title: Contributing
               path: contributing.md
             - title: API Documentation
-              path: api/index.md
+              api: "*"
             - title: Changelog
               path: changelog.md
         - title: Community
@@ -92,8 +88,7 @@ navigation:
       title: Arx
       paths:
         - arx/
-        - api/arx/
-        - api/arx.html
+        - api/python/arx/
       items:
         - title: Arx Overview
           path: arx/index.md
@@ -140,13 +135,12 @@ navigation:
             - title: Docstrings
               path: arx/docstrings.md
         - title: Python API
-          path: api/arx/index.md
+          api: arx
     - id: astx
       title: ASTx
       paths:
         - astx/
-        - api/astx/
-        - api/astx.html
+        - api/python/astx/
       items:
         - title: Overview
           path: astx/index.md
@@ -177,13 +171,12 @@ navigation:
             - title: Historical Changelog
               path: astx/changelog.md
         - title: Python API
-          path: api/astx/index.md
+          api: astx
     - id: irx
       title: IRx
       paths:
         - irx/
-        - api/irx/
-        - api/irx.html
+        - api/python/irx/
       items:
         - title: Overview
           path: irx/index.md
@@ -212,31 +205,29 @@ navigation:
             - title: Historical Changelog
               path: irx/changelog.md
         - title: Python API
-          path: api/irx/index.md
+          api: irx
     - id: arxpy
       title: ArxPy
       paths:
         - arxpy/
-        - api/arxpy/
-        - api/arxpy.html
+        - api/python/arxpy/
       items:
         - title: Overview
           path: arxpy/index.md
         - title: Python API
-          path: api/arxpy/index.md
+          api: arxpy
     - id: arxjit
       title: ArxJIT
       paths:
         - arxjit/
-        - api/arxjit/
-        - api/arxjit.html
+        - api/python/arxjit/
       items:
         - title: Overview
           path: arxjit/index.md
         - title: Python-to-ASTx Design
           path: arxjit/design.md
         - title: Python API
-          path: api/arxjit/index.md
+          api: arxjit
     - id: tools
       title: Tools
       paths:
@@ -260,3 +251,36 @@ navigation:
           children:
             - title: Douki
               path: tools/douki.md
+api:
+  generate_pages: true
+  sources:
+    - name: arx
+      language: python
+      root: packages/arx/src
+      modules:
+        - arx
+    - name: astx
+      language: python
+      root: packages/astx/src
+      modules:
+        - astx
+    - name: irx
+      language: python
+      root: packages/irx/src
+      modules:
+        - irx
+    - name: arxpy
+      language: python
+      root: packages/arxpy/src
+      modules:
+        - arxpy
+    - name: arxjit
+      language: python
+      root: packages/arxjit/src
+      modules:
+        - arxjit
+    - name: aix
+      language: python
+      root: packages/aix/src
+      modules:
+        - aix

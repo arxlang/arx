@@ -59,6 +59,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class BinaryOpVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower binary operations to LLVM.
+    """
+
     def _resolved_binary_variant(self, node: astx.BinaryOp) -> astx.BinaryOp:
         """
         title: Resolved binary variant.

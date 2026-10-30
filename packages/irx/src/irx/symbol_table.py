@@ -2,18 +2,29 @@
 title: Symbol Table classes.
 """
 
-from astx.symbol_table import SymbolTable
+from typing import TypeAlias
+
+from astx.symbol_table import SymbolTable as AstxSymbolTable
 from public import public
 
 from irx.typecheck import typechecked
 
-__all__ = ["SymbolTable"]
+SymbolTable: TypeAlias = AstxSymbolTable
+
+__all__ = ["RegisterTable", "SymbolTable"]
 
 
 @public
 @typechecked
 class RegisterTable:
-    # each level in the stack represents a context
+    """
+    title: Track named registers in nested scopes.
+    attributes:
+      stack:
+        type: list[int]
+    """
+
+    # Each level in the stack represents a context.
     stack: list[int]
 
     def __init__(self) -> None:

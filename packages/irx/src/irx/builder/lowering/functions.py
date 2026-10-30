@@ -59,6 +59,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class FunctionVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower function definitions and calls to LLVM.
+    """
+
     def _register_call_result_cleanup(
         self,
         node: astx.AST,

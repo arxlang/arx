@@ -27,6 +27,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class LiteralVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower literal values to LLVM.
+    """
+
     def _semantic_class_construction(
         self,
         node: astx.ClassConstruct,

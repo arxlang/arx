@@ -55,6 +55,11 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ControlFlowVisitorMixin(VisitorMixinBase):
+    """
+    title: Lower resolved control flow through registered LLVM handlers.
+    visibility: internal
+    """
+
     def _resolved_context_manager(
         self,
         node: astx.WithStmt,

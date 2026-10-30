@@ -152,3 +152,10 @@ def test_parenthesized_expr_2() -> None:
     node_2 = astx.OrOp(node_1, node_1)
     assert node_2.get_struct(simplified=True)
     assert node_2.get_struct(simplified=False)
+
+
+def test_public_exports_resolve() -> None:
+    """
+    title: Ensure every advertised package export resolves to a real object.
+    """
+    assert all(hasattr(astx, name) for name in astx.__all__)

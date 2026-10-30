@@ -58,6 +58,10 @@ def _is_yield_node(node: astx.AST) -> bool:
 
 @typechecked
 class GeneratorVisitorMixin(VisitorMixinBase):
+    """
+    title: Lower supported generator operations to LLVM.
+    """
+
     @private
     @contextmanager
     def generator_function_scope(

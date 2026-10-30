@@ -21,6 +21,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class TemporalVisitorMixin(VisitorMixinBase):
+    """
+    title: Lower temporal values and operations to LLVM.
+    """
+
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.LiteralDate) -> None:
         """

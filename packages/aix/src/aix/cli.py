@@ -136,6 +136,15 @@ def show_version() -> None:
 
 
 def _looks_like_subcommand_attempt(token: str) -> bool:
+    """
+    title: Recognize command-like input before parsing CLI arguments.
+    visibility: internal
+    parameters:
+      token:
+        type: str
+    returns:
+      type: bool
+    """
     if not token or token.startswith("-"):
         return False
     if token == "run" or token in KNOWN_SUBCOMMANDS:

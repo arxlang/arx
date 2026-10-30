@@ -387,15 +387,36 @@ class Lexer:
         return self.lex()
 
     def _tokenize_source(self, source: str) -> TokenList:
+        """
+        title: Tokenize the complete source buffer.
+        visibility: internal
+        parameters:
+          source:
+            type: str
+        returns:
+          type: TokenList
+        """
         tokens: list[Token] = []
         index = 0
         line = 1
         col = 1
 
         def location() -> SourceLocation:
+            """
+            title: Return the current source coordinates.
+            visibility: internal
+            returns:
+              type: SourceLocation
+            """
             return SourceLocation(line, col)
 
         def advance() -> str:
+            """
+            title: Advance source coordinates across consumed text.
+            visibility: internal
+            returns:
+              type: str
+            """
             nonlocal index, line, col
             char = source[index]
             index += 1
@@ -505,6 +526,17 @@ class Lexer:
     def _match_symbol(
         self, source: str, index: int
     ) -> tuple[str, TokenKind] | None:
+        """
+        title: Match a reserved symbol at the current source offset.
+        visibility: internal
+        parameters:
+          source:
+            type: str
+          index:
+            type: int
+        returns:
+          type: tuple[str, TokenKind] | None
+        """
         for symbol, kind in sorted(
             _SYMBOL_TOKENS.items(), key=lambda item: len(item[0]), reverse=True
         ):
@@ -521,6 +553,17 @@ class Lexer:
     def _read_number(
         self, source: str, start: int
     ) -> tuple[int | float, TokenKind, int]:
+        """
+        title: Read a numeric literal from the source buffer.
+        visibility: internal
+        parameters:
+          source:
+            type: str
+          start:
+            type: int
+        returns:
+          type: tuple[int | float, TokenKind, int]
+        """
         index = start
         dots = 0
         while index < len(source):
@@ -546,6 +589,19 @@ class Lexer:
     def _read_string(
         self, source: str, start: int, loc: SourceLocation
     ) -> tuple[Token, int]:
+        """
+        title: Read a quoted string and reject unterminated input.
+        visibility: internal
+        parameters:
+          source:
+            type: str
+          start:
+            type: int
+          loc:
+            type: SourceLocation
+        returns:
+          type: tuple[Token, int]
+        """
         quote = source[start]
         index = start + 1
         content = ""
@@ -574,7 +630,25 @@ class Lexer:
         return Token(TokenKind.string, content, loc), index - start + 1
 
     def _is_identifier_start(self, char: str) -> bool:
+        """
+        title: Check whether a character can start an identifier.
+        visibility: internal
+        parameters:
+          char:
+            type: str
+        returns:
+          type: bool
+        """
         return char == "_" or char.isalpha()
 
     def _is_identifier_part(self, char: str) -> bool:
+        """
+        title: Check whether a character can continue an identifier.
+        visibility: internal
+        parameters:
+          char:
+            type: str
+        returns:
+          type: bool
+        """
         return char == "_" or char.isalpha() or char.isdigit()

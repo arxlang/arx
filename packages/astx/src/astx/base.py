@@ -57,6 +57,15 @@ def is_using_jupyter_notebook() -> bool:
 @public
 @typechecked
 class SourceLocation:
+    """
+    title: Source coordinates attached to AST nodes.
+    attributes:
+      line:
+        type: int
+      col:
+        type: int
+    """
+
     line: int
     col: int
 
@@ -224,6 +233,10 @@ class ASTKind(Enum):
 
 
 class ASTMeta(type):
+    """
+    title: Display AST classes by their unqualified names.
+    """
+
     def __str__(cls) -> str:
         """
         title: Return an string that represents the object.

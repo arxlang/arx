@@ -151,6 +151,10 @@ class Parser:
         return module
 
     def _parse_metadata_block(self) -> None:
+        """
+        title: Parse optional declaration metadata.
+        visibility: internal
+        """
         self._consume(TokenKind.metadata, "κ")
         self._consume(TokenKind.semantic_lbracket, "⟦")
         depth = 1
@@ -164,6 +168,12 @@ class Parser:
             self.tokens.get_next_token()
 
     def _parse_definition(self) -> astx.AST:
+        """
+        title: Parse a top-level function or constant definition.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         self._consume(TokenKind.define, "∴")
         name_token = self._expect(TokenKind.identifier, "definition name")
         name = cast(str, name_token.value)
@@ -181,6 +191,17 @@ class Parser:
     def _parse_function_definition(
         self, name: str, name_token: Token
     ) -> astx.FunctionDef:
+        """
+        title: Parse a function declaration and body.
+        visibility: internal
+        parameters:
+          name:
+            type: str
+          name_token:
+            type: Token
+        returns:
+          type: astx.FunctionDef
+        """
         args = self._parse_parameter_block()
         return_type: astx.DataType = astx.NoneType()
         if self._at(TokenKind.arrow):
@@ -199,6 +220,17 @@ class Parser:
     def _parse_constant_definition(
         self, name: str, name_token: Token
     ) -> astx.VariableDeclaration:
+        """
+        title: Parse a typed constant definition.
+        visibility: internal
+        parameters:
+          name:
+            type: str
+          name_token:
+            type: Token
+        returns:
+          type: astx.VariableDeclaration
+        """
         self._consume(TokenKind.colon, ":")
         type_ = self._parse_type_expression()
         self._consume(TokenKind.assign, "≔")
@@ -214,6 +246,12 @@ class Parser:
         )
 
     def _parse_parameter_block(self) -> astx.Arguments:
+        """
+        title: Parse the function parameter block.
+        visibility: internal
+        returns:
+          type: astx.Arguments
+        """
         self._consume(TokenKind.semantic_lbracket, "⟦")
         args = astx.Arguments()
         if self._at(TokenKind.semantic_rbracket):
@@ -240,6 +278,12 @@ class Parser:
         return args
 
     def _parse_type_expression(self) -> astx.DataType:
+        """
+        title: Parse a supported type expression.
+        visibility: internal
+        returns:
+          type: astx.DataType
+        """
         token = self.tokens.cur_tok
         if token.kind == TokenKind.unit:
             self.tokens.get_next_token()
@@ -268,11 +312,23 @@ class Parser:
         return type_factory(loc=token.location)
 
     def _parse_function_body(self) -> astx.Block:
+        """
+        title: Parse an inline or delimited function body.
+        visibility: internal
+        returns:
+          type: astx.Block
+        """
         if self._at(TokenKind.lbrace):
             return self._parse_inline_block()
         return self._parse_block_until_end()
 
     def _parse_inline_block(self) -> astx.Block:
+        """
+        title: Parse an inline statement block.
+        visibility: internal
+        returns:
+          type: astx.Block
+        """
         self._consume(TokenKind.lbrace, "{")
         block = astx.Block()
         while not self._at(TokenKind.rbrace):
@@ -287,6 +343,12 @@ class Parser:
         return block
 
     def _parse_block_until_end(self) -> astx.Block:
+        """
+        title: Parse statements until the block terminator.
+        visibility: internal
+        returns:
+          type: astx.Block
+        """
         block = astx.Block()
         while not self._at(TokenKind.end):
             if self._at(TokenKind.eof):
@@ -302,6 +364,12 @@ class Parser:
         return block
 
     def _parse_statement(self) -> astx.AST:
+        """
+        title: Parse the next statement in a function body.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         if self._at(TokenKind.turnstile):
             return self._parse_branch_statement()
         if self._at(TokenKind.bind):
@@ -316,6 +384,12 @@ class Parser:
         return self.parse_expression()
 
     def _parse_branch_statement(self) -> astx.AST:
+        """
+        title: Parse a conditional branch and its alternatives.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         branch_token = self.tokens.cur_tok
         self._consume(TokenKind.turnstile, "⊢")
         first = cast(astx.Expr, self.parse_expression())
@@ -342,6 +416,12 @@ class Parser:
         )
 
     def _parse_binding_statement(self) -> astx.VariableDeclaration:
+        """
+        title: Parse a local variable binding.
+        visibility: internal
+        returns:
+          type: astx.VariableDeclaration
+        """
         bind_token = self.tokens.cur_tok
         self._consume(TokenKind.bind, "⌁")
         name_token = self._expect(TokenKind.identifier, "binding name")
@@ -361,6 +441,12 @@ class Parser:
         )
 
     def _parse_assignment_statement(self) -> astx.VariableAssignment:
+        """
+        title: Parse a variable assignment.
+        visibility: internal
+        returns:
+          type: astx.VariableAssignment
+        """
         name_token = self._expect(TokenKind.identifier, "assignment target")
         self._consume(TokenKind.assign, "≔")
         value = cast(astx.Expr, self.parse_expression())
@@ -371,6 +457,12 @@ class Parser:
         )
 
     def _parse_emit_statement(self) -> astx.AST:
+        """
+        title: Parse an emit statement.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         self._consume(TokenKind.emit, "⟣")
         expr = cast(astx.Expr, self.parse_expression())
         return cast(astx.AST, builtins.build_print(expr))
@@ -408,6 +500,12 @@ class Parser:
             )
 
     def _parse_unary(self) -> astx.AST:
+        """
+        title: Parse a unary expression or its operand.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         token = self.tokens.cur_tok
         if token.kind == TokenKind.minus:
             self.tokens.get_next_token()
@@ -429,6 +527,12 @@ class Parser:
         return self._parse_postfix()
 
     def _parse_postfix(self) -> astx.AST:
+        """
+        title: Parse postfix operators and call suffixes.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         expr = self._parse_primary()
         while True:
             if self._at(TokenKind.semantic_lbracket):
@@ -446,6 +550,15 @@ class Parser:
             return expr
 
     def _parse_call_suffix(self, callee: astx.AST) -> astx.FunctionCall:
+        """
+        title: Parse arguments for a call to an existing callee.
+        visibility: internal
+        parameters:
+          callee:
+            type: astx.AST
+        returns:
+          type: astx.FunctionCall
+        """
         if not isinstance(callee, astx.Identifier):
             self._raise_here("only identifier function calls are supported")
         call_loc = self.tokens.cur_tok.location
@@ -464,6 +577,12 @@ class Parser:
         return astx.FunctionCall(callee.name, args, loc=call_loc)
 
     def _parse_primary(self) -> astx.AST:
+        """
+        title: Parse a primary expression.
+        visibility: internal
+        returns:
+          type: astx.AST
+        """
         token = self.tokens.cur_tok
         if token.kind in _EXPRESSION_TERMINATORS:
             self._raise_here("expected expression")
@@ -515,6 +634,15 @@ class Parser:
         )
 
     def _infer_type(self, value: astx.Expr) -> astx.DataType:
+        """
+        title: Infer a supported literal type or return the unknown type.
+        visibility: internal
+        parameters:
+          value:
+            type: astx.Expr
+        returns:
+          type: astx.DataType
+        """
         if isinstance(value, astx.LiteralBoolean):
             return astx.Boolean()
         if isinstance(value, astx.LiteralFloat64):
@@ -528,19 +656,52 @@ class Parser:
         return AnyType()
 
     def _skip_separators(self) -> None:
+        """
+        title: Advance past statement separators.
+        visibility: internal
+        """
         while self.tokens.cur_tok.kind == TokenKind.semicolon:
             self.tokens.get_next_token()
 
     def _at(self, kind: TokenKind) -> bool:
+        """
+        title: Check the current token kind.
+        visibility: internal
+        parameters:
+          kind:
+            type: TokenKind
+        returns:
+          type: bool
+        """
         return self.tokens.cur_tok.kind == kind
 
     def _peek(self, offset: int = 0) -> Token:
+        """
+        title: Read a token at an offset without advancing.
+        visibility: internal
+        parameters:
+          offset:
+            type: int
+        returns:
+          type: Token
+        """
         index = self.tokens.position + offset
         if index >= len(self.tokens.tokens):
             return Token(TokenKind.eof, "")
         return self.tokens.tokens[index]
 
     def _consume(self, kind: TokenKind, display: str) -> Token:
+        """
+        title: Consume a required token with a literal display name.
+        visibility: internal
+        parameters:
+          kind:
+            type: TokenKind
+          display:
+            type: str
+        returns:
+          type: Token
+        """
         token = self.tokens.cur_tok
         if token.kind != kind:
             self._raise_here(f"expected '{display}', got '{token.get_name()}'")
@@ -548,6 +709,17 @@ class Parser:
         return token
 
     def _expect(self, kind: TokenKind, description: str) -> Token:
+        """
+        title: Consume a required token with a descriptive diagnostic.
+        visibility: internal
+        parameters:
+          kind:
+            type: TokenKind
+          description:
+            type: str
+        returns:
+          type: Token
+        """
         token = self.tokens.cur_tok
         if token.kind != kind:
             self._raise_here(f"expected {description}")
@@ -555,6 +727,15 @@ class Parser:
         return token
 
     def _raise_reserved_operator(self, token: Token) -> NoReturn:
+        """
+        title: Reject a reserved operator with its source location.
+        visibility: internal
+        parameters:
+          token:
+            type: Token
+        returns:
+          type: NoReturn
+        """
         raise ParserException(
             self._message_at(
                 token,
@@ -565,9 +746,29 @@ class Parser:
         )
 
     def _raise_here(self, message: str) -> NoReturn:
+        """
+        title: Raise a parser diagnostic at the current token.
+        visibility: internal
+        parameters:
+          message:
+            type: str
+        returns:
+          type: NoReturn
+        """
         raise ParserException(self._message_at(self.tokens.cur_tok, message))
 
     def _message_at(self, token: Token, message: str) -> str:
+        """
+        title: Format a parser diagnostic with the token location.
+        visibility: internal
+        parameters:
+          token:
+            type: Token
+          message:
+            type: str
+        returns:
+          type: str
+        """
         return (
             "AIX parser error at line "
             f"{token.location.line}, column {token.location.col}: {message}"

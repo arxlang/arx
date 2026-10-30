@@ -22,6 +22,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class UnaryOpVisitorMixin(VisitorMixinBase):
+    """
+    title: Lower unary operations to LLVM.
+    """
+
     @VisitorCore.visit.dispatch  # type: ignore[attr-defined,untyped-decorator]
     def visit(self, node: astx.UnaryOp) -> None:
         """

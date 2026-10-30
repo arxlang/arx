@@ -69,6 +69,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
+    """
+    title: Process control flow in the current compilation phase.
+    """
+
     def _resolve_return_resource_ownership(
         self,
         node: astx.FunctionReturn,
