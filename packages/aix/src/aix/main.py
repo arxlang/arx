@@ -81,6 +81,12 @@ class AixMain:
         return tree_ast
 
     def _resolve_output_file(self) -> str:
+        """
+        title: Choose the configured output path or a source-derived default.
+        visibility: internal
+        returns:
+          type: str
+        """
         if self.output_file:
             return self.output_file
         if not self.input_files:
@@ -88,6 +94,15 @@ class AixMain:
         return Path(self.input_files[0]).stem or "a.out"
 
     def _modules_from_ast(self, node: astx.AST) -> list[astx.Module]:
+        """
+        title: Return module nodes from the frontend result.
+        visibility: internal
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: list[astx.Module]
+        """
         if isinstance(node, astx.Module):
             return [node]
         if isinstance(node, astx.Block):
@@ -97,6 +112,15 @@ class AixMain:
         return []
 
     def _has_main_entry(self, node: astx.AST) -> bool:
+        """
+        title: Check whether any module declares a main function.
+        visibility: internal
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: bool
+        """
         modules = self._modules_from_ast(node)
         for module in modules:
             for module_node in module.nodes:
@@ -108,11 +132,28 @@ class AixMain:
         return False
 
     def _prepare_backend_ast(self, node: astx.AST) -> astx.AST:
+        """
+        title: Adapt frontend entry points for the native backend.
+        visibility: internal
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: astx.AST
+        """
         for module in self._modules_from_ast(node):
             self._adapt_module_main_entry(module)
         return node
 
     def _adapt_module_main_entry(self, module: astx.Module) -> None:
+        """
+        title: >-
+          Wrap a parameterless none-returning main with an integer entry point.
+        visibility: internal
+        parameters:
+          module:
+            type: astx.Module
+        """
         for index, module_node in enumerate(tuple(module.nodes)):
             if not isinstance(module_node, astx.FunctionDef):
                 continue
@@ -134,6 +175,16 @@ class AixMain:
             return
 
     def _next_entry_helper_name(self, module: astx.Module) -> str:
+        """
+        title: >-
+          Choose a helper name that does not collide with module functions.
+        visibility: internal
+        parameters:
+          module:
+            type: astx.Module
+        returns:
+          type: str
+        """
         used_names = {
             node.prototype.name
             for node in module.nodes
@@ -149,6 +200,17 @@ class AixMain:
     def _build_main_entry_wrapper(
         self, main_function: astx.FunctionDef, helper_name: str
     ) -> astx.FunctionDef:
+        """
+        title: Build an integer-returning wrapper around the frontend main.
+        visibility: internal
+        parameters:
+          main_function:
+            type: astx.FunctionDef
+          helper_name:
+            type: str
+        returns:
+          type: astx.FunctionDef
+        """
         call_args: list[astx.DataType] = []
         body = astx.Block(loc=main_function.loc)
         body.append(
@@ -249,6 +311,19 @@ class AixMain:
         file_pattern: str,
         excludes: tuple[str, ...],
     ) -> list[Path]:
+        """
+        title: Discover included AIX tests under the supplied paths.
+        visibility: internal
+        parameters:
+          paths:
+            type: tuple[str, Ellipsis]
+          file_pattern:
+            type: str
+          excludes:
+            type: tuple[str, Ellipsis]
+        returns:
+          type: list[Path]
+        """
         files: list[Path] = []
         for entry in paths:
             path = Path(entry)
@@ -268,6 +343,17 @@ class AixMain:
     def _filter_test_files(
         self, files: list[Path], name_filter: str
     ) -> list[Path]:
+        """
+        title: Filter discovered tests by configured exclusion patterns.
+        visibility: internal
+        parameters:
+          files:
+            type: list[Path]
+          name_filter:
+            type: str
+        returns:
+          type: list[Path]
+        """
         if not name_filter:
             return files
         return [
@@ -277,6 +363,17 @@ class AixMain:
         ]
 
     def _is_included_test(self, path: Path, excludes: tuple[str, ...]) -> bool:
+        """
+        title: Check a test path against exclusion patterns.
+        visibility: internal
+        parameters:
+          path:
+            type: Path
+          excludes:
+            type: tuple[str, Ellipsis]
+        returns:
+          type: bool
+        """
         text = path.as_posix()
         return not any(fnmatch(text, pattern) for pattern in excludes)
 

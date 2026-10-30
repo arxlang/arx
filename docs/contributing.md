@@ -58,12 +58,16 @@ compiler.
 ## Documentation and examples
 
 The site uses [DoukiMD](https://github.com/arxlang/doukimd), configured in
-`doukimd.yaml`. `makim docs.build` generates the Python API Markdown and builds
-the site in `build/`; `makim docs.preview` builds and serves it at
-`http://localhost:8000`. Rebuild after editing; preview does not watch files.
-Saved notebook outputs are rendered without executing cells. The existing API
-generator remains in use; enabling DoukiMD native API extraction is a separate
-migration that requires source docstring and export cleanup.
+`doukimd.yaml`. `makim docs.build` builds guides, saved notebooks, and native
+Python API references directly into `build/`; no API Markdown generator runs.
+The named `api.sources` entries select each package's source folder. DoukiMD
+reads declarations and Douki docstrings statically without importing packages.
+Keep theme overrides in `docs/theme/`. `makim docs.preview` builds and serves
+the site at `http://localhost:8000`. Rebuild after editing; preview does not
+watch files. Saved notebook outputs are rendered without executing cells.
+
+When upgrading an older checkout, remove its previously generated `docs/api/`
+directory before building. Native API output now lives only under `build/`.
 
 - Keep public types, defaults, validation, ownership, and failure contracts next
   to code, with focused tests. Do not duplicate signatures, method catalogs, or
@@ -71,9 +75,8 @@ migration that requires source docstring and export cleanup.
 - Update short guides only for changed workflows, architecture, restrictions,
   migration decisions, or data-loss/resource-safety contracts. Put common and
   advanced API examples in the PR description or executable tests.
-- Leave generated API output to `scripts/gen_api_docs.py` and the
-  `docs.generate-api` task. Keep that pipeline working without expanding it for
-  an unrelated API change.
+- Leave API output to DoukiMD and its configured sources. Keep source docstrings
+  valid and exports resolvable; do not hand-edit generated pages.
 - Every committed `.x` file begins with a valid Douki module docstring.
 - Class, function, and method docstrings use Douki YAML inside triple backticks.
 - Use quadruple Markdown fences around Arx examples containing docstrings.

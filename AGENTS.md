@@ -93,10 +93,9 @@ investigation diaries and test-result catalogs out of the repository; report
 validation in the PR or CI output. Preserve required source docstrings.
 
 Existing generated reference output stays generated. Do not hand-edit it. Keep
-`scripts/gen_api_docs.py` and the `docs.generate-api` task working; do not
-expand their output or build a new documentation platform for an unrelated API
-change. A future separate project will generate API reference from authoritative
-code and semantic signatures.
+the native DoukiMD API sources in `doukimd.yaml` working. API references come
+from source docstrings and signatures; do not add an intermediate Markdown
+generator or handwritten API catalogs. Keep theme overrides in `docs/theme/`.
 
 Keep one compact capability/status page describing support boundaries, not every
 method. Preserve essential explanations of null semantics, aliasing, mutation,
@@ -358,8 +357,8 @@ extract -> validate -> resolve_signature -> lower
   examples; examples used as support evidence must execute in tests.
 - Follow Documentation Scope: update necessary workflow, architecture, and
   safety guidance, not API catalogs. A new public symbol does not require a new
-  page or changes to every overview. Leave generated reference output to
-  `scripts/gen_api_docs.py`.
+  page or changes to every overview. Leave generated reference output to DoukiMD
+  and the API sources in `doukimd.yaml`.
 - Public cross-package changes may also require schemas, exports, package
   manifests, dependency pins, build scripts, and release wiring.
 

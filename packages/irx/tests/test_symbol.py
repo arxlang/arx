@@ -4,6 +4,8 @@ title: Test RegisterTable functionality.
 
 import pytest
 
+from astx import symbol_table as astx_symbol_table
+from irx import symbol_table
 from irx.symbol_table import RegisterTable
 
 # Constants for test values used in each test
@@ -163,3 +165,11 @@ def test_nested_context_operations(register_table: RegisterTable) -> None:
     # Reset global scope
     register_table.reset()
     assert register_table.stack == [INITIAL_VALUE]
+
+
+def test_symbol_table_alias() -> None:
+    """
+    title: Preserve the ASTx symbol-table alias and public export.
+    """
+    assert symbol_table.SymbolTable is astx_symbol_table.SymbolTable
+    assert {"SymbolTable", "RegisterTable"} <= set(symbol_table.__all__)

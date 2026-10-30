@@ -32,7 +32,7 @@ see the [safe-write contract](#encryption-and-safe-writes) for its limits.
 
 Option declarations and validation live in `irx.analysis.table_io`,
 `irx.parquet_options`, and `packages/arx/src/arx/stdlib/parquet.x`. The
-[generated Python reference](../api/irx/table_io.md) supplies Python signatures;
+generated {@api python:irx:irx.table_io} reference supplies Python signatures;
 the workflow and safety rules below apply to the native engine.
 
 Explicit keywords override an options snapshot **even when equal to a default**.

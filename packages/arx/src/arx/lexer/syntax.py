@@ -1,3 +1,7 @@
+"""
+title: Access the canonical lexical syntax manifest.
+"""
+
 from __future__ import annotations
 
 import json
@@ -9,6 +13,13 @@ from typing import Any
 
 @dataclass(frozen=True)
 class SyntaxManifest:
+    """
+    title: Access the canonical lexical syntax manifest.
+    attributes:
+      data:
+        type: dict[str, Any]
+    """
+
     data: dict[str, Any]
 
     @property

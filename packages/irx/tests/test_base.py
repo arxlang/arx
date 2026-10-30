@@ -9,6 +9,8 @@ from typing import Any, Sequence
 import astx
 import pytest
 
+from astx import system as astx_system
+from irx import system
 from irx.builder.base import (
     Builder,
     BuilderVisitor,
@@ -229,3 +231,12 @@ def test_builder_run_forwards_all_kwargs(
             "debug": True,
         }
     ]
+
+
+def test_system_node_aliases() -> None:
+    """
+    title: Preserve the identity and exports of ASTx system-node aliases.
+    """
+    for name in ("AssertStmt", "Cast", "PrintExpr"):
+        assert getattr(system, name) is getattr(astx_system, name)
+        assert name in system.__all__

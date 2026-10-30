@@ -549,22 +549,12 @@ groups:
 
   docs:
     tasks:
-      generate-api:
-        help: generate API Markdown from Python source
-        run: python scripts/gen_api_docs.py
-
       check:
         help: validate documentation without writing site output
-        hooks:
-          pre-run:
-            - task: docs.generate-api
         run: doukimd check --config doukimd.yaml
 
       build:
         help: build documentation
-        hooks:
-          pre-run:
-            - task: docs.generate-api
         run: doukimd build --config doukimd.yaml
 
       preview:

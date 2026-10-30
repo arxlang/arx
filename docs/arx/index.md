@@ -60,7 +60,7 @@ explain arithmetic, ownership, failure, and compatibility decisions; neither is
 a stability promise.
 
 Handwritten pages focus on workflows and safety. Python API reference is
-[generated from source](../api/arx.md), not maintained as copied signatures.
+generated from source by DoukiMD; see {@api python:arx:arx}.
 
 ## Related tools
 

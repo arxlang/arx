@@ -20,6 +20,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ImportVisitorMixin(SemanticVisitorMixinBase):
+    """
+    title: Analyze imported module declarations.
+    """
+
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ImportStmt) -> None:
         """

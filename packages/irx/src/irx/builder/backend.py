@@ -62,12 +62,23 @@ class Visitor(
     ModuleVisitorMixin,
     VisitorCore,
 ):
+    """
+    title: Compose AST handlers for LLVM lowering.
+    """
+
     pass
 
 
 @public
 @typechecked
 class Builder(BaseBuilder):
+    """
+    title: Build LLVM modules from semantically analyzed AST nodes.
+    attributes:
+      translator:
+        type: Visitor
+    """
+
     translator: Visitor
 
     def __init__(self) -> None:

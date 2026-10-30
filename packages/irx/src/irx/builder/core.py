@@ -362,6 +362,91 @@ def semantic_fma_rhs(node: astx.AST) -> astx.AST | None:
 @private
 @typechecked
 class VisitorCore(BuilderVisitor):
+    """
+    title: Maintain shared LLVM visitor state.
+    attributes:
+      named_values:
+        type: NamedValueMap
+      _llvm:
+        type: VariablesLLVM
+      function_protos:
+        type: dict[str, astx.FunctionPrototype]
+      llvm_functions_by_symbol_id:
+        type: dict[str, ir.Function]
+      result_stack:
+        type: list[ResultStackValue]
+      runtime_features:
+        type: RuntimeFeatureState
+      const_vars:
+        type: set[str]
+      loop_stack:
+        type: list[LoopTargets]
+      cleanup_stack:
+        type: list[CleanupAction]
+      class_construction_stack:
+        type: list[ir.Value]
+      emitting_failure_cleanup:
+        type: bool
+      _set_value_ids:
+        type: dict[int, ir.Value]
+      _buffer_view_global_counter:
+        type: int
+      struct_types:
+        type: dict[str, ir.Type]
+      llvm_structs_by_qualified_name:
+        type: dict[str, ir.IdentifiedStructType]
+      _emitted_function_bodies:
+        type: set[str]
+      _module_display_names:
+        type: dict[int, str]
+      _current_module_display_name:
+        type: str | None
+      _interned_c_strings:
+        type: dict[tuple[str, str], ir.GlobalVariable]
+      _c_string_global_counter:
+        type: int
+      _namespace_globals:
+        type: dict[tuple[str, str], ir.GlobalVariable]
+      entry_function_symbol_id:
+        type: str | None
+      _fast_math_enabled:
+        type: bool
+      _current_function_return_type:
+        type: astx.DataType | None
+      _current_function_signature:
+        type: FunctionSignature | None
+      _generator_frame_types:
+        type: dict[str, ir.IdentifiedStructType]
+      _generator_frame_slots_by_symbol_id:
+        type: dict[str, dict[str, int]]
+      _generator_resume_functions:
+        type: dict[str, ir.Function]
+      _current_generator_frame_ptr:
+        type: ir.Value | None
+      _current_generator_frame_slots:
+        type: dict[str, int]
+      _current_generator_out_ptr:
+        type: ir.Value | None
+      _current_generator_next_state:
+        type: int | None
+      target:
+        type: llvm.TargetRef
+      target_machine:
+        type: llvm.TargetMachine
+      runtime_exception_types:
+        type: dict[str, ResolvedExceptionType]
+      exception_context:
+        type: ir.Value | None
+      exception_result_slot:
+        type: ir.Value | None
+      exception_targets:
+        type: list[ExceptionTarget]
+      pending_returns:
+        type: list[PendingReturn]
+      llvm_function_signatures:
+        type: dict[str, FunctionSignature]
+    """
+
     named_values: NamedValueMap
     _llvm: VariablesLLVM
     function_protos: dict[str, astx.FunctionPrototype]

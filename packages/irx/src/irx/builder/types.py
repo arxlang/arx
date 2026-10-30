@@ -46,6 +46,89 @@ def is_int_type(type_: ir.Type) -> bool:
 
 @typechecked
 class VariablesLLVM:
+    """
+    title: Define LLVM representations for supported runtime types.
+    attributes:
+      FLOAT_TYPE:
+        type: ir.types.Type
+      FLOAT16_TYPE:
+        type: ir.types.Type
+      DOUBLE_TYPE:
+        type: ir.types.Type
+      INT8_TYPE:
+        type: ir.types.Type
+      INT64_TYPE:
+        type: ir.types.Type
+      INT16_TYPE:
+        type: ir.types.Type
+      INT32_TYPE:
+        type: ir.types.Type
+      VOID_TYPE:
+        type: ir.types.Type
+      BOOLEAN_TYPE:
+        type: ir.types.Type
+      UINT8_TYPE:
+        type: ir.types.Type
+      UINT16_TYPE:
+        type: ir.types.Type
+      UINT32_TYPE:
+        type: ir.types.Type
+      UINT64_TYPE:
+        type: ir.types.Type
+      UINT128_TYPE:
+        type: ir.types.Type
+      ASCII_STRING_TYPE:
+        type: ir.types.Type
+      UTF8_STRING_TYPE:
+        type: ir.types.Type
+      TIME_TYPE:
+        type: ir.types.Type
+      TIMESTAMP_TYPE:
+        type: ir.types.Type
+      DATETIME_TYPE:
+        type: ir.types.Type
+      SIZE_T_TYPE:
+        type: ir.types.Type | None
+      POINTER_BITS:
+        type: int
+      OPAQUE_POINTER_TYPE:
+        type: ir.types.Type
+      BUFFER_OWNER_HANDLE_TYPE:
+        type: ir.types.Type
+      BUFFER_VIEW_TYPE:
+        type: ir.types.Type
+      ARRAY_BUILDER_HANDLE_TYPE:
+        type: ir.types.Type
+      ARRAY_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_ARRAY_BUILDER_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_ARRAY_HANDLE_TYPE:
+        type: ir.types.Type
+      TENSOR_BUILDER_HANDLE_TYPE:
+        type: ir.types.Type
+      TENSOR_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_TENSOR_BUILDER_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_TENSOR_HANDLE_TYPE:
+        type: ir.types.Type
+      TABLE_HANDLE_TYPE:
+        type: ir.types.Type
+      CHUNKED_ARRAY_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_TABLE_HANDLE_TYPE:
+        type: ir.types.Type
+      ARROW_CHUNKED_ARRAY_HANDLE_TYPE:
+        type: ir.types.Type
+      context:
+        type: ir.context.Context
+      module:
+        type: ir.module.Module
+      ir_builder:
+        type: ir.builder.IRBuilder
+    """
+
     FLOAT_TYPE: ir.types.Type
     FLOAT16_TYPE: ir.types.Type
     DOUBLE_TYPE: ir.types.Type

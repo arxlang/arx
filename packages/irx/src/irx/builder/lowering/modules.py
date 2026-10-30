@@ -27,6 +27,11 @@ from irx.typecheck import typechecked
 
 @typechecked
 class ModuleVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower modules and imported declarations to LLVM.
+    visibility: internal
+    """
+
     def _default_global_initializer(self, llvm_type: ir.Type) -> ir.Constant:
         """
         title: Return one zero or null global initializer.

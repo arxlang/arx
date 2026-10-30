@@ -37,6 +37,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class SystemVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower system operations to LLVM.
+    """
+
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.Cast) -> None:
         """

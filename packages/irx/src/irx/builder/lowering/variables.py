@@ -35,6 +35,10 @@ from irx.typecheck import typechecked
 
 @typechecked
 class VariableVisitorMixin(ClassVisitorMixin):
+    """
+    title: Lower variable declarations and references to LLVM.
+    """
+
     def _register_owned_list_cleanup(
         self,
         node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
