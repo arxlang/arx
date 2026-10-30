@@ -1,5 +1,5 @@
 """
-title: Generate Quarto API reference pages from Python source.
+title: Generate Markdown API reference pages from Python source.
 summary: Build lightweight Markdown API pages without site-generator plugins.
 """
 

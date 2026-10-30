@@ -93,10 +93,10 @@ investigation diaries and test-result catalogs out of the repository; report
 validation in the PR or CI output. Preserve required source docstrings.
 
 Existing generated reference output stays generated. Do not hand-edit it. Keep
-`scripts/gen_api_docs.py` and its Quarto pre-render hook working; do not expand
-their output or build a new documentation platform for an unrelated API change.
-A future separate project will generate API reference from authoritative code
-and semantic signatures.
+`scripts/gen_api_docs.py` and the `docs.generate-api` task working; do not
+expand their output or build a new documentation platform for an unrelated API
+change. A future separate project will generate API reference from authoritative
+code and semantic signatures.
 
 Keep one compact capability/status page describing support boundaries, not every
 method. Preserve essential explanations of null semantics, aliasing, mutation,
@@ -149,7 +149,7 @@ The main compiler pipeline is:
 Important root locations:
 
 - `examples/`: executable Arx examples
-- `docs/`: Quarto documentation
+- `docs/`: DoukiMD documentation
 - `scripts/`: build, documentation, release, and maintenance tooling
 - `.makim.yaml`: canonical local task definitions
 - `.github/workflows/main.yaml`: CI behavior

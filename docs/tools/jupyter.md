@@ -33,17 +33,11 @@ jupyter kernelspec list
 
 The `arx` executable must be available on `PATH`, or `ARX_BIN` must point to it.
 
-## Quarto usage
+## Documentation notebooks
 
-Once the kernel is registered and its compiler integration matches the installed
-Arx CLI:
-
-```yaml
----
-title: "Arx Notebook"
-jupyter: arx
----
-```
+DoukiMD renders saved `.ipynb` cells and outputs without starting a kernel. Run
+notebooks in Jupyter with the registered Arx kernel and save the results before
+building the documentation. Interactive widgets are not executed.
 
 ## Configuration
 

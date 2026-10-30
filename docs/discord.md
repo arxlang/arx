@@ -1,3 +1,7 @@
+---
+html: true
+---
+
 # ArxLang Community
 
 Join the ArxLang community on [Discord](https://discord.gg/CjSr6GNgp7) to

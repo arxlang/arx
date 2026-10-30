@@ -1,3 +1,7 @@
+---
+html: true
+---
+
 # Sponsor
 
 Sponsorship helps maintain the compiler ecosystem, native runtime,

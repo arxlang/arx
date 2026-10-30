@@ -100,7 +100,8 @@ Before any row becomes supported rather than a release candidate, it needs:
 3. documented minimum compiler, linker, glibc, and C++ runtime versions;
 4. installation and failure tests without a repository checkout;
 5. an RC soak plus upgrade and rollback rehearsal;
-6. a stated support lifetime in [SUPPORT.md](../SUPPORT.md).
+6. a stated support lifetime in
+   [SUPPORT.md](https://github.com/arxlang/arx/blob/main/SUPPORT.md).
 
 Passing on an unlisted platform is useful feedback but is not evidence of
 project support.

@@ -22,6 +22,20 @@
             "countMatches": true
           },
           {
+            "files": ["doukimd.yaml"],
+            "from": "  version: .*",
+            "to": "  version: ${nextRelease.version}",
+            "results": [
+              {
+                "file": "doukimd.yaml",
+                "hasChanged": true,
+                "numMatches": 1,
+                "numReplacements": 1
+              }
+            ],
+            "countMatches": true
+          },
+          {
             "files": ["packages/astx/pyproject.toml"],
             "from": "version = \".*\"  # semantic-release",
             "to": "version = \"${nextRelease.version}\"  # semantic-release",
@@ -343,6 +357,7 @@
       {
         "assets": [
           "pyproject.toml",
+          "doukimd.yaml",
           "poetry.lock",
           "docs/changelog.md",
           "packages/astx/pyproject.toml",

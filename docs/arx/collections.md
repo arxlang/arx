@@ -112,7 +112,7 @@ selects streaming format at a path, and `connect` exchanges IPC streaming bytes
 over TCP. Writers reject schema mismatches, including metadata and nullability.
 Check `is_null` before typed getters. Objects close on their last scoped
 reference; explicit `close()` is idempotent. See the
-[interoperability workflow and ownership contract](../apache-arrow.md#compiled-arx-interoperability-stdlib.arrow).
+[interoperability workflow and ownership contract](../apache-arrow.md#compiled-arx-interoperability-stdlib-arrow).
 
 ## Checked DataFrame conversion
 
