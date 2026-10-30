@@ -37,6 +37,8 @@ jobs:
       - name: Install deps
         run: |
           poetry config virtualenvs.create false
+          # Finish tool dependency updates before building local packages.
+          poetry install --no-directory
           poetry install
 
       - name: Generate documentation
