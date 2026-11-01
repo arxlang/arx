@@ -103,3 +103,26 @@ fn test_boolean_short_circuit_evaluation() -> none:
   ```
   assert (false && fail_if_evaluated()) == false
   assert (true || fail_if_evaluated()) == true
+  assert not false or fail_if_evaluated()
+  assert not (false and not fail_if_evaluated())
+
+fn test_scalar_remainder_and_negation() -> none:
+  ```
+  title: test_scalar_remainder_and_negation
+  summary: Remainder truncates rather than implementing Python floor modulo.
+  ```
+  var move: i32 = -5
+  var size: i32 = 100
+  assert move / size == 0
+  assert move % size == -5
+  # For a positive modulus, add only to a negative remainder to avoid overflow.
+  var position: i32 = move % size
+  if position < 0:
+    position = position + size
+  assert position == 95
+  assert not move == size and true
+  assert not not (move < size)
+  assert !false
+  assert 3 - -2 == 5
+  assert -move == 5
+  assert 17 % 5 * 2 == 4

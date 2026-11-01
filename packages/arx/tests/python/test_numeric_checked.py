@@ -67,12 +67,41 @@ def translate_numeric(source: str) -> tuple[ArxBuilder, str]:
 
 
 @private
+def compile_numeric(tmp_path: Path, source: str, optimization: int) -> Path:
+    """
+    title: Compile verified numeric LLVM once for isolated native executions.
+    parameters:
+      tmp_path:
+        type: Path
+      source:
+        type: str
+      optimization:
+        type: int
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("native numeric checks require clang")
+    builder, text = translate_numeric(source)
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    executable = tmp_path / "numeric"
+    builder._build_from_ir_result(str(module), str(executable), True, "auto")
+    return executable
+
+
+@private
 def run_numeric(
     tmp_path: Path, body: str, optimization: int = 0, definitions: str = ""
 ) -> subprocess.CompletedProcess[str]:
     """
-    title: >-
-      Execute verified LLVM with bounded time at the requested optimization.
+    title: Execute verified numeric source at the requested optimization.
     parameters:
       tmp_path:
         type: Path
@@ -85,19 +114,9 @@ def run_numeric(
     returns:
       type: subprocess.CompletedProcess[str]
     """
-    if shutil.which("clang") is None:
-        pytest.skip("native numeric checks require clang")
-    builder, text = translate_numeric(numeric_program(body, definitions))
-    module = llvm.parse_assembly(text)
-    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
-    with llvm.create_pass_builder(
-        builder.translator.target_machine, tuning
-    ) as passes:
-        with passes.getModulePassManager() as manager:
-            manager.run(module, passes)
-    module.verify()
-    executable = tmp_path / "numeric"
-    builder._build_from_ir_result(str(module), str(executable), True, "auto")
+    executable = compile_numeric(
+        tmp_path, numeric_program(body, definitions), optimization
+    )
     return subprocess.run(
         [str(executable)],
         cwd=tmp_path,
@@ -106,6 +125,71 @@ def run_numeric(
         timeout=5,
         check=False,
     )
+
+
+@pytest.fixture(scope="module", params=[0, 3])
+def remainder_binary(
+    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> Path:
+    """
+    title: Reuse one native artifact per optimization for divisor failures.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+      request:
+        type: pytest.FixtureRequest
+    returns:
+      type: Path
+    """
+    source = numeric_program(
+        """var mode: i32 = getchar()
+var divisor: i64 = cast(mode, i64) - 1
+if mode == 2:
+  var unsigned: u64 = 9
+  var zero: u64 = cast(mode - 2, u64)
+  print(unsigned % zero)
+else:
+  var minimum: i64 = -9223372036854775808
+  print(minimum % divisor)
+print(777)""",
+        "extern getchar() -> i32\n",
+    )
+    return compile_numeric(
+        tmp_path_factory.mktemp("remainder"), source, request.param
+    )
+
+
+@pytest.mark.parametrize(
+    "mode,exception",
+    [(0, "OverflowError"), (1, "ZeroDivisionError"), (2, "ZeroDivisionError")],
+)
+def test_remainder_failures(
+    remainder_binary: Path, mode: int, exception: str
+) -> None:
+    """
+    title: Remainder guards precede LLVM poison and output publication.
+    parameters:
+      remainder_binary:
+        type: Path
+      mode:
+        type: int
+      exception:
+        type: str
+    """
+    result = subprocess.run(
+        [str(remainder_binary)],
+        input=chr(mode),
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""
+    report = parse_exception_output(result.stderr)
+    assert report is not None
+    assert report.type_name == "builtins.exceptions::class::" + exception
+    assert report.code == "ARX-RUNTIME-ARITHMETIC-001"
 
 
 @pytest.mark.parametrize("optimization", [0, 3])
@@ -279,6 +363,38 @@ assert half == 32768.0
 var small: i8 = 3
 assert choose(small) == 3
 assert choose(value=small, other=2) == 2
+var dividend: i32 = -5
+var divisor: i32 = 100
+assert dividend / divisor == 0
+assert dividend % divisor == -5
+assert dividend % -divisor == -5
+assert -dividend % -divisor == 5
+assert 17 % 5 * 2 == 4
+assert 17 % (5 * 2) == 7
+var unsigned: u64 = 18446744073709551615
+assert unsigned % 10 == 5
+var fraction32: f32 = -5.5
+var fraction64: f64 = 5.5
+assert fraction32 % 2.0 == -1.5
+assert fraction64 % -2.0 == 1.5
+var nan_remainder: f64 = fraction64 % 0.0
+assert not nan_remainder == nan_remainder
+var negzero_remainder: f64 = -4.0 % 2.0
+assert (1.0 / negzero_remainder) < 0.0
+assert not dividend == divisor and true
+assert not not (dividend < divisor)
+assert 3 - -2 == 5
+var seven: i32 = 7
+assert -seven == -7
+assert - -seven == 7
+var minimum8: i8 = -128
+var minimum16: i16 = -32768
+var minimum32: i32 = -2147483648
+var minimum64: i64 = -9223372036854775808
+assert cast(minimum8, i64) == -128
+assert cast(minimum16, i64) == -32768
+assert cast(minimum32, i64) == -2147483648
+assert minimum64 == -9223372036854775808
 """
     definitions = """import math from stdlib
 @<T: i8 | i16 | i32 | i64>
@@ -302,6 +418,10 @@ fn choose(value: T, other: T = 3) -> T:
         "2147483647 + 1",
         "cast(2147483647 + 1, i64)",
         "cast(300, i8)",
+        "1 % 0",
+        "-9223372036854775808 % -1",
+        "-9223372036854775808 / -1",
+        "not 1",
         "wrapping_cast(1.0, i8)",
         "wrapping_add(true, false)",
         "var a: i8 = 1\nvar b: i16 = 2\nmath.min(a,b)",
@@ -348,8 +468,12 @@ def test_unevaluated_operations_do_not_fail(
         tmp_path,
         """var flag: bool = false
 var unused: bool = flag and ((2147483647 + 1) == 0)
+var skip: bool = not flag or (1 % 0 == 0)
+var double_skip: bool = flag and not (1 % 0 == 0)
 if flag:
   2147483647 + 1
+  -9223372036854775808 % -1
+  1 % 0
 else:
   print(42)
 """,

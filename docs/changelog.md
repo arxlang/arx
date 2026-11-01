@@ -35,6 +35,17 @@
 
 ## Unreleased
 
+### Scalar remainder and word negation
+
+- `%` now exposes checked scalar remainder at multiplication/division
+  precedence. Integer division still truncates toward zero; remainder is not
+  Python floor modulo. Collection and nullable remainder remain unsupported.
+- `not` is now an operator rather than an identifier. It binds below comparisons
+  and above `and`/`or`, preserving scalar short-circuiting and eager nullable
+  masks. Symbolic `!` keeps its higher precedence.
+- CI no longer schedules AIX package/language tests. The documentation job has
+  a 30-minute budget for setup, native API extraction, and rendering.
+
 ### Collection loop safety and crash diagnostics
 
 - Literal-list, tensor, and buffer scratch slots no longer accumulate on loop

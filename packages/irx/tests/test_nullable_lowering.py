@@ -211,7 +211,7 @@ def test_owned_series_and_scalar_execute() -> None:
     [
         (
             lambda: astx.BinaryOp("%", column(), astx.LiteralInt32(1)),
-            "supported operator",
+            "non-nullable numeric scalars",
         ),
         (
             lambda: astx.BinaryOp("+", column(), astx.LiteralBoolean(True)),

@@ -49,6 +49,69 @@ def test_binop_precedence() -> None:
     assert parser.bin_op_precedence["-"] == 20
     assert parser.bin_op_precedence["*"] == 40
     assert parser.bin_op_precedence["/"] == 40
+    assert parser.bin_op_precedence["%"] == 40
+
+
+@pytest.mark.parametrize(
+    "source,grouped",
+    [
+        ("not a == b", "!(a == b)"),
+        ("not a < b + c", "!(a < (b + c))"),
+        ("not a and b or c", "((!a) and b) or c"),
+        ("a and not b == c", "a and (!(b == c))"),
+        ("a || not b && c", "a || ((!b) && c)"),
+        ("not not a", "!(!a)"),
+        ("!a == b", "(!a) == b"),
+        ("a = not b == c", "a = (!(b == c))"),
+        ("a + b % c * d / e", "a + (((b % c) * d) / e)"),
+        ("-a % b", "(-a) % b"),
+        ("a * b % c", "(a * b) % c"),
+    ],
+)
+def test_prefix_and_remainder_grouping(source: str, grouped: str) -> None:
+    """
+    title: Word negation binds comparisons while remainder associates left.
+    parameters:
+      source:
+        type: str
+      grouped:
+        type: str
+    """
+    expressions: list[astx.AST] = []
+    for code in (source, grouped):
+        ArxIO.string_to_buffer(code)
+        parser = Parser(Lexer().lex())
+        parser.tokens.get_next_token()
+        expressions.append(parser.parse_expression())
+    assert expressions[0].get_struct(simplified=True) == expressions[
+        1
+    ].get_struct(simplified=True)
+
+
+@pytest.mark.parametrize(
+    "source,message",
+    [
+        ("a + not b", "Parenthesize 'not'"),
+        ("a == not b", "Parenthesize 'not'"),
+        ("!not b", "Parenthesize 'not'"),
+        ("% a", "requires a left operand"),
+        ("a % % b", "requires a left operand"),
+    ],
+)
+def test_invalid_prefix_operand(source: str, message: str) -> None:
+    """
+    title: Reject misplaced word negation and missing remainder operands.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    ArxIO.string_to_buffer(source)
+    parser = Parser(Lexer().lex())
+    parser.tokens.get_next_token()
+    with pytest.raises(ParserException, match=message):
+        parser.parse_expression()
 
 
 def test_parse_float_expr() -> None:

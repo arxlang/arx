@@ -21,6 +21,25 @@ from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
 
 
+def test_scalar_remainder_and_word_not_translate() -> None:
+    """
+    title: Surface operators reach checked remainder and Boolean LLVM plans.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Scalar operators\n```\n"
+        "extern getchar() -> i32\n"
+        "fn main() -> i32:\n"
+        "  var value: i32 = getchar()\n"
+        "  assert not value % 3 == 2\n"
+        "  return value % 3\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "srem i32" in text
+    assert "xor i1" in text
+    assert "ARX-RUNTIME-ARITHMETIC-001" in text
+
+
 @pytest.mark.parametrize("expression", ["café[0]", "café[:1]", "42[0]"])
 def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     """
