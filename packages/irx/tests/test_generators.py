@@ -570,3 +570,42 @@ def test_generator_return_runs_nonsuspending_finally() -> None:
     assert result.returncode == 1
     assert result.stdout.strip() == "done"
     assert result.stderr == ""
+
+
+@pytest.mark.parametrize("iteration", [False, True])
+def test_owned_string_list_access_in_generators_is_diagnosed(
+    iteration: bool,
+) -> None:
+    """
+    title: List element copies cannot silently escape generator frame cleanup.
+    parameters:
+      iteration:
+        type: bool
+    """
+    if iteration:
+        statement: astx.AST = astx.ForInLoopStmt(
+            astx.Identifier("word"),
+            astx.Identifier("values"),
+            _block_of(astx.Identifier("word")),
+        )
+    else:
+        statement = astx.ListIndex(
+            astx.Identifier("values"), astx.LiteralInt32(0)
+        )
+    module = astx.Module()
+    module.block.append(
+        astx.FunctionDef(
+            astx.FunctionPrototype(
+                "words",
+                astx.Arguments(
+                    astx.Argument("values", astx.ListType([astx.String()]))
+                ),
+                astx.GeneratorType(astx.Int32()),
+            ),
+            _block_of(statement, astx.YieldStmt(astx.LiteralInt32(1))),
+        )
+    )
+    with pytest.raises(
+        SemanticError, match=r"generators require.*lifecycle cleanup"
+    ):
+        analyze(module)

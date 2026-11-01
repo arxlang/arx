@@ -1019,9 +1019,10 @@ def is_assignable(
         value_members = [
             cast(astx.DataType, member) for member in value.element_types
         ]
+        # Mutable storage cannot widen in place at a borrow boundary.
         return all(
             any(
-                is_assignable(target_member, value_member)
+                same_type(target_member, value_member)
                 for target_member in target_members
             )
             for value_member in value_members

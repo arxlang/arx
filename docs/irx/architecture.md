@@ -279,7 +279,7 @@ during semantic analysis.
 
 IRx also exposes backend-neutral query nodes for common collection operations:
 
-- `CollectionLength(base)` returns the logical length as `Int32`
+- `CollectionLength(base)` returns the logical length as `Int64`
 - `CollectionIsEmpty(base)` returns a Boolean emptiness check
 - `CollectionContains(base, value)` checks list, tuple, or set values and dict
   keys

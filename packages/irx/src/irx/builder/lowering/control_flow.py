@@ -23,6 +23,7 @@ from irx.analysis.resolved_nodes import (
 from irx.analysis.types import (
     is_boolean_type,
     is_float_type,
+    is_string_type,
     is_unsigned_type,
 )
 from irx.builder.core import (
@@ -662,6 +663,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             break_target=exit_bb,
             continue_target=advance_bb,
         ):
+            iteration_depth = len(self.cleanup_stack)
             self._llvm.ir_builder.position_at_start(body_bb)
             item_value = cast(Any, self)._load_list_element_at_index(
                 base=node.iterable,
@@ -673,7 +675,14 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 source_type=iteration.element_type,
                 target_type=target_type,
             )
+            if is_string_type(iteration.element_type):
+                item_value = self._copy_string_to_heap(node.target, item_value)
             self._llvm.ir_builder.store(item_value, target_addr)
+            if is_string_type(iteration.element_type):
+                cast(Any, self)._register_owned_string_cleanup(
+                    node.target,
+                    target_addr,
+                )
             with self._temporary_named_value(
                 target_key,
                 target_addr,
@@ -681,7 +690,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             ):
                 self._discard_child_results(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
+                self._emit_active_cleanups(iteration_depth)
                 self._llvm.ir_builder.branch(advance_bb)
+            del self.cleanup_stack[iteration_depth:]
 
         self._llvm.ir_builder.position_at_start(advance_bb)
         next_index = self._llvm.ir_builder.add(

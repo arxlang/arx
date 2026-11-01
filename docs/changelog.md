@@ -1,6 +1,17 @@
 # Release Notes
 ---
 
+## Unreleased
+
+- **Breaking:** Bracket expressions construct owned lists, including calls and
+  arithmetic; tensor initialization requires an explicit fixed-shape target.
+  ASTx exposes `ListExpr` rather than relaxing `LiteralList`.
+- **Breaking:** Collection length queries and the new `len` builtin return
+  `i64`. Mutable list arguments no longer implicitly widen element types.
+- List construction rolls back on failure; string elements are copied and
+  dropped independently. The internal native list ABI adds an element-kind
+  field; rebuild native producers and consumers together.
+
 # [1.25.0](https://github.com/arxlang/arx/compare/1.24.1...1.25.0) (2026-10-26)
 
 

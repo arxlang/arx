@@ -749,3 +749,74 @@ def test_raw_and_checked_externs_share_native_feature() -> None:
     assert 'call void @"irx_rb_schema_release"(i8*' in text
     assert 'call i32 @"irx_rb_api_schema_count"(i8*' in text
     assert 'declare external i32 @"irx_rb_api_schema_count"(i8*' in text
+
+
+@pytest.mark.parametrize("comprehension", [False, True])
+def test_partial_owned_list_return_rolls_back(
+    tmp_path: Path, comprehension: bool
+) -> None:
+    """
+    title: Failure drops partial returns even when ownership will move.
+    parameters:
+      tmp_path:
+        type: Path
+      comprehension:
+        type: bool
+    """
+    item = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "item",
+            astx.Arguments(astx.Argument("index", astx.Int32())),
+            astx.String(),
+        ),
+        block(
+            astx.IfStmt(
+                astx.BinaryOp(
+                    "==", astx.Identifier("index"), astx.LiteralInt32(1)
+                ),
+                block(raised()),
+            ),
+            astx.FunctionReturn(astx.LiteralString("owned")),
+        ),
+    )
+    if comprehension:
+        expression: astx.Expr = astx.ListComprehension(
+            astx.FunctionCall("item", [astx.Identifier("index")]),
+            [
+                astx.ComprehensionClause(
+                    astx.Identifier("index"),
+                    astx.LiteralList(
+                        [astx.LiteralInt32(0), astx.LiteralInt32(1)]
+                    ),
+                )
+            ],
+        )
+    else:
+        expression = astx.ListExpr(
+            [
+                astx.FunctionCall("item", [astx.LiteralInt32(0)]),
+                astx.FunctionCall("item", [astx.LiteralInt32(1)]),
+            ]
+        )
+    list_type = astx.ListType([astx.String()])
+    make = function(
+        "make",
+        block(
+            astx.VariableDeclaration("prepared", list_type, value=expression),
+            astx.FunctionReturn(astx.Identifier("prepared")),
+        )
+        if comprehension
+        else block(astx.FunctionReturn(expression)),
+        list_type,
+    )
+    main = function(
+        "main",
+        block(
+            caught(block(astx.FunctionCall("make", [])), astx.LiteralInt32(0)),
+            astx.FunctionReturn(astx.LiteralInt32(1)),
+        ),
+    )
+    module = astx.Module(name="partial_list")
+    for declaration in (item, make, main):
+        module.block.append(declaration)
+    assert_executed_list_cleanups(module, tmp_path, expected=1)

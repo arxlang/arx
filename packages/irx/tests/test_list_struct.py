@@ -18,6 +18,7 @@ def test_collections_package_reexports_list_helpers() -> None:
     package = importlib.import_module("astx.collections")
     list_module = importlib.import_module("astx.collections.list")
 
+    assert package.ListExpr is list_module.ListExpr is astx.ListExpr
     assert package.ListCreate is list_module.ListCreate is astx.ListCreate
     assert package.ListIndex is list_module.ListIndex is astx.ListIndex
     assert package.ListAppend is list_module.ListAppend is astx.ListAppend
@@ -110,10 +111,10 @@ def test_list_length_get_struct_shapes() -> None:
     assert simplified["ListLength"] == {"base": base.get_struct(True)}
 
 
-def test_list_length_uses_int32_language_type() -> None:
+def test_list_length_uses_int64_language_type() -> None:
     """
-    title: ListLength should expose the current Int32 language contract.
+    title: ListLength should expose the Int64 language contract.
     """
     node = astx.ListLength(astx.Identifier("items"))
 
-    assert isinstance(node.type_, astx.Int32)
+    assert isinstance(node.type_, astx.Int64)

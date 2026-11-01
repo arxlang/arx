@@ -134,18 +134,22 @@ class VariableVisitorMixin(ClassVisitorMixin):
 
     def _register_owned_string_cleanup(
         self,
-        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        node: astx.VariableDeclaration
+        | astx.InlineVariableDeclaration
+        | astx.Identifier,
         string_ptr: ir.Value,
     ) -> None:
         """
         title: Register lexical cleanup for one semantically owned string.
         parameters:
           node:
-            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+            type: >-
+              astx.VariableDeclaration | astx.InlineVariableDeclaration |
+              astx.Identifier
           string_ptr:
             type: ir.Value
         """
-        if not is_string_type(node.type_):
+        if not is_string_type(self._resolved_ast_type(node)):
             return
         ownership = resource_ownership(node)
         if ownership is None:

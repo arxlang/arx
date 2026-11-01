@@ -77,7 +77,7 @@ def build_list_runtime_feature() -> RuntimeFeature:
                 LIST_STATUS_MESSAGE_SYMBOL,
             ),
             "limitations": (
-                "scalar element storage only",
+                "numeric, Boolean, and copied string element storage only",
                 "borrowed and static list values cannot be moved into owned "
                 "locals",
                 "owned list locals in generators are not supported yet",
@@ -102,6 +102,7 @@ def _list_llvm_type(visitor: VisitorProtocol) -> ir.LiteralStructType:
             visitor._llvm.INT64_TYPE,
             visitor._llvm.INT64_TYPE,
             visitor._llvm.INT64_TYPE,
+            visitor._llvm.INT32_TYPE,
         ]
     )
 

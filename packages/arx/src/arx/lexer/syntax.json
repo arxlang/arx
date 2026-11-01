@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.4.0",
+  "syntax_pack_version": "0.5.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -289,6 +289,7 @@
       "datetime",
       "isinstance",
       "is_null",
+      "len",
       "fill_null",
       "open",
       "print",

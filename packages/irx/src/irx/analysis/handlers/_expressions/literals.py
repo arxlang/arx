@@ -43,6 +43,7 @@ from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
     OwnershipKind,
     ResolvedCollectionMethod,
+    ResolvedGeneratorFunction,
 )
 from irx.analysis.types import (
     common_numeric_type,
@@ -51,6 +52,7 @@ from irx.analysis.types import (
     is_boolean_type,
     is_integer_type,
     is_numeric_type,
+    is_string_type,
     same_type,
 )
 from irx.analysis.validation import (
@@ -62,6 +64,7 @@ from irx.analysis.validation import (
 from irx.builtins.collections.list import (
     list_element_type,
     list_has_concrete_element_type,
+    list_supports_owned_element,
 )
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -170,6 +173,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             clause.target,
             iteration.element_type,
             kind="comprehension",
+            iteration_kind=iteration.kind,
         )
         resolved_iteration = replace(iteration, target_symbol=symbol)
         self._set_iteration(clause.iterable, resolved_iteration)
@@ -568,7 +572,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.CollectionLength
         """
-        return_type = astx.Int32()
+        return_type = astx.Int64()
         base_type = self._validate_collection_query_base(
             node,
             node.base,
@@ -876,6 +880,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
+        if not list_supports_owned_element(node.element_type):
+            self.context.diagnostics.add(
+                "owned lists support numeric, Boolean, and string "
+                "elements only",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
         self._set_resource_ownership(
             node,
             list_resource_ownership(OwnershipKind.OWNED),
@@ -914,6 +926,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 "list comprehensions cannot produce owning list elements "
                 "because nested ownership and destruction are not supported",
                 node=node.element,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+        if not list_supports_owned_element(element_type):
+            self.context.diagnostics.add(
+                "owned lists support numeric, Boolean, and string "
+                "elements only",
+                node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
@@ -979,6 +999,37 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             return
         self._set_type(node, astx.DictType(key_type, value_type))
 
+    @private
+    def resolve_list_read(
+        self, node: astx.AST, element_type: astx.DataType | None
+    ) -> None:
+        """
+        title: Resolve copied string results without borrowing list storage.
+        parameters:
+          node:
+            type: astx.AST
+          element_type:
+            type: astx.DataType | None
+        """
+        self._set_type(node, element_type)
+        self._semantic(node).resource_ownership = None
+        if not is_string_type(element_type):
+            return
+        function = self.context.current_function
+        if function is not None and isinstance(
+            function.signature.metadata.get("generator"),
+            ResolvedGeneratorFunction,
+        ):
+            self.context.diagnostics.add(
+                "owned string list reads in generators require "
+                "lifecycle cleanup",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+        self._set_resource_ownership(
+            node, string_resource_ownership(OwnershipKind.OWNED)
+        )
+
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListIndex) -> None:
         """
@@ -1013,7 +1064,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, list_element_type(value_type))
+        self.resolve_list_read(node, list_element_type(value_type))
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListLength) -> None:
@@ -1028,7 +1079,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             node.base,
             context="list length",
         ):
-            self._set_type(node, astx.Int32())
+            self._set_type(node, astx.Int64())
             return
 
         if not isinstance(self._expr_type(node.base), astx.ListType):
@@ -1037,7 +1088,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
+        self._set_type(node, astx.Int64())
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListAppend) -> None:
@@ -1164,7 +1215,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-            self._set_type(node, list_element_type(value_type))
+            self.resolve_list_read(node, list_element_type(value_type))
             return
         if not isinstance(node.value, astx.LiteralDict):
             self.context.diagnostics.add(

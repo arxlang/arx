@@ -46,9 +46,6 @@ from arx.tensor import (
     binding_from_type,
     is_tensor_type,
 )
-from arx.tensor import (
-    coerce_expression as coerce_tensor_expression,
-)
 
 
 class DeclarationParserMixin(ParserMixinBase):
@@ -76,7 +73,7 @@ class DeclarationParserMixin(ParserMixinBase):
           type: astx.Expr
         """
         return coerce_dataframe_expression(
-            coerce_tensor_expression(expr, target_type, context=context),
+            expr,
             target_type,
             context=context,
         )

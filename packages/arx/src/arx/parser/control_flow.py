@@ -33,9 +33,6 @@ from arx.tensor import (
     binding_from_type,
     is_tensor_type,
 )
-from arx.tensor import (
-    coerce_expression as coerce_tensor_expression,
-)
 
 
 class ControlFlowParserMixin(ParserMixinBase):
@@ -375,11 +372,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         try:
             raw_value = cast(astx.Expr, self.parse_expression())
             value = coerce_dataframe_expression(
-                coerce_tensor_expression(
-                    raw_value,
-                    var_type,
-                    context=f"inline variable '{name}'",
-                ),
+                raw_value,
                 var_type,
                 context=f"inline variable '{name}'",
             )
@@ -423,11 +416,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             try:
                 raw_value = cast(astx.Expr, self.parse_expression())
                 value = coerce_dataframe_expression(
-                    coerce_tensor_expression(
-                        raw_value,
-                        var_type,
-                        context=f"variable '{name}'",
-                    ),
+                    raw_value,
                     var_type,
                     context=f"variable '{name}'",
                 )
@@ -527,11 +516,7 @@ class ControlFlowParserMixin(ParserMixinBase):
         if return_type is not None:
             try:
                 value = coerce_dataframe_expression(
-                    coerce_tensor_expression(
-                        cast(astx.Expr, value),
-                        return_type,
-                        context="return value",
-                    ),
+                    cast(astx.Expr, value),
                     return_type,
                     context="return value",
                 )

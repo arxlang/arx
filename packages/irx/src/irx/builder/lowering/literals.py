@@ -635,6 +635,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             cast(Any, self)._lower_list_subscript(
                 base=node.value,
                 index_node=node.index,
+                result_node=node,
             )
             return
 

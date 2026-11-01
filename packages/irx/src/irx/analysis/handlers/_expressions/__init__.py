@@ -16,6 +16,7 @@ from irx.analysis.handlers._expressions.classes import (
 from irx.analysis.handlers._expressions.dataframes import (
     ExpressionDataFrameVisitorMixin,
 )
+from irx.analysis.handlers._expressions.lists import ExpressionListVisitorMixin
 from irx.analysis.handlers._expressions.literals import (
     ExpressionLiteralVisitorMixin,
 )
@@ -46,6 +47,7 @@ class ExpressionVisitorMixin(
     ExpressionArrayVisitorMixin,
     ExpressionTensorBufferVisitorMixin,
     ExpressionLiteralVisitorMixin,
+    ExpressionListVisitorMixin,
 ):
     """
     title: Expression-oriented semantic visitors.

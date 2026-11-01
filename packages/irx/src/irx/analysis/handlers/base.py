@@ -28,10 +28,14 @@ from irx.analysis.numeric_literals import (
     contextualize_literal,
     resolve_numeric_literal,
 )
-from irx.analysis.ownership import resource_ownership
+from irx.analysis.ownership import (
+    resource_ownership,
+    string_resource_ownership,
+)
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import (
     CallResolution,
+    IterationKind,
     OwnershipKind,
     ResolvedAssignment,
     ResolvedBaseClassFieldAccess,
@@ -64,6 +68,7 @@ from irx.analysis.types import (
     contains_file_type,
     display_type_name,
     is_assignable,
+    is_string_type,
     union_storage_type,
 )
 from irx.base.visitors.base import BaseVisitor
@@ -241,6 +246,7 @@ class SemanticVisitorMixinTypingBase:
         element_type: astx.DataType,
         *,
         kind: str,
+        iteration_kind: IterationKind,
     ) -> SemanticSymbol | None:
         """
         title: Declare one loop or comprehension target.
@@ -251,6 +257,8 @@ class SemanticVisitorMixinTypingBase:
             type: astx.DataType
           kind:
             type: str
+          iteration_kind:
+            type: IterationKind
         returns:
           type: SemanticSymbol | None
         """
@@ -1148,6 +1156,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         element_type: astx.DataType,
         *,
         kind: str,
+        iteration_kind: IterationKind,
     ) -> SemanticSymbol | None:
         """
         title: Declare one loop or comprehension target.
@@ -1161,9 +1170,30 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: astx.DataType
           kind:
             type: str
+          iteration_kind:
+            type: IterationKind
         returns:
           type: SemanticSymbol | None
         """
+        self._semantic(target).resource_ownership = None
+        copy_string = iteration_kind is IterationKind.LIST and is_string_type(
+            element_type
+        )
+        function = self.context.current_function
+        if (
+            copy_string
+            and function is not None
+            and isinstance(
+                function.signature.metadata.get("generator"),
+                ResolvedGeneratorFunction,
+            )
+        ):
+            self.context.diagnostics.add(
+                "owned string list iteration in generators requires "
+                "lifecycle cleanup",
+                node=target,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         if isinstance(target, astx.Identifier):
             symbol = self.registry.declare_local(
                 target.name,
@@ -1173,6 +1203,14 @@ class SemanticAnalyzerCore(BaseVisitor):
                 kind=kind,
             )
             self._set_symbol(target, symbol)
+            if copy_string:
+                self._set_resource_ownership(
+                    target,
+                    string_resource_ownership(
+                        OwnershipKind.OWNED,
+                        owner_symbol_id=symbol.symbol_id,
+                    ),
+                )
             return symbol
 
         if not isinstance(target, astx.InlineVariableDeclaration):
@@ -1204,6 +1242,14 @@ class SemanticAnalyzerCore(BaseVisitor):
             kind=kind,
         )
         self._set_symbol(target, symbol)
+        if copy_string:
+            self._set_resource_ownership(
+                target,
+                string_resource_ownership(
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=symbol.symbol_id,
+                ),
+            )
         return symbol
 
     def _set_function(

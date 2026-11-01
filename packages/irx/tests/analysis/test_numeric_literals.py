@@ -8,14 +8,23 @@ import math
 import struct
 
 from decimal import Decimal, localcontext
+from itertools import permutations
 from typing import cast
 
 import astx
 import pytest
 
-from irx.analysis import SemanticError, SemanticInfo, analyze
+from irx.analysis import (
+    OwnershipKind,
+    SemanticError,
+    SemanticInfo,
+    analyze,
+    resource_ownership,
+)
+from irx.analysis.class_lifecycle import lifecycle_children
 from irx.analysis.float_literals import rounded_float
 from irx.analysis.numeric_literals import numeric_constant
+from irx.builtins.collections.list import list_element_type
 
 
 @pytest.mark.parametrize(
@@ -197,3 +206,108 @@ def test_rounding_rejects_unsupported_inputs() -> None:
         rounded_float(Decimal(1), astx.Int32())
     with pytest.raises(ValueError, match="finite"):
         rounded_float(Decimal("NaN"), astx.Float32())
+
+
+@pytest.mark.parametrize(
+    ("elements", "expected"),
+    [
+        (
+            [astx.LiteralInteger(1), astx.LiteralInteger(7693600637)],
+            astx.Int64,
+        ),
+        ([astx.LiteralInt8(-1), astx.LiteralUInt8(255)], astx.Int16),
+        (
+            [
+                astx.LiteralInt32(1),
+                astx.LiteralUInt32(2),
+                astx.LiteralFloat32(0.5),
+            ],
+            astx.Float64,
+        ),
+        ([astx.LiteralInt16(1), astx.LiteralFloat32(0.5)], astx.Float32),
+        ([astx.LiteralString("ab"), astx.LiteralUTF8Char("é")], astx.String),
+    ],
+)
+def test_list_inference_uses_every_domain(
+    elements: list[astx.DataType], expected: type[astx.DataType]
+) -> None:
+    """
+    title: Every permutation chooses the same lossless list element domain.
+    parameters:
+      elements:
+        type: list[astx.DataType]
+      expected:
+        type: type[astx.DataType]
+    """
+
+    for permutation in permutations(elements):
+        expression = astx.ListExpr(list(permutation))
+        assert list(lifecycle_children(expression)) == list(permutation)
+        analyze(expression)
+        info = cast(SemanticInfo, getattr(expression, "semantic"))
+        assert type(list_element_type(info.resolved_type)) is expected
+        ownership = resource_ownership(expression)
+        assert ownership is not None and ownership.kind is OwnershipKind.OWNED
+
+
+@pytest.mark.parametrize(
+    "elements",
+    [
+        [],
+        [astx.LiteralInt64(1), astx.LiteralUInt64(2)],
+        [astx.LiteralInt64(1), astx.LiteralFloat64(0.5)],
+        [astx.LiteralBoolean(True), astx.LiteralInt32(1)],
+        [astx.LiteralString("one"), astx.LiteralInt32(1)],
+        [astx.ListExpr([astx.LiteralInt32(1)])],
+    ],
+)
+def test_list_inference_rejects_ambiguous_or_unsupported_domains(
+    elements: list[astx.DataType],
+) -> None:
+    """
+    title: Empty, lossy, heterogeneous, and nested ownership fails in analysis.
+    parameters:
+      elements:
+        type: list[astx.DataType]
+    """
+    with pytest.raises(SemanticError, match=r"concrete element|nested owned"):
+        analyze(astx.ListExpr(elements))
+
+
+def test_fresh_index_context_does_not_persist_between_analyses() -> None:
+    """
+    title: Destination context reaches fresh elements without mutation.
+    """
+    expression = astx.ListExpr([astx.LiteralInteger(1)])
+    index = astx.ListIndex(expression, astx.LiteralInteger(0))
+    analyze(astx.VariableDeclaration("value", astx.Int64(), value=index))
+    info = cast(SemanticInfo, getattr(expression, "semantic"))
+    assert isinstance(info.resolved_type, astx.ListType)
+    assert isinstance(info.resolved_type.element_types[0], astx.Int64)
+    analyze(expression)
+    assert isinstance(info.resolved_type, astx.ListType)
+    assert isinstance(info.resolved_type.element_types[0], astx.Int32)
+    assert info.literal_context is None
+
+
+@pytest.mark.parametrize("elements", [[1, 7693600637], [7693600637, 1]])
+def test_narrow_list_context_checks_all_exact_values(
+    elements: list[int],
+) -> None:
+    """
+    title: Explicit narrow collection domains reject large values in any order.
+    parameters:
+      elements:
+        type: list[int]
+    """
+    expression = astx.ListExpr(
+        [astx.LiteralInteger(item) for item in elements]
+    )
+    with pytest.raises(SemanticError, match="representable"):
+        analyze(
+            astx.VariableDeclaration(
+                "values",
+                astx.ListType([astx.Int32()]),
+                value=expression,
+            )
+        )

@@ -18,6 +18,7 @@ from astx.collections.common import (
 from astx.collections.common import CollectionLength as CollectionLength
 from astx.collections.list import ListAppend as ListAppend
 from astx.collections.list import ListCreate as ListCreate
+from astx.collections.list import ListExpr as ListExpr
 from astx.collections.list import ListIndex as ListIndex
 from astx.collections.list import ListLength as ListLength
 
@@ -29,6 +30,7 @@ __all__ = (
     "CollectionLength",
     "ListAppend",
     "ListCreate",
+    "ListExpr",
     "ListIndex",
     "ListLength",
 )

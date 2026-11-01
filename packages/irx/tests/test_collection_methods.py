@@ -93,7 +93,7 @@ def _run_workspace_build(
 
 def test_literal_collection_lengths() -> None:
     """
-    title: Literal collection length queries should lower as Int32 values.
+    title: Collection lengths narrow explicitly at the i32 boundary.
     """
     builder = Builder()
     expected_total = 8
@@ -101,37 +101,55 @@ def test_literal_collection_lengths() -> None:
         astx.FunctionReturn(
             astx.BinaryOp(
                 "+",
-                astx.CollectionLength(
-                    astx.LiteralList([astx.LiteralInt32(1)])
+                astx.Cast(
+                    astx.CollectionLength(
+                        astx.LiteralList([astx.LiteralInt32(1)])
+                    ),
+                    astx.Int32(),
                 ),
                 astx.BinaryOp(
                     "+",
-                    astx.CollectionLength(
-                        astx.LiteralTuple(
-                            (
-                                astx.LiteralInt32(1),
-                                astx.LiteralInt32(2),
+                    astx.Cast(
+                        astx.CollectionLength(
+                            astx.LiteralTuple(
+                                (
+                                    astx.LiteralInt32(1),
+                                    astx.LiteralInt32(2),
+                                )
                             )
-                        )
+                        ),
+                        astx.Int32(),
                     ),
                     astx.BinaryOp(
                         "+",
-                        astx.CollectionLength(
-                            astx.LiteralSet(
-                                {
-                                    astx.LiteralInt32(1),
-                                    astx.LiteralInt32(2),
-                                }
-                            )
+                        astx.Cast(
+                            astx.CollectionLength(
+                                astx.LiteralSet(
+                                    {
+                                        astx.LiteralInt32(1),
+                                        astx.LiteralInt32(2),
+                                    }
+                                )
+                            ),
+                            astx.Int32(),
                         ),
-                        astx.CollectionLength(
-                            astx.LiteralDict(
-                                {
-                                    astx.LiteralInt32(1): astx.LiteralInt32(2),
-                                    astx.LiteralInt32(3): astx.LiteralInt32(4),
-                                    astx.LiteralInt32(5): astx.LiteralInt32(6),
-                                }
-                            )
+                        astx.Cast(
+                            astx.CollectionLength(
+                                astx.LiteralDict(
+                                    {
+                                        astx.LiteralInt32(
+                                            1
+                                        ): astx.LiteralInt32(2),
+                                        astx.LiteralInt32(
+                                            3
+                                        ): astx.LiteralInt32(4),
+                                        astx.LiteralInt32(
+                                            5
+                                        ): astx.LiteralInt32(6),
+                                    }
+                                )
+                            ),
+                            astx.Int32(),
                         ),
                     ),
                 ),
@@ -432,7 +450,9 @@ def test_collection_count_rejects_dict() -> None:
         (
             astx.SetType(astx.Int32()),
             astx.LiteralSet({astx.LiteralInt32(1)}),
-            astx.CollectionLength(astx.Identifier("items")),
+            astx.Cast(
+                astx.CollectionLength(astx.Identifier("items")), astx.Int32()
+            ),
             astx.Int32(),
         ),
         (

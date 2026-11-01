@@ -13,7 +13,6 @@ from typing import cast
 
 import astx
 
-from irx.analysis.numeric_literals import default_numeric_literal_type
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.buffer import BufferMutability, BufferOwnership, buffer_view_flags
 from irx.builtins.collections.tensor import (
@@ -212,33 +211,6 @@ def attach_binding(node: astx.AST, binding: TensorBinding) -> None:
     info.extras[TENSOR_FLAGS_EXTRA] = binding.flags
 
 
-def coerce_expression(
-    expr: astx.Expr,
-    target_type: astx.DataType,
-    *,
-    context: str,
-) -> astx.Expr:
-    """
-    title: Coerce one parsed expression into one declared tensor type.
-    parameters:
-      expr:
-        type: astx.Expr
-      target_type:
-        type: astx.DataType
-      context:
-        type: str
-    returns:
-      type: astx.Expr
-    """
-    if not is_tensor_type(target_type):
-        return expr
-    if isinstance(expr, astx.TensorLiteral):
-        return expr
-    if not isinstance(expr, astx.Literal):
-        return expr
-    return build_literal_from_literal(expr, target_type, context=context)
-
-
 def default_value(target_type: astx.DataType) -> astx.TensorLiteral:
     """
     title: Build one default tensor literal for one declared type.
@@ -255,75 +227,6 @@ def default_value(target_type: astx.DataType) -> astx.TensorLiteral:
     count = prod(binding.layout.shape)
     scalar = _zero_literal(binding.element_type)
     values = tuple(_clone_scalar_literal(scalar) for _ in range(count))
-    return _literal_from_values(binding, values)
-
-
-def build_literal_from_literal(
-    expr: astx.Literal,
-    target_type: astx.DataType,
-    *,
-    context: str,
-) -> astx.TensorLiteral:
-    """
-    title: Build one tensor literal from one nested literal value.
-    parameters:
-      expr:
-        type: astx.Literal
-      target_type:
-        type: astx.DataType
-      context:
-        type: str
-    returns:
-      type: astx.TensorLiteral
-    """
-    binding = binding_from_type(target_type)
-    if binding is None:
-        if not is_tensor_type(target_type):
-            raise ValueError("tensor literal target must be a tensor type")
-        raise ValueError(
-            "tensor literal target requires a static tensor shape"
-        )
-
-    shape, values = _flatten_literal(expr)
-    if shape != binding.layout.shape:
-        raise ValueError(
-            f"{context} has shape {_format_shape(shape)} but the declared "
-            f"tensor shape is {_format_shape(binding.layout.shape)}"
-        )
-
-    for value in values:
-        _validate_scalar_literal(value, binding.element_type, context=context)
-
-    return _literal_from_values(binding, values)
-
-
-def infer_literal(expr: astx.Literal) -> astx.TensorLiteral:
-    """
-    title: Infer one tensor literal directly from one literal value.
-    parameters:
-      expr:
-        type: astx.Literal
-    returns:
-      type: astx.TensorLiteral
-    """
-    shape, values = _flatten_literal(expr)
-    if not values:
-        raise ValueError(
-            "cannot infer a tensor element type from an empty literal"
-        )
-
-    element_type = _infer_element_type(values[0])
-    for value in values:
-        _validate_scalar_literal(
-            value,
-            element_type,
-            context="tensor literal",
-        )
-
-    binding = cast(
-        TensorBinding,
-        binding_from_type(tensor_type(element_type, shape)),
-    )
     return _literal_from_values(binding, values)
 
 
@@ -414,130 +317,6 @@ def _dtype_handle(element_type: astx.DataType) -> int:
     return handle.address
 
 
-def _flatten_literal(
-    expr: astx.Literal,
-) -> tuple[tuple[int, ...], tuple[astx.Literal, ...]]:
-    """
-    title: Flatten one nested tensor literal.
-    parameters:
-      expr:
-        type: astx.Literal
-    returns:
-      type: tuple[tuple[int, Ellipsis], tuple[astx.Literal, Ellipsis]]
-    """
-    if not isinstance(expr, (astx.LiteralList, astx.LiteralTuple)):
-        return (), (expr,)
-
-    if not expr.elements:
-        return (0,), ()
-
-    child_shapes: list[tuple[int, ...]] = []
-    child_values: list[astx.Literal] = []
-    for element in expr.elements:
-        if not isinstance(element, astx.Literal):
-            raise ValueError("tensor literals support only literal elements")
-        child_shape, flat_values = _flatten_literal(element)
-        child_shapes.append(child_shape)
-        child_values.extend(flat_values)
-
-    first_shape = child_shapes[0]
-    if any(shape != first_shape for shape in child_shapes[1:]):
-        raise ValueError(
-            "tensor literals must use a regular rectangular shape"
-        )
-
-    return (len(expr.elements), *first_shape), tuple(child_values)
-
-
-def _infer_element_type(value: astx.Literal) -> astx.DataType:
-    """
-    title: Infer one tensor scalar type from one literal.
-    parameters:
-      value:
-        type: astx.Literal
-    returns:
-      type: astx.DataType
-    """
-    if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
-        return default_numeric_literal_type(value)
-    if isinstance(value, (astx.LiteralInt8, astx.LiteralUTF8Char)):
-        return astx.Int8()
-    if isinstance(value, astx.LiteralInt16):
-        return astx.Int16()
-    if isinstance(value, astx.LiteralInt32):
-        return astx.Int32()
-    if isinstance(value, astx.LiteralInt64):
-        return astx.Int64()
-    if isinstance(value, astx.LiteralFloat32):
-        return astx.Float32()
-    if isinstance(value, astx.LiteralFloat64):
-        return astx.Float64()
-    raise ValueError(
-        "tensor literals currently support only char, integer, and "
-        "floating-point scalars"
-    )
-
-
-def _validate_scalar_literal(
-    value: astx.Literal,
-    element_type: astx.DataType,
-    *,
-    context: str,
-) -> None:
-    """
-    title: Validate one scalar literal against one tensor element type.
-    parameters:
-      value:
-        type: astx.Literal
-      element_type:
-        type: astx.DataType
-      context:
-        type: str
-    """
-    if isinstance(
-        element_type,
-        (astx.Int8, astx.Int16, astx.Int32, astx.Int64),
-    ):
-        if isinstance(
-            value,
-            (
-                astx.LiteralUTF8Char,
-                astx.LiteralInt8,
-                astx.LiteralInt16,
-                astx.LiteralInt32,
-                astx.LiteralInteger,
-                astx.LiteralInt64,
-            ),
-        ):
-            return
-        raise ValueError(
-            f"{context} expects integer elements compatible with "
-            f"{type(element_type).__name__}"
-        )
-
-    if isinstance(element_type, (astx.Float32, astx.Float64)):
-        if isinstance(
-            value,
-            (
-                astx.LiteralInt8,
-                astx.LiteralInt16,
-                astx.LiteralInt32,
-                astx.LiteralInteger,
-                astx.LiteralInt64,
-                astx.LiteralFloat32,
-                astx.LiteralFloat,
-                astx.LiteralFloat64,
-            ),
-        ):
-            return
-        raise ValueError(
-            f"{context} expects numeric elements compatible with "
-            f"{type(element_type).__name__}"
-        )
-
-    raise ValueError("unsupported tensor element type")
-
-
 def _zero_literal(element_type: astx.DataType) -> astx.Literal:
     """
     title: Return one zero-value scalar literal for one tensor type.
@@ -590,28 +369,11 @@ def _clone_scalar_literal(value: astx.Literal) -> astx.Literal:
     raise ValueError("unsupported tensor element type")
 
 
-def _format_shape(shape: tuple[int, ...]) -> str:
-    """
-    title: Render one tensor shape for user-facing diagnostics.
-    parameters:
-      shape:
-        type: tuple[int, Ellipsis]
-    returns:
-      type: str
-    """
-    if not shape:
-        return "()"
-    return "(" + ", ".join(str(dim) for dim in shape) + ")"
-
-
 __all__ = [
     "TensorBinding",
     "attach_binding",
     "binding_from_type",
-    "build_literal_from_literal",
-    "coerce_expression",
     "default_value",
-    "infer_literal",
     "is_tensor_type",
     "literal_values",
     "runtime_tensor_type",
