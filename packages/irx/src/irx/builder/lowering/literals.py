@@ -439,7 +439,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             return
 
         arr_ty = ir.ArrayType(target_ty, count)
-        alloca = self._llvm.ir_builder.alloca(arr_ty, name="list_tmp")
+        alloca = self.create_entry_block_alloca("list_tmp", arr_ty)
         zero = ir.Constant(self._llvm.INT32_TYPE, 0)
         for index, value in enumerate(coerced):
             idx = ir.Constant(self._llvm.INT32_TYPE, index)

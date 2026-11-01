@@ -148,6 +148,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         )
         node.type_ = astx.TensorType(node.element_type, shape=shape)
         self._set_type(node, node.type_)
+        self._semantic(node).tensor_temporary_owner = True
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TensorView) -> None:
@@ -306,6 +307,9 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         self._semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
         self._semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
         self._set_type(node, node.type_)
+        self._semantic(node).tensor_temporary_owner = self._semantic(
+            node.base
+        ).tensor_temporary_owner
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.TensorIndex) -> None:

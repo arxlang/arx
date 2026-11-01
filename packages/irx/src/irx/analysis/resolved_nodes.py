@@ -2191,6 +2191,12 @@ class SemanticInfo:
         type: ResolvedCollectionMethod | None
       resource_ownership:
         type: ResourceOwnership | None
+      tensor_temporary_owner:
+        type: bool
+        description: >-
+          This tensor expression constructs a fresh owner, possibly through
+          views. Scalar consumers release it after use; named tensors and
+          explicit retain/release operations keep their existing lifetime.
       lifecycle_self:
         type: bool
       lifecycle_field_store:
@@ -2250,6 +2256,7 @@ class SemanticInfo:
     resolved_iteration: ResolvedIteration | None = None
     resolved_collection_method: ResolvedCollectionMethod | None = None
     resource_ownership: ResourceOwnership | None = None
+    tensor_temporary_owner: bool = False
     lifecycle_self: bool = False
     lifecycle_field_store: bool = False
     resolved_resource_store: ResourceOwnership | None = None

@@ -104,6 +104,16 @@ locals and non-transferred temporaries, emits cleanup on normal block
 fallthrough, return, `break`, and `continue`, excludes an owner moved through a
 return, and retains cleanup for the caller that receives the result.
 
+## Tensor scalar-consumer temporaries
+
+Analysis identifies fresh tensor expressions, including views rooted in a
+literal. Scalar consumers such as indexing release these temporary owners after
+use, including failures while evaluating indices. Construction guards every
+status/output boundary and releases partial builders or tensors on failure.
+Fixed-size call and literal scratch slots are per invocation, not per loop
+iteration. This does not establish automatic ownership for named tensor locals,
+arguments, or returns; explicit IRx retain/release operations are unchanged.
+
 ## Enforced string contract
 
 IRx uses `ResourceKind.STRING` sidecars to distinguish immutable global pointers

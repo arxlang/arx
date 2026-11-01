@@ -1166,6 +1166,15 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 )
             self._set_type(node, list_element_type(value_type))
             return
+        if not isinstance(node.value, astx.LiteralDict):
+            self.context.diagnostics.add(
+                "subscript access is not supported for "
+                f"{display_type_name(value_type)}",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            self._set_type(node, None)
+            return
         if isinstance(node.value, astx.LiteralDict):
             if not node.value.elements:
                 self.context.diagnostics.add(

@@ -6,7 +6,46 @@
 #include <cstdio>
 #include <limits>
 
+static void release_tensor_context(void* context) {
+  irx_arrow_tensor_release(static_cast<irx_arrow_tensor_handle*>(context));
+}
+
+static void check_tensor_lifetimes() {
+  const int64_t shape[] = {2}, strides[] = {sizeof(int32_t)};
+  for (int repeat = 0; repeat < 32; ++repeat) {
+    irx_arrow_tensor_builder_handle* builder = nullptr;
+    assert(irx_arrow_tensor_builder_new(
+        IRX_ARROW_TYPE_INT32, 1, shape, strides, &builder) == 0);
+    assert(irx_arrow_tensor_builder_append_int(builder, 11) == 0);
+    irx_arrow_tensor_handle* tensor = nullptr;
+    assert(irx_arrow_tensor_builder_finish(builder, &tensor) != 0);
+    assert(tensor == nullptr);
+    // Failed finish retains the builder, including its partial contents.
+    assert(irx_arrow_tensor_builder_append_int(builder, 22) == 0);
+    assert(irx_arrow_tensor_builder_finish(builder, &tensor) == 0);
+    irx_buffer_view view{};
+    assert(irx_arrow_tensor_borrow_buffer_view(tensor, &view) == 0);
+    assert(static_cast<int32_t*>(view.data)[1] == 22);
+    assert(irx_buffer_owner_external_new(
+        tensor, release_tensor_context, nullptr) != 0);
+    // Failed bridge creation did not consume the tensor.
+    assert(irx_buffer_owner_external_new(
+        tensor, release_tensor_context, &view.owner) == 0);
+    assert(irx_buffer_view_retain(&view) == 0);
+    irx_buffer_owner_handle* retained = view.owner;
+    assert(irx_buffer_view_release(&view) == 0);
+    assert(view.owner == nullptr);
+    assert(irx_buffer_owner_release(retained) == 0);
+
+    assert(irx_arrow_tensor_builder_new(
+        IRX_ARROW_TYPE_INT32, 1, shape, strides, &builder) == 0);
+    assert(irx_arrow_tensor_builder_append_int(builder, 33) == 0);
+    irx_arrow_tensor_builder_release(builder);
+  }
+}
+
 int main() {
+  check_tensor_lifetimes();
   for (int repeat = 0; repeat < 16; ++repeat) {
     IrxRbSchema* schema = nullptr;
     assert(irx_rb_schema_create(&schema) == 0);

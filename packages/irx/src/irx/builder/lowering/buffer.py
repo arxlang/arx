@@ -169,9 +169,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         if value.type != self._llvm.BUFFER_VIEW_TYPE:
             raise Exception("buffer helper requires a BufferViewType value")
 
-        slot = self._llvm.ir_builder.alloca(
-            self._llvm.BUFFER_VIEW_TYPE,
-            name=name,
+        slot = self.create_entry_block_alloca(
+            name, self._llvm.BUFFER_VIEW_TYPE
         )
         self._llvm.ir_builder.store(value, slot)
         return slot

@@ -42,6 +42,8 @@ typedef struct irx_buffer_view {
   int32_t flags;
 } irx_buffer_view;
 
+/* On success the owner holds the context's release obligation. On failure
+ * out_owner is NULL (when supplied) and the caller still owns the context. */
 int32_t irx_buffer_owner_external_new(
     void* context,
     irx_buffer_owner_release_fn release,
