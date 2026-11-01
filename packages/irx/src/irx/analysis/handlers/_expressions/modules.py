@@ -23,6 +23,7 @@ from irx.analysis.call_arguments import (
     contextualize_null_arguments,
 )
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
+from irx.analysis.extensions.calls import AnalysisCall, AnalysisServices
 from irx.analysis.ffi import ffi_returns_owned_string
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
@@ -44,12 +45,14 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     ResourceOwnership,
     SemanticBinding,
+    SemanticClass,
+    SemanticFunction,
     SemanticModule,
 )
-from irx.analysis.table_io import resolve_table_io
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions import ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -57,7 +60,12 @@ from irx.typecheck import typechecked
 class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression helpers for module namespaces and function calls
+    attributes:
+      call_dispatch:
+        type: ScopedDispatch
     """
+
+    call_dispatch: ScopedDispatch
 
     def _resolve_call_resource_ownership(
         self,
@@ -351,8 +359,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if binding.class_ is not None:
             self.resolve_class_construction(node, binding.class_)
             return
-        if binding.function is not None and resolve_table_io(
-            cast(SemanticAnalyzerCore, self), node, binding.function
+        if binding.function is not None and self.analyze_operation(
+            node, binding.function
         ):
             return
         arg_types.extend(
@@ -409,6 +417,85 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             list(call_evaluations(node)),
             call_resolution.result_type,
         )
+
+    def analyze_call_operand(self, node: astx.AST) -> astx.DataType | None:
+        """
+        title: Supply one analyzed expression through the narrow call boundary.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: astx.DataType | None
+        """
+        self.visit(node)
+        return self._expr_type(node)
+
+    def resolve_call_class(
+        self, type_: astx.ClassType, node: astx.AST
+    ) -> SemanticClass | None:
+        """
+        title: >-
+          Supply nominal class resolution without exporting analyzer state.
+        parameters:
+          type_:
+            type: astx.ClassType
+          node:
+            type: astx.AST
+        returns:
+          type: SemanticClass | None
+        """
+        return self._resolve_class_from_type(
+            type_, node=node, unknown_message="unknown class {name}"
+        )
+
+    def analyze_operation(
+        self,
+        node: astx.FunctionCall | astx.MethodCall,
+        function: SemanticFunction,
+    ) -> bool:
+        """
+        title: >-
+          Delegate resolved operation meaning after ordinary symbol lookup.
+        parameters:
+          node:
+            type: astx.FunctionCall | astx.MethodCall
+          function:
+            type: SemanticFunction
+        returns:
+          type: bool
+        """
+        operation = function.signature.operation
+        if operation is None:
+            return False
+        self._set_function(node, function)
+        current = self.context.current_function
+        services = AnalysisServices(
+            analyze_operand=self.analyze_call_operand,
+            find_class=self.resolve_call_class,
+            analyze_construction=self.resolve_class_construction,
+            registered_classes=tuple(
+                declaration
+                for module in (
+                    ()
+                    if self.session is None
+                    else self.session.modules.values()
+                )
+                for declaration in module.native_arrow_classes
+            ),
+            allowed=current is not None
+            and current.signature.metadata.get("generator") is None,
+        )
+        self.call_dispatch.visit(
+            operation,
+            AnalysisCall(
+                node,
+                function,
+                self._semantic(node),
+                self.context.diagnostics,
+                services,
+            ),
+        )
+        return True
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.Identifier) -> None:
@@ -575,9 +662,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             self.resolve_class_construction(node, binding.class_)
             return
         if binding is not None and binding.function is not None:
-            if resolve_table_io(
-                cast(SemanticAnalyzerCore, self), node, binding.function
-            ):
+            if self.analyze_operation(node, binding.function):
                 return
             contextualize_null_arguments(node, binding.function)
         arg_types = analyze_numeric_arguments(

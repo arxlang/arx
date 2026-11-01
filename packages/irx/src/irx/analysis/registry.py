@@ -535,10 +535,9 @@ class SemanticRegistry:
 
         table_io = self.context.native_table_io.get(id(prototype))
         if table_io is not None:
-            signature = replace(
-                signature,
-                metadata={**signature.metadata, "table_io": table_io},
-            )
+            from irx.analysis.table_io import table_operation  # noqa: PLC0415
+
+            signature = replace(signature, operation=table_operation(table_io))
         if validate_ffi and signature.is_extern and table_io is None:
             ffi = build_ffi_callable_info(
                 self.context,

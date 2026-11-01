@@ -15,6 +15,8 @@ import astx
 
 from public import private, public
 
+from irx.analysis.extensions.records import CallOperation
+from irx.analysis.facts import SemanticFacts
 from irx.analysis.flow import FlowOutcome
 from irx.analysis.module_interfaces import ModuleKey
 from irx.analysis.numeric_policy import (
@@ -398,6 +400,8 @@ class FunctionSignature:
         type: FFICallableInfo | None
       metadata:
         type: dict[str, Any]
+      operation:
+        type: CallOperation | None
     """
 
     name: str
@@ -411,6 +415,7 @@ class FunctionSignature:
     required_runtime_features: tuple[str, ...] = ()
     ffi: FFICallableInfo | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    operation: CallOperation | None = None
 
 
 @public
@@ -2196,6 +2201,8 @@ class SemanticInfo:
         type: SemanticSymbol | None
       semantic_flags:
         type: SemanticFlags
+      facts:
+        type: SemanticFacts
       extras:
         type: dict[str, Any]
     """
@@ -2248,6 +2255,7 @@ class SemanticInfo:
     resolved_resource_store: ResourceOwnership | None = None
     initializer_receiver: SemanticSymbol | None = None
     semantic_flags: SemanticFlags = field(default_factory=SemanticFlags)
+    facts: SemanticFacts = field(default_factory=SemanticFacts)
     extras: dict[str, Any] = field(default_factory=dict)
 
 

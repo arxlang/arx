@@ -42,7 +42,7 @@ jobs:
           poetry install
 
       - name: Generate documentation
-        run: makim --verbose docs.build
+        run: makim docs.build
 
       - name: GitHub Pages action
         if: ${{ github.event_name == 'workflow_dispatch' }}

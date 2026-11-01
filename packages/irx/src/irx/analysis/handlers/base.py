@@ -16,6 +16,12 @@ from plum import dispatch
 
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
+from irx.analysis.extensions.calls import (
+    AnalysisCall,
+    default_analysis_configuration,
+)
+from irx.analysis.extensions.invalidation import invalidate_facts
+from irx.analysis.extensions.records import CallOperation
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
 from irx.analysis.numeric_literals import (
@@ -62,6 +68,7 @@ from irx.analysis.types import (
 )
 from irx.base.visitors.base import BaseVisitor
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -885,6 +892,10 @@ class SemanticAnalyzerCore(BaseVisitor):
     attributes:
       context:
         type: SemanticContext
+      configuration:
+        type: HandlerConfiguration
+      call_dispatch:
+        type: ScopedDispatch
       session:
         type: CompilationSession | None
       factory:
@@ -896,6 +907,8 @@ class SemanticAnalyzerCore(BaseVisitor):
     """
 
     context: SemanticContext
+    configuration: HandlerConfiguration
+    call_dispatch: ScopedDispatch
     session: CompilationSession | None
     factory: SemanticEntityFactory
     registry: SemanticRegistry
@@ -906,6 +919,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         *,
         context: SemanticContext | None = None,
         session: CompilationSession | None = None,
+        configuration: HandlerConfiguration | None = None,
     ) -> None:
         """
         title: Initialize SemanticAnalyzerCore.
@@ -914,7 +928,18 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: SemanticContext | None
           session:
             type: CompilationSession | None
+          configuration:
+            type: HandlerConfiguration | None
         """
+        self.configuration = (
+            configuration
+            if configuration is not None
+            else default_analysis_configuration()
+        )
+        self.configuration.validate_contract(
+            "analysis", CallOperation, AnalysisCall
+        )
+        self.call_dispatch = ScopedDispatch(self.configuration)
         self.session = session
         self.context = context or SemanticContext()
         if session is not None:
@@ -946,6 +971,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: astx.AST
         """
+        invalidate_facts(node)
         if self.session is None:
             from irx.analysis.exception_types import (  # noqa: PLC0415
                 bind_direct_exception_names,

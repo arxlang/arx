@@ -7,6 +7,7 @@ summary: >-
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import cast
 
 import astx
@@ -17,6 +18,7 @@ from irx.analysis.numeric_policy import (
     is_lossless_numeric_conversion,
     lossless_common_numeric_type,
 )
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.typecheck import typechecked
 
 INT_TYPES = (astx.Int8, astx.Int16, astx.Int32, astx.Int64)
@@ -236,8 +238,10 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
             alias_name=type_.alias_name,
         )
         info = getattr(type_, "semantic", None)
-        if info is not None:
-            setattr(cloned_union, "semantic", info)
+        if isinstance(info, SemanticInfo):
+            # Immutable records may be shared within this generation, but
+            # invalidating the clone must not clear the source's attachments.
+            setattr(cloned_union, "semantic", replace(info))
         return cloned_union
     if isinstance(type_, astx.TemplateTypeVar):
         return with_alias(

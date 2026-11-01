@@ -15,6 +15,7 @@ import astx
 from public import public
 
 from irx.analysis.analyzer import SemanticAnalyzer
+from irx.analysis.extensions.invalidation import invalidate_facts
 from irx.analysis.ffi import _runtime_feature_names
 from irx.analysis.module_interfaces import (
     ImportResolver,
@@ -23,6 +24,7 @@ from irx.analysis.module_interfaces import (
 from irx.analysis.reachability import plan_declarations
 from irx.analysis.session import CompilationSession
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions import HandlerConfiguration
 from irx.typecheck import typechecked
 
 __all__ = [
@@ -35,7 +37,9 @@ __all__ = [
 
 @public
 @typechecked
-def analyze(node: astx.AST) -> astx.AST:
+def analyze(
+    node: astx.AST, *, configuration: HandlerConfiguration | None = None
+) -> astx.AST:
     """
     title: Analyze one AST root and attach semantic sidecars.
     summary: >-
@@ -45,15 +49,19 @@ def analyze(node: astx.AST) -> astx.AST:
     parameters:
       node:
         type: astx.AST
+      configuration:
+        type: HandlerConfiguration | None
     returns:
       type: astx.AST
     """
-    return SemanticAnalyzer().analyze(node)
+    return SemanticAnalyzer(configuration=configuration).analyze(node)
 
 
 @public
 @typechecked
-def analyze_module(module: astx.Module) -> astx.Module:
+def analyze_module(
+    module: astx.Module, *, configuration: HandlerConfiguration | None = None
+) -> astx.Module:
     """
     title: Analyze an AST module.
     summary: >-
@@ -62,10 +70,12 @@ def analyze_module(module: astx.Module) -> astx.Module:
     parameters:
       module:
         type: astx.Module
+      configuration:
+        type: HandlerConfiguration | None
     returns:
       type: astx.Module
     """
-    return cast(astx.Module, analyze(module))
+    return cast(astx.Module, analyze(module, configuration=configuration))
 
 
 @public
@@ -73,6 +83,8 @@ def analyze_module(module: astx.Module) -> astx.Module:
 def analyze_modules(
     root: ParsedModule,
     resolver: ImportResolver,
+    *,
+    configuration: HandlerConfiguration | None = None,
 ) -> CompilationSession:
     """
     title: Analyze a reachable graph of host-provided parsed modules.
@@ -86,6 +98,8 @@ def analyze_modules(
         type: ParsedModule
       resolver:
         type: ImportResolver
+      configuration:
+        type: HandlerConfiguration | None
     returns:
       type: CompilationSession
     """
@@ -97,7 +111,7 @@ def analyze_modules(
                 f"native feature '{name}' conflicts with a builtin feature",
                 code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
             )
-    analyzer = SemanticAnalyzer(session=session)
+    analyzer = SemanticAnalyzer(session=session, configuration=configuration)
     if not analyzer.context.exception_declarations:
         from irx.analysis.exception_types import (  # noqa: PLC0415
             builtin_exception_module,
@@ -108,6 +122,7 @@ def analyze_modules(
         analyzer.analyze_parsed_module(builtin, predeclared=False)
 
     for parsed_module in session.ordered_modules():
+        invalidate_facts(parsed_module.ast)
         analyzer._reset_template_analysis_state(parsed_module.ast)
 
     for parsed_module in session.ordered_modules():

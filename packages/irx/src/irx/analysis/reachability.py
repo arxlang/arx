@@ -21,6 +21,7 @@ import astx
 from plum import dispatch
 from public import private
 
+from irx.analysis.facts import SemanticFacts
 from irx.analysis.session import CompilationSession
 from irx.typecheck import typechecked
 
@@ -111,6 +112,16 @@ class DeclarationReachability:
         )
 
     @dispatch
+    def visit(self, value: SemanticFacts) -> None:
+        """
+        title: Traverse provider-declared attachment dependencies.
+        parameters:
+          value:
+            type: SemanticFacts
+        """
+        self.pending.extend(value.dependencies())
+
+    @dispatch
     def visit(self, value: astx.AST) -> None:
         """
         title: Walk children and sidecars, never parent links or import roots.
@@ -174,6 +185,6 @@ def plan_declarations(session: CompilationSession) -> frozenset[int] | None:
     roots: list[astx.AST] = []
     for module in session.ordered_modules():
         if module.key == session.root.key or not module.lazy_declarations:
-            roots.extend(module.ast.nodes)
+            roots.append(module.ast)
             roots.extend(astx.generated_template_nodes(module.ast))
     return DeclarationReachability(session).collect(roots)

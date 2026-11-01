@@ -11,6 +11,7 @@ import astx
 from llvmlite import ir
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
+from irx.analysis.extensions.records import CALL_PLAN, CallPlan
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     CallingConvention,
@@ -38,8 +39,8 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
+from irx.builder.extensions.calls import CallLoweringServices, LoweringCall
 from irx.builder.lowering.classes import ClassVisitorMixin
-from irx.builder.lowering.table_io import lower_table_io
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.record_batch_api import is_checked_native_facade
 from irx.builder.state import (
@@ -54,6 +55,7 @@ from irx.builtins.collections.list import (
     LIST_RUNTIME_FEATURE,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions import ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -61,7 +63,40 @@ from irx.typecheck import typechecked
 class FunctionVisitorMixin(ClassVisitorMixin):
     """
     title: Lower function definitions and calls to LLVM.
+    attributes:
+      call_dispatch:
+        type: ScopedDispatch
+      call_services:
+        type: CallLoweringServices
     """
+
+    call_dispatch: ScopedDispatch
+    call_services: CallLoweringServices
+
+    def emit_operation(
+        self, node: astx.FunctionCall | astx.MethodCall
+    ) -> bool:
+        """
+        title: Select specialized emission from semantic plan type, not syntax.
+        parameters:
+          node:
+            type: astx.FunctionCall | astx.MethodCall
+        returns:
+          type: bool
+        """
+        info = getattr(node, "semantic", None)
+        if not isinstance(info, SemanticInfo):
+            return False
+        function = info.resolved_function
+        plan: CallPlan | None
+        if function is not None and function.signature.operation is not None:
+            plan = info.facts.require(CALL_PLAN, node=node)
+        else:
+            plan = info.facts.get(CALL_PLAN)
+        if plan is None:
+            return False
+        self.call_dispatch.visit(plan, LoweringCall(node, self.call_services))
+        return True
 
     def _register_call_result_cleanup(
         self,
@@ -672,7 +707,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FunctionCall
         """
-        if lower_table_io(self, node):
+        if self.emit_operation(node):
             return
         semantic = getattr(node, "semantic", None)
         if (
@@ -710,7 +745,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.MethodCall
         """
-        if lower_table_io(self, node):
+        if self.emit_operation(node):
             return
         semantic = getattr(node, "semantic", None)
         if (
@@ -1038,7 +1073,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             node,
             label="function prototype",
         )
-        if function.signature.metadata.get("table_io") is not None:
+        if function.signature.operation is not None:
             return
         fn = self._declare_semantic_function(function)
         self.result_stack.append(fn)
