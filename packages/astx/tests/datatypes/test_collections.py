@@ -134,3 +134,46 @@ def test_literal_dict_binary_merge() -> None:
     assert merged_dict.op_code == "**"
     assert merged_dict.lhs == lit_dict1
     assert merged_dict.rhs == lit_dict2
+
+
+def test_list_expression_preserves_nonliteral_elements() -> None:
+    """
+    title: Owned construction is distinct from the literal-only AST contract.
+    """
+    import astx
+
+    from astx.collections import ListExpr
+
+    elements: list[astx.DataType] = [
+        astx.Identifier("value"),
+        astx.FunctionCall("next", []),
+        astx.Cast(astx.LiteralInteger(1), astx.Int64()),
+    ]
+    expression = ListExpr(elements, loc=astx.SourceLocation(2, 3))
+    assert astx.ListExpr is ListExpr
+    assert expression.elements == elements
+    assert expression.elements is not elements
+    assert (expression.loc.line, expression.loc.col) == (2, 3)
+    assert isinstance(expression.type_, astx.types.AnyType)
+    for simplified in (False, True):
+        assert "elements" in str(expression.get_struct(simplified))
+    assert isinstance(astx.ListLength(expression).type_, astx.Int64)
+    assert isinstance(astx.CollectionLength(expression).type_, astx.Int64)
+
+
+def test_list_expression_checks_every_element() -> None:
+    """
+    title: Invalid non-first items cannot bypass runtime collection checking.
+    """
+    from typing import cast
+
+    import pytest
+
+    from typeguard import TypeCheckError
+
+    import astx
+
+    with pytest.raises(TypeCheckError):
+        astx.ListExpr(cast(list[astx.DataType], [astx.LiteralInt32(1), "bad"]))
+    with pytest.raises(TypeCheckError):
+        astx.LiteralList(cast(list[Literal], [astx.Identifier("value")]))

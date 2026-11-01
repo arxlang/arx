@@ -15,6 +15,7 @@ from irx.builder import Builder
 from irx.diagnostics import LoweringError
 
 from .conftest import assert_build_output, assert_ir_parses
+from .test_string import assert_executed_string_frees
 
 HAS_CLANG = shutil.which("clang") is not None
 
@@ -142,7 +143,9 @@ def _filtered_comprehension_module() -> astx.Module:
             mutability=astx.MutabilityKind.mutable,
             value=comprehension,
         ),
-        astx.FunctionReturn(astx.ListLength(astx.Identifier("values"))),
+        astx.FunctionReturn(
+            astx.Cast(astx.ListLength(astx.Identifier("values")), astx.Int32())
+        ),
     )
 
 
@@ -234,7 +237,9 @@ def _nested_comprehension_module() -> astx.Module:
                     astx.Identifier("values"),
                     astx.LiteralInt32(2),
                 ),
-                astx.ListLength(astx.Identifier("values")),
+                astx.Cast(
+                    astx.ListLength(astx.Identifier("values")), astx.Int32()
+                ),
             ),
         ),
     )
@@ -507,3 +512,32 @@ def test_set_comprehension_lowering_is_guarded() -> None:
 
     with pytest.raises(LoweringError, match="dynamic set runtime"):
         Builder().translate(module)
+
+
+def test_string_iteration_cleans_continue_and_break() -> None:
+    """
+    title: Iteration clones release once on both continue and break edges.
+    """
+    continued = astx.Block()
+    continued.append(astx.ContinueStmt())
+    loop = astx.Block()
+    loop.append(
+        astx.IfStmt(
+            astx.BinaryOp(
+                "==", astx.Identifier("word"), astx.LiteralString("skip")
+            ),
+            continued,
+        )
+    )
+    loop.append(astx.BreakStmt())
+    module = _main_module(
+        astx.ForInLoopStmt(
+            astx.Identifier("word"),
+            astx.ListExpr(
+                [astx.LiteralString("skip"), astx.LiteralString("stop")]
+            ),
+            loop,
+        ),
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    assert_executed_string_frees(module, expected=2)

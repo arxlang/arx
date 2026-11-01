@@ -109,6 +109,7 @@ from astx.collections import (
     CollectionLength,
     ListAppend,
     ListCreate,
+    ListExpr,
     ListIndex,
     ListLength,
 )
@@ -487,6 +488,7 @@ __all__ = [
     "ListAppend",
     "ListComprehension",
     "ListCreate",
+    "ListExpr",
     "ListIndex",
     "ListLength",
     "ListType",

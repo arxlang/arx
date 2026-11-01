@@ -2120,7 +2120,7 @@ class SemanticInfo:
         type: astx.DataType | None
       literal_context:
         type: astx.DataType | None
-        description: Expected literal type, consumed by the next literal visit.
+        description: Expected literal or collection type, consumed on visit.
       numeric_constant:
         type: int | float | None
       numeric_conversion:
@@ -2197,6 +2197,12 @@ class SemanticInfo:
           This tensor expression constructs a fresh owner, possibly through
           views. Scalar consumers release it after use; named tensors and
           explicit retain/release operations keep their existing lifetime.
+      collection_tensor:
+        type: astx.TensorLiteral | None
+        description: An explicitly tensor-contextualized collection expression.
+      collection_length:
+        type: astx.CollectionLength | None
+        description: Resolved unshadowed len intrinsic using shared queries.
       lifecycle_self:
         type: bool
       lifecycle_field_store:
@@ -2257,6 +2263,8 @@ class SemanticInfo:
     resolved_collection_method: ResolvedCollectionMethod | None = None
     resource_ownership: ResourceOwnership | None = None
     tensor_temporary_owner: bool = False
+    collection_tensor: astx.TensorLiteral | None = None
+    collection_length: astx.CollectionLength | None = None
     lifecycle_self: bool = False
     lifecycle_field_store: bool = False
     resolved_resource_store: ResourceOwnership | None = None

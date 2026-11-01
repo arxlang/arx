@@ -109,7 +109,7 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
     type_ = field.type
     if pa.types.is_dictionary(type_):
         return literal_cell(node, field.with_type(type_.value_type), path)
-    if isinstance(node, (astx.LiteralList, astx.LiteralTuple)):
+    if isinstance(node, (astx.LiteralList, astx.LiteralTuple, astx.ListExpr)):
         elements = node.elements
         if pa.types.is_struct(type_):
             if len(elements) != type_.num_fields:
@@ -125,7 +125,8 @@ def literal_cell(node: astx.AST, field: pa.Field, path: str) -> object:
             for element in elements:
                 if (
                     not isinstance(
-                        element, (astx.LiteralList, astx.LiteralTuple)
+                        element,
+                        (astx.LiteralList, astx.LiteralTuple, astx.ListExpr),
                     )
                     or len(element.elements) != PAIR_SIZE
                 ):

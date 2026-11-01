@@ -8,12 +8,72 @@ summary: >-
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import cast
+
+from public import public
 
 import astx
 
+from astx.base import NO_SOURCE_LOCATION, SourceLocation
 from astx.tools.typing import typechecked
 from astx.types import AnyType
+
+
+@public
+@typechecked
+class ListExpr(astx.base.DataType):
+    """
+    title: Ordered expression-valued collection construction.
+    summary: >-
+      Evaluate elements once, left to right. Semantic analysis chooses the
+      concrete list element type, or a tensor under an explicit tensor target.
+      Unlike LiteralList, elements need not be literals.
+    attributes:
+      elements:
+        type: list[astx.Expr]
+      type_:
+        type: AnyType
+    """
+
+    elements: list[astx.Expr]
+    type_: AnyType
+
+    def __init__(
+        self,
+        elements: Sequence[astx.Expr],
+        loc: SourceLocation = NO_SOURCE_LOCATION,
+    ) -> None:
+        """
+        title: Initialize a collection expression without inferring its type.
+        parameters:
+          elements:
+            type: Sequence[astx.Expr]
+          loc:
+            type: SourceLocation
+        """
+        super().__init__(loc=loc)
+        self.elements = list(elements)
+        self.type_ = AnyType()
+
+    def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
+        """
+        title: Preserve each element in the structured representation.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: astx.base.ReprStruct
+        """
+        return self._prepare_struct(
+            "ListExpr",
+            {
+                "elements": [
+                    item.get_struct(simplified) for item in self.elements
+                ]
+            },
+            simplified,
+        )
 
 
 @typechecked
@@ -178,18 +238,16 @@ class ListLength(astx.base.DataType):
     title: Internal list length node.
     summary: >-
       Return the current logical length of one list-valued expression as an
-      int32 value. The runtime stores list lengths as int64, but the current
-      ASTx language-level contract intentionally truncates that representation
-      to Int32.
+      int64 value. No narrowing is performed at this query boundary.
     attributes:
       base:
         type: astx.AST
       type_:
-        type: astx.Int32
+        type: astx.Int64
     """
 
     base: astx.AST
-    type_: astx.Int32
+    type_: astx.Int64
 
     def __init__(self, base: astx.AST) -> None:
         """
@@ -200,7 +258,7 @@ class ListLength(astx.base.DataType):
         """
         super().__init__()
         self.base = base
-        self.type_ = astx.Int32()
+        self.type_ = astx.Int64()
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """
@@ -221,4 +279,4 @@ class ListLength(astx.base.DataType):
         )
 
 
-__all__ = ["ListAppend", "ListCreate", "ListIndex", "ListLength"]
+__all__ = ["ListAppend", "ListCreate", "ListExpr", "ListIndex", "ListLength"]

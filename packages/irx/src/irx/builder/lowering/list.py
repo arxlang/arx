@@ -13,15 +13,24 @@ import astx
 from llvmlite import ir
 from public import private
 
-from irx.analysis.resolved_nodes import IterationKind, ResolvedIteration
+from irx.analysis.resolved_nodes import (
+    IterationKind,
+    ResolvedIteration,
+    SemanticInfo,
+)
+from irx.analysis.types import is_string_type
 from irx.builder.core import VisitorCore, semantic_symbol_key
-from irx.builder.diagnostics import raise_lowering_error
-from irx.builder.numeric import guard_collection_length
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_error,
+    require_semantic_metadata,
+)
+from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
 from irx.builder.runtime import safe_pop
+from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
+    LIST_DESTROY_SYMBOL,
     LIST_FIELD_INDICES,
     LIST_RUNTIME_FEATURE,
     LIST_STATUS_MESSAGE_SYMBOL,
@@ -97,6 +106,7 @@ class ListVisitorMixin(VisitorMixinBase):
                     self._llvm.INT64_TYPE,
                     self._llvm.INT64_TYPE,
                     self._llvm.INT64_TYPE,
+                    self._llvm.INT32_TYPE,
                 ]
             ),
         )
@@ -204,6 +214,10 @@ class ListVisitorMixin(VisitorMixinBase):
                 ir.Constant(
                     self._llvm.INT64_TYPE,
                     self._list_element_size_from_type(type_),
+                ),
+                ir.Constant(
+                    self._llvm.INT32_TYPE,
+                    int(is_string_type(list_element_type(type_))),
                 ),
             ],
         )
@@ -447,7 +461,101 @@ class ListVisitorMixin(VisitorMixinBase):
             element_size_i64,
             field_ptr("element_size"),
         )
+        # Static views borrow their elements and are never destroyed.
+        self._llvm.ir_builder.store(
+            ir.Constant(self._llvm.INT32_TYPE, 0), field_ptr("element_kind")
+        )
         return list_slot
+
+    @private
+    def track_list_construction(self, output: ir.Value) -> CleanupAction:
+        """
+        title: Roll back initialized elements even for a pending move.
+        parameters:
+          output:
+            type: ir.Value
+        returns:
+          type: CleanupAction
+        """
+        destroy = self.require_runtime_symbol(
+            LIST_RUNTIME_FEATURE, LIST_DESTROY_SYMBOL
+        )
+
+        def release() -> None:
+            """
+            title: Drop the partially constructed list through its native ABI.
+            """
+            self._llvm.ir_builder.call(destroy, [output])
+
+        action = CleanupAction(release, fallible=False)
+        self.cleanup_stack.append(action)
+        return action
+
+    @cast(DispatchRegistrar, VisitorCore.visit).dispatch
+    def visit(self, node: astx.ListExpr) -> None:
+        """
+        title: Construct resolved elements in order with rollback cleanup.
+        parameters:
+          node:
+            type: astx.ListExpr
+        """
+        info = cast(
+            SemanticInfo,
+            require_semantic_metadata(
+                getattr(node, "semantic", None),
+                node=node,
+                metadata="semantic",
+                context="list construction",
+            ),
+        )
+        tensor = info.collection_tensor
+        if tensor is not None:
+            self.visit_child(tensor)
+            return
+        element_type = require_semantic_metadata(
+            list_element_type(info.resolved_type),
+            node=node,
+            metadata="concrete list element type",
+            context="list construction",
+        )
+        output = self.create_entry_block_alloca(
+            "list.expression", self._llvm_list_type()
+        )
+        self._llvm.ir_builder.store(self._empty_list_value(node), output)
+        cleanup = self.track_list_construction(output)
+        slot = self.create_entry_block_alloca(
+            "list.expression.item", self._list_element_llvm_type(node)
+        )
+        append = self.require_runtime_symbol(
+            LIST_RUNTIME_FEATURE, LIST_APPEND_SYMBOL
+        )
+        for item in node.elements:
+            element_depth = len(self.cleanup_stack)
+            self.visit_child(item)
+            value = safe_pop(self.result_stack)
+            if value is None:
+                raise_lowering_error(
+                    "list element did not produce a value",
+                    node=item,
+                    code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                )
+            value = self._cast_ast_value(
+                value,
+                source_type=self._resolved_ast_type(item),
+                target_type=element_type,
+            )
+            self._llvm.ir_builder.store(value, slot)
+            raw = self._llvm.ir_builder.bitcast(
+                slot, self._llvm.INT8_TYPE.as_pointer()
+            )
+            status = self._llvm.ir_builder.call(append, [output, raw])
+            self.check_list_status(item, status)
+            self._emit_temporary_cleanups(element_depth)
+        self.cleanup_stack.remove(cleanup)
+        self._register_owned_list_temporary(node, output)
+        self.result_stack.append(
+            self._llvm.ir_builder.load(output, name="list.expression.value")
+        )
 
     def _lower_literal_list_index_via_runtime(
         self,
@@ -533,6 +641,7 @@ class ListVisitorMixin(VisitorMixinBase):
         *,
         base: astx.AST,
         index_node: astx.AST,
+        result_node: astx.AST,
     ) -> None:
         """
         title: Lower one list indexing operation.
@@ -540,6 +649,8 @@ class ListVisitorMixin(VisitorMixinBase):
           base:
             type: astx.AST
           index_node:
+            type: astx.AST
+          result_node:
             type: astx.AST
         """
         if isinstance(base, astx.LiteralList):
@@ -551,11 +662,13 @@ class ListVisitorMixin(VisitorMixinBase):
                     base=base,
                     index_node=index_node,
                 )
+                self.copy_list_string_result(result_node)
                 return
             self._lower_literal_list_index_via_runtime(
                 base=base,
                 index_node=index_node,
             )
+            self.copy_list_string_result(result_node)
             return
         if list_element_type(self._resolved_ast_type(base)) is None:
             raise Exception(
@@ -572,6 +685,28 @@ class ListVisitorMixin(VisitorMixinBase):
             list_ptr=list_ptr,
             index_node=index_node,
         )
+        self.copy_list_string_result(result_node)
+
+    @private
+    def copy_list_string_result(self, node: astx.AST) -> None:
+        """
+        title: Detach indexed string storage from a mutable list owner.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        if not is_string_type(self._resolved_ast_type(node)):
+            return
+        value = safe_pop(self.result_stack)
+        if value is None:
+            raise_lowering_error(
+                "string index did not produce a value",
+                node=node,
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+            )
+        pointer = self._copy_string_to_heap(node, value)
+        self._register_owned_string_temporary(node, pointer)
+        self.result_stack.append(pointer)
 
     def _lower_literal_list_index(
         self,
@@ -659,6 +794,7 @@ class ListVisitorMixin(VisitorMixinBase):
           element_type:
             type: astx.DataType
         """
+        element_depth = len(self.cleanup_stack)
         self.visit_child(node.element)
         value = safe_pop(self.result_stack)
         if value is None:
@@ -694,6 +830,7 @@ class ListVisitorMixin(VisitorMixinBase):
             name="irx_list_comprehension_append_status",
         )
         self.check_list_status(node, append_status)
+        self._emit_temporary_cleanups(element_depth)
 
     def _lower_list_comprehension_filters(
         self,
@@ -740,12 +877,14 @@ class ListVisitorMixin(VisitorMixinBase):
         passed_block = self._llvm.ir_builder.function.append_basic_block(
             f"list.comp.{clause_index}.filter.{condition_index}.pass"
         )
+        condition_depth = len(self.cleanup_stack)
         self.visit_child(condition)
         condition_value = cast(Any, self)._lower_boolean_condition(
             safe_pop(self.result_stack),
             node=condition,
             context="list comprehension filter",
         )
+        self._emit_temporary_cleanups(condition_depth)
         self._llvm.ir_builder.cbranch(
             condition_value,
             passed_block,
@@ -835,6 +974,7 @@ class ListVisitorMixin(VisitorMixinBase):
             ir.Constant(self._llvm.INT64_TYPE, 0),
             index_addr,
         )
+        iterable_depth = len(self.cleanup_stack)
         list_ptr, length = self._list_pointer_and_length_for_iteration(
             clause.iterable
         )
@@ -866,6 +1006,7 @@ class ListVisitorMixin(VisitorMixinBase):
         )
         self._llvm.ir_builder.cbranch(has_item, body_block, exit_block)
 
+        iteration_depth = len(self.cleanup_stack)
         self._llvm.ir_builder.position_at_start(body_block)
         body_index = self._llvm.ir_builder.load(
             index_addr,
@@ -881,7 +1022,14 @@ class ListVisitorMixin(VisitorMixinBase):
             source_type=iteration.element_type,
             target_type=target_type,
         )
+        if is_string_type(iteration.element_type):
+            item_value = self._copy_string_to_heap(clause.target, item_value)
         self._llvm.ir_builder.store(item_value, target_addr)
+        if is_string_type(iteration.element_type):
+            cast(Any, self)._register_owned_string_cleanup(
+                clause.target,
+                target_addr,
+            )
         target_key = semantic_symbol_key(clause.target, target_name)
         with cast(Any, self)._temporary_named_value(
             target_key,
@@ -901,6 +1049,8 @@ class ListVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.branch(advance_block)
 
         self._llvm.ir_builder.position_at_start(advance_block)
+        self._emit_active_cleanups(iteration_depth)
+        del self.cleanup_stack[iteration_depth:]
         next_index = self._llvm.ir_builder.add(
             self._llvm.ir_builder.load(
                 index_addr,
@@ -913,6 +1063,7 @@ class ListVisitorMixin(VisitorMixinBase):
         self._llvm.ir_builder.branch(cond_block)
 
         self._llvm.ir_builder.position_at_start(exit_block)
+        self._emit_temporary_cleanups(iterable_depth)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.ListComprehension) -> None:
@@ -948,6 +1099,7 @@ class ListVisitorMixin(VisitorMixinBase):
             self._empty_list_value_for_type(result_type),
             output_ptr,
         )
+        cleanup = self.track_list_construction(output_ptr)
         clauses = list(node.generators.nodes)
         if clauses:
             self._lower_list_comprehension_clause(
@@ -964,6 +1116,7 @@ class ListVisitorMixin(VisitorMixinBase):
                 element_type=element_type,
             )
 
+        self.cleanup_stack.remove(cleanup)
         self._register_owned_list_temporary(node, output_ptr)
         self.result_stack.append(
             self._llvm.ir_builder.load(
@@ -1023,6 +1176,7 @@ class ListVisitorMixin(VisitorMixinBase):
         self._lower_list_subscript(
             base=node.base,
             index_node=node.index,
+            result_node=node,
         )
 
     @VisitorCore.visit.dispatch
@@ -1035,7 +1189,7 @@ class ListVisitorMixin(VisitorMixinBase):
         """
         if isinstance(node.base, astx.LiteralList):
             self.result_stack.append(
-                ir.Constant(self._llvm.INT32_TYPE, len(node.base.elements))
+                ir.Constant(self._llvm.INT64_TYPE, len(node.base.elements))
             )
             return
         list_ptr = self._list_pointer_for_call(
@@ -1058,16 +1212,7 @@ class ListVisitorMixin(VisitorMixinBase):
             length_ptr,
             name="irx_list_length_i64",
         )
-        guard_collection_length(self, node, length_i64)
-        # IRx currently exposes list lengths as Int32 even though the runtime
-        # stores the backing length field as Int64.
-        self.result_stack.append(
-            self._llvm.ir_builder.trunc(
-                length_i64,
-                self._llvm.INT32_TYPE,
-                "irx_list_length_i32",
-            )
-        )
+        self.result_stack.append(length_i64)
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.ListAppend) -> None:

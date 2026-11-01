@@ -707,6 +707,13 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FunctionCall
         """
+        info = getattr(node, "semantic", None)
+        if (
+            isinstance(info, SemanticInfo)
+            and info.collection_length is not None
+        ):
+            self.visit_child(info.collection_length)
+            return
         if self.emit_operation(node):
             return
         semantic = getattr(node, "semantic", None)

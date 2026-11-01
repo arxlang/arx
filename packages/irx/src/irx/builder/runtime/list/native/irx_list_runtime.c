@@ -33,8 +33,26 @@ int32_t irx_list_append(irx_list* list, const void* value) {
     return IRX_LIST_INVALID_ARGUMENT;
   }
   if (list->element_size <= 0 || list->length < 0 || list->capacity < 0 ||
-      list->length > list->capacity || (list->capacity && !list->data)) {
+      list->length > list->capacity || (list->capacity && !list->data) ||
+      list->element_kind < 0 || list->element_kind > 1 ||
+      (list->element_kind == 1 && list->element_size != (int64_t)sizeof(char*))) {
     return IRX_LIST_INVALID_ARGUMENT;
+  }
+  if ((uint64_t)list->capacity >
+      (uint64_t)SIZE_MAX / (uint64_t)list->element_size) {
+    return IRX_LIST_CAPACITY_OVERFLOW;
+  }
+  char* owned_string = NULL;
+  if (list->element_kind == 1) {
+    const char* source = NULL;
+    memcpy(&source, value, sizeof(source));
+    if (!source) return IRX_LIST_INVALID_ARGUMENT;
+    size_t length = strlen(source);
+    if (length == SIZE_MAX) return IRX_LIST_CAPACITY_OVERFLOW;
+    owned_string = (char*)malloc(length + 1);
+    if (!owned_string) return IRX_LIST_ALLOCATION_FAILED;
+    memcpy(owned_string, source, length + 1);
+    value = &owned_string;
   }
 
   if (list->length >= list->capacity) {
@@ -42,16 +60,19 @@ int32_t irx_list_append(irx_list* list, const void* value) {
     int32_t capacity_status =
         irx_list_next_capacity(list->capacity, &new_capacity);
     if (capacity_status != IRX_LIST_OK) {
+      free(owned_string);
       return capacity_status;
     }
     if ((uint64_t)new_capacity >
         (uint64_t)SIZE_MAX / (uint64_t)list->element_size) {
+      free(owned_string);
       return IRX_LIST_CAPACITY_OVERFLOW;
     }
     size_t new_size =
         (size_t)new_capacity * (size_t)list->element_size;
     void* new_data = realloc(list->data, new_size);
     if (new_data == NULL) {
+      free(owned_string);
       return IRX_LIST_ALLOCATION_FAILED;
     }
     list->data = (uint8_t*)new_data;
@@ -69,7 +90,10 @@ int32_t irx_list_append(irx_list* list, const void* value) {
 int32_t irx_list_at(const irx_list* list, int64_t index, void** out) {
   if (out) *out = NULL;
   if (!list || !out || list->length < 0 || list->capacity < list->length ||
-      list->element_size <= 0) return IRX_LIST_INVALID_ARGUMENT;
+      list->element_size <= 0 || list->element_kind < 0 ||
+      list->element_kind > 1 ||
+      (list->element_kind == 1 && list->element_size != (int64_t)sizeof(char*)))
+    return IRX_LIST_INVALID_ARGUMENT;
   if (index < 0 || index >= list->length) return IRX_LIST_OUT_OF_RANGE;
   if (!list->data) return IRX_LIST_INVALID_ARGUMENT;
   if ((uint64_t)index > SIZE_MAX / (uint64_t)list->element_size)
@@ -81,6 +105,13 @@ int32_t irx_list_at(const irx_list* list, int64_t index, void** out) {
 void irx_list_destroy(irx_list* list) {
   if (list == NULL) {
     return;
+  }
+  if (list->element_kind == 1 && list->data) {
+    for (int64_t index = 0; index < list->length; ++index) {
+      char* value = NULL;
+      memcpy(&value, list->data + (size_t)index * sizeof(value), sizeof(value));
+      free(value);
+    }
   }
   free(list->data);
   list->data = NULL;

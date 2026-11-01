@@ -68,12 +68,12 @@ def assert_executed_list_cleanups(
     ).replace('define i32 @"main"()', 'define i32 @"test.original_main"()')
     text += """
 @test.list_cleanup_count = internal global i32 0
-define void @"test.list_destroy"({i8*, i64, i64, i64}* %value) {
+define void @"test.list_destroy"({i8*, i64, i64, i64, i32}* %value) {
 entry:
   %previous = load i32, i32* @test.list_cleanup_count
   %next = add i32 %previous, 1
   store i32 %next, i32* @test.list_cleanup_count
-  call void @"irx_list_destroy"({i8*, i64, i64, i64}* %value)
+  call void @"irx_list_destroy"({i8*, i64, i64, i64, i32}* %value)
   ret void
 }
 define i32 @main() {
@@ -443,7 +443,7 @@ def _direct_list_node_module() -> astx.Module:
         _mutable_decl(
             "length",
             astx.Int32(),
-            astx.ListLength(astx.Identifier("out")),
+            astx.Cast(astx.ListLength(astx.Identifier("out")), astx.Int32()),
         ),
         astx.FunctionReturn(
             astx.BinaryOp(
@@ -506,32 +506,14 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
     tmp_path: Path,
 ) -> None:
     """
-    title: Native list append statuses and repeated destruction are defined.
+    title: Native allocation rollback, bounds, and element drops are defined.
     parameters:
       tmp_path:
         type: Path
     """
     native_dir = Path(list_runtime_feature.__file__).parent / "native"
-    program = tmp_path / "list_runtime_test.c"
+    program = Path(__file__).parent / "native" / "list_ownership.c"
     executable = tmp_path / "list_runtime_test"
-    program.write_text(
-        '#include "irx_list_runtime.h"\n'
-        "int main(void) {\n"
-        "  irx_list list = {0};\n"
-        "  int32_t value = 7;\n"
-        "  list.element_size = sizeof(value);\n"
-        "  if (irx_list_append(0, &value) != "
-        "IRX_LIST_INVALID_ARGUMENT) return 1;\n"
-        "  if (irx_list_append(&list, &value) != IRX_LIST_OK) return 2;\n"
-        "  if (list.length != 1 || list.data == 0) return 3;\n"
-        "  irx_list_destroy(&list);\n"
-        "  irx_list_destroy(&list);\n"
-        "  if (list.data != 0 || list.length != 0 || "
-        "list.capacity != 0) return 4;\n"
-        "  return 0;\n"
-        "}\n",
-        encoding="utf-8",
-    )
     compile_result = subprocess.run(
         [
             "clang",
@@ -539,7 +521,6 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
             "-I",
             str(native_dir),
             str(program),
-            str(native_dir / "irx_list_runtime.c"),
             "-o",
             str(executable),
         ],
@@ -564,11 +545,15 @@ def test_direct_list_length_from_temporary_list_create() -> None:
     """
     builder = Builder()
     module = _module_with_main(
-        astx.FunctionReturn(astx.ListLength(astx.ListCreate(astx.Int32())))
+        astx.FunctionReturn(
+            astx.Cast(
+                astx.ListLength(astx.ListCreate(astx.Int32())), astx.Int32()
+            )
+        )
     )
     ir_text = builder.translate(module)
 
-    assert "irx_list_length_i32" in ir_text
+    assert "irx_list_length_i64" in ir_text
     assert 'call i32 @"irx_list_append"' not in ir_text
     assert 'call i32 @"irx_list_at"' not in ir_text
     assert_ir_parses(ir_text)
@@ -588,7 +573,7 @@ def test_direct_list_nodes_build_and_return() -> None:
 
     assert 'call i32 @"irx_list_append"' in ir_text
     assert 'call i32 @"irx_list_at"' in ir_text
-    assert "irx_list_length_i32" in ir_text
+    assert "irx_list_length_i64" in ir_text
     assert "list" in builder.translator.runtime_features.active_feature_names()
     assert_ir_parses(ir_text)
 
@@ -609,20 +594,23 @@ def test_direct_list_length_from_literal_list_returns_constant() -> None:
     builder = Builder()
     module = _module_with_main(
         astx.FunctionReturn(
-            astx.ListLength(
-                astx.LiteralList(
-                    elements=[
-                        astx.LiteralInt32(2),
-                        astx.LiteralInt32(4),
-                        astx.LiteralInt32(8),
-                    ]
-                )
+            astx.Cast(
+                astx.ListLength(
+                    astx.LiteralList(
+                        elements=[
+                            astx.LiteralInt32(2),
+                            astx.LiteralInt32(4),
+                            astx.LiteralInt32(8),
+                        ]
+                    )
+                ),
+                astx.Int32(),
             )
         )
     )
     ir_text = builder.translate(module)
 
-    assert "irx_list_length_i32" not in ir_text
+    assert "irx_list_length_i64" not in ir_text
     assert 'call i32 @"irx_list_append"' not in ir_text
     assert 'call i32 @"irx_list_at"' not in ir_text
     assert_ir_parses(ir_text)
@@ -838,7 +826,9 @@ def test_direct_list_length_rejects_non_list_base() -> None:
     title: Direct list length should require a list-valued base expression.
     """
     module = _module_with_main(
-        astx.FunctionReturn(astx.ListLength(astx.LiteralInt32(1)))
+        astx.FunctionReturn(
+            astx.Cast(astx.ListLength(astx.LiteralInt32(1)), astx.Int32())
+        )
     )
 
     with pytest.raises(
@@ -942,7 +932,9 @@ def test_list_call_argument_sidecar_records_borrow_and_escape() -> None:
         body=astx.Block(),
     )
     consume.body.append(
-        astx.FunctionReturn(astx.ListLength(astx.Identifier("values")))
+        astx.FunctionReturn(
+            astx.Cast(astx.ListLength(astx.Identifier("values")), astx.Int32())
+        )
     )
     module.block.append(consume)
 
@@ -1139,7 +1131,9 @@ def test_list_assignment_destroys_replaced_and_final_storage(
     module = _module_with_main(
         _mutable_decl("out", list_type, astx.ListCreate(astx.Int32())),
         astx.VariableAssignment("out", astx.ListCreate(astx.Int32())),
-        astx.FunctionReturn(astx.ListLength(astx.Identifier("out"))),
+        astx.FunctionReturn(
+            astx.Cast(astx.ListLength(astx.Identifier("out")), astx.Int32())
+        ),
     )
 
     ir_text = Builder().translate(module)
@@ -1167,7 +1161,9 @@ def test_binary_list_assignment_destroys_replaced_and_final_storage(
             astx.Identifier("out"),
             astx.ListCreate(astx.Int32()),
         ),
-        astx.FunctionReturn(astx.ListLength(astx.Identifier("out"))),
+        astx.FunctionReturn(
+            astx.Cast(astx.ListLength(astx.Identifier("out")), astx.Int32())
+        ),
     )
 
     ir_text = Builder().translate(module)
@@ -1361,3 +1357,24 @@ def test_while_condition_destroys_list_call_temporary_each_evaluation(
     ir_text = Builder().translate(module)
     assert_executed_list_cleanups(module, tmp_path, 1)
     assert_ir_parses(ir_text)
+
+
+@pytest.mark.parametrize(
+    "element_type",
+    [
+        astx.NullableType(astx.String()),
+        astx.PointerType(astx.Int32()),
+        astx.NoneType(),
+    ],
+)
+def test_owned_lists_reject_elements_without_drop_contracts(
+    element_type: astx.DataType,
+) -> None:
+    """
+    title: Explicit constructors cannot bypass the owned element restriction.
+    parameters:
+      element_type:
+        type: astx.DataType
+    """
+    with pytest.raises(SemanticError, match="numeric, Boolean, and string"):
+        analyze(astx.ListCreate(element_type))

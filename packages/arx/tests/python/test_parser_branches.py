@@ -47,21 +47,28 @@ def test_parse_literal_kinds_and_list_literal() -> None:
     assert isinstance(fn, astx.FunctionDef)
     ret = fn.body.nodes[-1]
     assert isinstance(ret, astx.FunctionReturn)
-    assert isinstance(ret.value, astx.LiteralList)
+    assert isinstance(ret.value, astx.ListExpr)
 
 
-def test_parse_list_literal_rejects_non_literal_elements() -> None:
+def test_parse_list_expression_preserves_elements() -> None:
     """
-    title: List literals reject non-literal values.
+    title: Calls, names, casts, and arithmetic remain ordered expressions.
     """
-    with pytest.raises(
-        ParserException,
-        match=(
-            r"(only literal elements|"
-            r"Unknown token when expecting an expression)"
-        ),
-    ):
-        _parse("fn main() -> list[i32]:\n  return [foo]\n")
+    tree = _parse(
+        "fn main() -> list[i32]:\n"
+        "  return [foo, bar(), cast(1, i32), foo + 1,]\n"
+    )
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    result = function.body.nodes[0]
+    assert isinstance(result, astx.FunctionReturn)
+    assert isinstance(result.value, astx.ListExpr)
+    assert [type(item) for item in result.value.elements] == [
+        astx.Identifier,
+        astx.FunctionCall,
+        astx.Cast,
+        astx.BinaryOp,
+    ]
 
 
 def test_parse_datetime_and_timestamp_builtins() -> None:
@@ -384,7 +391,7 @@ def test_parse_tensor_type_literal_and_indexing() -> None:
     assert isinstance(main_fn.body.nodes[0].type_, astx.TensorType)
     assert isinstance(
         cast(astx.VariableDeclaration, main_fn.body.nodes[0]).value,
-        astx.TensorLiteral,
+        astx.ListExpr,
     )
     assert isinstance(main_fn.body.nodes[1], astx.VariableDeclaration)
     assert isinstance(
@@ -574,7 +581,7 @@ def test_parse_for_in_list_literal_uses_for_in_node() -> None:
     assert isinstance(loop, astx.ForInLoopStmt)
     assert isinstance(loop.target, astx.Identifier)
     assert loop.target.name == "value"
-    assert isinstance(loop.iterable, astx.LiteralList)
+    assert isinstance(loop.iterable, astx.ListExpr)
     assert isinstance(loop.body.nodes[0], astx.FunctionReturn)
     assert isinstance(loop.body.nodes[0].value, astx.Identifier)
     assert loop.body.nodes[0].value.name == "value"
@@ -696,18 +703,6 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        (
-            "fn main() -> i32:\n"
-            "  var grid: tensor[i32, 2, 2] = [[1, 2], [3]]\n"
-            "  return 0\n",
-            "regular rectangular shape",
-        ),
-        (
-            "fn main() -> i32:\n"
-            "  var grid: tensor[i32, 2, 2] = [[1, 2, 3], [4, 5, 6]]\n"
-            "  return 0\n",
-            "declared tensor shape",
-        ),
         (
             "fn main() -> i32:\n"
             "  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"

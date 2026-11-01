@@ -24,7 +24,7 @@ from arx.exceptions import ParserException
 from arx.lexer import TokenKind
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import TypeUseContext
-from arx.tensor import attach_binding, infer_literal
+from arx.tensor import attach_binding
 
 NOT_PRECEDENCE = 7
 PREFIX_PRECEDENCE = 50
@@ -328,37 +328,27 @@ class ExpressionParserMixin(ParserMixinBase):
         self._consume_operator(")")
         return expr
 
-    def parse_array_expr(self) -> astx.Literal:
+    def parse_array_expr(self) -> astx.ListExpr:
         """
-        title: Parse list and tensor literals.
+        title: Parse ordered lists without selecting storage or types.
         returns:
-          type: astx.Literal
+          type: astx.ListExpr
         """
+        location = self.tokens.cur_tok.location
         self._consume_operator("[")
-
-        elements: list[astx.Literal] = []
-        if not self._is_operator("]"):
-            while True:
-                elem = self.parse_expression()
-                if not isinstance(elem, astx.Literal):
-                    raise ParserException(
-                        "List and tensor literals currently support only "
-                        "literal elements."
-                    )
-                elements.append(elem)
-
-                if self._is_operator("]"):
-                    break
-
-                self._consume_operator(",")
-
+        elements: list[astx.Expr] = []
+        while not self._is_operator("]"):
+            element = self.parse_expression()
+            if not isinstance(element, astx.Expr):
+                raise ParserException(
+                    "List elements must be expressions.", location
+                )
+            elements.append(element)
+            if self._is_operator("]"):
+                break
+            self._consume_operator(",")
         self._consume_operator("]")
-        if any(
-            isinstance(element, (astx.LiteralList, astx.LiteralTuple))
-            for element in elements
-        ):
-            return astx.LiteralTuple(tuple(elements))
-        return astx.LiteralList(elements)
+        return astx.ListExpr(elements, loc=location)
 
     def parse_imported_namespace_name(self, name: str) -> str:
         """
@@ -711,7 +701,7 @@ class ExpressionParserMixin(ParserMixinBase):
 
             self._consume_operator(":")
             value = self.parse_expression()
-            if not isinstance(value, (astx.LiteralList, astx.LiteralTuple)):
+            if not isinstance(value, astx.ListExpr):
                 raise ParserException(
                     "DataFrame constructor column values must be list "
                     "literals."
@@ -869,12 +859,6 @@ class ExpressionParserMixin(ParserMixinBase):
                     "tensor annotation for indexed access."
                 )
             return None
-
-        if isinstance(base, (astx.LiteralList, astx.LiteralTuple)):
-            try:
-                return infer_literal(base)
-            except ValueError:
-                return None
 
         return None
 

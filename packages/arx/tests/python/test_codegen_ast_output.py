@@ -69,7 +69,7 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
 @pytest.fixture(scope="module")
 def literal_loop_ir() -> tuple[ArxBuilder, str]:
     """
-    title: Translate tensor and list loop paths once for safety regressions.
+    title: Translate list loop paths once for safety regressions.
     returns:
       type: tuple[ArxBuilder, str]
     """
@@ -118,7 +118,7 @@ def test_literal_loop_allocations_are_in_entry(
                 if instruction.opcode == "alloca":
                     assert block == entry, (function.name, str(instruction))
     assert found == tested
-    assert "irx_buffer_owner_release" in text
+    assert "irx_list_destroy" in text
 
 
 @pytest.fixture(scope="module", params=[0, 3])
@@ -806,3 +806,155 @@ def test_table_io_names_do_not_grant_capabilities() -> None:
         "parquet"
         not in builder.translator.runtime_features.active_feature_names()
     )
+
+
+@pytest.fixture(scope="module")
+def owned_list_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Reuse the compiled-language list workflow for translation tests.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    source = (Path(__file__).parents[1] / "arx" / "test_lists.x").read_text()
+    source += (
+        "\nfn main() -> i32:\n"
+        "  test_owned_lists()\n"
+        "  test_partial_construction()\n"
+        "  test_owned_string_elements()\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_owned_list_translation(owned_list_ir: tuple[ArxBuilder, str]) -> None:
+    """
+    title: Expression lists use owned storage and non-truncating shared length.
+    parameters:
+      owned_list_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    _, text = owned_list_ir
+    assert 'call i32 @"irx_list_append"' in text
+    assert 'call void @"irx_list_destroy"' in text
+    assert "irx_collection_length_i64" in text
+    assert "irx_collection_length_i32" not in text
+    assert "irx_tensor" not in text
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="clang required")
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_owned_lists_build_and_run(
+    owned_list_ir: tuple[ArxBuilder, str], tmp_path: Path, optimization: int
+) -> None:
+    """
+    title: Native lists retain values through failures and transfers.
+    parameters:
+      owned_list_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    builder, text = owned_list_ir
+    executable = tmp_path / "owned-lists"
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    builder._build_from_ir(str(module), str(executable))
+    result = subprocess.run(
+        [str(executable)],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == result.stderr == ""
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        ("fn main() -> i32:\n  return cast(len([]), i32)\n", "annotate empty"),
+        (
+            "fn main() -> i32:\n  return cast(len([[1], [2]]), i32)\n",
+            "nested owned",
+        ),
+        (
+            "fn main() -> i32:\n  var x: i8 = [128][0]\n  return 0\n",
+            "representable",
+        ),
+        (
+            "fn main() -> i32:\n  var x: i8 = [cast(1, i32)][0]\n  return 0\n",
+            "type Int8",
+        ),
+        ("fn main() -> i32:\n  return len([1])\n", "expects Int32"),
+        (
+            "fn main() -> i32:\n  return cast(len(1), i32)\n",
+            "requires a collection",
+        ),
+        (
+            "fn main() -> i32:\n  return cast(len([1], [2]), i32)\n",
+            "one positional",
+        ),
+        (
+            "fn main() -> i32:\n  var len: i32 = 1\n  return len([1])\n",
+            "does not resolve to a function",
+        ),
+        (
+            "fn use(x: list[i64]) -> none:\n  return none\n"
+            "fn main() -> i32:\n  var x: list[i32] = [1]\n"
+            "  use(x)\n  return 0\n",
+            "ListType",
+        ),
+        (
+            "fn escape(x: list[i32]) -> list[i32]:\n  return x\n"
+            "fn main() -> i32:\n  return 0\n",
+            "borrowed",
+        ),
+        (
+            "fn main() -> i32:\n"
+            "  var t: tensor[i32, 2, 2] = [[1, 2], [3]]\n  return 0\n",
+            "rectangular",
+        ),
+        (
+            "fn main() -> i32:\n  var t: tensor[i32, 2] = [1]\n  return 0\n",
+            "shape",
+        ),
+    ],
+)
+def test_owned_list_diagnostics(source: str, message: str) -> None:
+    """
+    title: Invalid collection domains and ownership fail before LLVM lowering.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    ArxIO.string_to_buffer(source)
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_len_can_be_shadowed_by_a_function() -> None:
+    """
+    title: Builtin spelling respects ordinary name resolution.
+    """
+    ArxIO.string_to_buffer(
+        "fn len(value: i32) -> i32:\n  return value\n"
+        "fn main() -> i32:\n  return len(0)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_collection_length" not in text

@@ -17,7 +17,9 @@ provided by IRx's native Arrow C++ runtime.
 
 ```arx
 fn sum_values() -> i32:
-  var values: list[i32] = range(0, 4)
+  var values: list[i32] = [0, 1, 2 + 1]
+  values.append(4)
+  assert len(values) == 4
   var total: i32 = 0
   for value in values:
     total = total + value
@@ -29,11 +31,22 @@ released on normal and exceptional lexical exits and replacement; returning an
 owned list moves it to the caller. A list moved into a pending return cannot be
 read or reassigned through that binding in `finally`; a separate fresh owned
 return value is allowed. Parameters borrow storage and cannot append or return
-that borrow. Literal-list views are non-owning and cannot escape into dynamic
-owners or call arguments. See the
-[enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract)
-for the ownership boundary. `range` currently materializes a list, not a lazy
-iterator.
+that borrow. Borrowed lists keep their exact element type: passing `list[i32]`
+to a `list[i64]` parameter does not convert the existing storage.
+
+Bracket expressions evaluate once, left to right, and produce owned lists; only
+an explicit fixed-shape tensor target selects tensor storage. An explicit list
+target types fresh literal elements first. Otherwise all elements must have a
+common lossless domain, independent of order. Empty lists need a target, for
+example `var values: list[i64] = []`. Nested owned lists remain unsupported.
+
+`len(values)` returns `i64`; narrowing it requires a checked `cast`. String
+insertion copies the bytes, and indexing or iterating a string list produces
+independent strings that survive list replacement. Failed construction drops
+initialized elements without replacing an existing destination. See the
+[enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract).
+`range` still materializes a list, not a lazy iterator. String and tensor
+receivers for `len` are not yet implemented.
 
 ## Tensors
 

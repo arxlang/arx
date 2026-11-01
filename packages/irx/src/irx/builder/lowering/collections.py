@@ -79,7 +79,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
 
     def _dynamic_list_length(self, base: astx.AST) -> ir.Value:
         """
-        title: Lower one dynamic list length to Int32.
+        title: Lower one dynamic list length without narrowing.
         parameters:
           base:
             type: astx.AST
@@ -106,19 +106,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
             length_ptr,
             name="irx_collection_length_i64",
         )
-        guard_collection_length(cast(VisitorCore, self), base, length_i64)
-        return cast(
-            ir.Value,
-            self._llvm.ir_builder.trunc(
-                length_i64,
-                self._llvm.INT32_TYPE,
-                "irx_collection_length_i32",
-            ),
-        )
+        return length_i64
 
     def _collection_length_value(self, base: astx.AST) -> ir.Value:
         """
-        title: Lower one collection length to an Int32 value.
+        title: Lower one collection length to an Int64 value.
         parameters:
           base:
             type: astx.AST
@@ -127,7 +119,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         static_length = self._static_collection_length(base)
         if static_length is not None:
-            return ir.Constant(self._llvm.INT32_TYPE, static_length)
+            return ir.Constant(self._llvm.INT64_TYPE, static_length)
 
         if isinstance(self._resolved_ast_type(base), astx.ListType):
             return self._dynamic_list_length(base)
@@ -755,7 +747,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             self._llvm.ir_builder.icmp_signed(
                 "==",
                 length,
-                ir.Constant(self._llvm.INT32_TYPE, 0),
+                ir.Constant(self._llvm.INT64_TYPE, 0),
                 name="collection_is_empty",
             )
         )

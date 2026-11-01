@@ -1630,6 +1630,7 @@ class VisitorCore(BuilderVisitor):
                     self._llvm.INT64_TYPE,
                     self._llvm.INT64_TYPE,
                     self._llvm.INT64_TYPE,
+                    self._llvm.INT32_TYPE,
                 ]
             )
         if isinstance(type_, astx.BufferViewType):

@@ -57,6 +57,18 @@ def contextualize_literal(
       target:
         type: astx.DataType | None
     """
+    if isinstance(value, (astx.SubscriptExpr, astx.ListIndex)):
+        base = (
+            value.value
+            if isinstance(value, astx.SubscriptExpr)
+            else value.base
+        )
+        if isinstance(base, astx.ListExpr) and target is not None:
+            contextualize_literal(base, astx.ListType([target]))
+        return
+    if isinstance(value, astx.ListExpr):
+        literal_semantic(value).literal_context = target
+        return
     if isinstance(target, astx.NullableType):
         target = target.value_type
     if isinstance(

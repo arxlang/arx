@@ -84,8 +84,8 @@ IRx semantic analysis attaches a typed `ResourceOwnership` sidecar to list
 expressions, declarations, arguments, calls, assignments, and returns. The
 current contract is deliberately move-only:
 
-- `ListCreate`, list comprehensions, and list-returning calls produce owned
-  values;
+- `ListExpr`, `ListCreate`, list comprehensions, and list-returning calls
+  produce owned values;
 - a local declaration consumes a fresh owned value, while a list parameter and
   an identifier expression are borrows;
 - a list-valued assignment consumes a fresh owner and destroys the target's
@@ -93,16 +93,25 @@ current contract is deliberately move-only:
 - returning a fresh owner or an owned local moves it to the caller; returning a
   borrowed parameter or static literal storage is rejected with `IRX-S013`;
 - append is allowed only through a locally owned list binding;
-- literal-list storage is static, supports direct indexing and iteration, and is
-  never passed to the dynamic-list destructor; and
+- the lower-level ASTx `LiteralList` remains literal-only, static storage; Arx
+  bracket expressions use `ListExpr`, not this non-owning representation; and
 - local aliases, borrowed/static-to-owned copies, static list call arguments or
-  defaults, owned list locals in generators, and owning list elements remain
-  unsupported and fail closed.
+  defaults, owned list locals in generators, and nested owning containers remain
+  unsupported and fail closed. Numeric, Boolean, and string elements are
+  supported; other element representations require explicit copy/drop plans.
 
 Lowering consumes these sidecars. It registers `irx_list_destroy` for owned
 locals and non-transferred temporaries, emits cleanup on normal block
 fallthrough, return, `break`, and `continue`, excludes an owner moved through a
 return, and retains cleanup for the caller that receives the result.
+Construction registers rollback before evaluating elements, including a pending
+move or return. Native append copies string elements, frees unpublished copies
+on allocation failure, and destroy drops every initialized string before freeing
+the backing bytes. Indexed and iterated strings own independent copies.
+
+`ListLength` and `CollectionLength` return `Int64`, without a truncating legacy
+path. Mutable list borrows require an identical element domain; scalar numeric
+widening is not a storage conversion.
 
 ## Tensor scalar-consumer temporaries
 

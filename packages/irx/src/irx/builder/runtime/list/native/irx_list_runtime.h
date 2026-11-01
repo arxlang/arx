@@ -12,6 +12,8 @@ typedef struct irx_list {
   int64_t length;
   int64_t capacity;
   int64_t element_size;
+  /* 0: trivial value; 1: independently owned NUL-free string pointer. */
+  int32_t element_kind;
 } irx_list;
 
 typedef enum irx_list_status {
@@ -22,6 +24,8 @@ typedef enum irx_list_status {
   IRX_LIST_OUT_OF_RANGE = 4
 } irx_list_status;
 
+/* Borrows value; string elements are copied. Failure never publishes an item.
+   Destroy drops every initialized string, then the backing allocation. */
 int32_t irx_list_append(irx_list* list, const void* value);
 /* Output remains NULL on failure; callers may dereference only on success. */
 int32_t irx_list_at(const irx_list* list, int64_t index, void** out);

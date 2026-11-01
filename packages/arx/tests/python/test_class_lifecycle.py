@@ -11,7 +11,6 @@ import astx
 import pytest
 
 from arx.codegen import ArxBuilder
-from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
@@ -840,12 +839,12 @@ class Holder:
     assert result.stdout == "base\nbase\n"
 
 
-def test_class_literal_container_is_rejected() -> None:
+def test_class_list_storage_is_rejected() -> None:
     """
-    title: Inferred literal storage cannot hide a strong class reference.
+    title: List expressions cannot hide an unsupported strong class owner.
     """
-    with pytest.raises(ParserException, match="literal elements"):
-        parsed(COUNTER, "[Counter()]")
+    with pytest.raises(SemanticError, match="owned lists support"):
+        analyze(parsed(COUNTER, "[Counter()]"))
 
 
 def test_constructor_in_hook_can_use_later_class(tmp_path: Path) -> None:

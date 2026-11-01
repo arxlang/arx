@@ -21,16 +21,16 @@ class CollectionLength(astx.base.DataType):
     title: Common collection length query node.
     summary: >-
       Return the logical length of a list, tuple, set, or dictionary as an
-      Int32 value.
+      Int64 value.
     attributes:
       base:
         type: astx.AST
       type_:
-        type: astx.Int32
+        type: astx.Int64
     """
 
     base: astx.AST
-    type_: astx.Int32
+    type_: astx.Int64
 
     def __init__(self, base: astx.AST) -> None:
         """
@@ -41,7 +41,7 @@ class CollectionLength(astx.base.DataType):
         """
         super().__init__()
         self.base = base
-        self.type_ = astx.Int32()
+        self.type_ = astx.Int64()
 
     def get_struct(self, simplified: bool = False) -> astx.base.ReprStruct:
         """

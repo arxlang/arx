@@ -843,6 +843,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 node.target,
                 iteration.element_type,
                 kind="for-in",
+                iteration_kind=iteration.kind,
             )
             resolved_iteration = replace(iteration, target_symbol=symbol)
             self._set_iteration(node.iterable, resolved_iteration)

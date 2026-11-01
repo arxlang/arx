@@ -964,6 +964,16 @@ class BaseVisitor:
         self._not_implemented(node)
 
     @dispatch
+    def visit(self, node: astx.ListExpr) -> None:
+        """
+        title: Visit expression-valued list construction.
+        parameters:
+          node:
+            type: astx.ListExpr
+        """
+        self._not_implemented(node)
+
+    @dispatch
     def visit(self, node: astx.LiteralList) -> None:
         """
         title: Visit LiteralList nodes.

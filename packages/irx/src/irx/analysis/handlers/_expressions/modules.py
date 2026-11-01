@@ -638,6 +638,36 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             info.resource_ownership = None
         info.resolved_file_open = None
         info.resolved_class_construction = None
+        info.collection_length = None
+        if node.fn == "len" and self.bindings.resolve(node.fn) is None:
+            info.resource_ownership = None
+            info.resolved_call = None
+            info.resolved_callable = None
+            info.resolved_function = None
+            if self.context.scopes.resolve(node.fn) is not None:
+                self.context.diagnostics.add(
+                    "name 'len' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            if (
+                len(node.args) != 1
+                or node.keywords
+                or astx.get_template_args(node)
+            ):
+                self.context.diagnostics.add(
+                    "len expects one positional value and no templates",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return
+            query = astx.CollectionLength(node.args[0])
+            query.loc = node.loc
+            self.visit(query)
+            info.collection_length = query
+            self._set_type(node, self._expr_type(query))
+            return
         if node.fn == "open":
             local = self.context.scopes.resolve(node.fn)
             if local is not None:

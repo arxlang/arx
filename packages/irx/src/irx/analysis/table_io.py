@@ -470,7 +470,7 @@ def resolve_table_io(
         literals: tuple[str | int, ...] = ()
         index = None
         if kind in {"texts", "ints"}:
-            if not isinstance(expression, astx.LiteralList):
+            if not isinstance(expression, (astx.LiteralList, astx.ListExpr)):
                 error(f"{name} requires a literal list", expression)
                 continue
             items = expression.elements
