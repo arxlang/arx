@@ -22,6 +22,7 @@ MAX_NUMERIC_LITERAL_CHARS = 4096
 MAX_TOKEN_COUNT = 250_000
 
 _MANIFEST = load_syntax_manifest()
+WORD_OPERATORS = _MANIFEST.word_operators
 
 
 class TokenKind(Enum):
@@ -483,7 +484,7 @@ class Lexer:
                 identifier += self.last_char
                 self.last_char = self.advance()
 
-            if identifier in ("and", "or"):
+            if identifier in WORD_OPERATORS:
                 return Token(
                     kind=TokenKind.operator,
                     value=identifier,

@@ -272,6 +272,17 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             self._set_type(node, chosen)
             analyze_constant_operation(node, self.context, chosen)
             return
+        if node.op_code == "%" and not (
+            is_numeric_type(lhs_type) and is_numeric_type(rhs_type)
+        ):
+            self.context.diagnostics.add(
+                "remainder '%' requires non-nullable numeric scalars; "
+                "collection and vector remainder is unsupported",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            self._set_type(node, None)
+            return
         if resolve_column_binary(cast(SemanticAnalyzerCore, self), node):
             return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)

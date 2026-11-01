@@ -9,7 +9,7 @@ support summary; executable conformance lives in the compiler tests.
 
 ### Boolean evaluation
 
-- `&&` and `||` require Boolean operands.
+- Scalar `&&`/`and` and `||`/`or` require Boolean operands.
 - The left operand is evaluated first.
 - For `lhs && rhs`, `rhs` is evaluated only when `lhs` is `true`.
 - For `lhs || rhs`, `rhs` is evaluated only when `lhs` is `false`.
@@ -18,6 +18,12 @@ support summary; executable conformance lives in the compiler tests.
 case: the skipped operand deliberately asserts false. IRx also verifies that
 lowering uses conditional blocks and a merge value rather than eager LLVM
 `and`/`or` instructions.
+
+Boolean negation accepts `!` and `not`. Word `not` binds below comparisons and
+above `and`/`or`: `not a == b` means `not (a == b)`, whereas `!a == b` means
+`(!a) == b`. Parenthesize word negation in tighter operands. Neither spelling
+adds numeric truthiness. Nullable/Series masks keep their existing eager,
+null-propagating operations rather than scalar short-circuiting.
 
 ### Fixed-width integer overflow
 
@@ -60,10 +66,20 @@ These forms do not change surrounding expressions' checked behavior.
 
 ### Integer division and remainder failures
 
-Signed integer division truncates toward zero. Division and remainder reject
-zero divisors and signed minimum with negative one before LLVM executes the
-operation. Integer SIMD lowering checks every supplied active lane; no masked
-source-vector API is implied. Floating-point division follows IEEE behavior.
+Signed integer `/` truncates toward zero. Scalar `%` is the remainder from that
+quotient, so `-5 / 100 == 0` and `-5 % 100 == -5`, unlike Python's floor-modulo
+result `95`. `%`, `*`, and `/` have equal precedence and associate left. For a
+positive integer modulus `m`, compute `r = value % m` and add `m` only when
+`r < 0`; unlike `(r + m) % m`, this avoids overflowing on an already positive
+remainder. The compiled datatype tests exercise this workflow.
+
+Integer division and remainder reject zero divisors and signed minimum with
+negative one before LLVM executes the operation. Remainder supports signed,
+unsigned, and floating non-nullable scalars, not collections, nullable values,
+or vectors. Integer SIMD division checks every supplied active lane; no masked
+source-vector API is implied. Floating-point division follows IEEE behavior;
+floating `%` uses truncating remainder (like `fmod`), preserves the dividend's
+sign including negative zero, and produces NaN for a zero divisor.
 
 Dynamic integer zero divisors raise `ZeroDivisionError`; out-of-range arithmetic
 and conversions raise `OverflowError`, at every optimization level. Diagnostic

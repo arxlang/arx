@@ -7,6 +7,7 @@ import pytest
 
 from arx.io import ArxIO
 from arx.lexer import Lexer, LexerError, Token, TokenKind, TokenList
+from arx.lexer.syntax import load_syntax_manifest
 from astx import SourceLocation
 
 
@@ -547,15 +548,26 @@ def test_lexer_rejects_excessive_token_count(
 
 def test_lexer_boolean_false_and_logical_operators() -> None:
     """
-    title: Lexer emits false literal and treats and/or as operators.
+    title: Word operators follow the manifest without splitting identifiers.
     """
-    ArxIO.string_to_buffer("false and x or y\n")
+    manifest = load_syntax_manifest()
+    assert manifest.word_operators == {"and", "or", "not"}
+    assert "%" in manifest.data["operators"]["arithmetic"]
+    assert "%" in manifest.data["operators"]["single_char"]
+    ArxIO.string_to_buffer("false and x or not y % 2 notice not_é\n")
     lexer = Lexer()
     assert lexer.get_token() == Token(TokenKind.bool_literal, False)
     assert lexer.get_token() == Token(TokenKind.operator, "and")
     assert lexer.get_token() == Token(TokenKind.identifier, "x")
     assert lexer.get_token() == Token(TokenKind.operator, "or")
+    negation = lexer.get_token()
+    assert negation == Token(TokenKind.operator, "not")
+    assert (negation.location.line, negation.location.col) == (1, 16)
     assert lexer.get_token() == Token(TokenKind.identifier, "y")
+    assert lexer.get_token() == Token(TokenKind.operator, "%")
+    assert lexer.get_token() == Token(TokenKind.int_literal, 2)
+    assert lexer.get_token() == Token(TokenKind.identifier, "notice")
+    assert lexer.get_token() == Token(TokenKind.identifier, "not_é")
 
 
 def test_lexer_dot_as_operator_alone() -> None:

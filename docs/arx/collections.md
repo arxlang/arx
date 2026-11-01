@@ -184,6 +184,9 @@ These scalar operations currently cover `i8`–`i64`, `u8`–`u64`, `f32`, `f64`
 but cannot yet be indexed into language scalars or used in these operators.
 Unary `+` and checked `-` support signed numeric values; Boolean `!`/`not`
 invert validity-preserving masks. Unsigned negation requires an explicit cast.
+Word `not` binds below comparisons, as in `not frame.x == 3`; see the
+[Boolean evaluation contract](specification.md#boolean-evaluation). Remainder
+`%` is scalar-only and is rejected for nullable values and Series.
 `column[start:stop:step]` follows Python's bound clipping and negative-stride
 rules; omitted bounds are allowed and a zero step fails. Slicing, `is_null` and
 `series_count` also work on rich column storage.

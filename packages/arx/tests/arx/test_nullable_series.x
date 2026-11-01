@@ -24,3 +24,8 @@ fn test_nullable_series() -> none:
   var mask: series[bool] = is_null(total)
   assert mask[1]
   assert !mask[0]
+  var inverted: series[bool] = not mask
+  assert inverted[0]
+  assert not inverted[1]
+  var different: series[bool | none] = not total == 2
+  assert is_null(different[1])

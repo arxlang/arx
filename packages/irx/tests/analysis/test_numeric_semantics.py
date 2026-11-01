@@ -8,6 +8,52 @@ import astx
 import pytest
 
 from irx.analysis import SemanticError, analyze
+from irx.analysis.numeric_literals import numeric_constant
+
+
+@pytest.mark.parametrize(
+    "left,right,expected", [(-19, 5, -4), (19, -5, 4), (-19, -5, -4)]
+)
+def test_constant_remainder_truncates(
+    left: int, right: int, expected: int
+) -> None:
+    """
+    title: Constant remainder uses the dividend sign, not Python floor modulo.
+    parameters:
+      left:
+        type: int
+      right:
+        type: int
+      expected:
+        type: int
+    """
+    expression = astx.BinaryOp(
+        "%", astx.LiteralInt32(left), astx.LiteralInt32(right)
+    )
+    analyze(expression)
+    assert numeric_constant(expression) == expected
+
+
+@pytest.mark.parametrize(
+    "operand",
+    [
+        astx.LiteralBoolean(True),
+        astx.LiteralList([astx.LiteralInt32(1), astx.LiteralInt32(2)]),
+        astx.TensorLiteral(
+            [astx.LiteralInt32(1)], element_type=astx.Int32(), shape=(1,)
+        ),
+        astx.Cast(astx.LiteralInt32(1), astx.NullableType(astx.Int32())),
+    ],
+)
+def test_remainder_requires_numeric_scalars(operand: astx.DataType) -> None:
+    """
+    title: Unsupported remainder domains fail before scalar LLVM lowering.
+    parameters:
+      operand:
+        type: astx.DataType
+    """
+    with pytest.raises(SemanticError, match="non-nullable numeric scalars"):
+        analyze(astx.BinaryOp("%", operand, astx.LiteralInt32(2)))
 
 
 def _semantic_type(node: astx.AST) -> astx.DataType | None:

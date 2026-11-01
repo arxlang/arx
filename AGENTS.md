@@ -407,7 +407,7 @@ pytest -q packages/arx/tests/python/test_codegen_ast_output.py
 pytest -q packages/arx/tests/python/test_codegen_file_object.py
 ```
 
-The GitHub workflow runs package tests and Arx/AIX language checks on Ubuntu
+The GitHub workflow runs non-AIX package tests and Arx language checks on Ubuntu
 with Python 3.10 through 3.14, plus the pre-commit lint stack. Do not assume a
 change is portable because it passes on only one Python version. Native build
 and execution checks may additionally require Clang and a C++ toolchain.

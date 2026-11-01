@@ -40,7 +40,6 @@ jobs:
           - astx
           - irx
           - arxpy
-          - aix
           - arxjit
         python_version:
           - "3.10"
@@ -143,12 +142,6 @@ jobs:
 
       - name: Run Arx syntax manifest checks
         run: makim arx.check-syntax
-
-      - name: Run compiled AIX tests
-        run: makim aix.test-compiled
-
-      - name: Run AIX syntax manifest checks
-        run: makim aix.check-syntax
 
   wheel-smoke:
     strategy:

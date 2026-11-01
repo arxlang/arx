@@ -23,6 +23,15 @@ class SyntaxManifest:
     data: dict[str, Any]
 
     @property
+    def word_operators(self) -> set[str]:
+        """
+        title: Return word operators recognized before ordinary identifiers.
+        returns:
+          type: set[str]
+        """
+        return set(self.data.get("operators", {}).get("word_operators", []))
+
+    @property
     def reserved_keywords(self) -> set[str]:
         """
         title: Return the set of reserved keywords from the manifest.

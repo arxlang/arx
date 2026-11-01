@@ -26,6 +26,9 @@ from arx.parser.base import ParserMixinBase
 from arx.parser.state import TypeUseContext
 from arx.tensor import attach_binding, infer_literal
 
+NOT_PRECEDENCE = 7
+PREFIX_PRECEDENCE = 50
+
 
 class ExpressionParserMixin(ParserMixinBase):
     """
@@ -934,9 +937,16 @@ class ExpressionParserMixin(ParserMixinBase):
             return "()"
         return "(" + ", ".join(str(dim) for dim in shape) + ")"
 
-    def parse_unary(self) -> astx.AST:
+    def parse_unary(self, min_precedence: int = 0) -> astx.AST:
         """
-        title: Parse a unary expression.
+        title: Parse prefix expressions with comparison-binding word negation.
+        summary: >-
+          Word not binds below comparisons but above and/or and emits the
+          existing Boolean ! operation. Symbolic prefixes retain their higher
+          precedence; parenthesize not when used in a tighter operand.
+        parameters:
+          min_precedence:
+            type: int
         returns:
           type: astx.AST
         """
@@ -953,8 +963,21 @@ class ExpressionParserMixin(ParserMixinBase):
 
         op_code = cast(str, self.tokens.cur_tok.value)
         op_loc = self.tokens.cur_tok.location
+        if op_code == "%":
+            raise ParserException(
+                "Remainder '%' requires a left operand.", op_loc
+            )
+        if op_code == "not" and min_precedence > NOT_PRECEDENCE:
+            raise ParserException(
+                "Parenthesize 'not' in this operator's operand.", op_loc
+            )
         self.tokens.get_next_token()
-        operand = self.parse_unary()
+        operand = self.parse_unary(
+            NOT_PRECEDENCE if op_code == "not" else PREFIX_PRECEDENCE
+        )
+        if op_code == "not":
+            operand = self.parse_bin_op_rhs(NOT_PRECEDENCE, operand)
+            op_code = "!"
         if not isinstance(operand, astx.DataType):
             raise ParserException(
                 f"Unary operator '{op_code}' requires an expression operand.",
@@ -996,7 +1019,7 @@ class ExpressionParserMixin(ParserMixinBase):
             bin_loc = self.tokens.cur_tok.location
             self.tokens.get_next_token()  # eat operator
 
-            rhs = self.parse_unary()
+            rhs = self.parse_unary(cur_prec + 1)
 
             next_prec = self.get_tok_precedence()
             if cur_prec < next_prec:

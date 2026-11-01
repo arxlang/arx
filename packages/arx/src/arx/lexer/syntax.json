@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.3.0",
+  "syntax_pack_version": "0.4.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -108,6 +108,7 @@
       "-",
       "*",
       "/",
+      "%",
       ".",
       ":",
       ",",
@@ -123,11 +124,11 @@
       "}"
     ],
     "multi_char": ["==", "!=", "<=", ">=", "->", "&&", "||", "++", "--"],
-    "word_operators": ["and", "or"],
+    "word_operators": ["and", "or", "not"],
     "assignment": ["="],
     "comparison": ["<", ">", "<=", ">=", "==", "!="],
-    "arithmetic": ["+", "-", "*", "/"],
-    "logical": ["&&", "||", "and", "or", "!"],
+    "arithmetic": ["+", "-", "*", "/", "%"],
+    "logical": ["&&", "||", "and", "or", "!", "not"],
     "type_union": ["|"],
     "punctuation": ["@", ":", ",", ";", "."]
   },
