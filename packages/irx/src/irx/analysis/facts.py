@@ -18,6 +18,7 @@ from typing import Generic, Literal, TypeVar, cast
 import astx
 
 from public import private, public
+from typeguard import TypeCheckError
 
 from irx.diagnostics import (
     Diagnostic,
@@ -25,7 +26,7 @@ from irx.diagnostics import (
     IRxDiagnosticError,
     LoweringError,
 )
-from irx.typecheck import TypeCheckError, typechecked
+from irx.typecheck import typechecked
 
 RecordT = TypeVar("RecordT", bound="SemanticFact")
 
