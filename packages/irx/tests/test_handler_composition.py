@@ -395,6 +395,9 @@ contribute("test", "test", "analysis", Value, Context, visit)
         "mypy",
         "--strict",
         "--follow-imports=silent",
+        # Installed dependency stubs match the CI matrix interpreter.
+        "--python-version",
+        f"{sys.version_info.major}.{sys.version_info.minor}",
     ]
     accepted = subprocess.run(
         [*command, str(positive)], capture_output=True, text=True, check=False
