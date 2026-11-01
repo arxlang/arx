@@ -24,7 +24,7 @@ from irx.builder.diagnostics import (
     raise_lowering_error,
     require_semantic_metadata,
 )
-from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
+from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
@@ -491,7 +491,8 @@ class ListVisitorMixin(VisitorMixinBase):
         self.cleanup_stack.append(action)
         return action
 
-    @cast(DispatchRegistrar, VisitorCore.visit).dispatch
+    # Plum adds dispatch dynamically; keep it visible to static API discovery.
+    @VisitorCore.visit.dispatch  # type: ignore[attr-defined, untyped-decorator]
     def visit(self, node: astx.ListExpr) -> None:
         """
         title: Construct resolved elements in order with rollback cleanup.
