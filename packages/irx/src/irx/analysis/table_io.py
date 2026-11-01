@@ -237,15 +237,18 @@ class TableIOCall(CallPlan):
             self.result_handle_index,
         )
 
-    def dependencies(self) -> tuple[object, ...]:
+    def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: >-
           Expose operands and generated construction to declaration
           reachability.
         returns:
-          type: tuple[object, Ellipsis]
+          type: tuple[astx.AST, Ellipsis]
         """
-        return (*self.arguments, self.construction)
+        expressions = tuple(argument.expression for argument in self.arguments)
+        if self.construction is None:
+            return expressions
+        return (*expressions, self.construction)
 
     def invalidate(self, node: astx.AST) -> None:
         """

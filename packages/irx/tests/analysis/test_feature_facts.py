@@ -17,7 +17,10 @@ from astx.binary_op import SPECIALIZED_BINARY_OP_EXTRA
 from irx.analysis import SemanticAnalyzer, analyze, analyze_modules
 from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.facts import FactKey, SemanticFact, SemanticFacts
-from irx.analysis.reachability import plan_declarations
+from irx.analysis.reachability import (
+    DeclarationReachability,
+    plan_declarations,
+)
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.table_io import TableIOArgument, TableIOCall
 from irx.analysis.types import clone_type
@@ -50,11 +53,11 @@ class DeclarationFact(SemanticFact):
         if not isinstance(self.declaration, astx.AST):
             raise TypeError("declaration must be an AST node")
 
-    def dependencies(self) -> tuple[object, ...]:
+    def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: Expose the declaration dependency without exposing its storage.
         returns:
-          type: tuple[object, Ellipsis]
+          type: tuple[astx.AST, Ellipsis]
         """
         return (self.declaration,)
 
@@ -147,9 +150,15 @@ def test_normalized_expression_keeps_one_semantic_identity() -> None:
     assert info.facts.get(key) is None
 
 
-def test_attachment_edges_participate_in_declaration_reachability() -> None:
+@pytest.mark.parametrize("module_attachment", [False, True])
+def test_attachment_edges_participate_in_declaration_reachability(
+    module_attachment: bool,
+) -> None:
     """
     title: A lazy declaration reachable only through a record is retained.
+    parameters:
+      module_attachment:
+        type: bool
     """
     body = astx.Block()
     body.append(astx.FunctionReturn(astx.LiteralInt32(7)))
@@ -158,19 +167,93 @@ def test_attachment_edges_participate_in_declaration_reachability() -> None:
     )
     library = make_parsed_module("library", declaration)
     library = replace(library, lazy_declarations=True)
+    expression = astx.LiteralInt32(0)
     root = make_parsed_module(
         "root",
         astx.ImportFromStmt(module="library", names=[astx.AliasExpr("kept")]),
+        expression,
     )
     session = analyze_modules(root, StaticImportResolver({"library": library}))
     assert session.lowering_declarations is not None
     assert id(declaration) not in session.lowering_declarations
-    info = cast(SemanticInfo, getattr(root.ast, "semantic"))
+    owner = root.ast if module_attachment else expression
+    info = cast(SemanticInfo, getattr(owner, "semantic"))
     info.facts = info.facts.with_fact(
         FactKey("provider", DeclarationFact), DeclarationFact(declaration)
     )
     reachable = plan_declarations(session)
     assert reachable is not None and id(declaration) in reachable
+
+
+@pytest.mark.parametrize("with_construction", [False, True])
+def test_table_dependencies_expose_source_order_ast_nodes(
+    with_construction: bool,
+) -> None:
+    """
+    title: Operand wrappers and absent constructions are not dependency edges.
+    parameters:
+      with_construction:
+        type: bool
+    """
+    path = astx.LiteralString("input.csv")
+    columns = astx.LiteralList([astx.LiteralString("id")])
+    construction = astx.ClassConstruct("Frame") if with_construction else None
+    plan = TableIOCall(
+        "read_csv",
+        (
+            TableIOArgument("path", path, "text"),
+            TableIOArgument("columns", columns, "texts", literals=("id",)),
+        ),
+        construction,
+    )
+    expected: tuple[astx.AST, ...] = (path, columns)
+    if construction is not None:
+        expected = (*expected, construction)
+    dependencies = plan.dependencies()
+    assert len(dependencies) == len(expected)
+    assert all(left is right for left, right in zip(dependencies, expected))
+
+
+def test_dependency_boundary_rejects_non_ast_edges(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    title: An unchecked provider cannot hide invalid edges after valid nodes.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+    """
+
+    def invalid_dependencies(self: DeclarationFact) -> tuple[object, ...]:
+        """
+        title: Simulate an unchecked provider returning an invalid second edge.
+        parameters:
+          self:
+            type: DeclarationFact
+        returns:
+          type: tuple[object, Ellipsis]
+        """
+        return (self.declaration, object())
+
+    facts = SemanticFacts().with_fact(
+        FactKey("provider", DeclarationFact),
+        DeclarationFact(astx.LiteralInt32(1)),
+    )
+    monkeypatch.setattr(DeclarationFact, "dependencies", invalid_dependencies)
+    with pytest.raises(TypeCheckError):
+        facts.dependencies()
+
+
+def test_reachability_rejects_non_ast_roots() -> None:
+    """
+    title: Reachability accepts only AST roots and checks every root.
+    """
+    root = make_parsed_module("root", astx.LiteralInt32(0))
+    session = analyze_modules(root, StaticImportResolver({}))
+    with pytest.raises(TypeCheckError):
+        DeclarationReachability(session).collect(
+            [root.ast, object()]  # type: ignore[list-item]
+        )
 
 
 def test_table_fact_copy_and_reanalysis_release_old_generation() -> None:

@@ -45,12 +45,12 @@ class SemanticFact:
         """
         raise NotImplementedError("semantic facts must validate their payload")
 
-    def dependencies(self) -> tuple[object, ...]:
+    def dependencies(self) -> tuple[astx.AST, ...]:
         """
         title: >-
-          Expose all declaration and expression dependencies to reachability.
+          Expose AST dependencies explicitly, without semantic record wrappers.
         returns:
-          type: tuple[object, Ellipsis]
+          type: tuple[astx.AST, Ellipsis]
         """
         raise NotImplementedError("semantic facts must expose dependencies")
 
@@ -276,11 +276,11 @@ class SemanticFacts:
             )
         return value
 
-    def dependencies(self) -> tuple[object, ...]:
+    def dependencies(self) -> tuple[astx.AST, ...]:
         """
-        title: Expose record-owned edges without exposing storage internals.
+        title: Return checked AST edges without exposing record internals.
         returns:
-          type: tuple[object, Ellipsis]
+          type: tuple[astx.AST, Ellipsis]
         """
         return tuple(
             edge

@@ -22,7 +22,6 @@ from plum import dispatch
 from public import private
 
 from irx.analysis.facts import SemanticFacts
-from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.session import CompilationSession
 from irx.typecheck import typechecked
 
@@ -62,12 +61,12 @@ class DeclarationReachability:
                         binding.struct.declaration
                     )
 
-    def collect(self, roots: list[object]) -> frozenset[int]:
+    def collect(self, roots: list[astx.AST]) -> frozenset[int]:
         """
         title: Compute a cycle-safe closure of resolved declaration references.
         parameters:
           roots:
-            type: list[object]
+            type: list[astx.AST]
         returns:
           type: frozenset[int]
         """
@@ -183,12 +182,9 @@ def plan_declarations(session: CompilationSession) -> frozenset[int] | None:
     """
     if not any(item.lazy_declarations for item in session.modules.values()):
         return None
-    roots: list[object] = []
+    roots: list[astx.AST] = []
     for module in session.ordered_modules():
         if module.key == session.root.key or not module.lazy_declarations:
-            info = getattr(module.ast, "semantic", None)
-            if isinstance(info, SemanticInfo):
-                roots.append(info.facts)
-            roots.extend(module.ast.nodes)
+            roots.append(module.ast)
             roots.extend(astx.generated_template_nodes(module.ast))
     return DeclarationReachability(session).collect(roots)
