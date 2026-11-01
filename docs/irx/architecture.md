@@ -67,6 +67,26 @@ failures.
 
 See [Semantic Contract](semantic-contract.md) for the concise contract summary.
 
+### Explicit call-handler composition
+
+Table I/O is the first composed handler family. Normal symbol lookup selects a
+trusted operation; its registered analysis handler produces a typed call plan.
+LLVM call lowering dispatches on that plan, not the source name. Handlers use
+small phase-owned service interfaces rather than inheriting the entire compiler.
+Other visitor families have not yet migrated.
+
+Analysis and builders accept explicit, immutable phase configurations.
+Derivation names replacements; duplicate signatures and unavailable invocation
+dependencies are rejected. Each compiler instance builds fresh Plum
+dispatch/cache state, so derived configurations do not mutate parents or live
+compilers. Providers must not capture compilation state. Recursive dispatch is
+supported; concurrent use of one mutable compiler instance is not. There is no
+automatic plugin discovery.
+
+Lightweight contribution metadata imports neither LLVM, PyArrow, nor Arx.
+Analysis providers do not import the backend. Registering a handler does not
+activate native code; emission still requests registered runtime symbols.
+
 ### Why sidecars instead of a separate HIR?
 
 For the current size of IRx, attaching explicit semantic sidecars to AST nodes

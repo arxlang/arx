@@ -8,6 +8,7 @@ from public import public
 from typeguard import (
     CollectionCheckStrategy,
     ForwardRefPolicy,
+    TypeCheckError,
 )
 from typeguard import (
     typechecked as _typechecked,
@@ -24,7 +25,7 @@ typechecked = _typechecked(
 global_config.forward_ref_policy = ForwardRefPolicy.IGNORE
 global_config.collection_check_strategy = CollectionCheckStrategy.ALL_ITEMS
 
-__all__ = ["copy_type", "skip_unused", "typechecked"]
+__all__ = ["TypeCheckError", "copy_type", "skip_unused", "typechecked"]
 
 
 @public

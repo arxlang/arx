@@ -873,6 +873,7 @@ def test_public_analysis_contract_is_stable() -> None:
         "resolved_context_manager",
         "resolved_field_access",
         "semantic_flags",
+        "facts",
         "extras",
     )
     assert contract.required_session_fields == (

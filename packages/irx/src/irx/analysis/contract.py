@@ -185,6 +185,7 @@ _SEMANTIC_CONTRACT = SemanticContract(
         "resolved_context_manager",
         "resolved_field_access",
         "semantic_flags",
+        "facts",
         "extras",
     ),
     required_session_fields=(

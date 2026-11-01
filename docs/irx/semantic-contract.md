@@ -49,7 +49,16 @@ Before lowering starts, IRx guarantees that analyzed nodes may carry
 - `resolved_context_manager`
 - `resolved_class_construction`
 - `semantic_flags`
+- `facts`
 - `extras`
+
+Specialized call plans use typed, provider-owned nominal keys in `facts`, not
+string-keyed `extras`. Optional lookup distinguishes absence from corruption;
+required lookup diagnoses a violated phase contract. Records validate nested
+payloads and declare reachability edges. Analysis entry points invalidate the
+previous generation; deep copies follow AST memoization, while type
+normalization keeps independent sidecar slots. Existing universal fields remain
+central. The old table I/O extras attachment is removed rather than aliased.
 
 For multi-module compilation, IRx also guarantees the following
 `CompilationSession` state before lowering:
@@ -125,6 +134,7 @@ display prefix.
 Current high-level families:
 
 - `Sxxx`: semantic analysis
+- `Exxx`: handler configuration and dispatch
 - `Fxxx`: public FFI contract
 - `Lxxx`: lowering and codegen
 - `Rxxx`: runtime feature activation and symbol resolution

@@ -21,6 +21,8 @@ import astx
 from plum import dispatch
 from public import private
 
+from irx.analysis.facts import SemanticFacts
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.session import CompilationSession
 from irx.typecheck import typechecked
 
@@ -60,12 +62,12 @@ class DeclarationReachability:
                         binding.struct.declaration
                     )
 
-    def collect(self, roots: list[astx.AST]) -> frozenset[int]:
+    def collect(self, roots: list[object]) -> frozenset[int]:
         """
         title: Compute a cycle-safe closure of resolved declaration references.
         parameters:
           roots:
-            type: list[astx.AST]
+            type: list[object]
         returns:
           type: frozenset[int]
         """
@@ -109,6 +111,16 @@ class DeclarationReachability:
         raise TypeError(
             f"unsupported declaration dependency metadata: {type(value)}"
         )
+
+    @dispatch
+    def visit(self, value: SemanticFacts) -> None:
+        """
+        title: Traverse provider-declared attachment dependencies.
+        parameters:
+          value:
+            type: SemanticFacts
+        """
+        self.pending.extend(value.dependencies())
 
     @dispatch
     def visit(self, value: astx.AST) -> None:
@@ -171,9 +183,12 @@ def plan_declarations(session: CompilationSession) -> frozenset[int] | None:
     """
     if not any(item.lazy_declarations for item in session.modules.values()):
         return None
-    roots: list[astx.AST] = []
+    roots: list[object] = []
     for module in session.ordered_modules():
         if module.key == session.root.key or not module.lazy_declarations:
+            info = getattr(module.ast, "semantic", None)
+            if isinstance(info, SemanticInfo):
+                roots.append(info.facts)
             roots.extend(module.ast.nodes)
             roots.extend(astx.generated_template_nodes(module.ast))
     return DeclarationReachability(session).collect(roots)
