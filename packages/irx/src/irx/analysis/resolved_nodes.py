@@ -2107,6 +2107,45 @@ class ResolvedFileOperation:
 
 
 @public
+class TextOperationKind(Enum):
+    """
+    title: Validated operations on NUL-free Unicode text.
+    """
+
+    LENGTH = "len"
+    INDEX = "index"
+    SLICE = "slice"
+    SPLIT = "split"
+    STRIP = "strip"
+    INTEGER = "int"
+    ORDINAL = "ord"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedTextOperation:
+    """
+    title: Source-ordered text operands and their normalized ABI positions.
+    summary: >-
+      Evaluate each operand once in order. Each argument index selects an
+      evaluation; None selects the operation's documented default. Inputs are
+      borrowed for the operation and owned results are independent copies.
+    attributes:
+      kind:
+        type: TextOperationKind
+      evaluations:
+        type: tuple[astx.AST, Ellipsis]
+      argument_indices:
+        type: tuple[int | None, Ellipsis]
+    """
+
+    kind: TextOperationKind
+    evaluations: tuple[astx.AST, ...]
+    argument_indices: tuple[int | None, ...]
+
+
+@public
 @typechecked
 @dataclass
 class SemanticInfo:
@@ -2202,6 +2241,8 @@ class SemanticInfo:
         description: An explicitly tensor-contextualized collection expression.
       collection_length:
         type: astx.CollectionLength | None
+      resolved_text_operation:
+        type: ResolvedTextOperation | None
         description: Resolved unshadowed len intrinsic using shared queries.
       lifecycle_self:
         type: bool
@@ -2265,6 +2306,7 @@ class SemanticInfo:
     tensor_temporary_owner: bool = False
     collection_tensor: astx.TensorLiteral | None = None
     collection_length: astx.CollectionLength | None = None
+    resolved_text_operation: ResolvedTextOperation | None = None
     lifecycle_self: bool = False
     lifecycle_field_store: bool = False
     resolved_resource_store: ResourceOwnership | None = None

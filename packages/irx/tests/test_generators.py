@@ -572,26 +572,36 @@ def test_generator_return_runs_nonsuspending_finally() -> None:
     assert result.stderr == ""
 
 
-@pytest.mark.parametrize("iteration", [False, True])
-def test_owned_string_list_access_in_generators_is_diagnosed(
-    iteration: bool,
+@pytest.mark.parametrize(
+    "operation",
+    ["index", "iteration", "text_index", "slice", "split", "strip"],
+)
+def test_owned_string_access_in_generators_is_diagnosed(
+    operation: str,
 ) -> None:
     """
-    title: List element copies cannot silently escape generator frame cleanup.
+    title: Owned text results cannot escape generator frame cleanup.
     parameters:
-      iteration:
-        type: bool
+      operation:
+        type: str
     """
-    if iteration:
+    if operation == "iteration":
         statement: astx.AST = astx.ForInLoopStmt(
             astx.Identifier("word"),
             astx.Identifier("values"),
             _block_of(astx.Identifier("word")),
         )
-    else:
+    elif operation == "index":
         statement = astx.ListIndex(
             astx.Identifier("values"), astx.LiteralInt32(0)
         )
+    elif operation in {"text_index", "slice"}:
+        statement = astx.SubscriptExpr(
+            astx.LiteralString("text"),
+            index=astx.LiteralInt32(0) if operation == "text_index" else None,
+        )
+    else:
+        statement = astx.MethodCall(astx.LiteralString("text"), operation, [])
     module = astx.Module()
     module.block.append(
         astx.FunctionDef(

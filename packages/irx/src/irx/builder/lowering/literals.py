@@ -22,6 +22,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.nullable import NullableVisitorMixin
+from irx.builder.lowering.text import lower_text_operation
 from irx.typecheck import typechecked
 
 
@@ -629,6 +630,8 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SubscriptExpr
         """
+        if lower_text_operation(cast(VisitorCore, self), node):
+            return
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return
         if isinstance(self._resolved_ast_type(node.value), astx.ListType):

@@ -20,8 +20,8 @@ class CollectionLength(astx.base.DataType):
     """
     title: Common collection length query node.
     summary: >-
-      Return the logical length of a list, tuple, set, or dictionary as an
-      Int64 value.
+      Return the logical length of a list, tuple, set, dictionary, or string as
+      an Int64 value. String length counts Unicode code points.
     attributes:
       base:
         type: astx.AST

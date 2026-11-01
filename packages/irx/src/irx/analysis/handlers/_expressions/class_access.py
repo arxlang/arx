@@ -55,7 +55,8 @@ from irx.analysis.resolved_nodes import (
     SemanticClass,
     SemanticClassMember,
 )
-from irx.analysis.types import display_type_name
+from irx.analysis.text import resolve_text_call, text_error
+from irx.analysis.types import display_type_name, is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -226,12 +227,26 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
         if info.resolved_file_operation is not None:
             info.resource_ownership = None
         info.resolved_file_operation = None
+        info.resolved_text_operation = None
         info.resolved_class_construction = None
         self._semantic(node).resource_ownership = None
         self.visit(node.receiver)
         module = self._module_namespace(node.receiver)
         if module is not None:
             self._resolve_module_namespace_call(node, module, [])
+            return
+        receiver_type = self._expr_type(node.receiver)
+        if is_string_type(receiver_type):
+            resolve_text_call(cast(SemanticAnalyzerCore, self), node)
+            return
+        if node.method_name in {"split", "strip"} and not isinstance(
+            receiver_type, astx.ClassType
+        ):
+            text_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                f"{node.method_name} requires a text receiver",
+            )
             return
         arg_types: list[astx.DataType | None] = []
         for arg in call_evaluations(node):

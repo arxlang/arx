@@ -41,6 +41,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.extensions.calls import CallLoweringServices, LoweringCall
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.text import lower_text_operation
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.record_batch_api import is_checked_native_facade
 from irx.builder.state import (
@@ -707,6 +708,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FunctionCall
         """
+        if lower_text_operation(cast(VisitorCore, self), node):
+            return
         info = getattr(node, "semantic", None)
         if (
             isinstance(info, SemanticInfo)
@@ -752,6 +755,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.MethodCall
         """
+        if lower_text_operation(cast(VisitorCore, self), node):
+            return
         if self.emit_operation(node):
             return
         semantic = getattr(node, "semantic", None)

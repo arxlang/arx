@@ -232,10 +232,8 @@ def test_owned_series_and_scalar_execute() -> None:
             "integer representable",
         ),
         (
-            lambda: astx.SubscriptExpr(
-                column(), astx.LiteralInt32(0), lower=astx.LiteralInt32(0)
-            ),
-            "slicing is unsupported",
+            lambda: astx.SubscriptExpr(column(), astx.LiteralNone()),
+            "integer representable",
         ),
     ],
 )

@@ -81,6 +81,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedOperator,
     ResolvedRaise,
     ResolvedStaticClassFieldAccess,
+    ResolvedTextOperation,
     ResolvedTry,
     ResourceKind,
     ResourceOwnership,
@@ -104,6 +105,7 @@ from irx.analysis.resolved_nodes import (
     SemanticSymbol,
     TemplateArgumentBinding,
     TemplateSpecializationKey,
+    TextOperationKind,
 )
 from irx.analysis.session import CompilationSession
 from irx.diagnostics import Diagnostic, DiagnosticBag, SemanticError
@@ -159,6 +161,7 @@ __all__ = [
     "ResolvedOperator",
     "ResolvedRaise",
     "ResolvedStaticClassFieldAccess",
+    "ResolvedTextOperation",
     "ResolvedTry",
     "ResourceKind",
     "ResourceOwnership",
@@ -186,6 +189,7 @@ __all__ = [
     "SemanticSymbol",
     "TemplateArgumentBinding",
     "TemplateSpecializationKey",
+    "TextOperationKind",
     "analyze",
     "analyze_module",
     "analyze_modules",

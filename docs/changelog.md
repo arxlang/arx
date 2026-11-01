@@ -3,6 +3,12 @@
 
 ## Unreleased
 
+- Add owned Unicode text indexing/slicing, splitting, stripping, checked `int`
+  parsing, `ord`, and code-point `len`; native failures are recoverable.
+- **Breaking:** Text literals reject embedded NUL and invalid Unicode scalars.
+  ASTx subscripts distinguish an explicit `none` index from omitted slice
+  bounds; use omitted `index` for a full slice.
+
 - **Breaking:** Bracket expressions construct owned lists, including calls and
   arithmetic; tensor initialization requires an explicit fixed-shape target.
   ASTx exposes `ListExpr` rather than relaxing `LiteralList`.

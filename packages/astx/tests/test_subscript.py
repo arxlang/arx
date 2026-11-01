@@ -4,11 +4,27 @@ title: Tests for subscripts.
 
 from typing import cast
 
+import pytest
+
 from astx.base import ASTKind, DictDataTypesStruct
 from astx.data import Variable
-from astx.literals import LiteralInt32
+from astx.literals import LiteralInt32, LiteralNone, LiteralString
 from astx.subscript import Ellipsis, SubscriptExpr
 from astx.viz import visualize_image
+
+
+def test_omitted_slice_bounds_differ_from_none_index() -> None:
+    """
+    title: Full slices preserve their syntax instead of becoming none indices.
+    """
+    source = LiteralString("text")
+    sliced = SubscriptExpr(source)
+    indexed = SubscriptExpr(source, LiteralNone())
+    assert sliced.is_slice and not indexed.is_slice
+    assert "[:]" in str(sliced)
+    assert sliced.get_struct() != indexed.get_struct()
+    with pytest.raises(ValueError, match="combine an index and slice"):
+        SubscriptExpr(source, LiteralInt32(0), upper=LiteralInt32(1))
 
 
 def test_subscriptexpr_upper_lower() -> None:

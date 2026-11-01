@@ -165,6 +165,54 @@ def test_status_call_reads_only_success_output(tmp_path: Path) -> None:
         )
 
 
+def test_text_result_rolls_back_when_receiver_cleanup_raises(
+    tmp_path: Path,
+) -> None:
+    """
+    title: A text result is protected before fallible operand cleanup and move.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = astx.ClassDefStmt(
+        "TextSource",
+        methods=[
+            function("__del__", block(raised()), astx.NoneType()),
+            function(
+                "text",
+                block(astx.FunctionReturn(astx.LiteralString("a,b"))),
+                astx.String(),
+            ),
+        ],
+    )
+    result = astx.MethodCall(
+        astx.MethodCall(astx.ClassConstruct("TextSource"), "text", []),
+        "split",
+        [],
+    )
+    make = function(
+        "make",
+        block(astx.FunctionReturn(result)),
+        astx.ListType([astx.String()]),
+    )
+    main = function(
+        "main",
+        block(
+            caught(
+                block(astx.FunctionCall("make", [])),
+                astx.LiteralInt32(CAUGHT_VALUE),
+            ),
+            astx.FunctionReturn(astx.LiteralInt32(0)),
+        ),
+    )
+    module = astx.Module()
+    for declaration in (source, make, main):
+        module.block.append(declaration)
+    assert_executed_list_cleanups(
+        module, tmp_path, expected=1, expected_result=CAUGHT_VALUE
+    )
+
+
 @pytest.mark.parametrize(
     ("transfer", "expected"), [("break", 1), ("continue", 3)]
 )

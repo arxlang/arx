@@ -44,6 +44,12 @@ from irx.analysis.resolved_nodes import (
     OwnershipKind,
     ResolvedCollectionMethod,
     ResolvedGeneratorFunction,
+    TextOperationKind,
+)
+from irx.analysis.text import (
+    resolve_text_subscript,
+    set_text_operation,
+    text_error,
 )
 from irx.analysis.types import (
     common_numeric_type,
@@ -129,6 +135,20 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.LiteralString
         """
+        if "\0" in node.value:
+            text_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "text literals cannot contain NUL; use binary data instead",
+            )
+        try:
+            node.value.encode("utf-8")
+        except UnicodeEncodeError:
+            text_error(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                "text literals require valid Unicode scalar values",
+            )
         self._set_type(node, node.type_)
         self._set_resource_ownership(
             node,
@@ -453,6 +473,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         base: astx.AST,
         *,
         context: str,
+        analyzed: bool = False,
     ) -> astx.DataType | None:
         """
         title: Validate one collection query receiver.
@@ -463,10 +484,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.AST
           context:
             type: str
+          analyzed:
+            type: bool
         returns:
           type: astx.DataType | None
         """
-        self.visit(base)
+        if not analyzed:
+            self.visit(base)
         if not self._require_value_expression(base, context=context):
             return None
         base_type = self._expr_type(base)
@@ -572,11 +596,25 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.CollectionLength
         """
+        info = self._semantic(node)
+        info.resolved_text_operation = None
+        info.resolved_collection_method = None
+        self.visit(node.base)
+        if is_string_type(self._expr_type(node.base)):
+            set_text_operation(
+                cast(SemanticAnalyzerCore, self),
+                node,
+                TextOperationKind.LENGTH,
+                (node.base,),
+                (0,),
+            )
+            return
         return_type = astx.Int64()
         base_type = self._validate_collection_query_base(
             node,
             node.base,
             context="collection length",
+            analyzed=True,
         )
         supported = self._validate_collection_lowering_support(
             node=node,
@@ -1186,14 +1224,21 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SubscriptExpr
         """
+        info = self._semantic(node)
+        if info.resolved_text_operation is not None:
+            info.resource_ownership = None
+        info.resolved_text_operation = None
         self.visit(node.value)
-        if not isinstance(node.index, astx.LiteralNone):
+        if is_string_type(self._expr_type(node.value)):
+            resolve_text_subscript(cast(SemanticAnalyzerCore, self), node)
+            return
+        if not node.is_slice:
             self.visit(node.index)
         value_type = self._expr_type(node.value)
         if resolve_column_index(cast(SemanticAnalyzerCore, self), node):
             return
         if isinstance(value_type, astx.ListType):
-            if isinstance(node.index, astx.LiteralNone):
+            if node.is_slice:
                 self.context.diagnostics.add(
                     "list slicing is not supported",
                     node=node,

@@ -26,6 +26,32 @@ Strings have distinct static, borrowed, and owned lifetimes; consult the
 before returning or storing borrowed text. Native strings cannot represent
 embedded NUL safely.
 
+## Parsing text
+
+```arx
+fn distance(record: str) -> i64:
+  var clean: str = record.strip()
+  return int(clean[1:])
+```
+
+For whitespace-delimited input, iterate over `text.split()`. The returned
+strings and list own their storage, including after the source file is closed or
+its text replaced. Advanced splitting can preserve empty fields with
+`text.split(sep=",", maxsplit=2)`; `strip(chars="xy")` removes a set of code
+points, not the substring `"xy"`. Explicit empty separators fail.
+
+`len(text)` and indexing count Unicode code points, not bytes or grapheme
+clusters; no normalization occurs. Slices clip nonnegative bounds, but negative
+indices/bounds and non-unit steps are unsupported. `ord(text)` requires exactly
+one code point. `int(text, base=10)` returns checked `i64`, with bases 2–36;
+unlike Python it does not recognize base prefixes or digit separators, and
+digits are ASCII only. Numeric casts still use `cast`, not `int`. Whitespace is
+locale-independent and shared by splitting, stripping and integer parsing; its
+exact set is specified in the native text source contract. Invalid text/options
+and overflow raise recoverable errors rather than returning partial data. Text
+literals and text-file reads reject embedded NUL; arbitrary bytes are not yet a
+text-file workflow.
+
 ## Collections and nullable values
 
 [Collections and Apache Arrow](collections.md) owns the list, tensor, DataFrame,

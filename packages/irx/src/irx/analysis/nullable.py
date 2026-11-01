@@ -240,7 +240,7 @@ def resolve_column_index(
     source = analyzer._expr_type(node.value)
     if not isinstance(source, astx.SeriesType):
         return False
-    if isinstance(node.index, astx.LiteralNone):
+    if node.is_slice:
         for bound in (node.lower, node.upper, node.step):
             if isinstance(bound, astx.LiteralNone):
                 continue
