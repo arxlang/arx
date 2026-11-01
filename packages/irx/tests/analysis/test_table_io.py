@@ -8,7 +8,7 @@ import astx
 import pytest
 
 from irx.analysis import ParsedModule, SemanticError, analyze_modules
-from irx.analysis.resolved_nodes import SemanticInfo
+from irx.analysis.resolved_nodes import OwnershipKind, SemanticInfo
 from irx.analysis.table_io import TABLE_IO, TableIOCall
 from irx.builder import Builder
 from irx.native import NativeBinding, TableIOOperation
@@ -51,7 +51,8 @@ def io_module(
         ),
         astx.NoneType(),
     )
-    reader.is_extern = writer.is_extern = True
+    setattr(reader, "is_extern", True)
+    setattr(writer, "is_extern", True)
     read = astx.FunctionCall(
         "host_read",
         (astx.LiteralString("input"),) if positional is None else positional,
@@ -67,7 +68,7 @@ def io_module(
             value=astx.Cast(astx.Identifier("loaded"), target),
         )
     )
-    settings = (
+    settings: tuple[astx.KeywordArgument, ...] = (
         (
             (
                 astx.KeywordArgument("delimiter", astx.LiteralString(";")),
@@ -146,7 +147,7 @@ def test_host_table_io_translate(
       configured:
         type: bool
     """
-    settings = (
+    settings: tuple[astx.KeywordArgument, ...] = (
         (
             astx.KeywordArgument(
                 "columns", astx.LiteralList([astx.LiteralString("id")])
@@ -239,6 +240,60 @@ def test_host_table_io_requires_path(
     root, _ = io_module("csv", positional=arguments)
     with pytest.raises(SemanticError):
         analyze_modules(root, StaticImportResolver({}))
+
+
+def test_table_io_reanalysis_replaces_operands_after_failure() -> None:
+    """
+    title: Failed reanalysis drops the old plan and retry preserves omission.
+    """
+    columns = astx.LiteralList([astx.LiteralString("id")])
+    root, read = io_module("csv", (astx.KeywordArgument("columns", columns),))
+    resolver = StaticImportResolver({})
+    first_session = analyze_modules(root, resolver)
+    info = cast(SemanticInfo, getattr(read, "semantic"))
+    first_function = info.resolved_function
+    first_plan = info.extras[TABLE_IO]
+    assert isinstance(first_plan, TableIOCall)
+    assert first_plan.arguments[1].expression is columns
+    assert first_plan.arguments[1].literals == ("id",)
+
+    read.keywords = (
+        astx.KeywordArgument("block_size", astx.LiteralString("invalid")),
+    )
+    with pytest.raises(SemanticError, match="block_size"):
+        analyze_modules(root, resolver)
+    assert TABLE_IO not in cast(SemanticInfo, getattr(read, "semantic")).extras
+
+    read.keywords = ()
+    second_session = analyze_modules(root, resolver)
+    info = cast(SemanticInfo, getattr(read, "semantic"))
+    plan = info.extras[TABLE_IO]
+    assert isinstance(plan, TableIOCall)
+    assert plan is not first_plan
+    assert [argument.name for argument in plan.arguments] == ["path"]
+    assert plan.arguments[0].expression is next(iter(read.args))
+    assert info.resolved_function is not first_function
+    assert second_session is not first_session
+    assert info.resource_ownership is not None
+    assert info.resource_ownership.kind is OwnershipKind.OWNED
+
+
+def test_reused_builder_does_not_retain_table_runtime_features() -> None:
+    """
+    title: A Parquet compilation cannot activate Parquet in a later CSV module.
+    """
+    builder = Builder()
+    resolver = StaticImportResolver({})
+    parquet, _ = io_module("parquet")
+    csv, _ = io_module("csv")
+    for root, uses_parquet in ((parquet, True), (csv, False), (parquet, True)):
+        text = builder.translate_modules(root, resolver)
+        llvm.parse_assembly(text).verify()
+        features = builder.translator.runtime_features.active_feature_names()
+        assert "record_batch" in features
+        assert ("parquet" in features) is uses_parquet
+        assert ("irx_rb_api_read_parquet" in text) is uses_parquet
+        assert ("irx_rb_api_read_csv" in text) is not uses_parquet
 
 
 @pytest.mark.parametrize("static_overload", [False, True])

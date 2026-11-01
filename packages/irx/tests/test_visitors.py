@@ -5,14 +5,17 @@ title: Tests for the shared visitor base.
 """
 
 from pathlib import Path
+from typing import cast
 
 import astx
 import pytest
 
+from astx.base import ReprStruct
 from irx.analysis.api import SemanticAnalyzer
-from irx.base.visitors import BaseVisitor
+from irx.base.visitors import BaseVisitor, BaseVisitorProtocol
 from irx.builder import Visitor
 from plum import dispatch
+from public import private
 
 
 class _SpecializedVisitor(BaseVisitor):
@@ -42,16 +45,69 @@ class _SpecializedVisitor(BaseVisitor):
         self.calls.append(type(node).__name__)
 
 
-def test_base_visitor_raises_not_implemented() -> None:
+@private
+class UnknownNode(astx.AST):
+    """
+    title: Unregistered node used to exercise the failing visitor fallback.
+    """
+
+    def get_struct(self, simplified: bool = False) -> ReprStruct:
+        """
+        title: Supply the AST representation contract without a visit handler.
+        parameters:
+          simplified:
+            type: bool
+        returns:
+          type: ReprStruct
+        """
+        return {"UnknownNode": {}}
+
+
+@private
+class IntegerSubtype(astx.LiteralInt32):
+    """
+    title: Nominal subtype without its own visitor registration.
+    """
+
+
+@private
+class InheritedVisitor(_SpecializedVisitor):
+    """
+    title: Add one overload without replacing the inherited integer handler.
+    attributes:
+      calls:
+        type: list[str]
+    """
+
+    @dispatch
+    # Plum extends the inherited overload set; mypy sees a replacement method.
+    def visit(self, node: astx.LiteralString) -> None:  # type: ignore[override]
+        """
+        title: Record string visits alongside inherited integer visits.
+        parameters:
+          node:
+            type: astx.LiteralString
+        """
+        self.calls.append(type(node).__name__)
+
+
+@pytest.mark.parametrize(
+    "node", [astx.LiteralInt32(1), astx.Block(), UnknownNode()]
+)
+def test_base_visitor_raises_not_implemented(node: astx.AST) -> None:
     """
     title: BaseVisitor should raise a consistent error for ASTx nodes.
+    parameters:
+      node:
+        type: astx.AST
     """
     visitor = BaseVisitor()
+    name = type(node).__name__
     with pytest.raises(
         NotImplementedError,
-        match=r"BaseVisitor\.visit\(LiteralInt32\) is not implemented",
+        match=rf"BaseVisitor\.visit\({name}\) is not implemented",
     ):
-        visitor.visit(astx.LiteralInt32(1))
+        visitor.visit(node)
 
 
 def test_specialized_visitor_dispatch_overrides_base_default() -> None:
@@ -63,6 +119,24 @@ def test_specialized_visitor_dispatch_overrides_base_default() -> None:
     visitor.visit(astx.LiteralInt32(1))
 
     assert visitor.calls == ["LiteralInt32"]
+
+
+def test_inherited_dispatch_preserves_subtypes_and_parent_isolation() -> None:
+    """
+    title: Child overloads preserve inherited specificity and parent rejection.
+    """
+    parent = _SpecializedVisitor()
+    child = InheritedVisitor()
+    for visitor in (child, parent, InheritedVisitor()):
+        visitor.visit(IntegerSubtype(1))
+        assert visitor.calls == ["IntegerSubtype"]
+        with pytest.raises(NotImplementedError, match="UnknownNode"):
+            cast(BaseVisitorProtocol, visitor).visit(UnknownNode())
+    child.visit(astx.LiteralString("child"))
+    assert child.calls == ["IntegerSubtype", "LiteralString"]
+    with pytest.raises(NotImplementedError, match="LiteralString"):
+        cast(BaseVisitorProtocol, parent).visit(astx.LiteralString("parent"))
+    assert parent.calls == ["IntegerSubtype"]
 
 
 def test_semantic_analyzer_inherits_shared_visit_contract() -> None:
