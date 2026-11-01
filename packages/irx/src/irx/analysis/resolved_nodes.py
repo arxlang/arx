@@ -2107,6 +2107,7 @@ class ResolvedFileOperation:
 
 
 @public
+@typechecked
 class TextOperationKind(Enum):
     """
     title: Validated operations on NUL-free Unicode text.

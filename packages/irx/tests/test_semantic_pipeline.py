@@ -70,9 +70,9 @@ def test_builder_translate_runs_analysis_before_codegen() -> None:
 
 def test_unsupported_subscript_without_source_fails_analysis() -> None:
     """
-    title: Direct ASTx subscripts fail even unused, without invented locations.
+    title: Unsupported subscripts fail even unused, without invented locations.
     """
-    node = astx.SubscriptExpr(astx.LiteralString("text"), astx.LiteralInt32(0))
+    node = astx.SubscriptExpr(astx.LiteralInt32(42), astx.LiteralInt32(0))
     module = _main_module(node, astx.FunctionReturn(astx.LiteralInt32(0)))
     with pytest.raises(SemanticError) as error:
         Builder().translate(module)
