@@ -35,6 +35,17 @@
 
 ## Unreleased
 
+### Collection loop safety and crash diagnostics
+
+- Literal-list, tensor, and buffer scratch slots no longer accumulate on loop
+  back edges. Fresh tensor expressions consumed by scalar queries release their
+  owners; tensor construction checks statuses and cleans up partial resources.
+- Unsupported subscripts fail at the subscript's source location rather than
+  only producing a later `AnyType` error. String indexing remains unsupported.
+- On POSIX, `arx --run` reports signal termination and exits with `128 + signal`
+  instead of passing a negative subprocess code through to the shell. Ordinary
+  child exit codes and stdout/stderr are unchanged.
+
 ### Python-inspired exceptions (breaking)
 
 - `raise`, ordered `except` handlers, `else`, and `finally` now propagate across

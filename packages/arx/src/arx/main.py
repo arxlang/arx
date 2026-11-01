@@ -3,6 +3,7 @@ title: Arx main module.
 """
 
 import importlib
+import signal
 import subprocess
 import sys
 
@@ -1318,11 +1319,27 @@ class ArxMain:
     def run_binary(self) -> None:
         """
         title: Run the generated binary.
+        summary: >-
+          Preserve child output and ordinary exit codes. On POSIX, report
+          signal termination without inventing a source location and exit with
+          128 plus the signal number.
         """
         binary_path = Path(self.output_file)
         if not binary_path.is_absolute():
             binary_path = Path.cwd() / binary_path
         result = subprocess.run([str(binary_path)], check=False)
+        if result.returncode < 0 and sys.platform != "win32":
+            number = -result.returncode
+            try:
+                name = signal.Signals(number).name
+            except ValueError:
+                name = "unknown signal"
+            print(
+                f"[ARX-RUNTIME-SIGNAL-001] '{binary_path}' terminated by "
+                f"{name} (signal {number})",
+                file=sys.stderr,
+            )
+            raise SystemExit(128 + number)
         if result.returncode != 0:
             raise SystemExit(result.returncode)
 

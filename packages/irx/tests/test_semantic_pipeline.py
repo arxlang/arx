@@ -68,6 +68,21 @@ def test_builder_translate_runs_analysis_before_codegen() -> None:
         builder.translate(module)
 
 
+def test_unsupported_subscript_without_source_fails_analysis() -> None:
+    """
+    title: Direct ASTx subscripts fail even unused, without invented locations.
+    """
+    node = astx.SubscriptExpr(astx.LiteralString("text"), astx.LiteralInt32(0))
+    module = _main_module(node, astx.FunctionReturn(astx.LiteralInt32(0)))
+    with pytest.raises(SemanticError) as error:
+        Builder().translate(module)
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    assert diagnostics[0].code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert "subscript access is not supported" in diagnostics[0].message
+    assert diagnostics[0].resolved_source() is None
+
+
 def test_builder_translate_rejects_continue_outside_loop_before_codegen() -> (
     None
 ):

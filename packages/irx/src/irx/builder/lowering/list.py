@@ -371,9 +371,8 @@ class ListVisitorMixin(VisitorMixinBase):
           type: ir.Value
         """
         list_type = cast(ir.LiteralStructType, self._llvm_list_type())
-        list_slot = self._llvm.ir_builder.alloca(
-            list_type,
-            name="literal_list_runtime_value",
+        list_slot = self.create_entry_block_alloca(
+            "literal_list_runtime_value", list_type
         )
         zero = ir.Constant(self._llvm.INT32_TYPE, 0)
 
@@ -403,9 +402,8 @@ class ListVisitorMixin(VisitorMixinBase):
         if element_count == 0:
             data_ptr = ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None)
         elif isinstance(literal_value.type, ir.ArrayType):
-            literal_slot = self._llvm.ir_builder.alloca(
-                literal_value.type,
-                name="literal_list_runtime_storage",
+            literal_slot = self.create_entry_block_alloca(
+                "literal_list_runtime_storage", literal_value.type
             )
             self._llvm.ir_builder.store(literal_value, literal_slot)
             first_ptr = self._llvm.ir_builder.gep(
@@ -609,9 +607,8 @@ class ListVisitorMixin(VisitorMixinBase):
 
         zero = ir.Constant(self._llvm.INT32_TYPE, 0)
         if isinstance(literal_value.type, ir.ArrayType):
-            literal_slot = self._llvm.ir_builder.alloca(
-                literal_value.type,
-                name="literal_list_index_value",
+            literal_slot = self.create_entry_block_alloca(
+                "literal_list_index_value", literal_value.type
             )
             self._llvm.ir_builder.store(literal_value, literal_slot)
             element_ptr = self._llvm.ir_builder.gep(
@@ -679,9 +676,8 @@ class ListVisitorMixin(VisitorMixinBase):
                 node=node.element,
                 code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
             )
-        value_ptr = self._llvm.ir_builder.alloca(
-            llvm_element_type,
-            name="irx_list_comprehension_value",
+        value_ptr = self.create_entry_block_alloca(
+            "irx_list_comprehension_value", llvm_element_type
         )
         self._llvm.ir_builder.store(value, value_ptr)
         raw_value_ptr = self._llvm.ir_builder.bitcast(
@@ -1104,9 +1100,8 @@ class ListVisitorMixin(VisitorMixinBase):
         )
 
         llvm_element_type = self._list_element_llvm_type(node.base)
-        value_ptr = self._llvm.ir_builder.alloca(
-            llvm_element_type,
-            name="irx_list_append_value",
+        value_ptr = self.create_entry_block_alloca(
+            "irx_list_append_value", llvm_element_type
         )
         self._llvm.ir_builder.store(value, value_ptr)
         raw_value_ptr = self._llvm.ir_builder.bitcast(

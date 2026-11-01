@@ -147,6 +147,9 @@ int irx_arrow_array_borrow_buffer_view(
 int irx_arrow_array_retain(irx_arrow_array_handle* array);
 void irx_arrow_array_release(irx_arrow_array_handle* array);
 
+/* Construction outputs are usable only after status 0. Append and failed
+ * finish leave the builder caller-owned; successful finish consumes it and
+ * transfers one tensor reference. Borrowed views do not retain the tensor. */
 int irx_arrow_tensor_builder_new(
     int32_t type_id,
     int32_t ndim,

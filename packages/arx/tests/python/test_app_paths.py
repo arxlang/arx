@@ -7,6 +7,7 @@ from __future__ import annotations
 import io
 import json
 import runpy
+import signal
 import subprocess
 import sys
 
@@ -2107,8 +2108,12 @@ def test_arxmain_run_binary_uses_absolute_path(
     assert recorded["cmd"] == [str(tmp_path / "print-star")]
 
 
+@pytest.mark.parametrize("returncode", [112, -signal.SIGSEGV, -99999])
 def test_arxmain_run_binary_nonzero_exits(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    returncode: int,
 ) -> None:
     """
     title: Test run_binary exits with child return code on failure.
@@ -2117,6 +2122,10 @@ def test_arxmain_run_binary_nonzero_exits(
         type: pytest.MonkeyPatch
       tmp_path:
         type: Path
+      capsys:
+        type: pytest.CaptureFixture[str]
+      returncode:
+        type: int
     """
     app = main_module.ArxMain(output_file="print-star")
 
@@ -2135,13 +2144,59 @@ def test_arxmain_run_binary_nonzero_exits(
         """
         del cmd
         del check
-        return subprocess.CompletedProcess(["print-star"], 112)
+        return subprocess.CompletedProcess(["print-star"], returncode)
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
 
-    with pytest.raises(SystemExit, match="112"):
+    with pytest.raises(SystemExit) as error:
         app.run_binary()
+    expected = 128 - returncode if returncode < 0 else returncode
+    assert error.value.code == expected
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    if returncode > 0:
+        assert captured.err == ""
+        return
+    assert "ARX-RUNTIME-SIGNAL-001" in captured.err
+    assert str(tmp_path / "print-star") in captured.err
+    assert f"signal {-returncode}" in captured.err
+    name = "SIGSEGV" if returncode == -signal.SIGSEGV else "unknown signal"
+    assert name in captured.err
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals required")
+def test_arxmain_run_binary_signal_preserves_child_output(
+    tmp_path: Path, capfd: pytest.CaptureFixture[str]
+) -> None:
+    """
+    title: A real signaled child preserves its output and adds a diagnosis.
+    parameters:
+      tmp_path:
+        type: Path
+      capfd:
+        type: pytest.CaptureFixture[str]
+    """
+    child = tmp_path / "signal-child"
+    child.write_text(
+        f"#!{sys.executable}\n"
+        "import os, resource, signal, sys\n"
+        "resource.setrlimit(resource.RLIMIT_CORE, (0, 0))\n"
+        "print('child output', flush=True)\n"
+        "print('child error', file=sys.stderr, flush=True)\n"
+        "os.kill(os.getpid(), signal.SIGTERM)\n",
+        encoding="utf-8",
+    )
+    child.chmod(0o755)
+    with pytest.raises(SystemExit) as error:
+        main_module.ArxMain(output_file=str(child)).run_binary()
+    assert error.value.code == 128 + signal.SIGTERM
+    captured = capfd.readouterr()
+    assert captured.out == "child output\n"
+    assert captured.err.startswith("child error\n")
+    assert "SIGTERM" in captured.err
+    assert "ARX-RUNTIME-SIGNAL-001" in captured.err
 
 
 def _write_resolver_project(

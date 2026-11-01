@@ -3,6 +3,8 @@ title: Test code generation AST output.
 """
 
 import shutil
+import subprocess
+import sys
 
 from pathlib import Path
 from textwrap import dedent
@@ -17,6 +19,150 @@ from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
+
+
+@pytest.mark.parametrize("expression", ["café[0]", "café[:1]", "42[0]"])
+def test_unsupported_subscript_reports_its_source(expression: str) -> None:
+    """
+    title: Unsupported subscripts diagnose the bracket, including Unicode.
+    parameters:
+      expression:
+        type: str
+    """
+    line = f"  print({expression})"
+    source = (
+        "```\ntitle: Unsupported indexing\n```\n"
+        "fn main() -> i32:\n"
+        '  var café: str = "L68"\n'
+        f"{line}\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    first = error.value.diagnostics.diagnostics[0]
+    assert "subscript access is not supported" in first.message
+    location = first.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (6, line.index("[") + 1)
+
+
+@pytest.fixture(scope="module")
+def literal_loop_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Translate tensor and list loop paths once for safety regressions.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Bounded literal loop storage\n```\n"
+        "extern getchar() -> i32\n"
+        "fn main() -> i32:\n"
+        "  var count: i32 = getchar() * 200\n"
+        "  var numbers: list[i32] = range(0, count)\n"
+        "  var total: i32 = 0\n"
+        "  var j: i32 = 1\n"
+        "  for number in numbers:\n"
+        "    total = total + [1, 2, 3][j]\n"
+        "    assert ![true, false, true][j]\n"
+        "    for value in [1, 2]:\n"
+        "      total = total + value\n"
+        "  assert total == count * 5\n"
+        "  return 0\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_literal_loop_allocations_are_in_entry(
+    literal_loop_ir: tuple[ArxBuilder, str],
+) -> None:
+    """
+    title: Loop scratch slots cannot accumulate on back edges.
+    parameters:
+      literal_loop_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    _, text = literal_loop_ir
+    module = llvm.parse_assembly(text)
+    tested = {"irx.entry.main", "builtins__generators__range"}
+    found: set[str] = set()
+    for function in module.functions:
+        if function.name not in tested:
+            continue
+        found.add(function.name)
+        entry = next(iter(function.blocks))
+        for block in function.blocks:
+            for instruction in block.instructions:
+                if instruction.opcode == "alloca":
+                    assert block == entry, (function.name, str(instruction))
+    assert found == tested
+    assert "irx_buffer_owner_release" in text
+
+
+@pytest.fixture(scope="module", params=[0, 3])
+def literal_loop_binary(
+    literal_loop_ir: tuple[ArxBuilder, str],
+    tmp_path_factory: pytest.TempPathFactory,
+    request: pytest.FixtureRequest,
+) -> Path:
+    """
+    title: Separate compilation setup from repeated constrained execution.
+    parameters:
+      literal_loop_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+      request:
+        type: pytest.FixtureRequest
+    returns:
+      type: Path
+    """
+    builder, text = literal_loop_ir
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=request.param)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    executable = tmp_path_factory.mktemp("literal-loop") / "probe"
+    builder._build_from_ir_result(str(module), str(executable), True, "auto")
+    return executable
+
+
+@pytest.mark.skipif(
+    sys.platform != "linux" or shutil.which("clang") is None,
+    reason="Linux resource limits and native compiler required",
+)
+def test_literal_loop_runs_with_bounded_stack(
+    literal_loop_binary: Path,
+) -> None:
+    """
+    title: Reuse each optimized binary for short and long small-stack runs.
+    parameters:
+      literal_loop_binary:
+        type: Path
+    """
+    launcher = (
+        "import os, resource, sys; "
+        "resource.setrlimit(resource.RLIMIT_CORE, (0, 0)); "
+        "resource.setrlimit(resource.RLIMIT_STACK, (524288, 524288)); "
+        "os.execv(sys.argv[1], [sys.argv[1]])"
+    )
+    for count in (1, 50):
+        result = subprocess.run(
+            [sys.executable, "-c", launcher, str(literal_loop_binary)],
+            input=bytes([count]),
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == result.stderr == b""
 
 
 @pytest.mark.parametrize(
