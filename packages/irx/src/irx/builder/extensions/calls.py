@@ -2,6 +2,7 @@
 title: Narrow LLVM services for resolved call-plan emission.
 """
 
+from abc import abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Protocol, runtime_checkable
@@ -24,15 +25,18 @@ class CallLoweringServices(Protocol):
     title: Only the value, checked-call, and lifetime services the pilot needs.
     """
 
+    # Explicit stub bodies keep unused-parameter checks file-local.
     @property
+    @abstractmethod
     def builder(self) -> ir.IRBuilder:
         """
         title: Return the active function instruction builder.
         returns:
           type: ir.IRBuilder
         """
-        ...
+        raise NotImplementedError
 
+    @abstractmethod
     def text(self, value: str) -> ir.Value:
         """
         title: Intern a configuration string in the current LLVM module.
@@ -42,8 +46,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del value
+        raise NotImplementedError
 
+    @abstractmethod
     def evaluate(self, node: astx.AST) -> ir.Value:
         """
         title: Evaluate once and pin aliases across later operand side effects.
@@ -53,8 +59,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del node
+        raise NotImplementedError
 
+    @abstractmethod
     def handle(self, node: astx.AST, value: ir.Value, index: int) -> ir.Value:
         """
         title: Require a live class and load its semantically resolved handle.
@@ -68,8 +76,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del node, value, index
+        raise NotImplementedError
 
+    @abstractmethod
     def convert(
         self, node: astx.AST, value: ir.Value, target: astx.DataType
     ) -> ir.Value:
@@ -85,8 +95,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del node, value, target
+        raise NotImplementedError
 
+    @abstractmethod
     def invoke(
         self, node: astx.AST, feature: str, name: str, args: list[ir.Value]
     ) -> ir.Value:
@@ -105,8 +117,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del node, feature, name, args
+        raise NotImplementedError
 
+    @abstractmethod
     def track(
         self, node: astx.AST, feature: str, destroy: str, value: ir.Value
     ) -> CleanupAction:
@@ -124,8 +138,10 @@ class CallLoweringServices(Protocol):
         returns:
           type: CleanupAction
         """
-        ...
+        del node, feature, destroy, value
+        raise NotImplementedError
 
+    @abstractmethod
     def release(self, cleanup: CleanupAction) -> None:
         """
         title: Release a temporary and discharge its pending cleanup.
@@ -133,8 +149,10 @@ class CallLoweringServices(Protocol):
           cleanup:
             type: CleanupAction
         """
-        ...
+        del cleanup
+        raise NotImplementedError
 
+    @abstractmethod
     def publish(self, node: astx.AST, value: ir.Value) -> None:
         """
         title: Register an owned Arrow result and produce exactly one value.
@@ -144,8 +162,10 @@ class CallLoweringServices(Protocol):
           value:
             type: ir.Value
         """
-        ...
+        del node, value
+        raise NotImplementedError
 
+    @abstractmethod
     def construct(
         self, node: astx.AST, resolution: ResolvedClassConstruction
     ) -> ir.Value:
@@ -159,7 +179,8 @@ class CallLoweringServices(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del node, resolution
+        raise NotImplementedError
 
 
 @public

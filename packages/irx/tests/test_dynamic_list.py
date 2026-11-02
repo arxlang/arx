@@ -520,6 +520,8 @@ def test_dynamic_list_native_status_and_destroy_are_safe(
             "-std=c99",
             "-I",
             str(native_dir),
+            "-I",
+            str(native_dir.parent.parent / "text" / "native"),
             str(program),
             "-o",
             str(executable),

@@ -2,12 +2,15 @@
 title: Tests for string operations.
 """
 
+import ctypes as ct
+import shutil
 import subprocess
 import tempfile
 
 from pathlib import Path
 
 import astx
+import irx.builder.runtime.text.feature as text_runtime_feature
 import pytest
 
 from irx.analysis import (
@@ -16,6 +19,8 @@ from irx.analysis import (
     OwnershipTransferKind,
     ResourceKind,
     SemanticError,
+    SemanticInfo,
+    TextOperationKind,
     analyze,
     resource_ownership,
 )
@@ -28,6 +33,614 @@ from llvmlite import ir
 from .conftest import assert_ir_parses, check_result
 
 EXPECTED_STRING_REPLACEMENT_FREES = 2
+TEXT_OUT_OF_RANGE = 4
+TEXT_ENCODING_ERROR = 5
+
+
+class NativeTextList(ct.Structure):
+    """
+    title: Test the native owned-string list output descriptor.
+    """
+
+    _fields_ = [
+        ("data", ct.POINTER(ct.c_void_p)),
+        ("length", ct.c_int64),
+        ("capacity", ct.c_int64),
+        ("element_size", ct.c_int64),
+        ("element_kind", ct.c_int32),
+    ]
+
+
+@pytest.fixture(scope="module")
+def text_runtime(tmp_path_factory: pytest.TempPathFactory) -> ct.CDLL:
+    """
+    title: Compile the real text/list ABI once for the native contract matrix.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: ct.CDLL
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("clang required")
+    native = Path(text_runtime_feature.__file__).parent / "native"
+    lists = native.parent.parent / "list" / "native"
+    library = tmp_path_factory.mktemp("text-runtime") / "text.so"
+    subprocess.run(
+        [
+            "clang",
+            "-std=c99",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-shared",
+            "-fPIC",
+            "-I",
+            str(lists),
+            str(native / "irx_text_runtime.c"),
+            str(lists / "irx_list_runtime.c"),
+            "-o",
+            str(library),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    runtime = ct.CDLL(str(library))
+    string, integer, output = ct.c_char_p, ct.c_int64, ct.POINTER(ct.c_void_p)
+    arguments = {
+        "len": [string, ct.POINTER(integer)],
+        "ord": [string, ct.POINTER(integer)],
+        "validate": [string, integer, ct.POINTER(integer)],
+        "int": [string, integer, ct.POINTER(integer)],
+        "index": [string, integer, output],
+        "slice": [string, integer, integer, integer, output],
+        "strip": [string, string, output],
+        "split": [string, string, integer, ct.POINTER(NativeTextList)],
+    }
+    for name, types in arguments.items():
+        function = getattr(runtime, f"irx_text_{name}")
+        function.argtypes = types
+        function.restype = ct.c_int32
+    runtime.free.argtypes = [ct.c_void_p]
+    runtime.free.restype = None
+    runtime.irx_list_destroy.argtypes = [ct.POINTER(NativeTextList)]
+    runtime.irx_list_destroy.restype = None
+    return runtime
+
+
+@pytest.mark.parametrize("value", ["", "abc", "é😀", "e\u0301", "\U0010ffff"])
+def test_text_codepoint_queries(text_runtime: ct.CDLL, value: str) -> None:
+    """
+    title: Length, ordinal and indexing count scalars without normalization.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      value:
+        type: str
+    """
+    encoded = value.encode()
+    number = ct.c_int64(-1)
+    assert text_runtime.irx_text_len(encoded, ct.byref(number)) == 0
+    assert number.value == len(value)
+    expected_status = 0 if len(value) == 1 else 1
+    assert (
+        text_runtime.irx_text_ord(encoded, ct.byref(number)) == expected_status
+    )
+    assert number.value == (ord(value) if len(value) == 1 else 0)
+    for index in range(-1, len(value) + 1):
+        output = ct.c_void_p()
+        status = text_runtime.irx_text_index(encoded, index, ct.byref(output))
+        if 0 <= index < len(value):
+            assert status == 0
+            try:
+                assert ct.string_at(output).decode() == value[index]
+            finally:
+                text_runtime.free(output)
+        else:
+            assert status == TEXT_OUT_OF_RANGE and output.value is None
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        b"\0",
+        b"a\0b",
+        b"\x80",
+        b"\xc0\x80",
+        b"\xe0\x80\x80",
+        b"\xed\xa0\x80",
+        b"\xf4\x90\x80\x80",
+        b"\xf0\x9f",
+        b"\xff",
+        b"\xc2x",
+    ],
+)
+def test_text_rejects_invalid_utf8(
+    text_runtime: ct.CDLL, invalid: bytes
+) -> None:
+    """
+    title: Bounded native input rejects NUL and every UTF-8 invalidity class.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      invalid:
+        type: bytes
+    """
+    count = ct.c_int64(99)
+    assert (
+        text_runtime.irx_text_validate(invalid, len(invalid), ct.byref(count))
+        == TEXT_ENCODING_ERROR
+    )
+    assert count.value == 0
+    if b"\0" not in invalid:
+        output = ct.c_void_p()
+        assert (
+            text_runtime.irx_text_strip(invalid, None, ct.byref(output))
+            == TEXT_ENCODING_ERROR
+        )
+        assert output.value is None
+
+
+@pytest.mark.parametrize(
+    ("start", "stop", "step", "status"),
+    [
+        (0, 4, 1, 0),
+        (1, 3, 1, 0),
+        (1, 99, 1, 0),
+        (99, 100, 1, 0),
+        (3, 1, 1, 0),
+        (0, 0, 1, 0),
+        (-1, 2, 1, 1),
+        (0, -1, 1, 1),
+        (0, 2, 0, 1),
+        (0, 2, 2, 1),
+        (0, 2, -1, 1),
+    ],
+)
+def test_text_slice_contract(
+    text_runtime: ct.CDLL, start: int, stop: int, step: int, status: int
+) -> None:
+    """
+    title: Half-open slices clip only nonnegative bounds and require unit step.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      start:
+        type: int
+      stop:
+        type: int
+      step:
+        type: int
+      status:
+        type: int
+    """
+    value = "A😀e\u0301"
+    output = ct.c_void_p()
+    assert (
+        text_runtime.irx_text_slice(
+            value.encode(), start, stop, step, ct.byref(output)
+        )
+        == status
+    )
+    if status:
+        assert output.value is None
+    else:
+        try:
+            assert ct.string_at(output).decode() == value[start:stop]
+        finally:
+            text_runtime.free(output)
+
+
+@pytest.mark.parametrize(
+    ("value", "separator"),
+    [
+        ("", None),
+        ("", ","),
+        (" \t\n", None),
+        (" a  b  ", None),
+        ("a,,b,", ","),
+        ("é😀文😀", "😀"),
+        ("aaaaa", "aa"),
+        ("a\u00a0b\u2003c\u001cd", None),
+    ],
+)
+@pytest.mark.parametrize("limit", [-7, -1, 0, 1, 2])
+def test_text_split_matches_supported_python_contract(
+    text_runtime: ct.CDLL, value: str, separator: str | None, limit: int
+) -> None:
+    """
+    title: >-
+      Whitespace and explicit splitting preserve limit and empty semantics.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      value:
+        type: str
+      separator:
+        type: str | None
+      limit:
+        type: int
+    """
+    output = NativeTextList()
+    assert (
+        text_runtime.irx_text_split(
+            value.encode(),
+            separator.encode() if separator is not None else None,
+            limit,
+            ct.byref(output),
+        )
+        == 0
+    )
+    try:
+        assert output.element_kind == 1
+        assert output.element_size == ct.sizeof(ct.c_void_p)
+        words = [
+            ct.string_at(output.data[i]).decode() for i in range(output.length)
+        ]
+        assert words == value.split(separator, limit)
+    finally:
+        text_runtime.irx_list_destroy(ct.byref(output))
+    assert output.length == 0 and not output.data
+
+
+@pytest.mark.parametrize(
+    ("value", "chars"),
+    [
+        ("", None),
+        (" \t\n", None),
+        (" a  b ", None),
+        ("\u2003a\u00a0", None),
+        ("éétextéé", "é"),
+        ("xyhellozyx", "xyz"),
+        ("  abc  ", ""),
+        ("\u200bvalue\u200b", None),
+    ],
+)
+def test_text_strip_set_contract(
+    text_runtime: ct.CDLL, value: str, chars: str | None
+) -> None:
+    """
+    title: Strip removes code-point sets rather than substrings or graphemes.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      value:
+        type: str
+      chars:
+        type: str | None
+    """
+    output = ct.c_void_p()
+    assert (
+        text_runtime.irx_text_strip(
+            value.encode(),
+            chars.encode() if chars is not None else None,
+            ct.byref(output),
+        )
+        == 0
+    )
+    try:
+        assert ct.string_at(output).decode() == value.strip(chars)
+    finally:
+        text_runtime.free(output)
+
+
+@pytest.mark.parametrize(
+    ("value", "base", "status", "expected"),
+    [
+        ("  +42\u2003", 10, 0, 42),
+        ("-0", 10, 0, 0),
+        ("101", 2, 0, 5),
+        ("zZ", 36, 0, 1295),
+        ("-ff", 16, 0, -255),
+        ("9223372036854775807", 10, 0, 2**63 - 1),
+        ("-9223372036854775808", 10, 0, -(2**63)),
+        ("9223372036854775808", 10, 2, 0),
+        ("-9223372036854775809", 10, 2, 0),
+        ("8000000000000000", 16, 2, 0),
+        ("", 10, 1, 0),
+        (" + ", 10, 1, 0),
+        ("12junk", 10, 1, 0),
+        ("1 2", 10, 1, 0),
+        ("2", 2, 1, 0),
+        ("0xff", 16, 1, 0),
+        ("1_000", 10, 1, 0),
+        ("٣", 10, 1, 0),
+        ("1", 0, 1, 0),
+        ("1", 1, 1, 0),
+        ("1", 37, 1, 0),
+    ],
+)
+def test_text_integer_contract(
+    text_runtime: ct.CDLL, value: str, base: int, status: int, expected: int
+) -> None:
+    """
+    title: >-
+      Integer parsing is complete, locale independent and i64 range checked.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+      value:
+        type: str
+      base:
+        type: int
+      status:
+        type: int
+      expected:
+        type: int
+    """
+    output = ct.c_int64(99)
+    assert (
+        text_runtime.irx_text_int(value.encode(), base, ct.byref(output))
+        == status
+    )
+    assert output.value == expected
+
+
+def test_text_native_invalid_options_and_whitespace(
+    text_runtime: ct.CDLL,
+) -> None:
+    """
+    title: >-
+      Optional text validation and the complete whitespace set are explicit.
+    parameters:
+      text_runtime:
+        type: ct.CDLL
+    """
+    output = ct.c_void_p()
+    words = NativeTextList()
+    count = ct.c_int64(99)
+    assert text_runtime.irx_text_len(None, ct.byref(count)) == 1
+    assert count.value == 0
+    assert text_runtime.irx_text_len(b"x", None) == 1
+    assert text_runtime.irx_text_split(b"a", b"", -1, ct.byref(words)) == 1
+    assert not words.data and words.length == 0
+    assert (
+        text_runtime.irx_text_split(b"a", b"\xff", -1, ct.byref(words))
+        == TEXT_ENCODING_ERROR
+    )
+    assert not words.data and words.length == 0
+    assert (
+        text_runtime.irx_text_strip(b"a", b"\xff", ct.byref(output))
+        == TEXT_ENCODING_ERROR
+    )
+    assert output.value is None
+    spaces = "".join(
+        chr(cp)
+        for cp in (
+            *range(9, 14),
+            *range(0x1C, 0x21),
+            0x85,
+            0xA0,
+            0x1680,
+            *range(0x2000, 0x200B),
+            0x2028,
+            0x2029,
+            0x202F,
+            0x205F,
+            0x3000,
+        )
+    )
+    assert all(char.isspace() for char in spaces)
+    value = (spaces + "x" + spaces).encode()
+    assert text_runtime.irx_text_strip(value, None, ct.byref(output)) == 0
+    try:
+        assert ct.string_at(output) == b"x"
+    finally:
+        text_runtime.free(output)
+    assert text_runtime.irx_text_split(value, None, -1, ct.byref(words)) == 0
+    try:
+        assert words.length == 1 and ct.string_at(words.data[0]) == b"x"
+    finally:
+        text_runtime.irx_list_destroy(ct.byref(words))
+
+
+@pytest.mark.parametrize(
+    ("expression", "message"),
+    [
+        (astx.FunctionCall("int", []), "requires a text"),
+        (astx.FunctionCall("int", [astx.LiteralInt32(4)]), "requires text"),
+        (
+            astx.FunctionCall(
+                "int", [astx.LiteralString("1"), astx.LiteralBoolean(True)]
+            ),
+            "integer",
+        ),
+        (
+            astx.FunctionCall(
+                "int", [astx.LiteralString("1"), astx.LiteralUInt64(10)]
+            ),
+            "integer",
+        ),
+        (
+            astx.FunctionCall(
+                "ord", [astx.LiteralString("x"), astx.LiteralInt32(1)]
+            ),
+            "too many",
+        ),
+        (
+            astx.FunctionCall(
+                "ord",
+                [],
+                keywords=(
+                    astx.KeywordArgument("text", astx.LiteralString("x")),
+                ),
+            ),
+            "unknown",
+        ),
+        (
+            astx.FunctionCall(
+                "int",
+                [astx.LiteralString("1"), astx.LiteralInt32(10)],
+                keywords=(astx.KeywordArgument("base", astx.LiteralInt32(2)),),
+            ),
+            "duplicate",
+        ),
+        (
+            astx.FunctionCall(
+                "int",
+                [astx.LiteralString("1")],
+                keywords=(
+                    astx.KeywordArgument("radix", astx.LiteralInt32(2)),
+                ),
+            ),
+            "unknown",
+        ),
+        (
+            astx.MethodCall(
+                astx.LiteralString("a"), "strip", [astx.LiteralInt32(1)]
+            ),
+            "requires text",
+        ),
+        (
+            astx.MethodCall(
+                astx.LiteralString("a"),
+                "split",
+                [astx.LiteralNone(), astx.LiteralFloat32(1.0)],
+            ),
+            "integer",
+        ),
+        (
+            astx.MethodCall(
+                astx.LiteralString("a"),
+                "split",
+                [],
+                keywords=(
+                    astx.KeywordArgument("count", astx.LiteralInt32(1)),
+                ),
+            ),
+            "unknown",
+        ),
+        (
+            astx.MethodCall(astx.LiteralString("a"), "int", []),
+            "unsupported text method",
+        ),
+        (astx.MethodCall(astx.LiteralInt32(1), "strip", []), "text receiver"),
+        (
+            astx.SubscriptExpr(
+                astx.LiteralString("a"), astx.LiteralBoolean(True)
+            ),
+            "integer",
+        ),
+        (
+            astx.SubscriptExpr(
+                astx.LiteralString("a"), lower=astx.LiteralFloat32(0.0)
+            ),
+            "integer",
+        ),
+        (
+            astx.SubscriptExpr(astx.LiteralString("a"), astx.LiteralNone()),
+            "integer",
+        ),
+        (
+            astx.MethodCall(
+                astx.VariableDeclaration(
+                    "word", astx.String(), value=astx.LiteralString("x")
+                ),
+                "strip",
+                [],
+            ),
+            "must be expressions",
+        ),
+        (astx.LiteralString("a\0b"), "NUL"),
+        (astx.LiteralString("\ud800"), "Unicode scalar"),
+    ],
+)
+def test_text_semantic_contract_rejections(
+    expression: astx.AST, message: str
+) -> None:
+    """
+    title: Invalid text calls and storage fail during analysis, not lowering.
+    parameters:
+      expression:
+        type: astx.AST
+      message:
+        type: str
+    """
+    with pytest.raises(SemanticError, match=message):
+        analyze(_string_main(expression))
+
+
+def test_text_plans_preserve_argument_order_and_reanalysis() -> None:
+    """
+    title: Text plans bind named operands in source order and clear stale data.
+    """
+    receiver = astx.LiteralString("a,b")
+    limit = astx.LiteralInt64(1)
+    separator = astx.LiteralString(",")
+    call = astx.MethodCall(
+        receiver,
+        "split",
+        [],
+        keywords=(
+            astx.KeywordArgument("maxsplit", limit),
+            astx.KeywordArgument("sep", separator),
+        ),
+    )
+    length = astx.CollectionLength(astx.LiteralString("😀"))
+    module = _string_main(call, length)
+    analyze(module)
+    info = call.semantic
+    assert isinstance(info, SemanticInfo)
+    assert info.resolved_text_operation is not None
+    assert info.resolved_text_operation.kind is TextOperationKind.SPLIT
+    assert info.resolved_text_operation.evaluations == (
+        receiver,
+        limit,
+        separator,
+    )
+    assert info.resolved_text_operation.argument_indices == (0, 2, 1)
+    assert resource_ownership(call).kind is OwnershipKind.OWNED
+    assert isinstance(length.semantic.resolved_type, astx.Int64)
+    assert length.semantic.resolved_text_operation is not None
+    length.base = astx.ListExpr([astx.LiteralInt64(1)])
+    analyze(module)
+    assert length.semantic.resolved_text_operation is None
+    assert length.semantic.resolved_collection_method is not None
+
+
+@pytest.mark.parametrize(
+    ("expression", "frees"),
+    [
+        (astx.MethodCall(astx.LiteralString(" x "), "strip", []), 1),
+        (
+            astx.SubscriptExpr(
+                astx.BinaryOp(
+                    "+", astx.LiteralString("a"), astx.LiteralString("b")
+                ),
+                astx.LiteralInt32(1),
+            ),
+            3,
+        ),
+        (
+            astx.SubscriptExpr(
+                astx.BinaryOp(
+                    "+", astx.LiteralString("a"), astx.LiteralString("b")
+                ),
+                lower=astx.LiteralInt32(1),
+            ),
+            3,
+        ),
+    ],
+)
+def test_owned_text_result_cleanup(
+    expression: astx.DataType, frees: int
+) -> None:
+    """
+    title: Source temporaries, snapshots, and owned results each drop once.
+    parameters:
+      expression:
+        type: astx.DataType
+      frees:
+        type: int
+    """
+    module = _string_main(
+        astx.VariableDeclaration(
+            "result",
+            astx.String(),
+            value=expression,
+        )
+    )
+    assert_executed_string_frees(module, frees)
 
 
 def assert_executed_string_frees(module: astx.Module, expected: int) -> None:

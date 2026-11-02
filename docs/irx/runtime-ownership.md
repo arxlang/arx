@@ -127,9 +127,9 @@ arguments, or returns; explicit IRx retain/release operations are unchanged.
 
 IRx uses `ResourceKind.STRING` sidecars to distinguish immutable global pointers
 from heap owners even though both lower to the current C-string pointer ABI.
-Concatenation, numeric-to-string formatting, and defined Arx string-returning
-calls are owners; literals, empty defaults, and type names are static; function
-parameters and identifier expressions borrow.
+Concatenation, numeric-to-string formatting, text indexing/slicing/stripping,
+and defined Arx string-returning calls are owners; literals, empty defaults, and
+type names are static; function parameters and identifier expressions borrow.
 
 Owned locals and temporaries call `free` on all ordinary control-flow exits.
 Owned replacement frees the old generation first. Returning an owner moves it to
@@ -142,6 +142,15 @@ Bindings cannot change between static and owned storage. Borrowed parameters
 cannot initialize owned locals or escape through returns. Owning struct fields,
 generator locals, external string results without an ownership ABI, and identity
 casts that would obscure an owner fail closed with `IRX-S013`.
+
+The registered `text` runtime validates UTF-8 before operating on code points.
+Splitting publishes an owned string list only after all fields succeed; failure
+drops every initialized field. Output slots are read only after success.
+Snapshots protect text operands from later argument-side mutations, and newly
+allocated results are protected if operand cleanup raises. Text helpers borrow
+C-string inputs: producers of length-delimited data must reject embedded NUL
+before conversion; the bounded native validator is provided for that boundary.
+The current pointer ABI cannot discover bytes after its terminating NUL.
 
 ## Cleanup control flow
 

@@ -625,7 +625,6 @@ class ExpressionParserMixin(ParserMixinBase):
                 self._consume_operator("]")
                 return astx.SubscriptExpr(
                     cast(astx.Expr, base),
-                    astx.LiteralNone(),
                     lower=first,
                     upper=stop,
                     step=step,

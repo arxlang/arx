@@ -41,6 +41,10 @@ class SubscriptExpr(DataType):
         type: Expr
       step:
         type: Expr
+      is_slice:
+        type: bool
+        description: >-
+          Distinguish omitted slice bounds from an explicit none index.
     """
 
     kind: ASTKind
@@ -51,6 +55,7 @@ class SubscriptExpr(DataType):
     lower: Expr
     upper: Expr
     step: Expr
+    is_slice: bool
 
     def __init__(
         self,
@@ -100,6 +105,17 @@ class SubscriptExpr(DataType):
             type: Optional[ASTNodes]
         """
         super().__init__(loc=loc, parent=parent)
+        self.is_slice = index is None or any(
+            bound is not None for bound in (lower, upper, step)
+        )
+        if (
+            self.is_slice
+            and index is not None
+            and not isinstance(index, LiteralNone)
+        ):
+            raise ValueError(
+                "subscripts cannot combine an index and slice bounds"
+            )
         self.type_ = AnyType()
         self.value: Expr = value if value is not None else LiteralNone()
         self.index: Expr = index if index is not None else LiteralNone()
@@ -114,16 +130,16 @@ class SubscriptExpr(DataType):
         returns:
           type: str
         """
+        if not self.is_slice:
+            return f"SubscriptExpr({self.value}[{self.index}])"
         lower_str = (
-            str(self.lower)
-            if not isinstance(self.lower, LiteralNone)
-            else str(self.index)
+            str(self.lower) if not isinstance(self.lower, LiteralNone) else ""
         )
 
         upper_str = (
             ":" + str(self.upper)
             if not isinstance(self.upper, LiteralNone)
-            else ""
+            else ":"
         )
         step_str = (
             ":" + str(self.step)
@@ -143,10 +159,10 @@ class SubscriptExpr(DataType):
         """
         value_dict: ReprStruct = {"indexed": self.value.get_struct(simplified)}
 
-        lower_key = "index" if isinstance(self.lower, LiteralNone) else "lower"
+        lower_key = "lower" if self.is_slice else "index"
         lower_value = (
             self.index.get_struct(simplified)
-            if isinstance(self.lower, LiteralNone)
+            if not self.is_slice
             else self.lower.get_struct(simplified)
         )
         lower_dict: ReprStruct = {lower_key: lower_value}

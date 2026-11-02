@@ -48,6 +48,7 @@ static void* checked_realloc(void* value, size_t size) {
 #define realloc checked_realloc
 #define free checked_free
 #include "irx_list_runtime.c"
+#include "irx_text_runtime.c"
 #undef malloc
 #undef realloc
 #undef free
@@ -113,6 +114,44 @@ int main(void) {
   huge.length = 0;
   huge.element_size = INT64_MAX;
   assert(irx_list_append(&huge, &number) == IRX_LIST_CAPACITY_OVERFLOW);
+  assert(live == 0);
+
+  /* Every allocation frontier of split must release the entire partial list.
+   * Reuse the list allocator instrumentation to detect leaks/double drops. */
+  int succeeded = 0;
+  for (int budget = 0; budget < 12; ++budget) {
+    fail_after = budget;
+    irx_list output = {0};
+    int32_t status = irx_text_split("a,b,c,d,e,f,g", ",", -1, &output);
+    if (status == IRX_TEXT_OK) {
+      assert(output.length == 7 && live == 8);
+      ++succeeded;
+    } else {
+      assert(status == IRX_TEXT_ALLOCATION_FAILED);
+      assert(output.data == NULL && output.length == 0 && live == 0);
+    }
+    irx_list_destroy(&output);
+    irx_list_destroy(&output);
+    assert(live == 0);
+  }
+  assert(succeeded > 0);
+  fail_after = 0;
+  char* text = NULL;
+  assert(irx_text_strip(" value ", NULL, &text) == IRX_TEXT_ALLOCATION_FAILED);
+  assert(text == NULL && live == 0);
+  assert(irx_text_index("value", 0, &text) == IRX_TEXT_ALLOCATION_FAILED);
+  assert(text == NULL && live == 0);
+  assert(irx_text_slice("value", 0, 1, 1, &text) == IRX_TEXT_ALLOCATION_FAILED);
+  assert(text == NULL && live == 0);
+  fail_after = -1;
+  char mutable_text[] = "left,right";
+  assert(irx_text_split(mutable_text, ",", -1, &strings) == IRX_TEXT_OK);
+  mutable_text[0] = 'L';
+  assert(irx_list_at(&strings, 0, &item) == IRX_LIST_OK);
+  assert(strcmp(*(char**)item, "left") == 0);
+  irx_list_destroy(&strings);
+  huge.length = huge.capacity = INT64_MAX;
+  assert(text_add(&huge, "", 0, 0) == IRX_TEXT_OVERFLOW);
   assert(live == 0);
   return 0;
 }

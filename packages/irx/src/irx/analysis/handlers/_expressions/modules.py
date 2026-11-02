@@ -49,6 +49,7 @@ from irx.analysis.resolved_nodes import (
     SemanticFunction,
     SemanticModule,
 )
+from irx.analysis.text import resolve_text_call
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
@@ -639,6 +640,25 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         info.resolved_file_open = None
         info.resolved_class_construction = None
         info.collection_length = None
+        if info.resolved_text_operation is not None:
+            info.resource_ownership = None
+        info.resolved_text_operation = None
+        if (
+            node.fn in {"int", "ord"}
+            and self.bindings.resolve(node.fn) is None
+        ):
+            info.resolved_call = None
+            info.resolved_callable = None
+            info.resolved_function = None
+            if self.context.scopes.resolve(node.fn) is not None:
+                self.context.diagnostics.add(
+                    f"name '{node.fn}' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            resolve_text_call(cast(SemanticAnalyzerCore, self), node)
+            return
         if node.fn == "len" and self.bindings.resolve(node.fn) is None:
             info.resource_ownership = None
             info.resolved_call = None

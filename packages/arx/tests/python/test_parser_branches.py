@@ -50,6 +50,35 @@ def test_parse_literal_kinds_and_list_literal() -> None:
     assert isinstance(ret.value, astx.ListExpr)
 
 
+@pytest.mark.parametrize(
+    ("suffix", "slicing"),
+    [
+        ("[none]", False),
+        ("[:]", True),
+        ("[:2]", True),
+        ("[1:]", True),
+    ],
+)
+def test_subscript_preserves_omitted_bounds(
+    suffix: str, slicing: bool
+) -> None:
+    """
+    title: Text subscripts retain the distinction between slices and none keys.
+    parameters:
+      suffix:
+        type: str
+      slicing:
+        type: bool
+    """
+    tree = _parse(f'fn value() -> str:\n  return "abc"{suffix}\n')
+    function = tree.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    returned = function.body.nodes[0]
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.SubscriptExpr)
+    assert returned.value.is_slice is slicing
+
+
 def test_parse_list_expression_preserves_elements() -> None:
     """
     title: Calls, names, casts, and arithmetic remain ordered expressions.

@@ -29,6 +29,7 @@ from irx.builder.runtime.record_batch import (
     build_record_batch_runtime_feature,
 )
 from irx.builder.runtime.tensor.feature import build_tensor_runtime_feature
+from irx.builder.runtime.text.feature import build_text_runtime_feature
 from irx.diagnostics import (
     Diagnostic,
     DiagnosticCodes,
@@ -377,6 +378,7 @@ def get_default_runtime_feature_registry() -> RuntimeFeatureRegistry:
     registry.register(build_dataframe_runtime_feature())
     registry.register(build_tensor_runtime_feature())
     registry.register(build_list_runtime_feature())
+    registry.register(build_text_runtime_feature())
     registry.register(build_record_batch_runtime_feature())
     registry.register(build_parquet_runtime_feature())
     return registry

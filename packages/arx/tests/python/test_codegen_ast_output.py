@@ -52,7 +52,7 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     source = (
         "```\ntitle: Unsupported indexing\n```\n"
         "fn main() -> i32:\n"
-        '  var café: str = "L68"\n'
+        "  var café: i32 = 42\n"
         f"{line}\n"
         "  return 0\n"
     )
@@ -947,14 +947,131 @@ def test_owned_list_diagnostics(source: str, message: str) -> None:
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
-def test_len_can_be_shadowed_by_a_function() -> None:
+@pytest.mark.parametrize("name", ["len", "int", "ord"])
+def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
     """
     title: Builtin spelling respects ordinary name resolution.
+    parameters:
+      name:
+        type: str
     """
     ArxIO.string_to_buffer(
-        "fn len(value: i32) -> i32:\n  return value\n"
-        "fn main() -> i32:\n  return len(0)\n"
+        f"fn {name}(value: i32) -> i32:\n  return value\n"
+        f"fn main() -> i32:\n  return {name}(0)\n"
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(text).verify()
     assert "irx_collection_length" not in text
+    assert "irx_text_" not in text
+
+
+@pytest.mark.parametrize("name", ["len", "int", "ord"])
+def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
+    """
+    title: Local values cannot fall through to intrinsic text names.
+    parameters:
+      name:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        f"fn main() -> i32:\n  var {name}: i32 = 0\n"
+        f'  {name}("1")\n  return 0\n'
+    )
+    with pytest.raises(SemanticError, match="does not resolve to a function"):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.fixture(scope="module")
+def text_operations_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Translate the Unicode workflow once for native optimization checks.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    source = (Path(__file__).parents[1] / "arx" / "test_text.x").read_text()
+    source += (
+        "\nfn main() -> i32:\n"
+        "  test_text_parsing()\n"
+        "  test_text_argument_order()\n"
+        "  test_text_failures()\n"
+        '  var words: list[str] = words_from_file("input.txt")\n'
+        '  assert words[0] == "L68"\n'
+        '  assert words[1] == "R-12"\n'
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_text_operations_translation(
+    text_operations_ir: tuple[ArxBuilder, str],
+) -> None:
+    """
+    title: Text lowering uses registered status/output APIs and valid LLVM.
+    parameters:
+      text_operations_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    builder, text = text_operations_ir
+    for operation in ("len", "index", "slice", "split", "strip", "int", "ord"):
+        assert f'call i32 @"irx_text_{operation}"' in text
+    assert {"text", "list", "file"} <= set(
+        builder.translator.runtime_features.active_feature_names()
+    )
+    assert "ARX-RUNTIME-TEXT-001" in text
+    failure_blocks = [
+        block
+        for function in llvm.parse_assembly(text).functions
+        for block in function.blocks
+        if block.name.startswith("text.failure")
+    ]
+    assert failure_blocks
+    assert all(
+        instruction.opcode != "load"
+        for block in failure_blocks
+        for instruction in block.instructions
+    )
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="clang required")
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_text_operations_build_and_run(
+    text_operations_ir: tuple[ArxBuilder, str],
+    tmp_path: Path,
+    optimization: int,
+) -> None:
+    """
+    title: Native text survives source release, mutation and checked failures.
+    parameters:
+      text_operations_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    builder, text = text_operations_ir
+    executable = tmp_path / "text-operations"
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    builder._build_from_ir(str(module), str(executable))
+    (tmp_path / "input.txt").write_text(" L68\nR-12\n", encoding="utf-8")
+    result = subprocess.run(
+        [str(executable)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == result.stderr == ""

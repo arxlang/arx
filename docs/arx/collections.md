@@ -45,8 +45,8 @@ insertion copies the bytes, and indexing or iterating a string list produces
 independent strings that survive list replacement. Failed construction drops
 initialized elements without replacing an existing destination. See the
 [enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract).
-`range` still materializes a list, not a lazy iterator. String and tensor
-receivers for `len` are not yet implemented.
+`range` still materializes a list, not a lazy iterator. Tensor receivers for
+`len` are not yet implemented.
 
 ## Tensors
 
