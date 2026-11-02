@@ -140,6 +140,43 @@ def test_object_generation(code: str) -> None:
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
+def test_trailing_blank_line_builds_and_runs(tmp_path: Path) -> None:
+    """
+    title: Exact file bytes with spaces at EOF compile like string input.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    code = (
+        "```\ntitle: Trailing blank line\n```\n"
+        "fn main() -> i32:\n"
+        "  var x: i64 = 3\n"
+        "  print(x)\n"
+        "  return 0\n\n  "
+    )
+    source = tmp_path / "eof.x"
+    source.write_bytes(code.encode("utf-8"))
+    ArxIO.file_to_buffer(str(source))
+    assert ArxIO.buffer.buffer == code
+    file_tokens = Lexer().lex()
+    ArxIO.string_to_buffer(code)
+    assert file_tokens.tokens == Lexer().lex().tokens
+    module_ast = Parser().parse(file_tokens)
+
+    builder = ArxBuilder()
+    text = builder.translate(module_ast)
+    llvm.parse_assembly(text).verify()
+    binary = tmp_path / "eof"
+    builder._build_from_ir_result(text, str(binary), True, "auto")
+    result = subprocess.run(
+        [str(binary)], check=False, capture_output=True, text=True
+    )
+    assert result.returncode == 0
+    assert result.stdout == "3\n"
+    assert result.stderr == ""
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for object build")
 def test_integer_division_by_zero_reports_runtime_diagnostic(
     tmp_path: Path,
 ) -> None:

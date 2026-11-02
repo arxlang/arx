@@ -873,6 +873,10 @@ def test_parse_block_error_paths() -> None:
     with pytest.raises(ParserException, match="Indentation not allowed here"):
         _parse("fn main() -> i32:\n  a = 1\n    b = 2\n")
 
+    for body in ("", "  ", "  # comment", "  # comment\n    "):
+        with pytest.raises(ParserException, match="Expected indentation"):
+            _parse("fn main() -> i32:\n" + body)
+
 
 def test_parse_primary_unknown_token_branch() -> None:
     """

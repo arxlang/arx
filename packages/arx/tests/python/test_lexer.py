@@ -361,7 +361,12 @@ def test_skip_hash_comments() -> None:
     """
     title: Test that hash comments are ignored by lexer.
     """
-    ArxIO.string_to_buffer("a = 1  # comment\nb = 2\n")
+    ArxIO.string_to_buffer(
+        "a = 1  # comment\n"
+        "    # comment-only indentation is insignificant\n"
+        "  \n"
+        "b = 2\n"
+    )
     lexer = Lexer()
 
     assert lexer.get_token() == Token(TokenKind.identifier, "a")
@@ -452,17 +457,23 @@ def test_token_list_exhaustion_returns_stable_eof() -> None:
     assert second.kind == TokenKind.eof
 
 
-def test_lexer_rejects_tab_indentation() -> None:
+@pytest.mark.parametrize("body", ["\treturn 0\n", "\t", "  \t# comment"])
+def test_lexer_rejects_tab_indentation(body: str) -> None:
     """
     title: Arx rejects tab indentation at the lexer boundary.
+    parameters:
+      body:
+        type: str
     """
-    ArxIO.string_to_buffer("fn main() -> i32:\n\treturn 0\n")
+    ArxIO.string_to_buffer("fn main() -> i32:\n" + body)
 
     with pytest.raises(LexerError) as exc_info:
         Lexer().lex()
 
     assert exc_info.value.code == "ARX-LEX-INDENT-001"
     assert "Tab characters are not allowed" in str(exc_info.value)
+    assert exc_info.value.location.line == 2
+    assert exc_info.value.location.col == body.index("\t") + 1
 
 
 def test_lexer_locations_are_one_based_unicode_columns() -> None:
@@ -481,19 +492,47 @@ def test_lexer_locations_are_one_based_unicode_columns() -> None:
     ]
 
 
-def test_lexer_eof_location_does_not_drift() -> None:
+@pytest.mark.parametrize(
+    "source,identifiers,line,col",
+    [
+        ("x", ("x",), 1, 2),
+        ("", (), 1, 1),
+        ("  ", (), 1, 3),
+        ("\n    ", (), 2, 5),
+        ("  # café", (), 1, 9),
+        ("x\n  ", ("x",), 2, 3),
+        ("x\n    ", ("x",), 2, 5),
+        ("x\n  \n", ("x",), 3, 1),
+        ("x\n  # café", ("x",), 2, 9),
+        ("x # café", ("x",), 1, 9),
+    ],
+)
+def test_lexer_eof_location_does_not_drift(
+    source: str, identifiers: tuple[str, ...], line: int, col: int
+) -> None:
     """
-    title: Repeated EOF reads preserve the same source boundary.
+    title: Trailing trivia yields only stable EOF, never indentation.
+    parameters:
+      source:
+        type: str
+      identifiers:
+        type: tuple[str, Ellipsis]
+      line:
+        type: int
+      col:
+        type: int
     """
-    ArxIO.string_to_buffer("x")
+    ArxIO.string_to_buffer(source)
     lexer = Lexer()
-    assert lexer.get_token().value == "x"
+    for identifier in identifiers:
+        assert lexer.get_token() == Token(TokenKind.identifier, identifier)
     first_eof = lexer.get_token()
     second_eof = lexer.get_token()
     assert first_eof.kind == TokenKind.eof
     assert second_eof.kind == TokenKind.eof
-    assert first_eof.location.line == second_eof.location.line == 1
-    assert first_eof.location.col == second_eof.location.col == 2
+    assert first_eof.location.line == second_eof.location.line == line
+    assert first_eof.location.col == second_eof.location.col == col
+    assert ArxIO.buffer.buffer == source
 
 
 def test_lexer_rejects_excessive_nesting(

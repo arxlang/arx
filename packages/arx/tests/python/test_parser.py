@@ -946,23 +946,40 @@ def test_cast_result_can_participate_in_binary_expression() -> None:
     assert isinstance(return_node.value, astx.BinaryOp)
 
 
-def test_parse_block_with_comment_and_blank_lines() -> None:
+@pytest.mark.parametrize("suffix", ["", "\n  ", "\n      # final comment"])
+def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
     """
-    title: Test block parsing across comment/blank lines.
+    title: Trivia cannot change block or clause attachment, including at EOF.
+    parameters:
+      suffix:
+        type: str
     """
     ArxIO.string_to_buffer(
         "fn main() -> i32:\n"
         "  # section A\n"
         "\n"
         "  var a: i32 = 1\n"
+        "  if true:\n"
+        "    a = 2\n"
+        "# dedented comment\n"
+        "      # over-indented comment\n"
+        "  else:\n"
+        "    a = 3\n"
         "  # section B\n"
-        "  return a\n"
+        "  return a\n" + suffix
     )
     lexer = Lexer()
     parser = Parser()
 
     tree = parser.parse(lexer.lex())
+    assert len(tree.nodes) == 1
     fn = tree.nodes[0]
     assert isinstance(fn, astx.FunctionDef)
+    assert len(fn.body.nodes) == 3
     assert isinstance(fn.body.nodes[0], astx.VariableDeclaration)
-    assert isinstance(fn.body.nodes[1], astx.FunctionReturn)
+    branch = fn.body.nodes[1]
+    assert isinstance(branch, astx.IfStmt)
+    assert len(branch.then.nodes) == 1
+    assert branch.else_ is not None
+    assert len(branch.else_.nodes) == 1
+    assert isinstance(fn.body.nodes[2], astx.FunctionReturn)
