@@ -71,7 +71,7 @@ def resolve_parameter_ownership(
                 transfer_kind=OwnershipTransferKind.BORROW,
             ),
         )
-    elif isinstance(arg_symbol.type_, astx.ListType):
+    elif isinstance(arg_symbol.type_, (astx.ListType, astx.Bytes)):
         analyzer._set_resource_ownership(
             arg_node,
             list_resource_ownership(

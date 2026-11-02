@@ -347,3 +347,36 @@ def test_materialization_validates_unsized_bounds(
     module.block.append(function)
     with pytest.raises(SemanticError, match=message):
         analyze(module)
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_bytes_materialization_metadata(empty: bool) -> None:
+    """
+    title: >-
+      Reanalysis preserves checked octet construction and read-only access.
+    parameters:
+      empty:
+        type: bool
+    """
+    source = astx.FunctionCall(
+        "bytes", [] if empty else [astx.ListExpr([astx.LiteralInt64(255)])]
+    )
+    value = astx.Identifier("octets")
+    index = astx.SubscriptExpr(value, astx.LiteralInt64(0))
+    length = astx.CollectionLength(value)
+    module = make_main_module(
+        astx.VariableDeclaration("octets", astx.Bytes(), value=source),
+        length,
+        *([] if empty else [index]),
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    for _ in range(2):
+        analyze(module)
+        assert isinstance(source.semantic.resolved_type, astx.Bytes)
+        assert source.semantic.materialization.checked_bytes
+        assert isinstance(length.semantic.resolved_type, astx.Int64)
+        if not empty:
+            assert isinstance(index.semantic.resolved_type, astx.UInt8)
+    assert_ir_parses(Builder().translate(module))
+    assert not same_type(astx.Bytes(), astx.ListType([astx.UInt8()]))
+    assert not same_type(astx.Bytes(), astx.ColumnType("binary"))

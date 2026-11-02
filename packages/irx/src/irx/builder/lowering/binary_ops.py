@@ -645,7 +645,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         )
 
         llvm_lhs = self._lvalue_address(var_lhs)
-        if isinstance(self._resolved_ast_type(node), astx.ListType):
+        if isinstance(
+            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
+        ):
             if not isinstance(var_lhs, astx.Identifier):
                 raise_lowering_internal_error(
                     "list field assignment reached lowering without an "

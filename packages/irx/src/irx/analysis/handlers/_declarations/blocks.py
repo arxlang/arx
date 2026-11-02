@@ -82,7 +82,9 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 is_numeric_type(node.type_)
                 or is_boolean_type(node.type_)
                 or is_sequence_element(node.type_)
-                or isinstance(node.type_, (astx.ListType, astx.GeneratorType))
+                or isinstance(
+                    node.type_, (astx.ListType, astx.Bytes, astx.GeneratorType)
+                )
                 or is_string_type(node.type_)
             )
         ):
@@ -141,10 +143,10 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 ),
             )
             return
-        if not isinstance(node.type_, astx.ListType):
+        if not isinstance(node.type_, (astx.ListType, astx.Bytes)):
             return
-        if any(
-            isinstance(element_type, astx.ListType)
+        if isinstance(node.type_, astx.ListType) and any(
+            isinstance(element_type, (astx.ListType, astx.Bytes))
             for element_type in node.type_.element_types
         ):
             self.context.diagnostics.add(

@@ -44,7 +44,8 @@ def resolve_iteration_capability(
         return None
 
     if isinstance(
-        iterable_type, (astx.SequenceType, astx.SeriesType, astx.TensorType)
+        iterable_type,
+        (astx.SequenceType, astx.SeriesType, astx.TensorType, astx.Bytes),
     ):
         adapter = resolve_sequence_access(iterable_type)
         if adapter is None:

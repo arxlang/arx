@@ -100,7 +100,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
           list_ptr:
             type: ir.Value
         """
-        if not isinstance(node.type_, astx.ListType):
+        if not isinstance(node.type_, (astx.ListType, astx.Bytes)):
             return
 
         ownership = resource_ownership(node)
@@ -319,7 +319,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 f"Identifier '{var_name}' not found in the named values."
             )
 
-        if isinstance(self._resolved_ast_type(expr), astx.ListType):
+        if isinstance(
+            self._resolved_ast_type(expr), (astx.ListType, astx.Bytes)
+        ):
             self._destroy_replaced_list(
                 expr,
                 llvm_var,
@@ -522,7 +524,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(node.type_, astx.ListType):
+            elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
                 init_val = cast(
                     ir.Constant,
                     cast(Any, self)._empty_list_value_for_type(node.type_),
@@ -629,7 +631,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             )
         elif isinstance(node.type_, astx.StructType):
             init_val = ir.Constant(llvm_type, None)
-        elif isinstance(node.type_, astx.ListType):
+        elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
             init_val = cast(
                 ir.Constant,
                 cast(Any, self)._empty_list_value_for_type(node.type_),

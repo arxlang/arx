@@ -20,6 +20,8 @@ from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
 
+from .test_file_class_native import build_audited_file_program
+
 
 def test_scalar_remainder_and_word_not_translate() -> None:
     """
@@ -1227,3 +1229,57 @@ def test_nested_template_literal_context(arguments: str) -> None:
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(text).verify()
     assert "irx_list_append" in text
+
+
+@pytest.fixture(scope="module")
+def binary_file_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Verify and compile the byte workflow once without Arrow artifacts.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("binary file checks require clang")
+    source = Path(__file__).parents[4] / "examples/binary-files.x"
+    ArxIO.string_to_buffer(source.read_text())
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    artifacts = builder.translator.runtime_features.native_artifacts()
+    assert all("arrow" not in str(artifact.path) for artifact in artifacts)
+    assert "irx_file_read_bytes" in text and "irx_file_write_bytes" in text
+    executable = tmp_path_factory.mktemp("binary-workflow") / "program"
+    if sys.platform == "linux":
+        return build_audited_file_program(builder, text, executable.parent)
+    builder._build_from_ir(text, str(executable))
+    return executable
+
+
+def test_binary_file_roundtrip(
+    binary_file_program: Path, tmp_path: Path
+) -> None:
+    """
+    title: Independently inspect all bytes, append, empty writes and lifetimes.
+    parameters:
+      binary_file_program:
+        type: Path
+      tmp_path:
+        type: Path
+    """
+    result = subprocess.run(
+        [str(binary_file_program)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    if sys.platform == "linux":
+        assert b"AUDIT live=0 opened=6 released=6" in result.stderr
+    assert (tmp_path / "binary-output.dat").read_bytes() == bytes(
+        range(256)
+    ) * 2
+    assert (tmp_path / "binary-empty.dat").read_bytes() == b""

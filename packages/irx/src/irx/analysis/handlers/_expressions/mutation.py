@@ -283,7 +283,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
           is_local:
             type: bool
         """
-        if not isinstance(target_type, astx.ListType):
+        if not isinstance(target_type, (astx.ListType, astx.Bytes)):
             return
         if not is_local:
             self.context.diagnostics.add(

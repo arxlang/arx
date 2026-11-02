@@ -1,5 +1,5 @@
 """
-title: Registered native text-file runtime declarations.
+title: Registered native text and binary file runtime declarations.
 """
 
 from pathlib import Path
@@ -29,7 +29,16 @@ def build_file_runtime_feature() -> RuntimeFeature:
     """
     native = Path(__file__).resolve().parent / "native"
     symbols: dict[str, ExternalSymbolSpec] = {}
-    for name in ("open", "read", "write", "flush", "close", "release"):
+    for name in (
+        "open",
+        "read",
+        "write",
+        "read_bytes",
+        "write_bytes",
+        "flush",
+        "close",
+        "release",
+    ):
         symbol_name = f"irx_file_{name}"
 
         def declare(
@@ -50,7 +59,29 @@ def build_file_runtime_feature() -> RuntimeFeature:
             cstring = visitor._llvm.INT8_TYPE.as_pointer()
             parameters: list[ir.Type]
             if operation == "open":
-                parameters = [cstring, cstring, pointer.as_pointer(), cstring]
+                parameters = [
+                    cstring,
+                    cstring,
+                    visitor._llvm.INT32_TYPE,
+                    pointer.as_pointer(),
+                    cstring,
+                ]
+            elif operation == "read_bytes":
+                parameters = [
+                    pointer,
+                    visitor._llvm.INT64_TYPE,
+                    cstring.as_pointer(),
+                    visitor._llvm.INT64_TYPE.as_pointer(),
+                    cstring,
+                ]
+            elif operation == "write_bytes":
+                parameters = [
+                    pointer,
+                    cstring,
+                    visitor._llvm.INT64_TYPE,
+                    visitor._llvm.INT64_TYPE.as_pointer(),
+                    cstring,
+                ]
             elif operation == "read":
                 parameters = [pointer, cstring.as_pointer(), cstring]
             elif operation == "write":
@@ -82,6 +113,6 @@ def build_file_runtime_feature() -> RuntimeFeature:
         ),
         metadata={
             "ownership": "single owner; close then release",
-            "encoding": "UTF-8",
+            "encoding": "UTF-8 text or unmodified bytes",
         },
     )

@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from irx.builder.runtime.exceptions import parse_exception_output
 from llvmlite import binding as llvm
 
 from .file_support import analyze_arx as analyze
+from .test_file_class_native import build_audited_file_program
 
 
 def parse_module(body: str, declarations: str = "") -> astx.Module:
@@ -105,7 +107,7 @@ def test_open_parameters_and_translation(arguments: str) -> None:
     [
         ("", "requires a file path"),
         ("1", "requires a string"),
-        ('"x", "wb"', "supports only"),
+        ('"x", "wb+"', "supports only"),
         ('"x", buffering=0', "buffering"),
         ('"x", encoding="latin-1"', "encoding"),
         ('"x", errors="ignore"', "errors"),
@@ -262,7 +264,7 @@ def test_open_runtime_mode_is_checked_before_truncation(
     (tmp_path / "keep").write_bytes(b"unchanged")
     result = execute(
         tmp_path,
-        f'var mode: str = "wb"\nvar f: file = {factory}("keep", mode)',
+        f'var mode: str = "wb+"\nvar f: file = {factory}("keep", mode)',
     )
     assert result.returncode == 1
     assert (tmp_path / "keep").read_bytes() == b"unchanged"
@@ -426,3 +428,185 @@ def test_read_string_can_return_after_lexical_file_release(
 """
     result = execute(tmp_path, 'assert load() == "independent"', declarations)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "body,match",
+    [
+        ("bytes([true])", "integer items"),
+        ("bytes([1.5])", "integer items"),
+        ('bytes("text")', "integer items"),
+        ("bytes(10)", "integer items"),
+        ("bytes([1], [2])", "expects one input"),
+        ("var value: bytes = bytes([1])\nvalue.append(2)", "list|class"),
+        (
+            "var value: bytes = bytes([1])\nvar alias: bytes = value",
+            "borrowed storage",
+        ),
+        ("var value: bytes = cast(bytes([1]), bytes)", "bytes casts"),
+        ("var value: list[bytes]", "nested ownership"),
+        (
+            'var stream: File = open("x", "rb")\nstream.write_bytes("text")',
+            "requires bytes|expects",
+        ),
+        (
+            'var stream: File = open("x", "rb")\nstream.read_bytes(true)',
+            "requires|expects",
+        ),
+        ('var stream: File = open("x", "rb")\nstream.read_bytes()', "expects"),
+        (
+            'var stream: File = open("x", "wb", encoding="utf-8")',
+            "binary mode",
+        ),
+        ('var stream: File = open("x", "ab", errors="strict")', "binary mode"),
+        ("var bytes: i32 = 0\nbytes([1])", "does not resolve"),
+    ],
+)
+def test_binary_semantic_restrictions(body: str, match: str) -> None:
+    """
+    title: Reject unsafe coercion, mutation, aliases, and binary text options.
+    parameters:
+      body:
+        type: str
+      match:
+        type: str
+    """
+    with pytest.raises(SemanticError, match=match):
+        analyze(parse_module(body))
+
+
+@pytest.fixture(scope="module")
+def binary_failure_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Reuse one binary across recoverable constructor and File errors.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("binary failure checks require clang")
+    source = """```
+title: Binary errors
+```
+extern getchar() -> i32
+fn main() -> i32:
+  var scenario: i32 = getchar()
+  try:
+    if scenario == 0:
+      var negative: i8 = -1
+      bytes([negative])
+    if scenario == 1:
+      var large: u64 = 18446744073709551615
+      bytes([large])
+    if scenario == 2:
+      bytes([0, 255, 256])
+    if scenario == 3:
+      var mode: str = "wb"
+      open("keep", mode, encoding="utf-8")
+    if scenario == 4:
+      open("keep", "rb").read()
+    if scenario == 5:
+      open("keep", "wb").write("")
+    if scenario == 6:
+      open("keep", "r").read_bytes(0)
+    if scenario == 7:
+      open("keep", "w").write_bytes(bytes())
+    if scenario == 8:
+      open("keep", "rb").read_bytes(-1)
+    if scenario == 9:
+      open("missing", "rb")
+    if scenario == 10:
+      open("directory", "wb")
+    if scenario == 11:
+      var data: bytes = bytes([0, 255])
+      data[2]
+    if scenario == 12:
+      var empty: bytes = bytes()
+      empty[0]
+    if scenario == 13:
+      var signed: bytes = bytes([0, 255])
+      signed[-1]
+    return 1
+  except ValueError:
+    return 10
+  except OSError:
+    return 11
+  except IndexError:
+    return 12
+"""
+    ArxIO.string_to_buffer(source)
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    program = tmp_path_factory.mktemp("binary-errors") / "program"
+    if sys.platform == "linux":
+        return build_audited_file_program(builder, text, program.parent)
+    builder._build_from_ir(text, str(program))
+    return program
+
+
+@pytest.mark.parametrize(
+    "scenario,expected",
+    [(i, 10 if i < 9 else 11 if i < 11 else 12) for i in range(14)],
+)
+def test_binary_failures_are_recoverable(
+    binary_failure_program: Path, tmp_path: Path, scenario: int, expected: int
+) -> None:
+    """
+    title: Check values, modes, bounds and filesystem failures before success.
+    parameters:
+      binary_failure_program:
+        type: Path
+      tmp_path:
+        type: Path
+      scenario:
+        type: int
+      expected:
+        type: int
+    """
+    (tmp_path / "keep").write_bytes(b"unchanged")
+    (tmp_path / "directory").mkdir()
+    result = subprocess.run(
+        [str(binary_failure_program)],
+        input=bytes([scenario]),
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        timeout=15,
+    )
+    assert result.returncode == expected, result.stderr
+    if sys.platform == "linux":
+        assert b"AUDIT live=0 " in result.stderr
+    if scenario == 3:
+        assert (tmp_path / "keep").read_bytes() == b"unchanged"
+
+
+@pytest.mark.parametrize(
+    "declarations,match",
+    [
+        ("extern expose(value: bytes) -> bytes\n", "FFI|unsupported"),
+        ("class Box:\n  data: bytes\n", "field|ownership"),
+        ("fn borrow(data: bytes) -> bytes:\n  return data\n", "borrowed"),
+        (
+            "fn pending() -> bytes:\n"
+            "  var data: bytes = bytes([1])\n"
+            "  try:\n    return data\n"
+            "  finally:\n    print(len(data))\n",
+            "finally cannot reuse",
+        ),
+    ],
+)
+def test_bytes_cannot_escape_ownership(declarations: str, match: str) -> None:
+    """
+    title: >-
+      Reject unmodeled byte-buffer escapes and reuse after return transfer.
+    parameters:
+      declarations:
+        type: str
+      match:
+        type: str
+    """
+    with pytest.raises(SemanticError, match=match):
+        analyze(parse_module("bytes()", declarations))

@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.7.0",
+  "syntax_pack_version": "0.8.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -254,6 +254,7 @@
       "boolean",
       "none",
       "file",
+      "bytes",
       "str",
       "string",
       "char",
@@ -280,6 +281,7 @@
       "arrow_map"
     ],
     "functions": [
+      "bytes",
       "cast",
       "wrapping_cast",
       "wrapping_add",

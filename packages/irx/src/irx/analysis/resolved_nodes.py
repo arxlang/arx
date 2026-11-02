@@ -2038,16 +2038,21 @@ class ResolvedMaterialization:
       Unsized inputs require max_items. On excess, at most max_items + 1 items
       have been consumed, and no partial list is published. Consumed input is
       not rolled back. Fresh iterator frames transfer to this call; named
-      iterator frames are borrowed from their lexical owner.
+      iterator frames are borrowed from their lexical owner. checked_bytes
+      selects immutable UInt8 output with per-item 0..255 validation before
+      narrowing, not the source element width. No invalid prefix is published.
     attributes:
       iteration:
         type: ResolvedIteration
       max_items:
         type: astx.AST | None
+      checked_bytes:
+        type: bool
     """
 
     iteration: ResolvedIteration
     max_items: astx.AST | None
+    checked_bytes: bool = False
 
 
 @public
@@ -2097,6 +2102,9 @@ class ResolvedCollectionMethod:
 class ResolvedFileOpen:
     """
     title: Validated open operands in original evaluation order.
+    summary: >-
+      text_options records non-None encoding/errors/newline so dynamic binary
+      modes reject incompatible settings before creating or truncating a path.
     attributes:
       evaluations:
         type: tuple[astx.DataType, Ellipsis]
@@ -2104,11 +2112,14 @@ class ResolvedFileOpen:
         type: int
       mode_index:
         type: int | None
+      text_options:
+        type: bool
     """
 
     evaluations: tuple[astx.DataType, ...]
     path_index: int
     mode_index: int | None
+    text_options: bool = False
 
 
 @public

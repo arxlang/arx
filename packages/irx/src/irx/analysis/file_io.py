@@ -9,7 +9,9 @@ import astx
 from public import private
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
+    list_resource_ownership,
     resource_ownership,
     string_resource_ownership,
 )
@@ -22,7 +24,7 @@ from irx.analysis.resolved_nodes import (
     ResourceOwnership,
     SemanticSymbol,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import is_integer_type, is_string_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -36,7 +38,7 @@ OPEN_PARAMETERS = (
     "closefd",
     "opener",
 )
-FILE_MODES = {"r", "w", "a", "rt", "wt", "at"}
+FILE_MODES = {"r", "w", "a", "rt", "wt", "at", "rb", "wb", "ab"}
 
 
 @private
@@ -192,7 +194,8 @@ def bind_file_arguments(
                     file_error(
                         analyzer,
                         value,
-                        f"{entry} supports only r, w, a, rt, wt, at modes",
+                        f"{entry} supports only r, w, a, rt, wt, at, "
+                        "rb, wb, ab modes",
                     )
                     valid = False
         elif not supported_option(name, value):
@@ -204,6 +207,22 @@ def bind_file_arguments(
                 "(or utf-8/strict)",
             )
             valid = False
+    text_options = any(
+        name in values and not isinstance(values[name], astx.LiteralNone)
+        for name in ("encoding", "errors", "newline")
+    )
+    mode = values.get("mode")
+    if (
+        text_options
+        and isinstance(mode, astx.LiteralString)
+        and mode.value in {"rb", "wb", "ab"}
+    ):
+        file_error(
+            analyzer,
+            node,
+            "binary mode does not accept encoding, errors, or newline",
+        )
+        valid = False
     function = analyzer.context.current_function
     if (function is None and analyzer.context.current_class is None) or (
         function is not None
@@ -228,7 +247,7 @@ def bind_file_arguments(
     mode_index = next(
         (i for i, (name, value) in enumerate(operands) if name == "mode"), None
     )
-    return ResolvedFileOpen(evaluations, path_index, mode_index)
+    return ResolvedFileOpen(evaluations, path_index, mode_index, text_options)
 
 
 @private
@@ -287,7 +306,14 @@ def validate_file_method_arguments(
     returns:
       type: bool
     """
-    arity = {"read": 0, "write": 1, "flush": 0, "close": 0}
+    arity = {
+        "read": 0,
+        "write": 1,
+        "read_bytes": 1,
+        "write_bytes": 1,
+        "flush": 0,
+        "close": 0,
+    }
     if node.method_name not in arity:
         file_error(
             analyzer, node, f"unsupported file method '{node.method_name}'"
@@ -318,6 +344,26 @@ def validate_file_method_arguments(
             args[0]
         ):
             file_error(analyzer, node, "file write requires a NUL-free string")
+            return False
+    if node.method_name == "write_bytes" and not isinstance(
+        analyzer._expr_type(args[0]), astx.Bytes
+    ):
+        file_error(analyzer, node, "file write_bytes requires bytes")
+        return False
+    if node.method_name == "read_bytes":
+        contextualize_literal(args[0], astx.Int64())
+        analyzer.visit(args[0])
+        size_type = analyzer._expr_type(args[0])
+        if (
+            not is_integer_type(size_type)
+            or isinstance(size_type, (astx.UInt64, astx.UInt128))
+            or (not public and not isinstance(size_type, astx.Int64))
+        ):
+            file_error(
+                analyzer,
+                node,
+                "file read_bytes requires a nonnegative i64 size",
+            )
             return False
     return True
 
@@ -360,7 +406,12 @@ def resolve_file_method(
         analyzer._set_resource_ownership(
             node, string_resource_ownership(OwnershipKind.OWNED)
         )
-    elif node.method_name == "write":
+    elif node.method_name == "read_bytes":
+        result_type = astx.Bytes()
+        analyzer._set_resource_ownership(
+            node, list_resource_ownership(OwnershipKind.OWNED)
+        )
+    elif node.method_name in {"write", "write_bytes"}:
         result_type = astx.Int64()
     analyzer._set_type(node, result_type)
 

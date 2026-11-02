@@ -18,7 +18,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedIteration,
     SemanticInfo,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import is_string_type, sequence_element_type
 from irx.builder.core import VisitorCore, semantic_symbol_key
 from irx.builder.diagnostics import (
     raise_lowering_error,
@@ -123,7 +123,7 @@ class ListVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Type
         """
-        element_type = list_element_type(type_)
+        element_type = sequence_element_type(type_)
         if element_type is None:
             raise Exception(
                 "dynamic list lowering requires a single concrete element type"

@@ -3,20 +3,20 @@
 External native packages initially use existing scalar/string extern contracts.
 An external Arx class may own a checked integer token through `__init__` and
 `__del__`, but token validation and foreign allocations belong to its C ABI
-wrapper. This adds no raw pointer ownership, binary strings, owned extern string
-results, or foreign-frame unwind. Generated Arx calls use checked exception
-propagation and lexical cleanup. See
+wrapper. This adds no raw pointer ownership, foreign byte-buffer ownership,
+owned extern string results, or foreign-frame unwind. Generated Arx calls use
+checked exception propagation and lexical cleanup. See
 [native packages](../arx/native-packages.md).
 
 ## Status and purpose
 
 This inventory was checked against the local IRx lowering and native runtime on
-2026-10-24. It is the starting point for the Arx resource model, not yet a
+2026-11-02. It is the starting point for the Arx resource model, not yet a
 complete production ownership specification. Scalar dynamic lists, immutable
-strings, text files, and acyclic class references have bounded enforced
-ownership slices. A resource may be promoted to the stable language only after
-its create, borrow, transfer, escape, release, and failure paths are represented
-here and enforced by semantic metadata and lowering.
+strings/bytes, text/binary files, and acyclic class references have bounded
+enforced ownership slices. A resource may be promoted to the stable language
+only after its create, borrow, transfer, escape, release, and failure paths are
+represented here and enforced by semantic metadata and lowering.
 
 ## Required vocabulary
 
@@ -190,6 +190,13 @@ double-release a moved value.
     not an implicit ownership policy.
 
 ## Enforced file contract
+
+Immutable bytes reuse `ResourceKind.LIST` and the byte-width descriptor only for
+storage, not mutable-list operations. Construction copies checked integers; File
+reads transfer independently allocated buffers only after successful status.
+Parameters borrow, returns move, and replacement/exception exits destroy owned
+storage. Explicit `bytes(existing)` copies; implicit local aliases and nested
+ownership remain rejected.
 
 Public File objects use `ResourceKind.CLASS` reference ownership. Their private
 native field retains `ResourceKind.FILE` unique ownership; existing low-level

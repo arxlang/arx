@@ -144,7 +144,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 node,
                 ResourceOwnership(ResourceKind.GENERATOR, OwnershipKind.OWNED),
             )
-        elif isinstance(result_type, astx.ListType):
+        elif isinstance(result_type, (astx.ListType, astx.Bytes)):
             self._set_resource_ownership(
                 node,
                 list_resource_ownership(OwnershipKind.OWNED),
@@ -595,7 +595,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                         transfer_kind=OwnershipTransferKind.BORROW,
                     ),
                 )
-            elif isinstance(symbol.type_, astx.ListType):
+            elif isinstance(symbol.type_, (astx.ListType, astx.Bytes)):
                 declaration_ownership = symbol_resource_ownership(symbol)
                 self._set_resource_ownership(
                     node,
@@ -665,13 +665,16 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if info.materialization is not None:
             info.resource_ownership = None
         info.materialization = None
-        if node.fn == "list" and self.bindings.resolve(node.fn) is None:
+        if (
+            node.fn in {"list", "bytes"}
+            and self.bindings.resolve(node.fn) is None
+        ):
             info.resolved_call = None
             info.resolved_callable = None
             info.resolved_function = None
             if self.context.scopes.resolve(node.fn) is not None:
                 self.context.diagnostics.add(
-                    "name 'list' does not resolve to a function",
+                    f"name '{node.fn}' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )

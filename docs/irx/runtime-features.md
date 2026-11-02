@@ -226,7 +226,7 @@ IRx currently does not provide:
 See [Native Apache Arrow Support](../apache-arrow.md) for the cross-project view
 and [Buffer View Model](buffer-view-model.md) for the low-level descriptor.
 
-## Text file runtime
+## File runtime
 
 The `file` feature exposes opaque `irx_file_*` handles and caller-owned error
 buffers (`IRX_FILE_ERROR_CAPACITY` bytes). Open/read/write outputs are
@@ -238,8 +238,16 @@ synchronous, single-owner, and not thread-safe. Lowering activates `errors` when
 status guards are emitted and `libc` when returned strings require cleanup;
 dependencies do not depend on passive feature metadata.
 
-See [Arx Text File I/O](../arx/file-io.md) for the intentionally restricted
-parameter and lifetime surface. The native header is the C ABI contract.
+Binary operations use explicit pointer-plus-length payloads, never `strlen`.
+Counts are checked before conversion to `size_t`; read buffers are independently
+owned. Lowering wraps successful reads in the shared byte-width list descriptor
+and registers its normal cleanup, without an Arrow dependency. Failed reads
+release partial storage; failed writes publish no count but may have changed the
+external file. The open ABI carries a text-option flag so dynamic binary modes
+reject incompatible settings before `fopen`.
+
+See [Arx File I/O](../arx/file-io.md) for the intentionally restricted parameter
+and lifetime surface. The native header is the C ABI contract.
 
 ## Class Lifetime Feature
 

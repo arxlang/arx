@@ -86,7 +86,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            if isinstance(attr.type_, astx.ListType):
+            if isinstance(attr.type_, (astx.ListType, astx.Bytes)):
                 self.context.diagnostics.add(
                     f"struct field '{struct.name}.{attr.name}' cannot own "
                     "dynamic list storage because struct destruction is not "

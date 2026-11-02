@@ -460,6 +460,15 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         self.visit(node.value)
         source = self._expr_type(node.value)
         target = node.target_type
+        if isinstance(source, astx.Bytes) or isinstance(target, astx.Bytes):
+            self.context.diagnostics.add(
+                "bytes casts are unsupported; "
+                "use bytes(input) for a checked copy",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            self._set_type(node, target)
+            return
         source_scalar = (
             source.value_type
             if isinstance(source, astx.NullableType)

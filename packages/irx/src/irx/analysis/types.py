@@ -69,6 +69,21 @@ def sequence_element_type(type_: astx.DataType | None) -> astx.DataType | None:
 
 @dispatch
 @typechecked
+def sequence_element_type(type_: astx.Bytes) -> astx.DataType:
+    """
+    title: Resolve immutable octets without mutable-list coercion.
+    parameters:
+      type_:
+        type: astx.Bytes
+    returns:
+      type: astx.DataType
+    """
+    del type_
+    return astx.UInt8()
+
+
+@dispatch
+@typechecked
 def sequence_element_type(type_: astx.ListType) -> astx.DataType | None:
     """
     title: Resolve a homogeneous list element without widening it.
@@ -1075,7 +1090,12 @@ def is_explicitly_castable(
     returns:
       type: bool
     """
-    if contains_sequence(source) or contains_sequence(target):
+    if (
+        contains_sequence(source)
+        or contains_sequence(target)
+        or contains_bytes(source)
+        or contains_bytes(target)
+    ):
         return False
     if source is None or target is None:
         return True
@@ -1320,6 +1340,43 @@ def contains_file_type(type_: astx.DataType | None) -> bool:
         if isinstance(value, (list, tuple)):
             if any(
                 isinstance(item, astx.DataType) and contains_file_type(item)
+                for item in value
+            ):
+                return True
+    return False
+
+
+@public
+@typechecked
+def contains_bytes(type_: astx.DataType | None) -> bool:
+    """
+    title: Detect unsupported nested byte-buffer storage.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.Bytes):
+        return True
+    if isinstance(type_, astx.DataFrameType) and type_.columns is not None:
+        return any(contains_bytes(column.type_) for column in type_.columns)
+    for attribute in (
+        "element_types",
+        "members",
+        "element_type",
+        "key_type",
+        "value_type",
+        "yield_type",
+        "pointee_type",
+        "bound",
+    ):
+        value: object = getattr(type_, attribute, None)
+        if isinstance(value, astx.DataType) and contains_bytes(value):
+            return True
+        if isinstance(value, (list, tuple)):
+            if any(
+                isinstance(item, astx.DataType) and contains_bytes(item)
                 for item in value
             ):
                 return True

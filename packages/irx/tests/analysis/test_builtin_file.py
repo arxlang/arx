@@ -27,7 +27,14 @@ def file_declaration() -> astx.ClassDefStmt:
       type: astx.ClassDefStmt
     """
     methods = []
-    for name in ("read", "write", "flush", "close"):
+    for name in (
+        "read",
+        "write",
+        "read_bytes",
+        "write_bytes",
+        "flush",
+        "close",
+    ):
         args = astx.Arguments()
         body = astx.Block()
         return_type: astx.DataType = astx.NoneType()
@@ -36,6 +43,14 @@ def file_declaration() -> astx.ClassDefStmt:
             args = astx.Arguments(astx.Argument("text", astx.String()))
             return_type = astx.Int64()
             native_args = [astx.Identifier("text")]
+        elif name == "read_bytes":
+            args = astx.Arguments(astx.Argument("size", astx.Int64()))
+            return_type = astx.Bytes()
+            native_args = [astx.Identifier("size")]
+        elif name == "write_bytes":
+            args = astx.Arguments(astx.Argument("data", astx.Bytes()))
+            return_type = astx.Int64()
+            native_args = [astx.Identifier("data")]
         elif name == "read":
             return_type = astx.String()
         operation = astx.MethodCall(

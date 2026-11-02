@@ -12,6 +12,7 @@
 struct irx_file {
   FILE* stream;
   int readable;
+  int binary;
 };
 
 static int32_t irx_file_error(char* error, int32_t status, const char* message) {
@@ -80,22 +81,27 @@ static int32_t irx_file_utf8(const unsigned char* data, size_t length,
   return 0;
 }
 
-int32_t irx_file_open(const char* path, const char* mode, irx_file** out,
+int32_t irx_file_open(const char* path, const char* mode, int32_t text_options, irx_file** out,
                       char* error) {
-  char canonical[2] = {0, 0};
+  char canonical[3] = {0, 0, 0};
   irx_file* handle;
   irx_file_clear_error(error);
   if (out != NULL) *out = NULL;
-  if (out == NULL || path == NULL || mode == NULL)
+  if (out == NULL || path == NULL || mode == NULL || (text_options != 0 && text_options != 1))
     return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "open requires a path, mode, and output");
-  if (!strcmp(mode, "r") || !strcmp(mode, "rt"))
+  if (!strcmp(mode, "r") || !strcmp(mode, "rt") || !strcmp(mode, "rb"))
     canonical[0] = 'r';
-  else if (!strcmp(mode, "w") || !strcmp(mode, "wt"))
+  else if (!strcmp(mode, "w") || !strcmp(mode, "wt") || !strcmp(mode, "wb"))
     canonical[0] = 'w';
-  else if (!strcmp(mode, "a") || !strcmp(mode, "at"))
+  else if (!strcmp(mode, "a") || !strcmp(mode, "at") || !strcmp(mode, "ab"))
     canonical[0] = 'a';
   else
-    return irx_file_error(error, IRX_FILE_MODE, "open supports only r, w, a, rt, wt, at modes");
+    return irx_file_error(error, IRX_FILE_MODE, "open supports only r, w, a, rt, wt, at, rb, wb, ab modes");
+  if (mode[1] == 'b') {
+    if (text_options)
+      return irx_file_error(error, IRX_FILE_MODE, "binary mode does not accept encoding, errors, or newline");
+    canonical[1] = 'b';
+  }
   handle = malloc(sizeof(*handle));
   if (handle == NULL) return irx_file_error(error, IRX_FILE_ALLOCATION, "file allocation failed");
   errno = 0;
@@ -106,6 +112,7 @@ int32_t irx_file_open(const char* path, const char* mode, irx_file** out,
     return status;
   }
   handle->readable = canonical[0] == 'r';
+  handle->binary = canonical[1] == 'b';
   *out = handle;
   return 0;
 }
@@ -119,7 +126,7 @@ int32_t irx_file_read(irx_file* handle, char** out, char* error) {
   if (out == NULL) return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "read requires an output");
   if (handle == NULL || handle->stream == NULL)
     return irx_file_error(error, IRX_FILE_CLOSED, "read on a closed file");
-  if (!handle->readable) return irx_file_error(error, IRX_FILE_MODE, "file is not readable");
+  if (!handle->readable || handle->binary) return irx_file_error(error, IRX_FILE_MODE, "read requires readable text mode");
   buffer = malloc(capacity);
   if (buffer == NULL) return irx_file_error(error, IRX_FILE_ALLOCATION, "read allocation failed");
   for (;;) {
@@ -178,7 +185,7 @@ int32_t irx_file_write(irx_file* handle, const char* text, int64_t* out,
     return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "write requires text and output");
   if (handle == NULL || handle->stream == NULL)
     return irx_file_error(error, IRX_FILE_CLOSED, "write on a closed file");
-  if (handle->readable) return irx_file_error(error, IRX_FILE_MODE, "file is not writable");
+  if (handle->readable || handle->binary) return irx_file_error(error, IRX_FILE_MODE, "write requires writable text mode");
   length = strlen(text);
   {
     int32_t status = irx_file_utf8((const unsigned char*)text, length, &count, error);
@@ -188,6 +195,80 @@ int32_t irx_file_write(irx_file* handle, const char* text, int64_t* out,
   if (fwrite(text, 1, length, handle->stream) != length)
     return irx_file_system_error(error, "write failed");
   *out = count;
+  return 0;
+}
+
+/* Byte buffers are not strings: counts, including zero, govern every access.
+ * Failed reads discard the partial buffer. Failed writes may have changed the
+ * external stream; out_count is published only on complete success. */
+int32_t irx_file_read_bytes(irx_file* handle, int64_t size,
+                            unsigned char** out_data, int64_t* out_count,
+                            char* error) {
+  unsigned char* buffer;
+  size_t used = 0, capacity;
+  irx_file_clear_error(error);
+  if (out_data != NULL) *out_data = NULL;
+  if (out_count != NULL) *out_count = 0;
+  if (out_data == NULL || out_count == NULL || size < 0)
+    return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "read_bytes requires a nonnegative size and outputs");
+  if (handle == NULL || handle->stream == NULL)
+    return irx_file_error(error, IRX_FILE_CLOSED, "read_bytes on a closed file");
+  if (!handle->readable || !handle->binary)
+    return irx_file_error(error, IRX_FILE_MODE, "read_bytes requires readable binary mode");
+  if ((uint64_t)size > SIZE_MAX)
+    return irx_file_error(error, IRX_FILE_OVERFLOW, "read_bytes size overflow");
+  if (size == 0) return 0;
+  capacity = (size_t)size;
+  buffer = malloc(capacity);
+  if (buffer == NULL)
+    return irx_file_error(error, IRX_FILE_ALLOCATION, "read_bytes allocation failed");
+  while (used < capacity) {
+    size_t received;
+    errno = 0;
+    received = fread(buffer + used, 1, capacity - used, handle->stream);
+    used += received;
+    if (ferror(handle->stream)) {
+      int32_t status = irx_file_system_error(error, "read_bytes failed");
+      free(buffer);
+      return status;
+    }
+    if (feof(handle->stream)) break;
+    if (received == 0) {
+      free(buffer);
+      return irx_file_error(error, IRX_FILE_NO_PROGRESS, "read_bytes made no progress");
+    }
+  }
+  if (used == 0) { free(buffer); buffer = NULL; }
+  *out_data = buffer;
+  *out_count = (int64_t)used;
+  return 0;
+}
+
+int32_t irx_file_write_bytes(irx_file* handle, const unsigned char* data,
+                             int64_t size, int64_t* out_count, char* error) {
+  size_t used = 0, length;
+  irx_file_clear_error(error);
+  if (out_count != NULL) *out_count = 0;
+  if (out_count == NULL || size < 0 || (data == NULL && size != 0))
+    return irx_file_error(error, IRX_FILE_INVALID_ARGUMENT, "write_bytes requires bytes, a nonnegative size, and output");
+  if (handle == NULL || handle->stream == NULL)
+    return irx_file_error(error, IRX_FILE_CLOSED, "write_bytes on a closed file");
+  if (handle->readable || !handle->binary)
+    return irx_file_error(error, IRX_FILE_MODE, "write_bytes requires writable binary mode");
+  if ((uint64_t)size > SIZE_MAX)
+    return irx_file_error(error, IRX_FILE_OVERFLOW, "write_bytes size overflow");
+  length = (size_t)size;
+  while (used < length) {
+    size_t written;
+    errno = 0;
+    written = fwrite(data + used, 1, length - used, handle->stream);
+    used += written;
+    if (ferror(handle->stream))
+      return irx_file_system_error(error, "write_bytes failed");
+    if (written == 0)
+      return irx_file_error(error, IRX_FILE_NO_PROGRESS, "write_bytes made no progress");
+  }
+  *out_count = size;
   return 0;
 }
 
