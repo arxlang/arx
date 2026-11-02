@@ -1,6 +1,21 @@
 # Release Notes
 ---
 
+# [1.26.0](https://github.com/arxlang/arx/compare/1.25.0...1.26.0) (2026-11-02)
+
+
+### Bug Fixes
+
+* bound collection loop storage and report runtime failures ([#150](https://github.com/arxlang/arx/issues/150)) ([20c84ac](https://github.com/arxlang/arx/commit/20c84aceca654a9838f50faf116d15fe6320cad9))
+
+
+### Features
+
+* add remainder and word negation with CI adjustments ([#151](https://github.com/arxlang/arx/issues/151)) ([c457c2d](https://github.com/arxlang/arx/commit/c457c2d109531170a7a9eaef1361e552bdaa1b05))
+* **collections:** add owned list expressions and i64 length ([#152](https://github.com/arxlang/arx/issues/152)) ([4777303](https://github.com/arxlang/arx/commit/4777303e1c26f43629616280adffae0f917649ba))
+* **sequence:** add borrowed numeric sequences and bounded materialization ([#154](https://github.com/arxlang/arx/issues/154)) ([ccfb351](https://github.com/arxlang/arx/commit/ccfb35133ae9cfef92ba9119fc319c414102792f))
+* **text:** add checked Unicode parsing and owned string operations ([#153](https://github.com/arxlang/arx/issues/153)) ([e05b7d5](https://github.com/arxlang/arx/commit/e05b7d59409c47c993b5ac878578568bfa86789c))
+
 ## Unreleased
 
 - Add exact, read-only `sequence[T]` parameters for numeric lists, rank-one
