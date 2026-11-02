@@ -5,6 +5,9 @@ title: Generator semantic and lowering tests.
 from __future__ import annotations
 
 import shutil
+import subprocess
+
+from pathlib import Path
 
 import astx
 import pytest
@@ -12,8 +15,14 @@ import pytest
 from irx.analysis import SemanticError, analyze
 from irx.analysis.resolved_nodes import IterationKind
 from irx.builder import Builder
+from llvmlite import ir
 
-from .conftest import assert_build_output, assert_ir_parses, build_and_run
+from .conftest import (
+    assert_build_output,
+    assert_ir_parses,
+    build_and_run,
+    make_main_module,
+)
 
 HAS_CLANG = shutil.which("clang") is not None
 
@@ -619,3 +628,313 @@ def test_owned_string_access_in_generators_is_diagnosed(
         SemanticError, match=r"generators require.*lifecycle cleanup"
     ):
         analyze(module)
+
+
+@pytest.mark.parametrize(
+    "type_,value",
+    [
+        (
+            astx.TensorType(astx.Int32(), shape=(1,)),
+            astx.TensorLiteral(
+                [astx.LiteralInt32(1)], element_type=astx.Int32(), shape=(1,)
+            ),
+        ),
+        (astx.DataFrameType(), astx.Undefined()),
+        (astx.FileType(), astx.Undefined()),
+    ],
+)
+def test_generator_frames_reject_owned_non_scalar_locals(
+    type_: astx.DataType, value: astx.Expr
+) -> None:
+    """
+    title: Frame deallocation must not bypass nested resource destruction.
+    parameters:
+      type_:
+        type: astx.DataType
+      value:
+        type: astx.Expr
+    """
+    function = _numbers_function()
+    function.body = _block_of(
+        astx.VariableDeclaration("resource", type_, value=value),
+        astx.YieldStmt(astx.LiteralInt32(1)),
+    )
+    module = astx.Module()
+    module.block.append(function)
+    with pytest.raises(SemanticError, match="non-scalar locals in generators"):
+        analyze(module)
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+def test_materialization_failure_leaves_borrowed_iterator_advanced() -> None:
+    """
+    title: A failed bounded copy consumes its probe without destroying input.
+    """
+
+    def materialize(limit: int) -> astx.FunctionCall:
+        """
+        title: Borrow the same iterator with an exact i64 bound.
+        parameters:
+          limit:
+            type: int
+        returns:
+          type: astx.FunctionCall
+        """
+        return astx.FunctionCall(
+            "list",
+            [astx.Identifier("source")],
+            keywords=(
+                astx.KeywordArgument("max_items", astx.LiteralInt64(limit)),
+            ),
+        )
+
+    module = make_main_module(
+        astx.VariableDeclaration(
+            "source",
+            astx.GeneratorType(astx.Int32()),
+            value=astx.FunctionCall("numbers", []),
+        ),
+        astx.ExceptionHandlerStmt(
+            _block_of(
+                materialize(0), astx.AssertStmt(astx.LiteralBoolean(False))
+            ),
+            [
+                astx.CatchHandlerStmt(
+                    _block_of(astx.LiteralInt32(0)),
+                    types=[astx.Identifier("ValueError")],
+                )
+            ],
+        ),
+        astx.VariableDeclaration(
+            "remainder",
+            astx.ListType([astx.Int32()]),
+            value=materialize(2**63 - 1),
+        ),
+        astx.AssertStmt(
+            astx.BinaryOp(
+                "==",
+                astx.CollectionLength(astx.Identifier("remainder")),
+                astx.LiteralInt64(2),
+            )
+        ),
+        astx.AssertStmt(
+            astx.BinaryOp(
+                "==",
+                astx.SubscriptExpr(
+                    astx.Identifier("remainder"), astx.LiteralInt32(0)
+                ),
+                astx.LiteralInt32(2),
+            )
+        ),
+        astx.AssertStmt(
+            astx.BinaryOp(
+                "==",
+                astx.SubscriptExpr(
+                    astx.Identifier("remainder"), astx.LiteralInt32(1)
+                ),
+                astx.LiteralInt32(3),
+            )
+        ),
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    module.block.insert(0, _numbers_function())
+    result = build_and_run(Builder(), module)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.fixture(scope="module")
+def materialization_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: >-
+      Compile bounded consumption once, with finite and infinite ABI inputs.
+    summary: >-
+      The test resume adapter exercises an infinite single-pass source without
+      claiming nested source-level yield support. Allocation counters prove
+      frame cleanup on normal completion and checked failures.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if not HAS_CLANG:
+        pytest.skip("native generator checks require clang")
+    bound = astx.BinaryOp(
+        "-", astx.FunctionCall("getchar", []), astx.LiteralInt32(1)
+    )
+    materialized = astx.FunctionCall(
+        "list",
+        [astx.FunctionCall("numbers", [])],
+        keywords=(astx.KeywordArgument("max_items", bound),),
+    )
+    module = make_main_module(
+        astx.VariableDeclaration(
+            "result", astx.ListType([astx.Int32()]), value=materialized
+        ),
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    external = astx.FunctionPrototype(
+        "getchar", astx.Arguments(), return_type=astx.Int32()
+    )
+    external.is_extern = True
+    external.calling_convention = "c"
+    module.block.insert(0, external)
+    module.block.insert(0, _numbers_function())
+    builder = Builder()
+    builder.translate(module)
+    llvm_module = builder.translator._llvm.module
+    integer = ir.IntType(32)
+    counters = {}
+    for name in ("frames", "lists", "resumes", "infinite"):
+        global_ = ir.GlobalVariable(llvm_module, integer, "test." + name)
+        global_.initializer = ir.Constant(integer, 0)
+        counters[name] = global_
+    originals = list(llvm_module.functions)
+    resume = next(
+        function
+        for function in originals
+        if function.name.endswith(".__resume")
+    )
+    for original, delta in (
+        (llvm_module.get_global("malloc"), 1),
+        (llvm_module.get_global("free"), -1),
+        (resume, 0),
+        (llvm_module.get_global("irx_list_append"), 0),
+        (llvm_module.get_global("irx_list_destroy"), 0),
+    ):
+        wrapper = ir.Function(
+            llvm_module, original.function_type, "test." + original.name
+        )
+        for function in originals:
+            for bb in function.blocks:
+                for instruction in bb.instructions:
+                    instruction.replace_usage(original, wrapper)
+        emitter = ir.IRBuilder(wrapper.append_basic_block("entry"))
+        if original is resume:
+            counter = counters["resumes"]
+            emitter.store(
+                emitter.add(emitter.load(counter), ir.Constant(integer, 1)),
+                counter,
+            )
+            with emitter.if_then(
+                emitter.icmp_signed(
+                    "!=",
+                    emitter.load(counters["infinite"]),
+                    ir.Constant(integer, 0),
+                )
+            ):
+                emitter.store(ir.Constant(ir.IntType(32), 7), wrapper.args[2])
+                emitter.store(ir.Constant(ir.IntType(1), 1), wrapper.args[3])
+                emitter.ret(ir.Constant(integer, 0))
+        else:
+            counter = counters["frames"]
+            emitter.store(
+                emitter.add(
+                    emitter.load(counter), ir.Constant(integer, delta)
+                ),
+                counter,
+            )
+        data_slot = None
+        before = None
+        if original.name in {"irx_list_append", "irx_list_destroy"}:
+            data_slot = emitter.gep(
+                wrapper.args[0],
+                [ir.Constant(integer, 0), ir.Constant(integer, 0)],
+            )
+            data = emitter.load(data_slot)
+            before = emitter.zext(
+                emitter.icmp_unsigned(
+                    "!=", data, ir.Constant(data.type, None)
+                ),
+                integer,
+            )
+        result = emitter.call(original, list(wrapper.args))
+        if data_slot is not None and before is not None:
+            data = emitter.load(data_slot)
+            after = emitter.zext(
+                emitter.icmp_unsigned(
+                    "!=", data, ir.Constant(data.type, None)
+                ),
+                integer,
+            )
+            counter = counters["lists"]
+            emitter.store(
+                emitter.add(emitter.load(counter), emitter.sub(after, before)),
+                counter,
+            )
+
+        if isinstance(result.type, ir.VoidType):
+            emitter.ret_void()
+        else:
+            emitter.ret(result)
+    text = str(llvm_module).replace(
+        'define i32 @"main"()', 'define i32 @"test.original_main"()'
+    )
+    # Encode resumes even on failure; a leaked frame has a distinct code.
+    text += """
+define i32 @main() {
+entry:
+  %mode = call i32 @getchar()
+  store i32 %mode, i32* @test.infinite
+  %result = call i32 @test.original_main()
+  %frames = load i32, i32* @test.frames
+  %resumes = load i32, i32* @test.resumes
+  %clean_frames = icmp eq i32 %frames, 0
+  %lists = load i32, i32* @test.lists
+  %clean_lists = icmp eq i32 %lists, 0
+  %clean = and i1 %clean_frames, %clean_lists
+  %failure = mul i32 %result, 20
+  %code = add i32 %failure, %resumes
+  %output = select i1 %clean, i32 %code, i32 99
+  ret i32 %output
+}
+"""
+    assert_ir_parses(text)
+    executable = tmp_path_factory.mktemp("materialization") / "probe"
+    builder._build_from_ir(text, str(executable))
+    return executable
+
+
+@pytest.mark.parametrize(
+    "infinite,bound,resumes,failure",
+    [
+        (False, -1, 0, True),
+        (False, 0, 1, True),
+        (False, 1, 2, True),
+        (False, 3, 4, False),
+        (False, 4, 4, False),
+        (True, 0, 1, True),
+        (True, 1, 2, True),
+        (True, 7, 8, True),
+    ],
+)
+def test_bounded_materialization_consumption(
+    materialization_binary: Path,
+    infinite: bool,
+    bound: int,
+    resumes: int,
+    failure: bool,
+) -> None:
+    """
+    title: Consume at most N+1 items once and release owned frames on failure.
+    parameters:
+      materialization_binary:
+        type: Path
+      infinite:
+        type: bool
+      bound:
+        type: int
+      resumes:
+        type: int
+      failure:
+        type: bool
+    """
+    result = subprocess.run(
+        [str(materialization_binary)],
+        input=bytes([int(infinite), bound + 1]),
+        check=False,
+        capture_output=True,
+    )
+    assert result.returncode == int(failure) * 20 + resumes, result.stderr
+    if failure:
+        assert b"max_items" in result.stderr

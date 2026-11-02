@@ -1,3 +1,5 @@
+# mypy: disable-error-code=no-redef
+
 """
 title: Type helpers for semantic analysis.
 summary: >-
@@ -12,6 +14,7 @@ from typing import cast
 
 import astx
 
+from plum import dispatch
 from public import public
 
 from irx.analysis.numeric_policy import (
@@ -46,6 +49,157 @@ _BIT_WIDTHS: dict[type[astx.DataType], int] = {
     astx.Float32: BIT_WIDTH_32,
     astx.Float64: BIT_WIDTH_64,
 }
+
+
+@public
+@dispatch
+@typechecked
+def sequence_element_type(type_: astx.DataType | None) -> astx.DataType | None:
+    """
+    title: Return the exact element contract for a supported sized source.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: astx.DataType | None
+    """
+    del type_
+    return None
+
+
+@dispatch
+@typechecked
+def sequence_element_type(type_: astx.ListType) -> astx.DataType | None:
+    """
+    title: Resolve a homogeneous list element without widening it.
+    parameters:
+      type_:
+        type: astx.ListType
+    returns:
+      type: astx.DataType | None
+    """
+    if len(type_.element_types) == 1 and isinstance(
+        type_.element_types[0], astx.DataType
+    ):
+        return type_.element_types[0]
+    return None
+
+
+@dispatch
+@typechecked
+def sequence_element_type(type_: astx.TensorType) -> astx.DataType | None:
+    """
+    title: >-
+      Resolve rank-one tensors, deferring unknown rank to a checked adapter.
+    parameters:
+      type_:
+        type: astx.TensorType
+    returns:
+      type: astx.DataType | None
+    """
+    if type_.shape is not None and len(type_.shape) != 1:
+        return None
+    return type_.element_type
+
+
+@dispatch
+@typechecked
+def sequence_element_type(type_: astx.SeriesType) -> astx.DataType | None:
+    """
+    title: Preserve a Series element's scalar width and validity.
+    parameters:
+      type_:
+        type: astx.SeriesType
+    returns:
+      type: astx.DataType | None
+    """
+    if type_.element_type is None:
+        return None
+    return (
+        astx.NullableType(type_.element_type)
+        if type_.nullable
+        else type_.element_type
+    )
+
+
+@dispatch
+@typechecked
+def sequence_element_type(type_: astx.SequenceType) -> astx.DataType:
+    """
+    title: Forward an existing sequence's exact element contract.
+    parameters:
+      type_:
+        type: astx.SequenceType
+    returns:
+      type: astx.DataType
+    """
+    return type_.element_type
+
+
+@public
+@typechecked
+def contains_template_variables(type_: astx.DataType | None) -> bool:
+    """
+    title: Discover unresolved variables recursively in supported annotations.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.TemplateTypeVar):
+        return True
+    if isinstance(type_, (astx.ListType, astx.TupleType)):
+        return any(
+            contains_template_variables(cast(astx.DataType, item))
+            for item in type_.element_types
+        )
+    if isinstance(type_, astx.UnionType):
+        return any(contains_template_variables(item) for item in type_.members)
+    if isinstance(type_, astx.NullableType):
+        return contains_template_variables(type_.value_type)
+    if isinstance(type_, astx.GeneratorType):
+        return contains_template_variables(type_.yield_type)
+    if isinstance(type_, astx.PointerType):
+        return contains_template_variables(type_.pointee_type)
+    if isinstance(
+        type_,
+        (
+            astx.SequenceType,
+            astx.SeriesType,
+            astx.TensorType,
+            astx.BufferViewType,
+        ),
+    ):
+        return contains_template_variables(type_.element_type)
+    return False
+
+
+@public
+@typechecked
+def is_sequence_element(type_: astx.DataType | None) -> bool:
+    """
+    title: >-
+      Accept fixed-width numeric scalars, optionally nullable, not Boolean.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    inner = type_.value_type if isinstance(type_, astx.NullableType) else type_
+    return isinstance(
+        inner,
+        (
+            *INT_TYPES,
+            astx.UInt8,
+            astx.UInt16,
+            astx.UInt32,
+            astx.UInt64,
+            astx.Float32,
+            astx.Float64,
+        ),
+    )
 
 
 @typechecked
@@ -222,6 +376,8 @@ def clone_type(type_: astx.DataType) -> astx.DataType:
 
     if isinstance(type_, astx.NullableType):
         return with_alias(astx.NullableType(clone_type(type_.value_type)))
+    if isinstance(type_, astx.SequenceType):
+        return with_alias(astx.SequenceType(clone_type(type_.element_type)))
     if isinstance(type_, astx.ColumnType):
         return with_alias(
             astx.ColumnType(
@@ -384,7 +540,9 @@ def display_type_name(type_: astx.DataType | None) -> str:
     alias_name = getattr(type_, "alias_name", None)
     if isinstance(alias_name, str):
         return alias_name
-    if isinstance(type_, (astx.NullableType, astx.ColumnType)):
+    if isinstance(
+        type_, (astx.NullableType, astx.ColumnType, astx.SequenceType)
+    ):
         return str(type_)
     if isinstance(type_, astx.UnionType):
         if type_.alias_name is not None:
@@ -491,6 +649,10 @@ def same_type(lhs: astx.DataType | None, rhs: astx.DataType | None) -> bool:
     """
     if lhs is None or rhs is None:
         return False
+    if isinstance(lhs, astx.SequenceType) and isinstance(
+        rhs, astx.SequenceType
+    ):
+        return same_type(lhs.element_type, rhs.element_type)
     if isinstance(lhs, astx.NullableType) and isinstance(
         rhs, astx.NullableType
     ):
@@ -913,6 +1075,8 @@ def is_explicitly_castable(
     returns:
       type: bool
     """
+    if contains_sequence(source) or contains_sequence(target):
+        return False
     if source is None or target is None:
         return True
     if isinstance(source, astx.NoneType) and isinstance(
@@ -973,6 +1137,11 @@ def is_assignable(
     """
     if target is None or value is None:
         return True
+    if isinstance(target, astx.SequenceType):
+        element = sequence_element_type(value)
+        return is_sequence_element(element) and same_type(
+            target.element_type, element
+        )
     if isinstance(target, astx.NullableType):
         return is_assignable(
             target.value_type,
@@ -1154,4 +1323,115 @@ def contains_file_type(type_: astx.DataType | None) -> bool:
                 for item in value
             ):
                 return True
+    return False
+
+
+@public
+@typechecked
+def substitute_type(
+    type_: astx.DataType, bindings: dict[str, astx.DataType]
+) -> astx.DataType:
+    """
+    title: >-
+      Recursively substitute concrete template arguments in supported types.
+    parameters:
+      type_:
+        type: astx.DataType
+      bindings:
+        type: dict[str, astx.DataType]
+    returns:
+      type: astx.DataType
+    """
+    if isinstance(type_, astx.TemplateTypeVar):
+        return clone_type(bindings.get(type_.name, type_))
+    if isinstance(type_, astx.ListType):
+        return astx.ListType(
+            [
+                substitute_type(cast(astx.DataType, item), bindings)
+                for item in type_.element_types
+            ],
+            size=type_.size,
+        )
+    if isinstance(type_, astx.NullableType):
+        return astx.NullableType(substitute_type(type_.value_type, bindings))
+    if isinstance(type_, astx.SequenceType):
+        return astx.SequenceType(substitute_type(type_.element_type, bindings))
+    if isinstance(type_, astx.SeriesType):
+        return astx.SeriesType(
+            None
+            if type_.element_type is None
+            else substitute_type(type_.element_type, bindings),
+            nullable=type_.nullable,
+            size=type_.size,
+        )
+    if isinstance(type_, astx.GeneratorType):
+        return astx.GeneratorType(substitute_type(type_.yield_type, bindings))
+    if isinstance(type_, astx.UnionType):
+        return astx.UnionType(
+            tuple(
+                substitute_type(member, bindings) for member in type_.members
+            ),
+            alias_name=type_.alias_name,
+        )
+    if isinstance(type_, astx.PointerType):
+        pointee_type = (
+            substitute_type(type_.pointee_type, bindings)
+            if type_.pointee_type is not None
+            else None
+        )
+        return astx.PointerType(pointee_type)
+    if isinstance(type_, astx.BufferViewType):
+        element_type = (
+            substitute_type(type_.element_type, bindings)
+            if type_.element_type is not None
+            else None
+        )
+        return astx.BufferViewType(element_type)
+    if isinstance(type_, astx.TensorType):
+        element_type = (
+            substitute_type(type_.element_type, bindings)
+            if type_.element_type is not None
+            else None
+        )
+        return astx.TensorType(element_type, shape=type_.shape)
+    return clone_type(type_)
+
+
+@public
+@typechecked
+def contains_sequence(type_: astx.DataType | None) -> bool:
+    """
+    title: Find borrowed sequence storage inside supported composite types.
+    parameters:
+      type_:
+        type: astx.DataType | None
+    returns:
+      type: bool
+    """
+    if isinstance(type_, astx.SequenceType):
+        return True
+    if isinstance(type_, (astx.ListType, astx.TupleType)):
+        return any(
+            contains_sequence(cast(astx.DataType, t))
+            for t in type_.element_types
+        )
+    if isinstance(type_, astx.UnionType):
+        return any(contains_sequence(t) for t in type_.members)
+    if isinstance(type_, astx.NullableType):
+        return contains_sequence(type_.value_type)
+    if isinstance(type_, astx.GeneratorType):
+        return contains_sequence(type_.yield_type)
+    if isinstance(type_, astx.PointerType):
+        return contains_sequence(type_.pointee_type)
+    if isinstance(
+        type_,
+        (astx.SeriesType, astx.TensorType, astx.BufferViewType, astx.SetType),
+    ):
+        return contains_sequence(
+            cast(astx.DataType | None, type_.element_type)
+        )
+    if isinstance(type_, astx.DictType):
+        return contains_sequence(
+            cast(astx.DataType, type_.key_type)
+        ) or contains_sequence(cast(astx.DataType, type_.value_type))
     return False

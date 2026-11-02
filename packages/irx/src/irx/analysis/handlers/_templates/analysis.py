@@ -8,6 +8,7 @@ summary: >-
 from __future__ import annotations
 
 from itertools import product
+from typing import cast
 
 import astx
 
@@ -18,6 +19,8 @@ from irx.analysis.handlers._templates.state import (
     _OWNER_MODULE_ATTR,
     _SPECIALIZATION_ANALYZED_ATTR,
 )
+from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.parameters import resolve_parameter_ownership
 from irx.analysis.resolved_nodes import SemanticFunction
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -140,6 +143,9 @@ class TemplateAnalysisVisitorMixin(TemplateResolutionVisitorMixin):
                     ]
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
+                    resolve_parameter_ownership(
+                        cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
+                    )
                 self.visit(definition.body)
         if not isinstance(
             function.return_type, astx.NoneType

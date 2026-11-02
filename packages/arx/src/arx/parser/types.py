@@ -82,7 +82,9 @@ COLUMN_TYPE_NAMES = {
 _BUILTIN_TYPE_NAMES = (
     frozenset(_BUILTIN_TYPE_MAP)
     | frozenset(COLUMN_TYPE_NAMES)
-    | frozenset({"dataframe", "list", "series", "tensor", "nullable"})
+    | frozenset(
+        {"dataframe", "list", "sequence", "series", "tensor", "nullable"}
+    )
 )
 
 
@@ -362,7 +364,7 @@ class TypeParserMixin(ParserMixinBase):
                 inner = self.parse_type(type_context=TypeUseContext.NESTED)
                 self._consume_operator("]")
                 type_ = astx.NullableType(inner)
-            elif type_name == "list":
+            elif type_name in {"list", "sequence"}:
                 self.tokens.get_next_token()  # eat list
                 self._consume_operator("[")
                 elem_type = self.parse_type(
@@ -372,10 +374,14 @@ class TypeParserMixin(ParserMixinBase):
                 )
                 if self._is_operator(","):
                     raise ParserException(
-                        "List types accept exactly one element type."
+                        f"{type_name} types accept exactly one element type."
                     )
                 self._consume_operator("]")
-                type_ = astx.ListType([cast(astx.ExprType, elem_type)])
+                type_ = (
+                    astx.SequenceType(elem_type)
+                    if type_name == "sequence"
+                    else astx.ListType([cast(astx.ExprType, elem_type)])
+                )
             elif type_name == "tensor":
                 self.tokens.get_next_token()  # eat tensor
                 self._consume_operator("[")

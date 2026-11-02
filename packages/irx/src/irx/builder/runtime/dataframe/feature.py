@@ -4,6 +4,7 @@ title: Builtin dataframe runtime feature declarations backed by Arrow.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,7 @@ from irx.builder.runtime.features import (
     RuntimeFeature,
     declare_external_function,
 )
+from irx.builder.runtime.sequence import declare_sequence_reader
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -55,6 +57,18 @@ def build_dataframe_runtime_feature() -> RuntimeFeature:
     return RuntimeFeature(
         name="dataframe",
         symbols={
+            "irx_arrow_sequence_read": ExternalSymbolSpec(
+                "irx_arrow_sequence_read",
+                partial(
+                    declare_sequence_reader, name="irx_arrow_sequence_read"
+                ),
+            ),
+            "irx_arrow_sequence_snapshot": ExternalSymbolSpec(
+                "irx_arrow_sequence_snapshot", declare_sequence_snapshot
+            ),
+            "irx_arrow_sequence_length": ExternalSymbolSpec(
+                "irx_arrow_sequence_length", declare_sequence_length
+            ),
             "irx_arrow_table_from_ipc": ExternalSymbolSpec(
                 "irx_arrow_table_from_ipc", declare_table_from_ipc
             ),
@@ -125,6 +139,26 @@ def build_dataframe_runtime_feature() -> RuntimeFeature:
             **arrowcpp_runtime_metadata(),
         },
         linker_flags=arrowcpp_linker_flags(),
+    )
+
+
+@private
+@typechecked
+def declare_sequence_length(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Query the logical length across all chunks of a borrowed Series.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    return declare_external_function(
+        visitor._llvm.module,
+        "irx_arrow_sequence_length",
+        ir.FunctionType(
+            ir.IntType(64), [visitor._llvm.CHUNKED_ARRAY_HANDLE_TYPE]
+        ),
     )
 
 
@@ -505,4 +539,23 @@ def declare_table_from_ipc(visitor: VisitorProtocol) -> ir.Function:
             ir.IntType(64),
             visitor._llvm.TABLE_HANDLE_TYPE.as_pointer(),
         ],
+    )
+
+
+@private
+@typechecked
+def declare_sequence_snapshot(visitor: "VisitorProtocol") -> ir.Function:
+    """
+    title: Declare a status-checked independently owned Series snapshot.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    opaque = ir.IntType(8).as_pointer()
+    return declare_external_function(
+        visitor._llvm.module,
+        "irx_arrow_sequence_snapshot",
+        ir.FunctionType(ir.IntType(32), [opaque, opaque.as_pointer()]),
     )

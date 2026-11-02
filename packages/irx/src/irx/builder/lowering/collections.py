@@ -22,6 +22,7 @@ from irx.analysis.resolved_nodes import (
 from irx.analysis.types import same_type
 from irx.builder.core import VisitorCore, uses_unsigned_semantics
 from irx.builder.diagnostics import require_semantic_metadata
+from irx.builder.lowering.sequences import lower_sequence_query
 from irx.builder.lowering.text import lower_text_operation
 from irx.builder.numeric import guard_collection_length
 from irx.builder.protocols import VisitorMixinBase
@@ -727,7 +728,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
           node:
             type: astx.CollectionLength
         """
-        if lower_text_operation(cast(VisitorCore, self), node):
+        if lower_sequence_query(
+            cast(VisitorCore, self), node
+        ) or lower_text_operation(cast(VisitorCore, self), node):
             return
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.LENGTH:

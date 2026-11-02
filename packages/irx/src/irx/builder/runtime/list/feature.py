@@ -8,6 +8,7 @@ summary: >-
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ from irx.builder.runtime.features import (
     RuntimeFeature,
     declare_external_function,
 )
+from irx.builder.runtime.sequence import declare_sequence_reader
 from irx.builtins.collections.list import (
     LIST_APPEND_SYMBOL,
     LIST_AT_SYMBOL,
@@ -43,6 +45,12 @@ def build_list_runtime_feature() -> RuntimeFeature:
     return RuntimeFeature(
         name="list",
         symbols={
+            "irx_list_sequence_read": ExternalSymbolSpec(
+                "irx_list_sequence_read",
+                partial(
+                    declare_sequence_reader, name="irx_list_sequence_read"
+                ),
+            ),
             LIST_APPEND_SYMBOL: ExternalSymbolSpec(
                 LIST_APPEND_SYMBOL,
                 _declare_list_append,

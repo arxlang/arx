@@ -36,9 +36,16 @@ from irx.analysis.resolved_nodes import (
     OwnershipKind,
     OwnershipTransferKind,
     ResolvedGeneratorFunction,
+    ResourceKind,
+    ResourceOwnership,
     SemanticSymbol,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import (
+    is_boolean_type,
+    is_numeric_type,
+    is_sequence_element,
+    is_string_type,
+)
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -64,6 +71,27 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             type: SemanticSymbol
         """
         self._semantic(node).resource_ownership = None
+        function = self.context.current_function
+        if (
+            function is not None
+            and isinstance(
+                function.signature.metadata.get("generator"),
+                ResolvedGeneratorFunction,
+            )
+            and not (
+                is_numeric_type(node.type_)
+                or is_boolean_type(node.type_)
+                or is_sequence_element(node.type_)
+                or isinstance(node.type_, (astx.ListType, astx.GeneratorType))
+                or is_string_type(node.type_)
+            )
+        ):
+            self.context.diagnostics.add(
+                "non-scalar locals in generators require lifecycle cleanup",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
         if isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
             arrow_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
@@ -75,6 +103,43 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             return
         if is_string_type(node.type_):
             self._resolve_local_string_ownership(node, symbol)
+            return
+        if isinstance(node.type_, astx.GeneratorType):
+            ownership = resource_ownership(node.value)
+            function = self.context.current_function
+            if (
+                ownership is None
+                or ownership.kind is not OwnershipKind.OWNED
+                or function is None
+                or isinstance(
+                    function.signature.metadata.get("generator"),
+                    ResolvedGeneratorFunction,
+                )
+            ):
+                self.context.diagnostics.add(
+                    "generator locals require a fresh owned iterator "
+                    "in an ordinary function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            assert node.value is not None
+            self._set_resource_ownership(
+                node.value,
+                transfer_resource_ownership(
+                    ownership,
+                    owner_symbol_id=symbol.symbol_id,
+                    transfer_kind=OwnershipTransferKind.MOVE,
+                ),
+            )
+            self._set_resource_ownership(
+                node,
+                ResourceOwnership(
+                    ResourceKind.GENERATOR,
+                    OwnershipKind.OWNED,
+                    owner_symbol_id=symbol.symbol_id,
+                ),
+            )
             return
         if not isinstance(node.type_, astx.ListType):
             return

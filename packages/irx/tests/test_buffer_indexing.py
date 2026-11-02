@@ -4,6 +4,11 @@ title: Tests for low-level buffer/view indexing.
 
 from __future__ import annotations
 
+import shutil
+import subprocess
+
+from pathlib import Path
+
 import astx
 import pytest
 
@@ -18,6 +23,96 @@ from irx.buffer import (
 from irx.builder import Builder
 
 from .conftest import assert_ir_parses
+
+
+@pytest.fixture(scope="module")
+def checked_store_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Compile dynamic stores once against sentinel-guarded storage.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("native buffer checks require clang")
+    module = _module_with_main(
+        astx.BufferViewStore(
+            _descriptor(
+                _metadata(
+                    shape=(2,),
+                    strides=(4,),
+                    mutability=BufferMutability.WRITABLE,
+                )
+            ),
+            [
+                astx.BinaryOp(
+                    "-", astx.FunctionCall("getchar", []), astx.LiteralInt32(1)
+                )
+            ],
+            astx.LiteralInt32(7),
+        )
+    )
+    getchar = astx.FunctionPrototype(
+        "getchar", astx.Arguments(), return_type=astx.Int32()
+    )
+    getchar.is_extern = True
+    getchar.calling_convention = "c"
+    module.block.insert(0, getchar)
+    builder = Builder()
+    text = builder.translate(module)
+    address = "inttoptr (i64 4096 to i8*)"
+    assert address in text
+    text = text.replace(
+        address,
+        "bitcast (i32* getelementptr ([4 x i32], [4 x i32]* @test.data, "
+        "i64 0, i64 1) to i8*)",
+    )
+    text = text.replace(
+        'define i32 @"main"()', 'define i32 @"test.original_main"()'
+    )
+    text += """
+@test.data = global [4 x i32] [i32 41, i32 0, i32 0, i32 42]
+define i32 @main() {
+entry:
+  %status = call i32 @test.original_main()
+  %lp = getelementptr [4 x i32], [4 x i32]* @test.data, i64 0, i64 0
+  %rp = getelementptr [4 x i32], [4 x i32]* @test.data, i64 0, i64 3
+  %left = load i32, i32* %lp
+  %right = load i32, i32* %rp
+  %left_ok = icmp eq i32 %left, 41
+  %right_ok = icmp eq i32 %right, 42
+  %safe = and i1 %left_ok, %right_ok
+  %result = select i1 %safe, i32 %status, i32 99
+  ret i32 %result
+}
+"""
+    assert_ir_parses(text)
+    executable = tmp_path_factory.mktemp("checked-store") / "probe"
+    builder._build_from_ir(text, str(executable))
+    return executable
+
+
+@pytest.mark.parametrize("index", [-1, 0, 1, 2])
+def test_dynamic_store_checks_bounds_before_writing(
+    checked_store_binary: Path, index: int
+) -> None:
+    """
+    title: Negative and excess indices never overwrite adjacent storage.
+    parameters:
+      checked_store_binary:
+        type: Path
+      index:
+        type: int
+    """
+    result = subprocess.run(
+        [str(checked_store_binary)],
+        input=bytes([index + 1]),
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == int(index not in (0, 1)), result.stderr
 
 
 def _metadata(
@@ -296,10 +391,11 @@ def test_rank1_read_lowers_through_descriptor_fields() -> None:
     )
 
     assert "irx_buffer_view_data" in ir_text
-    assert "irx_buffer_view_offset_bytes" in ir_text
-    assert "irx_buffer_view_strides" in ir_text
-    assert "irx_buffer_index_stride_0" in ir_text
+    assert "irx_buffer_index_offset" in ir_text
+    assert "buffer.index.view" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
     assert "load i32" in ir_text
+    assert "align 1" in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -326,8 +422,9 @@ def test_identifier_read_lowers_with_static_initializer_metadata() -> None:
 
     assert 'load %"irx_buffer_view"' in ir_text
     assert "irx_buffer_view_data" in ir_text
-    assert "irx_buffer_index_stride_0" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
     assert "load i32" in ir_text
+    assert "align 1" in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -385,7 +482,7 @@ def test_identifier_store_lowers_with_static_initializer_metadata() -> None:
 
     assert 'load %"irx_buffer_view"' in ir_text
     assert "irx_buffer_view_data" in ir_text
-    assert "irx_buffer_index_stride_0" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
     assert "store i32 7" in ir_text
     assert_ir_parses(ir_text)
 
@@ -410,11 +507,12 @@ def test_rank2_read_uses_both_strides() -> None:
         )
     )
 
-    assert "irx_buffer_index_stride_0" in ir_text
-    assert "irx_buffer_index_stride_1" in ir_text
-    assert "irx_buffer_index_scaled_0" in ir_text
-    assert "irx_buffer_index_scaled_1" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
+    assert "buffer.index.indices" in ir_text
+    assert "i64 16, i64 4" in ir_text
+    assert "i32 2, i64 4" in ir_text
     assert "load i32" in ir_text
+    assert "align 1" in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -439,8 +537,8 @@ def test_rank2_store_uses_offset_bytes_and_strides() -> None:
         )
     )
 
-    assert "irx_buffer_view_offset_bytes" in ir_text
-    assert "irx_buffer_index_stride_0" in ir_text
-    assert "irx_buffer_index_stride_1" in ir_text
+    assert "irx_buffer_index_offset" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
+    assert "buffer.index.indices" in ir_text
     assert "store i32 5" in ir_text
     assert_ir_parses(ir_text)

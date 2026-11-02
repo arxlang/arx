@@ -45,8 +45,54 @@ insertion copies the bytes, and indexing or iterating a string list produces
 independent strings that survive list replacement. Failed construction drops
 initialized elements without replacing an existing destination. See the
 [enforced list contract](../irx/runtime-ownership.md#enforced-scalar-dynamic-list-contract).
-`range` still materializes a list, not a lazy iterator. Tensor receivers for
-`len` are not yet implemented.
+`range` still materializes a list, not a lazy iterator. Rank-one numeric tensors
+and typed Series also support `len`.
+
+## Read-only numeric consumers
+
+`sequence[T]` is a **parameter-only borrow**, not a new owning container. Like
+Python's `collections.abc.Sequence`, it offers ordered iteration, integer
+indexing, and `len -> i64`. Unlike Python sequences, negative indices, slicing,
+Boolean elements, and implicit element conversions are not supported. Numeric
+elements are signed/unsigned 8-64-bit integers or `f32`/`f64`.
+
+```arx
+@<T: i32 | i64 | f64>
+fn first(values: sequence[T]) -> T:
+  return values[0]
+```
+
+Pass a matching `list[T]` (including `range`), rank-one static/runtime tensor,
+or typed numeric Series directly. No flattening or conversion to `f64` occurs;
+large integers remain exact. Nullable Series require `sequence[nullable[T]]`:
+explicitly fill or filter nulls for a nonnullable consumer. NaN and infinity
+remain floating values; algorithms needing finite input must check them. See the
+executable `examples/numeric-sequences.x` for inferred/explicit calls, nested
+template types, and nullable input.
+
+Adapters live through the call or iteration, including exceptional exits. Lists
+borrow their owner; tensors pin their owner and preserve strides; Series retain
+independent zero-copy chunk snapshots so subsequent alias replacement does not
+invalidate the view. Sequence descriptors cannot be returned, stored, captured
+by a generator, reassigned, or used to mutate the source. Materialize an owned
+result instead:
+
+```arx
+var owned: list[i64] = list(values, max_items=1000)
+```
+
+`list(input, max_items=N)` copies nonnullable numeric values once. Sized inputs
+may omit the bound; exceeding a supplied nonnegative bound raises `ValueError`
+without publishing a truncated list. Allocation sizes remain overflow-checked.
+Nullable storage is deliberately not supported in owned lists; fill/filter
+first.
+
+IRx single-pass generators are **not** sequences and require `max_items`.
+Materialization probes at most `N + 1` items to detect excess, releasing partial
+output and owned temporary frames on failure. Consumption is not rolled back.
+Named iterators are borrowed from their lexical owner and remain advanced after
+failure. Arx source-level generator declarations are still unsupported; this
+iterator workflow is available to ASTx/IRx hosts, not new Arx `yield` syntax.
 
 ## Tensors
 
@@ -63,7 +109,7 @@ fn main() -> i32:
 
 Rules:
 
-- supported elements: `i8`, `i16`, `i32`, `i64`, `f32`, and `f64`
+- supported elements: signed/unsigned 8-64-bit integers, `f32`, and `f64`
 - literals must be rectangular and match the declared shape
 - indexing supplies one index per static dimension
 - variables, fields, and returns require at least one static dimension
@@ -77,8 +123,10 @@ fn accept(values: tensor[i32, ...]) -> none:
   return none
 ```
 
-Passing the value through is supported. Dynamic indexing is not yet available,
-so indexed access requires a static-shape annotation.
+Indexing uses runtime rank, shape, strides, and offset. All indices must be
+nonnegative and in bounds, including dynamic indices into static-shaped tensors.
+Rank mismatch and invalid metadata fail before reading; byte-offset arithmetic
+is overflow-checked. Rank-one tensors also support `len` and ordered iteration.
 
 ## DataFrames and Series
 

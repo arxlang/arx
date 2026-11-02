@@ -53,6 +53,15 @@ int32_t irx_buffer_owner_release(irx_buffer_owner_handle* owner);
 int32_t irx_buffer_view_retain(const irx_buffer_view* view);
 int32_t irx_buffer_view_release(irx_buffer_view* view);
 const char* irx_buffer_last_error(void);
+/* Checked rank, nonnegative indices, per-axis bounds and byte arithmetic.
+ * Strides may be negative; the final address must not precede data or wrap.
+ * Status: 0 success, 1 invalid descriptor/rank, 2 overflow, 4 bounds.
+ * Output is cleared on failure. Metadata/backing storage remain borrowed. */
+int32_t irx_buffer_checked_offset(const irx_buffer_view* view,
+    const int64_t* indices, int32_t rank, int64_t item_size, int64_t* out);
+/* Rank-one numeric callback with the same raw-bit contract as list reads. */
+int32_t irx_buffer_sequence_read(const void* source, int64_t index, int32_t size,
+                               uint64_t* bits, int32_t* valid);
 
 #ifdef __cplusplus
 }

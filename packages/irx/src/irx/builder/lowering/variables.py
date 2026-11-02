@@ -9,6 +9,7 @@ from typing import Any, cast
 import astx
 
 from llvmlite import ir
+from public import private
 
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
@@ -21,6 +22,7 @@ from irx.builder.core import (
 from irx.builder.diagnostics import (
     raise_lowering_error,
     raise_lowering_internal_error,
+    require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.runtime import safe_pop
@@ -38,6 +40,52 @@ class VariableVisitorMixin(ClassVisitorMixin):
     """
     title: Lower variable declarations and references to LLVM.
     """
+
+    @private
+    def register_generator_cleanup(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        storage: ir.Value,
+    ) -> None:
+        """
+        title: Release one validated lexical owner of scalar iterator state.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          storage:
+            type: ir.Value
+        """
+        if not isinstance(node.type_, astx.GeneratorType):
+            return
+        ownership = require_semantic_metadata(
+            resource_ownership(node),
+            node=node,
+            metadata="resource_ownership",
+            context="generator local cleanup",
+        )
+        owner = require_semantic_metadata(
+            ownership.owner_symbol_id,
+            node=node,
+            metadata="owner_symbol_id",
+            context="generator local cleanup",
+        )
+        free = self.require_runtime_symbol("libc", "free")
+
+        def release_iterator() -> None:
+            """
+            title: Drop the lexical owner of a scalar-only generator.
+            """
+            value = self._llvm.ir_builder.load(storage)
+            frame = self._llvm.ir_builder.extract_value(value, 0)
+            self._llvm.ir_builder.call(free, [frame])
+
+        self.cleanup_stack.append(
+            CleanupAction(
+                release_iterator,
+                owner_symbol_id=owner,
+                fallible=False,
+            )
+        )
 
     def _register_owned_list_cleanup(
         self,
@@ -546,6 +594,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node, alloca, ownership.owner_symbol_id, storage=True
             )
         self._register_owned_list_cleanup(node, alloca)
+        self.register_generator_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
 
     @VisitorCore.visit.dispatch
@@ -627,5 +676,6 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 node, alloca, ownership.owner_symbol_id, storage=True
             )
         self._register_owned_list_cleanup(node, alloca)
+        self.register_generator_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
         self.result_stack.append(init_val)

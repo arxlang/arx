@@ -39,6 +39,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
     resolved_ast_type_name,
 )
+from irx.builder.lowering.sequences import adapt_sequence, read_sequence
 from irx.builder.numeric import resolved_integer_operation
 from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
 from irx.builder.runtime import safe_pop
@@ -623,10 +624,29 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             index_addr,
         )
 
-        list_ptr, length = cast(
-            Any,
-            self,
-        )._list_pointer_and_length_for_iteration(node.iterable)
+        sequence = iteration.sequence_access
+        if iteration.kind is IterationKind.SEQUENCE:
+            sequence = require_semantic_metadata(
+                sequence,
+                node=node,
+                metadata="sequence adapter",
+                context="sequence iteration",
+            )
+        if sequence is not None:
+            self.visit_child(node.iterable)
+            source = require_lowered_value(
+                safe_pop(self.result_stack),
+                node=node.iterable,
+                context="sequence iteration",
+            )
+            list_ptr = adapt_sequence(
+                cast(VisitorCore, self), node.iterable, source, sequence
+            )
+            length = self._llvm.ir_builder.extract_value(list_ptr, 1)
+        else:
+            list_ptr, length = cast(
+                Any, self
+            )._list_pointer_and_length_for_iteration(node.iterable)
 
         cond_bb, body_bb, advance_bb, exit_bb = self._append_basic_blocks(
             "for.in",
@@ -665,10 +685,20 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         ):
             iteration_depth = len(self.cleanup_stack)
             self._llvm.ir_builder.position_at_start(body_bb)
-            item_value = cast(Any, self)._load_list_element_at_index(
-                base=node.iterable,
-                list_ptr=list_ptr,
-                index=current_index,
+            item_value = (
+                read_sequence(
+                    cast(VisitorCore, self),
+                    node.iterable,
+                    list_ptr,
+                    current_index,
+                    iteration.element_type,
+                )
+                if sequence is not None
+                else cast(Any, self)._load_list_element_at_index(
+                    base=node.iterable,
+                    list_ptr=list_ptr,
+                    index=current_index,
+                )
             )
             item_value = self._cast_ast_value(
                 item_value,
@@ -1346,7 +1376,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
             )
-        if iteration.kind is IterationKind.LIST:
+        if iteration.kind in {IterationKind.LIST, IterationKind.SEQUENCE}:
             self._lower_list_for_in_loop(node, iteration)
             return
         if iteration.kind is IterationKind.GENERATOR:

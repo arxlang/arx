@@ -3,6 +3,7 @@ title: Nullable native ABI status, overflow, validity and lifetime contracts.
 """
 
 import ctypes
+import math
 import struct
 
 import pyarrow as pa
@@ -429,3 +430,134 @@ def test_nested_required_fields(
     finally:
         native.irx_rb_schema_release(schema)
         native.irx_rb_batch_release(source)
+
+
+@pytest.mark.parametrize(
+    "floating,empty", [(False, False), (True, False), (False, True)]
+)
+def test_sequence_snapshot_chunked_nulls_and_replacement(
+    native: ctypes.CDLL, floating: bool, empty: bool
+) -> None:
+    """
+    title: >-
+      Snapshots retain chunk buffers and validity across source replacement.
+    summary: >-
+      IPC batches deliberately preserve multiple chunks. NaN/Inf are values,
+      not nulls; large integer bits survive without an intermediate float.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      floating:
+        type: bool
+      empty:
+        type: bool
+    """
+    bind_kernels(native)
+    pointer = ctypes.c_void_p
+    native.irx_arrow_table_from_ipc.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_int64,
+        ctypes.POINTER(pointer),
+    ]
+    native.irx_arrow_table_from_ipc.restype = ctypes.c_int
+    native.irx_arrow_sequence_snapshot.argtypes = [
+        pointer,
+        ctypes.POINTER(pointer),
+    ]
+    native.irx_arrow_sequence_snapshot.restype = ctypes.c_int
+    native.irx_arrow_sequence_length.argtypes = [pointer]
+    native.irx_arrow_sequence_length.restype = ctypes.c_int64
+    native.irx_arrow_sequence_read.argtypes = (
+        native.irx_arrow_series_index.argtypes
+    )
+    native.irx_arrow_sequence_read.restype = ctypes.c_int
+    native.irx_arrow_series_set.argtypes = [
+        pointer,
+        ctypes.c_int64,
+        ctypes.c_int32,
+        ctypes.c_uint64,
+        ctypes.c_int32,
+        ctypes.c_int32,
+    ]
+    native.irx_arrow_series_set.restype = ctypes.c_int
+    type_ = pa.float64() if floating else pa.int64()
+    type_id = 10 if floating else 4
+    values = (
+        [float("nan"), None, float("inf"), -float("inf")]
+        if floating
+        else [2**53 + 1, None, 2**63 - 1, -(2**63)]
+    )
+    if empty:
+        values = []
+    schema = pa.schema([pa.field("x", type_)])
+    sink = pa.BufferOutputStream()
+    with pa.ipc.new_stream(sink, schema) as writer:
+        for chunk in (values[:2], values[2:]):
+            writer.write_batch(
+                pa.record_batch([pa.array(chunk, type=type_)], schema=schema)
+            )
+    payload = sink.getvalue().to_pybytes()
+    table, column, snapshot = pointer(), pointer(), pointer()
+    assert (
+        native.irx_arrow_table_from_ipc(
+            payload, len(payload), ctypes.byref(table)
+        )
+        == 0
+    )
+    assert (
+        native.irx_arrow_table_column_by_index(table, 0, ctypes.byref(column))
+        == 0
+    )
+    assert (
+        native.irx_arrow_sequence_snapshot(column, ctypes.byref(snapshot)) == 0
+    )
+    assert native.irx_arrow_sequence_length(snapshot) == len(values)
+    # Update one alias after taking the snapshot, then discard every source.
+    if values:
+        assert native.irx_arrow_series_set(column, 0, type_id, 0, 1, 1) == 0
+    native.irx_arrow_chunked_array_release(column)
+    native.irx_arrow_table_release(table)
+    try:
+        bits, valid = ctypes.c_uint64(77), ctypes.c_int32(77)
+        for index, value in enumerate(values):
+            assert (
+                native.irx_arrow_sequence_read(
+                    snapshot,
+                    index,
+                    type_id,
+                    ctypes.byref(bits),
+                    ctypes.byref(valid),
+                )
+                == 0
+            )
+            assert valid.value == int(value is not None)
+            if value is None:
+                assert bits.value == 0
+            elif floating:
+                actual = struct.unpack("d", struct.pack("Q", bits.value))[0]
+                if math.isnan(value):
+                    assert math.isnan(actual)
+                else:
+                    assert actual == value
+            else:
+                assert bits.value == int(value) % (2**64)
+        for index in (-1, len(values)):
+            bits.value = valid.value = 77
+            assert (
+                native.irx_arrow_sequence_read(
+                    snapshot,
+                    index,
+                    type_id,
+                    ctypes.byref(bits),
+                    ctypes.byref(valid),
+                )
+                != 0
+            )
+            assert (bits.value, valid.value) == (0, 0)
+    finally:
+        native.irx_arrow_chunked_array_release(snapshot)
+    snapshot.value = 77
+    assert (
+        native.irx_arrow_sequence_snapshot(None, ctypes.byref(snapshot)) != 0
+    )
+    assert snapshot.value is None

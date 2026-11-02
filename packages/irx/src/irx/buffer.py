@@ -87,9 +87,9 @@ class BufferIndexBoundsPolicy(str, Enum):
     """
     title: Buffer view indexing bounds policy hook.
     summary: >-
-      DEFAULT performs semantic static-bounds rejection when analysis can prove
-      the bounds and emits no runtime bounds helper yet. CHECKED and UNCHECKED
-      are reserved for future lowering modes.
+      DEFAULT and CHECKED reject proven invalid indices in analysis and check
+      runtime rank, bounds and byte-offset overflow before access. UNCHECKED
+      remains unsupported; callers cannot silently bypass safety checks.
     """
 
     DEFAULT = "default"

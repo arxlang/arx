@@ -49,6 +49,7 @@ from irx.analysis.resolved_nodes import (
     SemanticFunction,
     SemanticModule,
 )
+from irx.analysis.sequences import resolve_materialization
 from irx.analysis.text import resolve_text_call
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
@@ -85,7 +86,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             type: astx.DataType | None
         """
         self._semantic(node).resource_ownership = None
-        for arg in args:
+        call = self._semantic(node).resolved_call
+        for index, arg in enumerate(args):
             ownership = resource_ownership(arg)
             if ownership is None:
                 continue
@@ -98,6 +100,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             if (
                 ownership.resource_kind is ResourceKind.LIST
                 and ownership.kind is OwnershipKind.STATIC
+                and not (
+                    call is not None
+                    and index < len(call.sequence_arguments)
+                    and call.sequence_arguments[index] is not None
+                )
             ):
                 self.context.diagnostics.add(
                     "static list storage cannot cross a function-call "
@@ -131,6 +138,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         elif isinstance(result_type, astx.DataFrameType | astx.SeriesType):
             self._set_resource_ownership(
                 node, arrow_ownership(result_type, OwnershipKind.OWNED)
+            )
+        elif isinstance(result_type, astx.GeneratorType):
+            self._set_resource_ownership(
+                node,
+                ResourceOwnership(ResourceKind.GENERATOR, OwnershipKind.OWNED),
             )
         elif isinstance(result_type, astx.ListType):
             self._set_resource_ownership(
@@ -563,6 +575,16 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                         OwnershipTransferKind.BORROW,
                     ),
                 )
+            elif isinstance(symbol.type_, astx.GeneratorType):
+                self._set_resource_ownership(
+                    node,
+                    ResourceOwnership(
+                        ResourceKind.GENERATOR,
+                        OwnershipKind.BORROWED,
+                        source_symbol_id=symbol.symbol_id,
+                        transfer_kind=OwnershipTransferKind.BORROW,
+                    ),
+                )
             elif isinstance(symbol.type_, astx.FileType):
                 self._set_resource_ownership(
                     node,
@@ -640,6 +662,22 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         info.resolved_file_open = None
         info.resolved_class_construction = None
         info.collection_length = None
+        if info.materialization is not None:
+            info.resource_ownership = None
+        info.materialization = None
+        if node.fn == "list" and self.bindings.resolve(node.fn) is None:
+            info.resolved_call = None
+            info.resolved_callable = None
+            info.resolved_function = None
+            if self.context.scopes.resolve(node.fn) is not None:
+                self.context.diagnostics.add(
+                    "name 'list' does not resolve to a function",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+                )
+                return
+            resolve_materialization(cast(SemanticAnalyzerCore, self), node)
+            return
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None

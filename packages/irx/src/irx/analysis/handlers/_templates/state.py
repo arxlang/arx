@@ -117,6 +117,12 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
           bindings:
             type: dict[str, astx.DataType]
         """
+        for attribute in ("type_", "element_type"):
+            declared = getattr(node, attribute, None)
+            if isinstance(declared, astx.DataType):
+                setattr(
+                    node, attribute, self._substitute_type(declared, bindings)
+                )
         if isinstance(node, astx.FunctionDef):
             self._substitute_declared_types(node.prototype, bindings)
             self._substitute_declared_types(node.body, bindings)

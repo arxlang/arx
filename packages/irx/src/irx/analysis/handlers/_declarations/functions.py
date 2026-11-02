@@ -15,24 +15,22 @@ from dataclasses import replace
 
 import astx
 
-from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.class_lifecycle import class_ownership
 from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
 from irx.analysis.module_symbols import qualified_local_name
-from irx.analysis.ownership import (
-    list_resource_ownership,
-    string_resource_ownership,
-)
+from irx.analysis.parameters import resolve_parameter_ownership
 from irx.analysis.resolved_nodes import (
-    OwnershipKind,
-    OwnershipTransferKind,
     ResolvedGeneratorFunction,
     SemanticFunction,
 )
-from irx.analysis.types import clone_type, is_string_type
+from irx.analysis.types import (
+    clone_type,
+    is_boolean_type,
+    is_numeric_type,
+    is_sequence_element,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -228,10 +226,23 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
 
+        yield_type = function.signature.return_type.yield_type
+        if not (
+            is_numeric_type(yield_type)
+            or is_boolean_type(yield_type)
+            or is_sequence_element(yield_type)
+        ):
+            self.context.diagnostics.add(
+                "generator yields require scalar values "
+                "without owned resources",
+                node=node.prototype,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         for argument in function.args:
-            if isinstance(
-                argument.type_,
-                (astx.ClassType, astx.DataFrameType, astx.SeriesType),
+            if not (
+                is_numeric_type(argument.type_)
+                or is_boolean_type(argument.type_)
+                or is_sequence_element(argument.type_)
             ):
                 self.context.diagnostics.add(
                     "owned reference parameters in generators are unsupported",
@@ -320,46 +331,7 @@ class DeclarationFunctionVisitorMixin(SemanticVisitorMixinBase):
                     self.context.scopes.declare(arg_symbol)
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    self._semantic(arg_node).resource_ownership = None
-                    if isinstance(arg_symbol.type_, astx.ClassType):
-                        self._set_resource_ownership(
-                            arg_node,
-                            class_ownership(
-                                OwnershipKind.OWNED,
-                                symbol=arg_symbol.symbol_id,
-                                transfer=OwnershipTransferKind.COPY,
-                            ),
-                        )
-                    elif isinstance(
-                        arg_symbol.type_, astx.DataFrameType | astx.SeriesType
-                    ):
-                        self._set_resource_ownership(
-                            arg_node,
-                            arrow_ownership(
-                                arg_symbol.type_,
-                                OwnershipKind.OWNED,
-                                arg_symbol.symbol_id,
-                                OwnershipTransferKind.COPY,
-                            ),
-                        )
-                    elif isinstance(arg_symbol.type_, astx.ListType):
-                        self._set_resource_ownership(
-                            arg_node,
-                            list_resource_ownership(
-                                OwnershipKind.BORROWED,
-                                source_symbol_id=arg_symbol.symbol_id,
-                                transfer_kind=OwnershipTransferKind.BORROW,
-                            ),
-                        )
-                    elif is_string_type(arg_symbol.type_):
-                        self._set_resource_ownership(
-                            arg_node,
-                            string_resource_ownership(
-                                OwnershipKind.BORROWED,
-                                source_symbol_id=arg_symbol.symbol_id,
-                                transfer_kind=OwnershipTransferKind.BORROW,
-                            ),
-                        )
+                    resolve_parameter_ownership(self, arg_node, arg_symbol)
                 self.visit(node.body)
         if (
             not isinstance(function.return_type, astx.NoneType)

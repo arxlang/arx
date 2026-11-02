@@ -9,6 +9,8 @@ summary: >-
 
 from __future__ import annotations
 
+from typing import cast
+
 import astx
 
 from llvmlite import ir
@@ -23,9 +25,13 @@ from irx.buffer import (
     BufferViewMetadata,
 )
 from irx.builder.core import VisitorCore
+from irx.builder.diagnostics import raise_lowering_error
+from irx.builder.lowering.sequences import check_sequence_status
 from irx.builder.protocols import VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_int_type
+from irx.builtins.collections.tensor import tensor_element_size_bytes
+from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -329,6 +335,8 @@ class BufferVisitorMixin(VisitorMixinBase):
         indices: list[ir.Value],
         *,
         index_nodes: list[astx.AST],
+        node: astx.AST,
+        element_size: int = 1,
         bounds_policy: BufferIndexBoundsPolicy = (
             BufferIndexBoundsPolicy.DEFAULT
         ),
@@ -342,45 +350,61 @@ class BufferVisitorMixin(VisitorMixinBase):
             type: list[ir.Value]
           index_nodes:
             type: list[astx.AST]
+          node:
+            type: astx.AST
+          element_size:
+            type: int
           bounds_policy:
             type: BufferIndexBoundsPolicy
         returns:
           type: ir.Value
         """
-        _ = bounds_policy
-        if view.type != self._llvm.BUFFER_VIEW_TYPE:
-            raise Exception("buffer view indexing requires a BufferViewType")
-        if len(indices) != len(index_nodes):
-            raise Exception("buffer view index lowering arity mismatch")
-
-        strides = self._extract_buffer_view_strides(view)
-        total_offset = self._extract_buffer_view_offset_bytes(view)
-
-        for axis, (index, index_node) in enumerate(
+        if bounds_policy is BufferIndexBoundsPolicy.UNCHECKED:
+            raise_lowering_error(
+                "unchecked buffer indexing is unsupported",
+                node=node,
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+            )
+        if view.type != self._llvm.BUFFER_VIEW_TYPE or len(indices) != len(
+            index_nodes
+        ):
+            raise_lowering_error(
+                "buffer index storage or arity mismatch",
+                node=node,
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+            )
+        builder = self._llvm.ir_builder
+        integer = self._llvm.INT64_TYPE
+        view_slot = self.create_entry_block_alloca(
+            "buffer.index.view", view.type
+        )
+        builder.store(view, view_slot)
+        array_type = ir.ArrayType(integer, len(indices))
+        index_slot = self.create_entry_block_alloca(
+            "buffer.index.indices", array_type
+        )
+        zero = ir.Constant(self._llvm.INT32_TYPE, 0)
+        for axis, (value, expression) in enumerate(
             zip(indices, index_nodes, strict=True)
         ):
-            index64 = self._normalize_buffer_index_value(index, index_node)
-            stride_ptr = self._llvm.ir_builder.gep(
-                strides,
-                [ir.Constant(self._llvm.INT64_TYPE, axis)],
-                name=f"irx_buffer_index_stride_ptr_{axis}",
+            normalized = self._normalize_buffer_index_value(value, expression)
+            pointer = builder.gep(
+                index_slot, [zero, ir.Constant(self._llvm.INT32_TYPE, axis)]
             )
-            stride = self._llvm.ir_builder.load(
-                stride_ptr,
-                name=f"irx_buffer_index_stride_{axis}",
-            )
-            scaled_index = self._llvm.ir_builder.mul(
-                index64,
-                stride,
-                name=f"irx_buffer_index_scaled_{axis}",
-            )
-            total_offset = self._llvm.ir_builder.add(
-                total_offset,
-                scaled_index,
-                name=f"irx_buffer_index_offset_{axis}",
-            )
-
-        return total_offset
+            builder.store(normalized, pointer)
+        output = self.create_entry_block_alloca("buffer.index.offset", integer)
+        status = builder.call(
+            self.require_runtime_symbol("buffer", "irx_buffer_checked_offset"),
+            [
+                view_slot,
+                builder.gep(index_slot, [zero, zero]),
+                ir.Constant(self._llvm.INT32_TYPE, len(indices)),
+                ir.Constant(integer, element_size),
+                output,
+            ],
+        )
+        check_sequence_status(cast(VisitorCore, self), node, status)
+        return builder.load(output, name="irx_buffer_index_offset")
 
     def lower_buffer_element_pointer(
         self,
@@ -389,6 +413,7 @@ class BufferVisitorMixin(VisitorMixinBase):
         element_type: astx.DataType,
         *,
         index_nodes: list[astx.AST],
+        node: astx.AST,
         bounds_policy: BufferIndexBoundsPolicy = (
             BufferIndexBoundsPolicy.DEFAULT
         ),
@@ -404,15 +429,20 @@ class BufferVisitorMixin(VisitorMixinBase):
             type: astx.DataType
           index_nodes:
             type: list[astx.AST]
+          node:
+            type: astx.AST
           bounds_policy:
             type: BufferIndexBoundsPolicy
         returns:
           type: ir.Value
         """
         element_llvm_type = self._llvm_type_for_ast_type(element_type)
-        if element_llvm_type is None:
-            raise Exception(
-                "buffer view indexing has unsupported element type"
+        size = tensor_element_size_bytes(element_type)
+        if element_llvm_type is None or size is None:
+            raise_lowering_error(
+                "buffer view indexing has unsupported element type",
+                node=node,
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
             )
 
         data = self._extract_buffer_view_data(view)
@@ -420,6 +450,8 @@ class BufferVisitorMixin(VisitorMixinBase):
             view,
             indices,
             index_nodes=index_nodes,
+            node=node,
+            element_size=size,
             bounds_policy=bounds_policy,
         )
         byte_ptr = self._llvm.ir_builder.gep(
@@ -496,10 +528,12 @@ class BufferVisitorMixin(VisitorMixinBase):
             indices,
             self._buffer_index_element_type(node),
             index_nodes=node.indices,
+            node=node,
         )
         result = self._llvm.ir_builder.load(
             element_ptr,
             name="irx_buffer_index_load",
+            align=1,
         )
         self.result_stack.append(result)
 
@@ -524,6 +558,7 @@ class BufferVisitorMixin(VisitorMixinBase):
             indices,
             element_type,
             index_nodes=node.indices,
+            node=node,
         )
 
         self.visit_child(node.value)
@@ -535,7 +570,7 @@ class BufferVisitorMixin(VisitorMixinBase):
             source_type=self._resolved_ast_type(node.value),
             target_type=element_type,
         )
-        self._llvm.ir_builder.store(value, element_ptr)
+        self._llvm.ir_builder.store(value, element_ptr, align=1)
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     @VisitorCore.visit.dispatch

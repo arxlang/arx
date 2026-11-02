@@ -15,6 +15,7 @@ from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.resolved_nodes import OwnershipKind
 from irx.analysis.types import (
     common_numeric_type,
+    contains_template_variables,
     is_assignable,
     is_integer_type,
     is_numeric_type,
@@ -305,6 +306,8 @@ def validate_column_declaration(
       node:
         type: astx.AST
     """
+    if contains_template_variables(type_):
+        return
     if isinstance(type_, astx.UnionType) and any(
         isinstance(member, astx.NullableType) for member in type_.members
     ):
@@ -339,8 +342,9 @@ def validate_column_declaration(
             )
         ):
             dataframe_schema_ipc(type_)
-        if isinstance(type_, astx.SeriesType) and isinstance(
-            type_.element_type, astx.ColumnType
+        if (
+            isinstance(type_, astx.SeriesType)
+            and type_.element_type is not None
         ):
             column_arrow_type(type_.element_type)
     except (ValueError, TypeError) as error:

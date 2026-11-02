@@ -4,10 +4,12 @@ title: Buffer runtime feature declarations.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from llvmlite import ir
+from public import private
 
 from irx.builder.runtime.features import (
     ExternalSymbolSpec,
@@ -15,6 +17,7 @@ from irx.builder.runtime.features import (
     RuntimeFeature,
     declare_external_function,
 )
+from irx.builder.runtime.sequence import declare_sequence_reader
 from irx.typecheck import typechecked
 
 if TYPE_CHECKING:
@@ -33,6 +36,15 @@ def build_buffer_runtime_feature() -> RuntimeFeature:
     return RuntimeFeature(
         name="buffer",
         symbols={
+            "irx_buffer_sequence_read": ExternalSymbolSpec(
+                "irx_buffer_sequence_read",
+                partial(
+                    declare_sequence_reader, name="irx_buffer_sequence_read"
+                ),
+            ),
+            "irx_buffer_checked_offset": ExternalSymbolSpec(
+                "irx_buffer_checked_offset", declare_checked_offset
+            ),
             "irx_buffer_owner_external_new": ExternalSymbolSpec(
                 "irx_buffer_owner_external_new",
                 _declare_owner_external_new,
@@ -70,6 +82,34 @@ def build_buffer_runtime_feature() -> RuntimeFeature:
             "opaque_handles": {"owner": "irx_buffer_owner_handle"},
             "view_type": "irx_buffer_view",
         },
+    )
+
+
+@private
+@typechecked
+def declare_checked_offset(visitor: VisitorProtocol) -> ir.Function:
+    """
+    title: Declare rank, bounds and byte-offset validation.
+    parameters:
+      visitor:
+        type: VisitorProtocol
+    returns:
+      type: ir.Function
+    """
+    integer = visitor._llvm.INT64_TYPE
+    return declare_external_function(
+        visitor._llvm.module,
+        "irx_buffer_checked_offset",
+        ir.FunctionType(
+            visitor._llvm.INT32_TYPE,
+            [
+                visitor._llvm.BUFFER_VIEW_TYPE.as_pointer(),
+                integer.as_pointer(),
+                visitor._llvm.INT32_TYPE,
+                integer,
+                integer.as_pointer(),
+            ],
+        ),
     )
 
 

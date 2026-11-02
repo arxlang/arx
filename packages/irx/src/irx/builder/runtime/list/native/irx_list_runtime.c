@@ -102,6 +102,47 @@ int32_t irx_list_at(const irx_list* list, int64_t index, void** out) {
   return IRX_LIST_OK;
 }
 
+int32_t irx_list_sequence_read(const void* source, int64_t index, int32_t size,
+                               uint64_t* bits, int32_t* valid) {
+  if (bits) *bits = 0;
+  if (valid) *valid = 0;
+  const irx_list* list = (const irx_list*)source;
+  if (!list || !bits || !valid || size < 1 || size > 8 ||
+      list->element_size != size || list->element_kind != 0)
+    return 1;
+  void* item = NULL;
+  int32_t status = irx_list_at(list, index, &item);
+  if (status) return status;
+  /* Load at the native width before extending; preserve big-endian hosts. */
+  switch (size) {
+    case 1: {
+      uint8_t v;
+      memcpy(&v, item, 1);
+      *bits = v;
+      break;
+    }
+    case 2: {
+      uint16_t v;
+      memcpy(&v, item, 2);
+      *bits = v;
+      break;
+    }
+    case 4: {
+      uint32_t v;
+      memcpy(&v, item, 4);
+      *bits = v;
+      break;
+    }
+    case 8:
+      memcpy(bits, item, 8);
+      break;
+    default:
+      return 1;
+  }
+  *valid = 1;
+  return 0;
+}
+
 void irx_list_destroy(irx_list* list) {
   if (list == NULL) {
     return;

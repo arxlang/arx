@@ -668,10 +668,12 @@ class TensorVisitorMixin(VisitorMixinBase):
             indices,
             self._static_tensor_element_type(node.base),
             index_nodes=node.indices,
+            node=node,
         )
         result = self._llvm.ir_builder.load(
             element_ptr,
             name="irx_tensor_index_load",
+            align=1,
         )
         self.result_stack.append(result)
 
@@ -691,6 +693,7 @@ class TensorVisitorMixin(VisitorMixinBase):
             indices,
             element_type,
             index_nodes=node.indices,
+            node=node,
         )
 
         self.visit_child(node.value)
@@ -702,7 +705,7 @@ class TensorVisitorMixin(VisitorMixinBase):
             source_type=self._resolved_ast_type(node.value),
             target_type=element_type,
         )
-        self._llvm.ir_builder.store(value, element_ptr)
+        self._llvm.ir_builder.store(value, element_ptr, align=1)
         self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
 
     @VisitorCore.visit.dispatch
@@ -804,6 +807,7 @@ class TensorVisitorMixin(VisitorMixinBase):
             view,
             indices,
             index_nodes=node.indices,
+            node=node,
         )
         self.result_stack.append(offset)
 

@@ -14,6 +14,7 @@ from llvmlite import ir
 
 from irx.analysis.resolved_nodes import (
     ResolvedClassConstruction,
+    SemanticInfo,
 )
 from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
@@ -22,6 +23,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.nullable import NullableVisitorMixin
+from irx.builder.lowering.sequences import lower_sequence_query
 from irx.builder.lowering.text import lower_text_operation
 from irx.typecheck import typechecked
 
@@ -630,7 +632,13 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SubscriptExpr
         """
-        if lower_text_operation(cast(VisitorCore, self), node):
+        info = getattr(node, "semantic", None)
+        if isinstance(info, SemanticInfo) and info.tensor_index is not None:
+            self.visit_child(info.tensor_index)
+            return
+        if lower_sequence_query(
+            cast(VisitorCore, self), node
+        ) or lower_text_operation(cast(VisitorCore, self), node):
             return
         if cast(NullableVisitorMixin, self).lower_column_operation(node):
             return

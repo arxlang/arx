@@ -45,6 +45,15 @@ enum irx_arrow_type_id {
  */
 int irx_arrow_series_index(const irx_arrow_chunked_array_handle*, int64_t,
     int32_t, uint64_t*, int32_t*);
+/* Borrowed numeric sequence access: length -1 indicates an invalid handle.
+ * Read publishes exact scalar bits/validity on success; failures return 1. */
+/* Publish a separately owned handle sharing the current immutable chunk
+ * buffers. Later source replacement cannot invalidate it. Release normally.
+ * Failure clears out; no element data is copied or coalesced. */
+int32_t irx_arrow_sequence_snapshot(const irx_arrow_chunked_array_handle* source,
+    irx_arrow_chunked_array_handle** out);
+int64_t irx_arrow_sequence_length(const irx_arrow_chunked_array_handle*);
+int32_t irx_arrow_sequence_read(const void*, int64_t, int32_t, uint64_t*, int32_t*);
 /* IPC input is borrowed and copied. Success transfers one owned table handle;
  * failure clears out. The result does not borrow the input bytes. */
 int irx_arrow_table_from_ipc(const uint8_t* data, int64_t length,

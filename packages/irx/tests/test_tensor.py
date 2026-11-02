@@ -194,6 +194,17 @@ def tensor_lifetime_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
             ),
             body=repeated,
         ),
+        astx.FunctionCall(
+            "sequence_first", [_int32_tensor([1, 2], shape=(2,))]
+        ),
+        astx.TensorIndex(
+            _int32_tensor([1, 2], shape=(2,)),
+            [
+                astx.BinaryOp(
+                    "-", astx.FunctionCall("getchar", []), astx.LiteralInt32(1)
+                )
+            ],
+        ),
         astx.FunctionReturn(
             astx.TensorIndex(
                 astx.TensorView(_int32_tensor([1, 2], shape=(2,)), shape=(2,)),
@@ -205,6 +216,25 @@ def tensor_lifetime_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
                     )
                 ],
             )
+        ),
+    )
+    sequence_body = astx.Block()
+    sequence_body.append(
+        astx.FunctionReturn(
+            astx.SubscriptExpr(astx.Identifier("values"), astx.LiteralInt32(0))
+        )
+    )
+    module.block.insert(
+        0,
+        astx.FunctionDef(
+            astx.FunctionPrototype(
+                "sequence_first",
+                astx.Arguments(
+                    astx.Argument("values", astx.SequenceType(astx.Int32()))
+                ),
+                return_type=astx.Int32(),
+            ),
+            sequence_body,
         ),
     )
     prototype = astx.FunctionPrototype(
@@ -241,7 +271,7 @@ def test_tensor_temporary_lifetimes(
     """
     result = subprocess.run(
         [str(tensor_lifetime_binary)],
-        input=bytes([stage, divisor]),
+        input=bytes([stage, 1, divisor]),
         capture_output=True,
         check=False,
         timeout=15,
@@ -465,11 +495,11 @@ def test_tensor_view_lowers_custom_shape_stride_and_offset() -> None:
     assert (
         "irx_tensor_stride_ptr" in ir_text or "irx_tensor_strides_" in ir_text
     )
-    assert "irx_buffer_index_stride_0" in ir_text
-    assert "irx_buffer_index_stride_1" in ir_text
+    assert "irx_buffer_checked_offset" in ir_text
+    assert "buffer.index.indices" in ir_text
     assert (
         "irx_tensor_offset_bytes" in ir_text
-        or "irx_buffer_index_offset_1" in ir_text
+        or "irx_buffer_index_offset" in ir_text
     )
     assert_ir_parses(ir_text)
 
@@ -543,3 +573,26 @@ def test_tensor_view_build_returns_view_element() -> None:
 
     expected = 50
     assert result.returncode == expected, result.stderr or result.stdout
+
+
+@pytest.mark.parametrize("index", [-1, 2])
+def test_checked_tensor_bounds_release_temporaries(
+    tensor_lifetime_binary: Path, index: int
+) -> None:
+    """
+    title: A failed dynamic index releases fresh tensor backing owners.
+    parameters:
+      tensor_lifetime_binary:
+        type: Path
+      index:
+        type: int
+    """
+    result = subprocess.run(
+        [str(tensor_lifetime_binary)],
+        input=bytes([0, index + 1, 1]),
+        capture_output=True,
+        check=False,
+        timeout=15,
+    )
+    assert result.returncode == 1, result.stderr
+    assert b"out of bounds" in result.stderr

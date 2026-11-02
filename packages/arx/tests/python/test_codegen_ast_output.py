@@ -1075,3 +1075,155 @@ def test_text_operations_build_and_run(
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == result.stderr == ""
+
+
+def test_numeric_sequence_example(tmp_path: Path) -> None:
+    """
+    title: One generic consumer executes across all surface source families.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("native sequence integration requires clang")
+    source = (
+        Path(__file__).resolve().parents[4] / "examples/numeric-sequences.x"
+    )
+    ArxIO.string_to_buffer(source.read_text())
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_buffer_checked_offset" in text
+    executable = tmp_path / "sequences"
+    builder._build_from_ir(text, str(executable))
+    result = subprocess.run(
+        [str(executable)], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.fixture(scope="module")
+def numeric_bounds_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Compile tensor and sequence boundary failures once.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None:
+        pytest.skip("native bounds checks require clang")
+    source = """
+extern getchar() -> i32
+fn runtime_read(values: tensor[i64, ...], index: i32) -> i64:
+  return values[index]
+fn borrowed_read(values: sequence[i64], index: i32) -> i64:
+  return values[index]
+fn runtime_borrow(values: tensor[i64, ...]) -> i64:
+  return borrowed_read(values, 0)
+fn main() -> i32:
+  var mode: i32 = getchar()
+  var index: i32 = getchar() - 1
+  var values: tensor[i64, 2] = [7, 9]
+  try:
+    if mode == 0:
+      return cast(values[index], i32)
+    if mode == 1:
+      return cast(runtime_read(values, index), i32)
+    if mode == 2:
+      return cast(borrowed_read([7, 9], index), i32)
+    if mode == 3:
+      var empty: list[i64] = []
+      return cast(borrowed_read(empty, 0), i32)
+    if mode == 4:
+      var matrix: tensor[i64, 1, 2] = [[7, 9]]
+      return cast(runtime_borrow(matrix), i32)
+    var copied: list[i64] = list(values, max_items=index)
+    return cast(len(copied), i32)
+  except IndexError:
+    return 10
+  except ValueError:
+    return 11
+"""
+    ArxIO.string_to_buffer(source)
+    module = Parser().parse(Lexer().lex(), "numeric_bounds")
+    builder = ArxBuilder()
+    text = builder.translate_modules(
+        ParsedModule("numeric_bounds", inject_ambient_builtin_imports(module)),
+        FileImportResolver(()),
+    )
+    llvm.parse_assembly(text).verify()
+    executable = tmp_path_factory.mktemp("numeric-bounds") / "probe"
+    builder._build_from_ir(text, str(executable))
+    return executable
+
+
+@pytest.mark.parametrize(
+    "mode,index,expected",
+    [
+        (0, 0, 7),
+        (0, -1, 10),
+        (0, 2, 10),
+        (1, 1, 9),
+        (1, -1, 10),
+        (1, 2, 10),
+        (2, 0, 7),
+        (2, -1, 10),
+        (2, 2, 10),
+        (3, 0, 10),
+        (4, 0, 11),
+        (5, -1, 11),
+        (5, 1, 11),
+        (5, 2, 2),
+    ],
+)
+def test_numeric_bounds_are_recoverable(
+    numeric_bounds_binary: Path, mode: int, index: int, expected: int
+) -> None:
+    """
+    title: Check rank, empty and signed bounds before reads or publication.
+    parameters:
+      numeric_bounds_binary:
+        type: Path
+      mode:
+        type: int
+      index:
+        type: int
+      expected:
+        type: int
+    """
+    result = subprocess.run(
+        [str(numeric_bounds_binary)],
+        input=bytes([mode, index + 1]),
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == expected, result.stderr
+
+
+@pytest.mark.parametrize("arguments", ["[1], typed", "typed, [1]"])
+def test_nested_template_literal_context(arguments: str) -> None:
+    """
+    title: Concrete siblings and explicit arguments contextualize list[T].
+    parameters:
+      arguments:
+        type: str
+    """
+    parameters = (
+        "values: list[T], seed: T"
+        if arguments.startswith("[")
+        else "seed: T, values: list[T]"
+    )
+    ArxIO.string_to_buffer(
+        f"@<T: i32 | i64>\nfn pick({parameters}) -> T:\n"
+        "  return values[0]\n"
+        "fn main() -> i32:\n"
+        "  var typed: i64 = 7\n"
+        f"  assert pick({arguments}) == 1\n"
+        f"  assert pick<i64>({arguments}) == 1\n"
+        "  return 0\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    assert "irx_list_append" in text

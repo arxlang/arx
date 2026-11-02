@@ -1,3 +1,5 @@
+# mypy: disable-error-code=no-redef
+
 """
 title: Bind source call operands without reordering their evaluation.
 """
@@ -6,10 +8,12 @@ from typing import Callable, cast
 
 import astx
 
+from plum import dispatch
 from public import private
 
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.resolved_nodes import SemanticFunction
+from irx.analysis.types import sequence_element_type, substitute_type
 from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -204,31 +208,180 @@ def analyze_numeric_arguments(
     }
     expected: astx.DataType | None
     for value, slot in zip(values, slots):
-        if isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+        if isinstance(
+            value,
+            (
+                astx.LiteralInteger,
+                astx.LiteralFloat,
+                astx.ListExpr,
+                astx.LiteralList,
+            ),
+        ):
             continue
         if slot < len(function.signature.parameters):
             expected = function.signature.parameters[slot].type_
-            contextualize_literal(value, expected)
+            contextualize_literal(value, substitute_type(expected, selected))
         if not typed_visited:
             visit(value)
         if slot < len(function.signature.parameters):
             expected = function.signature.parameters[slot].type_
             actual = type_of(value)
-            if (
-                isinstance(expected, astx.TemplateTypeVar)
-                and actual is not None
-            ):
-                selected.setdefault(expected.name, actual)
+            collect_literal_context(expected, actual, selected)
     for value, slot in zip(values, slots):
-        if not isinstance(value, (astx.LiteralInteger, astx.LiteralFloat)):
+        if not isinstance(
+            value,
+            (
+                astx.LiteralInteger,
+                astx.LiteralFloat,
+                astx.ListExpr,
+                astx.LiteralList,
+            ),
+        ):
             continue
         expected = (
             function.signature.parameters[slot].type_
             if slot < len(function.signature.parameters)
             else None
         )
-        if isinstance(expected, astx.TemplateTypeVar):
-            expected = selected.get(expected.name)
+        if expected is not None:
+            expected = substitute_type(expected, selected)
         contextualize_literal(value, expected)
         visit(value)
     return [type_of(value) for value in values]
+
+
+@private
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.DataType,
+    actual: astx.DataType | None,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Leave unsupported context trees to authoritative call validation.
+    summary: >-
+      Provisional context never authorizes conversions or resolves conflicts.
+      The template resolver validates every binding after literals are typed.
+    parameters:
+      expected:
+        type: astx.DataType
+      actual:
+        type: astx.DataType | None
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    del expected, actual, bindings
+
+
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.TemplateTypeVar,
+    actual: astx.DataType | None,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Gather concrete sibling context for an unresolved variable.
+    parameters:
+      expected:
+        type: astx.TemplateTypeVar
+      actual:
+        type: astx.DataType | None
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    if actual is not None:
+        bindings.setdefault(expected.name, actual)
+
+
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.SequenceType,
+    actual: astx.DataType | None,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Gather exact element context through a sequence adapter.
+    parameters:
+      expected:
+        type: astx.SequenceType
+      actual:
+        type: astx.DataType | None
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    collect_literal_context(
+        expected.element_type, sequence_element_type(actual), bindings
+    )
+
+
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.ListType,
+    actual: astx.ListType,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Gather matching list element contexts without element conversion.
+    parameters:
+      expected:
+        type: astx.ListType
+      actual:
+        type: astx.ListType
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    if len(expected.element_types) == len(actual.element_types):
+        for left, right in zip(expected.element_types, actual.element_types):
+            collect_literal_context(
+                cast(astx.DataType, left), cast(astx.DataType, right), bindings
+            )
+
+
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.NullableType,
+    actual: astx.NullableType,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Preserve nullability while gathering the inner element context.
+    parameters:
+      expected:
+        type: astx.NullableType
+      actual:
+        type: astx.NullableType
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    collect_literal_context(expected.value_type, actual.value_type, bindings)
+
+
+@dispatch
+@typechecked
+def collect_literal_context(
+    expected: astx.SeriesType | astx.TensorType | astx.BufferViewType,
+    actual: astx.DataType | None,
+    bindings: dict[str, astx.DataType],
+) -> None:
+    """
+    title: Gather storage element contexts only for matching source kinds.
+    parameters:
+      expected:
+        type: astx.SeriesType | astx.TensorType | astx.BufferViewType
+      actual:
+        type: astx.DataType | None
+      bindings:
+        type: dict[str, astx.DataType]
+    """
+    if type(expected) is type(actual):
+        left, right = (
+            expected.element_type,
+            getattr(actual, "element_type", None),
+        )
+        if left is not None and isinstance(right, astx.DataType):
+            collect_literal_context(left, right, bindings)

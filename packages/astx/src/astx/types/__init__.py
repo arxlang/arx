@@ -16,6 +16,7 @@ from astx.types.collections import (
     CollectionType,
     DictType,
     ListType,
+    SequenceType,
     SetType,
     TupleType,
 )
@@ -104,6 +105,7 @@ __all__ = [
     "NotOp",
     "Number",
     "OrOp",
+    "SequenceType",
     "SetType",
     "SignedInteger",
     "String",

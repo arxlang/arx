@@ -4,6 +4,12 @@ title: Test cases for collection data types.
 
 from __future__ import annotations
 
+import pytest
+
+from typeguard import TypeCheckError
+
+import astx
+
 from astx.literals.base import Literal
 from astx.literals.collections import (
     LiteralDict,
@@ -177,3 +183,15 @@ def test_list_expression_checks_every_element() -> None:
         astx.ListExpr(cast(list[astx.DataType], [astx.LiteralInt32(1), "bad"]))
     with pytest.raises(TypeCheckError):
         astx.LiteralList(cast(list[Literal], [astx.Identifier("value")]))
+
+
+def test_numeric_sequence_model() -> None:
+    """
+    title: Model exact element types and reject untyped runtime arguments.
+    """
+    element = astx.NullableType(astx.Int64())
+    sequence = astx.SequenceType(element)
+    assert sequence.element_type is element
+    assert "nullable" in str(sequence)
+    with pytest.raises(TypeCheckError):
+        astx.SequenceType("i64")  # type: ignore[arg-type]
