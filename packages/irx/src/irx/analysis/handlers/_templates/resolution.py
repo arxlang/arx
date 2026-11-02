@@ -8,6 +8,7 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import astx
 
@@ -19,7 +20,12 @@ from irx.analysis.handlers._templates.state import (
     _SPECIALIZATION_ANALYZED_ATTR,
 )
 from irx.analysis.resolved_nodes import SemanticFunction
-from irx.analysis.types import clone_type, display_type_name, same_type
+from irx.analysis.types import (
+    clone_type,
+    display_type_name,
+    same_type,
+    sequence_element_type,
+)
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -83,6 +89,62 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             return False
+        if isinstance(expected_type, astx.ListType) and isinstance(
+            actual_type, astx.ListType
+        ):
+            if len(expected_type.element_types) != len(
+                actual_type.element_types
+            ):
+                return False
+            return all(
+                self._collect_inferred_template_bindings(
+                    cast(astx.DataType, expected),
+                    cast(astx.DataType, actual),
+                    inferred,
+                    function=function,
+                    node=node,
+                    diagnose=diagnose,
+                )
+                for expected, actual in zip(
+                    expected_type.element_types, actual_type.element_types
+                )
+            )
+        if isinstance(expected_type, astx.SequenceType):
+            return self._collect_inferred_template_bindings(
+                expected_type.element_type,
+                sequence_element_type(actual_type),
+                inferred,
+                function=function,
+                node=node,
+                diagnose=diagnose,
+            )
+        if isinstance(expected_type, astx.NullableType) and isinstance(
+            actual_type, astx.NullableType
+        ):
+            return self._collect_inferred_template_bindings(
+                expected_type.value_type,
+                actual_type.value_type,
+                inferred,
+                function=function,
+                node=node,
+                diagnose=diagnose,
+            )
+        if isinstance(expected_type, astx.SeriesType) and isinstance(
+            actual_type, astx.SeriesType
+        ):
+            if (
+                expected_type.element_type is None
+                or actual_type.element_type is None
+            ):
+                return True
+            return self._collect_inferred_template_bindings(
+                expected_type.element_type,
+                actual_type.element_type,
+                inferred,
+                function=function,
+                node=node,
+                diagnose=diagnose,
+            )
         if isinstance(expected_type, astx.PointerType) and isinstance(
             actual_type,
             astx.PointerType,

@@ -60,6 +60,15 @@ lowering in ArxJIT (whose decorator still runs Python fallback). Direct ASTx
 exception suppression; this does not add Arx `with`, `break`, or `continue`
 syntax.
 
+### Numeric sequence capability boundary
+
+Numeric `sequence[T]` consumers accept lists/materialized ranges, rank-one
+static/runtime tensors, and typed chunked Series without precision conversion.
+Nullability must match. Numeric `list(input, max_items=N)` supports bounded
+single-pass materialization in IRx; Arx still has no generator declaration
+syntax. Tensor indexing checks runtime bounds and offsets even for static
+shapes.
+
 ## Wheel gate
 
 The `wheel-smoke` CI job builds all six lockstep packages once, installs those

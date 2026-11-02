@@ -11,8 +11,6 @@ from typing import cast
 
 import astx
 
-from irx.builtins.collections.tensor import TENSOR_LAYOUT_EXTRA, TensorLayout
-
 from arx import builtins
 from arx.dataframe import (
     attach_binding as attach_dataframe_binding,
@@ -653,20 +651,16 @@ class ExpressionParserMixin(ParserMixinBase):
             )
 
         tensor_base = self._coerce_tensor_base(base)
-        if tensor_base is None:
-            if len(indices) != 1:
-                raise ParserException(
-                    "Multidimensional indexing is only supported for "
-                    "tensor values."
-                )
+        if tensor_base is None and len(indices) == 1:
             return astx.SubscriptExpr(
                 cast(astx.Expr, base),
                 indices[0],
                 loc=subscript_loc,
             )
 
-        self._validate_tensor_indices(tensor_base, indices)
-        return astx.TensorIndex(tensor_base, indices)
+        result = astx.TensorIndex(tensor_base or base, indices)
+        result.loc = subscript_loc
+        return result
 
     def parse_dataframe_constructor(self) -> astx.DataFrameLiteral:
         """
@@ -852,73 +846,10 @@ class ExpressionParserMixin(ParserMixinBase):
                 attach_binding(base, binding)
                 return base
             if self._is_tensor_name(base.name):
-                raise ParserException(
-                    "Runtime-shaped tensor indexing is not supported yet; "
-                    "pass tensor parameters through or use a static-shape "
-                    "tensor annotation for indexed access."
-                )
+                return base
             return None
 
         return None
-
-    def _validate_tensor_indices(
-        self,
-        base: astx.AST,
-        indices: list[astx.Expr],
-    ) -> None:
-        """
-        title: Validate one tensor index arity and static bounds.
-        parameters:
-          base:
-            type: astx.AST
-          indices:
-            type: list[astx.Expr]
-        """
-        layout = getattr(
-            getattr(base, "semantic", None),
-            "extras",
-            {},
-        ).get(TENSOR_LAYOUT_EXTRA)
-        if not isinstance(layout, TensorLayout):
-            if isinstance(base, astx.TensorLiteral):
-                layout = TensorLayout(
-                    shape=base.shape,
-                    strides=base.strides or (),
-                    offset_bytes=base.offset_bytes,
-                )
-            else:
-                return
-
-        if len(indices) != layout.ndim:
-            raise ParserException(
-                "Tensor indexing expects "
-                f"{layout.ndim} indices for shape "
-                f"{self._format_tensor_shape(layout.shape)}."
-            )
-
-        for axis, index in enumerate(indices):
-            if not isinstance(index, (astx.LiteralInt32, astx.LiteralInteger)):
-                continue
-            extent = layout.shape[axis]
-            if index.value < 0 or index.value >= extent:
-                raise ParserException(
-                    "Tensor index "
-                    f"{index.value} is out of bounds for dimension {axis} "
-                    f"with extent {extent}."
-                )
-
-    def _format_tensor_shape(self, shape: tuple[int, ...]) -> str:
-        """
-        title: Render one tensor shape in parser diagnostics.
-        parameters:
-          shape:
-            type: tuple[int, Ellipsis]
-        returns:
-          type: str
-        """
-        if not shape:
-            return "()"
-        return "(" + ", ".join(str(dim) for dim in shape) + ")"
 
     def parse_unary(self, min_precedence: int = 0) -> astx.AST:
         """

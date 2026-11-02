@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.6.0",
+  "syntax_pack_version": "0.7.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -263,6 +263,7 @@
       "time",
       "dataframe",
       "list",
+      "sequence",
       "series",
       "tensor",
       "nullable",
@@ -290,6 +291,7 @@
       "isinstance",
       "is_null",
       "len",
+      "list",
       "int",
       "ord",
       "fill_null",

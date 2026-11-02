@@ -107,6 +107,13 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
           type: tuple[SemanticSymbol, str, astx.DataType | None] | None
         """
         target_type = self._expr_type(target)
+        if isinstance(target_type, (astx.SequenceType, astx.GeneratorType)):
+            self.context.diagnostics.add(
+                "sequence borrows and iterator bindings cannot be reassigned",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return None
         if isinstance(target, astx.Identifier):
             symbol = cast(
                 SemanticInfo, getattr(target, "semantic", SemanticInfo())
@@ -463,6 +470,13 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 f"cannot assign to unresolved name '{node.name}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
+            )
+            return
+        if isinstance(symbol.type_, (astx.SequenceType, astx.GeneratorType)):
+            self.context.diagnostics.add(
+                "sequence borrows and iterator bindings cannot be reassigned",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
         if not symbol.is_mutable:

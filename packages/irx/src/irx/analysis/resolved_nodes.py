@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 import astx
 
@@ -74,6 +74,7 @@ class ResourceKind(str, Enum):
       ownership sidecar.
     """
 
+    GENERATOR = "generator"
     LIST = "list"
     STRING = "string"
     FILE = "file"
@@ -1261,6 +1262,29 @@ class ResolvedCallArguments:
 @public
 @typechecked
 @dataclass(frozen=True)
+class ResolvedSequenceAccess:
+    """
+    title: Exact borrowed numeric adapter selected by semantic analysis.
+    attributes:
+      kind:
+        type: Literal[list, tensor, series, sequence]
+      element_type:
+        type: astx.DataType
+      type_id:
+        type: int
+      literal_list:
+        type: astx.LiteralList | None
+    """
+
+    kind: Literal["list", "tensor", "series", "sequence"]
+    element_type: astx.DataType
+    type_id: int
+    literal_list: astx.LiteralList | None = None
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
 class CallResolution:
     """
     title: Resolved function-call semantics.
@@ -1280,6 +1304,8 @@ class CallResolution:
         type: tuple[ImplicitConversion | None, Ellipsis]
       arguments:
         type: ResolvedCallArguments | None
+      sequence_arguments:
+        type: tuple[ResolvedSequenceAccess | None, Ellipsis]
     """
 
     callee: CallableResolution
@@ -1288,6 +1314,7 @@ class CallResolution:
     result_type: astx.DataType
     implicit_conversions: tuple[ImplicitConversion | None, ...] = ()
     arguments: ResolvedCallArguments | None = None
+    sequence_arguments: tuple[ResolvedSequenceAccess | None, ...] = ()
 
 
 @public
@@ -1922,6 +1949,7 @@ class IterationKind(str, Enum):
     """
 
     LIST = "list"
+    SEQUENCE = "sequence"
     DICT_KEYS = "dict_keys"
     SET = "set"
     GENERATOR = "generator"
@@ -1969,6 +1997,8 @@ class ResolvedIteration:
         type: IterationOrder
       target_symbol:
         type: SemanticSymbol | None
+      sequence_access:
+        type: ResolvedSequenceAccess | None
       extras:
         type: dict[str, Any]
     """
@@ -1980,6 +2010,7 @@ class ResolvedIteration:
     is_reiterable: bool = True
     order: IterationOrder = IterationOrder.UNSPECIFIED
     target_symbol: SemanticSymbol | None = None
+    sequence_access: ResolvedSequenceAccess | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
 
@@ -1995,6 +2026,28 @@ class CollectionMethodKind(str, Enum):
     CONTAINS = "contains"
     INDEX = "index"
     COUNT = "count"
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
+class ResolvedMaterialization:
+    """
+    title: Single-pass numeric materialization with an optional sized bound.
+    summary: >-
+      Unsized inputs require max_items. On excess, at most max_items + 1 items
+      have been consumed, and no partial list is published. Consumed input is
+      not rolled back. Fresh iterator frames transfer to this call; named
+      iterator frames are borrowed from their lexical owner.
+    attributes:
+      iteration:
+        type: ResolvedIteration
+      max_items:
+        type: astx.AST | None
+    """
+
+    iteration: ResolvedIteration
+    max_items: astx.AST | None
 
 
 @public
@@ -2156,6 +2209,12 @@ class SemanticInfo:
       Aggregate all semantic sidecar fields that analysis may attach to a
       single AST node.
     attributes:
+      materialization:
+        type: ResolvedMaterialization | None
+      sequence_access:
+        type: ResolvedSequenceAccess | None
+      tensor_index:
+        type: astx.TensorIndex | None
       numeric_storage:
         type: astx.DataType | None
       literal_context:
@@ -2261,6 +2320,9 @@ class SemanticInfo:
         type: dict[str, Any]
     """
 
+    materialization: ResolvedMaterialization | None = None
+    sequence_access: ResolvedSequenceAccess | None = None
+    tensor_index: astx.TensorIndex | None = None
     numeric_storage: astx.DataType | None = None
     literal_context: astx.DataType | None = None
     numeric_constant: int | float | None = None

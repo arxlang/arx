@@ -41,6 +41,8 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.extensions.calls import CallLoweringServices, LoweringCall
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.materialization import lower_materialization
+from irx.builder.lowering.sequences import adapt_sequence
 from irx.builder.lowering.text import lower_text_operation
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.record_batch_api import is_checked_native_facade
@@ -119,6 +121,20 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             ownership.transfer_kind is OwnershipTransferKind.MOVE
             or ownership.escape_kind is OwnershipEscapeKind.RETURN
         ):
+            return
+        if ownership.resource_kind is ResourceKind.GENERATOR:
+            frame = self._llvm.ir_builder.extract_value(result, 0)
+            free = self.require_runtime_symbol("libc", "free")
+
+            def release_iterator() -> None:
+                """
+                title: Drop the owned scalar-only iterator frame.
+                """
+                self._llvm.ir_builder.call(free, [frame])
+
+            self.cleanup_stack.append(
+                CleanupAction(release_iterator, fallible=False)
+            )
             return
         if ownership.resource_kind is ResourceKind.STRING:
             self._register_owned_string_temporary(node, result)
@@ -291,6 +307,21 @@ class FunctionVisitorMixin(ClassVisitorMixin):
                 if index < len(resolution.resolved_argument_types)
                 else None
             )
+            if isinstance(target_type, astx.SequenceType):
+                plan = require_semantic_metadata(
+                    resolution.sequence_arguments[index]
+                    if index < len(resolution.sequence_arguments)
+                    else None,
+                    node=arg,
+                    metadata="sequence adapter",
+                    context="call argument",
+                )
+                llvm_args.append(
+                    adapt_sequence(
+                        cast(VisitorCore, self), arg, llvm_arg, plan
+                    )
+                )
+                continue
             llvm_args.append(
                 self._cast_ast_value(
                     llvm_arg,
@@ -711,6 +742,11 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         if lower_text_operation(cast(VisitorCore, self), node):
             return
         info = getattr(node, "semantic", None)
+        if isinstance(info, SemanticInfo) and info.materialization is not None:
+            lower_materialization(
+                cast(VisitorCore, self), node, info.materialization
+            )
+            return
         if (
             isinstance(info, SemanticInfo)
             and info.collection_length is not None

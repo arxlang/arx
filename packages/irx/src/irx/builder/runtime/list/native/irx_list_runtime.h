@@ -29,6 +29,11 @@ typedef enum irx_list_status {
 int32_t irx_list_append(irx_list* list, const void* value);
 /* Output remains NULL on failure; callers may dereference only on success. */
 int32_t irx_list_at(const irx_list* list, int64_t index, void** out);
+/* Borrowed sequence callback: size is the exact scalar byte width (1..8).
+ * Success publishes zero-extended raw bits and validity 1; failure clears both.
+ * No element conversion, ownership transfer, or mutation is performed. */
+int32_t irx_list_sequence_read(const void* source, int64_t index, int32_t size,
+                              uint64_t* bits, int32_t* valid);
 void irx_list_destroy(irx_list* list);
 const char* irx_list_status_message(int32_t status);
 

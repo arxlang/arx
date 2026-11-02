@@ -111,7 +111,9 @@ def series_type(element_type: astx.DataType) -> astx.SeriesType:
         if len(element_type.members) != 2 or len(members) != 1:
             raise ValueError("Series nullability requires type | none")
         element_type, nullable = members[0], True
-    if not dataframe_column_type_is_supported(element_type):
+    if not isinstance(
+        element_type, astx.TemplateTypeVar
+    ) and not dataframe_column_type_is_supported(element_type):
         raise ValueError(
             "series element types support numeric, bool, string and "
             "date/time/timestamp types"

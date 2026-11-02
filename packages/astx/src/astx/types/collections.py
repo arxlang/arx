@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from public import public
 
-from astx.base import ExprType
+from astx.base import DataType, ExprType
 from astx.tools.typing import typechecked
 from astx.types.base import AnyType
 
@@ -38,6 +38,41 @@ class CollectionType(AnyType):
     """
     title: Base class for collection data types.
     """
+
+
+@public
+@typechecked
+class SequenceType(CollectionType):
+    """
+    title: Read-only ordered, sized, indexable sequence parameter contract.
+    summary: >-
+      The element type preserves width and nullability. Frontends may express
+      generic elements; the semantic host validates concrete adapters, borrow
+      lifetimes and supported storage. This type does not own its elements.
+    attributes:
+      element_type:
+        type: DataType
+    """
+
+    element_type: DataType
+
+    def __init__(self, element_type: DataType) -> None:
+        """
+        title: Declare the exact element contract of a borrowed sequence.
+        parameters:
+          element_type:
+            type: DataType
+        """
+        super().__init__()
+        self.element_type = element_type
+
+    def __str__(self) -> str:
+        """
+        title: Render the sequence element contract.
+        returns:
+          type: str
+        """
+        return f"SequenceType[{_format_type_name(self.element_type)}]"
 
 
 @public

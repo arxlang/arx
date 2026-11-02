@@ -8,7 +8,7 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Iterable
+from typing import Iterable, cast
 
 import astx
 
@@ -19,7 +19,12 @@ from irx.analysis.resolved_nodes import (
     TemplateArgumentBinding,
     TemplateSpecializationKey,
 )
-from irx.analysis.types import clone_type, display_type_name, same_type
+from irx.analysis.types import (
+    clone_type,
+    display_type_name,
+    same_type,
+    substitute_type,
+)
 from irx.typecheck import typechecked
 
 
@@ -54,6 +59,42 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
             )
         if isinstance(type_, astx.TemplateTypeVar):
             return type_.name
+        if isinstance(type_, (astx.ListType, astx.TupleType)):
+            members = "_".join(
+                self._type_identity_name(cast(astx.DataType, item))
+                for item in type_.element_types
+            )
+            size = getattr(type_, "size", None)
+            return f"{type(type_).__name__}_{members}_{size}"
+        if isinstance(type_, astx.NullableType):
+            return "Nullable_" + self._type_identity_name(type_.value_type)
+        if isinstance(type_, astx.GeneratorType):
+            return "Generator_" + self._type_identity_name(type_.yield_type)
+        if isinstance(
+            type_,
+            (
+                astx.SequenceType,
+                astx.SeriesType,
+                astx.TensorType,
+                astx.BufferViewType,
+            ),
+        ):
+            element = type_.element_type
+            member = (
+                "Any" if element is None else self._type_identity_name(element)
+            )
+            return (
+                f"{type(type_).__name__}_{member}_"
+                f"{getattr(type_, 'nullable', False)}_"
+                f"{getattr(type_, 'shape', None)}_"
+                f"{getattr(type_, 'size', None)}"
+            )
+        if isinstance(type_, astx.PointerType):
+            return "Pointer_" + (
+                "Any"
+                if type_.pointee_type is None
+                else self._type_identity_name(type_.pointee_type)
+            )
         return str(type_.__class__.__name__)
 
     def _template_specialization_key(
@@ -169,38 +210,7 @@ class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType
         """
-        if isinstance(type_, astx.TemplateTypeVar):
-            return clone_type(bindings.get(type_.name, type_))
-        if isinstance(type_, astx.UnionType):
-            return astx.UnionType(
-                tuple(
-                    self._substitute_type(member, bindings)
-                    for member in type_.members
-                ),
-                alias_name=type_.alias_name,
-            )
-        if isinstance(type_, astx.PointerType):
-            pointee_type = (
-                self._substitute_type(type_.pointee_type, bindings)
-                if type_.pointee_type is not None
-                else None
-            )
-            return astx.PointerType(pointee_type)
-        if isinstance(type_, astx.BufferViewType):
-            element_type = (
-                self._substitute_type(type_.element_type, bindings)
-                if type_.element_type is not None
-                else None
-            )
-            return astx.BufferViewType(element_type)
-        if isinstance(type_, astx.TensorType):
-            element_type = (
-                self._substitute_type(type_.element_type, bindings)
-                if type_.element_type is not None
-                else None
-            )
-            return astx.TensorType(element_type, shape=type_.shape)
-        return clone_type(type_)
+        return substitute_type(type_, bindings)
 
     def _template_bindings_map(
         self,

@@ -233,6 +233,7 @@ def test_list_runtime_exposes_status_and_destroy_contract() -> None:
         "irx_list_at",
         "irx_list_destroy",
         "irx_list_status_message",
+        "irx_list_sequence_read",
     }
     assert "no destroy or release helper yet" not in feature.metadata.get(
         "limitations",

@@ -112,6 +112,24 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if is_string_type(return_type):
             self._resolve_string_return_resource_ownership(node)
             return
+        if isinstance(return_type, astx.GeneratorType):
+            ownership = resource_ownership(node.value)
+            if ownership is None or ownership.kind is not OwnershipKind.OWNED:
+                self.context.diagnostics.add(
+                    "return a freshly owned generator, "
+                    "not a borrowed iterator",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+                return
+            moved = transfer_resource_ownership(
+                ownership,
+                transfer_kind=OwnershipTransferKind.MOVE,
+                escape_kind=OwnershipEscapeKind.RETURN,
+            )
+            self._set_resource_ownership(node.value, moved)
+            self._set_resource_ownership(node, moved)
+            return
         if not isinstance(return_type, astx.ListType):
             return
 

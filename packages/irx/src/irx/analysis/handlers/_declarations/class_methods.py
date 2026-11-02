@@ -8,31 +8,29 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import astx
 
-from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.class_lifecycle import INITIALIZER_HOOK, class_ownership
-from irx.analysis.handlers.base import SemanticVisitorMixinBase
+from irx.analysis.class_lifecycle import INITIALIZER_HOOK
+from irx.analysis.handlers.base import (
+    SemanticAnalyzerCore,
+    SemanticVisitorMixinBase,
+)
 from irx.analysis.module_symbols import (
     class_method_symbol_basename,
     qualified_class_method_name,
 )
-from irx.analysis.ownership import (
-    list_resource_ownership,
-    string_resource_ownership,
-)
+from irx.analysis.parameters import resolve_parameter_ownership
 from irx.analysis.resolved_nodes import (
     FunctionSignature,
-    OwnershipKind,
-    OwnershipTransferKind,
     ParameterSpec,
     SemanticClass,
     SemanticClassMember,
     SemanticFunction,
     SemanticSymbol,
 )
-from irx.analysis.types import clone_type, is_string_type
+from irx.analysis.types import clone_type
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -285,46 +283,9 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
                     ]
                     self._set_symbol(arg_node, arg_symbol)
                     self._set_type(arg_node, arg_symbol.type_)
-                    self._semantic(arg_node).resource_ownership = None
-                    if isinstance(arg_symbol.type_, astx.ClassType):
-                        self._set_resource_ownership(
-                            arg_node,
-                            class_ownership(
-                                OwnershipKind.OWNED,
-                                symbol=arg_symbol.symbol_id,
-                                transfer=OwnershipTransferKind.COPY,
-                            ),
-                        )
-                    elif isinstance(
-                        arg_symbol.type_, astx.DataFrameType | astx.SeriesType
-                    ):
-                        self._set_resource_ownership(
-                            arg_node,
-                            arrow_ownership(
-                                arg_symbol.type_,
-                                OwnershipKind.OWNED,
-                                arg_symbol.symbol_id,
-                                OwnershipTransferKind.COPY,
-                            ),
-                        )
-                    elif isinstance(arg_symbol.type_, astx.ListType):
-                        self._set_resource_ownership(
-                            arg_node,
-                            list_resource_ownership(
-                                OwnershipKind.BORROWED,
-                                source_symbol_id=arg_symbol.symbol_id,
-                                transfer_kind=OwnershipTransferKind.BORROW,
-                            ),
-                        )
-                    elif is_string_type(arg_symbol.type_):
-                        self._set_resource_ownership(
-                            arg_node,
-                            string_resource_ownership(
-                                OwnershipKind.BORROWED,
-                                source_symbol_id=arg_symbol.symbol_id,
-                                transfer_kind=OwnershipTransferKind.BORROW,
-                            ),
-                        )
+                    resolve_parameter_ownership(
+                        cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
+                    )
                 self.visit(declaration.body)
         if not isinstance(function.return_type, astx.NoneType) and not (
             self._guarantees_return(declaration.body)

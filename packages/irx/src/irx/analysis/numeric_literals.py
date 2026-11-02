@@ -57,6 +57,14 @@ def contextualize_literal(
       target:
         type: astx.DataType | None
     """
+    from irx.analysis.types import contains_template_variables  # noqa: PLC0415
+
+    if contains_template_variables(target):
+        target = None
+    if isinstance(value, (astx.ListExpr, astx.LiteralList)) and isinstance(
+        target, astx.SequenceType
+    ):
+        target = astx.ListType([target.element_type])
     if isinstance(value, (astx.SubscriptExpr, astx.ListIndex)):
         base = (
             value.value

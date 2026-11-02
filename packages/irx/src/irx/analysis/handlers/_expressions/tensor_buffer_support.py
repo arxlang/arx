@@ -395,19 +395,13 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             )
 
         layout = self._static_tensor_layout(base)
-        if layout is None:
-            self.context.diagnostics.add(
-                "tensor indexing requires static layout metadata",
-                node=node,
-                code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
-            )
-        elif len(indices) != layout.ndim:
+        if layout is not None and len(indices) != layout.ndim:
             self.context.diagnostics.add(
                 "tensor indexing index count must match tensor ndim",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        else:
+        elif layout is not None:
             for axis, index in enumerate(indices):
                 extent = layout.shape[axis]
                 static_index = self._static_integer_literal_value(index)
@@ -422,7 +416,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
                     )
 
         flags = self._static_tensor_flags(base)
-        if is_store and flags is not None and buffer_view_is_readonly(flags):
+        if is_store and (flags is None or buffer_view_is_readonly(flags)):
             self.context.diagnostics.add(
                 "cannot write through a readonly tensor view",
                 node=node,

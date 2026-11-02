@@ -15,6 +15,7 @@ from arx.lexer import Lexer, Token, TokenKind, TokenList
 from arx.parser import Parser
 from arx.parser.state import TypeUseContext
 from arx.tensor import tensor_shape
+from irx.analysis import SemanticError, analyze
 
 
 def _parse(code: str) -> astx.Module:
@@ -317,10 +318,14 @@ def test_parse_runtime_shaped_tensor_parameters() -> None:
     assert isinstance(runtime_tensor, astx.TensorType)
     assert tensor_shape(runtime_tensor) is None
 
-    with pytest.raises(ParserException, match="indexing is not supported"):
-        _parse(
-            "fn read(values: tensor[i32, ...]) -> i32:\n  return values[0]\n"
-        )
+    indexed = _parse(
+        "fn read(values: tensor[i32, ...]) -> i32:\n  return values[0]\n"
+    )
+    function = indexed.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    statement = function.body.nodes[0]
+    assert isinstance(statement, astx.FunctionReturn)
+    assert isinstance(statement.value, astx.TensorIndex)
 
     tree = _parse(
         "extern consume(values: tensor[i32, ...]) -> i32\n"
@@ -736,7 +741,7 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
             "fn main() -> i32:\n"
             "  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]\n"
             "  return grid[0]\n",
-            "expects 2 indices",
+            "index count must match",
         ),
         (
             "fn main() -> i32:\n"
@@ -744,6 +749,25 @@ def test_parse_range_leaves_arity_validation_to_builtins() -> None:
             "  return grid[2, 0]\n",
             "out of bounds",
         ),
+    ],
+)
+def test_tensor_index_validation_is_semantic(code: str, expected: str) -> None:
+    """
+    title: The parser preserves indices; IRx diagnoses rank and bounds.
+    parameters:
+      code:
+        type: str
+      expected:
+        type: str
+    """
+    tree = _parse(code)
+    with pytest.raises(SemanticError, match=expected):
+        analyze(tree)
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
         (
             "fn main() -> i32:\n"
             "  var grid: tensor[i32, size] = [1, 2]\n"

@@ -19,9 +19,11 @@ from irx.analysis.resolved_nodes import (
     ImplicitConversion,
     ResolvedCallArguments,
     ResolvedDefaultArgument,
+    ResolvedSequenceAccess,
     ReturnResolution,
     SemanticFunction,
 )
+from irx.analysis.sequences import resolve_sequence_access
 from irx.analysis.types import (
     bit_width,
     contains_file_type,
@@ -244,6 +246,7 @@ def validate_call(
                 )
     resolved_argument_types: list[astx.DataType | None] = []
     implicit_conversions: list[ImplicitConversion | None] = []
+    sequence_arguments: list[ResolvedSequenceAccess | None] = []
     for source_index, (slot, arg_type) in enumerate(
         zip(slots or (), arg_types)
     ):
@@ -270,6 +273,20 @@ def validate_call(
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
         resolved_argument_types.append(target)
+        adapter = (
+            resolve_sequence_access(arg_type, evaluations[source_index])
+            if isinstance(target, astx.SequenceType)
+            else None
+        )
+        sequence_arguments.append(adapter)
+        if isinstance(target, astx.SequenceType) and adapter is None:
+            diagnostics.add(
+                "sequence parameters require a matching numeric list, rank- "
+                "one tensor, or typed Series; nullable elements require a "
+                "nullable contract",
+                node=evaluations[source_index],
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
         implicit_conversions.append(
             None
             if same_type(target, arg_type) or target is None
@@ -309,6 +326,7 @@ def validate_call(
         result_type=signature.return_type,
         implicit_conversions=tuple(implicit_conversions),
         arguments=plan,
+        sequence_arguments=tuple(sequence_arguments),
     )
 
 

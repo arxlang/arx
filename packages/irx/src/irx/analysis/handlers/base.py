@@ -1727,6 +1727,48 @@ class SemanticAnalyzerCore(BaseVisitor):
         from irx.analysis.nullable import (  # noqa: PLC0415
             validate_column_declaration,
         )
+        from irx.analysis.types import (  # noqa: PLC0415
+            contains_sequence,
+            contains_template_variables,
+            is_sequence_element,
+        )
+
+        if contains_sequence(type_) and not isinstance(
+            type_, astx.SequenceType
+        ):
+            self.context.diagnostics.add(
+                "sequence borrows cannot be nested in owned storage",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+        if isinstance(type_, astx.SequenceType):
+            if not isinstance(node, astx.Argument):
+                self.context.diagnostics.add(
+                    "sequence borrows are parameter-only; return or store an "
+                    "owned collection instead",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            if not contains_template_variables(
+                type_
+            ) and not is_sequence_element(type_.element_type):
+                self.context.diagnostics.add(
+                    "sequence elements must be fixed-width numeric scalars, "
+                    "optionally nullable; Boolean is not numeric",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+            if isinstance(node, astx.Argument) and not isinstance(
+                node.default, astx.Undefined
+            ):
+                self.context.diagnostics.add(
+                    "sequence parameters require an explicit borrowed "
+                    "argument",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+                )
+            self._set_type(type_, type_)
+            return type_
 
         if isinstance(type_, astx.UInt128):
             self.context.diagnostics.add(

@@ -3,6 +3,15 @@
 
 ## Unreleased
 
+- Add exact, read-only `sequence[T]` parameters for numeric lists, rank-one
+  tensors, and typed Series, plus bounded numeric `list(input, max_items=N)`.
+  Recursive collection templates resolve concrete loop and element types.
+- Runtime tensor indices now check rank, bounds, and offset overflow, including
+  dynamic indices into static-shaped tensors. Negative indices do not wrap.
+- **Breaking:** IRx generator locals require fresh single-owner frames;
+  rebinding, resource capture, and returning borrowed iterators are rejected.
+  Lexical and temporary frames now release on normal and exceptional exits.
+
 - Add owned Unicode text indexing/slicing, splitting, stripping, checked `int`
   parsing, `ord`, and code-point `len`; native failures are recoverable.
 - **Breaking:** Text literals reject embedded NUL and invalid Unicode scalars.

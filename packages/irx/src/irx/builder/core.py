@@ -69,6 +69,7 @@ from irx.builder.runtime.registry import (
     RuntimeFeatureState,
     get_default_runtime_feature_registry,
 )
+from irx.builder.runtime.sequence import sequence_view_type
 from irx.builder.state import (
     CleanupAction,
     CleanupKind,
@@ -1591,6 +1592,8 @@ class VisitorCore(BuilderVisitor):
         """
         if type_ is None:
             return None
+        if isinstance(type_, astx.SequenceType):
+            return sequence_view_type()
         if isinstance(type_, astx.NullableType):
             inner = self._llvm_type_for_ast_type(type_.value_type)
             return (

@@ -1912,6 +1912,39 @@ int irx_arrow_table_new_from_arrays(
   }
 }
 
+int32_t irx_arrow_sequence_snapshot(
+    const irx_arrow_chunked_array_handle* source,
+    irx_arrow_chunked_array_handle** out) {
+  clear_error();
+  if (!out) return set_error(EINVAL, "sequence snapshot output is required");
+  *out = nullptr;
+  if (!source || !source->column)
+    return set_error(EINVAL, "sequence snapshot requires a Series");
+  try {
+    auto snapshot = std::make_unique<irx_arrow_chunked_array_handle>();
+    snapshot->refcount = 1;
+    snapshot->column = source->column;
+    *out = snapshot.release();
+    return 0;
+  } catch (const std::exception& error) {
+    return set_exception_error("sequence snapshot", error);
+  } catch (...) {
+    return set_error(IRX_ERR_ARROW, "unknown sequence snapshot failure");
+  }
+}
+
+int64_t irx_arrow_sequence_length(const irx_arrow_chunked_array_handle* source) {
+  if (!source || !source->column) return -1;
+  return source->column->length();
+}
+
+int32_t irx_arrow_sequence_read(const void* source, int64_t index, int32_t type,
+                               uint64_t* bits, int32_t* valid) {
+  return irx_arrow_series_index(
+      static_cast<const irx_arrow_chunked_array_handle*>(source), index, type,
+      bits, valid) == 0 ? 0 : 1;
+}
+
 int64_t irx_arrow_table_num_rows(const irx_arrow_table_handle* table) {
   clear_error();
   if (table == nullptr || !table->table) {

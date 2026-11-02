@@ -46,6 +46,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedGeneratorFunction,
     TextOperationKind,
 )
+from irx.analysis.sequences import resolve_sequence_access
 from irx.analysis.text import (
     resolve_text_subscript,
     set_text_operation,
@@ -599,6 +600,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         info = self._semantic(node)
         info.resolved_text_operation = None
         info.resolved_collection_method = None
+        info.sequence_access = None
         self.visit(node.base)
         if is_string_type(self._expr_type(node.base)):
             set_text_operation(
@@ -608,6 +610,21 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 (node.base,),
                 (0,),
             )
+            return
+        if isinstance(
+            self._expr_type(node.base),
+            (astx.SequenceType, astx.TensorType, astx.SeriesType),
+        ):
+            info.sequence_access = resolve_sequence_access(
+                self._expr_type(node.base)
+            )
+            if info.sequence_access is None:
+                self.context.diagnostics.add(
+                    "len requires a numeric rank-one tensor or typed Series",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+            self._set_type(node, astx.Int64())
             return
         return_type = astx.Int64()
         base_type = self._validate_collection_query_base(
@@ -1225,10 +1242,45 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.SubscriptExpr
         """
         info = self._semantic(node)
+        info.sequence_access = None
+        info.tensor_index = None
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
         self.visit(node.value)
+        if isinstance(self._expr_type(node.value), astx.TensorType):
+            if node.is_slice:
+                self.context.diagnostics.add(
+                    "tensor slicing requires an explicit view",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return
+            access = astx.TensorIndex(node.value, [node.index])
+            access.loc = node.loc
+            self.visit(access)
+            info.tensor_index = access
+            self._set_type(node, self._expr_type(access))
+            return
+        if isinstance(self._expr_type(node.value), astx.SequenceType):
+            self.visit(node.index)
+            info.sequence_access = resolve_sequence_access(
+                self._expr_type(node.value)
+            )
+            if (
+                node.is_slice
+                or not is_integer_type(self._expr_type(node.index))
+                or isinstance(self._expr_type(node.index), astx.UInt128)
+            ):
+                self.context.diagnostics.add(
+                    "sequence access requires one integer index; slicing is "
+                    "unsupported",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+            if info.sequence_access is not None:
+                self._set_type(node, info.sequence_access.element_type)
+            return
         if is_string_type(self._expr_type(node.value)):
             resolve_text_subscript(cast(SemanticAnalyzerCore, self), node)
             return

@@ -16,6 +16,7 @@ from irx.analysis.resolved_nodes import (
     IterationOrder,
     ResolvedIteration,
 )
+from irx.analysis.sequences import resolve_sequence_access
 from irx.builtins.collections.list import list_element_type
 from irx.typecheck import typechecked
 
@@ -41,6 +42,21 @@ def resolve_iteration_capability(
     """
     if iterable_type is None:
         return None
+
+    if isinstance(
+        iterable_type, (astx.SequenceType, astx.SeriesType, astx.TensorType)
+    ):
+        adapter = resolve_sequence_access(iterable_type)
+        if adapter is None:
+            return None
+        return ResolvedIteration(
+            iterable_node=iterable_node,
+            iterable_type=iterable_type,
+            element_type=adapter.element_type,
+            kind=IterationKind.SEQUENCE,
+            order=IterationOrder.INDEX,
+            sequence_access=adapter,
+        )
 
     list_type = list_element_type(iterable_type)
     if list_type is not None:
