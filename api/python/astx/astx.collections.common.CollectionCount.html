@@ -1,0 +1,2300 @@
+
+        
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>CollectionCount · ArxLang</title>
+    <script src="../../../theme.js"></script>
+    <script src="../../../search.js" defer></script>
+    
+    <link rel="stylesheet" href="../../../_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="../../../theme.css">
+    <link rel="stylesheet" href="../../../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../../../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../../../index.html">
+        <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.26.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../../../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </header>
+    
+    <div class="layout">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">ASTx</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../astx/index.html"><span class="nav-label">Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/installation.html"><span class="nav-label">Installation</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Tutorials</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/get-started.html"><span class="nav-label">Getting Started</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/literals.html"><span class="nav-label">Literals</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/variables.html"><span class="nav-label">Variables</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/functions.html"><span class="nav-label">Functions</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/for-loop.html"><span class="nav-label">For Loops</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/context.html"><span class="nav-label">Context</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/tutorials/fibonacci.html"><span class="nav-label">Fibonacci</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li>
+            
+            <details class="sidebar-group">
+              <summary class="sidebar-group-title"><span class="nav-label">Development</span></summary>
+              
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../astx/conventions.html"><span class="nav-label">Conventions</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/contributing.html"><span class="nav-label">Contributing</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../astx/changelog.html"><span class="nav-label">Historical Changelog</span></a>
+            
+          </li>
+          
+        </ul>
+        
+            </details>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            
+        <section class="api-navigation" aria-label="Python API">
+          <a class="api-home" href="astx.html"><span class="nav-label">Python API</span></a>
+          
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">astx / astx</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.html" aria-label="astx / astx module overview">Module overview</a></li>
+              
+              <li><a href="astx.AST.html"><span class="nav-label">AST</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ASTKind.html"><span class="nav-label">ASTKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ASTNodes.html"><span class="nav-label">ASTNodes</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AddBinOp.html"><span class="nav-label">AddBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AliasExpr.html"><span class="nav-label">AliasExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AndOp.html"><span class="nav-label">AndOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Argument.html"><span class="nav-label">Argument</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Arguments.html"><span class="nav-label">Arguments</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ArrayInt32ArrayLength.html"><span class="nav-label">ArrayInt32ArrayLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AssertStmt.html"><span class="nav-label">AssertStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AssignmentBinOp.html"><span class="nav-label">AssignmentBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AssignmentExpr.html"><span class="nav-label">AssignmentExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AsyncForRangeLoopExpr.html"><span class="nav-label">AsyncForRangeLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AsyncForRangeLoopStmt.html"><span class="nav-label">AsyncForRangeLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AugAssign.html"><span class="nav-label">AugAssign</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.AwaitExpr.html"><span class="nav-label">AwaitExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BaseFieldAccess.html"><span class="nav-label">BaseFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BaseMethodCall.html"><span class="nav-label">BaseMethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BinaryOp.html"><span class="nav-label">BinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BitAndBinOp.html"><span class="nav-label">BitAndBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BitOrBinOp.html"><span class="nav-label">BitOrBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BitXorBinOp.html"><span class="nav-label">BitXorBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Block.html"><span class="nav-label">Block</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BoolBinaryOp.html"><span class="nav-label">BoolBinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BoolUnaryOp.html"><span class="nav-label">BoolUnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Boolean.html"><span class="nav-label">Boolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BreakStmt.html"><span class="nav-label">BreakStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferOwnerType.html"><span class="nav-label">BufferOwnerType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewDescriptor.html"><span class="nav-label">BufferViewDescriptor</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewIndex.html"><span class="nav-label">BufferViewIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewRelease.html"><span class="nav-label">BufferViewRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewRetain.html"><span class="nav-label">BufferViewRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewStore.html"><span class="nav-label">BufferViewStore</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewType.html"><span class="nav-label">BufferViewType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.BufferViewWrite.html"><span class="nav-label">BufferViewWrite</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CaseStmt.html"><span class="nav-label">CaseStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Cast.html"><span class="nav-label">Cast</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CatchHandlerStmt.html"><span class="nav-label">CatchHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ClassConstruct.html"><span class="nav-label">ClassConstruct</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ClassDeclStmt.html"><span class="nav-label">ClassDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ClassDefStmt.html"><span class="nav-label">ClassDefStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ClassType.html"><span class="nav-label">ClassType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionContains.html"><span class="nav-label">CollectionContains</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionCount.html"><span class="nav-label">CollectionCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionIndex.html"><span class="nav-label">CollectionIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionIsEmpty.html"><span class="nav-label">CollectionIsEmpty</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionLength.html"><span class="nav-label">CollectionLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CollectionType.html"><span class="nav-label">CollectionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ColumnType.html"><span class="nav-label">ColumnType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.CompareOp.html"><span class="nav-label">CompareOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Complex.html"><span class="nav-label">Complex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Complex32.html"><span class="nav-label">Complex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Complex64.html"><span class="nav-label">Complex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Comprehension.html"><span class="nav-label">Comprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ComprehensionClause.html"><span class="nav-label">ComprehensionClause</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ContinueStmt.html"><span class="nav-label">ContinueStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameColumn.html"><span class="nav-label">DataFrameColumn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameColumnAccess.html"><span class="nav-label">DataFrameColumnAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameColumnCount.html"><span class="nav-label">DataFrameColumnCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameLiteral.html"><span class="nav-label">DataFrameLiteral</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameLiteralColumn.html"><span class="nav-label">DataFrameLiteralColumn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameRelease.html"><span class="nav-label">DataFrameRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameRetain.html"><span class="nav-label">DataFrameRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameRowCount.html"><span class="nav-label">DataFrameRowCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameStringColumnAccess.html"><span class="nav-label">DataFrameStringColumnAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataFrameType.html"><span class="nav-label">DataFrameType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataType.html"><span class="nav-label">DataType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DataTypeOps.html"><span class="nav-label">DataTypeOps</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Date.html"><span class="nav-label">Date</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DateTime.html"><span class="nav-label">DateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DeleteStmt.html"><span class="nav-label">DeleteStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DictComprehension.html"><span class="nav-label">DictComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DivBinOp.html"><span class="nav-label">DivBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DoWhileExpr.html"><span class="nav-label">DoWhileExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.DoWhileStmt.html"><span class="nav-label">DoWhileStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Ellipsis.html"><span class="nav-label">Ellipsis</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.EnumDeclStmt.html"><span class="nav-label">EnumDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.EqBinOp.html"><span class="nav-label">EqBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ExceptionHandlerStmt.html"><span class="nav-label">ExceptionHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Expr.html"><span class="nav-label">Expr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ExprType.html"><span class="nav-label">ExprType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FieldAccess.html"><span class="nav-label">FieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FileType.html"><span class="nav-label">FileType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FinallyHandlerStmt.html"><span class="nav-label">FinallyHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Float16.html"><span class="nav-label">Float16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Float32.html"><span class="nav-label">Float32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Float64.html"><span class="nav-label">Float64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Floating.html"><span class="nav-label">Floating</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ForCountLoopExpr.html"><span class="nav-label">ForCountLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ForCountLoopStmt.html"><span class="nav-label">ForCountLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ForInLoopStmt.html"><span class="nav-label">ForInLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ForRangeLoopExpr.html"><span class="nav-label">ForRangeLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ForRangeLoopStmt.html"><span class="nav-label">ForRangeLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FunctionAsyncDef.html"><span class="nav-label">FunctionAsyncDef</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FunctionCall.html"><span class="nav-label">FunctionCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FunctionDef.html"><span class="nav-label">FunctionDef</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FunctionPrototype.html"><span class="nav-label">FunctionPrototype</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.FunctionReturn.html"><span class="nav-label">FunctionReturn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.GeBinOp.html"><span class="nav-label">GeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.GeneratorExpr.html"><span class="nav-label">GeneratorExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.GotoStmt.html"><span class="nav-label">GotoStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.GtBinOp.html"><span class="nav-label">GtBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Identifier.html"><span class="nav-label">Identifier</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.IfExpr.html"><span class="nav-label">IfExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.IfStmt.html"><span class="nav-label">IfStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ImportExpr.html"><span class="nav-label">ImportExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ImportFromExpr.html"><span class="nav-label">ImportFromExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ImportFromStmt.html"><span class="nav-label">ImportFromStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Int64.html"><span class="nav-label">Int64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Int8.html"><span class="nav-label">Int8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Integer.html"><span class="nav-label">Integer</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.IsInstanceExpr.html"><span class="nav-label">IsInstanceExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.KeywordArgument.html"><span class="nav-label">KeywordArgument</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LambdaExpr.html"><span class="nav-label">LambdaExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LeBinOp.html"><span class="nav-label">LeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListAppend.html"><span class="nav-label">ListAppend</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListComprehension.html"><span class="nav-label">ListComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListCreate.html"><span class="nav-label">ListCreate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListExpr.html"><span class="nav-label">ListExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListIndex.html"><span class="nav-label">ListIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListLength.html"><span class="nav-label">ListLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Literal.html"><span class="nav-label">Literal</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralBoolean.html"><span class="nav-label">LiteralBoolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralComplex.html"><span class="nav-label">LiteralComplex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralComplex32.html"><span class="nav-label">LiteralComplex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralComplex64.html"><span class="nav-label">LiteralComplex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralDate.html"><span class="nav-label">LiteralDate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralDateTime.html"><span class="nav-label">LiteralDateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralDict.html"><span class="nav-label">LiteralDict</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralFloat.html"><span class="nav-label">LiteralFloat</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralFloat16.html"><span class="nav-label">LiteralFloat16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralFloat32.html"><span class="nav-label">LiteralFloat32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralFloat64.html"><span class="nav-label">LiteralFloat64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInt128.html"><span class="nav-label">LiteralInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInt16.html"><span class="nav-label">LiteralInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInt32.html"><span class="nav-label">LiteralInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInt64.html"><span class="nav-label">LiteralInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInt8.html"><span class="nav-label">LiteralInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralInteger.html"><span class="nav-label">LiteralInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralList.html"><span class="nav-label">LiteralList</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralNone.html"><span class="nav-label">LiteralNone</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralSet.html"><span class="nav-label">LiteralSet</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralString.html"><span class="nav-label">LiteralString</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralTime.html"><span class="nav-label">LiteralTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralTimestamp.html"><span class="nav-label">LiteralTimestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralTuple.html"><span class="nav-label">LiteralTuple</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUInt128.html"><span class="nav-label">LiteralUInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUInt16.html"><span class="nav-label">LiteralUInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUInt32.html"><span class="nav-label">LiteralUInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUInt64.html"><span class="nav-label">LiteralUInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUInt8.html"><span class="nav-label">LiteralUInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUTF8Char.html"><span class="nav-label">LiteralUTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LiteralUTF8String.html"><span class="nav-label">LiteralUTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LogicalAndBinOp.html"><span class="nav-label">LogicalAndBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LogicalOrBinOp.html"><span class="nav-label">LogicalOrBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.LtBinOp.html"><span class="nav-label">LtBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.MethodCall.html"><span class="nav-label">MethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ModBinOp.html"><span class="nav-label">ModBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Module.html"><span class="nav-label">Module</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ModuleNamespaceType.html"><span class="nav-label">ModuleNamespaceType</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.MulBinOp.html"><span class="nav-label">MulBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.MutabilityKind.html"><span class="nav-label">MutabilityKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NamedExpr.html"><span class="nav-label">NamedExpr</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+              <li><a href="astx.NamespaceKind.html"><span class="nav-label">NamespaceKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NamespaceType.html"><span class="nav-label">NamespaceType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NandOp.html"><span class="nav-label">NandOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NeBinOp.html"><span class="nav-label">NeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NorOp.html"><span class="nav-label">NorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NotOp.html"><span class="nav-label">NotOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NullCheck.html"><span class="nav-label">NullCheck</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NullFill.html"><span class="nav-label">NullFill</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NullableType.html"><span class="nav-label">NullableType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.NumericMode.html"><span class="nav-label">NumericMode</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.OpaqueHandleType.html"><span class="nav-label">OpaqueHandleType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.OperatorType.html"><span class="nav-label">OperatorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Package.html"><span class="nav-label">Package</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ParenthesizedExpr.html"><span class="nav-label">ParenthesizedExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.PointerType.html"><span class="nav-label">PointerType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.ScopeKind.html"><span class="nav-label">ScopeKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SeriesReduction.html"><span class="nav-label">SeriesReduction</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SeriesRelease.html"><span class="nav-label">SeriesRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SeriesRetain.html"><span class="nav-label">SeriesRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SeriesType.html"><span class="nav-label">SeriesType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SetComprehension.html"><span class="nav-label">SetComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SetType.html"><span class="nav-label">SetType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SignedInteger.html"><span class="nav-label">SignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SourceLocation.html"><span class="nav-label">SourceLocation</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Starred.html"><span class="nav-label">Starred</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StatementType.html"><span class="nav-label">StatementType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StaticFieldAccess.html"><span class="nav-label">StaticFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StaticMethodCall.html"><span class="nav-label">StaticMethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.String.html"><span class="nav-label">String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StructDeclStmt.html"><span class="nav-label">StructDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StructDefStmt.html"><span class="nav-label">StructDefStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.StructType.html"><span class="nav-label">StructType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SubBinOp.html"><span class="nav-label">SubBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SubscriptExpr.html"><span class="nav-label">SubscriptExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.SwitchStmt.html"><span class="nav-label">SwitchStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Target.html"><span class="nav-label">Target</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TemplateParam.html"><span class="nav-label">TemplateParam</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TemplateTypeVar.html"><span class="nav-label">TemplateTypeVar</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorByteOffset.html"><span class="nav-label">TensorByteOffset</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorElementCount.html"><span class="nav-label">TensorElementCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorIndex.html"><span class="nav-label">TensorIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorLiteral.html"><span class="nav-label">TensorLiteral</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorNDim.html"><span class="nav-label">TensorNDim</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorRelease.html"><span class="nav-label">TensorRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorRetain.html"><span class="nav-label">TensorRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorShape.html"><span class="nav-label">TensorShape</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorStore.html"><span class="nav-label">TensorStore</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorStride.html"><span class="nav-label">TensorStride</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorType.html"><span class="nav-label">TensorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TensorView.html"><span class="nav-label">TensorView</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ThrowStmt.html"><span class="nav-label">ThrowStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Time.html"><span class="nav-label">Time</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Timestamp.html"><span class="nav-label">Timestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TupleType.html"><span class="nav-label">TupleType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TypeCastExpr.html"><span class="nav-label">TypeCastExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.TypeOfExpr.html"><span class="nav-label">TypeOfExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UInt128.html"><span class="nav-label">UInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UInt16.html"><span class="nav-label">UInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UInt32.html"><span class="nav-label">UInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UInt64.html"><span class="nav-label">UInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UInt8.html"><span class="nav-label">UInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UTF8Char.html"><span class="nav-label">UTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UTF8String.html"><span class="nav-label">UTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UnaryOp.html"><span class="nav-label">UnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Undefined.html"><span class="nav-label">Undefined</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UnionType.html"><span class="nav-label">UnionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.UnsignedInteger.html"><span class="nav-label">UnsignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.Variable.html"><span class="nav-label">Variable</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.VariableAssignment.html"><span class="nav-label">VariableAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.VariableDeclaration.html"><span class="nav-label">VariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.VisibilityKind.html"><span class="nav-label">VisibilityKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.WalrusOp.html"><span class="nav-label">WalrusOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.WhileExpr.html"><span class="nav-label">WhileExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.WhileStmt.html"><span class="nav-label">WhileStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.WithStmt.html"><span class="nav-label">WithStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.XnorOp.html"><span class="nav-label">XnorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.XorOp.html"><span class="nav-label">XorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.YieldExpr.html"><span class="nav-label">YieldExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.YieldFromExpr.html"><span class="nav-label">YieldFromExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.YieldStmt.html"><span class="nav-label">YieldStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.add_generated_template_node.html"><span class="nav-label">add_generated_template_node</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.binary_op_type_for_opcode.html"><span class="nav-label">binary_op_type_for_opcode</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.clear_generated_template_nodes.html"><span class="nav-label">clear_generated_template_nodes</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.generated_template_nodes.html"><span class="nav-label">generated_template_nodes</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.get_template_args.html"><span class="nav-label">get_template_args</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.get_template_params.html"><span class="nav-label">get_template_params</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.get_version.html"><span class="nav-label">get_version</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.is_template_node.html"><span class="nav-label">is_template_node</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.is_template_specialization.html"><span class="nav-label">is_template_specialization</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.mark_template_specialization.html"><span class="nav-label">mark_template_specialization</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.set_template_args.html"><span class="nav-label">set_template_args</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.set_template_params.html"><span class="nav-label">set_template_params</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.specialize_binary_op.html"><span class="nav-label">specialize_binary_op</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.template_specialization_name.html"><span class="nav-label">template_specialization_name</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">array</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.array.html" aria-label="array module overview">Module overview</a></li>
+              
+              <li><a href="astx.array.ArrayInt32ArrayLength.html"><span class="nav-label">ArrayInt32ArrayLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">base</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.base.html" aria-label="base module overview">Module overview</a></li>
+              
+              <li><a href="astx.base.DataTypesStruct.html"><span class="nav-label">DataTypesStruct</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+              <li><a href="astx.base.DictDataTypesStruct.html"><span class="nav-label">DictDataTypesStruct</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+              <li><a href="astx.base.ExprType.html"><span class="nav-label">ExprType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.base.PrimitivesStruct.html"><span class="nav-label">PrimitivesStruct</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+              <li><a href="astx.base.ReprStruct.html"><span class="nav-label">ReprStruct</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">binary_op</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.binary_op.html" aria-label="binary_op module overview">Module overview</a></li>
+              
+              <li><a href="astx.binary_op.AddBinOp.html"><span class="nav-label">AddBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.AssignmentBinOp.html"><span class="nav-label">AssignmentBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.BitAndBinOp.html"><span class="nav-label">BitAndBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.BitOrBinOp.html"><span class="nav-label">BitOrBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.BitXorBinOp.html"><span class="nav-label">BitXorBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.DivBinOp.html"><span class="nav-label">DivBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.EqBinOp.html"><span class="nav-label">EqBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.GeBinOp.html"><span class="nav-label">GeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.GtBinOp.html"><span class="nav-label">GtBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.LeBinOp.html"><span class="nav-label">LeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.LogicalAndBinOp.html"><span class="nav-label">LogicalAndBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.LogicalOrBinOp.html"><span class="nav-label">LogicalOrBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.LtBinOp.html"><span class="nav-label">LtBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.ModBinOp.html"><span class="nav-label">ModBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.MulBinOp.html"><span class="nav-label">MulBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.NeBinOp.html"><span class="nav-label">NeBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.SPECIALIZED_BINARY_OP_EXTRA.html"><span class="nav-label">SPECIALIZED_BINARY_OP_EXTRA</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.binary_op.SubBinOp.html"><span class="nav-label">SubBinOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.binary_op.binary_op_type_for_opcode.html"><span class="nav-label">binary_op_type_for_opcode</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.binary_op.specialize_binary_op.html"><span class="nav-label">specialize_binary_op</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">blocks</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.blocks.html" aria-label="blocks module overview">Module overview</a></li>
+              
+              <li><a href="astx.blocks.Block.html"><span class="nav-label">Block</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">buffer</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.buffer.html" aria-label="buffer module overview">Module overview</a></li>
+              
+              <li><a href="astx.buffer.BufferOwnerType.html"><span class="nav-label">BufferOwnerType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewDescriptor.html"><span class="nav-label">BufferViewDescriptor</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewIndex.html"><span class="nav-label">BufferViewIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewRelease.html"><span class="nav-label">BufferViewRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewRetain.html"><span class="nav-label">BufferViewRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewStore.html"><span class="nav-label">BufferViewStore</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewType.html"><span class="nav-label">BufferViewType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.buffer.BufferViewWrite.html"><span class="nav-label">BufferViewWrite</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">callables</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.callables.html" aria-label="callables module overview">Module overview</a></li>
+              
+              <li><a href="astx.callables.Argument.html"><span class="nav-label">Argument</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.Arguments.html"><span class="nav-label">Arguments</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.AwaitExpr.html"><span class="nav-label">AwaitExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.FunctionAsyncDef.html"><span class="nav-label">FunctionAsyncDef</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.FunctionCall.html"><span class="nav-label">FunctionCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.FunctionDef.html"><span class="nav-label">FunctionDef</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.FunctionPrototype.html"><span class="nav-label">FunctionPrototype</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.FunctionReturn.html"><span class="nav-label">FunctionReturn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.KeywordArgument.html"><span class="nav-label">KeywordArgument</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.LambdaExpr.html"><span class="nav-label">LambdaExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.UNDEFINED.html"><span class="nav-label">UNDEFINED</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.callables.YieldExpr.html"><span class="nav-label">YieldExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.YieldFromExpr.html"><span class="nav-label">YieldFromExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.callables.YieldStmt.html"><span class="nav-label">YieldStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">classes</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.classes.html" aria-label="classes module overview">Module overview</a></li>
+              
+              <li><a href="astx.classes.CLASS_BODY_DEFAULT.html"><span class="nav-label">CLASS_BODY_DEFAULT</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.classes.ClassDeclStmt.html"><span class="nav-label">ClassDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes.ClassDefStmt.html"><span class="nav-label">ClassDefStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes.EnumDeclStmt.html"><span class="nav-label">EnumDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes.StructDeclStmt.html"><span class="nav-label">StructDeclStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes.StructDefStmt.html"><span class="nav-label">StructDefStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">classes_ext</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.classes_ext.html" aria-label="classes_ext module overview">Module overview</a></li>
+              
+              <li><a href="astx.classes_ext.BaseFieldAccess.html"><span class="nav-label">BaseFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.BaseMethodCall.html"><span class="nav-label">BaseMethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.ClassConstruct.html"><span class="nav-label">ClassConstruct</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.ClassDefStmt.html"><span class="nav-label">ClassDefStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.ClassType.html"><span class="nav-label">ClassType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.MethodCall.html"><span class="nav-label">MethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.StaticFieldAccess.html"><span class="nav-label">StaticFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.classes_ext.StaticMethodCall.html"><span class="nav-label">StaticMethodCall</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">collections</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.collections.html" aria-label="collections module overview">Module overview</a></li>
+              
+              <li><a href="astx.collections.CollectionContains.html"><span class="nav-label">CollectionContains</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.CollectionCount.html"><span class="nav-label">CollectionCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.CollectionIndex.html"><span class="nav-label">CollectionIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.CollectionIsEmpty.html"><span class="nav-label">CollectionIsEmpty</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.CollectionLength.html"><span class="nav-label">CollectionLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.ListAppend.html"><span class="nav-label">ListAppend</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.ListCreate.html"><span class="nav-label">ListCreate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.ListExpr.html"><span class="nav-label">ListExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.ListIndex.html"><span class="nav-label">ListIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.ListLength.html"><span class="nav-label">ListLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5" open>
+            <summary><span class="nav-label">collections.common</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.collections.common.html" aria-label="collections.common module overview">Module overview</a></li>
+              
+              <li><a href="astx.collections.common.CollectionContains.html"><span class="nav-label">CollectionContains</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.common.CollectionCount.html" aria-current="page"><span class="nav-label">CollectionCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.common.CollectionIndex.html"><span class="nav-label">CollectionIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.common.CollectionIsEmpty.html"><span class="nav-label">CollectionIsEmpty</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.common.CollectionLength.html"><span class="nav-label">CollectionLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">collections.list</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.collections.list.html" aria-label="collections.list module overview">Module overview</a></li>
+              
+              <li><a href="astx.collections.list.ListAppend.html"><span class="nav-label">ListAppend</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.list.ListCreate.html"><span class="nav-label">ListCreate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.list.ListExpr.html"><span class="nav-label">ListExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.list.ListIndex.html"><span class="nav-label">ListIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.collections.list.ListLength.html"><span class="nav-label">ListLength</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">comprehensions</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.comprehensions.html" aria-label="comprehensions module overview">Module overview</a></li>
+              
+              <li><a href="astx.comprehensions.Comprehension.html"><span class="nav-label">Comprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.comprehensions.ComprehensionClause.html"><span class="nav-label">ComprehensionClause</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.comprehensions.GeneratorExpr.html"><span class="nav-label">GeneratorExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.comprehensions.ListComprehension.html"><span class="nav-label">ListComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.comprehensions.SetComprehension.html"><span class="nav-label">SetComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">context</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.context.html" aria-label="context module overview">Module overview</a></li>
+              
+              <li><a href="astx.context.WithStmt.html"><span class="nav-label">WithStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">context_manager</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.context_manager.html" aria-label="context_manager module overview">Module overview</a></li>
+              
+              <li><a href="astx.context_manager.WithItem.html"><span class="nav-label">WithItem</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.context_manager.WithStmt.html"><span class="nav-label">WithStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">data</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.data.html" aria-label="data module overview">Module overview</a></li>
+              
+              <li><a href="astx.data.DeleteStmt.html"><span class="nav-label">DeleteStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.data.Identifier.html"><span class="nav-label">Identifier</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.data.InlineVariableDeclaration.html"><span class="nav-label">InlineVariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.data.UNDEFINED.html"><span class="nav-label">UNDEFINED</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.data.Variable.html"><span class="nav-label">Variable</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.data.VariableDeclaration.html"><span class="nav-label">VariableDeclaration</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">dataframe</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.dataframe.html" aria-label="dataframe module overview">Module overview</a></li>
+              
+              <li><a href="astx.dataframe.DataFrameColumn.html"><span class="nav-label">DataFrameColumn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameColumnAccess.html"><span class="nav-label">DataFrameColumnAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameColumnCount.html"><span class="nav-label">DataFrameColumnCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameLiteral.html"><span class="nav-label">DataFrameLiteral</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameLiteralColumn.html"><span class="nav-label">DataFrameLiteralColumn</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameRelease.html"><span class="nav-label">DataFrameRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameRetain.html"><span class="nav-label">DataFrameRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameRowCount.html"><span class="nav-label">DataFrameRowCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameStringColumnAccess.html"><span class="nav-label">DataFrameStringColumnAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.DataFrameType.html"><span class="nav-label">DataFrameType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.SeriesRelease.html"><span class="nav-label">SeriesRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.SeriesRetain.html"><span class="nav-label">SeriesRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.dataframe.SeriesType.html"><span class="nav-label">SeriesType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">exceptions</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.exceptions.html" aria-label="exceptions module overview">Module overview</a></li>
+              
+              <li><a href="astx.exceptions.CatchHandlerStmt.html"><span class="nav-label">CatchHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.exceptions.ExceptionHandlerStmt.html"><span class="nav-label">ExceptionHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.exceptions.FinallyHandlerStmt.html"><span class="nav-label">FinallyHandlerStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.exceptions.ThrowStmt.html"><span class="nav-label">ThrowStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">ffi</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.ffi.html" aria-label="ffi module overview">Module overview</a></li>
+              
+              <li><a href="astx.ffi.OpaqueHandleType.html"><span class="nav-label">OpaqueHandleType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.ffi.PointerType.html"><span class="nav-label">PointerType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">flows</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.flows.html" aria-label="flows module overview">Module overview</a></li>
+              
+              <li><a href="astx.flows.AsyncForRangeLoopExpr.html"><span class="nav-label">AsyncForRangeLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.AsyncForRangeLoopStmt.html"><span class="nav-label">AsyncForRangeLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.BreakStmt.html"><span class="nav-label">BreakStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.CaseStmt.html"><span class="nav-label">CaseStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.ContinueStmt.html"><span class="nav-label">ContinueStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.DoWhileExpr.html"><span class="nav-label">DoWhileExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.DoWhileStmt.html"><span class="nav-label">DoWhileStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.ForCountLoopExpr.html"><span class="nav-label">ForCountLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.ForCountLoopStmt.html"><span class="nav-label">ForCountLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.ForRangeLoopExpr.html"><span class="nav-label">ForRangeLoopExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.ForRangeLoopStmt.html"><span class="nav-label">ForRangeLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.GotoStmt.html"><span class="nav-label">GotoStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.IfExpr.html"><span class="nav-label">IfExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.IfStmt.html"><span class="nav-label">IfStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.SwitchStmt.html"><span class="nav-label">SwitchStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.WhileExpr.html"><span class="nav-label">WhileExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.flows.WhileStmt.html"><span class="nav-label">WhileStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">io</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.io.html" aria-label="io module overview">Module overview</a></li>
+              
+              <li><a href="astx.io.FileType.html"><span class="nav-label">FileType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">iterables</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.iterables.html" aria-label="iterables module overview">Module overview</a></li>
+              
+              <li><a href="astx.iterables.DictComprehension.html"><span class="nav-label">DictComprehension</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.iterables.ForInLoopStmt.html"><span class="nav-label">ForInLoopStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.html" aria-label="literals module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.Literal.html"><span class="nav-label">Literal</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralBoolean.html"><span class="nav-label">LiteralBoolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralComplex.html"><span class="nav-label">LiteralComplex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralComplex32.html"><span class="nav-label">LiteralComplex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralComplex64.html"><span class="nav-label">LiteralComplex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralDate.html"><span class="nav-label">LiteralDate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralDateTime.html"><span class="nav-label">LiteralDateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralDict.html"><span class="nav-label">LiteralDict</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralFloat.html"><span class="nav-label">LiteralFloat</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralFloat16.html"><span class="nav-label">LiteralFloat16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralFloat32.html"><span class="nav-label">LiteralFloat32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralFloat64.html"><span class="nav-label">LiteralFloat64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInt128.html"><span class="nav-label">LiteralInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInt16.html"><span class="nav-label">LiteralInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInt32.html"><span class="nav-label">LiteralInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInt64.html"><span class="nav-label">LiteralInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInt8.html"><span class="nav-label">LiteralInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralInteger.html"><span class="nav-label">LiteralInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralList.html"><span class="nav-label">LiteralList</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralNone.html"><span class="nav-label">LiteralNone</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralSet.html"><span class="nav-label">LiteralSet</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralString.html"><span class="nav-label">LiteralString</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralTime.html"><span class="nav-label">LiteralTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralTimestamp.html"><span class="nav-label">LiteralTimestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralTuple.html"><span class="nav-label">LiteralTuple</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUInt128.html"><span class="nav-label">LiteralUInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUInt16.html"><span class="nav-label">LiteralUInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUInt32.html"><span class="nav-label">LiteralUInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUInt64.html"><span class="nav-label">LiteralUInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUInt8.html"><span class="nav-label">LiteralUInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUTF8Char.html"><span class="nav-label">LiteralUTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.LiteralUTF8String.html"><span class="nav-label">LiteralUTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.base</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.base.html" aria-label="literals.base module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.base.Literal.html"><span class="nav-label">Literal</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.base.LiteralNone.html"><span class="nav-label">LiteralNone</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.boolean</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.boolean.html" aria-label="literals.boolean module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.boolean.LiteralBoolean.html"><span class="nav-label">LiteralBoolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.collections</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.collections.html" aria-label="literals.collections module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.collections.LiteralDict.html"><span class="nav-label">LiteralDict</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.collections.LiteralList.html"><span class="nav-label">LiteralList</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.collections.LiteralSet.html"><span class="nav-label">LiteralSet</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.collections.LiteralTuple.html"><span class="nav-label">LiteralTuple</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.numeric</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.numeric.html" aria-label="literals.numeric module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralComplex.html"><span class="nav-label">LiteralComplex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralComplex32.html"><span class="nav-label">LiteralComplex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralComplex64.html"><span class="nav-label">LiteralComplex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralFloat.html"><span class="nav-label">LiteralFloat</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralFloat16.html"><span class="nav-label">LiteralFloat16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralFloat32.html"><span class="nav-label">LiteralFloat32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralFloat64.html"><span class="nav-label">LiteralFloat64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInt128.html"><span class="nav-label">LiteralInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInt16.html"><span class="nav-label">LiteralInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInt32.html"><span class="nav-label">LiteralInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInt64.html"><span class="nav-label">LiteralInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInt8.html"><span class="nav-label">LiteralInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralInteger.html"><span class="nav-label">LiteralInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralUInt128.html"><span class="nav-label">LiteralUInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralUInt16.html"><span class="nav-label">LiteralUInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralUInt32.html"><span class="nav-label">LiteralUInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralUInt64.html"><span class="nav-label">LiteralUInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.numeric.LiteralUInt8.html"><span class="nav-label">LiteralUInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.string</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.string.html" aria-label="literals.string module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.string.LiteralString.html"><span class="nav-label">LiteralString</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.string.LiteralUTF8Char.html"><span class="nav-label">LiteralUTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.string.LiteralUTF8String.html"><span class="nav-label">LiteralUTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">literals.temporal</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.literals.temporal.html" aria-label="literals.temporal module overview">Module overview</a></li>
+              
+              <li><a href="astx.literals.temporal.LiteralDate.html"><span class="nav-label">LiteralDate</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.temporal.LiteralDateTime.html"><span class="nav-label">LiteralDateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.temporal.LiteralTime.html"><span class="nav-label">LiteralTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.literals.temporal.LiteralTimestamp.html"><span class="nav-label">LiteralTimestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">mixes</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.mixes.html" aria-label="mixes module overview">Module overview</a></li>
+              
+              <li><a href="astx.mixes.NamedExpr.html"><span class="nav-label">NamedExpr</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">modifiers</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.modifiers.html" aria-label="modifiers module overview">Module overview</a></li>
+              
+              <li><a href="astx.modifiers.MutabilityKind.html"><span class="nav-label">MutabilityKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.modifiers.ScopeKind.html"><span class="nav-label">ScopeKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.modifiers.VisibilityKind.html"><span class="nav-label">VisibilityKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">modules</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.modules.html" aria-label="modules module overview">Module overview</a></li>
+              
+              <li><a href="astx.modules.ModuleNamespaceType.html"><span class="nav-label">ModuleNamespaceType</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.modules.NamespaceKind.html"><span class="nav-label">NamespaceKind</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.modules.NamespaceType.html"><span class="nav-label">NamespaceType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">nullable</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.nullable.html" aria-label="nullable module overview">Module overview</a></li>
+              
+              <li><a href="astx.nullable.ColumnType.html"><span class="nav-label">ColumnType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.nullable.NullCheck.html"><span class="nav-label">NullCheck</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.nullable.NullFill.html"><span class="nav-label">NullFill</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.nullable.NullableType.html"><span class="nav-label">NullableType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.nullable.SeriesReduction.html"><span class="nav-label">SeriesReduction</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">numeric_mode</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.numeric_mode.html" aria-label="numeric_mode module overview">Module overview</a></li>
+              
+              <li><a href="astx.numeric_mode.NumericMode.html"><span class="nav-label">NumericMode</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">operators</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.operators.html" aria-label="operators module overview">Module overview</a></li>
+              
+              <li><a href="astx.operators.AssignmentExpr.html"><span class="nav-label">AssignmentExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.operators.AugAssign.html"><span class="nav-label">AugAssign</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.operators.CompareOp.html"><span class="nav-label">CompareOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.operators.OpCodeAugAssign.html"><span class="nav-label">OpCodeAugAssign</span><span class="api-kind api-kind--type-alias">type-alias</span></a></li>
+              
+              <li><a href="astx.operators.Starred.html"><span class="nav-label">Starred</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.operators.VariableAssignment.html"><span class="nav-label">VariableAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.operators.WalrusOp.html"><span class="nav-label">WalrusOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">packages</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.packages.html" aria-label="packages module overview">Module overview</a></li>
+              
+              <li><a href="astx.packages.AliasExpr.html"><span class="nav-label">AliasExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.ImportExpr.html"><span class="nav-label">ImportExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.ImportFromExpr.html"><span class="nav-label">ImportFromExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.ImportFromStmt.html"><span class="nav-label">ImportFromStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.ImportStmt.html"><span class="nav-label">ImportStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.Module.html"><span class="nav-label">Module</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.Package.html"><span class="nav-label">Package</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.Program.html"><span class="nav-label">Program</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.packages.Target.html"><span class="nav-label">Target</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">structs</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.structs.html" aria-label="structs module overview">Module overview</a></li>
+              
+              <li><a href="astx.structs.FieldAccess.html"><span class="nav-label">FieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.structs.StructType.html"><span class="nav-label">StructType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">subscript</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.subscript.html" aria-label="subscript module overview">Module overview</a></li>
+              
+              <li><a href="astx.subscript.Ellipsis.html"><span class="nav-label">Ellipsis</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.subscript.SubscriptExpr.html"><span class="nav-label">SubscriptExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">symbol_table</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.symbol_table.html" aria-label="symbol_table module overview">Module overview</a></li>
+              
+              <li><a href="astx.symbol_table.Scope.html"><span class="nav-label">Scope</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.symbol_table.ScopeNode.html"><span class="nav-label">ScopeNode</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.symbol_table.ScopeNodeBase.html"><span class="nav-label">ScopeNodeBase</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.symbol_table.SymbolTable.html"><span class="nav-label">SymbolTable</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">system</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.system.html" aria-label="system module overview">Module overview</a></li>
+              
+              <li><a href="astx.system.AssertStmt.html"><span class="nav-label">AssertStmt</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.system.Cast.html"><span class="nav-label">Cast</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.system.IsInstanceExpr.html"><span class="nav-label">IsInstanceExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.system.PrintExpr.html"><span class="nav-label">PrintExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.system.TypeOfExpr.html"><span class="nav-label">TypeOfExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">templates</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.templates.html" aria-label="templates module overview">Module overview</a></li>
+              
+              <li><a href="astx.templates.TemplateParam.html"><span class="nav-label">TemplateParam</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.templates.TemplateTypeVar.html"><span class="nav-label">TemplateTypeVar</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.templates.UnionType.html"><span class="nav-label">UnionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.templates.add_generated_template_node.html"><span class="nav-label">add_generated_template_node</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.clear_generated_template_nodes.html"><span class="nav-label">clear_generated_template_nodes</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.generated_template_nodes.html"><span class="nav-label">generated_template_nodes</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.get_template_args.html"><span class="nav-label">get_template_args</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.get_template_params.html"><span class="nav-label">get_template_params</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.is_template_node.html"><span class="nav-label">is_template_node</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.is_template_specialization.html"><span class="nav-label">is_template_specialization</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.mark_template_specialization.html"><span class="nav-label">mark_template_specialization</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.set_template_args.html"><span class="nav-label">set_template_args</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.set_template_params.html"><span class="nav-label">set_template_params</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.templates.template_specialization_name.html"><span class="nav-label">template_specialization_name</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">tensor</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.tensor.html" aria-label="tensor module overview">Module overview</a></li>
+              
+              <li><a href="astx.tensor.TensorByteOffset.html"><span class="nav-label">TensorByteOffset</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorElementCount.html"><span class="nav-label">TensorElementCount</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorIndex.html"><span class="nav-label">TensorIndex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorLiteral.html"><span class="nav-label">TensorLiteral</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorNDim.html"><span class="nav-label">TensorNDim</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorRelease.html"><span class="nav-label">TensorRelease</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorRetain.html"><span class="nav-label">TensorRetain</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorShape.html"><span class="nav-label">TensorShape</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorStore.html"><span class="nav-label">TensorStore</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorStride.html"><span class="nav-label">TensorStride</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorType.html"><span class="nav-label">TensorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.tensor.TensorView.html"><span class="nav-label">TensorView</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">tools</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.tools.html" aria-label="tools module overview">Module overview</a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">tools.typing</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.tools.typing.html" aria-label="tools.typing module overview">Module overview</a></li>
+              
+              <li><a href="astx.tools.typing.typechecked.html"><span class="nav-label">typechecked</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.html" aria-label="types module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.AndOp.html"><span class="nav-label">AndOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.BinaryOp.html"><span class="nav-label">BinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.BoolBinaryOp.html"><span class="nav-label">BoolBinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.BoolUnaryOp.html"><span class="nav-label">BoolUnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Boolean--ad2e11542ae13307.html"><span class="nav-label">Boolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.CollectionType.html"><span class="nav-label">CollectionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Complex.html"><span class="nav-label">Complex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Complex32.html"><span class="nav-label">Complex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Complex64.html"><span class="nav-label">Complex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.DataTypeOps.html"><span class="nav-label">DataTypeOps</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Date.html"><span class="nav-label">Date</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.DateTime.html"><span class="nav-label">DateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Float16.html"><span class="nav-label">Float16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Float32.html"><span class="nav-label">Float32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Float64.html"><span class="nav-label">Float64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Floating.html"><span class="nav-label">Floating</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Int64.html"><span class="nav-label">Int64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Int8.html"><span class="nav-label">Int8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Integer.html"><span class="nav-label">Integer</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.NandOp.html"><span class="nav-label">NandOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.NorOp.html"><span class="nav-label">NorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.NotOp.html"><span class="nav-label">NotOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.SetType.html"><span class="nav-label">SetType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.SignedInteger.html"><span class="nav-label">SignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.String--509bb7095a565823.html"><span class="nav-label">String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.TemplateTypeVar.html"><span class="nav-label">TemplateTypeVar</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Time.html"><span class="nav-label">Time</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.Timestamp.html"><span class="nav-label">Timestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.TupleType.html"><span class="nav-label">TupleType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.TypeCastExpr.html"><span class="nav-label">TypeCastExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UInt128.html"><span class="nav-label">UInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UInt16.html"><span class="nav-label">UInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UInt32.html"><span class="nav-label">UInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UInt64.html"><span class="nav-label">UInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UInt8.html"><span class="nav-label">UInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UTF8Char.html"><span class="nav-label">UTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UTF8String.html"><span class="nav-label">UTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UnaryOp.html"><span class="nav-label">UnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UnionType.html"><span class="nav-label">UnionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.UnsignedInteger.html"><span class="nav-label">UnsignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.XnorOp.html"><span class="nav-label">XnorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.XorOp.html"><span class="nav-label">XorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.base</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.base.html" aria-label="types.base module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.base.AnyType.html"><span class="nav-label">AnyType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.base.NoneType.html"><span class="nav-label">NoneType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.boolean</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.boolean--b5af9fff125c0863.html" aria-label="types.boolean module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.boolean.Boolean.html"><span class="nav-label">Boolean</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.casting</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.casting.html" aria-label="types.casting module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.casting.TypeCastExpr.html"><span class="nav-label">TypeCastExpr</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.collections</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.collections.html" aria-label="types.collections module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.collections.CollectionType.html"><span class="nav-label">CollectionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.DictType.html"><span class="nav-label">DictType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.ListType.html"><span class="nav-label">ListType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.SequenceType.html"><span class="nav-label">SequenceType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.SetType.html"><span class="nav-label">SetType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections.TupleType.html"><span class="nav-label">TupleType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.collections._format_type_name.html"><span class="nav-label">_format_type_name</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.generic</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.generic.html" aria-label="types.generic module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.generic.GeneratorType.html"><span class="nav-label">GeneratorType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.generic.TemplateTypeVar.html"><span class="nav-label">TemplateTypeVar</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.generic.UnionType.html"><span class="nav-label">UnionType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.numeric</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.numeric.html" aria-label="types.numeric module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.numeric.Complex.html"><span class="nav-label">Complex</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Complex32.html"><span class="nav-label">Complex32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Complex64.html"><span class="nav-label">Complex64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Float16.html"><span class="nav-label">Float16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Float32.html"><span class="nav-label">Float32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Float64.html"><span class="nav-label">Float64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Floating.html"><span class="nav-label">Floating</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Int128.html"><span class="nav-label">Int128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Int16.html"><span class="nav-label">Int16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Int32.html"><span class="nav-label">Int32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Int64.html"><span class="nav-label">Int64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Int8.html"><span class="nav-label">Int8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Integer.html"><span class="nav-label">Integer</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.Number.html"><span class="nav-label">Number</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.SignedInteger.html"><span class="nav-label">SignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UInt128.html"><span class="nav-label">UInt128</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UInt16.html"><span class="nav-label">UInt16</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UInt32.html"><span class="nav-label">UInt32</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UInt64.html"><span class="nav-label">UInt64</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UInt8.html"><span class="nav-label">UInt8</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.numeric.UnsignedInteger.html"><span class="nav-label">UnsignedInteger</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.operators</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.operators.html" aria-label="types.operators module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.operators.AndOp.html"><span class="nav-label">AndOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.BinaryOp.html"><span class="nav-label">BinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.BoolBinaryOp.html"><span class="nav-label">BoolBinaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.BoolUnaryOp.html"><span class="nav-label">BoolUnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.DataTypeOps.html"><span class="nav-label">DataTypeOps</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.NandOp.html"><span class="nav-label">NandOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.NorOp.html"><span class="nav-label">NorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.NotOp.html"><span class="nav-label">NotOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.OrOp.html"><span class="nav-label">OrOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.UnaryOp.html"><span class="nav-label">UnaryOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.XnorOp.html"><span class="nav-label">XnorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.operators.XorOp.html"><span class="nav-label">XorOp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.string</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.string--ca8693d0d1e21904.html" aria-label="types.string module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.string.String.html"><span class="nav-label">String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.string.UTF8Char.html"><span class="nav-label">UTF8Char</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.string.UTF8String.html"><span class="nav-label">UTF8String</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.temporal</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.temporal.html" aria-label="types.temporal module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.temporal.Date.html"><span class="nav-label">Date</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.temporal.DateTime.html"><span class="nav-label">DateTime</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.temporal.Temporal.html"><span class="nav-label">Temporal</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.temporal.Time.html"><span class="nav-label">Time</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="astx.types.temporal.Timestamp.html"><span class="nav-label">Timestamp</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">types.ttypes</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.types.ttypes.html" aria-label="types.ttypes module overview">Module overview</a></li>
+              
+              <li><a href="astx.types.ttypes.t_boolean.html"><span class="nav-label">t_boolean</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_complex.html"><span class="nav-label">t_complex</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_complex32.html"><span class="nav-label">t_complex32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_complex64.html"><span class="nav-label">t_complex64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_date.html"><span class="nav-label">t_date</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_datetime.html"><span class="nav-label">t_datetime</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_float16.html"><span class="nav-label">t_float16</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_float32.html"><span class="nav-label">t_float32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_float64.html"><span class="nav-label">t_float64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_floating.html"><span class="nav-label">t_floating</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_int128.html"><span class="nav-label">t_int128</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_int16.html"><span class="nav-label">t_int16</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_int32.html"><span class="nav-label">t_int32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_int64.html"><span class="nav-label">t_int64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_int8.html"><span class="nav-label">t_int8</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_integer.html"><span class="nav-label">t_integer</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_none.html"><span class="nav-label">t_none</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_number.html"><span class="nav-label">t_number</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_signed_integer.html"><span class="nav-label">t_signed_integer</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_string.html"><span class="nav-label">t_string</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_temporal.html"><span class="nav-label">t_temporal</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_time.html"><span class="nav-label">t_time</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_timestamp.html"><span class="nav-label">t_timestamp</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_uint128.html"><span class="nav-label">t_uint128</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_uint16.html"><span class="nav-label">t_uint16</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_uint32.html"><span class="nav-label">t_uint32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_uint64.html"><span class="nav-label">t_uint64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_uint8.html"><span class="nav-label">t_uint8</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_unsigned_integer.html"><span class="nav-label">t_unsigned_integer</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_utf8_char.html"><span class="nav-label">t_utf8_char</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.types.ttypes.t_utf8_string.html"><span class="nav-label">t_utf8_string</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-5">
+            <summary><span class="nav-label">viz</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="astx.viz.html" aria-label="viz module overview">Module overview</a></li>
+              
+              <li><a href="astx.viz.Direction.html"><span class="nav-label">Direction</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="astx.viz._esc_mermaid_label.html"><span class="nav-label">_esc_mermaid_label</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz._find_mermaid_ascii.html"><span class="nav-label">_find_mermaid_ascii</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz._stable_id.html"><span class="nav-label">_stable_id</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz._traverse_ast_to_mermaid.html"><span class="nav-label">_traverse_ast_to_mermaid</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz.ast_to_mermaid.html"><span class="nav-label">ast_to_mermaid</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz.ast_to_mermaid_ascii.html"><span class="nav-label">ast_to_mermaid_ascii</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz.visualize_ascii.html"><span class="nav-label">visualize_ascii</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="astx.viz.visualize_image.html"><span class="nav-label">visualize_image</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+        </section>
+        
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">API reference</p>
+          
+          <p class="symbol-path">python:astx:astx.collections.common.CollectionCount</p>
+          
+        </div>
+        
+        
+        <h1 id="collectioncount"><span class="api-kind api-kind--class">class</span> CollectionCount</h1>
+<pre class="highlight"><code><span class="n">CollectionCount</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">)</span>
+</code></pre>
+<p>Source: packages/astx/src/astx/collections/common.py:223</p>
+<p>Common sequence count query node.</p>
+<p>Return how many times a value appears in a list or tuple as an Int32 value.</p>
+<h3 id="attributes">Attributes</h3>
+<ul>
+<li>
+<p><strong>base</strong> — <strong>Type:</strong> astx.AST</p>
+</li>
+<li>
+<p><strong>value</strong> — <strong>Type:</strong> astx.AST</p>
+</li>
+<li>
+<p><strong>type_</strong> — <strong>Type:</strong> astx.Int32</p>
+</li>
+</ul>
+<h2 id="methods">Methods</h2>
+<ul>
+<li>
+<p><a href="astx.collections.common.CollectionCount.__init__.html">__init__</a> — Initialize one sequence count query.</p>
+</li>
+<li>
+<p><a href="astx.collections.common.CollectionCount.get_struct.html">get_struct</a> — Return the structured representation.</p>
+</li>
+</ul>
+<h2 id="attributes-1">Attributes</h2>
+<ul>
+<li>
+<p><a href="astx.collections.common.CollectionCount.base.html">base</a> —</p>
+</li>
+<li>
+<p><a href="astx.collections.common.CollectionCount.type_.html">type_</a> —</p>
+</li>
+<li>
+<p><a href="astx.collections.common.CollectionCount.value.html">value</a> —</p>
+</li>
+</ul>
+
+      </main>
+      
+      <aside aria-label="On this page">
+        <div class="toc-panel">
+          <strong>On this page</strong>
+          <ul>
+            
+            <li class="toc-h3"><a href="#attributes">Attributes</a></li>
+            
+            <li class="toc-h2"><a href="#methods">Methods</a></li>
+            
+            <li class="toc-h2"><a href="#attributes-1">Attributes</a></li>
+            
+          </ul>
+        </div>
+      </aside>
+      
+    </div>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../../../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>

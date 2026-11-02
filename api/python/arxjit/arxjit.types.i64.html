@@ -1,0 +1,406 @@
+
+        
+        
+        
+        
+<!doctype html>
+<html lang="en" data-color-mode="auto" data-bs-theme="light" data-preference-key="doukimd:arx:color-mode" data-palette="terracotta" data-palettes="terracotta,ocean,forest,violet,slate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>i64 · ArxLang</title>
+    <script src="../../../theme.js"></script>
+    <script src="../../../search.js" defer></script>
+    
+    <link rel="stylesheet" href="../../../_doukimd/bootstrap/bootstrap.min.css">
+    
+    <link rel="stylesheet" href="../../../theme.css">
+    <link rel="stylesheet" href="../../../styles.css">
+    <meta name="description" content="A statically typed compiler ecosystem with LLVM and native Apache Arrow support.">
+    <link rel="icon" href="../../../favicon.ico">
+    
+  </head>
+  <body class="page-layout-docs">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <header class="site-header">
+      <a class="site-brand" href="../../../index.html">
+        <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
+        <span class="brand-name">ArxLang</span>
+        <span class="version badge rounded-pill">1.26.0</span>
+      </a>
+      
+      <nav class="site-navbar" aria-label="Primary">
+        <details class="navbar-panel" open>
+          <summary class="navbar-toggle">Menu</summary>
+          
+        <ul>
+          
+          <li>
+            
+            <a href="../../../index.html"><span class="nav-label">Home</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arx/index.html"><span class="nav-label">Arx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../astx/index.html"><span class="nav-label">ASTx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../irx/index.html"><span class="nav-label">IRx</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arxpy/index.html"><span class="nav-label">ArxPy</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../arxjit/index.html"><span class="nav-label">ArxJIT</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/arxpm.html"><span class="nav-label">ArxPM</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/vscode.html"><span class="nav-label">VS Code</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/jupyter.html"><span class="nav-label">Jupyter Kernel</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="../../../tools/douki.html"><span class="nav-label">Douki</span></a>
+            
+          </li>
+          
+          <li>
+            
+            <a href="https://github.com/arxlang/arx"><span class="nav-label">GitHub</span></a>
+            
+          </li>
+          
+        </ul>
+        
+        </details>
+      </nav>
+      
+      <div class="header-tools">
+        
+        <button class="search-open" id="search-open" type="button" aria-haspopup="dialog" aria-controls="search-dialog" aria-keyshortcuts="/ Control+k Meta+k" hidden>Search <kbd>/</kbd></button>
+        
+        <div class="palette-picker appearance-picker" hidden>
+          <label for="color-palette">Palette</label>
+          <select id="color-palette" class="form-select form-select-sm" aria-label="Color palette">
+            
+            <option value="terracotta">Terracotta</option>
+            
+            <option value="ocean">Ocean</option>
+            
+            <option value="forest">Forest</option>
+            
+            <option value="violet">Violet</option>
+            
+            <option value="slate">Slate</option>
+            
+          </select>
+        </div>
+        <div class="mode-picker appearance-picker" hidden>
+          <label for="color-mode">Appearance</label>
+          <select id="color-mode" class="form-select form-select-sm" aria-label="Color mode">
+            <option value="auto">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </header>
+    
+    <div class="layout layout--no-toc">
+      
+      <nav aria-label="Documentation">
+        <details class="navigation-panel" id="docs-navigation" open>
+          <summary class="navigation-toggle">Browse documentation</summary>
+          <div class="navigation-content">
+            <p class="sidebar-caption">ArxJIT</p>
+            
+        <ul class="sidebar-list">
+          
+          
+          
+          <li>
+            
+            <a href="../../../arxjit/index.html"><span class="nav-label">Overview</span></a>
+            
+          </li>
+          
+          
+          <li>
+            
+            <a href="../../../arxjit/design.html"><span class="nav-label">Python-to-ASTx Design</span></a>
+            
+          </li>
+          
+          
+          <li class="nav-active">
+            
+            
+        <section class="api-navigation" aria-label="Python API">
+          <a class="api-home" href="arxjit.html"><span class="nav-label">Python API</span></a>
+          
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">arxjit / arxjit</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.html" aria-label="arxjit / arxjit module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.ArxJitError.html"><span class="nav-label">ArxJitError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.Diagnostic.html"><span class="nav-label">Diagnostic</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.DiagnosticSeverity.html"><span class="nav-label">DiagnosticSeverity</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.ExtractedSource.html"><span class="nav-label">ExtractedSource</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.JitFunction.html"><span class="nav-label">JitFunction</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.LoweringError.html"><span class="nav-label">LoweringError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.SigType.html"><span class="nav-label">SigType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.Signature.html"><span class="nav-label">Signature</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.SourceExtractionError.html"><span class="nav-label">SourceExtractionError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.UnsupportedSyntaxError.html"><span class="nav-label">UnsupportedSyntaxError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.__version__.html"><span class="nav-label">__version__</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.bool_.html"><span class="nav-label">bool_</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.extract_source.html"><span class="nav-label">extract_source</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.f32.html"><span class="nav-label">f32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.f64.html"><span class="nav-label">f64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.get_version.html"><span class="nav-label">get_version</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.i32.html"><span class="nav-label">i32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.i64.html"><span class="nav-label">i64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.jit.html"><span class="nav-label">jit</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.lower.html"><span class="nav-label">lower</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.resolve_signature.html"><span class="nav-label">resolve_signature</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.validate.html"><span class="nav-label">validate</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">core</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.core.html" aria-label="core module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.core.JitFunction.html"><span class="nav-label">JitFunction</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.core.PyFunc.html"><span class="nav-label">PyFunc</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.core.jit.html"><span class="nav-label">jit</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">diagnostics</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.diagnostics.html" aria-label="diagnostics module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.diagnostics.Diagnostic.html"><span class="nav-label">Diagnostic</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.diagnostics.DiagnosticSeverity.html"><span class="nav-label">DiagnosticSeverity</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">errors</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.errors.html" aria-label="errors module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.errors.ArxJitError.html"><span class="nav-label">ArxJitError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.errors.LoweringError.html"><span class="nav-label">LoweringError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.errors.SourceExtractionError.html"><span class="nav-label">SourceExtractionError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.errors.UnsupportedSyntaxError.html"><span class="nav-label">UnsupportedSyntaxError</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">locations</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.locations.html" aria-label="locations module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.locations.char_column.html"><span class="nav-label">char_column</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="arxjit.locations.diagnostic.html"><span class="nav-label">diagnostic</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">lowering</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.lowering.html" aria-label="lowering module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.lowering.lower.html"><span class="nav-label">lower</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">reconcile</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.reconcile.html" aria-label="reconcile module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.reconcile.resolve_signature.html"><span class="nav-label">resolve_signature</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">source</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.source.html" aria-label="source module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.source.ExtractedSource.html"><span class="nav-label">ExtractedSource</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.source.extract_source.html"><span class="nav-label">extract_source</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3" open>
+            <summary><span class="nav-label">types</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.types.html" aria-label="types module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.types.SigType.html"><span class="nav-label">SigType</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.types.Signature.html"><span class="nav-label">Signature</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="arxjit.types.bool_.html"><span class="nav-label">bool_</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.types.f32.html"><span class="nav-label">f32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.types.f64.html"><span class="nav-label">f64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.types.i32.html"><span class="nav-label">i32</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+              <li><a href="arxjit.types.i64.html" aria-current="page"><span class="nav-label">i64</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+          
+          <details class="api-module" name="doukimd-api-sidebar-3">
+            <summary><span class="nav-label">validation</span></summary>
+            <ul class="api-members">
+              <li class="api-overview"><a href="arxjit.validation.html" aria-label="validation module overview">Module overview</a></li>
+              
+              <li><a href="arxjit.validation.validate.html"><span class="nav-label">validate</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+            </ul>
+          </details>
+        
+          
+        </section>
+        
+            
+          </li>
+          
+        </ul>
+        
+          </div>
+        </details>
+      </nav>
+      
+      <main id="content">
+        
+        
+        <div class="page-heading">
+          <p class="eyebrow">API reference</p>
+          
+          <p class="symbol-path">python:arxjit:arxjit.types.i64</p>
+          
+        </div>
+        
+        
+        <h1 id="i64"><span class="api-kind api-kind--attribute">attribute</span> i64</h1>
+<pre class="highlight"><code><span class="n">i64</span> <span class="o">=</span> <span class="n">SigType</span><span class="p">(</span><span class="s1">&#39;i64&#39;</span><span class="p">,</span> <span class="s1">&#39;Int64&#39;</span><span class="p">)</span>
+</code></pre>
+<p>Source: packages/arxjit/src/arxjit/types.py:83</p>
+
+      </main>
+      
+    </div>
+    
+    <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title" data-index-url="../../../search.json" data-limit="8" data-min-length="2">
+      <div class="search-heading"><h2 id="search-title">Search documentation</h2><form method="dialog"><button type="submit" class="search-close" aria-label="Close search">Close <kbd>Esc</kbd></button></form></div>
+      <label for="search-input">Search guides, notebooks, and API docs</label>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" aria-describedby="search-status" autofocus>
+      <p id="search-status" role="status" aria-live="polite">Type to search.</p>
+      <ol id="search-results" aria-label="Search results" aria-busy="false"></ol>
+    </dialog>
+    
+    <footer><span>arx</span><span>Built with <strong>DoukiMD</strong></span></footer>
+  </body>
+</html>
