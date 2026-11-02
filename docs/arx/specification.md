@@ -25,6 +25,22 @@ above `and`/`or`: `not a == b` means `not (a == b)`, whereas `!a == b` means
 adds numeric truthiness. Nullable/Series masks keep their existing eager,
 null-propagating operations rather than scalar short-circuiting.
 
+### Prefix increment and decrement
+
+Use `++value` or `--value` to update a mutable numeric variable by one. Both
+expressions yield the **updated** value:
+
+```arx
+var value: i32 = 3
+var increased: i32 = ++value  # value and increased are now 4
+var decreased: i32 = --value  # value and decreased are now 3
+```
+
+Postfix `value++` and `value--` are not supported. Use prefix mutation or an
+ordinary assignment such as `value = value + 1` or `value = value - 1`. Integer
+mutation follows the [checked overflow rules](#fixed-width-integer-overflow)
+below.
+
 ### Fixed-width integer overflow
 
 Fixed-width signed and unsigned 8–64-bit integer `+`, `-`, `*`, negation, and

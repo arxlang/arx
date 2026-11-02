@@ -147,7 +147,10 @@ class ExpressionParserMixin(ParserMixinBase):
 
     def parse_postfix(self) -> astx.AST:
         """
-        title: Parse postfix member access and method calls.
+        title: Parse member access, method calls, and subscripts.
+        summary: >-
+          Reject same-line postfix increment and decrement at their operator
+          token; prefix mutation in a following statement remains valid.
         returns:
           type: astx.AST
         """
@@ -238,6 +241,24 @@ class ExpressionParserMixin(ParserMixinBase):
                 expr = self._parse_dataframe_field_access(expr, member_name)
             else:
                 expr = astx.FieldAccess(expr, member_name)
+
+        token = self.tokens.cur_tok
+        if (
+            isinstance(expr, astx.Expr)
+            and token.kind == TokenKind.operator
+            and token.value in {"++", "--"}
+        ):
+            # Position follows the current lookahead. Use the preceding token
+            # rather than expr.loc, which may precede a multiline call.
+            previous = self.tokens.tokens[self.tokens.position - 2]
+            if token.location.line == previous.location.line:
+                operator = cast(str, token.value)
+                raise ParserException(
+                    f"Postfix '{operator}' is not supported; use prefix "
+                    f"mutation (e.g. '{operator}x') or assignment "
+                    f"(e.g. 'x = x {operator[0]} 1').",
+                    token.location,
+                )
 
         return expr
 

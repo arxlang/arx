@@ -66,6 +66,10 @@ def test_binop_precedence() -> None:
         ("a + b % c * d / e", "a + (((b % c) * d) / e)"),
         ("-a % b", "(-a) % b"),
         ("a * b % c", "(a * b) % c"),
+        ("a + +b", "a + (+b)"),
+        ("a - -b", "a - (-b)"),
+        ("a + ++b", "a + (++b)"),
+        ("a - --b", "a - (--b)"),
     ],
 )
 def test_prefix_and_remainder_grouping(source: str, grouped: str) -> None:
@@ -96,6 +100,11 @@ def test_prefix_and_remainder_grouping(source: str, grouped: str) -> None:
         ("!not b", "Parenthesize 'not'"),
         ("% a", "requires a left operand"),
         ("a % % b", "requires a left operand"),
+        (
+            "++return 0",
+            "Unary operator '\\+\\+' requires an expression operand",
+        ),
+        ("--return 0", "Unary operator '--' requires an expression operand"),
     ],
 )
 def test_invalid_prefix_operand(source: str, message: str) -> None:
@@ -112,6 +121,73 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match=message):
         parser.parse_expression()
+
+
+@pytest.mark.parametrize("operator", ["++", "--"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "x{operator}",
+        "x{operator}\n",
+        "x  {operator}",
+        "print(x{operator})",
+        "(x){operator}",
+        "x{operator} + 1",
+        "1 + x{operator}",
+        "object.value{operator}",
+        "values[0]{operator}",
+        "object.method()[0].value{operator}",
+        "café{operator}",
+        "call(\nx\n){operator}",
+        "for var i: i32 = 0; i < 3; i{operator}:\n  print(i)\n",
+        "fn main() -> i32:\n  var x: i32 = 3\n  x{operator}\n  return x\n",
+    ],
+)
+def test_postfix_mutation_reports_operator(source: str, operator: str) -> None:
+    """
+    title: Unsupported postfix mutation fails at its own operator token.
+    parameters:
+      source:
+        type: str
+      operator:
+        type: str
+    """
+    code = source.format(operator=operator)
+    before_operator = code.split(operator, 1)[0]
+    with pytest.raises(ParserException) as captured:
+        _parse_module(code)
+
+    error = captured.value
+    assert error.code == "ARX-PARSE-001"
+    assert f"Postfix '{operator}' is not supported" in error.message
+    assert f"'{operator}x'" in error.message
+    assert f"'x = x {operator[0]} 1'" in error.message
+    assert error.location is not None
+    assert error.location.line == before_operator.count("\n") + 1
+    assert error.location.col == len(before_operator.rsplit("\n", 1)[-1]) + 1
+
+
+@pytest.mark.parametrize("operator", ["++", "--"])
+@pytest.mark.parametrize("separator", ["; ", "\n", " # comment\n\n"])
+def test_prefix_mutation_after_statement_separator(
+    operator: str, separator: str
+) -> None:
+    """
+    title: A new statement's prefix is not the prior expression's postfix.
+    parameters:
+      operator:
+        type: str
+      separator:
+        type: str
+    """
+    tree = _parse_module(f"x{separator}{operator}y")
+    assert len(tree.nodes) == 2
+    assert isinstance(tree.nodes[0], astx.Identifier)
+    mutation = tree.nodes[1]
+    assert isinstance(mutation, astx.UnaryOp)
+    assert mutation.op_code == operator
+    assert isinstance(mutation.operand, astx.Identifier)
+    assert mutation.operand.name == "y"
 
 
 def test_parse_float_expr() -> None:

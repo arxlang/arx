@@ -104,3 +104,21 @@ fn test_for_count_loop_asserts() -> none:
   for var i: i32 = 0; i < 3; i + 1:
     assert i < 3, "count loop values should stay below the exit condition"
   assert skipped_count_loop() == 0
+
+fn test_prefix_mutation_values() -> none:
+  ```
+  title: test_prefix_mutation_values
+  summary: Prefix mutation stores and returns the updated value, including loop updates.
+  ```
+  var value: i32 = 3
+  var increased: i32 = ++value
+  assert value == 4
+  assert increased == 4
+  var decreased: i32 = --value
+  assert value == 3
+  assert decreased == 3
+
+  var total: i32 = 0
+  for var i: i32 = 0; i < 3; ++i:
+    total = total + i
+  assert total == 3
