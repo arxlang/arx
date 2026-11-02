@@ -432,6 +432,9 @@ class Lexer:
     def get_token(self) -> Token:
         """
         title: Get the next token.
+        summary: >-
+          Skip blank and comment-only lines before emitting indentation.
+          Trailing whitespace or comments produce only EOF, not indentation.
         returns:
           type: Token
           description: The next token from standard input.
@@ -449,22 +452,28 @@ class Lexer:
             self.initialized = True
 
         indent = 0
-        while self.last_char.isspace():
-            if self.last_char == "\t":
-                raise LexerError(
-                    "Tab characters are not allowed in Arx source",
-                    self.lex_loc,
-                    code="ARX-LEX-INDENT-001",
-                )
-            if self.last_char == "\n":
-                self.new_line = True
-                indent = 0
-            elif self.new_line:
-                indent += 1
+        while True:
+            while self.last_char.isspace():
+                if self.last_char == "\t":
+                    raise LexerError(
+                        "Tab characters are not allowed in Arx source",
+                        self.lex_loc,
+                        code="ARX-LEX-INDENT-001",
+                    )
+                if self.last_char == "\n":
+                    self.new_line = True
+                    indent = 0
+                elif self.new_line:
+                    indent += 1
 
-            self.last_char = self.advance()
+                self.last_char = self.advance()
 
-        if indent:
+            if self.last_char not in self._line_comment_delims:
+                break
+            while self.last_char not in (EOF, "\n", "\r"):
+                self.last_char = self.advance()
+
+        if indent and self.last_char != EOF:
             token = Token(
                 kind=TokenKind.indent,
                 value=indent,
@@ -573,12 +582,6 @@ class Lexer:
 
         if self.last_char == "`":
             return self._parse_docstring()
-
-        if self.last_char in self._line_comment_delims:
-            while self.last_char not in (EOF, "\n", "\r"):
-                self.last_char = self.advance()
-            if self.last_char != EOF:
-                return self.get_token()
 
         if self.last_char in ("=", "!", "<", ">", "-", "&", "|", "+"):
             return self._parse_operator()
