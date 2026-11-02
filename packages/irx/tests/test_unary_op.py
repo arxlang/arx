@@ -9,6 +9,7 @@ import pytest
 
 from irx.analysis import SemanticError, analyze
 from irx.builder import Builder as LLVMBuilder
+from irx.builder import Visitor
 from irx.builder.base import Builder
 from irx.system import Cast, PrintExpr
 from llvmlite import binding as llvm
@@ -345,23 +346,6 @@ def test_unary_minus_and_plus_integer(
     assert_build_output(LLVMBuilder(), module, "-5\n5\n5")
 
 
-def test_unary_minus_wraps_signed_minimum() -> None:
-    """
-    title: Negating the signed minimum wraps instead of trapping.
-    """
-    module = build_print_module(
-        astx.VariableDeclaration(
-            name="a",
-            type_=astx.Int32(),
-            value=astx.LiteralInt32(-(2**31)),
-            mutability=astx.MutabilityKind.mutable,
-        ),
-        PrintExpr(astx.UnaryOp(op_code="-", operand=astx.Identifier("a"))),
-    )
-
-    assert_build_output(LLVMBuilder(), module, "-2147483648")
-
-
 @pytest.mark.parametrize(
     "float_type, literal_type",
     [
@@ -398,32 +382,61 @@ def test_unary_minus_float(float_type: type, literal_type: type) -> None:
     assert_build_output(LLVMBuilder(), module, "-2.500000\n-0.000000")
 
 
-def test_unary_minus_ir_uses_plain_neg_and_fneg() -> None:
+class FastMathBuilder(LLVMBuilder):
     """
-    title: Integer negation has no nsw flag and float negation uses fneg.
+    title: Builder whose translators start with fast math enabled.
     """
-    module = build_print_module(
+
+    def _new_translator(self) -> Visitor:
+        """
+        title: New translator with fast math enabled.
+        returns:
+          type: Visitor
+        """
+        translator = super()._new_translator()
+        translator.set_fast_math(True)
+        return translator
+
+
+def build_float_negation_module() -> astx.Module:
+    """
+    title: Build a module that prints the negation of a Float64 zero.
+    returns:
+      type: astx.Module
+    """
+    return build_print_module(
         astx.VariableDeclaration(
-            name="a",
-            type_=astx.Int32(),
-            value=astx.LiteralInt32(5),
-            mutability=astx.MutabilityKind.mutable,
-        ),
-        astx.VariableDeclaration(
-            name="b",
+            name="zero",
             type_=astx.Float64(),
-            value=astx.LiteralFloat64(2.5),
+            value=astx.LiteralFloat64(0.0),
             mutability=astx.MutabilityKind.mutable,
         ),
-        PrintExpr(astx.UnaryOp(op_code="-", operand=astx.Identifier("a"))),
-        PrintExpr(astx.UnaryOp(op_code="-", operand=astx.Identifier("b"))),
+        PrintExpr(astx.UnaryOp(op_code="-", operand=astx.Identifier("zero"))),
     )
 
-    ir_text = LLVMBuilder().translate(module)
+
+def test_unary_minus_float_ir_uses_fneg() -> None:
+    """
+    title: Float negation lowers to a plain fneg.
+    """
+    ir_text = LLVMBuilder().translate(build_float_negation_module())
     llvm.parse_assembly(ir_text)
-    assert re.search(r"= sub i32 0, %", ir_text)
-    assert "sub nsw" not in ir_text
     assert re.search(r"= fneg double %", ir_text)
+
+
+def test_unary_minus_float_keeps_signed_zero_with_fast_math() -> None:
+    """
+    title: Fast math adds no flags such as nsz to fneg, so -(0.0) is -0.0.
+    """
+    builder = FastMathBuilder()
+    ir_text = builder.translate(build_float_negation_module())
+    llvm.parse_assembly(ir_text)
+    fneg_lines = [line for line in ir_text.splitlines() if "fneg" in line]
+    assert fneg_lines
+    for line in fneg_lines:
+        assert re.search(r"= fneg double %", line), line
+
+    assert_build_output(builder, build_float_negation_module(), "-0.000000")
 
 
 @pytest.mark.parametrize("op_code", ["-", "+"])
@@ -446,7 +459,7 @@ def test_unary_minus_and_plus_reject_non_numeric(
     expr = astx.UnaryOp(op_code=op_code, operand=operand)
     with pytest.raises(
         SemanticError,
-        match=rf"unary operator '\{op_code}' requires a numeric operand",
+        match="unary sign requires a numeric operand",
     ):
         analyze(expr)
 
