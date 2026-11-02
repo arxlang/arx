@@ -182,3 +182,14 @@ def test_unary_ops_string(
     assert repr(unary_op) != ""
     assert unary_op.get_struct() != {}
     assert unary_op.get_struct(simplified=True) != {}
+
+
+def test_bytes_is_not_text_or_a_mutable_list() -> None:
+    """
+    title: Export a distinct octet value, not Unicode or Arrow binary storage.
+    """
+    from astx.types import Bytes
+
+    value = Bytes()
+    assert isinstance(value, astx.Bytes)
+    assert not isinstance(value, (astx.String, astx.ListType))

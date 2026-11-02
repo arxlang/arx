@@ -106,7 +106,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            if isinstance(attribute.type_, astx.ListType):
+            if isinstance(attribute.type_, (astx.ListType, astx.Bytes)):
                 self.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "
                     "own dynamic list storage in this lifecycle subset",

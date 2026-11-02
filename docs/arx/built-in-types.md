@@ -49,8 +49,30 @@ digits are ASCII only. Numeric casts still use `cast`, not `int`. Whitespace is
 locale-independent and shared by splitting, stripping and integer parsing; its
 exact set is specified in the native text source contract. Invalid text/options
 and overflow raise recoverable errors rather than returning partial data. Text
-literals and text-file reads reject embedded NUL; arbitrary bytes are not yet a
-text-file workflow.
+literals and text-file reads reject embedded NUL; arbitrary octets use `bytes`
+and binary File methods instead.
+
+## Byte values
+
+`bytes([0, 255, 13, 10])` creates an immutable, length-aware octet buffer.
+`bytes()` is empty; `bytes(existing)` makes an independent copy. `len(data)`
+counts bytes and nonnegative indexing returns `u8`; indexing outside the buffer
+raises `IndexError`. NUL and invalid UTF-8 are ordinary bytes. This is not an
+Arrow `binary` column and does not require Arrow.
+
+Construction checks every integer in 0–255 without wrapping; Boolean, float,
+nullable, and text inputs are rejected. Sized integer sequences are accepted;
+single-pass iterators require an explicit `max_items` bound. An invalid value or
+exceeded bound publishes no partial buffer, but consumed input is not rewound.
+Unlike Python, scalar zero-fill construction, text encoding, and byte slices are
+not implemented.
+
+Content is immutable, but a local binding can be replaced. Buffers use the owned
+list lifecycle: parameters borrow; fresh results and returned local owners
+transfer ownership. Implicit local aliases are rejected: use `bytes(existing)`
+for a copy. Byte buffers in class/struct fields, nested containers, globals,
+extern signatures, and generator-owned storage are not supported. Independent
+[binary reads](file-io.md#bounded-binary-workflow) can outlive their File.
 
 ## Collections and nullable values
 
@@ -66,7 +88,8 @@ not interchangeable with non-nullable scalar arithmetic or Boolean conditions.
 
 ## File references
 
-[`File` and `open`](file-io.md) create shared class references to one text
-stream; lowercase `file` denotes the same type. References can be aliased,
-passed, returned, and stored in supported class fields. Closing through any
-alias closes the shared stream. Only the hidden native handle is uniquely owned.
+[`File` and `open`](file-io.md) create shared class references to one text or
+binary stream; lowercase `file` denotes the same type. References can be
+aliased, passed, returned, and stored in supported class fields. Closing through
+any alias closes the shared stream. Only the hidden native handle is uniquely
+owned.

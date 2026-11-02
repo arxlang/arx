@@ -1626,7 +1626,7 @@ class VisitorCore(BuilderVisitor):
             if pointee_type is None:
                 return None
             return pointee_type.as_pointer()
-        if isinstance(type_, astx.ListType):
+        if isinstance(type_, (astx.ListType, astx.Bytes)):
             return ir.LiteralStructType(
                 [
                     self._llvm.INT8_TYPE.as_pointer(),

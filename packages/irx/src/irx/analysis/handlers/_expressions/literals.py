@@ -613,7 +613,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             return
         if isinstance(
             self._expr_type(node.base),
-            (astx.SequenceType, astx.TensorType, astx.SeriesType),
+            (astx.SequenceType, astx.TensorType, astx.SeriesType, astx.Bytes),
         ):
             info.sequence_access = resolve_sequence_access(
                 self._expr_type(node.base)
@@ -1262,7 +1262,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             info.tensor_index = access
             self._set_type(node, self._expr_type(access))
             return
-        if isinstance(self._expr_type(node.value), astx.SequenceType):
+        if isinstance(
+            self._expr_type(node.value), (astx.SequenceType, astx.Bytes)
+        ):
             self.visit(node.index)
             info.sequence_access = resolve_sequence_access(
                 self._expr_type(node.value)

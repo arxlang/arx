@@ -62,6 +62,7 @@ from astx.types.operators import (
     XorOp,
 )
 from astx.types.string import (
+    Bytes,
     String,
     UTF8Char,
     UTF8String,
@@ -80,6 +81,7 @@ __all__ = [
     "BoolBinaryOp",
     "BoolUnaryOp",
     "Boolean",
+    "Bytes",
     "CollectionType",
     "Complex",
     "Complex32",

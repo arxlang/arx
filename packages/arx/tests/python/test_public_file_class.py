@@ -134,7 +134,7 @@ def test_file_constructor_argument_forms(factory: str, arguments: str) -> None:
     [
         "",
         "1",
-        '"x", "wb"',
+        '"x", "wb+"',
         '"x", buffering=0',
         '"x", encoding="latin-1"',
         '"x", errors="ignore"',

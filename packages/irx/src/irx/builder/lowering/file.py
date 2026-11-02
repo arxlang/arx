@@ -247,7 +247,16 @@ class FileVisitorMixin(VisitorMixinBase):
         error = self.file_error_buffer()
         function = self.require_runtime_symbol("file", "irx_file_open")
         status = self._llvm.ir_builder.call(
-            function, [values[resolution.path_index], mode, output, error]
+            function,
+            [
+                values[resolution.path_index],
+                mode,
+                ir.Constant(
+                    self._llvm.INT32_TYPE, int(resolution.text_options)
+                ),
+                output,
+                error,
+            ],
         )
         self.file_check(
             node, status, error, cleanup_temporaries=cleanup_temporaries
@@ -326,15 +335,30 @@ class FileVisitorMixin(VisitorMixinBase):
                         context="file argument",
                     )
                 )
+        builder = self._llvm.ir_builder
+        if operation.name == "write_bytes":
+            data = arguments.pop()
+            arguments.extend(
+                [
+                    builder.extract_value(data, 0),
+                    builder.extract_value(data, 1),
+                ]
+            )
+        byte_count: ir.Value | None = None
         output: ir.Value | None = None
-        if operation.name in {"read", "write"}:
+        if operation.name in {"read", "write", "read_bytes", "write_bytes"}:
             output_type = (
                 self._llvm.INT8_TYPE.as_pointer()
-                if operation.name == "read"
+                if operation.name in {"read", "read_bytes"}
                 else self._llvm.INT64_TYPE
             )
             output = self.create_entry_block_alloca("file_output", output_type)
             arguments.append(output)
+            if operation.name == "read_bytes":
+                byte_count = self.create_entry_block_alloca(
+                    "file_byte_count", self._llvm.INT64_TYPE
+                )
+                arguments.append(byte_count)
         error = self.file_error_buffer()
         arguments.append(error)
         function = self.require_runtime_symbol(
@@ -346,4 +370,23 @@ class FileVisitorMixin(VisitorMixinBase):
             result = self._llvm.ir_builder.load(output, name="file_value")
             if operation.name == "read":
                 self._register_owned_string_temporary(node, result)
+            if operation.name == "read_bytes":
+                from irx.builder.lowering.list import (  # noqa: PLC0415
+                    ListVisitorMixin,
+                )
+
+                lists = cast(ListVisitorMixin, self)
+                assert byte_count is not None
+                count = builder.load(byte_count)
+                descriptor = builder.insert_value(
+                    lists._empty_list_value(node), result, 0
+                )
+                descriptor = builder.insert_value(descriptor, count, 1)
+                descriptor = builder.insert_value(descriptor, count, 2)
+                storage = self.create_entry_block_alloca(
+                    "file_bytes", lists._llvm_list_type()
+                )
+                builder.store(descriptor, storage)
+                self._register_owned_list_temporary(node, storage)
+                result = descriptor
             self.result_stack.append(result)

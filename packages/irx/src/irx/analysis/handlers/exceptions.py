@@ -359,7 +359,8 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                         if not isinstance(child, astx.FunctionReturn):
                             continue
                         if child.value is None or not isinstance(
-                            self._expr_type(child.value), astx.ListType
+                            self._expr_type(child.value),
+                            (astx.ListType, astx.Bytes),
                         ):
                             continue
                         ownership = self._semantic(child).resource_ownership

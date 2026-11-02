@@ -125,19 +125,34 @@ def native(tmp_path_factory: pytest.TempPathFactory) -> ctypes.CDLL:
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-static int fault = 0;
-void irx_file_test_fault(int value) { fault = value; }
+#include <stdint.h>
+static int fault = 0, calls = 0, live = 0;
+void irx_file_test_fault(int value) { fault = value; calls = 0; }
+int irx_file_test_live(void) { return live; }
+void irx_file_test_free(void* p) { if (p) live--; free(p); }
 static void* test_malloc(size_t n) {
-  return fault == 1 ? NULL : malloc(n);
+  void* p = fault == 1 ? NULL : malloc(n);
+  if (p) live++;
+  return p;
 }
 static void* test_realloc(void* p, size_t n) {
   return fault == 2 ? NULL : realloc(p, n);
 }
 static size_t test_read(void* p, size_t s, size_t n, FILE* f) {
-  return fault == 3 ? 0 : fread(p, s, n, f);
+  calls++;
+  if (fault == 3 || ((fault == 8 || fault == 10) && calls > 1)) return 0;
+  if ((fault == 7 || fault == 8 || fault == 10) && n > 3) n = 3;
+  return fread(p, s, n, f);
 }
 static size_t test_write(const void* p, size_t s, size_t n, FILE* f) {
-  return fault == 4 ? 0 : fwrite(p, s, n, f);
+  calls++;
+  if (fault == 4 || ((fault == 8 || fault == 10) && calls > 1)) return 0;
+  if ((fault == 7 || fault == 8 || fault == 10) && n > 3) n = 3;
+  return fwrite(p, s, n, f);
+}
+static int test_error(FILE* f) {
+  if (fault == 8 && calls > 1) { errno = EIO; return 1; }
+  return ferror(f);
 }
 static int test_flush(FILE* f) {
   if (fault == 5) {
@@ -154,7 +169,12 @@ static int test_close(FILE* f) {
   }
   return status;
 }
+/* Exercise narrowing to a smaller target size_t without huge allocations. */
+#undef SIZE_MAX
+#define SIZE_MAX (fault == 9 ? 31u : (size_t)-1)
 #define malloc test_malloc
+#define free irx_file_test_free
+#define ferror test_error
 #define realloc test_realloc
 #define fread test_read
 #define fwrite test_write
@@ -191,9 +211,27 @@ static int test_close(FILE* f) {
     lib.irx_file_open.argtypes = [
         ctypes.c_char_p,
         ctypes.c_char_p,
+        ctypes.c_int32,
         output,
         error,
     ]
+    lib.irx_file_read_bytes.argtypes = [
+        pointer,
+        ctypes.c_int64,
+        output,
+        ctypes.POINTER(ctypes.c_int64),
+        error,
+    ]
+    lib.irx_file_write_bytes.argtypes = [
+        pointer,
+        pointer,
+        ctypes.c_int64,
+        ctypes.POINTER(ctypes.c_int64),
+        error,
+    ]
+    lib.irx_file_test_live.restype = ctypes.c_int
+    lib.irx_file_test_free.argtypes = [pointer]
+    lib.irx_file_test_free.restype = None
     lib.irx_file_read.argtypes = [pointer, output, error]
     lib.irx_file_write.argtypes = [
         pointer,
@@ -201,7 +239,16 @@ static int test_close(FILE* f) {
         ctypes.POINTER(ctypes.c_int64),
         error,
     ]
-    for name in ("open", "read", "write", "flush", "close", "release"):
+    for name in (
+        "open",
+        "read",
+        "write",
+        "read_bytes",
+        "write_bytes",
+        "flush",
+        "close",
+        "release",
+    ):
         function = getattr(lib, f"irx_file_{name}")
         function.restype = ctypes.c_int32
         if name in {"flush", "close", "release"}:
@@ -227,13 +274,10 @@ def read_native(native: ctypes.CDLL, handle: ctypes.c_void_p) -> bytes:
     assert native.irx_file_read(handle, ctypes.byref(value), error) == 0, (
         error.value
     )
-    libc = ctypes.CDLL(None)
-    libc.free.argtypes = [ctypes.c_void_p]
-    libc.free.restype = None
     try:
         return ctypes.string_at(value)
     finally:
-        libc.free(value)
+        native.irx_file_test_free(value)
 
 
 @pytest.mark.parametrize(
@@ -263,7 +307,9 @@ def test_native_read_and_eof(
     handle = ctypes.c_void_p()
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     assert (
-        native.irx_file_open(bytes(path), b"rt", ctypes.byref(handle), error)
+        native.irx_file_open(
+            bytes(path), b"rt", 0, ctypes.byref(handle), error
+        )
         == 0
     )
     try:
@@ -317,7 +363,7 @@ def test_native_rejects_bad_text(
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     handle, value = ctypes.c_void_p(), ctypes.c_void_p(123)
     assert (
-        native.irx_file_open(bytes(path), b"r", ctypes.byref(handle), error)
+        native.irx_file_open(bytes(path), b"r", 0, ctypes.byref(handle), error)
         == 0
     )
     try:
@@ -328,7 +374,9 @@ def test_native_rejects_bad_text(
         native.irx_file_release(handle, error)
 
 
-@pytest.mark.parametrize("mode", [b"", b"wb", b"x", b"r+", b"rr", b"tr", b"U"])
+@pytest.mark.parametrize(
+    "mode", [b"", b"wb+", b"x", b"r+", b"rr", b"tr", b"U"]
+)
 def test_native_mode_failure_is_non_destructive(
     native: ctypes.CDLL, tmp_path: Path, mode: bytes
 ) -> None:
@@ -347,7 +395,7 @@ def test_native_mode_failure_is_non_destructive(
     handle = ctypes.c_void_p(123)
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     assert (
-        native.irx_file_open(bytes(path), mode, ctypes.byref(handle), error)
+        native.irx_file_open(bytes(path), mode, 0, ctypes.byref(handle), error)
         != 0
     )
     assert handle.value is None
@@ -372,7 +420,9 @@ def test_native_write_rejects_bad_utf8(
     handle = ctypes.c_void_p()
     error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
     assert (
-        native.irx_file_open(bytes(path), b"wt", ctypes.byref(handle), error)
+        native.irx_file_open(
+            bytes(path), b"wt", 0, ctypes.byref(handle), error
+        )
         == 0
     )
     try:
@@ -411,7 +461,7 @@ def test_native_failure_slots_and_release(
     handle = ctypes.c_void_p()
     mode = b"r" if fault in {1, 2, 3} else b"w"
     assert (
-        native.irx_file_open(bytes(path), mode, ctypes.byref(handle), error)
+        native.irx_file_open(bytes(path), mode, 0, ctypes.byref(handle), error)
         == 0
     )
     native.irx_file_test_fault(fault)
@@ -460,7 +510,7 @@ def test_native_open_allocation_and_nulls(
     try:
         assert (
             native.irx_file_open(
-                bytes(path), b"w", ctypes.byref(handle), error
+                bytes(path), b"w", 0, ctypes.byref(handle), error
             )
             != 0
         )
@@ -468,9 +518,33 @@ def test_native_open_allocation_and_nulls(
         assert not path.exists()
     finally:
         native.irx_file_test_fault(0)
-    assert native.irx_file_open(None, b"r", ctypes.byref(handle), error) != 0
-    assert native.irx_file_open(bytes(path), b"r", None, error) != 0
+    assert (
+        native.irx_file_open(None, b"r", 0, ctypes.byref(handle), error) != 0
+    )
+    assert native.irx_file_open(bytes(path), b"r", 0, None, error) != 0
     assert native.irx_file_release(None, error) == 0
+    pointer = ctypes.c_void_p(123)
+    count = ctypes.c_int64(123)
+    assert (
+        native.irx_file_read_bytes(
+            None, 0, ctypes.byref(pointer), ctypes.byref(count), error
+        )
+        != 0
+    )
+    assert pointer.value is None and count.value == 0
+    assert (
+        native.irx_file_read_bytes(None, 0, None, ctypes.byref(count), error)
+        != 0
+    )
+    assert (
+        native.irx_file_read_bytes(None, 0, ctypes.byref(pointer), None, error)
+        != 0
+    )
+    assert native.irx_file_write_bytes(None, None, 0, None, error) != 0
+    assert (
+        native.irx_file_write_bytes(None, None, -1, ctypes.byref(count), error)
+        != 0
+    )
 
 
 def test_native_repeated_release_does_not_leak_descriptors(
@@ -494,7 +568,7 @@ def test_native_repeated_release_does_not_leak_descriptors(
         handle = ctypes.c_void_p()
         assert (
             native.irx_file_open(
-                bytes(tmp_path / "loop"), b"a", ctypes.byref(handle), error
+                bytes(tmp_path / "loop"), b"a", 0, ctypes.byref(handle), error
             )
             == 0
         )
@@ -641,10 +715,14 @@ def test_native_error_categories_preserve_errno(
     output = ctypes.c_void_p(123)
     error = ctypes.create_string_buffer(256)
     missing = bytes(tmp_path / "missing")
-    status = native.irx_file_open(missing, b"r", ctypes.byref(output), error)
+    status = native.irx_file_open(
+        missing, b"r", 0, ctypes.byref(output), error
+    )
     assert status == 65536 | errno.ENOENT
     assert output.value is None
-    status = native.irx_file_open(missing, b"bad", ctypes.byref(output), error)
+    status = native.irx_file_open(
+        missing, b"bad", 0, ctypes.byref(output), error
+    )
     mode_status = 6
     assert status == mode_status
     assert output.value is None
@@ -654,3 +732,182 @@ def test_native_error_categories_preserve_errno(
         == closed_status
     )
     assert output.value is None
+
+
+@pytest.mark.parametrize("write", [False, True])
+@pytest.mark.parametrize(
+    "fault,expected", [(0, 0), (1, 4), (7, 0), (8, 65541), (9, 5), (10, 7)]
+)
+def test_binary_transfer_faults(
+    native: ctypes.CDLL, tmp_path: Path, write: bool, fault: int, expected: int
+) -> None:
+    """
+    title: Retry short progress, gate outputs, and free partial read storage.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      tmp_path:
+        type: Path
+      write:
+        type: bool
+      fault:
+        type: int
+      expected:
+        type: int
+    """
+    data = bytes(range(256))
+    path = tmp_path / "bytes"
+    path.write_bytes(data)
+    error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
+    handle = ctypes.c_void_p()
+    pointer = ctypes.c_void_p(123)
+    count = ctypes.c_int64(123)
+    baseline = native.irx_file_test_live()
+    assert (
+        native.irx_file_open(
+            bytes(path),
+            b"wb" if write else b"rb",
+            0,
+            ctypes.byref(handle),
+            error,
+        )
+        == 0
+    )
+    native.irx_file_test_fault(fault)
+    try:
+        if write:
+            status = native.irx_file_write_bytes(
+                handle, data, len(data), ctypes.byref(count), error
+            )
+            # Borrowed writes do not allocate payload storage.
+            if fault == 1:
+                expected = 0
+        else:
+            status = native.irx_file_read_bytes(
+                handle,
+                len(data),
+                ctypes.byref(pointer),
+                ctypes.byref(count),
+                error,
+            )
+        assert status == expected, error.value
+        if status == 0:
+            assert count.value == len(data)
+            if not write:
+                assert ctypes.string_at(pointer, count.value) == data
+        else:
+            assert count.value == 0
+            if not write:
+                assert pointer.value is None
+        if not write:
+            native.irx_file_test_free(pointer)
+    finally:
+        native.irx_file_test_fault(0)
+        assert native.irx_file_release(handle, error) == 0
+    assert native.irx_file_test_live() == baseline
+    if write:
+        assert path.read_bytes() == (
+            data if expected == 0 else data[:3] if fault in {8, 10} else b""
+        )
+
+
+@pytest.mark.parametrize("mode", [b"r", b"w", b"rb", b"wb", b"ab"])
+def test_binary_zero_and_closed_contracts(
+    native: ctypes.CDLL, tmp_path: Path, mode: bytes
+) -> None:
+    """
+    title: Empty payloads still validate direction, binary mode, and state.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      tmp_path:
+        type: Path
+      mode:
+        type: bytes
+    """
+    path = tmp_path / "empty"
+    path.write_bytes(b"\x00\xff\r\n")
+    error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
+    handle = ctypes.c_void_p()
+    pointer = ctypes.c_void_p()
+    count = ctypes.c_int64()
+    assert (
+        native.irx_file_open(bytes(path), mode, 0, ctypes.byref(handle), error)
+        == 0
+    )
+    try:
+        for closed in (False, True):
+            if closed:
+                assert native.irx_file_close(handle, error) == 0
+            read = native.irx_file_read_bytes(
+                handle, 0, ctypes.byref(pointer), ctypes.byref(count), error
+            )
+            write = native.irx_file_write_bytes(
+                handle, None, 0, ctypes.byref(count), error
+            )
+            assert (read == 0) == (mode == b"rb" and not closed)
+            assert (write == 0) == (mode in {b"wb", b"ab"} and not closed)
+            assert pointer.value is None and count.value == 0
+            if mode.endswith(b"b") and not closed:
+                assert (
+                    native.irx_file_read(handle, ctypes.byref(pointer), error)
+                    != 0
+                )
+                assert (
+                    native.irx_file_write(
+                        handle, b"", ctypes.byref(count), error
+                    )
+                    != 0
+                )
+            assert (
+                native.irx_file_read_bytes(
+                    handle,
+                    -1,
+                    ctypes.byref(pointer),
+                    ctypes.byref(count),
+                    error,
+                )
+                != 0
+            )
+            assert (
+                native.irx_file_write_bytes(
+                    handle, None, 1, ctypes.byref(count), error
+                )
+                != 0
+            )
+    finally:
+        assert native.irx_file_release(handle, error) == 0
+
+
+@pytest.mark.parametrize("mode", [b"rb", b"wb", b"ab"])
+def test_binary_options_precede_open(
+    native: ctypes.CDLL, tmp_path: Path, mode: bytes
+) -> None:
+    """
+    title: Dynamic binary text options cannot create or truncate a path.
+    parameters:
+      native:
+        type: ctypes.CDLL
+      tmp_path:
+        type: Path
+      mode:
+        type: bytes
+    """
+    error = ctypes.create_string_buffer(FILE_ERROR_CAPACITY)
+    handle = ctypes.c_void_p(123)
+    for existing in (False, True):
+        path = tmp_path / "preserved"
+        if existing:
+            path.write_bytes(b"unchanged")
+        assert (
+            native.irx_file_open(
+                bytes(path), mode, 1, ctypes.byref(handle), error
+            )
+            != 0
+        )
+        assert handle.value is None
+        assert (
+            path.read_bytes() == b"unchanged"
+            if existing
+            else not path.exists()
+        )

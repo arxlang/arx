@@ -44,7 +44,7 @@ constructors roll back initialized owners. A failing implicit cleanup preserves
 an existing failure as primary; an explicit finalizer may replace it. Generator
 resume failures propagate separately from normal exhaustion. `else` may read
 definitely initialized direct try locals, not conditional/nested locals whose
-ownership cannot be proved. Move-only list restrictions still apply in
+ownership cannot be proved. Move-only list/bytes restrictions still apply in
 finalizers.
 
 Checked arithmetic/conversion, assertions, list/Series bounds, file, and

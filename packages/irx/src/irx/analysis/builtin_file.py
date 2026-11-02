@@ -21,7 +21,9 @@ from irx.analysis.resolved_nodes import (
 from irx.analysis.types import is_string_type
 from irx.typecheck import typechecked
 
-NATIVE_FILE_METHODS = frozenset({"read", "write", "flush", "close"})
+NATIVE_FILE_METHODS = frozenset(
+    {"read", "write", "read_bytes", "write_bytes", "flush", "close"}
+)
 
 
 @private
@@ -157,6 +159,18 @@ def validate_native_file_class(
             valid = valid and (
                 len(parameters) == 1
                 and is_string_type(parameters[0].type_)
+                and isinstance(prototype.return_type, astx.Int64)
+            )
+        elif method.name == "read_bytes":
+            valid = valid and (
+                len(parameters) == 1
+                and isinstance(parameters[0].type_, astx.Int64)
+                and isinstance(prototype.return_type, astx.Bytes)
+            )
+        elif method.name == "write_bytes":
+            valid = valid and (
+                len(parameters) == 1
+                and isinstance(parameters[0].type_, astx.Bytes)
                 and isinstance(prototype.return_type, astx.Int64)
             )
         elif method.name == "read":

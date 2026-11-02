@@ -178,9 +178,29 @@ def lower_materialization(
             visitor, node, view, index, iteration.element_type
         )
         builder.store(value, yielded)
+    item_pointer = yielded
+    if plan.checked_bytes:
+        value = builder.load(yielded)
+        unsigned = is_unsigned_type(iteration.element_type)
+        # Widen before checking so i8's upper bound is not truncated to -1.
+        wide = visitor._cast_value_to_type(value, integer, unsigned=unsigned)
+        valid = builder.icmp_unsigned("<=", wide, ir.Constant(integer, 255))
+        visitor._guard_runtime_condition(
+            node,
+            valid,
+            code="ARX-RUNTIME-BYTES-001",
+            message="bytes items must be integers in 0..255",
+            block_name="bytes.item",
+            exception_role="ValueError",
+        )
+        item_pointer = visitor.create_entry_block_alloca(
+            "bytes.item", ir.IntType(8)
+        )
+        builder.store(builder.trunc(wide, ir.IntType(8)), item_pointer)
     append = visitor.require_runtime_symbol("list", "irx_list_append")
     status = builder.call(
-        append, [output, builder.bitcast(yielded, ir.IntType(8).as_pointer())]
+        append,
+        [output, builder.bitcast(item_pointer, ir.IntType(8).as_pointer())],
     )
     lists.check_list_status(node, status)
     builder.store(builder.add(index, ir.Constant(integer, 1)), index_slot)

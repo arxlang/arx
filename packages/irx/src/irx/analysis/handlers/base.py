@@ -1728,11 +1728,19 @@ class SemanticAnalyzerCore(BaseVisitor):
             validate_column_declaration,
         )
         from irx.analysis.types import (  # noqa: PLC0415
+            contains_bytes,
             contains_sequence,
             contains_template_variables,
             is_sequence_element,
         )
 
+        if contains_bytes(type_) and not isinstance(type_, astx.Bytes):
+            self.context.diagnostics.add(
+                "bytes inside containers/unions require unsupported "
+                "nested ownership",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
         if contains_sequence(type_) and not isinstance(
             type_, astx.SequenceType
         ):

@@ -13,6 +13,7 @@ from plum import dispatch
 from public import private
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import list_resource_ownership
 from irx.analysis.resolved_nodes import (
     IterationKind,
@@ -88,6 +89,25 @@ def resolve_sequence_access(
     """
     del type_, node
     return None
+
+
+@dispatch
+@typechecked
+def resolve_sequence_access(
+    type_: astx.Bytes, node: astx.AST | None = None
+) -> ResolvedSequenceAccess | None:
+    """
+    title: Read immutable octets using the shared byte-width storage ABI.
+    parameters:
+      type_:
+        type: astx.Bytes
+      node:
+        type: astx.AST | None
+    returns:
+      type: ResolvedSequenceAccess | None
+    """
+    del type_
+    return sequence_access("list", astx.UInt8(), node)
 
 
 @dispatch
@@ -173,7 +193,13 @@ def resolve_materialization(
 ) -> None:
     """
     title: >-
-      Resolve numeric list construction without treating iterators as views.
+      Resolve copied list or bytes construction without treating iterators as
+      views.
+    summary: >-
+      bytes() is empty; bytes(input, max_items=bound) copies integer octets.
+      Boolean, floating, nullable, and scalar inputs are rejected. Every item
+      must fit 0..255; unsized inputs require a bound. Consumed input is not
+      rolled back on failure; no partial output escapes.
     parameters:
       analyzer:
         type: SemanticAnalyzerCore
@@ -185,7 +211,10 @@ def resolve_materialization(
     )
 
     info = analyzer._semantic(node)
+    binary = node.fn == "bytes"
     values = list(node.args)
+    if binary and not values:
+        values = [astx.ListExpr([])]
     if (
         len(values) != 1
         or len(node.keywords) > 1
@@ -193,12 +222,14 @@ def resolve_materialization(
         or astx.get_template_args(node)
     ):
         analyzer.context.diagnostics.add(
-            "list expects one input and optional max_items=integer",
+            f"{node.fn} expects one input and optional max_items=integer",
             node=node,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
         )
         return
     source = values[0]
+    if binary and isinstance(source, astx.ListExpr) and not source.elements:
+        contextualize_literal(source, astx.ListType([astx.UInt8()]))
     analyzer.visit(source)
     source_type = analyzer._expr_type(source)
     iteration = resolve_iteration_capability(source, source_type)
@@ -207,10 +238,16 @@ def resolve_materialization(
         iteration is None
         or not is_sequence_element(element)
         or isinstance(element, astx.NullableType)
+        or (binary and not is_integer_type(element))
     ):
         analyzer.context.diagnostics.add(
-            "list materialization requires nonnullable numeric items; "
-            "fill or filter nullable input explicitly",
+            (
+                "bytes requires integer items in 0..255, not Boolean or float"
+                if binary
+                else "list materialization requires nonnullable numeric "
+                "items; "
+                "fill or filter nullable input explicitly"
+            ),
             node=source,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
         )
@@ -218,7 +255,7 @@ def resolve_materialization(
     limit = node.keywords[0].value if node.keywords else None
     if limit is None and iteration.kind is IterationKind.GENERATOR:
         analyzer.context.diagnostics.add(
-            "single-pass list materialization requires max_items",
+            f"single-pass {node.fn} materialization requires max_items",
             node=node,
             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
         )
@@ -256,8 +293,11 @@ def resolve_materialization(
             )
             return
         iteration = replace(iteration, sequence_access=adapter)
-    info.materialization = ResolvedMaterialization(iteration, limit)
-    analyzer._set_type(node, astx.ListType([iteration.element_type]))
+    info.materialization = ResolvedMaterialization(iteration, limit, binary)
+    analyzer._set_type(
+        node,
+        astx.Bytes() if binary else astx.ListType([iteration.element_type]),
+    )
     analyzer._set_resource_ownership(
         node, list_resource_ownership(OwnershipKind.OWNED)
     )

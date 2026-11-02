@@ -1,10 +1,11 @@
-# Text File I/O
+# File I/O
 
 `File` is a builtin reference-managed class for a deliberately small native,
-POSIX text-file interface. `open(...)` is a compiler-backed factory adapter to
-`File(...)`: both create the same class object through one checked construction
-path. Both are available without an import and use C stdio, not Python or Arrow.
-Lowercase `file` remains a compatibility spelling for the builtin `File` type.
+POSIX text and binary file interface. `open(...)` is a compiler-backed factory
+adapter to `File(...)`: both create the same class object through one checked
+construction path. Both are available without an import and use C stdio, not
+Python or Arrow. Lowercase `file` remains a compatibility spelling for the
+builtin `File` type.
 
 The default is a strict UTF-8 text read. Use `mode="w"` to create/truncate or
 `mode="a"` to append. Only the path and mode can be runtime strings; other
@@ -17,8 +18,10 @@ Paths are relative to the running program's working directory, not its source
 file.
 
 Reading requires an existing file. Writing creates or truncates it. Appending
-creates it if necessary and writes at the end. No binary/update/exclusive modes,
-file descriptors, callbacks, or custom buffering are supported yet.
+creates it if necessary and writes at the end. Update/exclusive modes, file
+descriptors, callbacks, and custom buffering are unsupported. Binary modes are
+`rb`, `wb`, and `ab`; non-`none` encoding, errors, or newline options are
+rejected before creating/truncating a path, including when the mode is dynamic.
 
 ## Example
 
@@ -44,6 +47,25 @@ fn main() -> i32:
   return 0
 ````
 
+## Bounded binary workflow
+
+Use `bytes([0, 255, 13, 10])` for octets, then `output.write_bytes(data)` on a
+binary stream. `source.read_bytes(size)` reads at most a nonnegative `i64` byte
+count; there is no read-all sentinel. It returns independently owned `bytes`,
+including empty at EOF. Zero does not advance but still checks mode and closed
+state. Text methods reject binary streams and byte methods reject text streams.
+Nothing decodes, strips NUL, or translates newlines.
+
+`examples/binary-files.x` is an executable round-trip and append example. It
+creates/truncates `binary-output.dat` and `binary-empty.dat`; run it in a
+scratch directory. Byte lengths and write counts are bytes, not characters.
+Short writes that make progress are retried; no progress and I/O errors are
+failures. Failure may leave a partially modified external file: there is no
+rollback, atomicity, or durability promise. Explicit flush/close still matter
+for buffered errors.
+
+See [byte values](built-in-types.md#byte-values) for immutable-buffer ownership.
+
 ## Text and lifetime safety
 
 Reads consume all remaining text (not a size-limited chunk), returning an
@@ -58,8 +80,9 @@ share one stream and cursor; closing through one reference closes it for all
 references. References can be reassigned, passed to functions, returned, and
 stored in class fields. Locals and discarded temporaries release their
 references on ordinary lexical exits. The last reference releases the native
-wrapper once, even if the stream was explicitly closed earlier. Read strings own
-independent memory and can outlive the file. See [Classes](classes.md).
+wrapper once, even if the stream was explicitly closed earlier. Read strings and
+byte buffers own independent memory and can outlive the file. See
+[Classes](classes.md).
 
 Explicit casts to or from builtin `File`, including identity casts, remain
 unsupported. Use ordinary assignment to create an alias instead.
@@ -81,8 +104,7 @@ exceptions (including `OSError` for operating-system failures). Class checks use
 creation preserves constructor rollback and completed-base cleanup. See the
 [exception boundary](../support-matrix.md#exception-capability-boundary).
 Explicit close/flush are recommended to observe write errors before later work.
-`with`, iteration, seek/tell, binary I/O, and extra file properties are
-deferred.
+`with`, iteration, seek/tell, and extra file properties are deferred.
 
 For explicit imports, use `import File as TextFile from builtins.files` or
 `import builtins.files as io` followed by `io.File(...)`. These resolve the same

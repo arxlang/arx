@@ -24,6 +24,7 @@ AUDITOR = r"""#include <stdint.h>
 #include <stdlib.h>
 static int calls, live, opened, released;
 void* __real_malloc(size_t size);
+void* __real_realloc(void* value, size_t size);
 void* __real_calloc(size_t count, size_t size);
 void __real_free(void* value);
 void* __wrap_malloc(size_t size) {
@@ -36,16 +37,22 @@ void* __wrap_calloc(size_t count, size_t size) {
   if (out) live++;
   return out;
 }
+void* __wrap_realloc(void* value, size_t size) {
+  void* out = ++calls == FAULT ? NULL : __real_realloc(value, size);
+  if (out && !value) live++;
+  return out;
+}
 void __wrap_free(void* value) {
   if (value) live--;
   __real_free(value);
 }
 typedef struct irx_file irx_file;
-int32_t __real_irx_file_open(const char*, const char*, irx_file**, char*);
+int32_t __real_irx_file_open(const char*, const char*, int32_t,
+                             irx_file**, char*);
 int32_t __real_irx_file_release(irx_file*, char*);
 int32_t __wrap_irx_file_open(const char* path, const char* mode,
-                           irx_file** out, char* error) {
-  int32_t status = __real_irx_file_open(path, mode, out, error);
+                           int32_t options, irx_file** out, char* error) {
+  int32_t status = __real_irx_file_open(path, mode, options, out, error);
   if (!status) opened++;
   return status;
 }
@@ -106,34 +113,11 @@ fn main() -> i32:
   return 0
 ''')
     builder = ArxBuilder()
-    module = llvm.parse_assembly(
-        builder.translate(Parser().parse(Lexer().lex()))
-    )
-    module.verify()
-    primary = tmp_path / "module.o"
-    primary.write_bytes(builder.translator.target_machine.emit_object(module))
-    wrapper = tmp_path / "audit.c"
-    wrapper.write_text(AUDITOR, encoding="utf-8")
-    program = tmp_path / "program"
-    link_executable(
-        primary_object=primary,
-        output_file=program,
-        artifacts=(
-            *builder.translator.runtime_features.native_artifacts(),
-            NativeArtifact(
-                "c_source", wrapper, compile_flags=(f"-DFAULT={fault}",)
-            ),
-        ),
-        linker_flags=tuple(
-            f"-Wl,--wrap={name}"
-            for name in (
-                "malloc",
-                "calloc",
-                "free",
-                "irx_file_open",
-                "irx_file_release",
-            )
-        ),
+    program = build_audited_file_program(
+        builder,
+        builder.translate(Parser().parse(Lexer().lex())),
+        tmp_path,
+        fault,
     )
     result = subprocess.run(
         [str(program)],
@@ -151,3 +135,52 @@ fn main() -> i32:
         assert result.returncode != 0
         assert "AUDIT live=0 opened=0 released=0" in result.stderr
         assert not (tmp_path / "stream").exists()
+
+
+def build_audited_file_program(
+    builder: ArxBuilder, text: str, root: Path, fault: int = 0
+) -> Path:
+    """
+    title: >-
+      Link one verified module with allocator and File lifetime accounting.
+    parameters:
+      builder:
+        type: ArxBuilder
+      text:
+        type: str
+      root:
+        type: Path
+      fault:
+        type: int
+    returns:
+      type: Path
+    """
+    module = llvm.parse_assembly(text)
+    module.verify()
+    primary = root / "module.o"
+    primary.write_bytes(builder.translator.target_machine.emit_object(module))
+    wrapper = root / "audit.c"
+    wrapper.write_text(AUDITOR, encoding="utf-8")
+    program = root / "program"
+    link_executable(
+        primary_object=primary,
+        output_file=program,
+        artifacts=(
+            *builder.translator.runtime_features.native_artifacts(),
+            NativeArtifact(
+                "c_source", wrapper, compile_flags=(f"-DFAULT={fault}",)
+            ),
+        ),
+        linker_flags=tuple(
+            f"-Wl,--wrap={name}"
+            for name in (
+                "malloc",
+                "calloc",
+                "realloc",
+                "free",
+                "irx_file_open",
+                "irx_file_release",
+            )
+        ),
+    )
+    return program

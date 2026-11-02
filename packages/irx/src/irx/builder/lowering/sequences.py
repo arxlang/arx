@@ -349,7 +349,7 @@ def lower_sequence_query(
     info = getattr(node, "semantic", None)
     if not isinstance(info, SemanticInfo) or info.sequence_access is None:
         base_type = visitor._resolved_ast_type(base)
-        if isinstance(base_type, astx.SequenceType) or (
+        if isinstance(base_type, (astx.SequenceType, astx.Bytes)) or (
             isinstance(node, astx.CollectionLength)
             and isinstance(base_type, (astx.SeriesType, astx.TensorType))
         ):

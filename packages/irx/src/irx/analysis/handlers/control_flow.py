@@ -130,7 +130,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             self._set_resource_ownership(node.value, moved)
             self._set_resource_ownership(node, moved)
             return
-        if not isinstance(return_type, astx.ListType):
+        if not isinstance(return_type, (astx.ListType, astx.Bytes)):
             return
 
         value_ownership = resource_ownership(node.value)

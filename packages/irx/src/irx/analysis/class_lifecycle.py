@@ -184,6 +184,7 @@ def unsupported_class_field(type_: astx.DataType) -> bool:
         type_,
         (
             astx.ListType,
+            astx.Bytes,
             astx.TensorType,
             astx.DataFrameType,
             astx.SeriesType,
