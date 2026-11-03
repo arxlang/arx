@@ -174,29 +174,77 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         return block
 
-    def parse_if_stmt(self) -> astx.IfStmt:
+    def parse_if_clause(self) -> astx.IfStmt:
         """
-        title: Parse the `if` expression.
+        title: Parse one if or elif condition and its scoped body.
+        summary: >-
+          Boolean validity belongs to IRx; statement conditions fail here.
         returns:
           type: astx.IfStmt
         """
-        if_loc = self.tokens.cur_tok.location
-        self.tokens.get_next_token()  # eat if
+        keyword = self.tokens.cur_tok
+        self.tokens.get_next_token()
+        condition_token = self.tokens.cur_tok
+        if (
+            condition_token.kind in {TokenKind.indent, TokenKind.eof}
+            or condition_token.location.line > keyword.location.line
+            or self._is_operator(":")
+        ):
+            raise ParserException(
+                f"Expected a condition after '{keyword.value}'.",
+                condition_token.location,
+            )
 
         cond = self.parse_expression()
+        if not isinstance(cond, astx.Expr):
+            raise ParserException(
+                f"Expected an expression condition after '{keyword.value}'.",
+                condition_token.location,
+            )
         self._consume_operator(":")
-
         then_block = self.parse_block()
-
-        else_block = astx.Block()
-        if self.match_clause(TokenKind.kw_else, if_loc.col - 1):
-            self.tokens.get_next_token()  # eat else
-            self._consume_operator(":")
-            else_block = self.parse_block()
-
         return astx.IfStmt(
-            cast(astx.Expr, cond), then_block, else_block, loc=if_loc
+            cond, then_block, astx.Block(), loc=keyword.location
         )
+
+    def parse_if_stmt(self) -> astx.IfStmt:
+        """
+        title: Parse an if/elif chain and optional final else as nested IfStmt.
+        summary: >-
+          Attach only same-indentation clauses. Build the chain iteratively;
+          each elif occupies the preceding clause's else block and retains its
+          keyword location. IRx evaluates conditions until one matches.
+        returns:
+          type: astx.IfStmt
+        """
+        indentation = self.tokens.cur_tok.location.col - 1
+        root = self.parse_if_clause()
+        tail = root
+        while self.match_clause(TokenKind.kw_elif, indentation):
+            branch = self.parse_if_clause()
+            alternative = astx.Block()
+            alternative.append(branch)
+            tail.else_ = alternative
+            tail = branch
+
+        if self.match_clause(TokenKind.kw_else, indentation):
+            self.tokens.get_next_token()  # eat else
+            if self.tokens.cur_tok.kind == TokenKind.kw_if:
+                raise ParserException(
+                    "'else if' is not supported; use 'elif'.",
+                    self.tokens.cur_tok.location,
+                )
+            self._consume_operator(":")
+            tail.else_ = self.parse_block()
+            if self.match_clause(
+                TokenKind.kw_elif, indentation
+            ) or self.match_clause(TokenKind.kw_else, indentation):
+                raise ParserException(
+                    "An 'else' clause must be last in an if/elif chain.",
+                    self.tokens.cur_tok.location,
+                )
+
+        return root
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """

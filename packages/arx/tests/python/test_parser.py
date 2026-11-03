@@ -313,6 +313,197 @@ def test_parse_if_stmt() -> None:
     assert isinstance(expr.else_.nodes[0], astx.BinaryOp)
 
 
+@pytest.mark.parametrize("with_else", [False, True])
+def test_parse_elif_chain(with_else: bool) -> None:
+    """
+    title: Elif chains use nested IfStmt nodes with real keyword locations.
+    parameters:
+      with_else:
+        type: bool
+    """
+    source = "if a:\n  first\nelif b:\n  second\nelif café:\n  third\n"
+    if with_else:
+        source += "else:\n  last\n"
+    tree = _parse_module(source + "after\n")
+    assert len(tree.nodes) == 2
+    node = tree.nodes[0]
+    for index, (condition, body) in enumerate(
+        [("a", "first"), ("b", "second"), ("café", "third")]
+    ):
+        assert isinstance(node, astx.IfStmt)
+        assert (node.loc.line, node.loc.col) == (index * 2 + 1, 1)
+        assert isinstance(node.condition, astx.Identifier)
+        assert node.condition.name == condition
+        assert len(node.then.nodes) == 1
+        assert isinstance(node.then.nodes[0], astx.Identifier)
+        assert node.then.nodes[0].name == body
+        assert node.else_ is not None
+        if index < 2:
+            assert len(node.else_.nodes) == 1
+            node = node.else_.nodes[0]
+    assert isinstance(node, astx.IfStmt)
+    assert node.else_ is not None
+    if with_else:
+        assert len(node.else_.nodes) == 1
+        assert isinstance(node.else_.nodes[0], astx.Identifier)
+        assert node.else_.nodes[0].name == "last"
+    else:
+        assert node.else_.nodes == []
+    assert isinstance(tree.nodes[1], astx.Identifier)
+    assert tree.nodes[1].name == "after"
+
+
+def test_long_elif_chain_parses_iteratively() -> None:
+    """
+    title: Sibling elif clauses do not consume recursive parser depth.
+    """
+    tree = _parse_module("if false:\n  0\n" + "elif false:\n  0\n" * 256)
+    node = tree.nodes[0]
+    for index in range(257):
+        assert isinstance(node, astx.IfStmt)
+        assert node.loc.line == 2 * index + 1
+        assert node.else_ is not None
+        if index < 256:
+            assert len(node.else_.nodes) == 1
+            node = node.else_.nodes[0]
+        else:
+            assert node.else_.nodes == []
+
+
+def test_nested_elif_clauses_preserve_enclosing_blocks() -> None:
+    """
+    title: Nested chains and loops leave outer clauses and statements intact.
+    """
+    tree = _parse_module(
+        "if outer:\n"
+        "  while running:\n"
+        "    if inner:\n"
+        "      first\n"
+        "    elif next:\n"
+        "      second\n"
+        "elif fallback:\n"
+        "  third\n"
+        "else:\n"
+        "  last\n"
+        "after\n"
+    )
+    assert len(tree.nodes) == 2
+    outer = tree.nodes[0]
+    assert isinstance(outer, astx.IfStmt)
+    loop = outer.then.nodes[0]
+    assert isinstance(loop, astx.WhileStmt)
+    assert len(loop.body.nodes) == 1
+    inner = loop.body.nodes[0]
+    assert isinstance(inner, astx.IfStmt)
+    assert inner.else_ is not None
+    inner_elif = inner.else_.nodes[0]
+    assert isinstance(inner_elif, astx.IfStmt)
+    assert (inner_elif.loc.line, inner_elif.loc.col) == (5, 5)
+    assert inner_elif.else_ is not None
+    assert inner_elif.else_.nodes == []
+    assert outer.else_ is not None
+    outer_elif = outer.else_.nodes[0]
+    assert isinstance(outer_elif, astx.IfStmt)
+    assert (outer_elif.loc.line, outer_elif.loc.col) == (7, 1)
+    assert outer_elif.else_ is not None
+    assert isinstance(outer_elif.else_.nodes[0], astx.Identifier)
+    assert outer_elif.else_.nodes[0].name == "last"
+
+
+def test_elif_branch_bindings_do_not_leak() -> None:
+    """
+    title: Parser collection bindings remain local to each conditional body.
+    """
+    tree = _parse_module(
+        "if first:\n"
+        "  var values: list[i32] = [1]\n"
+        "  values.append(2)\n"
+        "elif second:\n"
+        "  values.append(3)\n"
+        "else:\n"
+        "  values.append(4)\n"
+        "values.append(5)\n"
+    )
+    branch = tree.nodes[0]
+    assert isinstance(branch, astx.IfStmt)
+    assert isinstance(branch.then.nodes[1], astx.ListAppend)
+    assert branch.else_ is not None
+    alternative = branch.else_.nodes[0]
+    assert isinstance(alternative, astx.IfStmt)
+    assert isinstance(alternative.then.nodes[0], astx.MethodCall)
+    assert alternative.else_ is not None
+    assert isinstance(alternative.else_.nodes[0], astx.MethodCall)
+    assert isinstance(tree.nodes[1], astx.MethodCall)
+
+
+@pytest.mark.parametrize(
+    "source, message, line, column",
+    [
+        ("elif true:\n  x\n", "same indentation", 1, 1),
+        ("else:\n  x\n", "matching 'if' or 'try'", 1, 1),
+        ("if true:\n  x\n  elif false:\n    y\n", "same indentation", 3, 3),
+        ("if true:\n  x\n elif false:\n   y\n", "same indentation", 3, 2),
+        ("if true:\n  x\nelif:\n  y\n", "Expected a condition", 3, 5),
+        ("if true:\n  x\nelif\nfalse:\n  y\n", "Expected a condition", 4, 1),
+        (
+            "if true:\n  x\nelif return 1:\n  y\n",
+            "Expected an expression condition",
+            3,
+            6,
+        ),
+        (
+            "if true:\n  x\nelif false then\n  y\n",
+            "Expected operator ':'",
+            3,
+            12,
+        ),
+        (
+            "if true:\n  x\nelif false:\nelse:\n  y\n",
+            "Expected indentation",
+            4,
+            1,
+        ),
+        ("if true:\n  x\nelif false:\n", "Expected indentation", 4, 1),
+        ("if true:\n  x\nelse if false:\n  y\n", "use 'elif'", 3, 6),
+        (
+            "if true:\n  x\nelse:\n  y\nelif false:\n  z\n",
+            "must be last",
+            5,
+            1,
+        ),
+        (
+            "if true:\n  x\nelse:\n  y\nelse:\n  z\n",
+            "must be last",
+            5,
+            1,
+        ),
+        ("var elif: i32 = 1\n", "Expected identifier", 1, 5),
+    ],
+)
+def test_invalid_elif_chain(
+    source: str, message: str, line: int, column: int
+) -> None:
+    """
+    title: Malformed clauses fail at the parser boundary with real locations.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+      line:
+        type: int
+      column:
+        type: int
+    """
+    with pytest.raises(ParserException) as captured:
+        _parse_module(source)
+    error = captured.value
+    assert error.code == "ARX-PARSE-001"
+    assert message in error.message
+    assert error.location is not None
+    assert (error.location.line, error.location.col) == (line, column)
+
+
 def test_parse_fn() -> None:
     """
     title: Test gettok for main tokens.
@@ -1039,6 +1230,10 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
         "    a = 2\n"
         "# dedented comment\n"
         "      # over-indented comment\n"
+        "  elif false:\n"
+        "    a = 4\n"
+        "\n"
+        "# comment before final else\n"
         "  else:\n"
         "    a = 3\n"
         "  # section B\n"
@@ -1058,4 +1253,9 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
     assert len(branch.then.nodes) == 1
     assert branch.else_ is not None
     assert len(branch.else_.nodes) == 1
+    alternative = branch.else_.nodes[0]
+    assert isinstance(alternative, astx.IfStmt)
+    assert len(alternative.then.nodes) == 1
+    assert alternative.else_ is not None
+    assert len(alternative.else_.nodes) == 1
     assert isinstance(fn.body.nodes[2], astx.FunctionReturn)
