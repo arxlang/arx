@@ -1,23 +1,29 @@
 # Control Flow
 
-Arx currently supports `if`/`else`, `while`, and two `for` loop styles.
+Arx supports `if`/`elif`/`else`, `while`, and two `for` loop styles.
 
-## If / Else
+## If / Elif / Else
+
+Conditions must be Boolean and are evaluated in order, stopping at the first
+match. A chain may have any number of `elif` clauses and an optional final
+`else`. Align every clause with its opening `if`; use `elif`, not `else if`.
 
 ````arx
 ```
-title: If/else example
-summary: Branches based on a comparison.
+title: Conditional chain example
+summary: Classifies an integer using ordered comparisons.
 ```
-fn abs_value(x: i32) -> i32:
+fn classify(value: i32) -> i32:
   ```
-  title: abs_value
-  summary: Returns absolute value of x.
+  title: classify
+  summary: Classifies one integer as negative, zero, or positive.
   ```
-  if x < 0:
-    return 0 - x
+  if value < 0:
+    return 0 - 1
+  elif value == 0:
+    return 0
   else:
-    return x
+    return 1
 ````
 
 ## While Loop

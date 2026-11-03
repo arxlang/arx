@@ -51,6 +51,7 @@ class TokenKind(Enum):
     docstring = -17
 
     # control flow
+    kw_elif = -19
     kw_if = -20
     kw_then = -21
     kw_else = -22
@@ -86,6 +87,7 @@ MAP_NAME_TO_KW_TOKEN = {
     "class": TokenKind.kw_class,
     "import": TokenKind.kw_import,
     "if": TokenKind.kw_if,
+    "elif": TokenKind.kw_elif,
     "else": TokenKind.kw_else,
     "for": TokenKind.kw_for,
     "in": TokenKind.kw_in,
@@ -121,6 +123,7 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.none_literal: "none",
     TokenKind.docstring: "docstring",
     TokenKind.kw_if: "if",
+    TokenKind.kw_elif: "elif",
     TokenKind.kw_then: "then",
     TokenKind.kw_else: "else",
     TokenKind.kw_for: "for",
@@ -393,6 +396,7 @@ class Lexer:
         "import": TokenKind.kw_import,
         "return": TokenKind.kw_return,
         "if": TokenKind.kw_if,
+        "elif": TokenKind.kw_elif,
         "then": TokenKind.kw_then,
         "else": TokenKind.kw_else,
         "for": TokenKind.kw_for,

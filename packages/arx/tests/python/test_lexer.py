@@ -39,6 +39,7 @@ def test_token_name() -> None:
         Token(kind=TokenKind.identifier, value="").get_name() == "identifier"
     )
     assert Token(kind=TokenKind.kw_if, value="").get_name() == "if"
+    assert Token(kind=TokenKind.kw_elif, value="").get_name() == "elif"
     assert Token(kind=TokenKind.kw_for, value="").get_name() == "for"
     assert Token(kind=TokenKind.operator, value="+").get_name() == "+"
     assert Token(kind=TokenKind.operator, value="+").get_name() == "+"
@@ -57,6 +58,20 @@ def test_advance(value: str) -> None:
     assert lexer.advance() == value[0]
     assert lexer.advance() == value[1]
     assert lexer.advance() == value[2]
+
+
+def test_elif_keyword_preserves_identifier_boundaries() -> None:
+    """
+    title: Elif is reserved without splitting longer or Unicode identifiers.
+    """
+    assert "elif" in load_syntax_manifest().reserved_keywords
+    assert lexer_core.MAP_NAME_TO_KW_TOKEN["elif"] == TokenKind.kw_elif
+    ArxIO.string_to_buffer("elif elif_value elifé elif2")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.kw_elif, "elif")
+    for name in ("elif_value", "elifé", "elif2"):
+        assert lexer.get_token() == Token(TokenKind.identifier, name)
+    assert lexer.get_token().kind == TokenKind.eof
 
 
 def test_get_tok_simple() -> None:

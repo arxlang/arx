@@ -1,6 +1,6 @@
 ```
 title: Repository control-flow tests
-summary: Cover if branches, while loops, for-in loops, and count loops.
+summary: Cover if/elif chains, while loops, for-in loops, and count loops.
 ```
 
 fn classify(value: i32) -> i32:
@@ -10,11 +10,10 @@ fn classify(value: i32) -> i32:
   ```
   if value < 0:
     return 0 - 1
+  elif value == 0:
+    return 0
   else:
-    if value == 0:
-      return 0
-    else:
-      return 1
+    return 1
 
 fn while_never_runs() -> i32:
   ```
@@ -50,14 +49,30 @@ fn skipped_count_loop() -> i32:
     return 1
   return 0
 
-fn test_if_else_paths() -> none:
+fn test_if_elif_else_paths() -> none:
   ```
-  title: test_if_else_paths
-  summary: Covers negative, zero, and positive if-else paths.
+  title: test_if_elif_else_paths
+  summary: Covers every branch and ordered condition effects with early stopping.
   ```
   assert classify(0 - 2) == (0 - 1)
   assert classify(0) == 0
   assert classify(2) == 1
+
+  for stop in [1, 2, 3, 4]:
+    var checks: i32 = 0
+    var branch: i32 = 0
+    if ++checks == stop:
+      branch = 1
+    elif ++checks == stop:
+      branch = 2
+    elif ++checks == stop:
+      branch = 3
+    if stop == 4:
+      assert checks == 3
+      assert branch == 0
+    else:
+      assert checks == stop
+      assert branch == stop
 
 fn test_while_zero_iteration() -> none:
   ```

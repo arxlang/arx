@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.8.0",
+  "syntax_pack_version": "0.9.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -10,6 +10,7 @@
       "assert",
       "class",
       "const",
+      "elif",
       "else",
       "except",
       "extern",

@@ -19,6 +19,7 @@ from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
 from llvmlite import binding as llvm
+from llvmlite import ir
 
 from .test_file_class_native import build_audited_file_program
 
@@ -40,6 +41,63 @@ def test_scalar_remainder_and_word_not_translate() -> None:
     assert "srem i32" in text
     assert "xor i1" in text
     assert "ARX-RUNTIME-ARITHMETIC-001" in text
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "  if value < 0:\n"
+        "    return -1\n"
+        "  elif value == 0:\n"
+        "    return 0\n"
+        "  else:\n"
+        "    return 1\n",
+        "  var result: i32 = 9\n"
+        "  if value < 0:\n"
+        "    return -1\n"
+        "  elif value == 0:\n"
+        "    result = 0\n"
+        "  elif value == 1:\n"
+        "    print(value)\n"
+        "  return result\n",
+    ],
+    ids=["all-returning", "mixed-fallthrough-without-else"],
+)
+def test_elif_chain_translate(body: str) -> None:
+    """
+    title: Elif lowering preserves terminators and statement result stacks.
+    parameters:
+      body:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Conditional chains\n```\n"
+        "fn choose(value: i32) -> i32:\n" + body + "\n"
+        "fn main() -> i32:\n  return choose(0)\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    # Top-level definitions produce functions, not leftover branch values.
+    assert all(
+        isinstance(value, ir.Function)
+        for value in builder.translator.result_stack
+    )
+
+
+def test_elif_condition_requires_boolean() -> None:
+    """
+    title: Elif conditions retain IRx Boolean validity rather than truthiness.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Invalid elif condition\n```\n"
+        "fn main() -> i32:\n"
+        "  if false:\n    return 0\n"
+        "  elif 1:\n    return 1\n"
+        "  return 2\n"
+    )
+    with pytest.raises(SemanticError, match="condition must be Boolean"):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
 
 
 @pytest.mark.parametrize("expression", ["café[0]", "café[:1]", "42[0]"])

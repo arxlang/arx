@@ -18,6 +18,9 @@
 
 ## Unreleased
 
+- Add `if`/`elif`/`else` chains with ordered Boolean conditions and an optional
+  final `else`. **Breaking:** `elif` is now reserved; rename identifiers using
+  that spelling. `else if` remains unsupported.
 - Add exact, read-only `sequence[T]` parameters for numeric lists, rank-one
   tensors, and typed Series, plus bounded numeric `list(input, max_items=N)`.
   Recursive collection templates resolve concrete loop and element types.

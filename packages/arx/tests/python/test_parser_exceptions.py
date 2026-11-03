@@ -150,6 +150,8 @@ def test_nested_try_and_if_attach_clauses_by_indentation() -> None:
         "      raise\n"
         "    finally:\n"
         "      print(1)\n"
+        "  elif false:\n"
+        "    print(0)\n"
         "  else:\n"
         "    print(2)\n"
         "except Exception:\n"
@@ -164,6 +166,11 @@ def test_nested_try_and_if_attach_clauses_by_indentation() -> None:
     assert isinstance(branch, astx.IfStmt)
     inner = branch.then.nodes[0]
     assert isinstance(inner, astx.ExceptionHandlerStmt)
+    assert branch.else_ is not None
+    alternative = branch.else_.nodes[0]
+    assert isinstance(alternative, astx.IfStmt)
+    assert alternative.else_ is not None
+    assert len(alternative.else_.nodes) == 1
     assert inner.finally_handler is not None
     assert not inner.handlers.nodes
     assert len(node.handlers.nodes) == 1

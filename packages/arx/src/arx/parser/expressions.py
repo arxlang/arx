@@ -71,6 +71,18 @@ class ExpressionParserMixin(ParserMixinBase):
             return self.parse_array_expr()
         if self.tokens.cur_tok.kind == TokenKind.kw_if:
             return self.parse_if_stmt()
+        if self.tokens.cur_tok.kind == TokenKind.kw_elif:
+            raise ParserException(
+                "'elif' requires a preceding 'if' or 'elif' "
+                "at the same indentation.",
+                self.tokens.cur_tok.location,
+            )
+        if self.tokens.cur_tok.kind == TokenKind.kw_else:
+            raise ParserException(
+                "'else' requires a matching 'if' or 'try' "
+                "at the same indentation.",
+                self.tokens.cur_tok.location,
+            )
         if self.tokens.cur_tok.kind == TokenKind.kw_while:
             return self.parse_while_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_for:
