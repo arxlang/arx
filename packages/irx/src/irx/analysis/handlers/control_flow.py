@@ -878,7 +878,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             resolved_iteration = replace(iteration, target_symbol=symbol)
             self._set_iteration(node.iterable, resolved_iteration)
             self._set_iteration(node, resolved_iteration)
-            with self.context.in_loop():
+            with (
+                self.context.in_loop(),
+                self.context.list_iteration(
+                    iteration.borrowed_owner_symbol_id
+                ),
+            ):
                 with self.context.constant_diagnostics(False):
                     self.visit(node.body)
         self._set_type(node, None)

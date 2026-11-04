@@ -1132,6 +1132,9 @@ def test_list_assignment_destroys_replaced_and_final_storage(
     list_type = _list_i32_type()
     module = _module_with_main(
         _mutable_decl("out", list_type, astx.ListCreate(astx.Int32())),
+        astx.ForInLoopStmt(
+            astx.Identifier("item"), astx.Identifier("out"), astx.Block()
+        ),
         astx.VariableAssignment("out", astx.ListCreate(astx.Int32())),
         astx.FunctionReturn(
             astx.Cast(astx.ListLength(astx.Identifier("out")), astx.Int32())
@@ -1157,7 +1160,10 @@ def test_binary_list_assignment_destroys_replaced_and_final_storage(
     """
     list_type = _list_i32_type()
     module = _module_with_main(
-        _mutable_decl("out", list_type, astx.ListCreate(astx.Int32())),
+        _mutable_decl("out", list_type, astx.ListExpr([astx.LiteralInt32(1)])),
+        astx.ForInLoopStmt(
+            astx.Identifier("item"), astx.Identifier("out"), astx.Block()
+        ),
         astx.BinaryOp(
             "=",
             astx.Identifier("out"),

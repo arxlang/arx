@@ -11,9 +11,10 @@ summary: >-
 
 from __future__ import annotations
 
+from contextlib import ExitStack, contextmanager
 from dataclasses import replace
 from datetime import date, datetime, time
-from typing import cast
+from typing import Iterator, cast
 
 import astx
 
@@ -159,12 +160,15 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
     def _visit_comprehension_clause(
         self,
         clause: astx.ComprehensionClause,
+        borrows: ExitStack,
     ) -> None:
         """
         title: Visit one comprehension clause in the active scope.
         parameters:
           clause:
             type: astx.ComprehensionClause
+          borrows:
+            type: ExitStack
         """
         if clause.is_async:
             self.context.diagnostics.add(
@@ -201,22 +205,31 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         self._set_iteration(clause, resolved_iteration)
         self._set_type(clause, iteration.element_type)
 
+        borrows.enter_context(
+            self.context.list_iteration(iteration.borrowed_owner_symbol_id)
+        )
         for condition in clause.conditions.nodes:
             self.visit(condition)
             self._validate_comprehension_condition(condition)
 
+    @contextmanager
+    @typechecked
     def _visit_comprehension_clauses(
         self,
         clauses: list[astx.ComprehensionClause],
-    ) -> None:
+    ) -> Iterator[None]:
         """
-        title: Visit all comprehension clauses in left-to-right order.
+        title: Borrow iterable owners through dependent clauses and results.
         parameters:
           clauses:
             type: list[astx.ComprehensionClause]
+        returns:
+          type: Iterator[None]
         """
-        for clause in clauses:
-            self._visit_comprehension_clause(clause)
+        with ExitStack() as borrows:
+            for clause in clauses:
+                self._visit_comprehension_clause(clause, borrows)
+            yield
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.AliasExpr) -> None:
@@ -956,8 +969,11 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ComprehensionClause
         """
-        with self.context.scope("comprehension-clause"):
-            self._visit_comprehension_clause(node)
+        with (
+            self.context.scope("comprehension-clause"),
+            ExitStack() as borrows,
+        ):
+            self._visit_comprehension_clause(node, borrows)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.ListComprehension) -> None:
@@ -967,8 +983,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListComprehension
         """
-        with self.context.scope("list-comprehension"):
-            self._visit_comprehension_clauses(list(node.generators.nodes))
+        with (
+            self.context.scope("list-comprehension"),
+            self._visit_comprehension_clauses(list(node.generators.nodes)),
+        ):
             self.visit(node.element)
             self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
@@ -1005,8 +1023,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.GeneratorExpr
         """
-        with self.context.scope("generator-expression"):
-            self._visit_comprehension_clauses(list(node.generators.nodes))
+        with (
+            self.context.scope("generator-expression"),
+            self._visit_comprehension_clauses(list(node.generators.nodes)),
+        ):
             self.visit(node.element)
             self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
@@ -1023,8 +1043,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SetComprehension
         """
-        with self.context.scope("set-comprehension"):
-            self._visit_comprehension_clauses(list(node.generators.nodes))
+        with (
+            self.context.scope("set-comprehension"),
+            self._visit_comprehension_clauses(list(node.generators.nodes)),
+        ):
             self.visit(node.element)
             self.reject_class_element(node.element)
             element_type = self._expr_type(node.element)
@@ -1041,8 +1063,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DictComprehension
         """
-        with self.context.scope("dict-comprehension"):
-            self._visit_comprehension_clauses(list(node.generators.nodes))
+        with (
+            self.context.scope("dict-comprehension"),
+            self._visit_comprehension_clauses(list(node.generators.nodes)),
+        ):
             self.visit(node.key)
             self.visit(node.value)
             self.reject_class_element(node.key)

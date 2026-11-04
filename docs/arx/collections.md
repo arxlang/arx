@@ -34,6 +34,15 @@ return value is allowed. Parameters borrow storage and cannot append or return
 that borrow. Borrowed lists keep their exact element type: passing `list[i32]`
 to a `list[i64]` parameter does not convert the existing storage.
 
+While a `for ... in` loop borrows a list, replacing that owner binding anywhere
+in the body is a compile-time ownership error (`IRX-S013`), including nested
+branches and exception clauses. Move the replacement after the loop or build a
+different list inside it; distinct shadowed bindings remain independent. Unlike
+Python, Arx does not retain the original list object across rebinding. In-place
+`append` remains allowed on owned locals, but iteration keeps its initial
+length, so appended elements are not visited. Returning the owner from the loop
+still moves it to the caller.
+
 Bracket expressions evaluate once, left to right, and produce owned lists; only
 an explicit fixed-shape tensor target selects tensor storage. An explicit list
 target types fresh literal elements first. Otherwise all elements must have a

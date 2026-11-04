@@ -58,6 +58,8 @@ class SemanticContext:
         type: bool
       loop_depth:
         type: int
+      active_list_iteration_owners:
+        type: frozenset[str]
       exception_region_depth:
         type: int
       native_feature_names:
@@ -92,6 +94,7 @@ class SemanticContext:
     current_module_key: ModuleKey | None = None
     check_constant_expressions: bool = True
     loop_depth: int = 0
+    active_list_iteration_owners: frozenset[str] = frozenset()
     exception_region_depth: int = 0
     native_feature_names: tuple[str, ...] = ()
     native_bindings: dict[int, tuple[str, ...]] = field(default_factory=dict)
@@ -102,6 +105,30 @@ class SemanticContext:
     )
     _symbol_counter: int = 0
     _method_slot_counter: int = 0
+
+    @contextmanager
+    @typechecked
+    def list_iteration(self, owner_symbol_id: str | None) -> Iterator[None]:
+        """
+        title: Protect list storage borrowed for iteration.
+        summary: >-
+          Track resolved identity, not spelling. Restore the previous set even
+          on failed analysis or nested iteration of the same owner. Temporary
+          lists and non-list iterables have no named owner to protect. This
+          guards replacement, not in-place append or ownership-moving returns.
+        parameters:
+          owner_symbol_id:
+            type: str | None
+        returns:
+          type: Iterator[None]
+        """
+        previous = self.active_list_iteration_owners
+        if owner_symbol_id is not None:
+            self.active_list_iteration_owners = previous | {owner_symbol_id}
+        try:
+            yield
+        finally:
+            self.active_list_iteration_owners = previous
 
     @contextmanager
     def constant_diagnostics(self, enabled: bool) -> Iterator[None]:

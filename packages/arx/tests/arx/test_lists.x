@@ -37,11 +37,11 @@ fn first_word(values: list[str]) -> str:
   ```
   return values[0]
 
-fn first_iteration() -> str:
+fn first_iteration(values: list[str]) -> str:
   ```
-  title: Move a string iteration value out of a temporary list
+  title: Copy a string iteration value out of a borrowed list
   ```
-  for word in ["first", "second"]:
+  for word in values:
     return word
   return "empty"
 
@@ -90,8 +90,51 @@ fn test_owned_string_elements() -> none:
   values.append(first)
   values = []
   assert first == "owned word"
-  assert first_iteration() == "first"
+  assert first_iteration(["first", "second"]) == "first"
   values = ["stable"]
-  for word in values:
-    values = []
-    assert word == "stable"
+  var retained: str = first_iteration(values)
+  values = []
+  assert retained == "stable"
+
+fn return_iterated_list() -> list[i32]:
+  ```
+  title: Return the iterated owner without losing its storage
+  ```
+  var values: list[i32] = [7, 8]
+  for value in values:
+    return values
+  return values
+
+fn test_iteration_owner_boundaries() -> none:
+  ```
+  title: Preserve append bounds and replace only independent or released owners
+  ```
+  var values: list[i32] = [1, 2, 3]
+  var other: list[i32] = []
+  var total: i32 = 0
+  for value in values:
+    values.append(9)
+    other = [value]
+    total += other[0]
+    for inner in [0]:
+      var values: list[i32] = [inner]
+      values = [7]
+      assert values[0] == 7
+  assert total == 6
+  assert len(values) == 6
+  values = [total]
+  for values in values:
+    assert values == 6
+  values = []
+  for value in values:
+    assert false
+  for value in return_iterated_list():
+    total += value
+  assert total == 21
+  values = [1]
+  try:
+    for value in values:
+      raise ValueError("leave iteration")
+  except ValueError:
+    values = [2]
+  assert values[0] == 2

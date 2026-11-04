@@ -269,6 +269,11 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
     ) -> None:
         """
         title: Validate and record one dynamic-list replacement transfer.
+        summary: >-
+          Replacing an actively iterated owner would invalidate the loop's
+          borrowed storage. Reject it before authorizing a transfer, even on
+          the last iteration or immediately before returning. Other bindings
+          and replacement after iteration retain the existing move contract.
         parameters:
           node:
             type: astx.AST
@@ -316,6 +321,16 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 "owned value; borrowed and static list copies are not "
                 "supported",
                 node=value,
+                code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
+            )
+            return
+
+        if symbol.symbol_id in self.context.active_list_iteration_owners:
+            self.context.diagnostics.add(
+                f"cannot replace list '{target_name}' while it is being "
+                "iterated; move the replacement after the loop or use a "
+                "different binding",
+                node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return

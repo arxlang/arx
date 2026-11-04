@@ -18,6 +18,10 @@
 
 ## Unreleased
 
+- **Breaking:** Replacing a list owner while it is being iterated now fails
+  during semantic analysis (`IRX-S013`), including IRx comprehension evaluation.
+  Move replacement after iteration or use a different binding. In-place append
+  keeps the initial iteration bound; no implicit list copies are introduced.
 - Add checked scalar `+=`, `-=`, `*=`, `/=`, and `%=` statements and count-loop
   updates on mutable numeric identifiers, with lossless store conversions.
   Fields, subscripts, and compound-assignment expressions remain unsupported;
