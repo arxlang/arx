@@ -19,6 +19,7 @@ from irx.analysis.resolved_nodes import (
     ResolvedContextManager,
     ResolvedIteration,
     ResolvedMethodCall,
+    SemanticInfo,
 )
 from irx.analysis.types import (
     is_boolean_type,
@@ -845,6 +846,21 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: bool
         """
+        if isinstance(update, astx.AugAssign):
+            semantic = require_semantic_metadata(
+                cast(SemanticInfo | None, getattr(update, "semantic", None)),
+                node=update,
+                metadata="semantic",
+                context="compound count-loop update",
+            )
+            plan = require_semantic_metadata(
+                semantic.resolved_aug_assignment,
+                node=update,
+                metadata="resolved_aug_assignment",
+                context="compound count-loop update",
+            )
+            return plan.target.symbol_id == loop_symbol_key
+
         if isinstance(update, astx.UnaryOp) and update.op_code in {"++", "--"}:
             operand = update.operand
             if isinstance(operand, astx.Identifier):

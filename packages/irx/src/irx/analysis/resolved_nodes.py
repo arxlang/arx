@@ -1590,6 +1590,31 @@ class ResolvedAssignment:
 @public
 @typechecked
 @dataclass(frozen=True)
+class ResolvedAugAssignment:
+    """
+    title: Resolved scalar compound mutation and its lossless store conversion.
+    summary: >-
+      Load target before evaluating the RHS once. Compute using operation's
+      resolved operand conversions, then convert and store only on success.
+      Yield the stored value; independent RHS side effects are not rolled back.
+      This plan supports numeric identifiers, not fields or owning resources.
+    attributes:
+      target:
+        type: SemanticSymbol
+      operation:
+        type: ResolvedOperator
+      store_conversion:
+        type: ImplicitConversion
+    """
+
+    target: SemanticSymbol
+    operation: ResolvedOperator
+    store_conversion: ImplicitConversion
+
+
+@public
+@typechecked
+@dataclass(frozen=True)
 class ResolvedFieldAccess:
     """
     title: Resolved field access metadata.
@@ -2263,6 +2288,8 @@ class SemanticInfo:
         type: ResolvedOperator | None
       resolved_assignment:
         type: ResolvedAssignment | None
+      resolved_aug_assignment:
+        type: ResolvedAugAssignment | None
       resolved_field_access:
         type: ResolvedFieldAccess | None
       resolved_module_member_access:
@@ -2352,6 +2379,7 @@ class SemanticInfo:
     resolved_call: CallResolution | None = None
     resolved_operator: ResolvedOperator | None = None
     resolved_assignment: ResolvedAssignment | None = None
+    resolved_aug_assignment: ResolvedAugAssignment | None = None
     resolved_field_access: ResolvedFieldAccess | None = None
     resolved_module_member_access: ResolvedModuleMemberAccess | None = None
     resolved_class_field_access: ResolvedClassFieldAccess | None = None

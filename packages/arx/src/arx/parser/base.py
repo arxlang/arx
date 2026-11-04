@@ -76,6 +76,14 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
+    def parse_assignment_or_expression(self) -> astx.AST:
+        """
+        title: Parse a compound statement or ordinary count-loop expression.
+        returns:
+          type: astx.AST
+        """
+        raise NotImplementedError
+
     def match_clause(self, kind: TokenKind, indentation: int) -> bool:
         """
         title: Match a clause without consuming an unrelated line marker.

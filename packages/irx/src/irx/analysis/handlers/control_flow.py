@@ -772,6 +772,18 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             )
             with self.context.constant_diagnostics(False):
                 self.visit(node.update)
+            if isinstance(node.update, astx.AugAssign):
+                plan = self._semantic(node.update).resolved_aug_assignment
+                if (
+                    plan is not None
+                    and plan.target.symbol_id != symbol.symbol_id
+                ):
+                    self.context.diagnostics.add(
+                        "compound count-loop update must target "
+                        "the induction binding",
+                        node=node.update,
+                        code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
+                    )
             with self.context.in_loop():
                 with self.context.constant_diagnostics(False):
                     self.visit(node.body)

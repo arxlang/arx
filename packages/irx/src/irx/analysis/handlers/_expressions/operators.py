@@ -47,7 +47,11 @@ from irx.analysis.ownership import (
     resource_ownership,
     string_resource_ownership,
 )
-from irx.analysis.resolved_nodes import ImplicitConversion, OwnershipKind
+from irx.analysis.resolved_nodes import (
+    ImplicitConversion,
+    OwnershipKind,
+    ResolvedAugAssignment,
+)
 from irx.analysis.types import (
     common_numeric_type,
     display_type_name,
@@ -72,6 +76,96 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression visitors for unary, binary, cast, and print operations
     """
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(self, node: astx.AugAssign) -> None:
+        """
+        title: Resolve checked compound mutation of one numeric identifier.
+        summary: >-
+          Accept +=, -=, *=, /=, and %= with lossless operand and store
+          conversions. This internal value-producing operation does not imply
+          expression-context support in a frontend. Reject other modeled
+          opcodes and non-scalar domains before lowering.
+        parameters:
+          node:
+            type: astx.AugAssign
+        """
+        self._semantic(node).resolved_aug_assignment = None
+        if node.op_code not in {"+=", "-=", "*=", "/=", "%="}:
+            self.context.diagnostics.add(
+                f"unsupported compound assignment '{node.op_code}'",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        if not isinstance(node.target, astx.Identifier):
+            self.context.diagnostics.add(
+                "compound assignment requires an identifier target",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
+            )
+            return
+        self.visit(node.target)
+        resolved = self._resolve_mutation_target(
+            node.target,
+            node=node,
+            action="assign to",
+            invalid_message="compound assignment requires a mutable variable",
+        )
+        if resolved is None:
+            return
+        symbol, target_name, target_type = resolved
+        contextualize_literal(node.value, target_type)
+        self.visit(node.value)
+        if not self._require_value_expression(
+            node.value, context="Compound assignment"
+        ):
+            return
+        value_type = self._expr_type(node.value)
+        if not (is_numeric_type(target_type) and is_numeric_type(value_type)):
+            self.context.diagnostics.add(
+                "compound assignment requires non-nullable numeric scalars",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        result_type = common_numeric_type(target_type, value_type)
+        if result_type is None:
+            self.context.diagnostics.add(
+                "compound operands have no lossless common type; "
+                "use an explicit cast",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return
+        validate_assignment(
+            self.context.diagnostics,
+            target_name=target_name,
+            target_type=target_type,
+            value_type=result_type,
+            node=node,
+        )
+        if not symbol.is_mutable or not is_assignable(
+            target_type, result_type
+        ):
+            return
+        flags = normalize_flags(
+            node, lhs_type=target_type, rhs_type=value_type
+        )
+        operation = normalize_operator(
+            node.op_code[0],
+            result_type=result_type,
+            lhs_type=target_type,
+            rhs_type=value_type,
+            flags=flags,
+        )
+        self._set_flags(node, flags)
+        self._set_operator(node, operation)
+        self._set_assignment(node, symbol)
+        self._set_type(node, target_type)
+        self._semantic(node).resolved_aug_assignment = ResolvedAugAssignment(
+            symbol, operation, ImplicitConversion(result_type, target_type)
+        )
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.UnaryOp) -> None:

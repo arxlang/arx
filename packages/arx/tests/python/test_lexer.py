@@ -7,7 +7,7 @@ import pytest
 
 from arx.io import ArxIO
 from arx.lexer import Lexer, LexerError, Token, TokenKind, TokenList
-from arx.lexer.syntax import load_syntax_manifest
+from arx.lexer.syntax import SyntaxManifest, load_syntax_manifest
 from astx import SourceLocation
 
 
@@ -276,6 +276,39 @@ def test_get_tok_multi_char_operators() -> None:
 
     for token in expected:
         assert lexer.get_token() == token
+
+
+@pytest.mark.parametrize("operator", ["+=", "-=", "*=", "/=", "%="])
+def test_compound_operator_tokens(operator: str) -> None:
+    """
+    title: Compound spellings are single tokens without merging spaced symbols.
+    parameters:
+      operator:
+        type: str
+    """
+    manifest = load_syntax_manifest()
+    assert operator in manifest.multi_char_operators
+    assert operator in manifest.data["operators"]["assignment"]
+    ArxIO.string_to_buffer(f"x{operator}1 x {operator[0]} = 2")
+    lexer = Lexer()
+    for kind, value in [
+        (TokenKind.identifier, "x"),
+        (TokenKind.operator, operator),
+        (TokenKind.int_literal, 1),
+        (TokenKind.identifier, "x"),
+        (TokenKind.operator, operator[0]),
+        (TokenKind.operator, "="),
+        (TokenKind.int_literal, 2),
+    ]:
+        assert lexer.get_token() == Token(kind, value)
+
+
+def test_multi_character_inventory_comes_from_manifest() -> None:
+    """
+    title: Manifest contents, not a fallback inventory, define operator pairs.
+    """
+    manifest = SyntaxManifest({"operators": {"multi_char": ["**"]}})
+    assert manifest.multi_char_operators == {"**"}
 
 
 def test_get_tok_literals_and_keywords() -> None:

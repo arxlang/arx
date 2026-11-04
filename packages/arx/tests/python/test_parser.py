@@ -190,6 +190,112 @@ def test_prefix_mutation_after_statement_separator(
     assert mutation.operand.name == "y"
 
 
+@pytest.mark.parametrize("operator", ["+=", "-=", "*=", "/=", "%="])
+def test_compound_statement_locations_and_precedence(operator: str) -> None:
+    """
+    title: Compound statements retain operand locations and normal precedence.
+    parameters:
+      operator:
+        type: str
+    """
+    tree = _parse_module(f"café {operator} 2 + 3 * 4\n")
+    node = tree.nodes[0]
+    assert isinstance(node, astx.AugAssign)
+    assert node.op_code == operator
+    assert node.target.name == "café"
+    assert (node.loc.line, node.loc.col) == (1, 6)
+    assert (node.target.loc.line, node.target.loc.col) == (1, 1)
+    assert isinstance(node.value, astx.BinaryOp)
+    assert node.value.op_code == "+"
+    assert node.value.lhs.loc.col == 9
+    assert isinstance(node.value.rhs, astx.BinaryOp)
+    assert node.value.rhs.op_code == "*"
+
+
+@pytest.mark.parametrize("text", ["+=", ";", ":"])
+def test_compound_operator_detection_ignores_literal_contents(
+    text: str,
+) -> None:
+    """
+    title: Literal text cannot be consumed as an operator or a missing operand.
+    parameters:
+      text:
+        type: str
+    """
+    tree = _parse_module(f'x\n"{text}"\n')
+    assert len(tree.nodes) == 2
+    assert isinstance(tree.nodes[1], astx.LiteralString)
+    tree = _parse_module(f'x += "{text}"\n')
+    node = tree.nodes[0]
+    assert isinstance(node, astx.AugAssign)
+    assert isinstance(node.value, astx.LiteralString)
+
+
+def test_compound_count_update_and_statement_separators() -> None:
+    """
+    title: Count updates and semicolon-separated statements admit AugAssign.
+    """
+    tree = _parse_module(
+        "fn main() -> i32:\n"
+        "  var total: i32 = 0\n"
+        "  for var i: i32 = 0; i < 3; i += 1:\n"
+        "    total += i; total *= 2\n"
+        "  total %= 5\n"
+        "  return total\n"
+    )
+    fn = tree.nodes[0]
+    assert isinstance(fn, astx.FunctionDef)
+    loop = fn.body.nodes[1]
+    assert isinstance(loop, astx.ForCountLoopStmt)
+    assert isinstance(loop.update, astx.AugAssign)
+    assert loop.update.target.name == "i"
+    assert all(isinstance(node, astx.AugAssign) for node in loop.body.nodes)
+    assert len(loop.body.nodes) == 2
+    assert isinstance(fn.body.nodes[2], astx.AugAssign)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "obj.field += 1",
+        "items[0] += 1",
+        "(x) += 1",
+        "1 += 2",
+        "x + y += 1",
+        "f(x += 1)",
+        "[x += 1]",
+        "return x += 1",
+        "if x += 1:\n  0",
+        "var y: i32 = x += 1",
+        "x = y += 1",
+        "x += y += 1",
+        "x += y = 1",
+        "x += (y = 1)",
+        "x +=",
+        "x +=\ny",
+        "x\n+= 1",
+        "x +=; y",
+        "x += return 1",
+        "+= 1",
+        "for var i: i32 = 0; i += 1; i + 1:\n  0",
+    ],
+)
+def test_compound_assignment_rejects_invalid_surface_contexts(
+    source: str,
+) -> None:
+    """
+    title: Unsupported targets and expression contexts fail before analysis.
+    parameters:
+      source:
+        type: str
+    """
+    with pytest.raises(ParserException) as captured:
+        _parse_module(source)
+    assert "compound assignment" in captured.value.message.lower()
+    assert captured.value.code == "ARX-PARSE-001"
+    assert captured.value.location is not None
+
+
 def test_parse_float_expr() -> None:
     """
     title: Test gettok for main tokens.

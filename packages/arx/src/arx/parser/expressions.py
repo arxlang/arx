@@ -11,6 +11,8 @@ from typing import cast
 
 import astx
 
+from astx.operators import OpCodeAugAssign
+
 from arx import builtins
 from arx.dataframe import (
     attach_binding as attach_dataframe_binding,
@@ -26,6 +28,7 @@ from arx.tensor import attach_binding
 
 NOT_PRECEDENCE = 7
 PREFIX_PRECEDENCE = 50
+COMPOUND_OPERATORS = {"+=", "-=", "*=", "/=", "%="}
 
 
 class ExpressionParserMixin(ParserMixinBase):
@@ -281,7 +284,68 @@ class ExpressionParserMixin(ParserMixinBase):
           type: astx.AST
         """
         lhs = self.parse_unary()
-        return self.parse_bin_op_rhs(0, lhs)
+        expression = self.parse_bin_op_rhs(0, lhs)
+        if (
+            self.tokens.cur_tok.kind == TokenKind.operator
+            and self.tokens.cur_tok.value in COMPOUND_OPERATORS
+        ):
+            raise ParserException(
+                "Compound assignment requires a standalone identifier target "
+                "in a statement or count-loop update, not an expression.",
+                self.tokens.cur_tok.location,
+            )
+        return expression
+
+    def parse_assignment_or_expression(self) -> astx.AST:
+        """
+        title: Parse a scalar compound statement or an ordinary expression.
+        summary: >-
+          Only statement and count-loop dispatch may enter this path. Preserve
+          target, operator, and RHS locations without duplicating evaluations;
+          IRx validates mutability, numeric types, and loop binding identity.
+        returns:
+          type: astx.AST
+        """
+        target = self.tokens.cur_tok
+        following = self._peek_token()
+        if (
+            target.kind != TokenKind.identifier
+            or following.kind != TokenKind.operator
+            or following.value not in COMPOUND_OPERATORS
+            or following.location.line != target.location.line
+        ):
+            return self.parse_expression()
+        self.tokens.get_next_token()
+        operator = self.tokens.cur_tok
+        self.tokens.get_next_token()
+        value_token = self.tokens.cur_tok
+        if (
+            value_token.kind in {TokenKind.eof, TokenKind.indent}
+            or value_token.location.line > operator.location.line
+            or (
+                value_token.kind == TokenKind.operator
+                and value_token.value in {";", ":", ")", "]", ","}
+            )
+        ):
+            raise ParserException(
+                "Expected a value after compound assignment.",
+                value_token.location,
+            )
+        value = self.parse_expression()
+        if not isinstance(value, astx.DataType) or (
+            isinstance(value, astx.BinaryOp) and value.op_code == "="
+        ):
+            raise ParserException(
+                "Compound assignment requires a value, not a statement "
+                "or chained assignment.",
+                value_token.location,
+            )
+        return astx.AugAssign(
+            astx.Identifier(cast(str, target.value), loc=target.location),
+            cast(OpCodeAugAssign, operator.value),
+            value,
+            loc=operator.location,
+        )
 
     def parse_int_expr(self) -> astx.LiteralInteger:
         """
@@ -910,6 +974,12 @@ class ExpressionParserMixin(ParserMixinBase):
 
         op_code = cast(str, self.tokens.cur_tok.value)
         op_loc = self.tokens.cur_tok.location
+        if op_code in COMPOUND_OPERATORS:
+            raise ParserException(
+                "Compound assignment is not an expression; "
+                "provide an identifier target in a statement or loop update.",
+                op_loc,
+            )
         if op_code == "%":
             raise ParserException(
                 "Remainder '%' requires a left operand.", op_loc

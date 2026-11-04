@@ -108,10 +108,14 @@ fn count_loop() -> i32:
   summary: Sums numbers from 0 to 4.
   ```
   var total: i32 = 0
-  for var i: i32 = 0; i < 5; i = i + 1:
-    total = total + i
+  for var i: i32 = 0; i < 5; i += 1:
+    total += i
   return total
 ````
+
+Compound updates write the induction variable themselves. Ordinary expression
+updates such as `i + 1` remain supported; the loop stores their result into `i`.
+See the [compound assignment contract](specification.md#compound-assignment).
 
 ## Return Statements
 
