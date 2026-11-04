@@ -2024,6 +2024,10 @@ class ResolvedIteration:
         type: SemanticSymbol | None
       sequence_access:
         type: ResolvedSequenceAccess | None
+      borrowed_owner_symbol_id:
+        type: str | None
+        description: >-
+          Named list owner protected from replacement during iteration.
       extras:
         type: dict[str, Any]
     """
@@ -2036,6 +2040,7 @@ class ResolvedIteration:
     order: IterationOrder = IterationOrder.UNSPECIFIED
     target_symbol: SemanticSymbol | None = None
     sequence_access: ResolvedSequenceAccess | None = None
+    borrowed_owner_symbol_id: str | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
 

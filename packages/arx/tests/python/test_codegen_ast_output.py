@@ -17,11 +17,42 @@ from arx.lexer import Lexer
 from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
-from irx.diagnostics import SemanticError
+from irx.diagnostics import DiagnosticCodes, SemanticError
 from llvmlite import binding as llvm
 from llvmlite import ir
 
 from .test_file_class_native import build_audited_file_program
+
+
+@pytest.mark.parametrize("stop", [105, 110, 120])
+def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
+    """
+    title: Short, equal, and longer replacements fail before list lowering.
+    parameters:
+      stop:
+        type: int
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Iterated owner replacement\n```\n"
+        "fn main() -> i32:\n"
+        "  var data: list[i32] = range(0, 10)\n"
+        "  for val in data:\n"
+        "    if val == 2:\n"
+        f"      data = range(100, {stop})\n"
+        "  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP
+    assert "cannot replace list 'data' while it is being iterated" in (
+        diagnostic.message
+    )
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (8, 12)
 
 
 def test_compound_count_update_stores_once() -> None:

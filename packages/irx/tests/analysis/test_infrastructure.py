@@ -5,6 +5,7 @@ title: Tests for extracted semantic infrastructure.
 from __future__ import annotations
 
 import astx
+import pytest
 
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
@@ -12,6 +13,31 @@ from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_symbols import qualified_function_name
 from irx.analysis.registry import SemanticRegistry
 from irx.analysis.resolved_nodes import CallingConvention
+from typeguard import TypeCheckError
+
+
+def test_list_iteration_borrows_restore_on_nested_failure() -> None:
+    """
+    title: Failed nested analysis restores exactly the enclosing owner set.
+    """
+    context = SemanticContext()
+    with context.list_iteration("outer"):
+        with pytest.raises(ValueError, match="failed analysis"):
+            with (
+                context.list_iteration("outer"),
+                context.list_iteration("inner"),
+                context.list_iteration(None),
+            ):
+                assert context.active_list_iteration_owners == {
+                    "outer",
+                    "inner",
+                }
+                raise ValueError("failed analysis")
+        assert context.active_list_iteration_owners == {"outer"}
+    assert not context.active_list_iteration_owners
+    with pytest.raises(TypeCheckError):
+        with context.list_iteration(123):  # type: ignore[arg-type]
+            pass
 
 
 def test_semantic_registry_rejects_duplicate_locals_in_one_scope() -> None:

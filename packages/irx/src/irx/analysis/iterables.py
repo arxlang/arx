@@ -1,3 +1,5 @@
+# mypy: disable-error-code=no-redef
+
 """
 title: Iterable capability helpers for semantic analysis.
 summary: >-
@@ -9,16 +11,56 @@ from __future__ import annotations
 
 import astx
 
-from public import public
+from plum import dispatch
+from public import private, public
 
+from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
     IterationKind,
     IterationOrder,
     ResolvedIteration,
+    ResourceKind,
 )
 from irx.analysis.sequences import resolve_sequence_access
 from irx.builtins.collections.list import list_element_type
 from irx.typecheck import typechecked
+
+
+@private
+@dispatch
+@typechecked
+def list_iteration_owner(node: astx.AST) -> str | None:
+    """
+    title: Resolve the named storage owner of a list-valued iterable.
+    summary: >-
+      Identifiers borrow their owner's storage; assignment expressions also
+      expose their destination's storage despite producing an owned result.
+      Fresh temporaries and static lists do not borrow a named owner.
+    parameters:
+      node:
+        type: astx.AST
+    returns:
+      type: str | None
+    """
+    ownership = resource_ownership(node)
+    if ownership is None or ownership.resource_kind is not ResourceKind.LIST:
+        return None
+    return ownership.owner_symbol_id
+
+
+@private
+@dispatch
+@typechecked
+def list_iteration_owner(node: astx.Cast) -> str | None:
+    """
+    title: Identity list casts do not retain or copy the source storage.
+    parameters:
+      node:
+        type: astx.Cast
+    returns:
+      type: str | None
+    """
+    return list_iteration_owner(node.value)
 
 
 @public
@@ -67,6 +109,7 @@ def resolve_iteration_capability(
             element_type=list_type,
             kind=IterationKind.LIST,
             order=IterationOrder.INDEX,
+            borrowed_owner_symbol_id=list_iteration_owner(iterable_node),
         )
 
     if isinstance(iterable_type, astx.DictType) and isinstance(
