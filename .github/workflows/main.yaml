@@ -172,6 +172,10 @@ jobs:
           conda-solver: libmamba
           python-version: ${{ matrix.python_version }}
 
+      - name: Check Python Version
+        run: |
+          xonsh -c "assert '${{ matrix.python_version }}' in '$(python --version)'"
+
       - name: Install dependencies
         run: |
           poetry check
