@@ -342,6 +342,73 @@ class HandlerConfiguration:
                     f"for {item.signature} ({item.source})"
                 )
 
+    def inspect(self) -> dict[str, object]:
+        """
+        title: Return a fresh stable snapshot of effective handler provenance.
+        summary: Replacements name their predecessor; no handler is executed.
+        returns:
+          type: dict[str, object]
+        """
+        return {
+            "schema_version": 1,
+            "phase": self.phase,
+            "handlers": [
+                {
+                    "identity": item.identity,
+                    "owner": item.owner,
+                    "source": item.source,
+                    "signature": [
+                        f"{t.__module__}.{t.__qualname__}"
+                        for t in item.signature
+                    ],
+                    "replaces": item.replaces,
+                }
+                for item in sorted(
+                    self.contributions, key=lambda c: c.identity
+                )
+            ],
+        }
+
+    def explain(
+        self, value_type: type[object], context_type: type[object]
+    ) -> HandlerContribution:
+        """
+        title: Explain Plum's selection for one concrete nominal signature.
+        summary: >-
+          Uses a fresh dispatcher and public Plum resolution, not a second
+          specificity algorithm. Never executes a handler or changes compiler
+          dispatch state. Missing and ambiguous signatures are configuration
+          errors, just as at invocation.
+        parameters:
+          value_type:
+            type: type[object]
+          context_type:
+            type: type[object]
+        returns:
+          type: HandlerContribution
+        """
+        if any(type(t) is not type for t in (value_type, context_type)):
+            raise configuration_error("explanation requires nominal classes")
+        dispatcher = ScopedDispatch(self)
+        function = dispatcher.function
+        if not isinstance(function, Function):
+            raise configuration_error("expected an isolated Plum function")
+        try:
+            implementation, _ = function.resolve_method(
+                Signature(value_type, context_type)
+            )
+        except AmbiguousLookupError as exc:
+            raise configuration_error(
+                f"ambiguous {self.phase} dispatch: {exc}"
+            ) from exc
+        for contribution in self.contributions:
+            if contribution.implementation is implementation:
+                return contribution
+        raise configuration_error(
+            f"no {self.phase} handler for "
+            f"({value_type.__name__}, {context_type.__name__})"
+        )
+
 
 @private
 @typechecked

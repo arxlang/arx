@@ -13,7 +13,7 @@ from typing import Any, Callable, Optional, Protocol, Sequence
 from arx import __version__
 from arx.exceptions import ArxError
 
-KNOWN_SUBCOMMANDS: tuple[str, ...] = ("test",)
+KNOWN_SUBCOMMANDS: tuple[str, ...] = ("test", "features")
 COMPILATION_ERROR_EXIT_CODE = 1
 INTERNAL_ERROR_EXIT_CODE = 70
 DIAGNOSTIC_SCHEMA_VERSION = 1
@@ -464,6 +464,50 @@ def show_version() -> None:
     print(__version__)
 
 
+def inspect_features(argv: Sequence[str]) -> None:
+    """
+    title: >-
+      Inspect the default compiler call-feature composition without loading
+      providers.
+    summary: >-
+      Native activation belongs to a compilation, not this metadata view.
+    parameters:
+      argv:
+        type: Sequence[str]
+    """
+    parser = argparse.ArgumentParser(
+        prog="arx features",
+        description="Inspect call handlers, not all language support.",
+    )
+    parser.add_argument("--format", choices=("human", "json"), default="human")
+    args = parser.parse_args(argv)
+
+    from irx.extensions import (  # noqa: PLC0415
+        ConfigurationError,
+        default_feature_configuration,
+    )
+
+    try:
+        configuration = default_feature_configuration()
+    except ConfigurationError as exc:
+        report_compiler_error(exc, args.format)
+        raise SystemExit(COMPILATION_ERROR_EXIT_CODE) from None
+    if args.format == "json":
+        print(json.dumps(configuration.inspect(), sort_keys=True))
+        return
+    print(f"Composed call handlers; backend: {configuration.backend}")
+    for feature in configuration.available:
+        reason = configuration.selection_reason(feature.identity)
+        print(f"{feature.identity} ({reason}; revision {feature.revision})")
+        print(f"  source: {feature.source}")
+        print(f"  dependencies: {', '.join(feature.dependencies) or 'none'}")
+        print(f"  backends: {', '.join(feature.backends)}")
+        for provider in sorted(feature.providers, key=lambda p: p.phase):
+            print(f"  {provider.phase}: {provider.factory}")
+            print(f"    handlers: {', '.join(provider.provides)}")
+    print("Native activation: not observed (requires a compilation)")
+
+
 def _looks_like_subcommand_attempt(token: str) -> bool:
     """
     title: Return whether a leading token appears to be a subcommand attempt.
@@ -496,6 +540,9 @@ def app(argv: Sequence[str] | None = None) -> None:
         type: Sequence[str] | None
     """
     raw_args = list(sys.argv[1:] if argv is None else argv)
+
+    if raw_args and raw_args[0] == "features":
+        return inspect_features(raw_args[1:])
 
     if raw_args and raw_args[0] == "test":
         args_parser = get_test_args()

@@ -14,8 +14,10 @@ from astx.base import ReprStruct
 from irx.analysis.api import SemanticAnalyzer
 from irx.base.visitors import BaseVisitor, BaseVisitorProtocol
 from irx.builder import Visitor
+from irx.diagnostics import DiagnosticCodes, LoweringError, SemanticError
 from plum import dispatch
 from public import private
+from typeguard import TypeCheckError
 
 
 class _SpecializedVisitor(BaseVisitor):
@@ -149,6 +151,51 @@ def test_semantic_analyzer_inherits_shared_visit_contract() -> None:
 
     assert analyzed is node
     assert getattr(node, "semantic", None) is not None
+
+
+@pytest.mark.parametrize("typed", [False, True])
+def test_unknown_nodes_fail_at_the_responsible_phase(typed: bool) -> None:
+    """
+    title: A type annotation cannot grant unknown syntax compiler support.
+    parameters:
+      typed:
+        type: bool
+    """
+    node = UnknownNode()
+    if typed:
+        node.type_ = astx.Int32()
+    with pytest.raises(SemanticError) as caught:
+        SemanticAnalyzer().analyze(node)
+    diagnostic = caught.value.diagnostics.diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE
+    assert diagnostic.phase == "semantic"
+    assert diagnostic.resolved_source() is None
+    visitor = Visitor()
+    with pytest.raises(LoweringError) as lowering:
+        visitor.visit(node)
+    assert (
+        lowering.value.diagnostic.code
+        == DiagnosticCodes.LOWERING_MISSING_HANDLER
+    )
+    assert not visitor.result_stack
+
+
+def test_structural_traversal_and_scalar_subtypes_are_explicit() -> None:
+    """
+    title: >-
+      Supported blocks traverse children while unregistered containers fail.
+    """
+    scalar = IntegerSubtype(7)
+    block = astx.Block()
+    block.append(scalar)
+    SemanticAnalyzer().analyze(block)
+    assert isinstance(scalar.semantic.resolved_type, astx.Int32)
+    container: astx.ASTNodes[astx.AST] = astx.ASTNodes()
+    container.append(UnknownNode())
+    with pytest.raises(SemanticError, match="ASTNodes"):
+        SemanticAnalyzer().analyze(container)
+    with pytest.raises(TypeCheckError):
+        SemanticAnalyzer().analyze("not an AST")  # type: ignore[arg-type]
 
 
 def test_llvmlite_visitor_inherits_shared_visit_contract() -> None:

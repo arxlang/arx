@@ -26,7 +26,6 @@ from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
 from irx.analysis.numeric_literals import (
     contextualize_literal,
-    resolve_numeric_literal,
 )
 from irx.analysis.ownership import (
     resource_ownership,
@@ -2156,16 +2155,6 @@ class SemanticAnalyzerCore(BaseVisitor):
                 node=module,
             )
 
-    def _visit_plain_typed_node(self, node: astx.AST) -> None:
-        """
-        title: Visit one plain typed node.
-        parameters:
-          node:
-            type: astx.AST
-        """
-        literal_type = resolve_numeric_literal(node, self.context.diagnostics)
-        self._set_type(node, literal_type or getattr(node, "type_", None))
-
     def _guarantees_return(self, node: astx.AST) -> bool:
         """
         title: Return whether a statement subtree has no normal fallthrough.
@@ -2187,9 +2176,14 @@ class SemanticAnalyzerCore(BaseVisitor):
     @dispatch
     def visit(self, node: astx.AST) -> None:
         """
-        title: Visit generic AST nodes.
+        title: Reject unregistered nodes, even when they carry a type.
         parameters:
           node:
             type: astx.AST
         """
-        self._visit_plain_typed_node(node)
+        self.context.diagnostics.add(
+            f"unsupported syntax node: {type(node).__name__}",
+            node=node,
+            code=DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE,
+            hint="use a supported construct or register an analysis handler",
+        )

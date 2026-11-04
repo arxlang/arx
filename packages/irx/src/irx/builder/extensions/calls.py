@@ -14,7 +14,7 @@ from public import private, public
 
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
 from irx.builder.state import CleanupAction
-from irx.extensions import HandlerConfiguration
+from irx.extensions import HandlerConfiguration, default_feature_configuration
 from irx.typecheck import typechecked
 
 
@@ -226,12 +226,8 @@ def validate_lowering_call(
 @typechecked
 def default_lowering_configuration() -> HandlerConfiguration:
     """
-    title: Load only LLVM providers for the finite built-in pilot.
+    title: Compose built-in LLVM providers without native activation.
     returns:
       type: HandlerConfiguration
     """
-    from irx.builder.lowering.table_io import (  # noqa: PLC0415
-        lowering_contributions,
-    )
-
-    return HandlerConfiguration("lowering", lowering_contributions())
+    return default_feature_configuration().phase("lowering")

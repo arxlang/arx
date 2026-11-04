@@ -32,6 +32,49 @@ from arx.testing import TestRunSummary as _TestRunSummary
 from irx.diagnostics import DiagnosticBag, SemanticError
 
 
+def test_feature_inspection_cli_is_stable_and_backend_free(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    title: >-
+      Human and JSON metadata inspection never create a compiler or runtime.
+    parameters:
+      capsys:
+        type: pytest.CaptureFixture[str]
+    """
+    from irx.extensions import default_feature_configuration  # noqa: PLC0415
+
+    cli_module.app(["features", "--format", "json"])
+    assert (
+        json.loads(capsys.readouterr().out)
+        == default_feature_configuration().inspect()
+    )
+    cli_module.app(["features"])
+    human = capsys.readouterr().out
+    assert "irx.table_io" in human
+    assert "Native activation: not observed" in human
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "\n".join(
+                (
+                    "import sys",
+                    "from arx.cli import app",
+                    "app(['features', '--format', 'json'])",
+                    "assert not any(m in sys.modules "
+                    "for m in ("
+                    "'arx.main', 'irx.builder', 'irx.analysis', "
+                    "'llvmlite', 'pyarrow'))",
+                )
+            ),
+        ],
+        capture_output=True,
+        check=True,
+        timeout=60,
+    )
+
+
 def test_builtins_helpers() -> None:
     """
     title: Test builtins helper functions.

@@ -80,12 +80,42 @@ Derivation names replacements; duplicate signatures and unavailable invocation
 dependencies are rejected. Each compiler instance builds fresh Plum
 dispatch/cache state, so derived configurations do not mutate parents or live
 compilers. Providers must not capture compilation state. Recursive dispatch is
-supported; concurrent use of one mutable compiler instance is not. There is no
-automatic plugin discovery.
+supported; concurrent use of one mutable compiler instance is not.
+
+Built-in call providers are discovered from direct modules in
+`irx.extensions.builtin`. Each module exports a lightweight `descriptor()`; its
+`FeatureDescriptor` names dependencies, supported backends, contract revision,
+and phase factory references with promised handler identities. Add the
+descriptor and phase-owned implementations, not another central registry entry.
+Dependency closure and phase composition reject conflicts before the selected
+phase compiles an AST. Factories load only for enabled phases. There is no
+filesystem plugin scan or third-party entry-point loading.
+
+Use `arx features` (or `arx features --format json`) to inspect the default
+selection without loading providers. This describes migrated call handlers,
+**not all language support**. Native activation is unknown until a compilation
+requests runtime symbols; selection never implies activation.
+
+Python hosts use the same `default_feature_configuration()`. For an explicit
+selection, construct
+`FeatureConfiguration(discover_builtin_features(), selected=("irx.table_io",))`,
+then pass its `phase("analysis")` and `phase("lowering")` catalogs to the
+existing analyzer/builder configuration arguments. An empty selection disables
+all composed call providers; required disabled dependencies are errors.
+`inspect()` returns a fresh metadata snapshot. For a loaded phase,
+`explain(value_type, context_type)` uses Plum to select the actual contribution,
+including explicit replacements, without executing it.
 
 Lightweight contribution metadata imports neither LLVM, PyArrow, nor Arx.
 Analysis providers do not import the backend. Registering a handler does not
 activate native code; emission still requests registered runtime symbols.
+
+The shared visitor now has one typed rejecting fallback. Analysis explicitly
+registers supported scalar literals and structural traversal; a `type_` field
+does not make arbitrary syntax supported. Intentionally breaking pre-2.0
+behavior: unknown nodes now produce semantic `S016` diagnostics instead of
+receiving generic type metadata; bypassing analysis with a missing LLVM handler
+produces internal lowering `L002`. No node-specific base rejection stubs remain.
 
 ### Why sidecars instead of a separate HIR?
 
