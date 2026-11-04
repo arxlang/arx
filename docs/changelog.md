@@ -1,6 +1,22 @@
 # Release Notes
 ---
 
+# [1.27.0](https://github.com/arxlang/arx/compare/1.26.0...1.27.0) (2026-11-04)
+
+
+### Bug Fixes
+
+* **irx:** reject rebinding actively iterated lists ([#166](https://github.com/arxlang/arx/issues/166)) ([6bf2ad7](https://github.com/arxlang/arx/commit/6bf2ad7cdf637070088cd60ec9f5db139c5acfc1))
+* **lexer:** ignore trailing whitespace and comments at EOF ([#160](https://github.com/arxlang/arx/issues/160)) ([556e0cb](https://github.com/arxlang/arx/commit/556e0cba96b41146999228f944b7022e92166f61))
+* **parser:** clarify unsupported postfix mutation ([#162](https://github.com/arxlang/arx/issues/162)) ([78b8f66](https://github.com/arxlang/arx/commit/78b8f66ba6a51d49a2fde23a27113363b818cd59))
+
+
+### Features
+
+* **compiler:** add checked scalar compound assignment ([#165](https://github.com/arxlang/arx/issues/165)) ([871ec34](https://github.com/arxlang/arx/commit/871ec344155fc91de6bf2979ac1de69c08d7b0f4))
+* **io:** add immutable bytes and bounded binary file operations ([#159](https://github.com/arxlang/arx/issues/159)) ([7398616](https://github.com/arxlang/arx/commit/7398616f8502e736c772aa23935d7dced73a99c4))
+* **parser:** add Python-style elif chains ([#163](https://github.com/arxlang/arx/issues/163)) ([267a6ab](https://github.com/arxlang/arx/commit/267a6ab28eb37ff1d89267d8afc4f46b318a3dea))
+
 # [1.26.0](https://github.com/arxlang/arx/compare/1.25.0...1.26.0) (2026-11-02)
 
 

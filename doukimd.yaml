@@ -10,7 +10,7 @@ site:
   favicon: favicon.ico
 project:
   name: arx
-  version: 1.26.0
+  version: 1.27.0
 docs_dir: docs
 output_dir: build
 assets:
