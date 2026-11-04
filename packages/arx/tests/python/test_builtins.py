@@ -5,6 +5,7 @@ title: Bundled builtin-module loading and resolution tests.
 from __future__ import annotations
 
 import shutil
+import tomllib
 
 from pathlib import Path
 from textwrap import dedent
@@ -17,12 +18,6 @@ from arx import main as main_module
 from arx.exceptions import ParserException
 from arx.testing import ArxTestRunner
 from irx.diagnostics import SemanticError
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib
-
 
 HAS_CLANG = shutil.which("clang") is not None
 

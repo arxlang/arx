@@ -88,7 +88,8 @@ directory before building. Native API output now lives only under `build/`.
 
 ## Python code
 
-- Python 3.10 is the minimum supported runtime.
+- Follow the Python requirements in package manifests and the
+  [tested environment matrix](support-matrix.md#current-matrix).
 - Ruff uses a 79-character line length.
 - Mypy is strict.
 - Public and internal symbols follow the repository's Douki-style Python

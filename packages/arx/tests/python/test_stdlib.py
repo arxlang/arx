@@ -4,6 +4,8 @@ title: Bundled stdlib resolution and packaging tests.
 
 from __future__ import annotations
 
+import tomllib
+
 from pathlib import Path
 from textwrap import dedent
 
@@ -17,11 +19,6 @@ from arx.lexer import Lexer
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.diagnostics import SemanticError
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib
 
 
 def test_bundled_stdlib_package_data_is_present() -> None:

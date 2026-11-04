@@ -166,11 +166,10 @@ def _column_of(exc: SyntaxError, text: str) -> int | None:
     summary: >-
       SyntaxError.offset is a one-based character column, but it does not
       always point into the parsed source: for malformed f-string replacement
-      fields, Python 3.10 and 3.11 report an offset into a synthetic string
-      built from the replacement expression. The offset is therefore only
-      trusted when the error's reported text matches the parsed line it claims
-      to come from; otherwise, and when there is no usable offset at all, None
-      is returned.
+      fields, Python 3.11 reports an offset into a synthetic string built from
+      the replacement expression. The offset is therefore only trusted when the
+      error's reported text matches the parsed line it claims to come from;
+      otherwise, and when there is no usable offset at all, None is returned.
     parameters:
       exc:
         type: SyntaxError
@@ -231,9 +230,7 @@ def _parse_block(
       Wraps ast.parse so that every parse failure becomes a
       SourceExtractionError with a located diagnostic. SyntaxError locations
       are shifted by line_delta to point at the real file line; the column is
-      only kept when _column_of can validate it. Python 3.10 raises ValueError
-      instead of SyntaxError for source containing a null byte, which carries
-      no location attributes at all.
+      only kept when _column_of can validate it.
     parameters:
       fn:
         type: PyFunc
@@ -263,12 +260,6 @@ def _parse_block(
         raise SourceExtractionError(
             message,
             diagnostics=[_error(message, filename, line, column)],
-        ) from exc
-    except ValueError as exc:
-        message = f"cannot parse source of {_name_of(fn)!r}: {exc}"
-        raise SourceExtractionError(
-            message,
-            diagnostics=[_error(message, filename)],
         ) from exc
 
 

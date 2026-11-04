@@ -5,7 +5,7 @@ This guide installs the Arx compiler and compiles a small program. See the
 
 ## Requirements
 
-- Python 3.10 or newer
+- A [supported Python interpreter](../support-matrix.md#current-matrix)
 - `pip` for a published installation, or Mamba/Conda and Poetry for a source
   checkout
 - LLVM/Clang-compatible tools for object and executable generation

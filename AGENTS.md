@@ -8,9 +8,11 @@ release changes unless a more specific instruction file overrides it.
 
 1. Keep changes scoped; apply the pre-2.0 compatibility policy below.
 2. Respect package ownership and keep cross-package contracts aligned.
-3. Keep Python 3.10-3.14 behavior and the relevant quality gates green.
-4. Make minimal, targeted changes with focused tests, source contracts, and only
-   necessary guide, architecture, or safety documentation.
+3. Keep Python support aligned with `requires-python` in the package manifests
+   and the tested versions in `.github/workflows/main.yaml`.
+4. Make minimal, targeted changes with focused tests, source contracts; and ONLY
+   necessary guide, architecture, or safety documentation, just if really
+   necessary.
 5. Report evidence honestly; never invent commands, results, spans, or support.
 
 ## Compatibility Before Arx 2.0
@@ -102,6 +104,11 @@ method. Preserve essential explanations of null semantics, aliasing, mutation,
 atomic publication, durability, error recovery, native dependencies, and
 unsupported behavior in code/tests or one appropriate guide before removing
 duplicated reference material.
+
+Keep volatile support facts, such as Python version ranges, in executable
+configuration. Link to package manifests and CI rather than copying their values
+into guides or docstrings. Retain version-specific explanations only when needed
+to explain behavior, restrictions, or historical changes.
 
 ## Working With Repository State
 
@@ -407,10 +414,10 @@ pytest -q packages/arx/tests/python/test_codegen_ast_output.py
 pytest -q packages/arx/tests/python/test_codegen_file_object.py
 ```
 
-The GitHub workflow runs non-AIX package tests and Arx language checks on Ubuntu
-with Python 3.10 through 3.14, plus the pre-commit lint stack. Do not assume a
-change is portable because it passes on only one Python version. Native build
-and execution checks may additionally require Clang and a C++ toolchain.
+`.github/workflows/main.yaml` defines the tested Python versions, platforms,
+package suites, Arx language checks, and lint gates. Do not assume a change is
+portable because it passes on only one Python version. Native build and
+execution checks may additionally require Clang and a C++ toolchain.
 
 Always report exactly which checks ran, their results, and any environment or
 toolchain blockers. Do not imply that an unrun check passed.

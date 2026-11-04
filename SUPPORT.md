@@ -11,10 +11,12 @@ supported configuration unless a package manifest explicitly permits it.
 
 ## Supported environment
 
-The packages declare Python 3.10 through 3.14. The current CI configuration
-tests those Python versions on Ubuntu. macOS, Windows, non-x86 architectures,
-and alternate Clang/LLVM combinations are experimental until they are added to
-the required CI and clean-install matrix.
+The `requires-python` fields in the [package manifests](packages/) define
+installable Python versions; the [CI workflow](.github/workflows/main.yaml)
+defines the tested interpreter and platform matrix. Installability alone is not
+a support guarantee. macOS, Windows, non-x86 architectures, and alternate
+Clang/LLVM combinations are experimental until they are added to the required CI
+and clean-install matrix.
 
 Native compilation additionally requires a compatible C/C++ toolchain and the
 libraries documented by IRx. A build that happens to work outside the tested

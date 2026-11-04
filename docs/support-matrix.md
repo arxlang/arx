@@ -14,11 +14,18 @@ currently verifies from the target that may become supported at GA:
 
 ## Current matrix
 
+Package `requires-python` fields define installable Python versions; see the
+[Arx manifest](https://github.com/arxlang/arx/blob/main/packages/arx/pyproject.toml).
+The
+[CI workflow](https://github.com/arxlang/arx/blob/main/.github/workflows/main.yaml)
+defines the tested interpreter matrix. Installability alone does not imply CI
+coverage or a support guarantee.
+
 | Dimension            | CI-verified now                                                                   | Release candidate                                                       | Experimental / unsupported                                   |
 | -------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
 | Operating system     | Ubuntu GitHub-hosted runner                                                       | A named Ubuntu LTS release, to be frozen before RC                      | macOS and Windows are experimental                           |
 | Architecture         | GitHub-hosted x86-64                                                              | x86-64                                                                  | AArch64 and other architectures are experimental             |
-| Python               | CPython 3.10, 3.11, 3.12, 3.13, and 3.14 package/language jobs                    | The same versions that pass the RC wheel gate                           | PyPy and CPython outside this range are unsupported          |
+| Python               | CPython versions exercised by the CI package/language jobs                        | The versions that pass the RC wheel gate                                | PyPy and CPython outside the tested matrix are unsupported   |
 | Native compiler      | Conda-forge Clang/Clangdev 14 in `conda/dev.yaml`                                 | Clang 14 until a newer range is explicitly qualified                    | GCC/MSVC and other Clang versions are experimental           |
 | LLVM code generation | The LLVM bundled by the resolved `llvmlite` package                               | Exact `llvmlite`/LLVM combinations from the RC lock and wheels          | System LLVM replacement is unsupported                       |
 | Linker               | Toolchain-default linker, plus explicit PIE/non-PIE modes in tests                | The linker shipped with the selected Ubuntu/Clang environment           | Other linkers are experimental                               |

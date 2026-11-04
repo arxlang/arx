@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import re
-import sys
+import tomllib
 
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -20,11 +20,6 @@ from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
 
 from arx.native_config import NativeConfig
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 DEFAULT_CONFIG_FILENAME = ".arxproject.toml"
 _DEPENDENCY_GROUP_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")

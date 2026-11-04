@@ -6,7 +6,8 @@
 pip install astx
 ```
 
-ASTx supports Python 3.10 or newer.
+See the [supported environment matrix](../support-matrix.md#current-matrix) for
+Python requirements and tested platforms.
 
 For console ASCII rendering through `mermaid-ascii`:
 

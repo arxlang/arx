@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import tomllib
 import venv
 
 from dataclasses import dataclass
@@ -480,9 +481,31 @@ def _single_artifact(directory: Path, pattern: str) -> Path:
     return matches[0]
 
 
+def python_requirement(project_dir: Path) -> str:
+    """
+    title: Read a project's declared Python requirement.
+    parameters:
+      project_dir:
+        type: Path
+    returns:
+      type: str
+    raises:
+      ValueError: If the requirement is not a string.
+    """
+    path = project_dir / "pyproject.toml"
+    with path.open("rb") as manifest:
+        requirement = tomllib.load(manifest)["project"]["requires-python"]
+    if not isinstance(requirement, str):
+        raise ValueError(f"{path}: requires-python must be a string")
+    return requirement
+
+
 def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
     """
     title: Validate artifact completeness and return the wheel paths.
+    summary: >-
+      Package manifests must agree with the root Python requirement, and wheel
+      metadata must match it. Reject stale or inconsistent artifacts.
     parameters:
       workspace:
         type: Path
@@ -490,11 +513,19 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
       type: tuple[Path, Ellipsis]
     """
     expected_license = (workspace / "LICENSE").read_bytes()
+    expected_python = python_requirement(workspace)
     wheels: list[Path] = []
     versions: set[str] = set()
 
     for package in PACKAGES:
-        dist_dir = workspace / "packages" / package.directory / "dist"
+        package_dir = workspace / "packages" / package.directory
+        package_python = python_requirement(package_dir)
+        if package_python != expected_python:
+            raise RuntimeError(
+                f"{package_dir} declares Requires-Python {package_python!r}, "
+                f"expected {expected_python!r} from the root manifest"
+            )
+        dist_dir = package_dir / "dist"
         wheel = _single_artifact(dist_dir, "*.whl")
         sdist = _single_artifact(dist_dir, "*.tar.gz")
         wheels.append(wheel)
@@ -510,10 +541,11 @@ def audit_artifacts(workspace: Path) -> tuple[Path, ...]:
                     f"{wheel} has distribution name {metadata['Name']!r}"
                 )
             versions.add(str(metadata["Version"]))
-            if metadata["Requires-Python"] != ">=3.10,<4":
+            if metadata["Requires-Python"] != expected_python:
                 raise RuntimeError(
                     f"{wheel} has unexpected Requires-Python "
-                    f"{metadata['Requires-Python']!r}"
+                    f"{metadata['Requires-Python']!r}; "
+                    f"expected {expected_python!r} from the manifest"
                 )
 
             license_names = [

@@ -38,7 +38,7 @@ support</a>
 </div>
 
 <div class="arx-tech-list">
-<span>Python 3.10+</span>
+<span>Python</span>
 <span>LLVM</span>
 <span>Apache Arrow C++</span>
 <span>Apache-2.0</span>
