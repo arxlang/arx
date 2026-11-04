@@ -70,6 +70,7 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
     ast.AsyncWith: "with statements are not supported",
     ast.With: "with statements are not supported",
     ast.Try: "try/except is not supported",
+    ast.TryStar: "try/except* is not supported",
     ast.Raise: "raise statements are not supported",
     ast.Assert: "assert statements are not supported",
     ast.Import: "import statements are not supported",
@@ -100,10 +101,6 @@ _UNSUPPORTED_MESSAGES: dict[type[ast.AST], str] = {
     ast.Slice: "slicing is not supported",
     ast.Match: "match statements are not supported",
 }
-# TryStar (except*) was added in Python 3.11; guard the reference so this
-# module still imports cleanly on 3.10.
-if (_try_star := getattr(ast, "TryStar", None)) is not None:
-    _UNSUPPORTED_MESSAGES[_try_star] = "try/except* is not supported"
 
 
 def _defined_in_class_body(qualname: str) -> bool:

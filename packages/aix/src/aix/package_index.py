@@ -7,7 +7,7 @@ summary: >-
 from __future__ import annotations
 
 import re
-import sys
+import tomllib
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -19,11 +19,6 @@ from packaging.requirements import InvalidRequirement, Requirement
 
 from aix import builtins as arx_builtins
 from aix import settings as arx_settings
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:  # pragma: no cover
-    import tomli as tomllib
 
 _ARX_MODULE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _DEPENDENCY_NAME_PATTERN = re.compile(

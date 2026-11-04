@@ -69,11 +69,13 @@ a failing test.
 
 ## Arrow and Parquet CI coverage
 
-CI collects the complete package suites and compiled-language tests on Python
-3.10–3.14. Native prerequisites are checked explicitly in Arx/IRx jobs so
-missing compilers or expected codecs cannot silently omit those integration
-paths. Installed-wheel smoke tests run in clean environments on Python 3.10 and
-3.14, including the nullable Series native header and compiled kernel calls.
+CI collects package suites and compiled-language tests on the interpreters
+selected by the
+[CI workflow](https://github.com/arxlang/arx/blob/main/.github/workflows/main.yaml).
+Native prerequisites are checked explicitly in Arx/IRx jobs so missing compilers
+or expected codecs cannot silently omit those integration paths. Installed-wheel
+smoke tests run in clean environments on the workflow's wheel matrix, including
+the nullable Series native header and compiled kernel calls.
 
 A separate Linux job runs `makim irx.test-sanitizers`: registered Arrow and
 Parquet runtime artifacts are compiled with AddressSanitizer and UBSan. Its

@@ -1,15 +1,18 @@
 """
-title: Safety tests for installed-wheel smoke tooling.
+title: Artifact contract and safety tests for installed-wheel smoke tooling.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
+import tarfile
 
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import Mock
+from zipfile import ZipFile
 
 import pytest
 
@@ -27,6 +30,109 @@ sys.modules[SCRIPT_SPEC.name] = wheel_smoke
 SCRIPT_SPEC.loader.exec_module(wheel_smoke)
 if not isinstance(wheel_smoke, ModuleType):  # pragma: no cover
     raise RuntimeError("wheel smoke script did not load as a module")
+
+
+@pytest.fixture
+def artifact_workspace(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> Path:
+    """
+    title: Create minimal artifacts with an arbitrary Python requirement.
+    summary: >-
+      A synthetic future requirement proves the audit reads configuration
+      rather than copying the repository's current support range.
+    parameters:
+      monkeypatch:
+        type: pytest.MonkeyPatch
+      tmp_path:
+        type: Path
+    returns:
+      type: Path
+    """
+    package = wheel_smoke.PackageArtifact("sample", "sample", "sample")
+    monkeypatch.setattr(wheel_smoke, "PACKAGES", (package,))
+    package_dir = tmp_path / "packages" / "sample"
+    dist = package_dir / "dist"
+    dist.mkdir(parents=True)
+    manifest = '[project]\nrequires-python = ">=3.99,<4"\n'
+    (tmp_path / "pyproject.toml").write_text(manifest, encoding="utf-8")
+    (package_dir / "pyproject.toml").write_text(manifest, encoding="utf-8")
+    license_text = b"test license\n"
+    (tmp_path / "LICENSE").write_bytes(license_text)
+    with ZipFile(dist / "sample-1.0-py3-none-any.whl", "w") as archive:
+        archive.writestr(
+            "sample-1.0.dist-info/METADATA",
+            "Name: sample\nVersion: 1.0\nRequires-Python: >=3.99,<4\n",
+        )
+        archive.writestr("sample-1.0.dist-info/licenses/LICENSE", license_text)
+        archive.writestr("sample/py.typed", "")
+    with tarfile.open(dist / "sample-1.0.tar.gz", "w:gz") as archive:
+        member = tarfile.TarInfo("sample-1.0/LICENSE")
+        member.size = len(license_text)
+        archive.addfile(member, io.BytesIO(license_text))
+    return tmp_path
+
+
+def test_audit_reads_python_requirement_from_manifests(
+    artifact_workspace: Path,
+) -> None:
+    """
+    title: Artifact checks follow the declared requirement without a code edit.
+    parameters:
+      artifact_workspace:
+        type: Path
+    """
+    (wheel,) = wheel_smoke.audit_artifacts(artifact_workspace)
+    assert wheel.name == "sample-1.0-py3-none-any.whl"
+
+
+def test_python_requirement_rejects_non_string_metadata(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Reject malformed Python requirements rather than auditing them.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python = [">=3.99"]\n', encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="requires-python must be a string"):
+        wheel_smoke.python_requirement(tmp_path)
+
+
+@pytest.mark.parametrize("changed", ["root", "package", "wheel"])
+def test_audit_rejects_inconsistent_python_requirements(
+    artifact_workspace: Path,
+    changed: str,
+) -> None:
+    """
+    title: Root, package, and wheel Python requirements must agree.
+    parameters:
+      artifact_workspace:
+        type: Path
+      changed:
+        type: str
+    """
+    package_dir = artifact_workspace / "packages" / "sample"
+    if changed == "wheel":
+        wheel = next((package_dir / "dist").glob("*.whl"))
+        with ZipFile(wheel, "w") as archive:
+            archive.writestr(
+                "sample-1.0.dist-info/METADATA",
+                "Name: sample\nVersion: 1.0\nRequires-Python: >=3.98,<4\n",
+            )
+    else:
+        directory = artifact_workspace if changed == "root" else package_dir
+        (directory / "pyproject.toml").write_text(
+            '[project]\nrequires-python = ">=3.98,<4"\n',
+            encoding="utf-8",
+        )
+
+    with pytest.raises(RuntimeError, match="Requires-Python"):
+        wheel_smoke.audit_artifacts(artifact_workspace)
 
 
 def test_run_smoke_uses_and_removes_only_a_tool_owned_directory(

@@ -22,10 +22,6 @@ from arxjit.validation import (
 
 PyFunc = Callable[..., Any]
 
-# except* parses only on Python 3.11+; the validator guards its table entry
-# the same way, so the matrix below has to agree with whichever it is.
-_TRY_STAR = getattr(ast, "TryStar", None)
-
 
 def _rejected(fn: PyFunc) -> list[Any]:
     """
@@ -1283,6 +1279,7 @@ _UNSUPPORTED_CASES: list[tuple[type[ast.AST], str]] = [
     (ast.AsyncWith, "async with x:\n    pass"),
     (ast.With, "with x:\n    pass"),
     (ast.Try, "try:\n    pass\nexcept Exception:\n    pass"),
+    (ast.TryStar, "try:\n    pass\nexcept* Exception:\n    pass"),
     (ast.Raise, "raise ValueError"),
     (ast.Assert, "assert x"),
     (ast.Import, "import math"),
@@ -1316,11 +1313,6 @@ _UNSUPPORTED_CASES: list[tuple[type[ast.AST], str]] = [
     (ast.Await, "v = await x"),
     (ast.Starred, "for i in range(*x):\n    pass"),
 ]
-
-if _TRY_STAR is not None:  # pragma: no cover - version dependent
-    _UNSUPPORTED_CASES.append(
-        (_TRY_STAR, "try:\n    pass\nexcept* Exception:\n    pass")
-    )
 
 # ast.Slice has a message in the table but no reachable position: a slice can
 # only appear inside a Subscript, and Subscript is rejected without descending

@@ -42,11 +42,11 @@ jobs:
           - arxpy
           - arxjit
         python_version:
-          - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
           - "3.14"
+          # - "3.15"
         os:
           - "ubuntu"
           # - "macos"
@@ -93,11 +93,11 @@ jobs:
       fail-fast: false
       matrix:
         python_version:
-          - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
           - "3.14"
+          # - "3.15"
         os:
           - "ubuntu"
           # - "macos"
@@ -147,7 +147,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python_version: ["3.10", "3.14"]
+        python_version: ["3.11", "3.14"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -174,6 +174,7 @@ jobs:
 
       - name: Check Python Version
         run: |
+          pip install xonsh
           xonsh -c "assert '${{ matrix.python_version }}' in '$(python --version)'"
 
       - name: Install dependencies
@@ -209,7 +210,7 @@ jobs:
           activate-environment: arx
           auto-update-conda: true
           conda-solver: libmamba
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |

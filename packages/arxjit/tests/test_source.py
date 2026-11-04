@@ -480,10 +480,7 @@ def test_null_byte_source_is_rejected(
 ) -> None:
     """
     title: Source containing a null byte raises SourceExtractionError.
-    summary: >-
-      Python 3.10 raises ValueError (not SyntaxError) from ast.parse for source
-      containing null bytes; later versions raise SyntaxError. Either way the
-      failure must be translated, never leaked raw.
+    summary: The parser's SyntaxError must be translated, never leaked raw.
     parameters:
       monkeypatch:
         type: pytest.MonkeyPatch
@@ -503,7 +500,7 @@ def test_null_byte_source_is_rejected(
     monkeypatch.setattr(inspect, "getsourcelines", fake_getsourcelines)
     with pytest.raises(SourceExtractionError) as caught:
         extract_source(sample_add)
-    assert isinstance(caught.value.__cause__, (ValueError, SyntaxError))
+    assert isinstance(caught.value.__cause__, SyntaxError)
     (diagnostic,) = caught.value.diagnostics
     assert diagnostic.message.startswith("cannot parse source of")
     assert "null byte" in diagnostic.message
@@ -676,45 +673,6 @@ def test_retrieval_reason_strips_embedded_locations() -> None:
     assert _retrieval_reason(syntax_error) == "bad token"
 
     assert _retrieval_reason(OSError("no source")) == "no source"
-
-
-def test_parse_valueerror_is_translated(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """
-    title: A ValueError from ast.parse becomes SourceExtractionError.
-    summary: >-
-      Only Python 3.10 raises ValueError from ast.parse in practice (null
-      bytes), so the translation is exercised deterministically on every
-      version by stubbing the parser.
-    parameters:
-      monkeypatch:
-        type: pytest.MonkeyPatch
-    """
-
-    def fake_parse(*_args: Any, **_kwargs: Any) -> Any:
-        """
-        title: Raise ValueError like ast.parse on a null byte.
-        parameters:
-          _args:
-            type: Any
-            variadic: positional
-          _kwargs:
-            type: Any
-            variadic: keyword
-        returns:
-          type: Any
-        """
-        raise ValueError("source code string cannot contain null bytes")
-
-    monkeypatch.setattr(ast, "parse", fake_parse)
-    with pytest.raises(SourceExtractionError) as caught:
-        extract_source(sample_add)
-    assert isinstance(caught.value.__cause__, ValueError)
-    (diagnostic,) = caught.value.diagnostics
-    assert diagnostic.message.startswith("cannot parse source of")
-    assert diagnostic.line is None
-    assert diagnostic.column is None
 
 
 def test_column_validation_of_syntax_errors() -> None:

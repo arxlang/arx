@@ -8,9 +8,10 @@ pip install pyirx
 
 The distribution is named `pyirx`; Python code imports `irx`.
 
-IRx requires Python 3.10 or newer. Translation uses `llvmlite`. Native object
-and executable workflows require an LLVM/Clang-compatible toolchain, while
-Arrow-backed features additionally require a C++20 compiler.
+See the [supported environment matrix](../support-matrix.md#current-matrix) for
+Python requirements and tested platforms. Translation uses `llvmlite`. Native
+object and executable workflows require an LLVM/Clang-compatible toolchain,
+while Arrow-backed features additionally require a C++20 compiler.
 
 PyArrow and `arx-arrowcpp-sources` are installed dependencies. IRx uses their
 Arrow C++ include, source, library, and linker metadata for native runtime

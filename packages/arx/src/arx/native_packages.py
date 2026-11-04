@@ -4,7 +4,7 @@ title: Resolve native package metadata at the Arx host boundary.
 
 from __future__ import annotations
 
-import sys
+import tomllib
 
 from pathlib import Path, PureWindowsPath
 
@@ -16,11 +16,6 @@ from packaging.utils import canonicalize_name
 
 from arx import settings
 from arx.native_config import NativeFeatureConfig
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 
 def package_path(root: Path, value: str, *, directory: bool = False) -> Path:
