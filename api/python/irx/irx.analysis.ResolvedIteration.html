@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3726,9 +3732,9 @@
         
         
         <h1 id="resolvediteration"><span class="api-kind api-kind--class">class</span> ResolvedIteration</h1>
-<pre class="highlight"><code><span class="n">ResolvedIteration</span><span class="p">(</span><span class="n">iterable_node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span> <span class="n">iterable_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">element_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">IterationKind</span><span class="p">,</span> <span class="n">is_reiterable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="n">IterationOrder</span> <span class="o">=</span> <span class="n">IterationOrder</span><span class="o">.</span><span class="n">UNSPECIFIED</span><span class="p">,</span> <span class="n">target_symbol</span><span class="p">:</span> <span class="n">SemanticSymbol</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">sequence_access</span><span class="p">:</span> <span class="n">ResolvedSequenceAccess</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">extras</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">())</span>
+<pre class="highlight"><code><span class="n">ResolvedIteration</span><span class="p">(</span><span class="n">iterable_node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AST</span><span class="p">,</span> <span class="n">iterable_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">element_type</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">IterationKind</span><span class="p">,</span> <span class="n">is_reiterable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="n">IterationOrder</span> <span class="o">=</span> <span class="n">IterationOrder</span><span class="o">.</span><span class="n">UNSPECIFIED</span><span class="p">,</span> <span class="n">target_symbol</span><span class="p">:</span> <span class="n">SemanticSymbol</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">sequence_access</span><span class="p">:</span> <span class="n">ResolvedSequenceAccess</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">borrowed_owner_symbol_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">extras</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">())</span>
 </code></pre>
-<p>Source: packages/irx/src/irx/analysis/resolved_nodes.py:1976</p>
+<p>Source: packages/irx/src/irx/analysis/resolved_nodes.py:2001</p>
 <p>Declared as: python:irx:irx.analysis.resolved_nodes.ResolvedIteration</p>
 <p>Resolved iterable capability.</p>
 <p>Attach the semantic iteration plan that a for-in loop or comprehension should consume during backend lowering.</p>
@@ -3759,6 +3765,9 @@
 <p><strong>sequence_access</strong> — <strong>Type:</strong> ResolvedSequenceAccess | None</p>
 </li>
 <li>
+<p><strong>borrowed_owner_symbol_id</strong> — <strong>Type:</strong> str | None; Named list owner protected from replacement during iteration.</p>
+</li>
+<li>
 <p><strong>extras</strong> — <strong>Type:</strong> dict[str, Any]</p>
 </li>
 </ul>
@@ -3768,6 +3777,9 @@
 </ul>
 <h2 id="attributes-1">Attributes</h2>
 <ul>
+<li>
+<p><a href="irx.analysis.ResolvedIteration.borrowed_owner_symbol_id.html">borrowed_owner_symbol_id</a> —</p>
+</li>
 <li>
 <p><a href="irx.analysis.ResolvedIteration.element_type.html">element_type</a> —</p>
 </li>

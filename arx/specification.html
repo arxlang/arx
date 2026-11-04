@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.expressions.ExpressionParserMixin.html"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1224,6 +1226,37 @@ above <code>and</code>/<code>or</code>: <code>not a == b</code> means <code>not 
 <code>(!a) == b</code>. Parenthesize word negation in tighter operands. Neither spelling
 adds numeric truthiness. Nullable/Series masks keep their existing eager,
 null-propagating operations rather than scalar short-circuiting.</p>
+<h3 id="prefix-increment-and-decrement">Prefix increment and decrement</h3>
+<p>Use <code>++value</code> or <code>--value</code> to update a mutable numeric variable by one. Both
+expressions yield the <strong>updated</strong> value:</p>
+<pre class="highlight"><code>var value: i32 = 3
+var increased: i32 = ++value  # value and increased are now 4
+var decreased: i32 = --value  # value and decreased are now 3
+</code></pre>
+<p>Postfix <code>value++</code> and <code>value--</code> are not supported. Use prefix mutation or an
+ordinary assignment such as <code>value = value + 1</code> or <code>value = value - 1</code>. Integer
+mutation follows the <a href="#fixed-width-integer-overflow">checked overflow rules</a>
+below.</p>
+<h3 id="compound-assignment">Compound assignment</h3>
+<p><code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, and <code>%=</code> update a declared mutable numeric variable:</p>
+<pre class="highlight"><code>var start: i32 = 207
+var amount: i32 = 5
+start -= amount
+start %= 100  # start is now 2
+</code></pre>
+<p>Targets must be identifiers, not fields or subscripts. Boolean, string,
+collection, and nullable operands are unsupported. Compound assignment is a
+statement, not an expression for arguments, conditions, or returns. It is also
+allowed in a <a href="control-flow.html#for-loop-count-style">count-loop update</a>, where it
+must target that loop's induction variable.</p>
+<p>The old target value is loaded before evaluating the RHS once, and the result is
+stored once. Operand promotion and storage must both be lossless: there is no
+implicit narrowing or wrapping. Integer arithmetic follows the checked rules
+below, including truncating division and dividend-sign remainder. A failed
+operation or RHS conversion does not perform the compound store; independent RHS
+side effects are not rolled back. For example, <code>x += ++x</code> adds the old <code>x</code> to
+its incremented value, and an overflow in the addition retains that prior
+increment.</p>
 <h3 id="fixed-width-integer-overflow">Fixed-width integer overflow</h3>
 <p>Fixed-width signed and unsigned 8–64-bit integer <code>+</code>, <code>-</code>, <code>*</code>, negation, and
 supported increment/decrement operations are checked in every build. IRx
@@ -1358,6 +1391,10 @@ periods. The pre-2.0 policy must not silently continue afterward.</p>
             <li class="toc-h2"><a href="#arithmetic-and-evaluation">Arithmetic and evaluation</a></li>
             
             <li class="toc-h3"><a href="#boolean-evaluation">Boolean evaluation</a></li>
+            
+            <li class="toc-h3"><a href="#prefix-increment-and-decrement">Prefix increment and decrement</a></li>
+            
+            <li class="toc-h3"><a href="#compound-assignment">Compound assignment</a></li>
             
             <li class="toc-h3"><a href="#fixed-width-integer-overflow">Fixed-width integer overflow</a></li>
             

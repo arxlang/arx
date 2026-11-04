@@ -9,7 +9,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>Text File I/O · ArxLang</title>
+    <title>File I/O · ArxLang</title>
     <script src="../theme.js"></script>
     <script src="../search.js" defer></script>
     
@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.expressions.ExpressionParserMixin.html"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1197,17 +1199,18 @@
         <div class="page-heading">
           <p class="eyebrow">Documentation</p>
           
-          <h1>Text File I/O</h1>
+          <h1>File I/O</h1>
           
         </div>
         
         
-        <h1 id="text-file-i-o">Text File I/O</h1>
+        <h1 id="file-i-o">File I/O</h1>
 <p><code>File</code> is a builtin reference-managed class for a deliberately small native,
-POSIX text-file interface. <code>open(...)</code> is a compiler-backed factory adapter to
-<code>File(...)</code>: both create the same class object through one checked construction
-path. Both are available without an import and use C stdio, not Python or Arrow.
-Lowercase <code>file</code> remains a compatibility spelling for the builtin <code>File</code> type.</p>
+POSIX text and binary file interface. <code>open(...)</code> is a compiler-backed factory
+adapter to <code>File(...)</code>: both create the same class object through one checked
+construction path. Both are available without an import and use C stdio, not
+Python or Arrow. Lowercase <code>file</code> remains a compatibility spelling for the
+builtin <code>File</code> type.</p>
 <p>The default is a strict UTF-8 text read. Use <code>mode=&quot;w&quot;</code> to create/truncate or
 <code>mode=&quot;a&quot;</code> to append. Only the path and mode can be runtime strings; other
 Python-shaped settings accept only the implemented default profile. Nondefault
@@ -1217,8 +1220,10 @@ is checked before opening or truncating a path.</p>
 <p>Paths are relative to the running program's working directory, not its source
 file.</p>
 <p>Reading requires an existing file. Writing creates or truncates it. Appending
-creates it if necessary and writes at the end. No binary/update/exclusive modes,
-file descriptors, callbacks, or custom buffering are supported yet.</p>
+creates it if necessary and writes at the end. Update/exclusive modes, file
+descriptors, callbacks, and custom buffering are unsupported. Binary modes are
+<code>rb</code>, <code>wb</code>, and <code>ab</code>; non-<code>none</code> encoding, errors, or newline options are
+rejected before creating/truncating a path, including when the mode is dynamic.</p>
 <h2 id="example">Example</h2>
 <p>Run this in a scratch directory: the example creates/truncates <code>message.txt</code>.</p>
 <pre class="highlight"><code>```
@@ -1239,6 +1244,21 @@ fn main() -&gt; i32:
   print(text)
   return 0
 </code></pre>
+<h2 id="bounded-binary-workflow">Bounded binary workflow</h2>
+<p>Use <code>bytes([0, 255, 13, 10])</code> for octets, then <code>output.write_bytes(data)</code> on a
+binary stream. <code>source.read_bytes(size)</code> reads at most a nonnegative <code>i64</code> byte
+count; there is no read-all sentinel. It returns independently owned <code>bytes</code>,
+including empty at EOF. Zero does not advance but still checks mode and closed
+state. Text methods reject binary streams and byte methods reject text streams.
+Nothing decodes, strips NUL, or translates newlines.</p>
+<p><code>examples/binary-files.x</code> is an executable round-trip and append example. It
+creates/truncates <code>binary-output.dat</code> and <code>binary-empty.dat</code>; run it in a
+scratch directory. Byte lengths and write counts are bytes, not characters.
+Short writes that make progress are retried; no progress and I/O errors are
+failures. Failure may leave a partially modified external file: there is no
+rollback, atomicity, or durability promise. Explicit flush/close still matter
+for buffered errors.</p>
+<p>See <a href="built-in-types.html#byte-values">byte values</a> for immutable-buffer ownership.</p>
 <h2 id="text-and-lifetime-safety">Text and lifetime safety</h2>
 <p>Reads consume all remaining text (not a size-limited chunk), returning an
 independent string or <code>&quot;&quot;</code> at EOF. CRLF and CR become LF; malformed UTF-8 and
@@ -1251,8 +1271,9 @@ share one stream and cursor; closing through one reference closes it for all
 references. References can be reassigned, passed to functions, returned, and
 stored in class fields. Locals and discarded temporaries release their
 references on ordinary lexical exits. The last reference releases the native
-wrapper once, even if the stream was explicitly closed earlier. Read strings own
-independent memory and can outlive the file. See <a href="classes.html">Classes</a>.</p>
+wrapper once, even if the stream was explicitly closed earlier. Read strings and
+byte buffers own independent memory and can outlive the file. See
+<a href="classes.html">Classes</a>.</p>
 <p>Explicit casts to or from builtin <code>File</code>, including identity casts, remain
 unsupported. Use ordinary assignment to create an alias instead.</p>
 <p>Construction opens immediately: there is no public unopened constructor,
@@ -1270,8 +1291,7 @@ exceptions (including <code>OSError</code> for operating-system failures). Class
 creation preserves constructor rollback and completed-base cleanup. See the
 <a href="../support-matrix.html#exception-capability-boundary">exception boundary</a>.
 Explicit close/flush are recommended to observe write errors before later work.
-<code>with</code>, iteration, seek/tell, binary I/O, and extra file properties are
-deferred.</p>
+<code>with</code>, iteration, seek/tell, and extra file properties are deferred.</p>
 <p>For explicit imports, use <code>import File as TextFile from builtins.files</code> or
 <code>import builtins.files as io</code> followed by <code>io.File(...)</code>. These resolve the same
 canonical class, not an unrelated class with the same name. Existing user or
@@ -1292,6 +1312,8 @@ non-callable <code>open</code> shadows the builtin and produces an error when ca
           <ul>
             
             <li class="toc-h2"><a href="#example">Example</a></li>
+            
+            <li class="toc-h2"><a href="#bounded-binary-workflow">Bounded binary workflow</a></li>
             
             <li class="toc-h2"><a href="#text-and-lifetime-safety">Text and lifetime safety</a></li>
             

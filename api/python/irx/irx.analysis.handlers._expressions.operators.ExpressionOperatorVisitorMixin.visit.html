@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3727,54 +3733,63 @@
         
         <h1 id="visit"><span class="api-kind api-kind--method">method</span> visit</h1>
 <h3 id="variant-1">Variant 1</h3>
+<pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AugAssign</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre>
+<p>Resolve checked compound mutation of one numeric identifier.</p>
+<p>Accept +=, -=, *=, /=, and %= with lossless operand and store conversions. This internal value-producing operation does not imply expression-context support in a frontend. Reject other modeled opcodes and non-scalar domains before lowering.</p>
+<h3 id="parameters">Parameters</h3>
+<ul>
+<li><strong>node</strong> — <strong>Type:</strong> astx.AugAssign</li>
+</ul>
+<h3 id="variant-2">Variant 2</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">UnaryOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit UnaryOp nodes.</p>
-<h3 id="parameters">Parameters</h3>
+<h3 id="parameters-1">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.UnaryOp</li>
 </ul>
-<h3 id="variant-2">Variant 2</h3>
+<h3 id="variant-3">Variant 3</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit BinaryOp nodes.</p>
-<h3 id="parameters-1">Parameters</h3>
+<h3 id="parameters-2">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.BinaryOp</li>
 </ul>
-<h3 id="variant-3">Variant 3</h3>
+<h3 id="variant-4">Variant 4</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">Cast</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit Cast nodes.</p>
-<h3 id="parameters-2">Parameters</h3>
+<h3 id="parameters-3">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.Cast</li>
 </ul>
-<h3 id="variant-4">Variant 4</h3>
+<h3 id="variant-5">Variant 5</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">IsInstanceExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit IsInstanceExpr nodes.</p>
-<h3 id="parameters-3">Parameters</h3>
+<h3 id="parameters-4">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.IsInstanceExpr</li>
 </ul>
-<h3 id="variant-5">Variant 5</h3>
+<h3 id="variant-6">Variant 6</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">PrintExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit PrintExpr nodes.</p>
-<h3 id="parameters-4">Parameters</h3>
+<h3 id="parameters-5">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.PrintExpr</li>
 </ul>
-<h3 id="variant-6">Variant 6</h3>
+<h3 id="variant-7">Variant 7</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">TypeOfExpr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit TypeOfExpr nodes.</p>
-<h3 id="parameters-5">Parameters</h3>
+<h3 id="parameters-6">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.TypeOfExpr</li>
 </ul>
-<p>Source: packages/irx/src/irx/analysis/handlers/_expressions/operators.py:76</p>
+<p>Source: packages/irx/src/irx/analysis/handlers/_expressions/operators.py:80</p>
 
       </main>
       
@@ -3806,6 +3821,10 @@
             <li class="toc-h3"><a href="#variant-6">Variant 6</a></li>
             
             <li class="toc-h3"><a href="#parameters-5">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#variant-7">Variant 7</a></li>
+            
+            <li class="toc-h3"><a href="#parameters-6">Parameters</a></li>
             
           </ul>
         </div>

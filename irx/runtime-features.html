@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="../api/python/irx/irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../api/python/irx/irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="../api/python/irx/irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="../api/python/irx/irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3959,7 +3965,7 @@ ownership ABI.</p>
 </ul>
 <p>See <a href="../apache-arrow.html">Native Apache Arrow Support</a> for the cross-project view
 and <a href="buffer-view-model.html">Buffer View Model</a> for the low-level descriptor.</p>
-<h2 id="text-file-runtime">Text file runtime</h2>
+<h2 id="file-runtime">File runtime</h2>
 <p>The <code>file</code> feature exposes opaque <code>irx_file_*</code> handles and caller-owned error
 buffers (<code>IRX_FILE_ERROR_CAPACITY</code> bytes). Open/read/write outputs are
 initialized on all paths and may be consumed only after a zero status. EOF is a
@@ -3969,8 +3975,15 @@ is idempotent; release consumes the wrapper even when closing fails. Handles are
 synchronous, single-owner, and not thread-safe. Lowering activates <code>errors</code> when
 status guards are emitted and <code>libc</code> when returned strings require cleanup;
 dependencies do not depend on passive feature metadata.</p>
-<p>See <a href="../arx/file-io.html">Arx Text File I/O</a> for the intentionally restricted
-parameter and lifetime surface. The native header is the C ABI contract.</p>
+<p>Binary operations use explicit pointer-plus-length payloads, never <code>strlen</code>.
+Counts are checked before conversion to <code>size_t</code>; read buffers are independently
+owned. Lowering wraps successful reads in the shared byte-width list descriptor
+and registers its normal cleanup, without an Arrow dependency. Failed reads
+release partial storage; failed writes publish no count but may have changed the
+external file. The open ABI carries a text-option flag so dynamic binary modes
+reject incompatible settings before <code>fopen</code>.</p>
+<p>See <a href="../arx/file-io.html">Arx File I/O</a> for the intentionally restricted parameter
+and lifetime surface. The native header is the C ABI contract.</p>
 <h2 id="class-lifetime-feature">Class Lifetime Feature</h2>
 <p>The registered <code>class</code> feature packages a C99 runtime and header. It provides
 checked create/retain/release/require operations, compiler-only phase progress,
@@ -4065,7 +4078,7 @@ native overrides require rebuilding/unsetting the override, not fallback.</p>
             
             <li class="toc-h2"><a href="#deliberate-limits">Deliberate limits</a></li>
             
-            <li class="toc-h2"><a href="#text-file-runtime">Text file runtime</a></li>
+            <li class="toc-h2"><a href="#file-runtime">File runtime</a></li>
             
             <li class="toc-h2"><a href="#class-lifetime-feature">Class Lifetime Feature</a></li>
             

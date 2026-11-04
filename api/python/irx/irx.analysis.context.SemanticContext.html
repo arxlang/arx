@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3726,7 +3732,7 @@
         
         
         <h1 id="semanticcontext"><span class="api-kind api-kind--class">class</span> SemanticContext</h1>
-<pre class="highlight"><code><span class="n">SemanticContext</span><span class="p">(</span><span class="n">scopes</span><span class="p">:</span> <span class="n">ScopeStack</span> <span class="o">=</span> <span class="n">ScopeStack</span><span class="p">(),</span> <span class="n">diagnostics</span><span class="p">:</span> <span class="n">DiagnosticBag</span> <span class="o">=</span> <span class="n">DiagnosticBag</span><span class="p">(),</span> <span class="n">functions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticFunction</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">structs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticStruct</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">classes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticClass</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">current_function</span><span class="p">:</span> <span class="n">SemanticFunction</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">current_class</span><span class="p">:</span> <span class="n">SemanticClass</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">current_module_key</span><span class="p">:</span> <span class="n">ModuleKey</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">check_constant_expressions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">loop_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">exception_region_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">native_feature_names</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">native_bindings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">native_table_io</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">TableIOOperation</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">exception_declarations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassDefStmt</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">runtime_exception_types</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ResolvedExceptionType</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">_symbol_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">_method_slot_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+<pre class="highlight"><code><span class="n">SemanticContext</span><span class="p">(</span><span class="n">scopes</span><span class="p">:</span> <span class="n">ScopeStack</span> <span class="o">=</span> <span class="n">ScopeStack</span><span class="p">(),</span> <span class="n">diagnostics</span><span class="p">:</span> <span class="n">DiagnosticBag</span> <span class="o">=</span> <span class="n">DiagnosticBag</span><span class="p">(),</span> <span class="n">functions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticFunction</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">structs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticStruct</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">classes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ModuleKey</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">SemanticClass</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">current_function</span><span class="p">:</span> <span class="n">SemanticFunction</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">current_class</span><span class="p">:</span> <span class="n">SemanticClass</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">current_module_key</span><span class="p">:</span> <span class="n">ModuleKey</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">check_constant_expressions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">loop_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">active_list_iteration_owners</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(),</span> <span class="n">exception_region_depth</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">native_feature_names</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">native_bindings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">native_table_io</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">TableIOOperation</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">exception_declarations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">astx</span><span class="o">.</span><span class="n">ClassDefStmt</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span> <span class="n">runtime_exception_types</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ResolvedExceptionType</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">_symbol_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">_method_slot_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
 </code></pre>
 <p>Source: packages/irx/src/irx/analysis/context.py:31</p>
 <p>Shared semantic-analysis state.</p>
@@ -3762,6 +3768,9 @@
 </li>
 <li>
 <p><strong>loop_depth</strong> — <strong>Type:</strong> int</p>
+</li>
+<li>
+<p><strong>active_list_iteration_owners</strong> — <strong>Type:</strong> frozenset[str]</p>
 </li>
 <li>
 <p><strong>exception_region_depth</strong> — <strong>Type:</strong> int</p>
@@ -3818,6 +3827,9 @@
 <p><a href="irx.analysis.context.SemanticContext.in_module.html">in_module</a> — Temporarily set the current module key.</p>
 </li>
 <li>
+<p><a href="irx.analysis.context.SemanticContext.list_iteration.html">list_iteration</a> — Protect list storage borrowed for iteration.</p>
+</li>
+<li>
 <p><a href="irx.analysis.context.SemanticContext.next_method_slot.html">next_method_slot</a> — Return a fresh class-method dispatch slot.</p>
 </li>
 <li>
@@ -3843,6 +3855,9 @@
 </li>
 <li>
 <p><a href="irx.analysis.context.SemanticContext._symbol_counter.html">_symbol_counter</a> —</p>
+</li>
+<li>
+<p><a href="irx.analysis.context.SemanticContext.active_list_iteration_owners.html">active_list_iteration_owners</a> —</p>
 </li>
 <li>
 <p><a href="irx.analysis.context.SemanticContext.check_constant_expressions.html">check_constant_expressions</a> —</p>

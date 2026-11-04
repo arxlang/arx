@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="../api/python/irx/irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="../api/python/irx/irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="../api/python/irx/irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="../api/python/irx/irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="../api/python/irx/irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3729,18 +3735,18 @@
 <p>External native packages initially use existing scalar/string extern contracts.
 An external Arx class may own a checked integer token through <code>__init__</code> and
 <code>__del__</code>, but token validation and foreign allocations belong to its C ABI
-wrapper. This adds no raw pointer ownership, binary strings, owned extern string
-results, or foreign-frame unwind. Generated Arx calls use checked exception
-propagation and lexical cleanup. See
+wrapper. This adds no raw pointer ownership, foreign byte-buffer ownership,
+owned extern string results, or foreign-frame unwind. Generated Arx calls use
+checked exception propagation and lexical cleanup. See
 <a href="../arx/native-packages.html">native packages</a>.</p>
 <h2 id="status-and-purpose">Status and purpose</h2>
 <p>This inventory was checked against the local IRx lowering and native runtime on
-2026-10-24. It is the starting point for the Arx resource model, not yet a
+2026-11-02. It is the starting point for the Arx resource model, not yet a
 complete production ownership specification. Scalar dynamic lists, immutable
-strings, text files, and acyclic class references have bounded enforced
-ownership slices. A resource may be promoted to the stable language only after
-its create, borrow, transfer, escape, release, and failure paths are represented
-here and enforced by semantic metadata and lowering.</p>
+strings/bytes, text/binary files, and acyclic class references have bounded
+enforced ownership slices. A resource may be promoted to the stable language
+only after its create, borrow, transfer, escape, release, and failure paths are
+represented here and enforced by semantic metadata and lowering.</p>
 <h2 id="required-vocabulary">Required vocabulary</h2>
 <ul>
 <li><strong>owner</strong>: must perform exactly one final release unless ownership is moved;</li>
@@ -4051,6 +4057,12 @@ context management where useful.</li>
 not an implicit ownership policy.</li>
 </ol>
 <h2 id="enforced-file-contract">Enforced file contract</h2>
+<p>Immutable bytes reuse <code>ResourceKind.LIST</code> and the byte-width descriptor only for
+storage, not mutable-list operations. Construction copies checked integers; File
+reads transfer independently allocated buffers only after successful status.
+Parameters borrow, returns move, and replacement/exception exits destroy owned
+storage. Explicit <code>bytes(existing)</code> copies; implicit local aliases and nested
+ownership remain rejected.</p>
 <p>Public File objects use <code>ResourceKind.CLASS</code> reference ownership. Their private
 native field retains <code>ResourceKind.FILE</code> unique ownership; existing low-level
 IRx handle locals/fields keep their original no-copy/no-escape contract.

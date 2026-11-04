@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.expressions.ExpressionParserMixin.html"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1243,8 +1245,26 @@ digits are ASCII only. Numeric casts still use <code>cast</code>, not <code>int<
 locale-independent and shared by splitting, stripping and integer parsing; its
 exact set is specified in the native text source contract. Invalid text/options
 and overflow raise recoverable errors rather than returning partial data. Text
-literals and text-file reads reject embedded NUL; arbitrary bytes are not yet a
-text-file workflow.</p>
+literals and text-file reads reject embedded NUL; arbitrary octets use <code>bytes</code>
+and binary File methods instead.</p>
+<h2 id="byte-values">Byte values</h2>
+<p><code>bytes([0, 255, 13, 10])</code> creates an immutable, length-aware octet buffer.
+<code>bytes()</code> is empty; <code>bytes(existing)</code> makes an independent copy. <code>len(data)</code>
+counts bytes and nonnegative indexing returns <code>u8</code>; indexing outside the buffer
+raises <code>IndexError</code>. NUL and invalid UTF-8 are ordinary bytes. This is not an
+Arrow <code>binary</code> column and does not require Arrow.</p>
+<p>Construction checks every integer in 0–255 without wrapping; Boolean, float,
+nullable, and text inputs are rejected. Sized integer sequences are accepted;
+single-pass iterators require an explicit <code>max_items</code> bound. An invalid value or
+exceeded bound publishes no partial buffer, but consumed input is not rewound.
+Unlike Python, scalar zero-fill construction, text encoding, and byte slices are
+not implemented.</p>
+<p>Content is immutable, but a local binding can be replaced. Buffers use the owned
+list lifecycle: parameters borrow; fresh results and returned local owners
+transfer ownership. Implicit local aliases are rejected: use <code>bytes(existing)</code>
+for a copy. Byte buffers in class/struct fields, nested containers, globals,
+extern signatures, and generator-owned storage are not supported. Independent
+<a href="file-io.html#bounded-binary-workflow">binary reads</a> can outlive their File.</p>
 <h2 id="collections-and-nullable-values">Collections and nullable values</h2>
 <p><a href="collections.html">Collections and Apache Arrow</a> owns the list, tensor, DataFrame,
 and Series storage rules. In particular, runtime-schema DataFrames support
@@ -1255,10 +1275,11 @@ operations.</p>
 carry explicit validity, propagate nulls, and use checked arithmetic. They are
 not interchangeable with non-nullable scalar arithmetic or Boolean conditions.</p>
 <h2 id="file-references">File references</h2>
-<p><a href="file-io.html"><code>File</code> and <code>open</code></a> create shared class references to one text
-stream; lowercase <code>file</code> denotes the same type. References can be aliased,
-passed, returned, and stored in supported class fields. Closing through any
-alias closes the shared stream. Only the hidden native handle is uniquely owned.</p>
+<p><a href="file-io.html"><code>File</code> and <code>open</code></a> create shared class references to one text or
+binary stream; lowercase <code>file</code> denotes the same type. References can be
+aliased, passed, returned, and stored in supported class fields. Closing through
+any alias closes the shared stream. Only the hidden native handle is uniquely
+owned.</p>
 
       </main>
       
@@ -1270,6 +1291,8 @@ alias closes the shared stream. Only the hidden native handle is uniquely owned.
             <li class="toc-h2"><a href="#scalars-and-conversions">Scalars and conversions</a></li>
             
             <li class="toc-h2"><a href="#parsing-text">Parsing text</a></li>
+            
+            <li class="toc-h2"><a href="#byte-values">Byte values</a></li>
             
             <li class="toc-h2"><a href="#collections-and-nullable-values">Collections and nullable values</a></li>
             

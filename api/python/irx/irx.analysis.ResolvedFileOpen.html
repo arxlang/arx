@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3726,11 +3732,12 @@
         
         
         <h1 id="resolvedfileopen"><span class="api-kind api-kind--class">class</span> ResolvedFileOpen</h1>
-<pre class="highlight"><code><span class="n">ResolvedFileOpen</span><span class="p">(</span><span class="n">evaluations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">path_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span>
+<pre class="highlight"><code><span class="n">ResolvedFileOpen</span><span class="p">(</span><span class="n">evaluations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">astx</span><span class="o">.</span><span class="n">DataType</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">path_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">text_options</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
 </code></pre>
-<p>Source: packages/irx/src/irx/analysis/resolved_nodes.py:2094</p>
+<p>Source: packages/irx/src/irx/analysis/resolved_nodes.py:2129</p>
 <p>Declared as: python:irx:irx.analysis.resolved_nodes.ResolvedFileOpen</p>
 <p>Validated open operands in original evaluation order.</p>
+<p>text_options records non-None encoding/errors/newline so dynamic binary modes reject incompatible settings before creating or truncating a path.</p>
 <h3 id="attributes">Attributes</h3>
 <ul>
 <li>
@@ -3741,6 +3748,9 @@
 </li>
 <li>
 <p><strong>mode_index</strong> — <strong>Type:</strong> int | None</p>
+</li>
+<li>
+<p><strong>text_options</strong> — <strong>Type:</strong> bool</p>
 </li>
 </ul>
 <h2 id="methods">Methods</h2>
@@ -3757,6 +3767,9 @@
 </li>
 <li>
 <p><a href="irx.analysis.ResolvedFileOpen.path_index.html">path_index</a> —</p>
+</li>
+<li>
+<p><a href="irx.analysis.ResolvedFileOpen.text_options.html">text_options</a> —</p>
 </li>
 </ul>
 

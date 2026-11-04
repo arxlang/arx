@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.expressions.ExpressionParserMixin.html"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1203,21 +1205,26 @@
         
         
         <h1 id="control-flow">Control Flow</h1>
-<p>Arx currently supports <code>if</code>/<code>else</code>, <code>while</code>, and two <code>for</code> loop styles.</p>
-<h2 id="if-else">If / Else</h2>
+<p>Arx supports <code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, and two <code>for</code> loop styles.</p>
+<h2 id="if-elif-else">If / Elif / Else</h2>
+<p>Conditions must be Boolean and are evaluated in order, stopping at the first
+match. A chain may have any number of <code>elif</code> clauses and an optional final
+<code>else</code>. Align every clause with its opening <code>if</code>; use <code>elif</code>, not <code>else if</code>.</p>
 <pre class="highlight"><code>```
-title: If/else example
-summary: Branches based on a comparison.
+title: Conditional chain example
+summary: Classifies an integer using ordered comparisons.
 ```
-fn abs_value(x: i32) -&gt; i32:
+fn classify(value: i32) -&gt; i32:
   ```
-  title: abs_value
-  summary: Returns absolute value of x.
+  title: classify
+  summary: Classifies one integer as negative, zero, or positive.
   ```
-  if x &lt; 0:
-    return 0 - x
+  if value &lt; 0:
+    return 0 - 1
+  elif value == 0:
+    return 0
   else:
-    return x
+    return 1
 </code></pre>
 <h2 id="while-loop">While Loop</h2>
 <pre class="highlight"><code>```
@@ -1285,10 +1292,13 @@ fn count_loop() -&gt; i32:
   summary: Sums numbers from 0 to 4.
   ```
   var total: i32 = 0
-  for var i: i32 = 0; i &lt; 5; i = i + 1:
-    total = total + i
+  for var i: i32 = 0; i &lt; 5; i += 1:
+    total += i
   return total
 </code></pre>
+<p>Compound updates write the induction variable themselves. Ordinary expression
+updates such as <code>i + 1</code> remain supported; the loop stores their result into <code>i</code>.
+See the <a href="specification.html#compound-assignment">compound assignment contract</a>.</p>
 <h2 id="return-statements">Return Statements</h2>
 <ul>
 <li><code>return expr</code> returns a value from the current function.</li>
@@ -1309,7 +1319,7 @@ the return statement entirely.</li>
           <strong>On this page</strong>
           <ul>
             
-            <li class="toc-h2"><a href="#if-else">If / Else</a></li>
+            <li class="toc-h2"><a href="#if-elif-else">If / Elif / Else</a></li>
             
             <li class="toc-h2"><a href="#while-loop">While Loop</a></li>
             

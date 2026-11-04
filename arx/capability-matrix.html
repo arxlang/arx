@@ -28,7 +28,7 @@
       <a class="site-brand" href="../index.html">
         <img class="brand-logo" src="../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="../api/python/arx/arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="../api/python/arx/arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="../api/python/arx/arx.parser.expressions.ExpressionParserMixin.html"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="../api/python/arx/arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1223,12 +1225,12 @@ caller updates and concise migration notes.</p>
 </tr>
 <tr>
 <td><a href="specification.html#fixed-width-integer-overflow">Numeric safety</a></td>
-<td>Lossless promotion, checked integer arithmetic/casts, explicit wrapping</td>
+<td>Lossless promotion, checked arithmetic/casts, scalar compound assignment, explicit wrapping</td>
 <td>8–64-bit integers; no bigint fallback; typed recoverable dynamic failures</td>
 </tr>
 <tr>
 <td><a href="control-flow.html">Control flow</a></td>
-<td><code>if</code>/<code>else</code>, <code>while</code>, count loops, scalar-list <code>for ... in</code>, <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code></td>
+<td><code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, count loops, scalar-list <code>for ... in</code>, <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code></td>
 <td>No Arx <code>break</code>, <code>continue</code>, general generators, or <code>with</code>; see the <a href="../support-matrix.html#exception-capability-boundary">exception boundary</a></td>
 </tr>
 <tr>

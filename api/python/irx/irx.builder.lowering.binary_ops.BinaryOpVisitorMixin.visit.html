@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3727,150 +3733,159 @@
         
         <h1 id="visit"><span class="api-kind api-kind--method">method</span> visit</h1>
 <h3 id="variant-1">Variant 1</h3>
+<pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">AugAssign</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre>
+<p>Load, compute, and store a resolved scalar compound mutation.</p>
+<p>Snapshot the target before evaluating the RHS once. Guards and conversions precede the single store; failure preserves the target except for independent RHS effects. Push only the stored result.</p>
+<h3 id="parameters">Parameters</h3>
+<ul>
+<li><strong>node</strong> — <strong>Type:</strong> astx.AugAssign</li>
+</ul>
+<h3 id="variant-2">Variant 2</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">BinaryOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit BinaryOp nodes.</p>
-<h3 id="parameters">Parameters</h3>
+<h3 id="parameters-1">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> astx.BinaryOp</li>
 </ul>
-<h3 id="variant-2">Variant 2</h3>
+<h3 id="variant-3">Variant 3</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AssignmentBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit AssignmentBinOp nodes.</p>
-<h3 id="parameters-1">Parameters</h3>
+<h3 id="parameters-2">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> AssignmentBinOp</li>
 </ul>
-<h3 id="variant-3">Variant 3</h3>
+<h3 id="variant-4">Variant 4</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">AddBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit AddBinOp nodes.</p>
-<h3 id="parameters-2">Parameters</h3>
+<h3 id="parameters-3">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> AddBinOp</li>
 </ul>
-<h3 id="variant-4">Variant 4</h3>
+<h3 id="variant-5">Variant 5</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">SubBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit SubBinOp nodes.</p>
-<h3 id="parameters-3">Parameters</h3>
+<h3 id="parameters-4">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> SubBinOp</li>
 </ul>
-<h3 id="variant-5">Variant 5</h3>
+<h3 id="variant-6">Variant 6</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">MulBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit MulBinOp nodes.</p>
-<h3 id="parameters-4">Parameters</h3>
+<h3 id="parameters-5">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> MulBinOp</li>
 </ul>
-<h3 id="variant-6">Variant 6</h3>
+<h3 id="variant-7">Variant 7</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">DivBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit DivBinOp nodes.</p>
-<h3 id="parameters-5">Parameters</h3>
+<h3 id="parameters-6">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> DivBinOp</li>
 </ul>
-<h3 id="variant-7">Variant 7</h3>
+<h3 id="variant-8">Variant 8</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">ModBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit ModBinOp nodes.</p>
-<h3 id="parameters-6">Parameters</h3>
+<h3 id="parameters-7">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> ModBinOp</li>
 </ul>
-<h3 id="variant-8">Variant 8</h3>
+<h3 id="variant-9">Variant 9</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">LogicalAndBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit LogicalAndBinOp nodes.</p>
-<h3 id="parameters-7">Parameters</h3>
+<h3 id="parameters-8">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> LogicalAndBinOp</li>
 </ul>
-<h3 id="variant-9">Variant 9</h3>
+<h3 id="variant-10">Variant 10</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">LogicalOrBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit LogicalOrBinOp nodes.</p>
-<h3 id="parameters-8">Parameters</h3>
+<h3 id="parameters-9">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> LogicalOrBinOp</li>
 </ul>
-<h3 id="variant-10">Variant 10</h3>
+<h3 id="variant-11">Variant 11</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">LtBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit LtBinOp nodes.</p>
-<h3 id="parameters-9">Parameters</h3>
+<h3 id="parameters-10">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> LtBinOp</li>
 </ul>
-<h3 id="variant-11">Variant 11</h3>
+<h3 id="variant-12">Variant 12</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">GtBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit GtBinOp nodes.</p>
-<h3 id="parameters-10">Parameters</h3>
+<h3 id="parameters-11">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> GtBinOp</li>
 </ul>
-<h3 id="variant-12">Variant 12</h3>
+<h3 id="variant-13">Variant 13</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">LeBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit LeBinOp nodes.</p>
-<h3 id="parameters-11">Parameters</h3>
+<h3 id="parameters-12">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> LeBinOp</li>
 </ul>
-<h3 id="variant-13">Variant 13</h3>
+<h3 id="variant-14">Variant 14</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">GeBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit GeBinOp nodes.</p>
-<h3 id="parameters-12">Parameters</h3>
+<h3 id="parameters-13">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> GeBinOp</li>
 </ul>
-<h3 id="variant-14">Variant 14</h3>
+<h3 id="variant-15">Variant 15</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">EqBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit EqBinOp nodes.</p>
-<h3 id="parameters-13">Parameters</h3>
+<h3 id="parameters-14">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> EqBinOp</li>
 </ul>
-<h3 id="variant-15">Variant 15</h3>
+<h3 id="variant-16">Variant 16</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">NeBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit NeBinOp nodes.</p>
-<h3 id="parameters-14">Parameters</h3>
+<h3 id="parameters-15">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> NeBinOp</li>
 </ul>
-<h3 id="variant-16">Variant 16</h3>
+<h3 id="variant-17">Variant 17</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">BitOrBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit BitOrBinOp nodes.</p>
-<h3 id="parameters-15">Parameters</h3>
+<h3 id="parameters-16">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> BitOrBinOp</li>
 </ul>
-<h3 id="variant-17">Variant 17</h3>
+<h3 id="variant-18">Variant 18</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">BitAndBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit BitAndBinOp nodes.</p>
-<h3 id="parameters-16">Parameters</h3>
+<h3 id="parameters-17">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> BitAndBinOp</li>
 </ul>
-<h3 id="variant-18">Variant 18</h3>
+<h3 id="variant-19">Variant 19</h3>
 <pre class="highlight"><code><span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">BitXorBinOp</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre>
 <p>Visit BitXorBinOp nodes.</p>
-<h3 id="parameters-17">Parameters</h3>
+<h3 id="parameters-18">Parameters</h3>
 <ul>
 <li><strong>node</strong> — <strong>Type:</strong> BitXorBinOp</li>
 </ul>
-<p>Source: packages/irx/src/irx/builder/lowering/binary_ops.py:536</p>
+<p>Source: packages/irx/src/irx/builder/lowering/binary_ops.py:106</p>
 
       </main>
       
@@ -3950,6 +3965,10 @@
             <li class="toc-h3"><a href="#variant-18">Variant 18</a></li>
             
             <li class="toc-h3"><a href="#parameters-17">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#variant-19">Variant 19</a></li>
+            
+            <li class="toc-h3"><a href="#parameters-18">Parameters</a></li>
             
           </ul>
         </div>

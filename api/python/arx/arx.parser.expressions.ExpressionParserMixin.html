@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -896,6 +896,8 @@
             <ul class="api-members">
               <li class="api-overview"><a href="arx.parser.expressions.html" aria-label="parser.expressions module overview">Module overview</a></li>
               
+              <li><a href="arx.parser.expressions.COMPOUND_OPERATORS.html"><span class="nav-label">COMPOUND_OPERATORS</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
+              
               <li><a href="arx.parser.expressions.ExpressionParserMixin.html" aria-current="page"><span class="nav-label">ExpressionParserMixin</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="arx.parser.expressions.NOT_PRECEDENCE.html"><span class="nav-label">NOT_PRECEDENCE</span><span class="api-kind api-kind--attribute">attribute</span></a></li>
@@ -1203,7 +1205,7 @@
         
         
         <h1 id="expressionparsermixin"><span class="api-kind api-kind--class">class</span> ExpressionParserMixin</h1>
-<p>Source: packages/arx/src/arx/parser/expressions.py:31</p>
+<p>Source: packages/arx/src/arx/parser/expressions.py:34</p>
 <p>Expression parser mixin.</p>
 <h2 id="methods">Methods</h2>
 <ul>
@@ -1227,6 +1229,9 @@
 </li>
 <li>
 <p><a href="arx.parser.expressions.ExpressionParserMixin.parse_array_expr.html">parse_array_expr</a> — Parse ordered lists without selecting storage or types.</p>
+</li>
+<li>
+<p><a href="arx.parser.expressions.ExpressionParserMixin.parse_assignment_or_expression.html">parse_assignment_or_expression</a> — Parse a scalar compound statement or an ordinary expression.</p>
 </li>
 <li>
 <p><a href="arx.parser.expressions.ExpressionParserMixin.parse_bin_op_rhs.html">parse_bin_op_rhs</a> — Parse a binary expression rhs.</p>
@@ -1265,7 +1270,7 @@
 <p><a href="arx.parser.expressions.ExpressionParserMixin.parse_paren_expr.html">parse_paren_expr</a> — Parse the parenthesis expression.</p>
 </li>
 <li>
-<p><a href="arx.parser.expressions.ExpressionParserMixin.parse_postfix.html">parse_postfix</a> — Parse postfix member access and method calls.</p>
+<p><a href="arx.parser.expressions.ExpressionParserMixin.parse_postfix.html">parse_postfix</a> — Parse member access, method calls, and subscripts.</p>
 </li>
 <li>
 <p><a href="arx.parser.expressions.ExpressionParserMixin.parse_primary.html">parse_primary</a> — Parse the primary expression.</p>

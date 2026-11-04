@@ -28,7 +28,7 @@
       <a class="site-brand" href="../../../index.html">
         <img class="brand-logo" src="../../../images/arx-logo-terracotta.png" alt="ArxLang">
         <span class="brand-name">ArxLang</span>
-        <span class="version badge rounded-pill">1.26.0</span>
+        <span class="version badge rounded-pill">1.27.0</span>
       </a>
       
       <nav class="site-navbar" aria-label="Primary">
@@ -352,6 +352,8 @@
               <li><a href="irx.analysis.PhaseErrorBoundary.html"><span class="nav-label">PhaseErrorBoundary</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
+              <li><a href="irx.analysis.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
@@ -1565,6 +1567,8 @@
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedAssignment.html"><span class="nav-label">ResolvedAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
               
+              <li><a href="irx.analysis.resolved_nodes.ResolvedAugAssignment.html"><span class="nav-label">ResolvedAugAssignment</span><span class="api-kind api-kind--class">class</span></a></li>
+              
               <li><a href="irx.analysis.resolved_nodes.ResolvedBaseClassFieldAccess.html"><span class="nav-label">ResolvedBaseClassFieldAccess</span><span class="api-kind api-kind--class">class</span></a></li>
               
               <li><a href="irx.analysis.resolved_nodes.ResolvedCallArguments.html"><span class="nav-label">ResolvedCallArguments</span><span class="api-kind api-kind--class">class</span></a></li>
@@ -1800,6 +1804,8 @@
               <li><a href="irx.analysis.types.clone_type.html"><span class="nav-label">clone_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.common_numeric_type.html"><span class="nav-label">common_numeric_type</span><span class="api-kind api-kind--function">function</span></a></li>
+              
+              <li><a href="irx.analysis.types.contains_bytes.html"><span class="nav-label">contains_bytes</span><span class="api-kind api-kind--function">function</span></a></li>
               
               <li><a href="irx.analysis.types.contains_file_type.html"><span class="nav-label">contains_file_type</span><span class="api-kind api-kind--function">function</span></a></li>
               
@@ -3737,44 +3743,54 @@
 <h3 id="returns">Returns</h3>
 <p><strong>Type:</strong> astx.DataType | None</p>
 <h3 id="variant-2">Variant 2</h3>
+<pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">Bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span>
+</code></pre>
+<p>Resolve immutable octets without mutable-list coercion.</p>
+<h3 id="parameters-1">Parameters</h3>
+<ul>
+<li><strong>type_</strong> — <strong>Type:</strong> astx.Bytes</li>
+</ul>
+<h3 id="returns-1">Returns</h3>
+<p><strong>Type:</strong> astx.DataType</p>
+<h3 id="variant-3">Variant 3</h3>
 <pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">ListType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre>
 <p>Resolve a homogeneous list element without widening it.</p>
-<h3 id="parameters-1">Parameters</h3>
-<ul>
-<li><strong>type_</strong> — <strong>Type:</strong> astx.ListType</li>
-</ul>
-<h3 id="returns-1">Returns</h3>
-<p><strong>Type:</strong> astx.DataType | None</p>
-<h3 id="variant-3">Variant 3</h3>
-<pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">TensorType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre>
-<p>Resolve rank-one tensors, deferring unknown rank to a checked adapter.</p>
 <h3 id="parameters-2">Parameters</h3>
 <ul>
-<li><strong>type_</strong> — <strong>Type:</strong> astx.TensorType</li>
+<li><strong>type_</strong> — <strong>Type:</strong> astx.ListType</li>
 </ul>
 <h3 id="returns-2">Returns</h3>
 <p><strong>Type:</strong> astx.DataType | None</p>
 <h3 id="variant-4">Variant 4</h3>
-<pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">SeriesType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">|</span> <span class="kc">None</span>
+<pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">TensorType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre>
-<p>Preserve a Series element's scalar width and validity.</p>
+<p>Resolve rank-one tensors, deferring unknown rank to a checked adapter.</p>
 <h3 id="parameters-3">Parameters</h3>
 <ul>
-<li><strong>type_</strong> — <strong>Type:</strong> astx.SeriesType</li>
+<li><strong>type_</strong> — <strong>Type:</strong> astx.TensorType</li>
 </ul>
 <h3 id="returns-3">Returns</h3>
 <p><strong>Type:</strong> astx.DataType | None</p>
 <h3 id="variant-5">Variant 5</h3>
+<pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">SeriesType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre>
+<p>Preserve a Series element's scalar width and validity.</p>
+<h3 id="parameters-4">Parameters</h3>
+<ul>
+<li><strong>type_</strong> — <strong>Type:</strong> astx.SeriesType</li>
+</ul>
+<h3 id="returns-4">Returns</h3>
+<p><strong>Type:</strong> astx.DataType | None</p>
+<h3 id="variant-6">Variant 6</h3>
 <pre class="highlight"><code><span class="n">sequence_element_type</span><span class="p">(</span><span class="n">type_</span><span class="p">:</span> <span class="n">astx</span><span class="o">.</span><span class="n">SequenceType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">astx</span><span class="o">.</span><span class="n">DataType</span>
 </code></pre>
 <p>Forward an existing sequence's exact element contract.</p>
-<h3 id="parameters-4">Parameters</h3>
+<h3 id="parameters-5">Parameters</h3>
 <ul>
 <li><strong>type_</strong> — <strong>Type:</strong> astx.SequenceType</li>
 </ul>
-<h3 id="returns-4">Returns</h3>
+<h3 id="returns-5">Returns</h3>
 <p><strong>Type:</strong> astx.DataType</p>
 <p>Source: packages/irx/src/irx/analysis/types.py:54</p>
 
@@ -3814,6 +3830,12 @@
             <li class="toc-h3"><a href="#parameters-4">Parameters</a></li>
             
             <li class="toc-h3"><a href="#returns-4">Returns</a></li>
+            
+            <li class="toc-h3"><a href="#variant-6">Variant 6</a></li>
+            
+            <li class="toc-h3"><a href="#parameters-5">Parameters</a></li>
+            
+            <li class="toc-h3"><a href="#returns-5">Returns</a></li>
             
           </ul>
         </div>
