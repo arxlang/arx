@@ -37,7 +37,7 @@ class ExceptionParserMixin(ParserMixinBase):
                 "at this indentation.",
                 self.tokens.cur_tok.location,
             )
-        return self.parse_expression()
+        return self.parse_assignment_or_expression()
 
     def exception_expression(self) -> astx.Expr:
         """

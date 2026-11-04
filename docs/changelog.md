@@ -18,6 +18,10 @@
 
 ## Unreleased
 
+- Add checked scalar `+=`, `-=`, `*=`, `/=`, and `%=` statements and count-loop
+  updates on mutable numeric identifiers, with lossless store conversions.
+  Fields, subscripts, and compound-assignment expressions remain unsupported;
+  ArxJIT's Python augmented-assignment restriction is unchanged.
 - Add `if`/`elif`/`else` chains with ordered Boolean conditions and an optional
   final `else`. **Breaking:** `elif` is now reserved; rename identifiers using
   that spelling. `else if` remains unsupported.

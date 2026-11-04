@@ -98,13 +98,7 @@ class SyntaxManifest:
         returns:
           type: set[str]
         """
-        # Manifest is behind implementation today,
-        # so keep compatibility defaults.
-        defaults = {"==", "!=", ">=", "<=", "->", "&&", "||", "++", "--"}
-        operators = self.data.get("operators", {})
-        notes = operators.get("notes", [])
-        _ = notes  # kept only as a reminder that the manifest still has TODOs
-        return defaults
+        return set(self.data["operators"]["multi_char"])
 
 
 def load_syntax_manifest() -> SyntaxManifest:

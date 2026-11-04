@@ -4,7 +4,7 @@ title: ASTx classes for the operators.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, Literal, Optional, cast
+from typing import Iterable, Literal, Optional, cast
 
 from public import public
 from typing_extensions import TypeAlias
@@ -20,11 +20,8 @@ from astx.base import (
     SourceLocation,
     StatementType,
 )
-from astx.data import Variable
+from astx.data import Identifier, Variable
 from astx.tools.typing import typechecked
-
-if TYPE_CHECKING:
-    from astx.data import Identifier
 
 
 @public
@@ -260,6 +257,11 @@ OpCodeAugAssign: TypeAlias = Literal[
 class AugAssign(DataType):
     """
     title: AST class for augmented assignment.
+    summary: >-
+      Model a single identifier target and RHS value. The operation yields the
+      stored value internally; frontends may restrict it to statement contexts.
+      Operator modeling does not imply backend support. Numeric, mutability,
+      conversion, and failure rules belong to semantic analysis and lowering.
     attributes:
       kind:
         type: ASTKind

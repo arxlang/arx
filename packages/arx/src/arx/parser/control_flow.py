@@ -373,7 +373,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             condition = self.parse_expression()
             self._consume_operator(";")
 
-            update = self.parse_expression()
+            update = self.parse_assignment_or_expression()
             self._consume_operator(":")
 
             body = self.parse_block()

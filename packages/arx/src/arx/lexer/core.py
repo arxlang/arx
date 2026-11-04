@@ -587,7 +587,7 @@ class Lexer:
         if self.last_char == "`":
             return self._parse_docstring()
 
-        if self.last_char in ("=", "!", "<", ">", "-", "&", "|", "+"):
+        if self.last_char in {op[0] for op in self._multi_char_ops}:
             return self._parse_operator()
 
         if self.last_char:

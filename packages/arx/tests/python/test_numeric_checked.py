@@ -5,6 +5,7 @@ title: >-
 
 from __future__ import annotations
 
+import math
 import shutil
 import subprocess
 
@@ -125,6 +126,144 @@ def run_numeric(
         timeout=5,
         check=False,
     )
+
+
+@pytest.fixture(scope="module", params=[0, 3])
+def compound_binary(
+    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> Path:
+    """
+    title: Compile compound success and recovery cases once per optimization.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+      request:
+        type: pytest.FixtureRequest
+    returns:
+      type: Path
+    """
+    definitions = """
+fn rhs_once() -> i32:
+  print("rhs once")
+  return 2
+
+fn recover(before: i32, rhs: i32, op: i32, expected: i32) -> none:
+  var value: i32 = before
+  var caught: i32 = 0
+  try:
+    if op == 0:
+      value += rhs
+    elif op == 1:
+      value -= rhs
+    elif op == 2:
+      value *= rhs
+    elif op == 3:
+      value /= rhs
+    elif op == 4:
+      value %= rhs
+    else:
+      value += ++value
+  except OverflowError:
+    caught = 1
+  except ZeroDivisionError:
+    caught = 2
+  if rhs == 0 and op >= 3 and op <= 4:
+    assert caught == 2
+  else:
+    assert caught == 1
+  assert value == expected
+"""
+    body = """var start: i32 = 207
+var amount: i32 = 5
+start -= amount
+start %= 100
+assert start == 2
+var x: i32 = 3
+x += rhs_once()
+assert x == 5
+x = 3
+x += ++x
+assert x == 7
+x -= 1 + 2
+x *= 2
+x /= 3
+assert x == 2
+x %= 2
+assert x == 0
+var negative: i32 = -5
+negative %= 3
+assert negative == -2
+negative /= 2
+assert negative == -1
+var unsigned: u32 = 2147483648
+unsigned /= cast(2, u8)
+unsigned %= cast(3, u8)
+unsigned += cast(3, u8)
+unsigned -= cast(2, u8)
+unsigned *= cast(2, u8)
+assert unsigned == cast(4, u32)
+var floating: f64 = -5.5
+floating %= 2.0
+assert floating == -1.5
+floating *= 2.0
+floating += 5.0
+floating /= 2.0
+floating -= 0.5
+assert floating == 0.5
+floating %= 0.0
+print(floating)
+recover(2147483647, 1, 0, 2147483647)
+recover(-2147483648, 1, 1, -2147483648)
+recover(2147483647, 2, 2, 2147483647)
+recover(9, 0, 3, 9)
+recover(9, 0, 4, 9)
+recover(-2147483648, -1, 3, -2147483648)
+recover(-2147483648, -1, 4, -2147483648)
+recover(1073741824, 0, 5, 1073741825)
+var small: u8 = 255
+var caught: i32 = 0
+try:
+  small += 1
+except OverflowError:
+  caught += 1
+assert small == cast(255, u8)
+var wide: i32 = 300
+var target: i32 = 5
+try:
+  target += cast(wide, i8)
+except OverflowError:
+  caught += 1
+assert target == 5
+assert caught == 2
+print("compound ok")"""
+    return compile_numeric(
+        tmp_path_factory.mktemp("compound"),
+        numeric_program(body, definitions),
+        request.param,
+    )
+
+
+def test_compound_execution_and_recovery(compound_binary: Path) -> None:
+    """
+    title: Compound operations preserve evaluation order and failure atomicity.
+    parameters:
+      compound_binary:
+        type: Path
+    """
+    result = subprocess.run(
+        [str(compound_binary)],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert len(lines) == 3
+    assert lines[0] == "rhs once"
+    assert math.isnan(float(lines[1]))
+    assert lines[2] == "compound ok"
+    assert result.stderr == ""
 
 
 @pytest.fixture(scope="module", params=[0, 3])

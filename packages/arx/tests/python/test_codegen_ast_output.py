@@ -24,6 +24,80 @@ from llvmlite import ir
 from .test_file_class_native import build_audited_file_program
 
 
+def test_compound_count_update_stores_once() -> None:
+    """
+    title: Count updates consume compound results without storing them twice.
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Compound count update\n```\n"
+        "fn main() -> i32:\n"
+        "  var total: i32 = 0\n"
+        "  for var i: i32 = 0; i < 4; i += 1:\n"
+        "    total += i\n"
+        "  return total\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    module = llvm.parse_assembly(text)
+    module.verify()
+    updates = [
+        (function, block)
+        for function in module.functions
+        for block in function.blocks
+        if block.name.startswith("for.count.update")
+    ]
+    assert len(updates) == 1
+    function, update = updates[0]
+    load = next(
+        instruction
+        for instruction in update.instructions
+        if instruction.opcode == "load"
+    )
+    address = next(iter(load.operands))
+    stores = [
+        instruction
+        for block in function.blocks
+        for instruction in block.instructions
+        if instruction.opcode == "store"
+        and list(instruction.operands)[1] == address
+    ]
+    assert len(stores) == 2  # Initializer plus one compound update.
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        ("missing += 1", "cannot resolve name"),
+        ("var x: bool = true\n  x += true", "numeric scalars"),
+        ('var x: str = "a"\n  x += "b"', "numeric scalars"),
+        ("var x: list[i32] = [1]\n  x += [2]", "numeric scalars"),
+        (
+            "var x: nullable[i32] = cast(1, nullable[i32])\n  x += 1",
+            "numeric scalars",
+        ),
+        (
+            "var other: i32 = 0\n"
+            "  for var i: i32 = 0; i < 3; other += 1:\n    0",
+            "induction binding",
+        ),
+    ],
+)
+def test_compound_semantic_restrictions(body: str, message: str) -> None:
+    """
+    title: Invalid scalar domains and loop bindings fail in IRx, not lowering.
+    parameters:
+      body:
+        type: str
+      message:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Invalid compound assignment\n```\n"
+        f"fn main() -> i32:\n  {body}\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
 def test_scalar_remainder_and_word_not_translate() -> None:
     """
     title: Surface operators reach checked remainder and Boolean LLVM plans.

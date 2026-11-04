@@ -120,6 +120,15 @@ fn test_for_count_loop_asserts() -> none:
     assert i < 3, "count loop values should stay below the exit condition"
   assert skipped_count_loop() == 0
 
+  var i: i32 = 42
+  var total: i32 = 0
+  for var i: i32 = 0; i < 4; i += 1:
+    total += i * 2
+    for var i: i32 = 100; i < 101; i += 1:
+      assert i == 100
+  assert total == 12
+  assert i == 42
+
 fn test_prefix_mutation_values() -> none:
   ```
   title: test_prefix_mutation_values

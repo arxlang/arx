@@ -2,7 +2,11 @@
 title: Tests for operators.
 """
 
+from typing import cast
+
 import pytest
+
+from typeguard import TypeCheckError
 
 import astx
 
@@ -179,6 +183,36 @@ def test_aug_assign_operations(operator: OpCodeAugAssign, value: int) -> None:
     assert str(aug_assign) == f"AugAssign[{operator}]"
     assert aug_assign.get_struct()
     assert aug_assign.get_struct(simplified=True)
+
+
+@pytest.mark.parametrize(
+    "target, operator, value",
+    [
+        (LiteralInt32(1), "+=", LiteralInt32(2)),
+        (astx.FieldAccess(Identifier("obj"), "field"), "+=", LiteralInt32(2)),
+        (Identifier("x"), "=", LiteralInt32(2)),
+        (Identifier("x"), "+=", astx.Block()),
+    ],
+)
+def test_aug_assign_rejects_invalid_runtime_inputs(
+    target: object, operator: str, value: object
+) -> None:
+    """
+    title: Compound nodes enforce identifier, opcode, and value contracts.
+    parameters:
+      target:
+        type: object
+      operator:
+        type: str
+      value:
+        type: object
+    """
+    with pytest.raises(TypeCheckError):
+        AugAssign(
+            cast(Identifier, target),
+            cast(OpCodeAugAssign, operator),
+            cast(astx.DataType, value),
+        )
 
 
 def test_starred_creation() -> None:

@@ -34,7 +34,12 @@ from astx.binary_op import (
 from llvmlite import ir
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
-from irx.analysis.resolved_nodes import OwnershipTransferKind, ResourceKind
+from irx.analysis.resolved_nodes import (
+    ImplicitConversion,
+    OwnershipTransferKind,
+    ResourceKind,
+    SemanticInfo,
+)
 from irx.analysis.types import is_string_type
 from irx.builder.core import (
     VisitorCore,
@@ -50,7 +55,7 @@ from irx.builder.diagnostics import (
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.nullable import NullableVisitorMixin
-from irx.builder.numeric import resolved_integer_operation
+from irx.builder.numeric import integer_operation, resolved_integer_operation
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add, emit_int_div, is_vector
@@ -62,6 +67,131 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
     """
     title: Lower binary operations to LLVM.
     """
+
+    def compound_conversion(
+        self,
+        node: astx.AugAssign,
+        value: ir.Value,
+        conversion: ImplicitConversion,
+    ) -> ir.Value:
+        """
+        title: Apply an analyzed lossless scalar compound conversion.
+        parameters:
+          node:
+            type: astx.AugAssign
+          value:
+            type: ir.Value
+          conversion:
+            type: ImplicitConversion
+        returns:
+          type: ir.Value
+        """
+        numeric = require_semantic_metadata(
+            conversion.numeric,
+            node=node,
+            metadata="numeric conversion",
+            context="compound assignment",
+        )
+        if not numeric.implicit:
+            raise_lowering_internal_error(
+                "compound assignment requires a lossless conversion plan",
+                node=node,
+            )
+        return self._cast_ast_value(
+            value,
+            source_type=numeric.source_type,
+            target_type=numeric.target_type,
+        )
+
+    @VisitorCore.visit.dispatch  # type: ignore[attr-defined,untyped-decorator]
+    def visit(self, node: astx.AugAssign) -> None:
+        """
+        title: Load, compute, and store a resolved scalar compound mutation.
+        summary: >-
+          Snapshot the target before evaluating the RHS once. Guards and
+          conversions precede the single store; failure preserves the target
+          except for independent RHS effects. Push only the stored result.
+        parameters:
+          node:
+            type: astx.AugAssign
+        """
+        semantic = require_semantic_metadata(
+            cast(SemanticInfo | None, getattr(node, "semantic", None)),
+            node=node,
+            metadata="semantic",
+            context="compound assignment",
+        )
+        plan = require_semantic_metadata(
+            semantic.resolved_aug_assignment,
+            node=node,
+            metadata="resolved_aug_assignment",
+            context="compound assignment",
+        )
+        operation = plan.operation
+        require_semantic_metadata(
+            operation.computation_type,
+            node=node,
+            metadata="computation_type",
+            context="compound assignment",
+        )
+        left = require_semantic_metadata(
+            operation.lhs_conversion,
+            node=node,
+            metadata="lhs_conversion",
+            context="compound assignment",
+        )
+        right = require_semantic_metadata(
+            operation.rhs_conversion,
+            node=node,
+            metadata="rhs_conversion",
+            context="compound assignment",
+        )
+        op = operation.op_code
+        if op not in {"+", "-", "*", "/", "%"}:
+            raise_lowering_internal_error(
+                "unsupported resolved compound operator", node=node
+            )
+        address = self.named_values.get(plan.target.symbol_id)
+        if address is None:
+            raise_lowering_internal_error(
+                "compound assignment target has no resolved storage", node=node
+            )
+        old = self._llvm.ir_builder.load(address)
+        self.visit_child(node.value)
+        rhs = require_lowered_value(
+            safe_pop(self.result_stack),
+            node=node.value,
+            context="compound assignment RHS",
+        )
+        lhs = self.compound_conversion(node, old, left)
+        rhs = self.compound_conversion(node, rhs, right)
+        if is_fp_type(lhs.type):
+            if op == "%":
+                # LLVM frem may become a platform fmod call at link time.
+                self.runtime_features.activate("libm")
+            instruction = {
+                "+": "fadd",
+                "-": "fsub",
+                "*": "fmul",
+                "/": "fdiv",
+                "%": "frem",
+            }[op]
+            result = getattr(self._llvm.ir_builder, instruction)(lhs, rhs)
+        elif op in {"+", "-", "*"}:
+            result = integer_operation(
+                cast(VisitorCore, self), node, lhs, rhs, operation, op
+            )
+        else:
+            self._guard_scalar_integer_divisor(
+                node, lhs, rhs, unsigned=operation.flags.unsigned
+            )
+            instruction = ("u" if operation.flags.unsigned else "s") + (
+                "div" if op == "/" else "rem"
+            )
+            result = getattr(self._llvm.ir_builder, instruction)(lhs, rhs)
+        result = self.compound_conversion(node, result, plan.store_conversion)
+        self._llvm.ir_builder.store(result, address)
+        self.result_stack.append(result)
 
     def _resolved_binary_variant(self, node: astx.BinaryOp) -> astx.BinaryOp:
         """
@@ -321,7 +451,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
 
     def _guard_scalar_integer_divisor(
         self,
-        node: astx.BinaryOp,
+        node: astx.AST,
         llvm_lhs: ir.Value,
         llvm_rhs: ir.Value,
         *,
@@ -331,7 +461,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         title: Reject zero and unrepresentable signed integer division.
         parameters:
           node:
-            type: astx.BinaryOp
+            type: astx.AST
           llvm_lhs:
             type: ir.Value
           llvm_rhs:

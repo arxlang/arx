@@ -41,6 +41,32 @@ ordinary assignment such as `value = value + 1` or `value = value - 1`. Integer
 mutation follows the [checked overflow rules](#fixed-width-integer-overflow)
 below.
 
+### Compound assignment
+
+`+=`, `-=`, `*=`, `/=`, and `%=` update a declared mutable numeric variable:
+
+```arx
+var start: i32 = 207
+var amount: i32 = 5
+start -= amount
+start %= 100  # start is now 2
+```
+
+Targets must be identifiers, not fields or subscripts. Boolean, string,
+collection, and nullable operands are unsupported. Compound assignment is a
+statement, not an expression for arguments, conditions, or returns. It is also
+allowed in a [count-loop update](control-flow.md#for-loop-count-style), where it
+must target that loop's induction variable.
+
+The old target value is loaded before evaluating the RHS once, and the result is
+stored once. Operand promotion and storage must both be lossless: there is no
+implicit narrowing or wrapping. Integer arithmetic follows the checked rules
+below, including truncating division and dividend-sign remainder. A failed
+operation or RHS conversion does not perform the compound store; independent RHS
+side effects are not rolled back. For example, `x += ++x` adds the old `x` to
+its incremented value, and an overflow in the addition retains that prior
+increment.
+
 ### Fixed-width integer overflow
 
 Fixed-width signed and unsigned 8–64-bit integer `+`, `-`, `*`, negation, and
