@@ -80,6 +80,10 @@ jobs:
           poetry install --no-directory
           poetry install
 
+      - name: Check Python Version
+        run: |
+          xonsh -c "assert '${{ matrix.python_version }}' in '$(python --version)'"
+
       - name: Require native integration prerequisites
         if: matrix.project == 'arx' || matrix.project == 'irx'
         run: python scripts/check_native_test_environment.py
@@ -171,11 +175,6 @@ jobs:
           auto-update-conda: true
           conda-solver: libmamba
           python-version: ${{ matrix.python_version }}
-
-      - name: Check Python Version
-        run: |
-          pip install xonsh
-          xonsh -c "assert '${{ matrix.python_version }}' in '$(python --version)'"
 
       - name: Install dependencies
         run: |
