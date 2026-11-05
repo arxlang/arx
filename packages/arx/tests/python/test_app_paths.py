@@ -32,49 +32,6 @@ from arx.testing import TestRunSummary as _TestRunSummary
 from irx.diagnostics import DiagnosticBag, SemanticError
 
 
-def test_feature_inspection_cli_is_stable_and_backend_free(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """
-    title: >-
-      Human and JSON metadata inspection never create a compiler or runtime.
-    parameters:
-      capsys:
-        type: pytest.CaptureFixture[str]
-    """
-    from irx.extensions import default_feature_configuration  # noqa: PLC0415
-
-    cli_module.app(["features", "--format", "json"])
-    assert (
-        json.loads(capsys.readouterr().out)
-        == default_feature_configuration().inspect()
-    )
-    cli_module.app(["features"])
-    human = capsys.readouterr().out
-    assert "irx.table_io" in human
-    assert "Native activation: not observed" in human
-    subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            "\n".join(
-                (
-                    "import sys",
-                    "from arx.cli import app",
-                    "app(['features', '--format', 'json'])",
-                    "assert not any(m in sys.modules "
-                    "for m in ("
-                    "'arx.main', 'irx.builder', 'irx.analysis', "
-                    "'llvmlite', 'pyarrow'))",
-                )
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        timeout=60,
-    )
-
-
 def test_builtins_helpers() -> None:
     """
     title: Test builtins helper functions.
@@ -734,7 +691,9 @@ def test_cli_app_run_alias(
     assert DummyMain.called_kwargs["run"] is True
 
 
+@pytest.mark.parametrize("command", ["healthcheck", "features"])
 def test_cli_app_unknown_subcommand_exits_cleanly(
+    command: str,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -742,6 +701,8 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     """
     title: Test unknown subcommand tokens exit with code 2 and no traceback.
     parameters:
+      command:
+        type: str
       monkeypatch:
         type: pytest.MonkeyPatch
       tmp_path:
@@ -751,13 +712,12 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     """
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as excinfo:
-        cli_module.app(["healthcheck"])
+        cli_module.app([command])
 
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
-    assert "unknown command 'healthcheck'" in err
-    assert "known subcommands" in err
-    assert "test" in err
+    assert f"unknown command '{command}'" in err
+    assert "(known subcommands: test)" in err
 
 
 def test_cli_app_missing_input_file_exits_cleanly(

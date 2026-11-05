@@ -91,13 +91,14 @@ Dependency closure and phase composition reject conflicts before the selected
 phase compiles an AST. Factories load only for enabled phases. There is no
 filesystem plugin scan or third-party entry-point loading.
 
-Use `arx features` (or `arx features --format json`) to inspect the default
-selection without loading providers. This describes migrated call handlers,
-**not all language support**. Native activation is unknown until a compilation
-requests runtime symbols; selection never implies activation.
+Composition inspection is a programmatic IRx facility, not a public Arx CLI
+command. It describes migrated call handlers, **not all language support**.
+Native activation is unknown until a compilation requests runtime symbols;
+selection never implies activation. CLI exposure is deferred until a concrete
+diagnostic workflow justifies it.
 
-Python hosts use the same `default_feature_configuration()`. For an explicit
-selection, construct
+Python hosts inspect the same `default_feature_configuration()` used by the
+compiler. For an explicit selection, construct
 `FeatureConfiguration(discover_builtin_features(), selected=("irx.table_io",))`,
 then pass its `phase("analysis")` and `phase("lowering")` catalogs to the
 existing analyzer/builder configuration arguments. An empty selection disables
