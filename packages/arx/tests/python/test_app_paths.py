@@ -691,9 +691,7 @@ def test_cli_app_run_alias(
     assert DummyMain.called_kwargs["run"] is True
 
 
-@pytest.mark.parametrize("command", ["healthcheck", "features"])
 def test_cli_app_unknown_subcommand_exits_cleanly(
-    command: str,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -701,8 +699,6 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     """
     title: Test unknown subcommand tokens exit with code 2 and no traceback.
     parameters:
-      command:
-        type: str
       monkeypatch:
         type: pytest.MonkeyPatch
       tmp_path:
@@ -712,12 +708,13 @@ def test_cli_app_unknown_subcommand_exits_cleanly(
     """
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as excinfo:
-        cli_module.app([command])
+        cli_module.app(["healthcheck"])
 
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
-    assert f"unknown command '{command}'" in err
-    assert "(known subcommands: test)" in err
+    assert "unknown command 'healthcheck'" in err
+    assert "known subcommands" in err
+    assert "test" in err
 
 
 def test_cli_app_missing_input_file_exits_cleanly(

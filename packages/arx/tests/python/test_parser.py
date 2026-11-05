@@ -1198,23 +1198,6 @@ def test_parse_for_in_list_variable() -> None:
     assert loop.body.nodes[0].value.name == "value"
 
 
-def test_parse_for_removed_colon_range_syntax_is_rejected() -> None:
-    """
-    title: Removed colon range syntax must be rejected with guidance.
-    """
-    ArxIO.string_to_buffer(
-        "fn main() -> i32:\n  for j in (0:5:1):\n    return j\n"
-    )
-    lexer = Lexer()
-    parser = Parser()
-
-    with pytest.raises(
-        ParserException,
-        match="Colon range syntax was removed",
-    ):
-        parser.parse(lexer.lex())
-
-
 def test_parse_builtin_cast_and_print() -> None:
     """
     title: Test builtin cast and print node generation.

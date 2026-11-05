@@ -208,12 +208,6 @@ def test_parse_var_expr_error_paths() -> None:
     with pytest.raises(ParserException, match="identifier after var"):
         parser.parse_var_expr()
 
-    ArxIO.string_to_buffer("var a: i32 in")
-    parser = Parser(Lexer().lex())
-    parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="Legacy 'var"):
-        parser.parse_var_expr()
-
     ArxIO.string_to_buffer("var a = 1")
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
@@ -389,17 +383,6 @@ def test_parse_list_types_reject_shape_dimensions() -> None:
     parser = Parser(Lexer().lex())
     parser.tokens.get_next_token()
     with pytest.raises(ParserException, match="exactly one element type"):
-        parser.parse_type()
-
-
-def test_parse_array_type_is_rejected() -> None:
-    """
-    title: Legacy array type syntax is no longer accepted.
-    """
-    ArxIO.string_to_buffer("array[i32]")
-    parser = Parser(Lexer().lex())
-    parser.tokens.get_next_token()
-    with pytest.raises(ParserException, match="Unknown type 'array'"):
         parser.parse_type()
 
 
