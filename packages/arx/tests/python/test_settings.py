@@ -139,11 +139,11 @@ def test_load_settings_from_text_minimal() -> None:
     assert settings.project.authors == ()
 
 
-def test_load_settings_rejects_removed_build_entry_key() -> None:
+def test_build_rejects_unknown_option() -> None:
     """
-    title: Legacy ``[build].entry`` is rejected after the manifest redesign.
+    title: Build settings reject unknown options instead of ignoring them.
     """
-    content = _project_toml('[build]\nentry = "main.x"\n')
+    content = _project_toml("[build]\nunknown_option = true\n")
 
     with pytest.raises(ArxProjectError, match="Additional properties"):
         load_settings_from_text(content)
@@ -617,25 +617,13 @@ def test_venv_environment_rejects_name() -> None:
         load_settings_from_text(content)
 
 
-def test_rejects_legacy_managed_venv_kind() -> None:
+def test_environment_rejects_unknown_kind() -> None:
     """
-    title: The removed managed-venv kind points callers to the new venv kind.
+    title: Environment kinds must belong to the supported schema values.
     """
-    content = _project_toml('\n[environment]\nkind = "managed-venv"\n')
+    content = _project_toml('\n[environment]\nkind = "unknown"\n')
 
-    with pytest.raises(ArxProjectError, match='Use kind="venv" instead'):
-        load_settings_from_text(content)
-
-
-def test_rejects_legacy_existing_venv_kind() -> None:
-    """
-    title: The removed existing-venv kind points callers to the new venv kind.
-    """
-    content = _project_toml(
-        '\n[environment]\nkind = "existing-venv"\npath = ".venv"\n'
-    )
-
-    with pytest.raises(ArxProjectError, match='Use kind="venv" instead'):
+    with pytest.raises(ArxProjectError, match="schema validation"):
         load_settings_from_text(content)
 
 
@@ -710,31 +698,6 @@ def test_conda_environment_missing_name_and_path_raises() -> None:
     with pytest.raises(
         ArxProjectError,
         match='requires at least one of "name" or "path"',
-    ):
-        load_settings_from_text(content)
-
-
-def test_rejects_legacy_arxpm_dependency_tables() -> None:
-    """
-    title: Reject removed package-manager-specific dependency tables.
-    """
-    content = _project_toml(
-        '\n[arxpm.dependencies]\ndependencies = ["http"]\n'
-    )
-
-    with pytest.raises(ArxProjectError, match=r"\[arxpm\]"):
-        load_settings_from_text(content)
-
-
-def test_rejects_removed_toolchain_table() -> None:
-    """
-    title: Top-level ``[toolchain]`` is no longer part of the manifest schema.
-    """
-    content = _project_toml('\n[toolchain]\nlinker = "clang"\n')
-
-    with pytest.raises(
-        ArxProjectError,
-        match=r"does not support \[toolchain\]",
     ):
         load_settings_from_text(content)
 

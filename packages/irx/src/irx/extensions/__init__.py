@@ -1,6 +1,6 @@
 """
 title: Explicit, immutable compiler handler contributions.
-summary: No provider discovery or backend imports occur in this package.
+summary: Discovery is explicit; importing this package loads no backend.
 """
 
 from irx.extensions.handlers import (
@@ -10,11 +10,23 @@ from irx.extensions.handlers import (
     ScopedDispatch,
     contribute,
 )
+from irx.extensions.providers import (
+    FeatureConfiguration,
+    FeatureDescriptor,
+    PhaseProvider,
+    default_feature_configuration,
+    discover_builtin_features,
+)
 
 __all__ = [
     "ConfigurationError",
+    "FeatureConfiguration",
+    "FeatureDescriptor",
     "HandlerConfiguration",
     "HandlerContribution",
+    "PhaseProvider",
     "ScopedDispatch",
     "contribute",
+    "default_feature_configuration",
+    "discover_builtin_features",
 ]

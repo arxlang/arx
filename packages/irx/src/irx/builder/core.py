@@ -92,6 +92,7 @@ from irx.builtins.collections.list import (
     LIST_DESTROY_SYMBOL,
     LIST_RUNTIME_FEATURE,
 )
+from irx.diagnostics import DiagnosticCodes
 from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
@@ -597,12 +598,16 @@ class VisitorCore(BuilderVisitor):
     @dispatch
     def visit(self, node: astx.AST) -> None:
         """
-        title: Visit AST nodes.
+        title: Fail explicitly when analyzed input has no lowering handler.
         parameters:
           node:
             type: astx.AST
         """
-        super().visit(node)
+        raise_lowering_internal_error(
+            f"no lowering handler for {type(node).__name__}",
+            node=node,
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+        )
 
     def _emit_active_cleanups(
         self,

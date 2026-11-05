@@ -18,7 +18,7 @@ from irx.analysis.resolved_nodes import (
     SemanticInfo,
 )
 from irx.diagnostics import DiagnosticBag
-from irx.extensions import HandlerConfiguration
+from irx.extensions import HandlerConfiguration, default_feature_configuration
 from irx.typecheck import typechecked
 
 
@@ -265,10 +265,8 @@ def validate_call(
 @typechecked
 def default_analysis_configuration() -> HandlerConfiguration:
     """
-    title: Compose the finite built-in pilot without importing a backend.
+    title: Compose discovered built-in analysis providers without a backend.
     returns:
       type: HandlerConfiguration
     """
-    from irx.analysis.table_io import analysis_contributions  # noqa: PLC0415
-
-    return HandlerConfiguration("analysis", analysis_contributions())
+    return default_feature_configuration().phase("analysis")

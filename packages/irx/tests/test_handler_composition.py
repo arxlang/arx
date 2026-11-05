@@ -222,9 +222,32 @@ def test_replacement_specificity_recursion_and_instance_isolation() -> None:
     assert parent.contributions == (original,)
     assert child.contributions[0].replaces == "original"
     assert original.source.endswith("Provider.visit")
+    assert parent.explain(Narrow, Context) is original
+    assert specialized.explain(Narrow, Context).identity == "narrow"
+    assert child.explain(Value, Context).replaces == "original"
+    assert child.inspect() != parent.inspect()
     assert get_type_hints(original.implementation) == get_type_hints(
         provider.visit
     )
+
+
+def test_explanation_rejects_missing_and_ambiguous_signatures() -> None:
+    """
+    title: Inspection uses the same fail-closed specificity as invocation.
+    """
+    configuration = HandlerConfiguration(
+        "analysis",
+        (
+            contribute("narrow", "test", "analysis", Narrow, Context, narrow),
+            contribute(
+                "sibling", "test", "analysis", Sibling, Context, sibling
+            ),
+        ),
+    )
+    with pytest.raises(ConfigurationError, match="no analysis handler"):
+        configuration.explain(Value, Context)
+    with pytest.raises(ConfigurationError, match="ambiguous"):
+        configuration.explain(Combined, Context)
 
 
 def test_invalid_configurations_fail_before_dispatch() -> None:
@@ -348,11 +371,15 @@ def test_metadata_and_analysis_composition_do_not_import_backends() -> None:
             sys.executable,
             "-c",
             "import sys; import irx.extensions; "
+            "config = irx.extensions.default_feature_configuration(); "
+            "assert config.inspect()['native_activation'] is None; "
             "assert not any(name in sys.modules "
-            "for name in ('llvmlite', 'pyarrow', 'arx')); "
+            "for name in ('irx.analysis', 'irx.builder', 'llvmlite', "
+            "'pyarrow', 'arx')); "
             "from irx.analysis.extensions.calls "
             "import default_analysis_configuration; "
-            "default_analysis_configuration(); "
+            "assert config.phase('analysis').inspect() == "
+            "default_analysis_configuration().inspect(); "
             "assert not any(name in sys.modules "
             "for name in ('llvmlite', 'irx.builder', 'arx'))",
         ],

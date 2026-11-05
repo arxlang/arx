@@ -34,7 +34,10 @@ from irx.analysis.handlers.base import (
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.nullable import resolve_column_index
-from irx.analysis.numeric_literals import contextualize_literal
+from irx.analysis.numeric_literals import (
+    contextualize_literal,
+    resolve_numeric_literal,
+)
 from irx.analysis.ownership import (
     list_resource_ownership,
     string_resource_ownership,
@@ -103,6 +106,46 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression visitors for literals, list operations, and subscripts
     """
+
+    @SemanticAnalyzerCore.visit.dispatch
+    def visit(
+        self,
+        node: astx.LiteralInteger
+        | astx.LiteralFloat
+        | astx.LiteralInt8
+        | astx.LiteralInt16
+        | astx.LiteralInt32
+        | astx.LiteralInt64
+        | astx.LiteralInt128
+        | astx.LiteralUInt8
+        | astx.LiteralUInt16
+        | astx.LiteralUInt32
+        | astx.LiteralUInt64
+        | astx.LiteralUInt128
+        | astx.LiteralFloat16
+        | astx.LiteralFloat32
+        | astx.LiteralFloat64
+        | astx.LiteralBoolean
+        | astx.LiteralNone,
+    ) -> None:
+        """
+        title: Resolve supported scalar literals, including nominal subtypes.
+        summary: >-
+          Plain type annotations do not grant expression support. Contextual
+          widths and unsupported numeric representations retain their existing
+          semantic validation; specialized literals use their own handlers.
+        parameters:
+          node:
+            type: >-
+              astx.LiteralInteger | astx.LiteralFloat | astx.LiteralInt8 |
+              astx.LiteralInt16 | astx.LiteralInt32 | astx.LiteralInt64 |
+              astx.LiteralInt128 | astx.LiteralUInt8 | astx.LiteralUInt16 |
+              astx.LiteralUInt32 | astx.LiteralUInt64 | astx.LiteralUInt128 |
+              astx.LiteralFloat16 | astx.LiteralFloat32 | astx.LiteralFloat64 |
+              astx.LiteralBoolean | astx.LiteralNone
+        """
+        literal_type = resolve_numeric_literal(node, self.context.diagnostics)
+        self._set_type(node, literal_type or node.type_)
 
     def _validate_comprehension_condition(
         self,
