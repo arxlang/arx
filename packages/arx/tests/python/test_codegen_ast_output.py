@@ -491,6 +491,16 @@ def test_literal_loop_runs_with_bounded_stack(
         ).lstrip(),
         dedent(
             """
+            fn main() -> i32:
+              var value: i32 = -7
+              var ratio: f64 = -2.5
+              print(-value)
+              print(+ratio)
+              return 0
+            """
+        ).lstrip(),
+        dedent(
+            """
             fn accept(values: tensor[i32, ...]) -> i32:
               return 0
 

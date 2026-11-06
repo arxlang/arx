@@ -65,7 +65,11 @@ from irx.analysis.types import (
     same_type,
     union_storage_type,
 )
-from irx.analysis.typing import binary_result_type, unary_result_type
+from irx.analysis.typing import (
+    UNARY_OPERATORS,
+    binary_result_type,
+    unary_result_type,
+)
 from irx.analysis.validation import validate_assignment, validate_cast
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -208,6 +212,11 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
+        if node.op_code not in UNARY_OPERATORS:
+            self.context.diagnostics.add(
+                f"unary operator '{node.op_code}' is not supported",
+                node=node,
+            )
         result_type = unary_result_type(node.op_code, operand_type)
         if node.op_code in {"++", "--"}:
             resolved_target = self._resolve_mutation_target(
