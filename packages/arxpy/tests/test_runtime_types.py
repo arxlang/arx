@@ -22,7 +22,16 @@ from arxpy import (
     ParsedProgram,
     ParseError,
 )
+from arxpy.typecheck import typechecked
+from astx.tools.typing import typechecked as astx_typechecked
 from typeguard import TypeCheckError
+
+
+def test_runtime_checking_policy_is_shared_with_astx() -> None:
+    """
+    title: The Python API uses the compiler stack's instrumentation policy.
+    """
+    assert typechecked is astx_typechecked
 
 
 def test_public_value_records_reject_invalid_constructor_arguments() -> None:

@@ -56,11 +56,25 @@ jobs:
           makim release.ci
 
       - name: Generate documentation
+        id: docs
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: makim docs.build
+        # Temporary until DoukiMD supports cross-source decorator re-exports.
+        # Other errors remain blocking; failed builds must not be published.
+        run: |
+          set -o pipefail
+          log_file="$RUNNER_TEMP/doukimd-build.log"
+          known_error='Error: \[api\] Unresolved re-export: (irx|arxpy)\.typecheck\.typechecked'
+          if makim docs.build 2>&1 | tee "$log_file"; then
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          elif grep -Exq "$known_error" "$log_file" &&
+            ! grep -Exv "$known_error" "$log_file" | grep '^Error:'; then
+            echo "::warning::Skipping documentation: known DoukiMD cross-source re-export limitation."
+          else
+            exit 1
+          fi
 
       - name: GitHub Pages action
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.docs.outputs.built == 'true' }}
         uses: peaceiris/actions-gh-pages@v3.5.9
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,15 @@
 title: Tests for runtime type-checking helpers.
 """
 
+from astx.tools.typing import typechecked
 from irx import typecheck
+
+
+def test_runtime_checking_policy_is_shared_with_astx() -> None:
+    """
+    title: IRx keeps the same instrumentation policy as its input AST nodes.
+    """
+    assert typecheck.typechecked is typechecked
 
 
 def test_skip_unused_accepts_args_and_kwargs() -> None:

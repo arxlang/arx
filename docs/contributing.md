@@ -55,6 +55,14 @@ makim docs.build
 Native toolchain-dependent checks require Clang and, for Arrow features, a C++
 compiler.
 
+Runtime Typeguard instrumentation is off for normal CLI builds and Python API
+usage. Repository pytest suites, `arx test`, local smoke-test tasks, and CI
+enable it automatically; no environment setup is needed for those tests. For a
+standalone debugging command, set `ARX_RUNTIME_TYPECHECK=1` before starting
+Python or Arx (`0` disables it). The setting is read at import time, so changing
+it cannot retrofit checks onto already imported code. This does not disable Arx
+semantic analysis or native runtime safety checks.
+
 ## Documentation and examples
 
 The site uses [DoukiMD](https://github.com/arxlang/doukimd), configured in
