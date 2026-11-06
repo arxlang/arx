@@ -1,6 +1,13 @@
 # Release Notes
 ---
 
+## [1.27.1](https://github.com/arxlang/arx/compare/1.27.0...1.27.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **perf:** disable runtime type checking outside tests ([#181](https://github.com/arxlang/arx/issues/181)) ([f931c16](https://github.com/arxlang/arx/commit/f931c16eefbf95dceba184b8062bb6fee761372c))
+
 # [1.27.0](https://github.com/arxlang/arx/compare/1.26.0...1.27.0) (2026-11-04)
 
 
