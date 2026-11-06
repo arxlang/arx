@@ -20,7 +20,7 @@ class CallOperation:
 @typechecked
 class CallPlan(SemanticFact):
     """
-    title: Feature-owned resolved behavior selected by call lowering.
+    title: Typed resolved behavior consumed by static call visitors.
     """
 
 

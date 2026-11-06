@@ -52,7 +52,7 @@ Before lowering starts, IRx guarantees that analyzed nodes may carry
 - `facts`
 - `extras`
 
-Specialized call plans use typed, provider-owned nominal keys in `facts`, not
+Specialized call plans use typed, owner-scoped nominal keys in `facts`, not
 string-keyed `extras`. Optional lookup distinguishes absence from corruption;
 required lookup diagnoses a violated phase contract. Records validate nested
 payloads and expose reachability edges as ASTx nodes, not record wrappers.
@@ -136,7 +136,6 @@ display prefix.
 Current high-level families:
 
 - `Sxxx`: semantic analysis
-- `Exxx`: handler configuration and dispatch
 - `Fxxx`: public FFI contract
 - `Lxxx`: lowering and codegen
 - `Rxxx`: runtime feature activation and symbol resolution

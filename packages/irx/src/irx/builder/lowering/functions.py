@@ -39,7 +39,11 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.extensions.calls import CallLoweringServices, LoweringCall
+from irx.builder.extensions.calls import (
+    CallLoweringServices,
+    CallLoweringVisitor,
+    LoweringCall,
+)
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.materialization import lower_materialization
 from irx.builder.lowering.sequences import adapt_sequence
@@ -58,7 +62,6 @@ from irx.builtins.collections.list import (
     LIST_RUNTIME_FEATURE,
 )
 from irx.diagnostics import DiagnosticCodes
-from irx.extensions import ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -67,13 +70,13 @@ class FunctionVisitorMixin(ClassVisitorMixin):
     """
     title: Lower function definitions and calls to LLVM.
     attributes:
-      call_dispatch:
-        type: ScopedDispatch
+      call_visitor:
+        type: CallLoweringVisitor
       call_services:
         type: CallLoweringServices
     """
 
-    call_dispatch: ScopedDispatch
+    call_visitor: CallLoweringVisitor
     call_services: CallLoweringServices
 
     def emit_operation(
@@ -98,7 +101,7 @@ class FunctionVisitorMixin(ClassVisitorMixin):
             plan = info.facts.get(CALL_PLAN)
         if plan is None:
             return False
-        self.call_dispatch.visit(plan, LoweringCall(node, self.call_services))
+        self.call_visitor.visit(plan, LoweringCall(node, self.call_services))
         return True
 
     def _register_call_result_cleanup(

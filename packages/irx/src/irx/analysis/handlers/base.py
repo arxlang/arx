@@ -16,12 +16,8 @@ from plum import dispatch
 
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
-from irx.analysis.extensions.calls import (
-    AnalysisCall,
-    default_analysis_configuration,
-)
+from irx.analysis.extensions.calls import CallAnalysisVisitor
 from irx.analysis.extensions.invalidation import invalidate_facts
-from irx.analysis.extensions.records import CallOperation
 from irx.analysis.factories import SemanticEntityFactory
 from irx.analysis.module_interfaces import ModuleKey, ParsedModule
 from irx.analysis.numeric_literals import (
@@ -72,7 +68,6 @@ from irx.analysis.types import (
 )
 from irx.base.visitors.base import BaseVisitor
 from irx.diagnostics import DiagnosticCodes
-from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -899,10 +894,8 @@ class SemanticAnalyzerCore(BaseVisitor):
     attributes:
       context:
         type: SemanticContext
-      configuration:
-        type: HandlerConfiguration
-      call_dispatch:
-        type: ScopedDispatch
+      call_visitor:
+        type: CallAnalysisVisitor
       session:
         type: CompilationSession | None
       factory:
@@ -914,8 +907,7 @@ class SemanticAnalyzerCore(BaseVisitor):
     """
 
     context: SemanticContext
-    configuration: HandlerConfiguration
-    call_dispatch: ScopedDispatch
+    call_visitor: CallAnalysisVisitor
     session: CompilationSession | None
     factory: SemanticEntityFactory
     registry: SemanticRegistry
@@ -926,7 +918,6 @@ class SemanticAnalyzerCore(BaseVisitor):
         *,
         context: SemanticContext | None = None,
         session: CompilationSession | None = None,
-        configuration: HandlerConfiguration | None = None,
     ) -> None:
         """
         title: Initialize SemanticAnalyzerCore.
@@ -935,18 +926,12 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: SemanticContext | None
           session:
             type: CompilationSession | None
-          configuration:
-            type: HandlerConfiguration | None
         """
-        self.configuration = (
-            configuration
-            if configuration is not None
-            else default_analysis_configuration()
+        from irx.analysis.table_io import (  # noqa: PLC0415
+            TableIOAnalysisVisitor,
         )
-        self.configuration.validate_contract(
-            "analysis", CallOperation, AnalysisCall
-        )
-        self.call_dispatch = ScopedDispatch(self.configuration)
+
+        self.call_visitor = TableIOAnalysisVisitor()
         self.session = session
         self.context = context or SemanticContext()
         if session is not None:
@@ -2185,5 +2170,5 @@ class SemanticAnalyzerCore(BaseVisitor):
             f"unsupported syntax node: {type(node).__name__}",
             node=node,
             code=DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE,
-            hint="use a supported construct or register an analysis handler",
+            hint="use a supported construct or implement a visitor overload",
         )

@@ -1,7 +1,7 @@
 """
 title: Typed, immutable semantic attachments owned by an analysis generation.
 summary: >-
-  Keys pair a nominal record type with its provider owner. A record type cannot
+  Keys pair a nominal record type with its analysis owner. A record type cannot
   be claimed by two owners in one store. Updates return a new store;
   replacement is explicit. Records validate their full payload and expose
   dependency edges. Analysis entry points invalidate old records before
@@ -70,7 +70,7 @@ class SemanticFact:
 @dataclass(frozen=True)
 class FactKey(Generic[RecordT]):
     """
-    title: Provider-owned nominal key with an invariant static record type.
+    title: Owner-scoped nominal key with an invariant static record type.
     attributes:
       owner:
         type: str

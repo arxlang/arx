@@ -1,24 +1,24 @@
 """
-title: Narrow call-analysis dependencies and phase-local configuration.
+title: Narrow call-analysis dependencies and fail-closed static dispatch.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Callable, Protocol, runtime_checkable
 
 import astx
 
+from plum import dispatch
 from public import private, public
 
+from irx.analysis.extensions.records import CallOperation
 from irx.analysis.resolved_nodes import (
     SemanticClass,
     SemanticFunction,
     SemanticInfo,
 )
-from irx.diagnostics import DiagnosticBag
-from irx.extensions import HandlerConfiguration, default_feature_configuration
+from irx.diagnostics import DiagnosticBag, DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -92,7 +92,7 @@ class CallAnalysisServices(Protocol):
 @dataclass(frozen=True)
 class AnalysisServices:
     """
-    title: Explicit per-call dependencies, never retained in a configuration.
+    title: Explicit per-call dependencies with compilation-local lifetime.
     attributes:
       analyze_operand:
         type: Callable[[astx.AST], astx.DataType | None]
@@ -260,13 +260,26 @@ def validate_call(
     )
 
 
-@public
-@lru_cache(maxsize=1)
+@private
 @typechecked
-def default_analysis_configuration() -> HandlerConfiguration:
+class CallAnalysisVisitor:
     """
-    title: Compose discovered built-in analysis providers without a backend.
-    returns:
-      type: HandlerConfiguration
+    title: Reject unsupported semantic operations through nominal dispatch.
+    summary: Concrete visitors supply a fixed set of typed visit overloads.
     """
-    return default_feature_configuration().phase("analysis")
+
+    @dispatch
+    def visit(self, operation: CallOperation, call: AnalysisCall) -> None:
+        """
+        title: Diagnose unknown trusted operations before lowering.
+        parameters:
+          operation:
+            type: CallOperation
+          call:
+            type: AnalysisCall
+        """
+        call.diagnostics.add(
+            f"unsupported call operation: {type(operation).__name__}",
+            node=call.node,
+            code=DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE,
+        )

@@ -1,3 +1,3 @@
 """
-title: LLVM-owned call emission contracts and scoped composition.
+title: LLVM-owned call emission contracts for static visitors.
 """

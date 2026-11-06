@@ -8,17 +8,16 @@ summary: >-
   scripts/check_native_test_environment.py. Reuse the host CSV fixture rather
   than maintaining another program. Each phase sample uses fresh AST and
   compiler state; import samples use fresh interpreters, not cold OS caches.
-  Composition means analyzer/visitor construction, including fresh scoped
-  dispatch setup and first-use metadata loading. Lowering includes runtime-
-  state setup and IR serialization, but excludes analysis, construction, and
-  LLVM verification. A public analysis call includes its own analyzer
-  construction. The separate construction probe is not an additional cost to
-  add to that measurement. A scoped analysis stub supplies the already analyzed
-  session to the public translate entry point; revisit this adapter when phase
-  APIs change. Emit and link once, then execute that artifact repeatedly in an
-  isolated directory. Native build/cache cost is reported separately, not
-  amortized into execution. Report samples and variance; do not enforce a
-  timing threshold.
+  Composition means static analyzer/visitor construction and first-use metadata
+  loading. Lowering includes runtime-state setup and IR serialization, but
+  excludes analysis, construction, and LLVM verification. A public analysis
+  call includes its own analyzer construction. The separate construction probe
+  is not an additional cost to add to that measurement. A scoped analysis stub
+  supplies the already analyzed session to the public translate entry point;
+  revisit this adapter when phase APIs change. Emit and link once, then execute
+  that artifact repeatedly in an isolated directory. Native build/cache cost is
+  reported separately, not amortized into execution. Report samples and
+  variance; do not enforce a timing threshold.
 """
 
 from __future__ import annotations
