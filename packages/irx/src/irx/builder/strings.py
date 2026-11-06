@@ -54,7 +54,8 @@ class RuntimeGuard(Protocol):
           exception_role:
             type: str
         """
-        ...
+        del node, condition, code, message, block_name, exception_role
+        raise NotImplementedError
 
 
 @private

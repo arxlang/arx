@@ -55,7 +55,8 @@ class LiteralListStorage(Protocol):
         returns:
           type: ir.Value
         """
-        ...
+        del base, literal_value
+        raise NotImplementedError
 
 
 @private

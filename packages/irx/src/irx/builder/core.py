@@ -15,17 +15,11 @@ from llvmlite import ir
 from plum import dispatch
 from public import private
 
-from irx.buffer import BUFFER_VIEW_TYPE_NAME
-
-try:  # FP128 may not exist depending on llvmlite build.
-    from llvmlite.ir import FP128Type
-except ImportError:  # pragma: no cover - optional
-    FP128Type = None
-
 from irx.analysis import analyze, analyze_modules
 from irx.analysis.extensions.records import CallPlan
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.analysis.resolved_nodes import FunctionSignature
+from irx.buffer import BUFFER_VIEW_TYPE_NAME
 from irx.builder.base import BuilderVisitor
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
