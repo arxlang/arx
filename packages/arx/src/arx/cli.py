@@ -491,6 +491,10 @@ def _looks_like_subcommand_attempt(token: str) -> bool:
 def app(argv: Sequence[str] | None = None) -> None:
     """
     title: Run the application.
+    summary: >-
+      The test subcommand enables runtime Typeguard instrumentation before the
+      lazy compiler import. Normal builds leave the default-off policy intact.
+      Already imported compiler definitions retain their import-time policy.
     parameters:
       argv:
         type: Sequence[str] | None
@@ -500,6 +504,8 @@ def app(argv: Sequence[str] | None = None) -> None:
     if raw_args and raw_args[0] == "test":
         args_parser = get_test_args()
         args = args_parser.parse_args(raw_args[1:])
+        # Enable instrumentation before importing the compiler, not per build.
+        os.environ["ARX_RUNTIME_TYPECHECK"] = "1"
         try:
             arx = create_arx_application()
             exit_code = arx.run_tests(**dict(args._get_kwargs()))

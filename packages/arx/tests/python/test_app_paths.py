@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import runpy
 import signal
 import subprocess
@@ -340,6 +341,12 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     class DummyMain:
         called_kwargs: dict[str, object] = {}
 
+        def __init__(self) -> None:
+            """
+            title: Require test instrumentation before application creation.
+            """
+            assert os.environ["ARX_RUNTIME_TYPECHECK"] == "1"
+
         def run_tests(self, **kwargs: object) -> int:
             """
             title: Record forwarded test-runner kwargs.
@@ -353,6 +360,7 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
             DummyMain.called_kwargs = kwargs
             return 0
 
+    monkeypatch.setenv("ARX_RUNTIME_TYPECHECK", "0")
     monkeypatch.setattr(cli_module, "ArxMain", DummyMain)
     cli_module.app(
         [
@@ -367,6 +375,60 @@ def test_cli_app_test_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     assert DummyMain.called_kwargs["paths"] == ["tests/arx/test_math.x"]
     assert DummyMain.called_kwargs["list_only"] is True
     assert DummyMain.called_kwargs["exclude"] == ["tests/arx/slow_*.x"]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "enabled"),
+    [
+        (["--show-llvm-ir", "examples/constant.x"], False),
+        (["test", "--list", "packages/arx/tests/arx/test_math.x"], True),
+    ],
+)
+def test_cli_selects_runtime_checking_before_compiler_import(
+    arguments: list[str], enabled: bool
+) -> None:
+    """
+    title: CLI builds skip instrumentation while test discovery enables it.
+    parameters:
+      arguments:
+        type: list[str]
+      enabled:
+        type: bool
+    """
+    env = os.environ.copy()
+    env.pop("ARX_RUNTIME_TYPECHECK", None)
+    probe = """
+import runpy
+
+runpy.run_module("arx", run_name="__main__")
+
+import astx
+from astx.tools.typing import typechecked
+from irx.typecheck import typechecked as irx_typechecked
+from typeguard import TypeCheckError
+
+assert typechecked is irx_typechecked
+try:
+    astx.SourceLocation(line="invalid", col=1)
+except TypeCheckError:
+    enabled = True
+else:
+    enabled = False
+assert enabled is EXPECTED
+""".replace("EXPECTED", repr(enabled))
+    result = subprocess.run(
+        [sys.executable, "-c", probe, *arguments],
+        cwd=Path(__file__).resolve().parents[4],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    if enabled:
+        assert "test_math::test_abs" in result.stdout
+    else:
+        assert "; ModuleID" in result.stdout
 
 
 def test_cli_app_test_branch_nonzero_exit(

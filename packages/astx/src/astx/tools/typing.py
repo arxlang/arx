@@ -1,6 +1,12 @@
 """
 title: Tools for typing support helper.
+summary: >-
+  Runtime checking is disabled by default. Set ARX_RUNTIME_TYPECHECK=1 before
+  importing the compiler stack to instrument functions and classes for tests.
+  Changing the setting after import does not reinstrument existing definitions.
 """
+
+import os
 
 from typing import Any, Callable, TypeVar
 
@@ -10,11 +16,16 @@ from typeguard import (
     ForwardRefPolicy,
 )
 from typeguard import (
-    typechecked as _typechecked,
+    typechecked as typeguard_typechecked,
 )
 from typeguard._config import global_config
 
 _T = TypeVar("_T")
+TypecheckedTarget = TypeVar("TypecheckedTarget", bound=Callable[..., object])
+
+RUNTIME_TYPECHECK_SETTING = os.environ.get("ARX_RUNTIME_TYPECHECK", "0")
+if RUNTIME_TYPECHECK_SETTING not in {"0", "1"}:
+    raise ValueError("ARX_RUNTIME_TYPECHECK must be '0' or '1'")
 
 
 __all__ = ["typechecked"]
@@ -52,10 +63,28 @@ def copy_type(f: _T) -> Callable[[Any], _T]:
     return lambda x: x
 
 
-typechecked = _typechecked(
-    forward_ref_policy=ForwardRefPolicy.IGNORE,
-    collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS,
-)
+@public
+def typechecked(target: TypecheckedTarget) -> TypecheckedTarget:
+    """
+    title: Instrument a function or class when runtime checking is enabled.
+    summary: >-
+      ARX_RUNTIME_TYPECHECK=1 at import enables argument, return, and all-item
+      collection checks. Otherwise return the original target without runtime
+      instrumentation or a call wrapper. Compiler semantic validation is
+      independent of this developer-only setting.
+    parameters:
+      target:
+        type: TypecheckedTarget
+    returns:
+      type: TypecheckedTarget
+    """
+    if RUNTIME_TYPECHECK_SETTING == "0":
+        return target
+    return typeguard_typechecked(
+        forward_ref_policy=ForwardRefPolicy.IGNORE,
+        collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS,
+    )(target)
+
 
 # Override the default configuration
 global_config.forward_ref_policy = ForwardRefPolicy.IGNORE

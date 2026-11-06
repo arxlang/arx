@@ -43,6 +43,8 @@ groups:
 
       wheel-smoke:
         help: audit and test the package set in an isolated environment
+        env:
+          ARX_RUNTIME_TYPECHECK: "1"
         hooks:
           pre-run:
             - task: all.build
@@ -92,6 +94,8 @@ groups:
 
       test-smoke:
         help: run Arx CLI smoke tests against examples
+        env:
+          ARX_RUNTIME_TYPECHECK: "1"
         hooks:
           pre-run:
             - task: arx.show-tokens
@@ -284,6 +288,8 @@ groups:
 
       test-compiled:
         help: run parsed AIX language tests
+        env:
+          ARX_RUNTIME_TYPECHECK: "1"
         run: python -m aix test packages/aix/tests/aix
 
       check-syntax:

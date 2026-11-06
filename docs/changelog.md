@@ -34,6 +34,10 @@
 
 ## Unreleased
 
+- **Breaking:** Runtime Typeguard instrumentation is disabled by default for
+  regular compiler and Python API usage. Local pytest suites, `arx test`, smoke
+  tests, and CI enable it automatically. Standalone debugging can opt in with
+  `ARX_RUNTIME_TYPECHECK=1` before import; semantic validation is unchanged.
 - **Breaking:** Remove `irx.extensions` compiler-provider catalogs and the
   analysis/lowering configuration arguments from IRx analysis and builders.
   Table I/O now uses static Plum visitors; typed semantic plans, checked native

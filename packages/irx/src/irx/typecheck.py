@@ -1,28 +1,14 @@
 """
 title: Runtime type-checking helpers.
+summary: Reuse ASTx's import-time runtime-checking policy.
 """
 
 from typing import Any, Callable, TypeVar
 
+from astx.tools.typing import typechecked
 from public import public
-from typeguard import (
-    CollectionCheckStrategy,
-    ForwardRefPolicy,
-)
-from typeguard import (
-    typechecked as _typechecked,
-)
-from typeguard._config import global_config
 
 _T = TypeVar("_T")
-
-typechecked = _typechecked(
-    forward_ref_policy=ForwardRefPolicy.IGNORE,
-    collection_check_strategy=CollectionCheckStrategy.ALL_ITEMS,
-)
-
-global_config.forward_ref_policy = ForwardRefPolicy.IGNORE
-global_config.collection_check_strategy = CollectionCheckStrategy.ALL_ITEMS
 
 __all__ = ["copy_type", "skip_unused", "typechecked"]
 
