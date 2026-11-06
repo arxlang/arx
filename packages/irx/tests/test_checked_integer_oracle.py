@@ -20,7 +20,6 @@ from irx.analysis.numeric_policy import (
 )
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Builder
-from irx.builder.numeric import integer_operation, lower_numeric_cast
 from llvmlite import binding as llvm
 from llvmlite import ir
 from public import private
@@ -119,7 +118,7 @@ def integer_kernel(
         """
         checks.append(condition)
 
-    visitor._guard_runtime_condition = capture  # type: ignore[method-assign]
+    visitor.numeric.guard = capture
     node = astx.BinaryOp(operator, astx.LiteralInt32(0), astx.LiteralInt32(0))
     flags = normalize_flags(node, lhs_type=type_, rhs_type=type_)
     plan = normalize_operator(
@@ -130,7 +129,7 @@ def integer_kernel(
         flags=flags,
         mode=mode,
     )
-    result = integer_operation(visitor, node, lhs, rhs, plan, operator)
+    result = visitor.numeric.integer_operation(node, lhs, rhs, plan, operator)
     if lanes > 1:
         result = builder.bitcast(result, ir.IntType(width * lanes))
     builder.store(
@@ -358,7 +357,7 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
             observed,
         )
 
-    visitor._guard_runtime_condition = capture  # type: ignore[method-assign]
+    visitor.numeric.guard = capture
     packed = ir.Constant(ir.LiteralStructType([ir.IntType(1), storage]), None)
     value = builder.insert_value(
         packed, builder.trunc(function.args[0], ir.IntType(1)), 0
@@ -366,7 +365,9 @@ def test_null_cast_does_not_inspect_invalid_payload(floating: bool) -> None:
     value = builder.insert_value(value, function.args[1], 1)
     plan = classify_numeric_conversion(source_type, astx.Int8())
     assert plan is not None
-    lower_numeric_cast(visitor, node, value, plan, astx.NumericMode.CHECKED)
+    visitor.numeric.lower_numeric_cast(
+        node, value, plan, astx.NumericMode.CHECKED
+    )
     builder.ret(builder.load(observed))
     module = llvm.parse_assembly(str(visitor._llvm.module))
     module.verify()

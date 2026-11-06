@@ -12,9 +12,11 @@ from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.call_arguments import argument_slots
-from irx.analysis.handlers._templates.build import (
-    TemplateBuildVisitorMixin,
+from irx.analysis.dependencies.template_resolution import (
+    TemplateResolutionAnalysisServices,
 )
 from irx.analysis.handlers._templates.state import (
     _SPECIALIZATION_ANALYZED_ATTR,
@@ -30,11 +32,26 @@ from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
+class TemplateResolutionAnalysis:
     """
     title: Template-specialization argument and call-target resolution helpers
+    attributes:
+      services:
+        type: TemplateResolutionAnalysisServices
     """
+
+    services: TemplateResolutionAnalysisServices
+
+    def __init__(self, services: TemplateResolutionAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: TemplateResolutionAnalysisServices
+        """
+        self.services = services
 
     def _collect_inferred_template_bindings(
         self,
@@ -67,7 +84,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         if isinstance(expected_type, astx.TemplateTypeVar):
             if actual_type is None:
                 if diagnose:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "Cannot infer template argument "
                         f"'{expected_type.name}' "
                         f"for call to '{function.name}'",
@@ -82,7 +99,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
             if same_type(previous, actual_type):
                 return True
             if diagnose:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "Conflicting inferences for template argument "
                     f"'{expected_type.name}' in call to '{function.name}'",
                     node=node,
@@ -225,7 +242,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         if explicit_args is not None:
             if len(explicit_args) != len(params):
                 if diagnose:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         f"Call to '{function.name}' supplies "
                         f"{len(explicit_args)} template arguments but expects "
                         f"{len(params)}",
@@ -237,7 +254,9 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         else:
             inferred: dict[str, astx.DataType] = {}
             slots = argument_slots(
-                function, node, self.context.diagnostics if diagnose else None
+                function,
+                node,
+                self.services.context.diagnostics if diagnose else None,
             )
             if slots is None:
                 return None
@@ -260,7 +279,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
             if missing:
                 if diagnose:
                     missing_text = ", ".join(missing)
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         f"Cannot infer template argument(s) {missing_text} "
                         f"for call to '{function.name}'",
                         node=node,
@@ -272,10 +291,10 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
             )
 
         for param, argument in zip(params, concrete_args):
-            if self._type_within_template_bound(argument, param.bound):
+            if self.services.type_within_template_bound(argument, param.bound):
                 continue
             if diagnose:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Template argument '{display_type_name(argument)}' does "
                     f"not satisfy bound '{display_type_name(param.bound)}' "
                     f"for parameter '{param.name}' in '{function.name}'",
@@ -310,7 +329,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         )
         if concrete_args is None:
             return None
-        specialization = self._build_template_specialization(
+        specialization = self.services.build_template_specialization(
             function,
             concrete_args,
         )
@@ -363,7 +382,7 @@ class TemplateResolutionVisitorMixin(TemplateBuildVisitorMixin):
         )
         if concrete_args is None:
             return None
-        specialization = self._build_template_specialization(
+        specialization = self.services.build_template_specialization(
             function,
             concrete_args,
         )

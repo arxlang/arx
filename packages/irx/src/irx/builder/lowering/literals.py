@@ -1,38 +1,285 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Literal visitor mixins for llvmliteir.
+title: Literal lowering implementations for llvmliteir.
 """
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
+from irx.analysis.extensions.literals import (
+    DICTIONARY_LOOKUP,
+    LITERAL_STORAGE,
+)
 from irx.analysis.resolved_nodes import (
     ResolvedClassConstruction,
     SemanticInfo,
 )
-from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.lowering.classes import ClassVisitorMixin
-from irx.builder.lowering.nullable import NullableVisitorMixin
-from irx.builder.lowering.sequences import lower_sequence_query
-from irx.builder.lowering.text import lower_text_operation
+from irx.builder.lowering.contracts import LiteralServices
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
+from irx.builder.services.representations import (
+    semantic_info,
+)
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class LiteralVisitorMixin(ClassVisitorMixin):
+class LiteralLowering:
     """
     title: Lower literal values to LLVM.
+    attributes:
+      services:
+        type: LiteralServices
     """
+
+    services: LiteralServices
+
+    def __init__(self, services: LiteralServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: LiteralServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no literals handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.literals.ClassConstruct",
+                "irx.literals",
+                "lowering",
+                astx.ClassConstruct,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralInteger",
+                "irx.literals",
+                "lowering",
+                astx.LiteralInteger,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralFloat",
+                "irx.literals",
+                "lowering",
+                astx.LiteralFloat,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralInt32",
+                "irx.literals",
+                "lowering",
+                astx.LiteralInt32,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralFloat32",
+                "irx.literals",
+                "lowering",
+                astx.LiteralFloat32,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralFloat64",
+                "irx.literals",
+                "lowering",
+                astx.LiteralFloat64,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralFloat16",
+                "irx.literals",
+                "lowering",
+                astx.LiteralFloat16,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralNone",
+                "irx.literals",
+                "lowering",
+                astx.LiteralNone,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralBoolean",
+                "irx.literals",
+                "lowering",
+                astx.LiteralBoolean,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralInt64",
+                "irx.literals",
+                "lowering",
+                astx.LiteralInt64,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralInt8",
+                "irx.literals",
+                "lowering",
+                astx.LiteralInt8,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUInt8",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUInt8,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUInt16",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUInt16,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUInt32",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUInt32,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUInt64",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUInt64,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUInt128",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUInt128,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUTF8Char",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUTF8Char,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralUTF8String",
+                "irx.literals",
+                "lowering",
+                astx.LiteralUTF8String,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralString",
+                "irx.literals",
+                "lowering",
+                astx.LiteralString,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralList",
+                "irx.literals",
+                "lowering",
+                astx.LiteralList,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralSet",
+                "irx.literals",
+                "lowering",
+                astx.LiteralSet,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralTuple",
+                "irx.literals",
+                "lowering",
+                astx.LiteralTuple,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralDict",
+                "irx.literals",
+                "lowering",
+                astx.LiteralDict,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.SubscriptExpr",
+                "irx.literals",
+                "lowering",
+                astx.SubscriptExpr,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+            contribute_node(
+                "llvm.literals.LiteralInt16",
+                "irx.literals",
+                "lowering",
+                astx.LiteralInt16,
+                self.visit,
+                source="irx.builder.lowering.literals.LiteralLowering.visit",
+            ),
+        )
 
     def _semantic_class_construction(
         self,
@@ -64,12 +311,12 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         returns:
           type: ir.Value
         """
-        empty_str_type = ir.ArrayType(self._llvm.INT8_TYPE, 1)
+        empty_str_type = ir.ArrayType(self.services.llvm.INT8_TYPE, 1)
         global_name = f"class_init_empty_str_{name_hint}"
-        global_value = self._llvm.module.globals.get(global_name)
+        global_value = self.services.llvm.module.globals.get(global_name)
         if global_value is None:
             global_value = ir.GlobalVariable(
-                self._llvm.module,
+                self.services.llvm.module,
                 empty_str_type,
                 name=global_name,
             )
@@ -79,11 +326,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
                 empty_str_type,
                 bytearray(b"\0"),
             )
-        return self._llvm.ir_builder.gep(
+        return self.services.llvm.ir_builder.gep(
             global_value,
             [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
             ],
             inbounds=True,
             name=f"{name_hint}_empty",
@@ -105,7 +352,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         returns:
           type: ir.Value
         """
-        llvm_type = self._llvm_type_for_ast_type(type_)
+        llvm_type = self.services.types.llvm_type(type_)
         if llvm_type is None:
             raise_lowering_internal_error(
                 f"cannot lower default initializer for {type_!r}",
@@ -115,13 +362,15 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         if type_name == "string":
             return self._empty_string_pointer(name_hint)
         if "float" in type_name:
-            return ir.Constant(self._llvm.get_data_type(type_name), 0.0)
+            return ir.Constant(
+                self.services.llvm.get_data_type(type_name), 0.0
+            )
         if isinstance(type_, astx.ClassType):
             return ir.Constant(llvm_type, None)
         if isinstance(type_, astx.ListType):
             return cast(
                 ir.Constant,
-                cast(Any, self)._empty_list_value_for_type(type_),
+                self.services.empty_list_value_for_type(type_),
             )
         if isinstance(
             type_,
@@ -138,9 +387,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             ),
         ):
             return ir.Constant(llvm_type, None)
-        return ir.Constant(self._llvm.get_data_type(type_name), 0)
+        return ir.Constant(self.services.llvm.get_data_type(type_name), 0)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ClassConstruct) -> None:
         """
         title: Visit ClassConstruct nodes.
@@ -148,11 +397,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.ClassConstruct
         """
-        self.lower_class_construct(
+        self.services.lower_class_construct(
             node, self._semantic_class_construction(node)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralInteger | astx.LiteralFloat) -> None:
         """
         title: Emit a source literal using its resolved semantic type.
@@ -167,7 +416,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             context="numeric literal",
         )
         type_ = require_semantic_metadata(
-            self._llvm_type_for_ast_type(semantic.resolved_type),
+            self.services.types.llvm_type(semantic.resolved_type),
             node=node,
             metadata="resolved_type",
             context="numeric literal",
@@ -178,9 +427,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             metadata="numeric_constant",
             context="numeric literal",
         )
-        self.result_stack.append(ir.Constant(type_, constant))
+        self.services.function_state.result_stack.append(
+            ir.Constant(type_, constant)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralInt32) -> None:
         """
         title: Visit LiteralInt32 nodes.
@@ -188,11 +439,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralInt32
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.INT32_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT32_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralFloat32) -> None:
         """
         title: Visit LiteralFloat32 nodes.
@@ -200,11 +451,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralFloat32
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.FLOAT_TYPE, expr.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.FLOAT_TYPE, expr.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralFloat64) -> None:
         """
         title: Visit LiteralFloat64 nodes.
@@ -212,11 +463,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralFloat64
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.DOUBLE_TYPE, expr.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.DOUBLE_TYPE, expr.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralFloat16) -> None:
         """
         title: Visit LiteralFloat16 nodes.
@@ -224,11 +475,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralFloat16
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.FLOAT16_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.FLOAT16_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralNone) -> None:
         """
         title: Visit LiteralNone nodes.
@@ -236,9 +487,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralNone
         """
-        self.result_stack.append(None)
+        self.services.function_state.result_stack.append(None)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralBoolean) -> None:
         """
         title: Visit LiteralBoolean nodes.
@@ -246,11 +497,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralBoolean
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.BOOLEAN_TYPE, int(node.value))
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.BOOLEAN_TYPE, int(node.value))
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralInt64) -> None:
         """
         title: Visit LiteralInt64 nodes.
@@ -258,11 +509,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralInt64
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.INT64_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT64_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralInt8) -> None:
         """
         title: Visit LiteralInt8 nodes.
@@ -270,9 +521,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralInt8
         """
-        self.result_stack.append(ir.Constant(self._llvm.INT8_TYPE, node.value))
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT8_TYPE, node.value)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralUInt8) -> None:
         """
         title: Visit LiteralUInt8 nodes.
@@ -280,11 +533,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralUInt8
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.UINT8_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.UINT8_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralUInt16) -> None:
         """
         title: Visit LiteralUInt16 nodes.
@@ -292,11 +545,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralUInt16
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.UINT16_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.UINT16_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralUInt32) -> None:
         """
         title: Visit LiteralUInt32 nodes.
@@ -304,11 +557,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralUInt32
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.UINT32_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.UINT32_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralUInt64) -> None:
         """
         title: Visit LiteralUInt64 nodes.
@@ -316,11 +569,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralUInt64
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.UINT64_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.UINT64_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralUInt128) -> None:
         """
         title: Visit LiteralUInt128 nodes.
@@ -328,11 +581,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralUInt128
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.UINT128_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.UINT128_TYPE, node.value)
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralUTF8Char) -> None:
         """
         title: Visit LiteralUTF8Char nodes.
@@ -340,32 +593,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralUTF8Char
         """
-        string_value = expr.value
-        utf8_bytes = string_value.encode("utf-8")
-        string_length = len(utf8_bytes)
-
-        string_data_type = ir.ArrayType(
-            self._llvm.INT8_TYPE, string_length + 1
-        )
-        string_data = ir.GlobalVariable(
-            self._llvm.module,
-            string_data_type,
-            name=self._llvm.module.get_unique_name(f"str_ascii_{id(expr)}"),
-        )
-        string_data.linkage = "internal"
-        string_data.global_constant = True
-        string_data.initializer = ir.Constant(
-            string_data_type, bytearray(utf8_bytes + b"\0")
+        self.services.function_state.result_stack.append(
+            self.services.strings.constant(expr.value, name_hint="str_ascii")
         )
 
-        ptr = self._llvm.ir_builder.gep(
-            string_data,
-            [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), 0)],
-            inbounds=True,
-        )
-        self.result_stack.append(ptr)
-
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralUTF8String) -> None:
         """
         title: Visit LiteralUTF8String nodes.
@@ -373,33 +605,11 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralUTF8String
         """
-        string_value = expr.value
-        utf8_bytes = string_value.encode("utf-8")
-        string_length = len(utf8_bytes)
-
-        string_data_type = ir.ArrayType(
-            self._llvm.INT8_TYPE, string_length + 1
-        )
-        unique_name = self._llvm.module.get_unique_name(
-            f"str_utf8_{abs(hash(string_value))}_{id(expr)}"
-        )
-        string_data = ir.GlobalVariable(
-            self._llvm.module, string_data_type, name=unique_name
-        )
-        string_data.linkage = "internal"
-        string_data.global_constant = True
-        string_data.initializer = ir.Constant(
-            string_data_type, bytearray(utf8_bytes + b"\0")
+        self.services.function_state.result_stack.append(
+            self.services.strings.constant(expr.value, name_hint="str_utf8")
         )
 
-        data_ptr = self._llvm.ir_builder.gep(
-            string_data,
-            [ir.Constant(ir.IntType(32), 0), ir.Constant(ir.IntType(32), 0)],
-            inbounds=True,
-        )
-        self.result_stack.append(data_ptr)
-
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.LiteralString) -> None:
         """
         title: Visit LiteralString nodes.
@@ -407,9 +617,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           expr:
             type: astx.LiteralString
         """
-        self.visit_child(astx.LiteralUTF8String(value=expr.value))
+        self.services.visit_child(astx.LiteralUTF8String(value=expr.value))
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralList) -> None:
         """
         title: Visit LiteralList nodes.
@@ -417,46 +627,62 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralList
         """
-        llvm_elems: list[ir.Value] = []
-        for elem in node.elements:
-            self.visit_child(elem)
-            value = self.result_stack.pop()
+        storage = semantic_info(node).facts.require(LITERAL_STORAGE, node=node)
+        if len(storage.conversions) != len(node.elements):
+            raise_lowering_internal_error(
+                "literal storage conversions do not match its elements",
+                node=node,
+            )
+        target_ty = self.services.types.llvm_type(storage.element_type)
+        if target_ty is None:
+            raise_lowering_internal_error(
+                "literal storage has no LLVM representation", node=node
+            )
+        coerced: list[ir.Value] = []
+        for element, conversion in zip(node.elements, storage.conversions):
+            self.services.visit_child(element)
+            value = self.services.function_state.result_stack.pop()
             if value is None:
-                raise Exception("LiteralList: invalid element lowering.")
-            llvm_elems.append(value)
-
-        count = len(llvm_elems)
-        if count == 0:
-            empty_ty = ir.ArrayType(self._llvm.INT32_TYPE, 0)
-            self.result_stack.append(ir.Constant(empty_ty, []))
-            return
-
-        target_ty = llvm_elems[0].type
-        for value in llvm_elems[1:]:
-            target_ty = self._common_list_element_type(target_ty, value.type)
-
-        coerced = [self._coerce_to(value, target_ty) for value in llvm_elems]
+                raise_lowering_internal_error(
+                    "literal list element did not produce a value",
+                    node=element,
+                )
+            if conversion is not None:
+                value = self.services.numeric.aggregate_scalar(
+                    value,
+                    source_type=conversion.source_type,
+                    target_type=conversion.target_type,
+                )
+            if value.type != target_ty:
+                raise_lowering_internal_error(
+                    "literal element does not match its resolved storage",
+                    node=element,
+                )
+            coerced.append(value)
+        count = len(coerced)
         if all(isinstance(value, ir.Constant) for value in coerced):
             arr_ty = ir.ArrayType(target_ty, count)
-            self.result_stack.append(ir.Constant(arr_ty, coerced))
+            self.services.function_state.result_stack.append(
+                ir.Constant(arr_ty, coerced)
+            )
             return
 
         arr_ty = ir.ArrayType(target_ty, count)
-        alloca = self.create_entry_block_alloca("list_tmp", arr_ty)
-        zero = ir.Constant(self._llvm.INT32_TYPE, 0)
+        alloca = self.services.create_entry_block_alloca("list_tmp", arr_ty)
+        zero = ir.Constant(self.services.llvm.INT32_TYPE, 0)
         for index, value in enumerate(coerced):
-            idx = ir.Constant(self._llvm.INT32_TYPE, index)
-            slot = self._llvm.ir_builder.gep(
+            idx = ir.Constant(self.services.llvm.INT32_TYPE, index)
+            slot = self.services.llvm.ir_builder.gep(
                 alloca, [zero, idx], inbounds=True
             )
-            self._llvm.ir_builder.store(value, slot)
+            self.services.llvm.ir_builder.store(value, slot)
 
-        first_ptr = self._llvm.ir_builder.gep(
+        first_ptr = self.services.llvm.ir_builder.gep(
             alloca, [zero, zero], inbounds=True
         )
-        self.result_stack.append(first_ptr)
+        self.services.function_state.result_stack.append(first_ptr)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralSet) -> None:
         """
         title: Visit LiteralSet nodes.
@@ -465,14 +691,14 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             type: astx.LiteralSet
         """
 
-        def sort_key(lit: astx.Literal) -> tuple[str, Any]:
+        def sort_key(lit: astx.Literal) -> tuple[str, int | float | str]:
             """
             title: Sort key.
             parameters:
               lit:
                 type: astx.Literal
             returns:
-              type: tuple[str, Any]
+              type: tuple[str, int | float | str]
             """
             type_name = type(lit).__name__
             value = getattr(lit, "value", None)
@@ -481,52 +707,53 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             )
             return type_name, comparable
 
-        elems_sorted = sorted(node.elements, key=sort_key)
-        llvm_elems: list[ir.Value] = []
-        for elem in elems_sorted:
-            self.visit_child(elem)
-            value = self.result_stack.pop()
-            if value is None:
-                raise Exception("LiteralSet: invalid element lowering.")
-            llvm_elems.append(value)
-
-        count = len(llvm_elems)
-        if count == 0:
-            empty_ty = ir.ArrayType(self._llvm.INT32_TYPE, 0)
-            self.result_stack.append(
-                self._mark_set_value(ir.Constant(empty_ty, []))
+        storage = semantic_info(node).facts.require(LITERAL_STORAGE, node=node)
+        if len(storage.conversions) != len(node.elements):
+            raise_lowering_internal_error(
+                "set storage conversions do not match its elements", node=node
             )
-            return
-
-        is_ints = all(
-            isinstance(value.type, ir.IntType) for value in llvm_elems
-        )
-        all_constants = all(
-            isinstance(value, ir.Constant) for value in llvm_elems
-        )
-        if is_ints and all_constants:
-            widest = max(value.type.width for value in llvm_elems)
-            elem_ty = ir.IntType(widest)
-            arr_ty = ir.ArrayType(elem_ty, count)
-            promoted_vals: list[ir.Constant] = []
-            for value in llvm_elems:
-                if value.type.width != widest:
-                    promoted_vals.append(ir.Constant(elem_ty, value.constant))
-                else:
-                    promoted_vals.append(value)
-
-            const_arr = self._mark_set_value(
-                ir.Constant(arr_ty, promoted_vals)
+        element_type = self.services.types.llvm_type(storage.element_type)
+        if not isinstance(element_type, ir.IntType):
+            raise_lowering_internal_error(
+                "set storage requires a resolved integer representation",
+                node=node,
             )
-            self.result_stack.append(const_arr)
-            return
-
-        raise TypeError(
-            "LiteralSet: only integer constants are currently supported "
-            "(homogeneous or mixed-width)"
+        conversions = {
+            id(element): conversion
+            for element, conversion in zip(node.elements, storage.conversions)
+        }
+        constants: list[ir.Constant] = []
+        for element in sorted(node.elements, key=sort_key):
+            self.services.visit_child(element)
+            value = self.services.function_state.result_stack.pop()
+            conversion = conversions[id(element)]
+            if value is None or conversion is None:
+                raise_lowering_internal_error(
+                    "set element is missing its value or conversion plan",
+                    node=element,
+                )
+            value = self.services.numeric.aggregate_scalar(
+                value,
+                source_type=conversion.source_type,
+                target_type=conversion.target_type,
+            )
+            if (
+                not isinstance(value, ir.Constant)
+                or value.type != element_type
+            ):
+                raise_lowering_internal_error(
+                    "set element does not match its resolved constant storage",
+                    node=element,
+                )
+            constants.append(value)
+        array_type = ir.ArrayType(element_type, len(constants))
+        self.services.function_state.result_stack.append(
+            self.services.collection.mark_set_value(
+                ir.Constant(array_type, constants)
+            )
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTuple) -> None:
         """
         title: Visit LiteralTuple nodes.
@@ -536,16 +763,20 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         llvm_elems: list[ir.Value] = []
         for elem in node.elements:
-            self.visit_child(elem)
-            value = self.result_stack.pop()
+            self.services.visit_child(elem)
+            value = self.services.function_state.result_stack.pop()
             if value is None:
-                raise Exception("LiteralTuple: invalid element lowering.")
+                raise_lowering_internal_error(
+                    "LiteralTuple: invalid element lowering.", node=node
+                )
             llvm_elems.append(value)
 
         count = len(llvm_elems)
         if count == 0:
             struct_ty = ir.LiteralStructType([])
-            self.result_stack.append(ir.Constant(struct_ty, []))
+            self.services.function_state.result_stack.append(
+                ir.Constant(struct_ty, [])
+            )
             return
 
         first_ty = llvm_elems[0].type
@@ -555,7 +786,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         )
         if homogeneous and all_constants:
             struct_ty = ir.LiteralStructType([first_ty] * count)
-            self.result_stack.append(ir.Constant(struct_ty, llvm_elems))
+            self.services.function_state.result_stack.append(
+                ir.Constant(struct_ty, llvm_elems)
+            )
             return
 
         raise TypeError(
@@ -563,7 +796,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             "are supported"
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralDict) -> None:
         """
         title: Visit LiteralDict nodes.
@@ -573,25 +806,31 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         llvm_pairs: list[tuple[ir.Value, ir.Value]] = []
         for key_node, value_node in node.elements.items():
-            self.visit_child(key_node)
-            key_val = self.result_stack.pop()
+            self.services.visit_child(key_node)
+            key_val = self.services.function_state.result_stack.pop()
             if key_val is None:
-                raise Exception("LiteralDict: failed to lower key.")
+                raise_lowering_internal_error(
+                    "LiteralDict: failed to lower key.", node=node
+                )
 
-            self.visit_child(value_node)
-            val_val = self.result_stack.pop()
+            self.services.visit_child(value_node)
+            val_val = self.services.function_state.result_stack.pop()
             if val_val is None:
-                raise Exception("LiteralDict: failed to lower value.")
+                raise_lowering_internal_error(
+                    "LiteralDict: failed to lower value.", node=node
+                )
 
             llvm_pairs.append((key_val, val_val))
 
         count = len(llvm_pairs)
         if count == 0:
             pair_ty = ir.LiteralStructType(
-                [self._llvm.INT32_TYPE, self._llvm.INT32_TYPE]
+                [self.services.llvm.INT32_TYPE, self.services.llvm.INT32_TYPE]
             )
             arr_ty = ir.ArrayType(pair_ty, 0)
-            self.result_stack.append(ir.Constant(arr_ty, []))
+            self.services.function_state.result_stack.append(
+                ir.Constant(arr_ty, [])
+            )
             return
 
         all_constants = all(
@@ -616,7 +855,9 @@ class LiteralVisitorMixin(ClassVisitorMixin):
                     )
                 struct_consts.append(ir.Constant(pair_ty, [key_val, val_val]))
 
-            self.result_stack.append(ir.Constant(arr_ty, struct_consts))
+            self.services.function_state.result_stack.append(
+                ir.Constant(arr_ty, struct_consts)
+            )
             return
 
         raise TypeError(
@@ -624,7 +865,7 @@ class LiteralVisitorMixin(ClassVisitorMixin):
             "are supported in this version"
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SubscriptExpr) -> None:
         """
         title: Visit SubscriptExpr nodes.
@@ -634,25 +875,28 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         """
         info = getattr(node, "semantic", None)
         if isinstance(info, SemanticInfo) and info.tensor_index is not None:
-            self.visit_child(info.tensor_index)
+            self.services.visit_child(info.tensor_index)
             return
-        if lower_sequence_query(
-            cast(VisitorCore, self), node
-        ) or lower_text_operation(cast(VisitorCore, self), node):
+        if self.services.sequences.lower(node) or self.services.text.lower(
+            node
+        ):
             return
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
-        if isinstance(self._resolved_ast_type(node.value), astx.ListType):
-            cast(Any, self)._lower_list_subscript(
+        if isinstance(resolved_ast_type(node.value), astx.ListType):
+            self.services.lower_list_subscript(
                 base=node.value,
                 index_node=node.index,
                 result_node=node,
             )
             return
 
+        lookup = semantic_info(node).facts.require(
+            DICTIONARY_LOOKUP, node=node
+        )
         dict_pair_fields = 2
-        self.visit_child(node.value)
-        dict_val = self.result_stack.pop()
+        self.services.visit_child(node.value)
+        dict_val = self.services.function_state.result_stack.pop()
 
         if not (
             isinstance(dict_val, ir.Constant)
@@ -665,10 +909,12 @@ class LiteralVisitorMixin(ClassVisitorMixin):
                 "is supported in this version"
             )
 
-        self.visit_child(node.index)
-        key_val = self.result_stack.pop()
+        self.services.visit_child(node.index)
+        key_val = self.services.function_state.result_stack.pop()
         if key_val is None:
-            raise Exception("SubscriptExpr: invalid index lowering.")
+            raise_lowering_internal_error(
+                "SubscriptExpr: invalid index lowering.", node=node
+            )
 
         if dict_val.type.count == 0:
             raise KeyError("SubscriptExpr: key lookup on empty dict")
@@ -676,20 +922,24 @@ class LiteralVisitorMixin(ClassVisitorMixin):
         if isinstance(key_val, ir.Constant):
             for entry in dict_val.constant:
                 entry_key = entry.constant[0]
-                if self._constant_subscript_key_matches(entry_key, key_val):
-                    self.result_stack.append(entry.constant[1])
+                if self.services.collection.constant_subscript_key_matches(
+                    entry_key, key_val, lookup
+                ):
+                    self.services.function_state.result_stack.append(
+                        entry.constant[1]
+                    )
                     return
             raise KeyError(
                 f"SubscriptExpr: key {key_val.constant!r} not found in dict"
             )
 
-        self._emit_runtime_subscript_lookup(
+        self.services.collection.emit_runtime_subscript_lookup(
             dict_val,
             key_val,
-            unsigned=self._subscript_uses_unsigned_semantics(node),
+            lookup,
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralInt16) -> None:
         """
         title: Visit LiteralInt16 nodes.
@@ -697,6 +947,6 @@ class LiteralVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.LiteralInt16
         """
-        self.result_stack.append(
-            ir.Constant(self._llvm.INT16_TYPE, node.value)
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT16_TYPE, node.value)
         )

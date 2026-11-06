@@ -1,5 +1,4 @@
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
+# mypy: disable-error-code=no-redef
 
 """
 title: Declaration class-member resolution helpers.
@@ -11,22 +10,23 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
 
 import astx
+
+from plum import dispatch
+from public import private
 
 from irx.analysis.class_lifecycle import (
     INITIALIZER_HOOK,
     LIFECYCLE_HOOKS,
     unsupported_class_field,
-    validate_file_fields,
-    validate_hook,
+)
+from irx.analysis.dependencies.declaration_class_member import (
+    DeclarationClassMemberAnalysisServices,
 )
 from irx.analysis.handlers._declarations.class_methods import (
     IMPLICIT_METHOD_RECEIVER_NAME,
-    DeclarationClassMethodVisitorMixin,
 )
-from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
@@ -40,14 +40,33 @@ from irx.analysis.resolved_nodes import (
 )
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
+class DeclarationClassMemberAnalysis:
     """
     title: Declaration class-member resolution helpers.
+    attributes:
+      services:
+        type: DeclarationClassMemberAnalysisServices
     """
+
+    services: DeclarationClassMemberAnalysisServices
+
+    def __init__(
+        self, services: DeclarationClassMemberAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationClassMemberAnalysisServices
+        """
+        self.services = services
 
     def _resolve_declared_class_members(
         self,
@@ -67,12 +86,12 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         attribute_names: set[str] = set()
         method_groups: dict[str, list[SemanticClassMember]] = {}
         members: list[SemanticClassMember] = []
-        ancestor_attributes = self._ancestor_declared_attributes(mro)
-        ancestor_methods = self._ancestor_declared_method_groups(mro)
+        ancestor_attributes = self.services.ancestor_declared_attributes(mro)
+        ancestor_methods = self.services.ancestor_declared_method_groups(mro)
 
         for attribute in class_.declaration.attributes:
             if attribute.name in LIFECYCLE_HOOKS:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"class member '{attribute.name}' is reserved for a "
                     "lifecycle method, not a field",
                     node=attribute,
@@ -83,7 +102,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 attribute.name in attribute_names
                 or attribute.name in method_groups
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class member '{attribute.name}' already defined "
                         f"in '{class_.name}'"
@@ -93,75 +112,75 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             attribute_names.add(attribute.name)
-            self._resolve_declared_type(
+            self.services.resolve_declared_type(
                 attribute.type_,
                 node=attribute,
                 unknown_message="Unknown attribute type '{name}'",
             )
-            if self._attribute_is_static(attribute) and isinstance(
+            if self.services.attribute_is_static(attribute) and isinstance(
                 attribute.type_, (astx.FileType, astx.ClassType)
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "owning static class fields are unsupported",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if isinstance(attribute.type_, (astx.ListType, astx.Bytes)):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "
                     "own dynamic list storage in this lifecycle subset",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             elif unsupported_class_field(attribute.type_):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "this resource kind has no class-field ownership ABI",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if (
-                self._attribute_is_static(attribute)
+                self.services.attribute_is_static(attribute)
                 and attribute.value is not None
                 and not isinstance(
                     attribute.value,
                     astx.Undefined,
                 )
             ):
-                with self.context.in_class(class_):
+                with self.services.context.in_class(class_):
                     contextualize_literal(attribute.value, attribute.type_)
-                    self.visit(attribute.value)
-                if self._require_value_expression(
+                    self.services.visit(attribute.value)
+                if self.services.require_value_expression(
                     attribute.value,
                     context=(
                         f"Initializer for '{class_.name}.{attribute.name}'"
                     ),
                 ):
                     validate_assignment(
-                        self.context.diagnostics,
+                        self.services.context.diagnostics,
                         target_name=f"{class_.name}.{attribute.name}",
                         target_type=attribute.type_,
-                        value_type=self._expr_type(attribute.value),
+                        value_type=self.services.expr_type(attribute.value),
                         node=attribute,
                     )
                 initializer_ownership = resource_ownership(attribute.value)
                 if (
-                    self._attribute_is_static(attribute)
+                    self.services.attribute_is_static(attribute)
                     and initializer_ownership is not None
                     and initializer_ownership.kind is OwnershipKind.OWNED
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         f"class field '{class_.name}.{attribute.name}' "
                         "cannot own static runtime-managed storage",
                         node=attribute.value,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
             if (
-                not self._attribute_is_static(attribute)
+                not self.services.attribute_is_static(attribute)
                 and attribute.value is not None
             ):
                 owned = resource_ownership(attribute.value)
                 if owned is not None and owned.kind is OwnershipKind.OWNED:
-                    self._set_resource_ownership(
+                    self.services.set_resource_ownership(
                         attribute.value,
                         replace(
                             owned, transfer_kind=OwnershipTransferKind.MOVE
@@ -172,7 +191,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 attribute.value is None
                 or isinstance(attribute.value, astx.Undefined)
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         "Constant attribute "
                         f"'{class_.name}.{attribute.name}' "
@@ -181,10 +200,10 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
                 )
-            if self._attribute_is_static(attribute) and not (
-                self._static_initializer_is_supported(attribute.value)
+            if self.services.attribute_is_static(attribute) and not (
+                self.services.static_initializer_is_supported(attribute.value)
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         "Static attribute "
                         f"'{class_.name}.{attribute.name}' requires "
@@ -197,7 +216,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 attribute.name in ancestor_attributes
                 or attribute.name in ancestor_methods
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' cannot redeclare inherited "
                         f"member '{attribute.name}'"
@@ -207,13 +226,13 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             members.append(
-                self.factory.make_class_member(
+                self.services.factory.make_class_member(
                     class_,
                     name=attribute.name,
                     kind=ClassMemberKind.ATTRIBUTE,
                     declaration=attribute,
                     visibility=attribute.visibility,
-                    is_static=self._attribute_is_static(attribute),
+                    is_static=self.services.attribute_is_static(attribute),
                     is_constant=is_constant,
                     is_mutable=not is_constant,
                     type_=attribute.type_,
@@ -221,17 +240,17 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             )
 
         for method in class_.declaration.methods:
-            validate_hook(cast(SemanticAnalyzerCore, self), method)
+            self.services.free_validate_hook(method)
             if method.name in LIFECYCLE_HOOKS and method_groups.get(
                 method.name
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "lifecycle hooks cannot be overloaded",
                     node=method,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if method.name in attribute_names:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class member '{method.name}' already defined in "
                         f"'{class_.name}'"
@@ -241,20 +260,24 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             for argument in method.prototype.args.nodes:
-                self._resolve_declared_type(argument.type_, node=argument)
-            self._resolve_declared_type(
+                self.services.resolve_declared_type(
+                    argument.type_, node=argument
+                )
+            self.services.resolve_declared_type(
                 method.prototype.return_type,
                 node=method,
             )
-            signature = self._normalize_class_method_signature(class_, method)
-            is_static = self._method_is_static(method)
-            is_abstract = self._method_is_abstract(method)
-            signature_key = self._method_signature_key(
+            signature = self.services.normalize_class_method_signature(
+                class_, method
+            )
+            is_static = self.services.method_is_static(method)
+            is_abstract = self.services.method_is_abstract(method)
+            signature_key = self.services.method_signature_key(
                 method.name,
                 signature,
                 is_static=is_static,
             )
-            call_key = self._method_call_key_from_signature(
+            call_key = self.services.method_call_key_from_signature(
                 method.name,
                 signature,
                 is_static=is_static,
@@ -263,7 +286,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 argument.name == IMPLICIT_METHOD_RECEIVER_NAME
                 for argument in method.prototype.args.nodes
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot declare parameter '"
@@ -276,7 +299,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             if is_abstract and (
                 method.prototype.visibility is astx.VisibilityKind.private
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot be both abstract and private"
@@ -285,7 +308,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             if is_abstract and astx.is_template_node(method.prototype):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot be both abstract and templated"
@@ -294,7 +317,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             if is_abstract and len(method.body.nodes) > 0:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Abstract class method "
                         f"'{class_.name}.{method.name}' must not declare "
@@ -307,7 +330,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             if any(
                 existing.is_static != is_static for existing in local_group
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot mix static and instance overloads"
@@ -317,14 +340,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             if any(
-                self._member_call_key(existing) == call_key
+                self.services.member_call_key(existing) == call_key
                 for existing in local_group
             ):
                 if any(
                     existing.signature_key == signature_key
                     for existing in local_group
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         (
                             f"Class method '{class_.name}.{method.name}' "
                             "already defines this exact signature"
@@ -333,7 +356,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                     )
                 else:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         (
                             f"Class method '{class_.name}.{method.name}' "
                             "cannot overload only by return type"
@@ -343,7 +366,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     )
                 continue
             if method.name in ancestor_attributes:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot override inherited attribute "
@@ -362,7 +385,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 inherited.is_static != is_static
                 for inherited in inherited_methods
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "changes static/instance status across "
@@ -375,7 +398,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             inherited_same_call = tuple(
                 inherited
                 for inherited in inherited_methods
-                if self._member_call_key(inherited) == call_key
+                if self.services.member_call_key(inherited) == call_key
             )
             inherited_same_signature = tuple(
                 inherited
@@ -383,7 +406,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 if inherited.signature_key == signature_key
             )
             if inherited_same_call and not inherited_same_signature:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot overload inherited methods only by "
@@ -394,11 +417,11 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             if any(
-                self._visibility_rank(method.prototype.visibility)
-                < self._visibility_rank(inherited.visibility)
+                self.services.visibility_rank(method.prototype.visibility)
+                < self.services.visibility_rank(inherited.visibility)
                 for inherited in inherited_same_signature
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class method '{class_.name}.{method.name}' "
                         "cannot reduce visibility when overriding "
@@ -408,14 +431,14 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
                 continue
-            lowered_function = self._make_lowered_method_function(
+            lowered_function = self.services.make_lowered_method_function(
                 class_,
                 method,
                 signature,
                 is_static=is_static,
                 signature_key=signature_key,
             )
-            member = self.factory.make_class_member(
+            member = self.services.factory.make_class_member(
                 class_,
                 name=method.name,
                 kind=ClassMemberKind.METHOD,
@@ -434,12 +457,12 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 ),
                 lowered_function=lowered_function,
             )
-            self._set_class(method.prototype, class_)
-            self._set_class(method, class_)
-            self._set_function(method.prototype, lowered_function)
-            self._set_function(method, lowered_function)
-            self._set_type(method.prototype, None)
-            self._set_type(method, None)
+            self.services.set_class(method.prototype, class_)
+            self.services.set_class(method, class_)
+            self.services.set_function(method.prototype, lowered_function)
+            self.services.set_function(method, lowered_function)
+            self.services.set_type(method.prototype, None)
+            self.services.set_type(method, None)
             local_group.append(member)
             members.append(member)
 
@@ -475,8 +498,8 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             SemanticClassMemberResolution], dict[str,
             tuple[SemanticClassMemberResolution, Ellipsis]]]
         """
-        ancestor_attributes = self._ancestor_declared_attributes(mro)
-        ancestor_methods = self._ancestor_declared_method_groups(mro)
+        ancestor_attributes = self.services.ancestor_declared_attributes(mro)
+        ancestor_methods = self.services.ancestor_declared_method_groups(mro)
         effective_member_table: dict[str, SemanticClassMember] = {}
         effective_method_groups: dict[
             str, tuple[SemanticClassMember, ...]
@@ -509,7 +532,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     member.owner_name
                     for member in (*candidates, *ancestor_methods[name])
                 )
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' inherits conflicting "
                         f"members named '{name}' from {owner_names}"
@@ -522,7 +545,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 owner_names = ", ".join(
                     member.owner_name for member in candidates
                 )
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' inherits ambiguous "
                         f"attribute '{name}' from {owner_names}"
@@ -559,7 +582,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         *inherited_candidates,
                     )
                 )
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' inherits conflicting "
                         f"members named '{name}' from {owner_names}"
@@ -573,7 +596,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 for member in (*local_group, *inherited_candidates)
             }
             if len(staticness) > 1:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' inherits incompatible "
                         f"static and instance methods named '{name}'"
@@ -586,7 +609,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             inherited_by_call: dict[str, list[SemanticClassMember]] = {}
             inherited_call_order: list[str] = []
             for member in inherited_candidates:
-                call_key = self._member_call_key(member)
+                call_key = self.services.member_call_key(member)
                 if call_key not in inherited_by_call:
                     inherited_call_order.append(call_key)
                     inherited_by_call[call_key] = []
@@ -596,7 +619,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             resolutions: list[SemanticClassMemberResolution] = []
             local_call_keys: set[str] = set()
             for member in local_group:
-                call_key = self._member_call_key(member)
+                call_key = self.services.member_call_key(member)
                 local_call_keys.add(call_key)
                 inherited_same_call = tuple(
                     inherited_by_call.get(call_key, ())
@@ -605,7 +628,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     candidate.signature_key != member.signature_key
                     for candidate in inherited_same_call
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         (
                             f"Class method '{class_.name}.{member.name}' "
                             "conflicts with inherited call signatures"
@@ -641,7 +664,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     owner_names = ", ".join(
                         candidate.owner_name for candidate in candidates
                     )
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         (
                             f"Class '{class_.name}' inherits conflicting "
                             f"methods named '{name}' from {owner_names}"
@@ -650,12 +673,12 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                         code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                     )
                     continue
-                dominant = self._dominant_inherited_method(candidates)
+                dominant = self.services.dominant_inherited_method(candidates)
                 if dominant is None:
                     owner_names = ", ".join(
                         candidate.owner_name for candidate in candidates
                     )
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         (
                             f"Class '{class_.name}' inherits conflicting "
                             f"methods named '{name}' from {owner_names}"
@@ -702,7 +725,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         returns:
           type: SemanticClass
         """
-        with self.context.in_module(class_.module_key):
+        with self.services.context.in_module(class_.module_key):
             return self.resolve_class_structure_in_module(class_)
 
     def resolve_class_structure_in_module(
@@ -716,14 +739,16 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         returns:
           type: SemanticClass
         """
-        current = self.context.get_class(class_.module_key, class_.name)
+        current = self.services.context.get_class(
+            class_.module_key, class_.name
+        )
         if current is None:
             current = class_
-            self.context.register_class(current)
+            self.services.context.register_class(current)
         if current.is_structurally_resolved:
             return current
 
-        active_stack = self._class_resolution_stack()
+        active_stack = self.services.class_resolution_stack()
         if any(
             item.qualified_name == current.qualified_name
             for item in active_stack
@@ -731,7 +756,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
             cycle_names = " -> ".join(
                 [item.name for item in active_stack] + [current.name]
             )
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"inheritance cycle is invalid: {cycle_names}",
                 node=current.declaration,
                 code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
@@ -740,25 +765,22 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
 
         active_stack.append(current)
         try:
-            bases = self._resolve_class_bases(current)
-            from irx.analysis.builtin_file import (  # noqa: PLC0415
-                is_native_file_class,
-            )
+            bases = self.services.resolve_class_bases(current)
 
             if any(
-                is_native_file_class(cast(SemanticAnalyzerCore, self), base)
-                for base in bases
+                self.services.free_is_native_file_class(base) for base in bases
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "subclassing builtin File is unsupported",
                     node=current.declaration,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            raw_mro = self._compute_class_mro(current, bases)
+            raw_mro = self.services.compute_class_mro(current, bases)
             mro = (
                 current,
                 *tuple(
-                    self.context.get_class(item.module_key, item.name) or item
+                    self.services.context.get_class(item.module_key, item.name)
+                    or item
                     for item in raw_mro[1:]
                 ),
             )
@@ -767,7 +789,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 mro,
             )
             declared_member_table, declared_method_groups = (
-                self._declared_member_tables(declared_members)
+                self.services.declared_member_tables(declared_members)
             )
             updated = replace(
                 current,
@@ -778,19 +800,21 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 inheritance_graph=tuple(
                     ancestor.qualified_name for ancestor in mro[1:]
                 ),
-                shared_ancestors=self._shared_class_ancestors(bases, mro),
+                shared_ancestors=self.services.shared_class_ancestors(
+                    bases, mro
+                ),
                 mro=(current, *mro[1:]),
                 is_structurally_resolved=True,
             )
             updated = replace(updated, mro=(updated, *updated.mro[1:]))
-            self.context.register_class(updated)
-            self.bindings.bind_class(
+            self.services.context.register_class(updated)
+            self.services.bindings.bind_class(
                 updated.name,
                 updated,
                 node=updated.declaration,
                 module_key=updated.module_key,
             )
-            self._set_class(updated.declaration, updated)
+            self.services.set_class(updated.declaration, updated)
             return updated
         finally:
             active_stack.pop()
@@ -807,20 +831,36 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
         returns:
           type: SemanticClass
         """
-        current = self.context.get_class(class_.module_key, class_.name)
+        current = self.services.context.get_class(
+            class_.module_key, class_.name
+        )
         if current is None:
             current = class_
-            self.context.register_class(current)
+            self.services.context.register_class(current)
         if current.is_resolved:
             return current
 
         current = self._resolve_class_structure(current)
-        self._finalize_registered_class_layouts()
+        self.services.finalize_registered_class_layouts()
         return (
-            self.context.get_class(current.module_key, current.name) or current
+            self.services.context.get_class(current.module_key, current.name)
+            or current
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} "
+            "in DeclarationClassMemberAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.ClassDefStmt) -> None:
         """
         title: Visit ClassDefStmt nodes.
@@ -828,9 +868,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
           node:
             type: astx.ClassDefStmt
         """
-        class_ = self.registry.register_class(node)
-        self.bindings.bind_class(node.name, class_, node=node)
-        with self.context.in_class(class_):
+        class_ = self.services.registry.register_class(node)
+        self.services.bindings.bind_class(node.name, class_, node=node)
+        with self.services.context.in_class(class_):
             class_ = self._resolve_class_definition(class_)
             if class_.initialization is not None:
                 body = astx.Block()
@@ -842,22 +882,24 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     ),
                     body,
                 )
-                signature = self.registry.normalize_function_signature(
-                    definition.prototype,
-                    definition=definition,
-                    validate_ffi=False,
-                    validate_main=False,
+                signature = (
+                    self.services.registry.normalize_function_signature(
+                        definition.prototype,
+                        definition=definition,
+                        validate_ffi=False,
+                        validate_main=False,
+                    )
                 )
-                context = self._make_lowered_method_function(
+                context = self.services.make_lowered_method_function(
                     class_,
                     definition,
                     signature,
                     is_static=False,
                     signature_key="field-initializers",
                 )
-                with self.context.in_function(context):
-                    with self.context.scope("instance_initializers"):
-                        self.context.scopes.declare(context.args[0])
+                with self.services.context.in_function(context):
+                    with self.services.context.scope("instance_initializers"):
+                        self.services.context.scopes.declare(context.args[0])
                         for (
                             initializer
                         ) in class_.initialization.instance_initializers:
@@ -872,15 +914,15 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                             contextualize_literal(
                                 value, initializer.field.member.type_
                             )
-                            self.visit(value)
-                            self._semantic(
+                            self.services.visit(value)
+                            self.services.semantic(
                                 value
                             ).initializer_receiver = context.args[0]
                             validate_assignment(
-                                self.context.diagnostics,
+                                self.services.context.diagnostics,
                                 target_name=initializer.field.member.name,
                                 target_type=initializer.field.member.type_,
-                                value_type=self._expr_type(value),
+                                value_type=self.services.expr_type(value),
                                 node=initializer.field.member.declaration,
                             )
                             ownership = resource_ownership(value)
@@ -888,19 +930,37 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                                 ownership is not None
                                 and ownership.kind is OwnershipKind.OWNED
                             ):
-                                self._set_resource_ownership(
+                                self.services.set_resource_ownership(
                                     value,
                                     replace(
                                         ownership,
                                         transfer_kind=OwnershipTransferKind.MOVE,
                                     ),
                                 )
-                validate_hook(cast(SemanticAnalyzerCore, self), definition)
-        with self.context.in_class(class_):
+                self.services.free_validate_hook(definition)
+        with self.services.context.in_class(class_):
             for member in class_.declared_members:
                 if member.kind is not ClassMemberKind.METHOD:
                     continue
-                self._analyze_class_method_body(class_, member)
-        validate_file_fields(cast(SemanticAnalyzerCore, self), class_)
-        self._set_class(node, class_)
-        self._set_type(node, None)
+                self.services.analyze_class_method_body(class_, member)
+        self.services.free_validate_file_fields(class_)
+        self.services.set_class(node, class_)
+        self.services.set_type(node, None)
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.declaration_class_member." + node_type.__name__,
+                "irx.analysis.declaration_class_member",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".DeclarationClassMemberAnalysis.visit",
+            )
+            for node_type in (astx.ClassDefStmt,)
+        )

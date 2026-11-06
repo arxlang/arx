@@ -2,7 +2,7 @@
 title: Lower resolved class lifetimes without re-resolving ownership or names.
 """
 
-from typing import Any, cast
+from typing import cast
 
 import astx
 
@@ -24,18 +24,35 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.lowering.file import FileVisitorMixin
+from irx.builder.lowering.contracts import ClassServices
 from irx.builder.runtime import safe_pop
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
 from irx.builder.state import CleanupAction, ExceptionTarget
 from irx.typecheck import typechecked
 
 
 @private
 @typechecked
-class ClassVisitorMixin(FileVisitorMixin):
+class ClassLowering:
     """
     title: Checked creation, reference ownership, and concrete drops.
+    attributes:
+      services:
+        type: ClassServices
     """
+
+    services: ClassServices
+
+    def __init__(self, services: ClassServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: ClassServices
+        """
+        self.services = services
 
     def class_raw(self, value: ir.Value) -> ir.Value:
         """
@@ -46,11 +63,11 @@ class ClassVisitorMixin(FileVisitorMixin):
         returns:
           type: ir.Value
         """
-        pointer = self._llvm.INT8_TYPE.as_pointer()
+        pointer = self.services.llvm.INT8_TYPE.as_pointer()
         return (
             value
             if value.type == pointer
-            else self._llvm.ir_builder.bitcast(value, pointer)
+            else self.services.llvm.ir_builder.bitcast(value, pointer)
         )
 
     def class_field_function(self, class_: SemanticClass) -> ir.Function:
@@ -69,19 +86,19 @@ class ClassVisitorMixin(FileVisitorMixin):
             context="class field descriptor",
         )
         name = layout.descriptor_global_name
-        existing = self._llvm.module.globals.get(name)
+        existing = self.services.llvm.module.globals.get(name)
         if isinstance(existing, ir.Function):
             return existing
-        pointer = self._llvm.INT8_TYPE.as_pointer()
-        integer = self._llvm.INT32_TYPE
+        pointer = self.services.llvm.INT8_TYPE.as_pointer()
+        integer = self.services.llvm.INT32_TYPE
         function = ir.Function(
-            self._llvm.module,
+            self.services.llvm.module,
             ir.FunctionType(pointer, [pointer, integer]),
             name=name,
         )
         function.linkage = "internal"
-        previous = self._llvm.ir_builder
-        self._llvm.ir_builder = ir.IRBuilder(
+        previous = self.services.llvm.ir_builder
+        self.services.llvm.ir_builder = ir.IRBuilder(
             function.append_basic_block("entry")
         )
         try:
@@ -90,11 +107,15 @@ class ClassVisitorMixin(FileVisitorMixin):
                 module_key=class_.module_key,
                 qualified_name=class_.qualified_name,
             )
-            llvm_type = self._llvm_type_for_ast_type(type_)
+            llvm_type = self.services.types.llvm_type(type_)
             assert llvm_type is not None
-            value = self._llvm.ir_builder.bitcast(function.args[0], llvm_type)
+            value = self.services.llvm.ir_builder.bitcast(
+                function.args[0], llvm_type
+            )
             missing = function.append_basic_block("missing")
-            switch = self._llvm.ir_builder.switch(function.args[1], missing)
+            switch = self.services.llvm.ir_builder.switch(
+                function.args[1], missing
+            )
             for field in layout.instance_fields:
                 block = function.append_basic_block(
                     f"field.{field.access_index}"
@@ -102,8 +123,8 @@ class ClassVisitorMixin(FileVisitorMixin):
                 switch.add_case(
                     ir.Constant(integer, field.access_index), block
                 )
-                self._llvm.ir_builder.position_at_end(block)
-                address = self._llvm.ir_builder.gep(
+                self.services.llvm.ir_builder.position_at_end(block)
+                address = self.services.llvm.ir_builder.gep(
                     value,
                     [
                         ir.Constant(integer, 0),
@@ -112,11 +133,11 @@ class ClassVisitorMixin(FileVisitorMixin):
                     inbounds=True,
                     name=f"{field.member.name}_addr",
                 )
-                self._llvm.ir_builder.ret(self.class_raw(address))
-            self._llvm.ir_builder.position_at_end(missing)
-            self._llvm.ir_builder.ret(ir.Constant(pointer, None))
+                self.services.llvm.ir_builder.ret(self.class_raw(address))
+            self.services.llvm.ir_builder.position_at_end(missing)
+            self.services.llvm.ir_builder.ret(ir.Constant(pointer, None))
         finally:
-            self._llvm.ir_builder = previous
+            self.services.llvm.ir_builder = previous
         return function
 
     def class_field_value(self, node: astx.AST, value: ir.Value) -> ir.Value:
@@ -137,8 +158,8 @@ class ClassVisitorMixin(FileVisitorMixin):
             and ownership.resource_kind is ResourceKind.STRING
             and ownership.kind is OwnershipKind.OWNED
         ):
-            value = self._copy_string_to_heap(node, value)
-            self._register_owned_string_temporary(node, value)
+            value = self.services.strings.copy(node, value)
+            self.services.cleanup.register_owned_string_temporary(node, value)
         return value
 
     def class_operation(
@@ -164,28 +185,30 @@ class ClassVisitorMixin(FileVisitorMixin):
                 if ownership.resource_kind is ResourceKind.DATAFRAME
                 else "chunked_array"
             )
-            function = self.require_runtime_symbol(
+            function = self.services.require_runtime_symbol(
                 "dataframe", f"irx_arrow_{prefix}_{operation}"
             )
-            status = self._llvm.ir_builder.call(function, [value])
+            status = self.services.llvm.ir_builder.call(function, [value])
             if operation == "retain":
-                error_function = self.require_runtime_symbol(
+                error_function = self.services.require_runtime_symbol(
                     "dataframe", "irx_arrow_last_error"
                 )
-                error = self._llvm.ir_builder.call(error_function, [])
-                self.file_check(
+                error = self.services.llvm.ir_builder.call(error_function, [])
+                self.services.file_check(
                     node, status, error, code="ARX-RUNTIME-ARROW-001"
                 )
             return
-        error = self.file_error_buffer()
-        function = self.require_runtime_symbol(
+        error = self.services.file_error_buffer()
+        function = self.services.require_runtime_symbol(
             "class", f"irx_class_{operation}"
         )
         args = [self.class_raw(value), error]
         if operation == "release":
-            args.insert(0, cast(Any, self).context_value())
-        status = self._llvm.ir_builder.call(function, args)
-        self.file_check(node, status, error, code="ARX-RUNTIME-CLASS-001")
+            args.insert(0, self.services.exceptions.context_value())
+        status = self.services.llvm.ir_builder.call(function, args)
+        self.services.file_check(
+            node, status, error, code="ARX-RUNTIME-CLASS-001"
+        )
 
     def class_cleanup(
         self,
@@ -216,25 +239,31 @@ class ClassVisitorMixin(FileVisitorMixin):
         )
         if counted:
             assert owner is not None
-            count = self.create_entry_block_alloca(
+            count = self.services.create_entry_block_alloca(
                 "arrow.references", ir.IntType(64)
             )
-            self.named_values[f"arrow.references:{owner}"] = count
-            self._llvm.ir_builder.store(ir.Constant(ir.IntType(64), 1), count)
+            self.services.function_state.named_values[
+                f"arrow.references:{owner}"
+            ] = count
+            self.services.llvm.ir_builder.store(
+                ir.Constant(ir.IntType(64), 1), count
+            )
 
         def release() -> None:
             """
             title: >-
               Release only the references owned by this binding or temporary.
             """
-            current = self._llvm.ir_builder.load(value) if storage else value
+            current = (
+                self.services.llvm.ir_builder.load(value) if storage else value
+            )
             if counted:
                 assert owner is not None
                 self.arrow_release_binding(node, current, owner)
             else:
                 self.class_operation(node, "release", current)
 
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(
                 release,
                 owner_symbol_id=owner,
@@ -307,158 +336,180 @@ class ClassVisitorMixin(FileVisitorMixin):
             context="class drop",
         )
         name = f"irx.drop.{class_.qualified_name}"
-        existing = self._llvm.module.globals.get(name)
+        existing = self.services.llvm.module.globals.get(name)
         if isinstance(existing, ir.Function):
             return existing
-        pointer = self._llvm.INT8_TYPE.as_pointer()
-        integer = self._llvm.INT32_TYPE
+        pointer = self.services.llvm.INT8_TYPE.as_pointer()
+        integer = self.services.llvm.INT32_TYPE
         function = ir.Function(
-            self._llvm.module,
+            self.services.llvm.module,
             ir.FunctionType(integer, [pointer, pointer, pointer]),
             name=name,
         )
         function.linkage = "internal"
-        previous = self._llvm.ir_builder
-        self._llvm.ir_builder = ir.IRBuilder(
+        previous = self.services.llvm.ir_builder
+        self.services.llvm.ir_builder = ir.IRBuilder(
             function.append_basic_block("entry")
         )
-        previous_context = self.exception_context
-        previous_targets = self.exception_targets
-        previous_cleanups = self.cleanup_stack
-        previous_returns = self.pending_returns
-        self.pending_returns = []
-        self.exception_context = function.args[0]
-        self.exception_targets = []
-        self.cleanup_stack = []
         try:
-            context, value, error = function.args
-            type_ = astx.ClassType(
-                class_.name,
-                module_key=class_.module_key,
-                qualified_name=class_.qualified_name,
-            )
-            llvm_type = self._llvm_type_for_ast_type(type_)
-            assert llvm_type is not None
-            instance = self._llvm.ir_builder.bitcast(value, llvm_type)
-            first = self._llvm.ir_builder.alloca(integer, name="first_status")
-            self._llvm.ir_builder.store(ir.Constant(integer, 0), first)
-            local_error = self._llvm.ir_builder.alloca(
-                ir.ArrayType(ir.IntType(8), 256)
-            )
-            zero = ir.Constant(integer, 0)
-            details = self._llvm.ir_builder.gep(local_error, [zero, zero])
-            self._llvm.ir_builder.store(ir.Constant(ir.IntType(8), 0), details)
-            completed_fn = self.require_runtime_symbol(
-                "class", "irx_class_completed"
-            )
-            completed = self._llvm.ir_builder.call(completed_fn, [value])
-            record = self.require_runtime_symbol("class", "irx_class_record")
-            for index in reversed(range(len(initialization.phases))):
-                phase = initialization.phases[index]
-                if phase.destructor is not None:
-                    ready = self._llvm.ir_builder.icmp_signed(
-                        ">", completed, ir.Constant(integer, index)
-                    )
-                    with self._llvm.ir_builder.if_then(ready):
-                        hook = self._declare_semantic_function(
-                            phase.destructor
+            with self.services.exit_state.function_scope(function.args[0]):
+                context, value, error = function.args
+                type_ = astx.ClassType(
+                    class_.name,
+                    module_key=class_.module_key,
+                    qualified_name=class_.qualified_name,
+                )
+                llvm_type = self.services.types.llvm_type(type_)
+                assert llvm_type is not None
+                instance = self.services.llvm.ir_builder.bitcast(
+                    value, llvm_type
+                )
+                first = self.services.llvm.ir_builder.alloca(
+                    integer, name="first_status"
+                )
+                self.services.llvm.ir_builder.store(
+                    ir.Constant(integer, 0), first
+                )
+                local_error = self.services.llvm.ir_builder.alloca(
+                    ir.ArrayType(ir.IntType(8), 256)
+                )
+                zero = ir.Constant(integer, 0)
+                details = self.services.llvm.ir_builder.gep(
+                    local_error, [zero, zero]
+                )
+                self.services.llvm.ir_builder.store(
+                    ir.Constant(ir.IntType(8), 0), details
+                )
+                completed_fn = self.services.require_runtime_symbol(
+                    "class", "irx_class_completed"
+                )
+                completed = self.services.llvm.ir_builder.call(
+                    completed_fn, [value]
+                )
+                record = self.services.require_runtime_symbol(
+                    "class", "irx_class_record"
+                )
+                for index in reversed(range(len(initialization.phases))):
+                    phase = initialization.phases[index]
+                    if phase.destructor is not None:
+                        ready = self.services.llvm.ir_builder.icmp_signed(
+                            ">", completed, ir.Constant(integer, index)
                         )
-                        receiver = self._llvm.ir_builder.bitcast(
-                            instance, hook.args[1].type
-                        )
-                        token = cast(Any, self).exception_call(
-                            "cleanup_enter", [context]
-                        )
-                        status = self._llvm.ir_builder.call(
-                            hook, [context, receiver]
-                        )
-                        cast(Any, self).exception_call(
-                            "cleanup_leave", [context, token]
-                        )
-                        self._llvm.ir_builder.call(
-                            record, [status, details, first, error]
-                        )
-                for item in reversed(phase.fields):
-                    kind = item.field.resource_kind
-                    canonical = cast(
-                        SemanticInfo, getattr(class_.declaration, "semantic")
-                    ).resolved_class
-                    assert canonical is not None
-                    exception = canonical.exception_type
-                    if (
-                        exception is not None
-                        and item.field == exception.diagnostic_field
-                    ):
-                        address = self._llvm.ir_builder.gep(
+                        with self.services.llvm.ir_builder.if_then(ready):
+                            hook = self.services.declare_semantic_function(
+                                phase.destructor
+                            )
+                            receiver = self.services.llvm.ir_builder.bitcast(
+                                instance, hook.args[1].type
+                            )
+                            token = self.services.exceptions.exception_call(
+                                "cleanup_enter", [context]
+                            )
+                            status = self.services.llvm.ir_builder.call(
+                                hook, [context, receiver]
+                            )
+                            self.services.exceptions.exception_call(
+                                "cleanup_leave", [context, token]
+                            )
+                            self.services.llvm.ir_builder.call(
+                                record, [status, details, first, error]
+                            )
+                    for item in reversed(phase.fields):
+                        kind = item.field.resource_kind
+                        canonical = cast(
+                            SemanticInfo,
+                            getattr(class_.declaration, "semantic"),
+                        ).resolved_class
+                        assert canonical is not None
+                        exception = canonical.exception_type
+                        if (
+                            exception is not None
+                            and item.field == exception.diagnostic_field
+                        ):
+                            address = self.services.llvm.ir_builder.gep(
+                                instance,
+                                [
+                                    zero,
+                                    ir.Constant(
+                                        integer, item.field.storage_index
+                                    ),
+                                ],
+                            )
+                            self.services.exceptions.exception_call(
+                                "info_release",
+                                [self.services.llvm.ir_builder.load(address)],
+                            )
+                            self.services.llvm.ir_builder.store(
+                                ir.Constant(pointer, None), address
+                            )
+                            continue
+                        if kind is None:
+                            continue
+                        address = self.services.llvm.ir_builder.gep(
                             instance,
                             [
                                 zero,
                                 ir.Constant(integer, item.field.storage_index),
                             ],
                         )
-                        cast(Any, self).exception_call(
-                            "info_release",
-                            [self._llvm.ir_builder.load(address)],
+                        stored = self.services.llvm.ir_builder.load(address)
+                        raw = self.class_raw(stored)
+                        if kind is ResourceKind.STRING:
+                            self.services.llvm.ir_builder.call(
+                                self.services.require_runtime_symbol(
+                                    "libc", "free"
+                                ),
+                                [raw],
+                            )
+                        else:
+                            feature = (
+                                "file"
+                                if kind is ResourceKind.FILE
+                                else "class"
+                            )
+                            release = self.services.require_runtime_symbol(
+                                feature, f"irx_{feature}_release"
+                            )
+                            operands = [raw, details]
+                            if feature == "class":
+                                operands.insert(0, context)
+                            token = self.services.exceptions.exception_call(
+                                "cleanup_enter", [context]
+                            )
+                            status = self.services.llvm.ir_builder.call(
+                                release, operands
+                            )
+                            self.services.llvm.ir_builder.call(
+                                record, [status, details, first, error]
+                            )
+                            done = function.append_basic_block(
+                                "drop.field.done"
+                            )
+                            self.services.exit_state.exception_targets = [
+                                ExceptionTarget(done, 0)
+                            ]
+                            self.services.file_check(
+                                class_.declaration,
+                                status,
+                                details,
+                                code="ARX-RUNTIME-FILE-001"
+                                if feature == "file"
+                                else "ARX-RUNTIME-CLASS-001",
+                            )
+                            self.services.llvm.ir_builder.branch(done)
+                            self.services.llvm.ir_builder.position_at_end(done)
+                            self.services.exit_state.exception_targets = []
+                            self.services.exceptions.exception_call(
+                                "cleanup_leave", [context, token]
+                            )
+                        self.services.llvm.ir_builder.store(
+                            ir.Constant(stored.type, None), address
                         )
-                        self._llvm.ir_builder.store(
-                            ir.Constant(pointer, None), address
-                        )
-                        continue
-                    if kind is None:
-                        continue
-                    address = self._llvm.ir_builder.gep(
-                        instance,
-                        [zero, ir.Constant(integer, item.field.storage_index)],
-                    )
-                    stored = self._llvm.ir_builder.load(address)
-                    raw = self.class_raw(stored)
-                    if kind is ResourceKind.STRING:
-                        self._llvm.ir_builder.call(
-                            self.require_runtime_symbol("libc", "free"), [raw]
-                        )
-                    else:
-                        feature = (
-                            "file" if kind is ResourceKind.FILE else "class"
-                        )
-                        release = self.require_runtime_symbol(
-                            feature, f"irx_{feature}_release"
-                        )
-                        operands = [raw, details]
-                        if feature == "class":
-                            operands.insert(0, context)
-                        token = cast(Any, self).exception_call(
-                            "cleanup_enter", [context]
-                        )
-                        status = self._llvm.ir_builder.call(release, operands)
-                        self._llvm.ir_builder.call(
-                            record, [status, details, first, error]
-                        )
-                        done = function.append_basic_block("drop.field.done")
-                        self.exception_targets = [ExceptionTarget(done, 0)]
-                        self.file_check(
-                            class_.declaration,
-                            status,
-                            details,
-                            code="ARX-RUNTIME-FILE-001"
-                            if feature == "file"
-                            else "ARX-RUNTIME-CLASS-001",
-                        )
-                        self._llvm.ir_builder.branch(done)
-                        self._llvm.ir_builder.position_at_end(done)
-                        self.exception_targets = []
-                        cast(Any, self).exception_call(
-                            "cleanup_leave", [context, token]
-                        )
-                    self._llvm.ir_builder.store(
-                        ir.Constant(stored.type, None), address
-                    )
-            self._llvm.ir_builder.ret(self._llvm.ir_builder.load(first))
+                self.services.llvm.ir_builder.ret(
+                    self.services.llvm.ir_builder.load(first)
+                )
         finally:
-            self._llvm.ir_builder = previous
-            self.exception_context = previous_context
-            self.exception_targets = previous_targets
-            self.cleanup_stack = previous_cleanups
-            self.pending_returns = previous_returns
+            self.services.llvm.ir_builder = previous
         return function
 
     def lower_class_construct(
@@ -472,76 +523,85 @@ class ClassVisitorMixin(FileVisitorMixin):
           resolution:
             type: ResolvedClassConstruction
         """
-        from irx.builder.lowering.literals import (  # noqa: PLC0415
-            LiteralVisitorMixin,
-        )
 
-        literal = cast(LiteralVisitorMixin, self)
         class_ = resolution.class_
         layout = require_semantic_metadata(
             class_.layout, node=node, metadata="layout", context="construction"
         )
-        llvm_type = self._llvm_type_for_ast_type(self._resolved_ast_type(node))
+        llvm_type = self.services.types.llvm_type(resolved_ast_type(node))
         assert isinstance(llvm_type, ir.PointerType)
         values: list[ir.Value] = []
         for expression in resolution.evaluations:
-            self.visit_child(expression)
+            self.services.visit_child(expression)
             value = require_lowered_value(
-                safe_pop(self.result_stack),
+                safe_pop(self.services.function_state.result_stack),
                 node=expression,
                 context="constructor argument",
             )
             self.class_pin(expression, value)
             values.append(value)
-        pointer = self._llvm.INT8_TYPE.as_pointer()
-        output = self.create_entry_block_alloca("class_result", pointer)
-        error = self.file_error_buffer()
-        size_ptr = self._llvm.ir_builder.gep(
+        pointer = self.services.llvm.INT8_TYPE.as_pointer()
+        output = self.services.create_entry_block_alloca(
+            "class_result", pointer
+        )
+        error = self.services.file_error_buffer()
+        size_ptr = self.services.llvm.ir_builder.gep(
             ir.Constant(llvm_type, None), [ir.Constant(ir.IntType(32), 1)]
         )
-        size = self._llvm.ir_builder.ptrtoint(size_ptr, self._llvm.SIZE_T_TYPE)
-        create = self.require_runtime_symbol("class", "irx_class_create")
+        size = self.services.llvm.ir_builder.ptrtoint(
+            size_ptr, self.services.llvm.SIZE_T_TYPE
+        )
+        create = self.services.require_runtime_symbol(
+            "class", "irx_class_create"
+        )
         drop = self.class_drop_function(class_)
-        status = self._llvm.ir_builder.call(
+        status = self.services.llvm.ir_builder.call(
             create, [size, drop, output, error]
         )
-        self.file_check(
+        self.services.file_check(
             node,
             status,
             error,
             code="ARX-RUNTIME-CLASS-001",
             cleanup_temporaries=True,
         )
-        raw = self._llvm.ir_builder.load(output)
-        instance = self._llvm.ir_builder.bitcast(raw, llvm_type)
+        raw = self.services.llvm.ir_builder.load(output)
+        instance = self.services.llvm.ir_builder.bitcast(raw, llvm_type)
         zero = ir.Constant(ir.IntType(32), 0)
         for header in layout.header_fields:
             if header.kind is ClassHeaderFieldKind.LIFETIME:
                 continue  # Native create installs the opaque token.
-            address = self._llvm.ir_builder.gep(
+            address = self.services.llvm.ir_builder.gep(
                 instance,
                 [zero, ir.Constant(ir.IntType(32), header.storage_index)],
             )
             initial: ir.Value = ir.Constant(pointer, None)
             if header.kind is ClassHeaderFieldKind.TYPE_DESCRIPTOR:
-                initial = self._llvm.ir_builder.bitcast(
+                initial = self.services.llvm.ir_builder.bitcast(
                     self.class_field_function(class_), pointer
                 )
             if (
                 header.kind is ClassHeaderFieldKind.DISPATCH_TABLE
                 and layout.dispatch_table_size
             ):
-                dispatch = self._llvm.module.globals[
+                dispatch = self.services.llvm.module.globals[
                     layout.dispatch_global_name
                 ]
-                initial = self._llvm.ir_builder.bitcast(dispatch, pointer)
-            self._llvm.ir_builder.store(initial, address)
-        previous_construction = self.class_construction_stack
-        self.class_construction_stack = [*previous_construction, raw]
+                initial = self.services.llvm.ir_builder.bitcast(
+                    dispatch, pointer
+                )
+            self.services.llvm.ir_builder.store(initial, address)
+        previous_construction = (
+            self.services.function_state.class_construction_stack
+        )
+        self.services.function_state.class_construction_stack = [
+            *previous_construction,
+            raw,
+        ]
         rollback = CleanupAction(
             lambda: self.class_operation(node, "release", instance)
         )
-        self.cleanup_stack.append(rollback)
+        self.services.exit_state.cleanup_stack.append(rollback)
         try:
             for phase_index, phase in enumerate(
                 resolution.initialization.phases
@@ -565,19 +625,19 @@ class ClassVisitorMixin(FileVisitorMixin):
                         value = (
                             values[native_exception.message_index]
                             if native_exception.message_index is not None
-                            else cast(Any, self).exception_string("")
+                            else self.services.exception_string("")
                         )
                     elif (
                         native_file is not None and field == native_file.field
                     ):
-                        value = self.create_native_file(
+                        value = self.services.create_native_file(
                             node,
                             native_file.operands,
                             values,
                             cleanup_temporaries=True,
                         )
                     elif item.value is None:
-                        value = literal._default_runtime_initializer(
+                        value = self.services.default_runtime_initializer(
                             field.member.type_, name_hint=field.member.name
                         )
                     else:
@@ -589,41 +649,51 @@ class ClassVisitorMixin(FileVisitorMixin):
                         )
                         previous_receiver = None
                         if receiver is not None:
-                            previous_receiver = self.named_values.get(
-                                receiver.symbol_id
+                            previous_receiver = (
+                                self.services.function_state.named_values.get(
+                                    receiver.symbol_id
+                                )
                             )
-                            receiver_type = self._llvm_type_for_ast_type(
+                            receiver_type = self.services.types.llvm_type(
                                 receiver.type_
                             )
                             assert receiver_type is not None
-                            receiver_slot = self.create_entry_block_alloca(
-                                "initializer_self", receiver_type
+                            receiver_slot = (
+                                self.services.create_entry_block_alloca(
+                                    "initializer_self", receiver_type
+                                )
                             )
-                            self._llvm.ir_builder.store(
-                                self._llvm.ir_builder.bitcast(
+                            self.services.llvm.ir_builder.store(
+                                self.services.llvm.ir_builder.bitcast(
                                     instance, receiver_type
                                 ),
                                 receiver_slot,
                             )
-                            self.named_values[receiver.symbol_id] = (
-                                receiver_slot
-                            )
-                        self.visit_child(item.value)
-                        if receiver is not None:
-                            if previous_receiver is None:
-                                self.named_values.pop(receiver.symbol_id, None)
-                            else:
-                                self.named_values[receiver.symbol_id] = (
-                                    previous_receiver
-                                )
+                            self.services.function_state.named_values[
+                                receiver.symbol_id
+                            ] = receiver_slot
+                        try:
+                            self.services.visit_child(item.value)
+                        finally:
+                            if receiver is not None:
+                                if previous_receiver is None:
+                                    self.services.function_state.named_values.pop(
+                                        receiver.symbol_id, None
+                                    )
+                                else:
+                                    self.services.function_state.named_values[
+                                        receiver.symbol_id
+                                    ] = previous_receiver
                         value = require_lowered_value(
-                            safe_pop(self.result_stack),
+                            safe_pop(
+                                self.services.function_state.result_stack
+                            ),
                             node=item.value,
                             context="instance initializer",
                         )
-                        value = self._cast_ast_value(
+                        value = self.services.numeric.cast_scalar(
                             value,
-                            source_type=self._resolved_ast_type(item.value),
+                            source_type=resolved_ast_type(item.value),
                             target_type=field.member.type_,
                         )
                     ownership = resource_ownership(item.value)
@@ -633,7 +703,7 @@ class ClassVisitorMixin(FileVisitorMixin):
                             or ownership.transfer_kind
                             is not OwnershipTransferKind.MOVE
                         ):
-                            value = self._copy_string_to_heap(node, value)
+                            value = self.services.strings.copy(node, value)
                     elif field.resource_kind is ResourceKind.CLASS:
                         if (
                             ownership is None
@@ -641,20 +711,20 @@ class ClassVisitorMixin(FileVisitorMixin):
                             is not OwnershipTransferKind.MOVE
                         ):
                             self.class_operation(node, "retain", value)
-                    address = self._llvm.ir_builder.gep(
+                    address = self.services.llvm.ir_builder.gep(
                         instance,
                         [
                             zero,
                             ir.Constant(ir.IntType(32), field.storage_index),
                         ],
                     )
-                    self._llvm.ir_builder.store(value, address)
+                    self.services.llvm.ir_builder.store(value, address)
                 if phase.initializer is not None:
-                    function = self._declare_semantic_function(
+                    function = self.services.declare_semantic_function(
                         phase.initializer
                     )
                     arguments = [
-                        self._llvm.ir_builder.bitcast(
+                        self.services.llvm.ir_builder.bitcast(
                             instance,
                             function.args[
                                 int(phase.initializer.signature.exception_abi)
@@ -670,9 +740,9 @@ class ClassVisitorMixin(FileVisitorMixin):
                             resolution.argument_types,
                         ):
                             arguments.append(
-                                self._cast_ast_value(
+                                self.services.numeric.cast_scalar(
                                     values[index],
-                                    source_type=self._resolved_ast_type(
+                                    source_type=resolved_ast_type(
                                         resolution.evaluations[index]
                                     ),
                                     target_type=type_,
@@ -682,34 +752,38 @@ class ClassVisitorMixin(FileVisitorMixin):
                         for (
                             parameter
                         ) in phase.initializer.prototype.args.nodes:
-                            self.visit_child(parameter.default)
+                            self.services.visit_child(parameter.default)
                             arguments.append(
-                                self._cast_ast_value(
+                                self.services.numeric.cast_scalar(
                                     require_lowered_value(
-                                        safe_pop(self.result_stack),
+                                        safe_pop(
+                                            self.services.function_state.result_stack
+                                        ),
                                         node=parameter,
                                         context="base constructor default",
                                     ),
-                                    source_type=self._resolved_ast_type(
+                                    source_type=resolved_ast_type(
                                         parameter.default
                                     ),
                                     target_type=parameter.type_,
                                 )
                             )
-                    cast(Any, self).emit_resolved_call(
+                    self.services.exceptions.emit_resolved_call(
                         node, function, phase.initializer.signature, arguments
                     )
-                complete = self.require_runtime_symbol(
+                complete = self.services.require_runtime_symbol(
                     "class", "irx_class_complete"
                 )
-                self._llvm.ir_builder.call(complete, [raw])
+                self.services.llvm.ir_builder.call(complete, [raw])
             if resolution.native_exception is not None:
-                cast(Any, self).initialize_exception_record(
+                self.services.initialize_exception_record(
                     node, instance, resolution.native_exception.exception_type
                 )
         finally:
-            self.class_construction_stack = previous_construction
-            self.cleanup_stack.remove(rollback)
+            self.services.function_state.class_construction_stack = (
+                previous_construction
+            )
+            self.services.exit_state.cleanup_stack.remove(rollback)
         ownership = require_semantic_metadata(
             resource_ownership(node),
             node=node,
@@ -718,7 +792,7 @@ class ClassVisitorMixin(FileVisitorMixin):
         )
         if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
             self.class_cleanup(node, instance)
-        self.result_stack.append(instance)
+        self.services.function_state.result_stack.append(instance)
 
     def arrow_temporary(self, node: astx.AST, value: ir.Value) -> None:
         """
@@ -750,7 +824,9 @@ class ClassVisitorMixin(FileVisitorMixin):
         returns:
           type: ir.Value
         """
-        return self.named_values[f"arrow.references:{owner}"]
+        return self.services.function_state.named_values[
+            f"arrow.references:{owner}"
+        ]
 
     def arrow_release_binding(
         self, node: astx.AST, value: ir.Value, owner: str
@@ -766,7 +842,7 @@ class ClassVisitorMixin(FileVisitorMixin):
           owner:
             type: str
         """
-        builder = self._llvm.ir_builder
+        builder = self.services.llvm.ir_builder
         count = self.arrow_reference_count(owner)
         function = builder.function
         test = function.append_basic_block("arrow.drop.test")
@@ -818,7 +894,7 @@ class ClassVisitorMixin(FileVisitorMixin):
             context="explicit Arrow lifetime",
         )
         count = self.arrow_reference_count(owner)
-        builder = self._llvm.ir_builder
+        builder = self.services.llvm.ir_builder
         current = builder.load(count)
         one = ir.Constant(ir.IntType(64), 1)
         if retain:
@@ -831,7 +907,7 @@ class ClassVisitorMixin(FileVisitorMixin):
             zero,
         )
         builder.store(remaining, count)
-        address = self._lvalue_address(node)
+        address = self.services.layout.lvalue_address(node)
         builder.store(
             builder.select(
                 builder.icmp_unsigned("==", remaining, zero),

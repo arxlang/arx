@@ -501,7 +501,7 @@ def llvm_visitor() -> LLVMVisitor:
     """
     builder = LLVMBuilder()
     visitor = builder.translator
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     return visitor
 
 
@@ -517,7 +517,7 @@ def llvm_visitor_in_function() -> LLVMVisitor:
     """
     builder = LLVMBuilder()
     visitor = builder.translator
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     fn_type = ir.FunctionType(visitor._llvm.VOID_TYPE, [])
     function = ir.Function(visitor._llvm.module, fn_type, name="_test_dummy")
     block = function.append_basic_block("entry")

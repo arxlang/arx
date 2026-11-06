@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Expression literal visitors.
@@ -18,6 +16,7 @@ from typing import Iterator, cast
 
 import astx
 
+from plum import dispatch
 from public import private
 
 from irx.analysis.arrow_conversion import contains_arrow
@@ -27,17 +26,22 @@ from irx.analysis.collections import (
     collection_supports_sequence_search,
     is_collection_type,
 )
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.dependencies.expression_literal import (
+    ExpressionLiteralAnalysisServices,
+)
+from irx.analysis.extensions.literals import (
+    DICTIONARY_LOOKUP,
+    LITERAL_STORAGE,
+    resolve_dictionary_lookup,
+    resolve_literal_storage,
 )
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.normalization import normalize_flags, normalize_operator
-from irx.analysis.nullable import resolve_column_index
 from irx.analysis.numeric_literals import (
     contextualize_literal,
     resolve_numeric_literal,
 )
+from irx.analysis.numeric_policy import integer_bounds
 from irx.analysis.ownership import (
     list_resource_ownership,
     string_resource_ownership,
@@ -51,11 +55,6 @@ from irx.analysis.resolved_nodes import (
     TextOperationKind,
 )
 from irx.analysis.sequences import resolve_sequence_access
-from irx.analysis.text import (
-    resolve_text_subscript,
-    set_text_operation,
-    text_error,
-)
 from irx.analysis.types import (
     common_numeric_type,
     display_type_name,
@@ -78,6 +77,8 @@ from irx.builtins.collections.list import (
     list_supports_owned_element,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
@@ -101,13 +102,40 @@ def collection_probe_matches(
     return is_assignable(expected, actual)
 
 
+@private
 @typechecked
-class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionLiteralAnalysis:
     """
     title: Expression visitors for literals, list operations, and subscripts
+    attributes:
+      services:
+        type: ExpressionLiteralAnalysisServices
     """
 
-    @SemanticAnalyzerCore.visit.dispatch
+    services: ExpressionLiteralAnalysisServices
+
+    def __init__(self, services: ExpressionLiteralAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionLiteralAnalysisServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionLiteralAnalysis"
+        )
+
+    @dispatch
     def visit(
         self,
         node: astx.LiteralInteger
@@ -144,8 +172,10 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
               astx.LiteralFloat16 | astx.LiteralFloat32 | astx.LiteralFloat64 |
               astx.LiteralBoolean | astx.LiteralNone
         """
-        literal_type = resolve_numeric_literal(node, self.context.diagnostics)
-        self._set_type(node, literal_type or node.type_)
+        literal_type = resolve_numeric_literal(
+            node, self.services.context.diagnostics
+        )
+        self.services.set_type(node, literal_type or node.type_)
 
     def _validate_comprehension_condition(
         self,
@@ -157,22 +187,22 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           condition:
             type: astx.AST
         """
-        if not self._require_value_expression(
+        if not self.services.require_value_expression(
             condition,
             context="comprehension filter",
         ):
             return
-        condition_type = self._expr_type(condition)
+        condition_type = self.services.expr_type(condition)
         if condition_type is None or is_boolean_type(condition_type):
             return
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             "comprehension filter must be Boolean, got "
             f"{display_type_name(condition_type)}",
             node=condition,
             code=DiagnosticCodes.SEMANTIC_INVALID_CONDITION,
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralString) -> None:
         """
         title: Visit string literal nodes as immortal static storage.
@@ -181,21 +211,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.LiteralString
         """
         if "\0" in node.value:
-            text_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_text_error(
                 node,
                 "text literals cannot contain NUL; use binary data instead",
             )
         try:
             node.value.encode("utf-8")
         except UnicodeEncodeError:
-            text_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_text_error(
                 node,
                 "text literals require valid Unicode scalar values",
             )
-        self._set_type(node, node.type_)
-        self._set_resource_ownership(
+        self.services.set_type(node, node.type_)
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(OwnershipKind.STATIC),
         )
@@ -214,45 +242,47 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: ExitStack
         """
         if clause.is_async:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "async comprehensions are not supported",
                 node=clause,
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
 
-        self.visit(clause.iterable)
-        iterable_type = self._expr_type(clause.iterable)
+        self.services.visit(clause.iterable)
+        iterable_type = self.services.expr_type(clause.iterable)
         iteration = resolve_iteration_capability(
             clause.iterable,
             iterable_type,
         )
         if iteration is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "comprehension requires an iterable value, got "
                 f"{display_type_name(iterable_type)}",
                 node=clause.iterable,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_iteration(clause, None)
-            self._set_type(clause, None)
+            self.services.set_iteration(clause, None)
+            self.services.set_type(clause, None)
             return
 
-        symbol = self._declare_iteration_target(
+        symbol = self.services.declare_iteration_target(
             clause.target,
             iteration.element_type,
             kind="comprehension",
             iteration_kind=iteration.kind,
         )
         resolved_iteration = replace(iteration, target_symbol=symbol)
-        self._set_iteration(clause.iterable, resolved_iteration)
-        self._set_iteration(clause, resolved_iteration)
-        self._set_type(clause, iteration.element_type)
+        self.services.set_iteration(clause.iterable, resolved_iteration)
+        self.services.set_iteration(clause, resolved_iteration)
+        self.services.set_type(clause, iteration.element_type)
 
         borrows.enter_context(
-            self.context.list_iteration(iteration.borrowed_owner_symbol_id)
+            self.services.context.list_iteration(
+                iteration.borrowed_owner_symbol_id
+            )
         )
         for condition in clause.conditions.nodes:
-            self.visit(condition)
+            self.services.visit(condition)
             self._validate_comprehension_condition(condition)
 
     @contextmanager
@@ -274,7 +304,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 self._visit_comprehension_clause(clause, borrows)
             yield
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.AliasExpr) -> None:
         """
         title: Visit AliasExpr nodes.
@@ -282,7 +312,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.AliasExpr
         """
-        self._set_type(node, None)
+        self.services.set_type(node, None)
 
     def _visit_temporal_literal(self, node: astx.AST) -> None:
         """
@@ -307,7 +337,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 parsed_value = validate_literal_timestamp(literal_value)
             else:
                 parsed_value = validate_literal_datetime(literal_value)
-            self._semantic(node).extras["parsed_value"] = parsed_value
+            self.services.semantic(node).extras["parsed_value"] = parsed_value
             # Resolve Arrow's epoch representation here, not in lowering.
             if isinstance(parsed_value, datetime):
                 delta = parsed_value - datetime(1970, 1, 1)
@@ -322,12 +352,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             else:
                 assert isinstance(parsed_value, date)
                 physical = (parsed_value - date(1970, 1, 1)).days
-            self._semantic(node).extras["dataframe_temporal_value"] = physical
+            self.services.semantic(node).extras["dataframe_temporal_value"] = (
+                physical
+            )
         except ValueError as exc:
-            self.context.diagnostics.add(str(exc), node=node)
-        self._set_type(node, getattr(node, "type_", None))
+            self.services.context.diagnostics.add(str(exc), node=node)
+        self.services.set_type(node, getattr(node, "type_", None))
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralDate) -> None:
         """
         title: Validate calendar dates and resolve their epoch representation.
@@ -337,7 +369,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_temporal_literal(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTime) -> None:
         """
         title: Visit LiteralTime nodes.
@@ -347,7 +379,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_temporal_literal(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTimestamp) -> None:
         """
         title: Visit LiteralTimestamp nodes.
@@ -357,7 +389,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_temporal_literal(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralDateTime) -> None:
         """
         title: Visit LiteralDateTime nodes.
@@ -374,11 +406,15 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.AST
         """
-        if contains_class(self._expr_type(node)) or contains_arrow(
-            self._expr_type(node)
+        if contains_class(self.services.expr_type(node)) or contains_arrow(
+            self.services.expr_type(node)
         ):
-            self.context.diagnostics.add(
-                ("class" if contains_class(self._expr_type(node)) else "Arrow")
+            self.services.context.diagnostics.add(
+                (
+                    "class"
+                    if contains_class(self.services.expr_type(node))
+                    else "Arrow"
+                )
                 + " references inside containers/generators are unsupported",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -392,15 +428,15 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.AST
         """
         for element in cast(list[astx.AST], getattr(node, "elements")):
-            self.visit(element)
+            self.services.visit(element)
             self.reject_class_element(element)
         elements = cast(list[astx.AST], getattr(node, "elements"))
-        types = [self._expr_type(element) for element in elements]
+        types = [self.services.expr_type(element) for element in elements]
         concrete: list[astx.ExprType] = [
             type_ for type_ in types if type_ is not None
         ]
         if isinstance(node, astx.LiteralTuple):
-            self._set_type(node, astx.TupleType(concrete))
+            self.services.set_type(node, astx.TupleType(concrete))
         elif isinstance(node, astx.LiteralList):
             unique: list[astx.ExprType] = []
             for member in concrete:
@@ -412,7 +448,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                     for previous in unique
                 ):
                     unique.append(member)
-            self._set_type(node, astx.ListType(unique, size=len(elements)))
+            self.services.set_type(
+                node, astx.ListType(unique, size=len(elements))
+            )
+            storage = resolve_literal_storage(
+                node,
+                tuple(type_ for type_ in types if type_ is not None),
+                self.services.context.diagnostics,
+            )
+            if storage is not None:
+                info = self.services.semantic(node)
+                info.facts = info.facts.with_fact(
+                    LITERAL_STORAGE, storage, replace=True
+                )
 
     def _has_compatible_collection_probe(
         self,
@@ -459,13 +507,15 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           argument_types:
             type: tuple[astx.DataType, Ellipsis]
         """
-        receiver_type = self._expr_type(base)
+        receiver_type = self.services.expr_type(base)
         if receiver_type is None:
-            self._set_collection_method(node, None)
+            self.services.set_collection_method(node, None)
             return
         probe = getattr(node, "value", None)
         probe_type = (
-            self._expr_type(probe) if isinstance(probe, astx.AST) else None
+            self.services.expr_type(probe)
+            if isinstance(probe, astx.AST)
+            else None
         )
         entry_types = argument_types
         if isinstance(
@@ -480,14 +530,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             entry_types = tuple(
                 type_
                 for entry in base.elements
-                if (type_ := self._expr_type(entry)) is not None
+                if (type_ := self.services.expr_type(entry)) is not None
             )
         if is_numeric_type(probe_type) and any(
             is_numeric_type(type_)
             and common_numeric_type(type_, probe_type) is None
             for type_ in entry_types
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection comparison has no lossless common numeric type; "
                 "use an explicit cast",
                 node=node,
@@ -511,7 +561,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             )
             for type_ in matching
         )
-        self._set_collection_method(
+        self.services.set_collection_method(
             node,
             ResolvedCollectionMethod(
                 receiver_node=base,
@@ -547,13 +597,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           type: astx.DataType | None
         """
         if not analyzed:
-            self.visit(base)
-        if not self._require_value_expression(base, context=context):
+            self.services.visit(base)
+        if not self.services.require_value_expression(base, context=context):
             return None
-        base_type = self._expr_type(base)
+        base_type = self.services.expr_type(base)
         if is_collection_type(base_type):
             return base_type
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"{context} requires a collection value, got "
             f"{display_type_name(base_type)}",
             node=base,
@@ -637,7 +687,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         ):
             return True
 
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"{context} currently supports literal collections, "
             "dynamic lists, and tuple length/emptiness only",
             node=base,
@@ -645,7 +695,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         )
         return False
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionLength) -> None:
         """
         title: Visit CollectionLength nodes.
@@ -653,14 +703,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.CollectionLength
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.resolved_text_operation = None
         info.resolved_collection_method = None
         info.sequence_access = None
-        self.visit(node.base)
-        if is_string_type(self._expr_type(node.base)):
-            set_text_operation(
-                cast(SemanticAnalyzerCore, self),
+        self.services.visit(node.base)
+        if is_string_type(self.services.expr_type(node.base)):
+            self.services.free_set_text_operation(
                 node,
                 TextOperationKind.LENGTH,
                 (node.base,),
@@ -668,19 +717,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if isinstance(
-            self._expr_type(node.base),
+            self.services.expr_type(node.base),
             (astx.SequenceType, astx.TensorType, astx.SeriesType, astx.Bytes),
         ):
             info.sequence_access = resolve_sequence_access(
-                self._expr_type(node.base)
+                self.services.expr_type(node.base)
             )
             if info.sequence_access is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "len requires a numeric rank-one tensor or typed Series",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-            self._set_type(node, astx.Int64())
+            self.services.set_type(node, astx.Int64())
             return
         return_type = astx.Int64()
         base_type = self._validate_collection_query_base(
@@ -703,9 +752,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 method=CollectionMethodKind.LENGTH,
                 return_type=return_type,
             )
-        self._set_type(node, return_type)
+        self.services.set_type(node, return_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionIsEmpty) -> None:
         """
         title: Visit CollectionIsEmpty nodes.
@@ -733,9 +782,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 method=CollectionMethodKind.IS_EMPTY,
                 return_type=return_type,
             )
-        self._set_type(node, return_type)
+        self.services.set_type(node, return_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionContains) -> None:
         """
         title: Visit CollectionContains nodes.
@@ -752,14 +801,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         contexts = collection_contains_types(base_type)
         if len(contexts) == 1:
             contextualize_literal(node.value, contexts[0])
-        self.visit(node.value)
+        self.services.visit(node.value)
         expected_types = collection_contains_types(base_type)
-        actual_type = self._expr_type(node.value)
+        actual_type = self.services.expr_type(node.value)
         if not self._has_compatible_collection_probe(
             expected_types,
             actual_type,
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection containment probe expects "
                 + " or ".join(
                     display_type_name(expected_type)
@@ -784,9 +833,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 return_type=return_type,
                 argument_types=expected_types,
             )
-        self._set_type(node, return_type)
+        self.services.set_type(node, return_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionIndex) -> None:
         """
         title: Visit CollectionIndex nodes.
@@ -803,27 +852,28 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         contexts = collection_contains_types(base_type)
         if len(contexts) == 1:
             contextualize_literal(node.value, contexts[0])
-        self.visit(node.value)
+        self.services.visit(node.value)
         expected_types = collection_contains_types(base_type)
         if base_type is not None and not collection_supports_sequence_search(
             base_type
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection index requires a list or tuple value",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         elif not self._has_compatible_collection_probe(
             expected_types,
-            self._expr_type(node.value),
+            self.services.expr_type(node.value),
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection index probe expects "
                 + " or ".join(
                     display_type_name(expected_type)
                     for expected_type in expected_types
                 )
-                + f", got {display_type_name(self._expr_type(node.value))}",
+                + ", got "
+                + display_type_name(self.services.expr_type(node.value)),
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
@@ -846,9 +896,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 return_type=return_type,
                 argument_types=expected_types,
             )
-        self._set_type(node, return_type)
+        self.services.set_type(node, return_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionCount) -> None:
         """
         title: Visit CollectionCount nodes.
@@ -865,27 +915,28 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         contexts = collection_contains_types(base_type)
         if len(contexts) == 1:
             contextualize_literal(node.value, contexts[0])
-        self.visit(node.value)
+        self.services.visit(node.value)
         expected_types = collection_contains_types(base_type)
         if base_type is not None and not collection_supports_sequence_search(
             base_type
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection count requires a list or tuple value",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         elif not self._has_compatible_collection_probe(
             expected_types,
-            self._expr_type(node.value),
+            self.services.expr_type(node.value),
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "collection count probe expects "
                 + " or ".join(
                     display_type_name(expected_type)
                     for expected_type in expected_types
                 )
-                + f", got {display_type_name(self._expr_type(node.value))}",
+                + ", got "
+                + display_type_name(self.services.expr_type(node.value)),
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
@@ -908,9 +959,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 return_type=return_type,
                 argument_types=expected_types,
             )
-        self._set_type(node, return_type)
+        self.services.set_type(node, return_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralList) -> None:
         """
         title: Visit LiteralList nodes.
@@ -919,12 +970,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.LiteralList
         """
         self._visit_element_sequence_literal(node)
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(OwnershipKind.STATIC),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTuple) -> None:
         """
         title: Visit LiteralTuple nodes.
@@ -934,7 +985,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_element_sequence_literal(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralSet) -> None:
         """
         title: Visit LiteralSet nodes.
@@ -943,19 +994,36 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.LiteralSet
         """
         for element in node.elements:
-            self.visit(element)
+            self.services.visit(element)
             self.reject_class_element(element)
         if node.elements and not all(
-            isinstance(element, astx.Literal) for element in node.elements
+            isinstance(element, astx.Literal)
+            and (type_ := self.services.expr_type(element)) is not None
+            and integer_bounds(type_) is not None
+            for element in node.elements
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "LiteralSet: only integer constants are "
                 "currently supported for lowering",
                 node=node,
             )
-        self._set_type(node, astx.LiteralSet(node.elements).type_)
+        self.services.set_type(node, astx.LiteralSet(node.elements).type_)
+        storage = resolve_literal_storage(
+            node,
+            tuple(
+                type_
+                for element in node.elements
+                if (type_ := self.services.expr_type(element)) is not None
+            ),
+            self.services.context.diagnostics,
+        )
+        if storage is not None:
+            info = self.services.semantic(node)
+            info.facts = info.facts.with_fact(
+                LITERAL_STORAGE, storage, replace=True
+            )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralDict) -> None:
         """
         title: Visit LiteralDict nodes.
@@ -964,13 +1032,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.LiteralDict
         """
         for key, value in node.elements.items():
-            self.visit(key)
-            self.visit(value)
+            self.services.visit(key)
+            self.services.visit(value)
             self.reject_class_element(key)
             self.reject_class_element(value)
-        self._set_type(node, astx.LiteralDict(node.elements).type_)
+        self.services.set_type(node, astx.LiteralDict(node.elements).type_)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ListCreate) -> None:
         """
         title: Visit ListCreate nodes.
@@ -978,13 +1046,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListCreate
         """
-        self._set_type(node, node.type_)
+        self.services.set_type(node, node.type_)
         if contains_class(node.element_type) or contains_arrow(
             node.element_type
         ):
             self.reject_class_element(node)
         if isinstance(node.element_type, astx.ListType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "dynamic lists cannot own dynamic-list elements because "
                 "nested ownership and destruction are not supported",
                 node=node,
@@ -992,19 +1060,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if not list_supports_owned_element(node.element_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned lists support numeric, Boolean, and string "
                 "elements only",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(OwnershipKind.OWNED),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ComprehensionClause) -> None:
         """
         title: Visit ComprehensionClause nodes.
@@ -1013,12 +1081,12 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ComprehensionClause
         """
         with (
-            self.context.scope("comprehension-clause"),
+            self.services.context.scope("comprehension-clause"),
             ExitStack() as borrows,
         ):
             self._visit_comprehension_clause(node, borrows)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ListComprehension) -> None:
         """
         title: Visit ListComprehension nodes.
@@ -1027,18 +1095,18 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ListComprehension
         """
         with (
-            self.context.scope("list-comprehension"),
+            self.services.context.scope("list-comprehension"),
             self._visit_comprehension_clauses(list(node.generators.nodes)),
         ):
-            self.visit(node.element)
+            self.services.visit(node.element)
             self.reject_class_element(node.element)
-            element_type = self._expr_type(node.element)
+            element_type = self.services.expr_type(node.element)
         if element_type is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        self._set_type(node, astx.ListType([element_type]))
+        self.services.set_type(node, astx.ListType([element_type]))
         if isinstance(element_type, astx.ListType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list comprehensions cannot produce owning list elements "
                 "because nested ownership and destruction are not supported",
                 node=node.element,
@@ -1046,19 +1114,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if not list_supports_owned_element(element_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned lists support numeric, Boolean, and string "
                 "elements only",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(OwnershipKind.OWNED),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.GeneratorExpr) -> None:
         """
         title: Visit GeneratorExpr nodes.
@@ -1067,18 +1135,18 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.GeneratorExpr
         """
         with (
-            self.context.scope("generator-expression"),
+            self.services.context.scope("generator-expression"),
             self._visit_comprehension_clauses(list(node.generators.nodes)),
         ):
-            self.visit(node.element)
+            self.services.visit(node.element)
             self.reject_class_element(node.element)
-            element_type = self._expr_type(node.element)
+            element_type = self.services.expr_type(node.element)
         if element_type is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        self._set_type(node, astx.GeneratorType(element_type))
+        self.services.set_type(node, astx.GeneratorType(element_type))
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SetComprehension) -> None:
         """
         title: Visit SetComprehension nodes.
@@ -1087,18 +1155,18 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.SetComprehension
         """
         with (
-            self.context.scope("set-comprehension"),
+            self.services.context.scope("set-comprehension"),
             self._visit_comprehension_clauses(list(node.generators.nodes)),
         ):
-            self.visit(node.element)
+            self.services.visit(node.element)
             self.reject_class_element(node.element)
-            element_type = self._expr_type(node.element)
+            element_type = self.services.expr_type(node.element)
         if element_type is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        self._set_type(node, astx.SetType(element_type))
+        self.services.set_type(node, astx.SetType(element_type))
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DictComprehension) -> None:
         """
         title: Visit DictComprehension nodes.
@@ -1107,19 +1175,19 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.DictComprehension
         """
         with (
-            self.context.scope("dict-comprehension"),
+            self.services.context.scope("dict-comprehension"),
             self._visit_comprehension_clauses(list(node.generators.nodes)),
         ):
-            self.visit(node.key)
-            self.visit(node.value)
+            self.services.visit(node.key)
+            self.services.visit(node.value)
             self.reject_class_element(node.key)
             self.reject_class_element(node.value)
-            key_type = self._expr_type(node.key)
-            value_type = self._expr_type(node.value)
+            key_type = self.services.expr_type(node.key)
+            value_type = self.services.expr_type(node.value)
         if key_type is None or value_type is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        self._set_type(node, astx.DictType(key_type, value_type))
+        self.services.set_type(node, astx.DictType(key_type, value_type))
 
     @private
     def resolve_list_read(
@@ -1133,26 +1201,26 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           element_type:
             type: astx.DataType | None
         """
-        self._set_type(node, element_type)
-        self._semantic(node).resource_ownership = None
+        self.services.set_type(node, element_type)
+        self.services.semantic(node).resource_ownership = None
         if not is_string_type(element_type):
             return
-        function = self.context.current_function
+        function = self.services.context.current_function
         if function is not None and isinstance(
             function.signature.metadata.get("generator"),
             ResolvedGeneratorFunction,
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned string list reads in generators require "
                 "lifecycle cleanup",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node, string_resource_ownership(OwnershipKind.OWNED)
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ListIndex) -> None:
         """
         title: Visit ListIndex nodes.
@@ -1160,35 +1228,35 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListIndex
         """
-        self.visit(node.base)
-        self.visit(node.index)
+        self.services.visit(node.base)
+        self.services.visit(node.index)
 
-        value_type = self._expr_type(node.base)
+        value_type = self.services.expr_type(node.base)
         if not isinstance(value_type, astx.ListType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list indexing requires a list value",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
 
-        index_type = self._expr_type(node.index)
+        index_type = self.services.expr_type(node.index)
         if not is_integer_type(index_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list indexing requires an integer index",
                 node=node.index,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         if not list_has_concrete_element_type(value_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list indexing requires a single concrete list element type",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         self.resolve_list_read(node, list_element_type(value_type))
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ListLength) -> None:
         """
         title: Visit ListLength nodes.
@@ -1196,23 +1264,23 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListLength
         """
-        self.visit(node.base)
-        if not self._require_value_expression(
+        self.services.visit(node.base)
+        if not self.services.require_value_expression(
             node.base,
             context="list length",
         ):
-            self._set_type(node, astx.Int64())
+            self.services.set_type(node, astx.Int64())
             return
 
-        if not isinstance(self._expr_type(node.base), astx.ListType):
-            self.context.diagnostics.add(
+        if not isinstance(self.services.expr_type(node.base), astx.ListType):
+            self.services.context.diagnostics.add(
                 "list length requires a list value",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ListAppend) -> None:
         """
         title: Visit ListAppend nodes.
@@ -1220,51 +1288,51 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListAppend
         """
-        self.visit(node.base)
-        base_type = self._expr_type(node.base)
+        self.services.visit(node.base)
+        base_type = self.services.expr_type(node.base)
         contextualize_literal(
             node.value,
             list_element_type(base_type)
             if isinstance(base_type, astx.ListType)
             else None,
         )
-        self.visit(node.value)
+        self.services.visit(node.value)
         self.reject_class_element(node.value)
 
-        resolved_target = self._resolve_mutation_target(
+        resolved_target = self.services.resolve_mutation_target(
             node.base,
             node=node,
             action="append to",
             invalid_message="list append target must be a variable or field",
         )
         if resolved_target is None:
-            self._set_type(node, astx.Int32())
+            self.services.set_type(node, astx.Int32())
             return
 
         assignment_symbol, _target_name, target_type = resolved_target
         if not isinstance(target_type, astx.ListType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list append requires a list target",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_assignment(node, assignment_symbol)
-            self._set_type(node, astx.Int32())
+            self.services.set_assignment(node, assignment_symbol)
+            self.services.set_type(node, astx.Int32())
             return
 
         element_type = list_element_type(target_type)
         if element_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list append requires a single concrete list element type",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_assignment(node, assignment_symbol)
-            self._set_type(node, astx.Int32())
+            self.services.set_assignment(node, assignment_symbol)
+            self.services.set_type(node, astx.Int32())
             return
 
         if isinstance(element_type, astx.ListType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list append cannot transfer an owning list element because "
                 "nested ownership and destruction are not supported",
                 node=node.value,
@@ -1273,13 +1341,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
 
         target_ownership = symbol_resource_ownership(assignment_symbol)
         if target_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list append target is missing ownership metadata",
                 node=node.base,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
         elif target_ownership.kind is not OwnershipKind.OWNED:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list append requires locally owned dynamic storage; got "
                 f"{target_ownership.kind.value} storage",
                 node=node.base,
@@ -1291,16 +1359,16 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             )
 
         validate_assignment(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             target_name="list element",
             target_type=element_type,
-            value_type=self._expr_type(node.value),
+            value_type=self.services.expr_type(node.value),
             node=node,
         )
-        self._set_assignment(node, assignment_symbol)
-        self._set_type(node, astx.Int32())
+        self.services.set_assignment(node, assignment_symbol)
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SubscriptExpr) -> None:
         """
         title: Visit SubscriptExpr nodes.
@@ -1308,16 +1376,16 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SubscriptExpr
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.sequence_access = None
         info.tensor_index = None
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
-        self.visit(node.value)
-        if isinstance(self._expr_type(node.value), astx.TensorType):
+        self.services.visit(node.value)
+        if isinstance(self.services.expr_type(node.value), astx.TensorType):
             if node.is_slice:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor slicing requires an explicit view",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -1325,57 +1393,60 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                 return
             access = astx.TensorIndex(node.value, [node.index])
             access.loc = node.loc
-            self.visit(access)
+            self.services.visit(access)
             info.tensor_index = access
-            self._set_type(node, self._expr_type(access))
+            self.services.set_type(node, self.services.expr_type(access))
             return
         if isinstance(
-            self._expr_type(node.value), (astx.SequenceType, astx.Bytes)
+            self.services.expr_type(node.value),
+            (astx.SequenceType, astx.Bytes),
         ):
-            self.visit(node.index)
+            self.services.visit(node.index)
             info.sequence_access = resolve_sequence_access(
-                self._expr_type(node.value)
+                self.services.expr_type(node.value)
             )
             if (
                 node.is_slice
-                or not is_integer_type(self._expr_type(node.index))
-                or isinstance(self._expr_type(node.index), astx.UInt128)
+                or not is_integer_type(self.services.expr_type(node.index))
+                or isinstance(
+                    self.services.expr_type(node.index), astx.UInt128
+                )
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "sequence access requires one integer index; slicing is "
                     "unsupported",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             if info.sequence_access is not None:
-                self._set_type(node, info.sequence_access.element_type)
+                self.services.set_type(node, info.sequence_access.element_type)
             return
-        if is_string_type(self._expr_type(node.value)):
-            resolve_text_subscript(cast(SemanticAnalyzerCore, self), node)
+        if is_string_type(self.services.expr_type(node.value)):
+            self.services.free_resolve_text_subscript(node)
             return
         if not node.is_slice:
-            self.visit(node.index)
-        value_type = self._expr_type(node.value)
-        if resolve_column_index(cast(SemanticAnalyzerCore, self), node):
+            self.services.visit(node.index)
+        value_type = self.services.expr_type(node.value)
+        if self.services.free_resolve_column_index(node):
             return
         if isinstance(value_type, astx.ListType):
             if node.is_slice:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "list slicing is not supported",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-                self._set_type(node, None)
+                self.services.set_type(node, None)
                 return
-            index_type = self._expr_type(node.index)
+            index_type = self.services.expr_type(node.index)
             if not is_integer_type(index_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "list indexing requires an integer index",
                     node=node.index,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             if not list_has_concrete_element_type(value_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "list indexing requires a single concrete list element "
                     "type",
                     node=node.value,
@@ -1384,17 +1455,17 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             self.resolve_list_read(node, list_element_type(value_type))
             return
         if not isinstance(node.value, astx.LiteralDict):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "subscript access is not supported for "
                 f"{display_type_name(value_type)}",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
         if isinstance(node.value, astx.LiteralDict):
             if not node.value.elements:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "SubscriptExpr: key lookup on empty dict",
                     node=node,
                 )
@@ -1416,15 +1487,91 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
                     astx.Identifier,
                 ),
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "SubscriptExpr: only integer and floating-point "
                     "dict keys are supported",
                     node=node,
                 )
-        self._set_type(
+        lookup = resolve_dictionary_lookup(
+            node,
+            tuple(
+                type_
+                for key in node.value.elements
+                if (type_ := self.services.expr_type(key)) is not None
+            ),
+            self.services.expr_type(node.index),
+            self.services.context.diagnostics,
+        )
+        if lookup is not None:
+            info = self.services.semantic(node)
+            info.facts = info.facts.with_fact(
+                DICTIONARY_LOOKUP, lookup, replace=True
+            )
+        self.services.set_type(
             node,
             cast(
                 astx.DataType | None,
                 getattr(value_type, "value_type", None),
             ),
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_literal." + node_type.__name__,
+                "irx.analysis.expression_literal",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionLiteralAnalysis.visit",
+            )
+            for node_type in (
+                astx.LiteralInteger,
+                astx.LiteralFloat,
+                astx.LiteralInt8,
+                astx.LiteralInt16,
+                astx.LiteralInt32,
+                astx.LiteralInt64,
+                astx.LiteralInt128,
+                astx.LiteralUInt8,
+                astx.LiteralUInt16,
+                astx.LiteralUInt32,
+                astx.LiteralUInt64,
+                astx.LiteralUInt128,
+                astx.LiteralFloat16,
+                astx.LiteralFloat32,
+                astx.LiteralFloat64,
+                astx.LiteralBoolean,
+                astx.LiteralNone,
+                astx.LiteralString,
+                astx.AliasExpr,
+                astx.LiteralDate,
+                astx.LiteralTime,
+                astx.LiteralTimestamp,
+                astx.LiteralDateTime,
+                astx.CollectionLength,
+                astx.CollectionIsEmpty,
+                astx.CollectionContains,
+                astx.CollectionIndex,
+                astx.CollectionCount,
+                astx.LiteralList,
+                astx.LiteralTuple,
+                astx.LiteralSet,
+                astx.LiteralDict,
+                astx.ListCreate,
+                astx.ComprehensionClause,
+                astx.ListComprehension,
+                astx.GeneratorExpr,
+                astx.SetComprehension,
+                astx.DictComprehension,
+                astx.ListIndex,
+                astx.ListLength,
+                astx.ListAppend,
+                astx.SubscriptExpr,
+            )
         )

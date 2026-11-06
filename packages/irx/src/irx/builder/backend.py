@@ -8,6 +8,7 @@ import os
 import tempfile
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import astx
 
@@ -17,61 +18,25 @@ from public import public
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.builder.base import Builder as BaseBuilder
 from irx.builder.core import VisitorCore
-from irx.builder.extensions.calls import CallLoweringServices
-from irx.builder.lowering import (
-    ArrayVisitorMixin,
-    BinaryOpVisitorMixin,
-    BufferVisitorMixin,
-    CollectionVisitorMixin,
-    ControlFlowVisitorMixin,
-    FunctionVisitorMixin,
-    GeneratorVisitorMixin,
-    ListVisitorMixin,
-    LiteralVisitorMixin,
-    ModuleVisitorMixin,
-    SystemVisitorMixin,
-    TemporalVisitorMixin,
-    TensorVisitorMixin,
-    UnaryOpVisitorMixin,
-    VariableVisitorMixin,
-)
-from irx.builder.lowering.exceptions import ExceptionVisitorMixin
-from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.runtime.linking import link_executable
 from irx.extensions import HandlerConfiguration
 from irx.typecheck import typechecked
 
+if TYPE_CHECKING:
+    from irx.builder.lowering.composition import LoweringFeatures
+
 
 @public
 @typechecked
-class Visitor(
-    ExceptionVisitorMixin,
-    LiteralVisitorMixin,
-    ListVisitorMixin,
-    CollectionVisitorMixin,
-    VariableVisitorMixin,
-    UnaryOpVisitorMixin,
-    BinaryOpVisitorMixin,
-    ControlFlowVisitorMixin,
-    GeneratorVisitorMixin,
-    FunctionVisitorMixin,
-    TemporalVisitorMixin,
-    NullableVisitorMixin,
-    TensorVisitorMixin,
-    ArrayVisitorMixin,
-    BufferVisitorMixin,
-    SystemVisitorMixin,
-    ModuleVisitorMixin,
-    VisitorCore,
-):
+class Visitor(VisitorCore):
     """
     title: Compose AST handlers for LLVM lowering.
     attributes:
-      call_services:
-        type: CallLoweringServices
+      features:
+        type: LoweringFeatures
     """
 
-    call_services: CallLoweringServices
+    features: LoweringFeatures
 
     def __init__(
         self,
@@ -96,11 +61,11 @@ class Visitor(
             analysis_configuration=analysis_configuration,
             lowering_configuration=lowering_configuration,
         )
-        from irx.builder.extensions.adapters import (  # noqa: PLC0415
-            VisitorCallServices,
+        from irx.builder.lowering.composition import (  # noqa: PLC0415
+            LoweringFeatures,
         )
 
-        self.call_services = VisitorCallServices(self)
+        self.features = LoweringFeatures(self)
 
 
 @public

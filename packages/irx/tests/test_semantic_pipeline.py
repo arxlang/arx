@@ -223,7 +223,7 @@ def test_control_flow_boolean_lowering_failure_is_not_generic_exception() -> (
     condition.loc = SimpleNamespace(line=9, col=4)
 
     with pytest.raises(LoweringError) as exc_info:
-        visitor._lower_boolean_condition(
+        visitor.features.control_flow._lower_boolean_condition(
             ir.Constant(ir.IntType(32), 1),
             node=condition,
             context="if",

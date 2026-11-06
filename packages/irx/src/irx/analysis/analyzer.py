@@ -1,38 +1,16 @@
 """
-title: Semantic analyzer orchestration.
-summary: >-
-  Compose the specialized semantic visitor mixins around a shared analyzer core
-  so traversal, registration, bindings, and rule logic live in smaller modules.
+title: Semantic analyzer orchestration over explicit feature services.
 """
-
-from __future__ import annotations
 
 from public import public
 
 from irx.analysis.handlers.base import SemanticAnalyzerCore
-from irx.analysis.handlers.control_flow import ControlFlowVisitorMixin
-from irx.analysis.handlers.declarations import DeclarationVisitorMixin
-from irx.analysis.handlers.exceptions import ExceptionVisitorMixin
-from irx.analysis.handlers.expressions import ExpressionVisitorMixin
-from irx.analysis.handlers.imports import ImportVisitorMixin
-from irx.analysis.handlers.templates import TemplateVisitorMixin
 from irx.typecheck import typechecked
 
 
 @public
 @typechecked
-class SemanticAnalyzer(
-    ImportVisitorMixin,
-    TemplateVisitorMixin,
-    DeclarationVisitorMixin,
-    ExceptionVisitorMixin,
-    ExpressionVisitorMixin,
-    ControlFlowVisitorMixin,
-    SemanticAnalyzerCore,
-):
+class SemanticAnalyzer(SemanticAnalyzerCore):
     """
-    title: Concrete semantic analyzer.
-    summary: >-
-      Walk AST nodes, attach semantic sidecars, and delegate reusable policy to
-      the extracted factories, registries, and binding tables.
+    title: Analyze through a compiler-local graph and scoped AST dispatcher.
     """

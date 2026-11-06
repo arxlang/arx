@@ -1,5 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Expression Tensor visitors.
@@ -12,10 +11,12 @@ from __future__ import annotations
 
 import astx
 
-from irx.analysis.handlers._expressions.tensor_buffer_support import (
-    ExpressionTensorBufferSupportVisitorMixin,
+from plum import dispatch
+from public import private
+
+from irx.analysis.dependencies.expression_tensor import (
+    ExpressionTensorAnalysisServices,
 )
-from irx.analysis.handlers.base import SemanticAnalyzerCore
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.validation import validate_assignment
 from irx.buffer import (
@@ -41,16 +42,45 @@ from irx.builtins.collections.tensor import (
     validate_tensor_layout,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
+class ExpressionTensorAnalysis:
     """
     title: Expression Tensor visitors.
+    attributes:
+      services:
+        type: ExpressionTensorAnalysisServices
     """
 
-    @SemanticAnalyzerCore.visit.dispatch
+    services: ExpressionTensorAnalysisServices
+
+    def __init__(self, services: ExpressionTensorAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionTensorAnalysisServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionTensorAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.TensorLiteral) -> None:
         """
         title: Visit TensorLiteral nodes.
@@ -60,12 +90,12 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         """
         for item in node.values:
             contextualize_literal(item, node.element_type)
-            self.visit(item)
+            self.services.visit(item)
             validate_assignment(
-                self.context.diagnostics,
+                self.services.context.diagnostics,
                 target_name="tensor element",
                 target_type=node.element_type,
-                value_type=self._expr_type(item),
+                value_type=self.services.expr_type(item),
                 node=item,
             )
 
@@ -73,14 +103,14 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         element_size_bytes = tensor_element_size_bytes(node.element_type)
         if element_size_bytes is None:
             if isinstance(node.element_type, astx.Boolean):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "bool tensors are not supported because bit-packed Arrow "
                     "values are not buffer-view compatible",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
                 )
             else:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor literals require a fixed-width numeric element "
                     "type",
                     node=node,
@@ -101,7 +131,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
             offset_bytes=node.offset_bytes,
         )
         for error in validate_tensor_layout(layout):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 error,
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -109,7 +139,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
 
         expected_value_count = tensor_element_count(layout)
         if len(node.values) != expected_value_count:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor literal value count must match the shape extent",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -121,7 +151,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                 minimum, maximum = bounds
                 storage_bytes = len(node.values) * element_size_bytes
                 if minimum < 0 or maximum + element_size_bytes > storage_bytes:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "tensor literal layout exceeds compact backing "
                         "storage",
                         node=node,
@@ -140,17 +170,17 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                     element_size_bytes,
                 ),
             )
-            self._semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
+            self.services.semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
 
-        self._semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
-        self._semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
+        self.services.semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
+        self.services.semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
             node.element_type
         )
         node.type_ = astx.TensorType(node.element_type, shape=shape)
-        self._set_type(node, node.type_)
-        self._semantic(node).tensor_temporary_owner = True
+        self.services.set_type(node, node.type_)
+        self.services.semantic(node).tensor_temporary_owner = True
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorView) -> None:
         """
         title: Visit TensorView nodes.
@@ -158,26 +188,26 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorView
         """
-        self.visit(node.base)
-        base_type = self._expr_type(node.base)
+        self.services.visit(node.base)
+        base_type = self.services.expr_type(node.base)
         if not isinstance(base_type, astx.TensorType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor views require a TensorType base",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
 
-        base_layout = self._static_tensor_layout(node.base)
+        base_layout = self.services.static_tensor_layout(node.base)
         if base_layout is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor views require static base layout metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
 
-        element_type = self._static_tensor_element_type(node.base)
+        element_type = self.services.static_tensor_element_type(node.base)
         if element_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor views require a known element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -185,7 +215,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
 
         element_size_bytes = tensor_element_size_bytes(element_type)
         if element_type is not None and element_size_bytes is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor views require a fixed-width numeric element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -204,7 +234,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                     base_layout,
                     element_size_bytes,
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "tensor views without explicit strides require a "
                         "C-contiguous base",
                         node=node,
@@ -214,7 +244,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                 for dim in shape:
                     expected_count *= dim
                 if expected_count != tensor_element_count(base_layout):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "tensor reshape views require the same element count "
                         "as the base",
                         node=node,
@@ -233,7 +263,7 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
             offset_bytes=base_offset_bytes + node.offset_bytes,
         )
         for error in validate_tensor_layout(layout):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 error,
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -250,13 +280,13 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                     or view_bounds[1] > base_bounds[1]
                 )
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor view exceeds base storage bounds",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
                 )
 
-        base_flags = self._static_tensor_flags(node.base)
+        base_flags = self.services.static_tensor_flags(node.base)
         if base_flags is None:
             flags = buffer_view_flags(
                 BufferOwnership.EXTERNAL_OWNER,
@@ -300,18 +330,20 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
                 flags |= BUFFER_FLAG_VALIDITY_BITMAP
 
         if element_type is not None:
-            self._semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
+            self.services.semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
                 element_type
             )
             node.type_ = astx.TensorType(element_type, shape=shape)
-        self._semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
-        self._semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
-        self._set_type(node, node.type_)
-        self._semantic(node).tensor_temporary_owner = self._semantic(
+        self.services.semantic(node).extras[TENSOR_LAYOUT_EXTRA] = layout
+        self.services.semantic(node).extras[TENSOR_FLAGS_EXTRA] = flags
+        self.services.set_type(node, node.type_)
+        self.services.semantic(
+            node
+        ).tensor_temporary_owner = self.services.semantic(
             node.base
         ).tensor_temporary_owner
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorIndex) -> None:
         """
         title: Visit TensorIndex nodes.
@@ -319,10 +351,10 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorIndex
         """
-        self.visit(node.base)
+        self.services.visit(node.base)
         for index in node.indices:
-            self.visit(index)
-        element_type = self._validate_tensor_index_operation(
+            self.services.visit(index)
+        element_type = self.services.validate_tensor_index_operation(
             node=node,
             base=node.base,
             indices=node.indices,
@@ -330,9 +362,9 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
         )
         if element_type is not None:
             node.type_ = element_type
-        self._set_type(node, element_type)
+        self.services.set_type(node, element_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorStore) -> None:
         """
         title: Visit TensorStore nodes.
@@ -340,28 +372,28 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorStore
         """
-        self.visit(node.base)
+        self.services.visit(node.base)
         for index in node.indices:
-            self.visit(index)
-        element_type = self._validate_tensor_index_operation(
+            self.services.visit(index)
+        element_type = self.services.validate_tensor_index_operation(
             node=node,
             base=node.base,
             indices=node.indices,
             is_store=True,
         )
         contextualize_literal(node.value, element_type)
-        self.visit(node.value)
+        self.services.visit(node.value)
         if element_type is not None:
             validate_assignment(
-                self.context.diagnostics,
+                self.services.context.diagnostics,
                 target_name="tensor element",
                 target_type=element_type,
-                value_type=self._expr_type(node.value),
+                value_type=self.services.expr_type(node.value),
                 node=node,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorNDim) -> None:
         """
         title: Visit TensorNDim nodes.
@@ -369,16 +401,16 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorNDim
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor ndim requires a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorShape) -> None:
         """
         title: Visit TensorShape nodes.
@@ -386,29 +418,29 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorShape
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor shape queries require a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        layout = self._static_tensor_layout(node.base)
+        layout = self.services.static_tensor_layout(node.base)
         if layout is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor shape queries require static layout metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
         elif node.axis < 0 or node.axis >= layout.ndim:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor shape axis is out of bounds",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorStride) -> None:
         """
         title: Visit TensorStride nodes.
@@ -416,29 +448,29 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorStride
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor stride queries require a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        layout = self._static_tensor_layout(node.base)
+        layout = self.services.static_tensor_layout(node.base)
         if layout is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor stride queries require static layout metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
         elif node.axis < 0 or node.axis >= layout.ndim:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor stride axis is out of bounds",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorElementCount) -> None:
         """
         title: Visit TensorElementCount nodes.
@@ -446,22 +478,22 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorElementCount
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor element_count requires a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        if self._static_tensor_layout(node.base) is None:
-            self.context.diagnostics.add(
+        if self.services.static_tensor_layout(node.base) is None:
+            self.services.context.diagnostics.add(
                 "tensor element_count requires static layout metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorByteOffset) -> None:
         """
         title: Visit TensorByteOffset nodes.
@@ -469,18 +501,18 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorByteOffset
         """
-        self.visit(node.base)
+        self.services.visit(node.base)
         for index in node.indices:
-            self.visit(index)
-        self._validate_tensor_index_operation(
+            self.services.visit(index)
+        self.services.validate_tensor_index_operation(
             node=node,
             base=node.base,
             indices=node.indices,
             is_store=False,
         )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorRetain) -> None:
         """
         title: Visit TensorRetain nodes.
@@ -488,21 +520,21 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorRetain
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor retain requires a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._validate_tensor_lifetime_operation(
+        self.services.validate_tensor_lifetime_operation(
             node=node,
             view=node.base,
             operation="retain",
         )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TensorRelease) -> None:
         """
         title: Visit TensorRelease nodes.
@@ -510,16 +542,46 @@ class ExpressionTensorVisitorMixin(ExpressionTensorBufferSupportVisitorMixin):
           node:
             type: astx.TensorRelease
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.TensorType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.TensorType):
+            self.services.context.diagnostics.add(
                 "tensor release requires a TensorType value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
-        self._validate_tensor_lifetime_operation(
+        self.services.validate_tensor_lifetime_operation(
             node=node,
             view=node.base,
             operation="release",
         )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_tensor." + node_type.__name__,
+                "irx.analysis.expression_tensor",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionTensorAnalysis.visit",
+            )
+            for node_type in (
+                astx.TensorLiteral,
+                astx.TensorView,
+                astx.TensorIndex,
+                astx.TensorStore,
+                astx.TensorNDim,
+                astx.TensorShape,
+                astx.TensorStride,
+                astx.TensorElementCount,
+                astx.TensorByteOffset,
+                astx.TensorRetain,
+                astx.TensorRelease,
+            )
+        )

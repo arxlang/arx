@@ -1,45 +1,144 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Variable visitor mixins for llvmliteir.
+title: Variable lowering implementations for llvmliteir.
 """
 
-from typing import Any, cast
+from typing import cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
 from public import private
 
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import OwnershipKind, ResourceKind
 from irx.analysis.types import is_string_type
-from irx.builder.core import (
-    VisitorCore,
-    semantic_assignment_key,
-    semantic_symbol_key,
-)
 from irx.builder.diagnostics import (
     raise_lowering_error,
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.contracts import VariableServices
 from irx.builder.runtime import safe_pop
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
+from irx.builder.services.representations import (
+    semantic_assignment_key,
+    semantic_info,
+    semantic_symbol_key,
+)
 from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
     LIST_DESTROY_SYMBOL,
     LIST_RUNTIME_FEATURE,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class VariableVisitorMixin(ClassVisitorMixin):
+class VariableLowering:
     """
     title: Lower variable declarations and references to LLVM.
+    attributes:
+      services:
+        type: VariableServices
     """
+
+    services: VariableServices
+
+    def __init__(self, services: VariableServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: VariableServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no variables handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.variables.VariableAssignment",
+                "irx.variables",
+                "lowering",
+                astx.VariableAssignment,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.Identifier",
+                "irx.variables",
+                "lowering",
+                astx.Identifier,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.FieldAccess",
+                "irx.variables",
+                "lowering",
+                astx.FieldAccess,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.BaseFieldAccess",
+                "irx.variables",
+                "lowering",
+                astx.BaseFieldAccess,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.StaticFieldAccess",
+                "irx.variables",
+                "lowering",
+                astx.StaticFieldAccess,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.VariableDeclaration",
+                "irx.variables",
+                "lowering",
+                astx.VariableDeclaration,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+            contribute_node(
+                "llvm.variables.InlineVariableDeclaration",
+                "irx.variables",
+                "lowering",
+                astx.InlineVariableDeclaration,
+                self.visit,
+                source="irx.builder.lowering.variables.VariableLowering.visit",
+            ),
+        )
 
     @private
     def register_generator_cleanup(
@@ -69,17 +168,17 @@ class VariableVisitorMixin(ClassVisitorMixin):
             metadata="owner_symbol_id",
             context="generator local cleanup",
         )
-        free = self.require_runtime_symbol("libc", "free")
+        free = self.services.require_runtime_symbol("libc", "free")
 
         def release_iterator() -> None:
             """
             title: Drop the lexical owner of a scalar-only generator.
             """
-            value = self._llvm.ir_builder.load(storage)
-            frame = self._llvm.ir_builder.extract_value(value, 0)
-            self._llvm.ir_builder.call(free, [frame])
+            value = self.services.llvm.ir_builder.load(storage)
+            frame = self.services.llvm.ir_builder.extract_value(value, 0)
+            self.services.llvm.ir_builder.call(free, [frame])
 
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(
                 release_iterator,
                 owner_symbol_id=owner,
@@ -124,14 +223,14 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 "semantic owner id",
                 node=node,
             )
-        if self._current_generator_frame_ptr is not None:
+        if self.services.generator_frame_state.frame_ptr is not None:
             raise_lowering_internal_error(
                 "owned list locals in generator frames require generator "
                 "lifecycle cleanup",
                 node=node,
             )
 
-        destroy_fn = self.require_runtime_symbol(
+        destroy_fn = self.services.require_runtime_symbol(
             LIST_RUNTIME_FEATURE,
             LIST_DESTROY_SYMBOL,
         )
@@ -140,9 +239,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
             """
             title: Destroy the captured list storage.
             """
-            self._llvm.ir_builder.call(destroy_fn, [list_ptr])
+            self.services.llvm.ir_builder.call(destroy_fn, [list_ptr])
 
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(
                 destroy_list,
                 owner_symbol_id=ownership.owner_symbol_id,
@@ -174,30 +273,38 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 "ownership transfer",
                 node=node,
             )
-        destroy_fn = self.require_runtime_symbol(
+        destroy_fn = self.services.require_runtime_symbol(
             LIST_RUNTIME_FEATURE,
             LIST_DESTROY_SYMBOL,
         )
-        self._llvm.ir_builder.call(destroy_fn, [list_ptr])
+        self.services.llvm.ir_builder.call(destroy_fn, [list_ptr])
 
     def _register_owned_string_cleanup(
         self,
-        node: astx.VariableDeclaration
-        | astx.InlineVariableDeclaration
-        | astx.Identifier,
+        node: astx.AST,
         string_ptr: ir.Value,
     ) -> None:
         """
         title: Register lexical cleanup for one semantically owned string.
         parameters:
           node:
-            type: >-
-              astx.VariableDeclaration | astx.InlineVariableDeclaration |
-              astx.Identifier
+            type: astx.AST
           string_ptr:
             type: ir.Value
         """
-        if not is_string_type(self._resolved_ast_type(node)):
+        if not isinstance(
+            node,
+            (
+                astx.VariableDeclaration,
+                astx.InlineVariableDeclaration,
+                astx.Identifier,
+            ),
+        ):
+            raise_lowering_internal_error(
+                "owned string cleanup requires a resolved binding target",
+                node=node,
+            )
+        if not is_string_type(resolved_ast_type(node)):
             return
         ownership = resource_ownership(node)
         if ownership is None:
@@ -218,26 +325,26 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 "an invalid ownership contract",
                 node=node,
             )
-        if self._current_generator_frame_ptr is not None:
+        if self.services.generator_frame_state.frame_ptr is not None:
             raise_lowering_internal_error(
                 "owned string locals in generator frames require generator "
                 "lifecycle cleanup",
                 node=node,
             )
 
-        free_fn = self.require_runtime_symbol("libc", "free")
+        free_fn = self.services.require_runtime_symbol("libc", "free")
 
         def destroy_string() -> None:
             """
             title: Destroy the currently stored string pointer.
             """
-            pointer = self._llvm.ir_builder.load(
+            pointer = self.services.llvm.ir_builder.load(
                 string_ptr,
                 name=f"{node.name}_string_cleanup",
             )
-            self._llvm.ir_builder.call(free_fn, [pointer])
+            self.services.llvm.ir_builder.call(free_fn, [pointer])
 
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(
                 destroy_string,
                 owner_symbol_id=ownership.owner_symbol_id,
@@ -280,14 +387,14 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 "validated ownership transfer",
                 node=node,
             )
-        old_pointer = self._llvm.ir_builder.load(
+        old_pointer = self.services.llvm.ir_builder.load(
             string_ptr,
             name=f"{target_name}_replaced_string",
         )
-        free_fn = self.require_runtime_symbol("libc", "free")
-        self._llvm.ir_builder.call(free_fn, [old_pointer])
+        free_fn = self.services.require_runtime_symbol("libc", "free")
+        self.services.llvm.ir_builder.call(free_fn, [old_pointer])
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.VariableAssignment) -> None:
         """
         title: Visit VariableAssignment nodes.
@@ -296,47 +403,49 @@ class VariableVisitorMixin(ClassVisitorMixin):
             type: astx.VariableAssignment
         """
         var_name = expr.name
-        var_key = semantic_assignment_key(expr, var_name)
+        var_key = semantic_assignment_key(expr)
 
-        if var_key in self.const_vars:
-            raise Exception(
-                f"Cannot assign to '{var_name}': declared as constant"
+        if var_key in self.services.function_state.const_vars:
+            raise_lowering_internal_error(
+                f"Cannot assign to '{var_name}': declared as constant",
+                node=expr,
             )
 
-        self.visit_child(expr.value)
-        llvm_value = safe_pop(self.result_stack)
+        self.services.visit_child(expr.value)
+        llvm_value = safe_pop(self.services.function_state.result_stack)
         if llvm_value is None:
-            raise Exception("codegen: Invalid value in VariableAssignment.")
-        llvm_value = self._cast_ast_value(
+            raise_lowering_internal_error(
+                "codegen: Invalid value in VariableAssignment.", node=expr
+            )
+        llvm_value = self.services.numeric.cast_scalar(
             llvm_value,
-            source_type=self._resolved_ast_type(expr.value),
-            target_type=self._resolved_ast_type(expr),
+            source_type=resolved_ast_type(expr.value),
+            target_type=resolved_ast_type(expr),
         )
 
-        llvm_var = self.named_values.get(var_key)
+        llvm_var = self.services.function_state.named_values.get(var_key)
         if not llvm_var:
-            raise Exception(
-                f"Identifier '{var_name}' not found in the named values."
+            raise_lowering_internal_error(
+                f"Identifier '{var_name}' not found in the named values.",
+                node=expr,
             )
 
-        if isinstance(
-            self._resolved_ast_type(expr), (astx.ListType, astx.Bytes)
-        ):
+        if isinstance(resolved_ast_type(expr), (astx.ListType, astx.Bytes)):
             self._destroy_replaced_list(
                 expr,
                 llvm_var,
                 target_name=expr.name,
             )
-        elif is_string_type(self._resolved_ast_type(expr)):
+        elif is_string_type(resolved_ast_type(expr)):
             self._destroy_replaced_string(
                 expr,
                 llvm_var,
                 target_name=expr.name,
             )
-        self._llvm.ir_builder.store(llvm_value, llvm_var)
-        self.result_stack.append(llvm_value)
+        self.services.llvm.ir_builder.store(llvm_value, llvm_var)
+        self.services.function_state.result_stack.append(llvm_value)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.Identifier) -> None:
         """
         title: Visit Identifier nodes.
@@ -344,21 +453,32 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.Identifier
         """
-        symbol_key = semantic_symbol_key(node, node.name)
-        expr_var = self.named_values.get(symbol_key)
+        # Namespace references have module identities, not local symbols.
+        if semantic_info(node).resolved_symbol is None:
+            namespace_value = self.services.layout.namespace_value(node)
+            if namespace_value is not None:
+                self.services.function_state.result_stack.append(
+                    namespace_value
+                )
+                return
+
+        symbol_key = semantic_symbol_key(node)
+        expr_var = self.services.function_state.named_values.get(symbol_key)
         if expr_var:
-            result = self._llvm.ir_builder.load(expr_var, node.name)
-            self.result_stack.append(result)
+            result = self.services.llvm.ir_builder.load(expr_var, node.name)
+            self.services.function_state.result_stack.append(result)
             return
 
-        namespace_value = self._namespace_value(node)
+        namespace_value = self.services.layout.namespace_value(node)
         if namespace_value is not None:
-            self.result_stack.append(namespace_value)
+            self.services.function_state.result_stack.append(namespace_value)
             return
 
-        raise Exception(f"Unknown variable name: {node.name}")
+        raise_lowering_internal_error(
+            f"Unknown variable name: {node.name}", node=node
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.FieldAccess) -> None:
         """
         title: Visit FieldAccess nodes.
@@ -366,11 +486,11 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FieldAccess
         """
-        namespace_value = self._namespace_value(node)
+        namespace_value = self.services.layout.namespace_value(node)
         if namespace_value is not None:
-            self.visit_child(node.value)
-            _ = safe_pop(self.result_stack)
-            self.result_stack.append(namespace_value)
+            self.services.visit_child(node.value)
+            _ = safe_pop(self.services.function_state.result_stack)
+            self.services.function_state.result_stack.append(namespace_value)
             return
 
         resolved_module_member_access = getattr(
@@ -380,9 +500,11 @@ class VariableVisitorMixin(ClassVisitorMixin):
         )
         if resolved_module_member_access is not None:
             raise_lowering_error(
-                "module namespace member references are lowerable only when "
-                "they resolve to nested namespaces or are used in call "
-                "position",
+                (
+                    "module namespace member references are lowerable only"
+                    " when they resolve to nested namespaces or are used "
+                    "in call position"
+                ),
                 code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
                 node=node,
                 hint=(
@@ -400,8 +522,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
             )
             is None
         ):
-            parent_ptr = self._field_address(node.value)
-            parent_value = self._llvm.ir_builder.load(
+            parent_ptr = self.services.layout.field_address(node.value)
+            parent_value = self.services.llvm.ir_builder.load(
                 parent_ptr,
                 f"{node.field_name}_parent",
             )
@@ -411,20 +533,24 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 None,
             )
             if resolved is None:
-                raise Exception("codegen: unresolved field access.")
-            result = self._llvm.ir_builder.extract_value(
+                raise_lowering_internal_error(
+                    "codegen: unresolved field access.", node=node
+                )
+            result = self.services.llvm.ir_builder.extract_value(
                 parent_value,
                 resolved.field.index,
                 node.field_name,
             )
-            self.result_stack.append(result)
+            self.services.function_state.result_stack.append(result)
             return
 
-        field_ptr = self._field_address(node)
-        result = self._llvm.ir_builder.load(field_ptr, node.field_name)
-        self.result_stack.append(self.class_field_value(node, result))
+        field_ptr = self.services.layout.field_address(node)
+        result = self.services.llvm.ir_builder.load(field_ptr, node.field_name)
+        self.services.function_state.result_stack.append(
+            self.services.class_field_value(node, result)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.BaseFieldAccess) -> None:
         """
         title: Visit BaseFieldAccess nodes.
@@ -432,11 +558,13 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.BaseFieldAccess
         """
-        field_ptr = self._base_class_field_address(node)
-        result = self._llvm.ir_builder.load(field_ptr, node.field_name)
-        self.result_stack.append(self.class_field_value(node, result))
+        field_ptr = self.services.layout.base_class_field_address(node)
+        result = self.services.llvm.ir_builder.load(field_ptr, node.field_name)
+        self.services.function_state.result_stack.append(
+            self.services.class_field_value(node, result)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.StaticFieldAccess) -> None:
         """
         title: Visit StaticFieldAccess nodes.
@@ -444,11 +572,11 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.StaticFieldAccess
         """
-        field_ptr = self._static_class_field_address(node)
-        result = self._llvm.ir_builder.load(field_ptr, node.field_name)
-        self.result_stack.append(result)
+        field_ptr = self.services.layout.static_class_field_address(node)
+        result = self.services.llvm.ir_builder.load(field_ptr, node.field_name)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.VariableDeclaration) -> None:
         """
         title: Visit VariableDeclaration nodes.
@@ -456,44 +584,56 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.VariableDeclaration
         """
-        symbol_key = semantic_symbol_key(node, node.name)
-        existing_storage = self.named_values.get(symbol_key)
-        if existing_storage and self._current_generator_frame_ptr is None:
-            raise Exception(f"Identifier already declared: {node.name}")
+        symbol_key = semantic_symbol_key(node)
+        existing_storage = self.services.function_state.named_values.get(
+            symbol_key
+        )
+        if (
+            existing_storage
+            and self.services.generator_frame_state.frame_ptr is None
+        ):
+            raise_lowering_internal_error(
+                f"Identifier already declared: {node.name}", node=node
+            )
 
         type_str = node.type_.__class__.__name__.lower()
-        llvm_type = self._llvm_type_for_ast_type(node.type_)
+        llvm_type = self.services.types.llvm_type(node.type_)
         if llvm_type is None:
-            raise Exception(
-                f"codegen: Unknown LLVM type for variable '{node.name}'."
+            raise_lowering_internal_error(
+                f"codegen: Unknown LLVM type for variable '{node.name}'.",
+                node=node,
             )
         if node.value is not None and not isinstance(
             node.value, astx.Undefined
         ):
-            self.visit_child(node.value)
-            init_val = safe_pop(self.result_stack)
+            self.services.visit_child(node.value)
+            init_val = safe_pop(self.services.function_state.result_stack)
             if init_val is None:
-                raise Exception("Initializer code generation failed.")
-            init_val = self._cast_ast_value(
+                raise_lowering_internal_error(
+                    "Initializer code generation failed.", node=node
+                )
+            init_val = self.services.numeric.cast_scalar(
                 init_val,
-                source_type=self._resolved_ast_type(node.value),
+                source_type=resolved_ast_type(node.value),
                 target_type=node.type_,
             )
 
             if type_str == "string":
-                alloca = self.create_entry_block_alloca(
+                alloca = self.services.create_entry_block_alloca(
                     node.name, "stringascii"
                 )
             elif existing_storage is not None:
                 alloca = existing_storage
             else:
-                alloca = self.create_entry_block_alloca(node.name, llvm_type)
-            self._llvm.ir_builder.store(init_val, alloca)
+                alloca = self.services.create_entry_block_alloca(
+                    node.name, llvm_type
+                )
+            self.services.llvm.ir_builder.store(init_val, alloca)
         else:
             if type_str == "string":
-                empty_str_type = ir.ArrayType(self._llvm.INT8_TYPE, 1)
+                empty_str_type = ir.ArrayType(self.services.llvm.INT8_TYPE, 1)
                 empty_str_global = ir.GlobalVariable(
-                    self._llvm.module,
+                    self.services.llvm.module,
                     empty_str_type,
                     name=f"empty_str_{node.name}",
                 )
@@ -502,7 +642,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 empty_str_global.initializer = ir.Constant(
                     empty_str_type, bytearray(b"\0")
                 )
-                init_val = self._llvm.ir_builder.gep(
+                init_val = self.services.llvm.ir_builder.gep(
                     empty_str_global,
                     [
                         ir.Constant(ir.IntType(32), 0),
@@ -513,7 +653,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(
+                    else self.services.create_entry_block_alloca(
                         node.name, "stringascii"
                     )
                 )
@@ -522,17 +662,21 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
                 init_val = cast(
                     ir.Constant,
-                    cast(Any, self)._empty_list_value_for_type(node.type_),
+                    self.services.empty_list_value_for_type(node.type_),
                 )
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             elif isinstance(
                 node.type_,
@@ -542,64 +686,80 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             elif isinstance(node.type_, astx.GeneratorType):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             elif "float" in type_str:
-                init_val = ir.Constant(self._llvm.get_data_type(type_str), 0.0)
+                init_val = ir.Constant(
+                    self.services.llvm.get_data_type(type_str), 0.0
+                )
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
             else:
-                init_val = ir.Constant(self._llvm.get_data_type(type_str), 0)
+                init_val = ir.Constant(
+                    self.services.llvm.get_data_type(type_str), 0
+                )
                 alloca = (
                     existing_storage
                     if existing_storage is not None
-                    else self.create_entry_block_alloca(node.name, llvm_type)
+                    else self.services.create_entry_block_alloca(
+                        node.name, llvm_type
+                    )
                 )
 
-            self._llvm.ir_builder.store(init_val, alloca)
+            self.services.llvm.ir_builder.store(init_val, alloca)
 
         if node.mutability == astx.MutabilityKind.constant:
-            self.const_vars.add(symbol_key)
-        self.named_values[symbol_key] = alloca
+            self.services.function_state.const_vars.add(symbol_key)
+        self.services.function_state.named_values[symbol_key] = alloca
         if isinstance(node.type_, astx.FileType):
             ownership = resource_ownership(node)
             if ownership is None or ownership.owner_symbol_id is None:
                 raise_lowering_internal_error(
                     "file local is missing ownership", node=node
                 )
-            self.file_cleanup(node, init_val, ownership.owner_symbol_id)
+            self.services.file_cleanup(
+                node, init_val, ownership.owner_symbol_id
+            )
         if isinstance(
             node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
         ):
-            acquired = self.class_acquire(node, init_val)
-            self._llvm.ir_builder.store(acquired, alloca)
+            acquired = self.services.class_acquire(node, init_val)
+            self.services.llvm.ir_builder.store(acquired, alloca)
             ownership = resource_ownership(node)
             assert ownership is not None
-            self.class_cleanup(
+            self.services.class_cleanup(
                 node, alloca, ownership.owner_symbol_id, storage=True
             )
         self._register_owned_list_cleanup(node, alloca)
         self.register_generator_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
         """
         title: Visit InlineVariableDeclaration nodes.
@@ -607,26 +767,40 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.InlineVariableDeclaration
         """
-        symbol_key = semantic_symbol_key(node, node.name)
-        existing_storage = self.named_values.get(symbol_key)
-        if existing_storage and self._current_generator_frame_ptr is None:
-            raise Exception(f"Identifier already declared: {node.name}")
+        symbol_key = semantic_symbol_key(node)
+        existing_storage = self.services.function_state.named_values.get(
+            symbol_key
+        )
+        if (
+            existing_storage
+            and self.services.generator_frame_state.frame_ptr is None
+        ):
+            raise_lowering_internal_error(
+                f"Identifier already declared: {node.name}", node=node
+            )
 
         type_str = node.type_.__class__.__name__.lower()
-        llvm_type = self._llvm_type_for_ast_type(node.type_)
+        llvm_type = self.services.types.llvm_type(node.type_)
         if llvm_type is None:
-            raise Exception(
-                "codegen: Unknown LLVM type for inline variable "
-                f"'{node.name}'."
+            raise_lowering_internal_error(
+                (
+                    "codegen: Unknown LLVM type for inline "
+                    "variable '"
+                    f"{node.name}"
+                    "'."
+                ),
+                node=node,
             )
         if node.value is not None:
-            self.visit_child(node.value)
-            init_val = safe_pop(self.result_stack)
+            self.services.visit_child(node.value)
+            init_val = safe_pop(self.services.function_state.result_stack)
             if init_val is None:
-                raise Exception("Initializer code generation failed.")
-            init_val = self._cast_ast_value(
+                raise_lowering_internal_error(
+                    "Initializer code generation failed.", node=node
+                )
+            init_val = self.services.numeric.cast_scalar(
                 init_val,
-                source_type=self._resolved_ast_type(node.value),
+                source_type=resolved_ast_type(node.value),
                 target_type=node.type_,
             )
         elif isinstance(node.type_, astx.StructType):
@@ -634,7 +808,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
             init_val = cast(
                 ir.Constant,
-                cast(Any, self)._empty_list_value_for_type(node.type_),
+                self.services.empty_list_value_for_type(node.type_),
             )
         elif isinstance(
             node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
@@ -645,39 +819,49 @@ class VariableVisitorMixin(ClassVisitorMixin):
         elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
             init_val = ir.Constant(llvm_type, None)
         elif "float" in type_str:
-            init_val = ir.Constant(self._llvm.get_data_type(type_str), 0.0)
+            init_val = ir.Constant(
+                self.services.llvm.get_data_type(type_str), 0.0
+            )
         else:
-            init_val = ir.Constant(self._llvm.get_data_type(type_str), 0)
+            init_val = ir.Constant(
+                self.services.llvm.get_data_type(type_str), 0
+            )
 
         if type_str == "string":
-            alloca = self.create_entry_block_alloca(node.name, "stringascii")
+            alloca = self.services.create_entry_block_alloca(
+                node.name, "stringascii"
+            )
         elif existing_storage is not None:
             alloca = existing_storage
         else:
-            alloca = self.create_entry_block_alloca(node.name, llvm_type)
+            alloca = self.services.create_entry_block_alloca(
+                node.name, llvm_type
+            )
 
-        self._llvm.ir_builder.store(init_val, alloca)
+        self.services.llvm.ir_builder.store(init_val, alloca)
         if node.mutability == astx.MutabilityKind.constant:
-            self.const_vars.add(symbol_key)
-        self.named_values[symbol_key] = alloca
+            self.services.function_state.const_vars.add(symbol_key)
+        self.services.function_state.named_values[symbol_key] = alloca
         if isinstance(node.type_, astx.FileType):
             ownership = resource_ownership(node)
             if ownership is None or ownership.owner_symbol_id is None:
                 raise_lowering_internal_error(
                     "file local is missing ownership", node=node
                 )
-            self.file_cleanup(node, init_val, ownership.owner_symbol_id)
+            self.services.file_cleanup(
+                node, init_val, ownership.owner_symbol_id
+            )
         if isinstance(
             node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
         ):
-            acquired = self.class_acquire(node, init_val)
-            self._llvm.ir_builder.store(acquired, alloca)
+            acquired = self.services.class_acquire(node, init_val)
+            self.services.llvm.ir_builder.store(acquired, alloca)
             ownership = resource_ownership(node)
             assert ownership is not None
-            self.class_cleanup(
+            self.services.class_cleanup(
                 node, alloca, ownership.owner_symbol_id, storage=True
             )
         self._register_owned_list_cleanup(node, alloca)
         self.register_generator_cleanup(node, alloca)
         self._register_owned_string_cleanup(node, alloca)
-        self.result_stack.append(init_val)
+        self.services.function_state.result_stack.append(init_val)

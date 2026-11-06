@@ -1,42 +1,158 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: DataFrame visitor mixin for llvmliteir.
+title: DataFrame lowering implementation for llvmliteir.
 """
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
 from public import private
 
 from irx.analysis.resolved_nodes import SemanticInfo
 from irx.analysis.types import is_float_type, is_unsigned_type
-from irx.builder.core import VisitorCore
 from irx.builder.diagnostics import (
+    raise_lowering_error,
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.contracts import DataFrameServices
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.record_batch_api import ARROW_API_SIGNATURES
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
 from irx.builder.state import CleanupAction
 from irx.builder.types import is_int_type
 from irx.builtins.collections.dataframe import (
     DATAFRAME_COLUMN_INDEX_EXTRA,
     dataframe_type_id,
 )
+from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class DataFrameVisitorMixin(ClassVisitorMixin):
+class DataFrameLowering:
     """
-    title: DataFrame visitor mixin.
+    title: DataFrame lowering implementation.
+    attributes:
+      services:
+        type: DataFrameServices
     """
+
+    services: DataFrameServices
+
+    def __init__(self, services: DataFrameServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: DataFrameServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no dataframe handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.dataframe.DataFrameLiteral",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameLiteral,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameColumnAccess",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameColumnAccess,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameStringColumnAccess",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameStringColumnAccess,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameRowCount",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameRowCount,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameColumnCount",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameColumnCount,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameRetain",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameRetain,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.DataFrameRelease",
+                "irx.dataframe",
+                "lowering",
+                astx.DataFrameRelease,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.SeriesRetain",
+                "irx.dataframe",
+                "lowering",
+                astx.SeriesRetain,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+            contribute_node(
+                "llvm.dataframe.SeriesRelease",
+                "irx.dataframe",
+                "lowering",
+                astx.SeriesRelease,
+                self.visit,
+                source="irx.builder.lowering.dataframe.DataFrameLowering.visit",
+            ),
+        )
 
     @private
     def checked_native_call(
@@ -64,19 +180,23 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         operands = list(args)
         if contract[0] != "v":
             output_type = function.function_type.args[-2].pointee
-            output = self.create_entry_block_alloca(
+            output = self.services.create_entry_block_alloca(
                 "native.result", output_type
             )
             operands.append(output)
-        error = self.create_entry_block_alloca(
+        error = self.services.create_entry_block_alloca(
             "native.error", ir.ArrayType(ir.IntType(8), 1024)
         )
         zero = ir.Constant(ir.IntType(32), 0)
-        message = self._llvm.ir_builder.gep(error, [zero, zero])
+        message = self.services.llvm.ir_builder.gep(error, [zero, zero])
         operands.append(message)
-        status = self._llvm.ir_builder.call(function, operands)
+        status = self.services.llvm.ir_builder.call(function, operands)
         self.check_arrow_status(node, status, function.name, message)
-        return status if output is None else self._llvm.ir_builder.load(output)
+        return (
+            status
+            if output is None
+            else self.services.llvm.ir_builder.load(output)
+        )
 
     @private
     def check_arrow_status(
@@ -98,26 +218,26 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           message:
             type: ir.Value | None
         """
-        function = self._llvm.ir_builder.function
+        function = self.services.llvm.ir_builder.function
         success = function.append_basic_block(operation + ".success")
         failure = function.append_basic_block(operation + ".failure")
-        self._llvm.ir_builder.cbranch(
-            self._llvm.ir_builder.icmp_signed(
+        self.services.llvm.ir_builder.cbranch(
+            self.services.llvm.ir_builder.icmp_signed(
                 "==", status, ir.Constant(status.type, 0)
             ),
             success,
             failure,
         )
-        self._llvm.ir_builder.position_at_end(failure)
+        self.services.llvm.ir_builder.position_at_end(failure)
         if message is None:
-            message = self._llvm.ir_builder.call(
-                self.require_runtime_symbol(
+            message = self.services.llvm.ir_builder.call(
+                self.services.require_runtime_symbol(
                     "dataframe", "irx_arrow_last_error"
                 ),
                 [],
             )
         fallback = function.append_basic_block("arrow.runtime_error")
-        switch = self._llvm.ir_builder.switch(status, fallback)
+        switch = self.services.llvm.ir_builder.switch(status, fallback)
         for code, role in (
             (-2, "ValueError"),
             (-3, "IndexError"),
@@ -128,20 +248,20 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         ):
             block = function.append_basic_block("arrow." + role)
             switch.add_case(ir.Constant(status.type, code), block)
-            self._llvm.ir_builder.position_at_end(block)
-            self.raise_runtime_exception(
+            self.services.llvm.ir_builder.position_at_end(block)
+            self.services.raise_runtime_exception(
                 node, role, message, code="ARX-RUNTIME-ARROW-001"
             )
         allocation = function.append_basic_block("arrow.allocation_failure")
         switch.add_case(ir.Constant(status.type, -7), allocation)
-        self._llvm.ir_builder.position_at_end(allocation)
-        self.fatal_status(node, status)
-        self._llvm.ir_builder.unreachable()
-        self._llvm.ir_builder.position_at_end(fallback)
-        self.raise_runtime_exception(
+        self.services.llvm.ir_builder.position_at_end(allocation)
+        self.services.fatal_status(node, status)
+        self.services.llvm.ir_builder.unreachable()
+        self.services.llvm.ir_builder.position_at_end(fallback)
+        self.services.raise_runtime_exception(
             node, "RuntimeError", message, code="ARX-RUNTIME-ARROW-001"
         )
-        self._llvm.ir_builder.position_at_end(success)
+        self.services.llvm.ir_builder.position_at_end(success)
 
     @private
     def track_native_handle(
@@ -166,14 +286,14 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             """
             title: Destroy the handle through its declared native boundary.
             """
-            function = self.require_runtime_symbol(feature, destroy)
+            function = self.services.require_runtime_symbol(feature, destroy)
             if destroy in ARROW_API_SIGNATURES:
                 self.checked_native_call(node, function, [value])
             else:
-                self._llvm.ir_builder.call(function, [value])
+                self.services.llvm.ir_builder.call(function, [value])
 
         action = CleanupAction(release)
-        self.cleanup_stack.append(action)
+        self.services.exit_state.cleanup_stack.append(action)
         return action
 
     @private
@@ -184,7 +304,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           action:
             type: CleanupAction
         """
-        self.cleanup_stack.remove(action)
+        self.services.exit_state.cleanup_stack.remove(action)
         action.emitter()
 
     def _append_dataframe_value(
@@ -203,28 +323,30 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           target_type:
             type: astx.DataType
         """
-        self.visit_child(value_node)
-        value = safe_pop(self.result_stack)
+        self.services.visit_child(value_node)
+        value = safe_pop(self.services.function_state.result_stack)
         if value is None:
-            raise Exception("dataframe column value lowering failed")
-        value = self._cast_ast_value(
+            raise_lowering_internal_error(
+                "dataframe column value lowering failed", node=value_node
+            )
+        value = self.services.numeric.cast_scalar(
             value,
-            source_type=self._resolved_ast_type(value_node),
+            source_type=resolved_ast_type(value_node),
             target_type=target_type,
         )
 
         if is_float_type(target_type):
-            append = self.require_runtime_symbol(
+            append = self.services.require_runtime_symbol(
                 "array",
                 "irx_arrow_array_builder_append_double",
             )
-            if value.type != self._llvm.DOUBLE_TYPE:
-                value = self._llvm.ir_builder.fpext(
+            if value.type != self.services.llvm.DOUBLE_TYPE:
+                value = self.services.llvm.ir_builder.fpext(
                     value,
-                    self._llvm.DOUBLE_TYPE,
+                    self.services.llvm.DOUBLE_TYPE,
                     "dataframe_fpext",
                 )
-            status = self._llvm.ir_builder.call(
+            status = self.services.llvm.ir_builder.call(
                 append,
                 [builder_handle, value],
             )
@@ -233,35 +355,40 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             )
             return
 
-        append = self.require_runtime_symbol(
+        append = self.services.require_runtime_symbol(
             "array",
             "irx_arrow_array_builder_append_int",
         )
         if not is_int_type(value.type):
-            raise Exception("dataframe column value must lower to a scalar")
-        if value.type.width < self._llvm.INT64_TYPE.width:
+            raise_lowering_internal_error(
+                "dataframe column value must lower to a scalar",
+                node=value_node,
+            )
+        if value.type.width < self.services.llvm.INT64_TYPE.width:
             if is_unsigned_type(target_type) or isinstance(
                 target_type,
                 astx.Boolean,
             ):
-                value = self._llvm.ir_builder.zext(
+                value = self.services.llvm.ir_builder.zext(
                     value,
-                    self._llvm.INT64_TYPE,
+                    self.services.llvm.INT64_TYPE,
                     "dataframe_zext",
                 )
             else:
-                value = self._llvm.ir_builder.sext(
+                value = self.services.llvm.ir_builder.sext(
                     value,
-                    self._llvm.INT64_TYPE,
+                    self.services.llvm.INT64_TYPE,
                     "dataframe_sext",
                 )
-        elif value.type.width > self._llvm.INT64_TYPE.width:
-            value = self._llvm.ir_builder.trunc(
+        elif value.type.width > self.services.llvm.INT64_TYPE.width:
+            value = self.services.llvm.ir_builder.trunc(
                 value,
-                self._llvm.INT64_TYPE,
+                self.services.llvm.INT64_TYPE,
                 "dataframe_trunc",
             )
-        status = self._llvm.ir_builder.call(append, [builder_handle, value])
+        status = self.services.llvm.ir_builder.call(
+            append, [builder_handle, value]
+        )
         self.check_arrow_status(value_node, status, "dataframe_append_int")
 
     def _build_arrow_array_from_column(
@@ -287,30 +414,34 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         type_id = dataframe_type_id(column_type)
         if type_id is None:
-            raise Exception("unsupported dataframe column type")
+            raise_lowering_error(
+                "unsupported dataframe column type",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
+            )
 
-        builder_new = self.require_runtime_symbol(
+        builder_new = self.services.require_runtime_symbol(
             "array",
             "irx_arrow_array_builder_new",
         )
-        finish_builder = self.require_runtime_symbol(
+        finish_builder = self.services.require_runtime_symbol(
             "array",
             "irx_arrow_array_builder_finish",
         )
 
-        builder_slot = self._llvm.ir_builder.alloca(
-            self._llvm.ARRAY_BUILDER_HANDLE_TYPE,
+        builder_slot = self.services.llvm.ir_builder.alloca(
+            self.services.llvm.ARRAY_BUILDER_HANDLE_TYPE,
             name=f"{column_name}_array_builder_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status = self.services.llvm.ir_builder.call(
             builder_new,
             [
-                ir.Constant(self._llvm.INT32_TYPE, type_id),
+                ir.Constant(self.services.llvm.INT32_TYPE, type_id),
                 builder_slot,
             ],
         )
         self.check_arrow_status(node, status, "dataframe_array_builder_new")
-        builder_handle = self._llvm.ir_builder.load(
+        builder_handle = self.services.llvm.ir_builder.load(
             builder_slot,
             f"{column_name}_array_builder",
         )
@@ -321,17 +452,17 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         for value in values:
             self._append_dataframe_value(builder_handle, value, column_type)
 
-        array_slot = self._llvm.ir_builder.alloca(
-            self._llvm.ARRAY_HANDLE_TYPE,
+        array_slot = self.services.llvm.ir_builder.alloca(
+            self.services.llvm.ARRAY_HANDLE_TYPE,
             name=f"{column_name}_array_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status = self.services.llvm.ir_builder.call(
             finish_builder,
             [builder_handle, array_slot],
         )
         self.check_arrow_status(node, status, "dataframe_array_builder_finish")
-        self.cleanup_stack.remove(cleanup)
-        return self._llvm.ir_builder.load(
+        self.services.exit_state.cleanup_stack.remove(cleanup)
+        return self.services.llvm.ir_builder.load(
             array_slot,
             f"{column_name}_array",
         )
@@ -360,51 +491,53 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameColumnAccess
         """
-        self.visit_child(node.base)
-        table_handle = safe_pop(self.result_stack)
+        self.services.visit_child(node.base)
+        table_handle = safe_pop(self.services.function_state.result_stack)
         if table_handle is None:
-            raise Exception("dataframe column access requires a table")
+            raise_lowering_internal_error(
+                "dataframe column access requires a table", node=node
+            )
 
-        column_slot = self._llvm.ir_builder.alloca(
-            self._llvm.CHUNKED_ARRAY_HANDLE_TYPE,
+        column_slot = self.services.llvm.ir_builder.alloca(
+            self.services.llvm.CHUNKED_ARRAY_HANDLE_TYPE,
             name="dataframe_column_slot",
         )
         index = self._column_index(node)
         if index is not None:
-            column_by_index = self.require_runtime_symbol(
+            column_by_index = self.services.require_runtime_symbol(
                 "dataframe",
                 "irx_arrow_table_column_by_index",
             )
-            status = self._llvm.ir_builder.call(
+            status = self.services.llvm.ir_builder.call(
                 column_by_index,
                 [
                     table_handle,
-                    ir.Constant(self._llvm.INT32_TYPE, index),
+                    ir.Constant(self.services.llvm.INT32_TYPE, index),
                     column_slot,
                 ],
             )
             self.check_arrow_status(node, status, "dataframe_column_by_index")
         else:
-            column_by_name = self.require_runtime_symbol(
+            column_by_name = self.services.require_runtime_symbol(
                 "dataframe",
                 "irx_arrow_table_column_by_name",
             )
-            name_pointer = cast(Any, self)._constant_c_string_pointer(
+            name_pointer = self.services.strings.constant(
                 node.column_name,
                 name_hint=f"dataframe_column_{node.column_name}",
             )
-            status = self._llvm.ir_builder.call(
+            status = self.services.llvm.ir_builder.call(
                 column_by_name,
                 [table_handle, name_pointer, column_slot],
             )
             self.check_arrow_status(node, status, "dataframe_column_by_name")
 
-        column_handle = self._llvm.ir_builder.load(
+        column_handle = self.services.llvm.ir_builder.load(
             column_slot,
             "dataframe_column",
         )
-        self.arrow_temporary(node, column_handle)
-        self.result_stack.append(column_handle)
+        self.services.arrow_temporary(node, column_handle)
+        self.services.function_state.result_stack.append(column_handle)
 
     def lower_extended_dataframe_literal(
         self, node: astx.DataFrameLiteral
@@ -429,10 +562,10 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             ),
         )
         assert node.type_.columns is not None
-        builder = self._llvm.ir_builder
+        builder = self.services.llvm.ir_builder
         schema = self.checked_native_call(
             node,
-            self.require_runtime_symbol(
+            self.services.require_runtime_symbol(
                 "record_batch", "irx_rb_api_schema_new"
             ),
             [],
@@ -440,11 +573,11 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         schema_cleanup = self.track_native_handle(
             node, "record_batch", "irx_rb_api_schema_destroy", schema
         )
-        add = self.require_runtime_symbol(
+        add = self.services.require_runtime_symbol(
             "record_batch", "irx_rb_api_schema_add"
         )
         for column, type_id in zip(node.type_.columns, ids):
-            name = cast(Any, self)._constant_c_string_pointer(
+            name = self.services.strings.constant(
                 column.name, name_hint="dataframe_field"
             )
             self.checked_native_call(
@@ -459,7 +592,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             )
         owner = self.checked_native_call(
             node,
-            self.require_runtime_symbol(
+            self.services.require_runtime_symbol(
                 "record_batch", "irx_rb_api_builder_new"
             ),
             [schema],
@@ -493,7 +626,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 if isinstance(value_node, astx.LiteralNone):
                     self.checked_native_call(
                         node,
-                        self.require_runtime_symbol(
+                        self.services.require_runtime_symbol(
                             "record_batch", "irx_rb_api_append_null"
                         ),
                         [owner, column_index],
@@ -519,21 +652,21 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                     )
                     value = ir.Constant(ir.IntType(64), physical)
                 else:
-                    self.visit_child(value_node)
-                    value = safe_pop(self.result_stack)
+                    self.services.visit_child(value_node)
+                    value = safe_pop(self.services.function_state.result_stack)
                     if value is None:
                         raise_lowering_internal_error(
                             "DataFrame literal value did not lower",
                             node=value_node,
                         )
-                    value = self._cast_ast_value(
+                    value = self.services.numeric.cast_scalar(
                         value,
-                        source_type=self._resolved_ast_type(value_node),
+                        source_type=resolved_ast_type(value_node),
                         target_type=column.type_,
                     )
                 if isinstance(column.type_, astx.Boolean):
                     value = builder.zext(value, ir.IntType(32))
-                append = self.require_runtime_symbol(
+                append = self.services.require_runtime_symbol(
                     "record_batch",
                     "irx_rb_api_append_" + append_names[type_id],
                 )
@@ -542,7 +675,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 )
         batch = self.checked_native_call(
             node,
-            self.require_runtime_symbol(
+            self.services.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_new"
             ),
             [],
@@ -552,24 +685,24 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         )
         self.checked_native_call(
             node,
-            self.require_runtime_symbol(
+            self.services.require_runtime_symbol(
                 "record_batch", "irx_rb_api_builder_finish"
             ),
             [owner, batch],
         )
         table = self.checked_native_call(
             node,
-            self.require_runtime_symbol(
+            self.services.require_runtime_symbol(
                 "record_batch", "irx_rb_api_batch_to_table"
             ),
             [batch, schema],
         )
-        self.arrow_temporary(node, table)
+        self.services.arrow_temporary(node, table)
         for cleanup in (batch_cleanup, owner_cleanup, schema_cleanup):
             self.release_native_handle(cleanup)
-        self.result_stack.append(table)
+        self.services.function_state.result_stack.append(table)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameLiteral) -> None:
         """
         title: Visit DataFrameLiteral nodes.
@@ -586,33 +719,35 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 ir.ArrayType(ir.IntType(8), len(payload)), bytearray(payload)
             )
             storage = ir.GlobalVariable(
-                self._llvm.module,
+                self.services.llvm.module,
                 data.type,
-                self._llvm.module.get_unique_name("dataframe_literal"),
+                self.services.llvm.module.get_unique_name("dataframe_literal"),
             )
             storage.linkage = "internal"
             storage.global_constant = True
             storage.initializer = data
             zero = ir.Constant(ir.IntType(32), 0)
-            pointer = self._llvm.ir_builder.gep(
+            pointer = self.services.llvm.ir_builder.gep(
                 storage, [zero, zero], inbounds=True
             )
-            output = self.create_entry_block_alloca(
-                "literal_table", self._llvm.TABLE_HANDLE_TYPE
+            output = self.services.create_entry_block_alloca(
+                "literal_table", self.services.llvm.TABLE_HANDLE_TYPE
             )
-            status = self._llvm.ir_builder.call(
-                self.require_runtime_symbol(
+            status = self.services.llvm.ir_builder.call(
+                self.services.require_runtime_symbol(
                     "dataframe", "irx_arrow_table_from_ipc"
                 ),
                 [pointer, ir.Constant(ir.IntType(64), len(payload)), output],
             )
             self.check_arrow_status(node, status, "dataframe_literal")
-            table = self._llvm.ir_builder.load(output)
-            self.arrow_temporary(node, table)
-            self.result_stack.append(table)
+            table = self.services.llvm.ir_builder.load(output)
+            self.services.arrow_temporary(node, table)
+            self.services.function_state.result_stack.append(table)
             return
         if node.type_.columns is None:
-            raise Exception("dataframe literal lowering requires a schema")
+            raise_lowering_internal_error(
+                "dataframe literal lowering requires a schema", node=node
+            )
 
         if any(
             c.nullable
@@ -633,7 +768,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             return
 
         literal_by_name = {column.name: column for column in node.columns}
-        table_new = self.require_runtime_symbol(
+        table_new = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_new_from_arrays",
         )
@@ -644,7 +779,9 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         for schema_column in node.type_.columns:
             literal_column = literal_by_name.get(schema_column.name)
             if literal_column is None:
-                raise Exception("dataframe literal is missing a column")
+                raise_lowering_internal_error(
+                    "dataframe literal is missing a column", node=node
+                )
             array_handles.append(
                 self._build_arrow_array_from_column(
                     node,
@@ -659,7 +796,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
                 )
             )
             name_pointers.append(
-                cast(Any, self)._constant_c_string_pointer(
+                self.services.strings.constant(
                     schema_column.name,
                     name_hint=f"dataframe_column_{schema_column.name}",
                 )
@@ -667,18 +804,18 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
 
         column_count = len(array_handles)
         names_array_type = ir.ArrayType(
-            self._llvm.ASCII_STRING_TYPE,
+            self.services.llvm.ASCII_STRING_TYPE,
             column_count,
         )
         arrays_array_type = ir.ArrayType(
-            self._llvm.ARRAY_HANDLE_TYPE,
+            self.services.llvm.ARRAY_HANDLE_TYPE,
             column_count,
         )
-        names_array = self._llvm.ir_builder.alloca(
+        names_array = self.services.llvm.ir_builder.alloca(
             names_array_type,
             name="dataframe_names",
         )
-        arrays_array = self._llvm.ir_builder.alloca(
+        arrays_array = self.services.llvm.ir_builder.alloca(
             arrays_array_type,
             name="dataframe_arrays",
         )
@@ -687,53 +824,55 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
             zip(name_pointers, array_handles, strict=True)
         ):
             indices = [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, index),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, index),
             ]
-            name_slot = self._llvm.ir_builder.gep(names_array, indices)
-            array_slot = self._llvm.ir_builder.gep(arrays_array, indices)
-            self._llvm.ir_builder.store(name_pointer, name_slot)
-            self._llvm.ir_builder.store(array_handle, array_slot)
+            name_slot = self.services.llvm.ir_builder.gep(names_array, indices)
+            array_slot = self.services.llvm.ir_builder.gep(
+                arrays_array, indices
+            )
+            self.services.llvm.ir_builder.store(name_pointer, name_slot)
+            self.services.llvm.ir_builder.store(array_handle, array_slot)
 
-        names_ptr = self._llvm.ir_builder.gep(
+        names_ptr = self.services.llvm.ir_builder.gep(
             names_array,
             [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
             ],
         )
-        arrays_ptr = self._llvm.ir_builder.gep(
+        arrays_ptr = self.services.llvm.ir_builder.gep(
             arrays_array,
             [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
             ],
         )
-        table_slot = self._llvm.ir_builder.alloca(
-            self._llvm.TABLE_HANDLE_TYPE,
+        table_slot = self.services.llvm.ir_builder.alloca(
+            self.services.llvm.TABLE_HANDLE_TYPE,
             name="dataframe_table_slot",
         )
-        status = self._llvm.ir_builder.call(
+        status = self.services.llvm.ir_builder.call(
             table_new,
             [
-                ir.Constant(self._llvm.INT64_TYPE, column_count),
+                ir.Constant(self.services.llvm.INT64_TYPE, column_count),
                 names_ptr,
                 arrays_ptr,
                 table_slot,
             ],
         )
         self.check_arrow_status(node, status, "dataframe_table_new")
-        table_handle = self._llvm.ir_builder.load(
+        table_handle = self.services.llvm.ir_builder.load(
             table_slot,
             "dataframe_table",
         )
 
-        self.arrow_temporary(node, table_handle)
+        self.services.arrow_temporary(node, table_handle)
         for cleanup in reversed(array_cleanups):
             self.release_native_handle(cleanup)
-        self.result_stack.append(table_handle)
+        self.services.function_state.result_stack.append(table_handle)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameColumnAccess) -> None:
         """
         title: Visit DataFrameColumnAccess nodes.
@@ -743,7 +882,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         self._lower_dataframe_column_access(node)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameStringColumnAccess) -> None:
         """
         title: Visit DataFrameStringColumnAccess nodes.
@@ -753,7 +892,7 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
         """
         self._lower_dataframe_column_access(node)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRowCount) -> None:
         """
         title: Visit DataFrameRowCount nodes.
@@ -761,19 +900,21 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameRowCount
         """
-        self.visit_child(node.base)
-        table_handle = safe_pop(self.result_stack)
+        self.services.visit_child(node.base)
+        table_handle = safe_pop(self.services.function_state.result_stack)
         if table_handle is None:
-            raise Exception("dataframe nrows requires a table")
-        nrows = self.require_runtime_symbol(
+            raise_lowering_internal_error(
+                "dataframe nrows requires a table", node=node
+            )
+        nrows = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_num_rows",
         )
-        self.result_stack.append(
-            self._llvm.ir_builder.call(nrows, [table_handle], "nrows")
+        self.services.function_state.result_stack.append(
+            self.services.llvm.ir_builder.call(nrows, [table_handle], "nrows")
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameColumnCount) -> None:
         """
         title: Visit DataFrameColumnCount nodes.
@@ -781,19 +922,21 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameColumnCount
         """
-        self.visit_child(node.base)
-        table_handle = safe_pop(self.result_stack)
+        self.services.visit_child(node.base)
+        table_handle = safe_pop(self.services.function_state.result_stack)
         if table_handle is None:
-            raise Exception("dataframe ncols requires a table")
-        ncols = self.require_runtime_symbol(
+            raise_lowering_internal_error(
+                "dataframe ncols requires a table", node=node
+            )
+        ncols = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_num_columns",
         )
-        self.result_stack.append(
-            self._llvm.ir_builder.call(ncols, [table_handle], "ncols")
+        self.services.function_state.result_stack.append(
+            self.services.llvm.ir_builder.call(ncols, [table_handle], "ncols")
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRetain) -> None:
         """
         title: Visit DataFrameRetain nodes.
@@ -801,18 +944,20 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameRetain
         """
-        self.visit_child(node.base)
-        table_handle = safe_pop(self.result_stack)
-        retain = self.require_runtime_symbol(
+        self.services.visit_child(node.base)
+        table_handle = safe_pop(self.services.function_state.result_stack)
+        retain = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [table_handle])
+        status = self.services.llvm.ir_builder.call(retain, [table_handle])
         self.check_arrow_status(node, status, "dataframe_table_retain")
-        self.arrow_explicit_lifetime(node.base, table_handle, retain=True)
-        self.result_stack.append(status)
+        self.services.arrow_explicit_lifetime(
+            node.base, table_handle, retain=True
+        )
+        self.services.function_state.result_stack.append(status)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRelease) -> None:
         """
         title: Visit DataFrameRelease nodes.
@@ -820,17 +965,21 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.DataFrameRelease
         """
-        self.visit_child(node.base)
-        table_handle = safe_pop(self.result_stack)
-        release = self.require_runtime_symbol(
+        self.services.visit_child(node.base)
+        table_handle = safe_pop(self.services.function_state.result_stack)
+        release = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_table_release",
         )
-        self._llvm.ir_builder.call(release, [table_handle])
-        self.arrow_explicit_lifetime(node.base, table_handle, retain=False)
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
+        self.services.llvm.ir_builder.call(release, [table_handle])
+        self.services.arrow_explicit_lifetime(
+            node.base, table_handle, retain=False
+        )
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT32_TYPE, 0)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SeriesRetain) -> None:
         """
         title: Visit SeriesRetain nodes.
@@ -838,18 +987,20 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SeriesRetain
         """
-        self.visit_child(node.base)
-        column_handle = safe_pop(self.result_stack)
-        retain = self.require_runtime_symbol(
+        self.services.visit_child(node.base)
+        column_handle = safe_pop(self.services.function_state.result_stack)
+        retain = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_chunked_array_retain",
         )
-        status = self._llvm.ir_builder.call(retain, [column_handle])
+        status = self.services.llvm.ir_builder.call(retain, [column_handle])
         self.check_arrow_status(node, status, "dataframe_series_retain")
-        self.arrow_explicit_lifetime(node.base, column_handle, retain=True)
-        self.result_stack.append(status)
+        self.services.arrow_explicit_lifetime(
+            node.base, column_handle, retain=True
+        )
+        self.services.function_state.result_stack.append(status)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SeriesRelease) -> None:
         """
         title: Visit SeriesRelease nodes.
@@ -857,15 +1008,16 @@ class DataFrameVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.SeriesRelease
         """
-        self.visit_child(node.base)
-        column_handle = safe_pop(self.result_stack)
-        release = self.require_runtime_symbol(
+        self.services.visit_child(node.base)
+        column_handle = safe_pop(self.services.function_state.result_stack)
+        release = self.services.require_runtime_symbol(
             "dataframe",
             "irx_arrow_chunked_array_release",
         )
-        self._llvm.ir_builder.call(release, [column_handle])
-        self.arrow_explicit_lifetime(node.base, column_handle, retain=False)
-        self.result_stack.append(ir.Constant(self._llvm.INT32_TYPE, 0))
-
-
-__all__ = ["DataFrameVisitorMixin"]
+        self.services.llvm.ir_builder.call(release, [column_handle])
+        self.services.arrow_explicit_lifetime(
+            node.base, column_handle, retain=False
+        )
+        self.services.function_state.result_stack.append(
+            ir.Constant(self.services.llvm.INT32_TYPE, 0)
+        )

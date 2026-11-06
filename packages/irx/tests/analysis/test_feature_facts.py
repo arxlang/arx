@@ -15,13 +15,21 @@ import pytest
 
 from astx.binary_op import SPECIALIZED_BINARY_OP_EXTRA
 from irx.analysis import SemanticAnalyzer, analyze, analyze_modules
+from irx.analysis.extensions.literals import (
+    DictionaryLookup,
+    LiteralStorage,
+)
 from irx.analysis.extensions.records import CALL_PLAN
 from irx.analysis.facts import FactKey, SemanticFact, SemanticFacts
+from irx.analysis.numeric_policy import (
+    NumericConversion,
+    NumericConversionKind,
+)
 from irx.analysis.reachability import (
     DeclarationReachability,
     plan_declarations,
 )
-from irx.analysis.resolved_nodes import SemanticInfo
+from irx.analysis.resolved_nodes import ImplicitConversion, SemanticInfo
 from irx.analysis.table_io import TableIOArgument, TableIOCall
 from irx.analysis.types import clone_type
 from irx.diagnostics import DiagnosticCodes, IRxDiagnosticError
@@ -276,7 +284,7 @@ def test_table_fact_copy_and_reanalysis_release_old_generation() -> None:
     assert copied is not plan
     assert copied.arguments[0].expression is next(iter(cloned.args))
     assert copied.arguments[0].expression is not next(iter(read.args))
-    SemanticAnalyzer()._clear_semantic_sidecars(cloned)
+    SemanticAnalyzer().features.template_state._clear_semantic_sidecars(cloned)
     assert not hasattr(cloned, "semantic")
     assert not hasattr(next(iter(cloned.args)), "semantic")
     analyze_modules(root, resolver)
@@ -285,3 +293,19 @@ def test_table_fact_copy_and_reanalysis_release_old_generation() -> None:
     gc.collect()
     assert old_plan() is None
     assert old_session() is None
+
+
+def test_literal_fact_payloads_validate_nested_conversions() -> None:
+    """
+    title: Literal facts reject malformed nested plans and unsafe publication.
+    """
+    with pytest.raises(TypeCheckError):
+        LiteralStorage(astx.Int32(), (object(),))  # type: ignore[arg-type]
+    malformed = NumericConversion(
+        "i32", astx.Int32(), NumericConversionKind.IDENTITY, True, False
+    )  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        LiteralStorage(astx.Int32(), (malformed,))
+    unsafe = ImplicitConversion(astx.Int32(), astx.Float32())
+    with pytest.raises(ValueError, match="proven safe"):
+        DictionaryLookup(astx.Float32(), unsafe, unsafe)

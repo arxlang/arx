@@ -177,6 +177,21 @@ class RuntimeFeatureState:
         for feature_name in active_features:
             self.activate(feature_name)
 
+    def add_native_features(self, features: tuple[NativeFeature, ...]) -> None:
+        """
+        title: Extend this module's definitions without rebinding its state.
+        summary: >-
+          Validate the complete isolated registry before publication. Existing
+          declarations and activation remain valid because their definitions
+          cannot be replaced. Added features are not activated implicitly.
+          Failure leaves the previous registry and activation unchanged.
+        parameters:
+          features:
+            type: tuple[NativeFeature, Ellipsis]
+        """
+        registry = self._registry.with_native_features(features)
+        self._registry = registry
+
     def activate(self, feature_name: str) -> None:
         """
         title: Activate a runtime feature for the current module.

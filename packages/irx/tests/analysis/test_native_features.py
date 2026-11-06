@@ -79,6 +79,10 @@ def test_native_capabilities_reach_lowering_without_global_mutation() -> None:
     builder = Builder()
     text = builder.translate_modules(root, unavailable)
     llvm.parse_assembly(text).verify()
+    assert (
+        builder.translator.features.functions.services.runtime_features
+        is builder.translator.runtime_features
+    )
     assert builder.translator.runtime_features.is_active(
         "package:test:backend"
     )

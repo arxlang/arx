@@ -26,15 +26,248 @@ from irx.analysis import (
 )
 from irx.builder import Builder as LLVMBuilder
 from irx.builder.base import Builder
+from irx.builder.strings import StringEmission
 from irx.system import PrintExpr
 from llvmlite import binding as llvm
 from llvmlite import ir
 
-from .conftest import assert_ir_parses, check_result
+from .conftest import assert_ir_parses, build_and_run, check_result
 
 EXPECTED_STRING_REPLACEMENT_FREES = 2
 TEXT_OUT_OF_RANGE = 4
 TEXT_ENCODING_ERROR = 5
+
+
+def test_string_emission_caches_are_module_owned_and_collision_safe() -> None:
+    """
+    title: Reuse exact constants and helpers without sharing LLVM module state.
+    """
+    integer = ir.IntType(32)
+    pointer = ir.IntType(8).as_pointer()
+
+    def symbol(feature: str, name: str) -> ir.Function:
+        """
+        title: Constant and equality emission need no native activation.
+        parameters:
+          feature:
+            type: str
+          name:
+            type: str
+        returns:
+          type: ir.Function
+        """
+        raise AssertionError(f"unexpected native request: {feature}/{name}")
+
+    def guard(
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+        exception_role: str = "RuntimeError",
+    ) -> None:
+        """
+        title: Interning and equality never allocate fallible storage.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+          exception_role:
+            type: str
+        """
+        del node, condition, code, message, block_name, exception_role
+        raise AssertionError("unexpected allocation guard")
+
+    cached: list[ir.GlobalVariable] = []
+    for _ in range(2):
+        module = ir.Module()
+        # User declarations must not become compiler helper/cache entries.
+        collision = ir.GlobalVariable(module, integer, "fmt")
+        collision.initializer = ir.Constant(integer, 7)
+        reserved = ir.Function(
+            module, ir.FunctionType(ir.VoidType(), []), "string_equals"
+        )
+        reserved.linkage = "external"
+        function = ir.Function(
+            module, ir.FunctionType(pointer, []), "constant_pointer"
+        )
+        builder = ir.IRBuilder(function.append_basic_block("entry"))
+        strings = StringEmission(
+            module, ir.IntType(64), lambda: builder, symbol, guard
+        )
+        text = strings.constant_global("é😀", name_hint="fmt")
+        assert text is strings.constant_global("é😀", name_hint="fmt")
+        assert text is not collision
+        assert text.parent is module
+        assert bytes(text.initializer.constant) == "é😀\0".encode()
+        equality = strings.equality_function()
+        assert equality is strings.equality_function()
+        assert equality is not reserved
+        builder.ret(strings.constant("é😀", name_hint="fmt"))
+        llvm.parse_assembly(str(module)).verify()
+        cached.append(text)
+    assert cached[0] is not cached[1]
+
+
+def test_formatted_string_releases_unpublished_allocation() -> None:
+    """
+    title: Formatting owns its allocation until successful caller transfer.
+    summary: >-
+      Deterministic LLVM runtime stubs exercise all three failure boundaries
+      without relying on actual allocation exhaustion or invalid libc formats.
+      One compiled probe covers every case; its result encodes failure,
+      allocation count, and release count.
+    """
+    module = ir.Module()
+    integer, size = ir.IntType(32), ir.IntType(64)
+    byte, pointer = ir.IntType(8), ir.IntType(8).as_pointer()
+    allocations = ir.GlobalVariable(module, integer, "allocations")
+    releases = ir.GlobalVariable(module, integer, "releases")
+    allocations.initializer = releases.initializer = ir.Constant(integer, 0)
+    size_result = ir.GlobalVariable(module, integer, "size_result")
+    write_result = ir.GlobalVariable(module, integer, "write_result")
+    size_result.initializer = write_result.initializer = ir.Constant(
+        integer, 0
+    )
+    allocate = ir.GlobalVariable(module, ir.IntType(1), "allocate")
+    allocate.initializer = ir.Constant(ir.IntType(1), 0)
+    storage = ir.GlobalVariable(module, byte, "storage")
+    storage.initializer = ir.Constant(byte, 0)
+    snprintf = ir.Function(
+        module,
+        ir.FunctionType(integer, [pointer, size, pointer], var_arg=True),
+        "snprintf",
+    )
+    probe = ir.IRBuilder(snprintf.append_basic_block("entry"))
+    sizing = probe.icmp_unsigned(
+        "==", snprintf.args[0], ir.Constant(pointer, None)
+    )
+    probe.ret(
+        probe.select(
+            sizing,
+            probe.load(size_result),
+            probe.load(write_result),
+        )
+    )
+    malloc = ir.Function(module, ir.FunctionType(pointer, [size]), "malloc")
+    probe = ir.IRBuilder(malloc.append_basic_block("entry"))
+    probe.store(
+        probe.add(probe.load(allocations), ir.Constant(integer, 1)),
+        allocations,
+    )
+    probe.ret(
+        probe.select(probe.load(allocate), storage, ir.Constant(pointer, None))
+    )
+    free = ir.Function(
+        module, ir.FunctionType(ir.VoidType(), [pointer]), "free"
+    )
+    probe = ir.IRBuilder(free.append_basic_block("entry"))
+    probe.store(
+        probe.add(probe.load(releases), ir.Constant(integer, 1)), releases
+    )
+    probe.ret_void()
+    function = ir.Function(
+        module,
+        ir.FunctionType(integer, [integer, integer, ir.IntType(1)]),
+        "probe",
+    )
+    builder = ir.IRBuilder(function.append_basic_block("entry"))
+    for destination, source in zip(
+        (size_result, write_result, allocate), function.args, strict=True
+    ):
+        builder.store(source, destination)
+    builder.store(ir.Constant(integer, 0), allocations)
+    builder.store(ir.Constant(integer, 0), releases)
+
+    def finish(status: int) -> None:
+        """
+        title: Return the status and observed ownership transitions.
+        parameters:
+          status:
+            type: int
+        """
+        counts = builder.add(
+            builder.mul(builder.load(allocations), ir.Constant(integer, 10)),
+            builder.load(releases),
+        )
+        builder.ret(builder.add(ir.Constant(integer, status * 100), counts))
+
+    def symbol(feature: str, name: str) -> ir.Function:
+        """
+        title: Supply only the formatting service's registered C ABI.
+        parameters:
+          feature:
+            type: str
+          name:
+            type: str
+        returns:
+          type: ir.Function
+        """
+        assert feature == "libc"
+        return {"snprintf": snprintf, "malloc": malloc, "free": free}[name]
+
+    def guard(
+        node: astx.AST,
+        condition: ir.Value,
+        *,
+        code: str,
+        message: str,
+        block_name: str,
+        exception_role: str = "RuntimeError",
+    ) -> None:
+        """
+        title: Model checked control transfer without a compiler owner.
+        parameters:
+          node:
+            type: astx.AST
+          condition:
+            type: ir.Value
+          code:
+            type: str
+          message:
+            type: str
+          block_name:
+            type: str
+          exception_role:
+            type: str
+        """
+        del node, code, message, block_name, exception_role
+        with builder.if_then(builder.not_(condition)):
+            finish(1)
+
+    strings = StringEmission(module, size, lambda: builder, symbol, guard)
+    result = strings.format_heap(
+        astx.LiteralInt32(7),
+        strings.format_global("%d"),
+        [ir.Constant(integer, 7)],
+    )
+    builder.call(free, [result])
+    finish(0)
+    compiled = llvm.parse_assembly(str(module))
+    compiled.verify()
+    llvm.initialize_native_target()
+    llvm.initialize_native_asmprinter()
+    machine = llvm.Target.from_default_triple().create_target_machine()
+    with llvm.create_mcjit_compiler(compiled, machine) as engine:
+        engine.finalize_object()
+        run = ct.CFUNCTYPE(ct.c_int32, ct.c_int32, ct.c_int32, ct.c_bool)(
+            engine.get_function_address("probe")
+        )
+        for query, write, allocated, expected in (
+            (-1, 2, True, 100),
+            (2, 2, False, 110),
+            (2, -1, True, 111),
+            (2, 2, True, 11),
+        ):
+            assert run(query, write, allocated) == expected
 
 
 class NativeTextList(ct.Structure):
@@ -659,7 +892,9 @@ def assert_executed_string_frees(module: astx.Module, expected: int) -> None:
     integer = ir.IntType(32)
     counter = ir.GlobalVariable(generated, integer, "test.free_count")
     counter.initializer = ir.Constant(integer, 0)
-    for function in builder.translator.llvm_functions_by_symbol_id.values():
+    for (
+        function
+    ) in builder.translator.module_state.llvm_functions_by_symbol_id.values():
         for block in function.blocks:
             for instruction in list(block.instructions):
                 if (
@@ -770,7 +1005,7 @@ def test_string_literal_utf8_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(expected)))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -805,7 +1040,7 @@ def test_string_literal_utf8_char_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(expected)))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -840,7 +1075,7 @@ def test_string_literal_generic_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(expected)))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -892,7 +1127,7 @@ def test_string_concatenation_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(expected)))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -949,7 +1184,7 @@ def test_string_comparison_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(str(expected_result))))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -959,7 +1194,7 @@ def test_string_comparison_with_print(
     module.block.append(fn)
 
     check_result(
-        "build", builder, module, expected_output=str(expected_result)
+        "build", builder, module, expected_output=str(int(expected_result))
     )
 
 
@@ -986,7 +1221,7 @@ def test_empty_string_with_print(
 
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String("EMPTY")))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(
@@ -995,7 +1230,10 @@ def test_empty_string_with_print(
     fn = astx.FunctionDef(prototype=proto, body=block)
     module.block.append(fn)
 
-    check_result("build", builder, module, expected_output="EMPTY")
+    result = build_and_run(builder, module)
+    assert result.returncode == 0
+    assert result.stdout == "\n"
+    assert result.stderr == ""
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -1023,7 +1261,7 @@ def test_string_with_special_characters_with_print(
     # Return block that prints string with special chars then returns 0
     block = astx.Block()
     block.append(decl_tmp)
-    block.append(PrintExpr(astx.LiteralUTF8String(expected)))
+    block.append(PrintExpr(astx.Identifier("tmp")))
     block.append(astx.FunctionReturn(astx.LiteralInt32(0)))
 
     proto = astx.FunctionPrototype(

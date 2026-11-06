@@ -1,32 +1,81 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Unary-operator visitor mixins for llvmliteir.
+title: Unary-operator lowering implementations for llvmliteir.
 """
-
-from typing import cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
-from irx.builder.core import VisitorCore
-from irx.builder.diagnostics import require_lowered_value
-from irx.builder.lowering.nullable import NullableVisitorMixin
-from irx.builder.numeric import resolved_integer_operation
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_error,
+    raise_lowering_internal_error,
+    require_lowered_value,
+)
+from irx.builder.lowering.contracts import UnaryServices
 from irx.builder.runtime import safe_pop
 from irx.builder.types import is_fp_type, is_int_type
+from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class UnaryOpVisitorMixin(VisitorMixinBase):
+class UnaryLowering:
     """
     title: Lower unary operations to LLVM.
+    attributes:
+      services:
+        type: UnaryServices
     """
 
-    @VisitorCore.visit.dispatch  # type: ignore[attr-defined,untyped-decorator]
+    services: UnaryServices
+
+    def __init__(self, services: UnaryServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: UnaryServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no unary_ops handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.unary_ops.UnaryOp",
+                "irx.unary_ops",
+                "lowering",
+                astx.UnaryOp,
+                self.visit,
+                source="irx.builder.lowering.unary_ops.UnaryLowering.visit",
+            ),
+        )
+
+    @dispatch
     def visit(self, node: astx.UnaryOp) -> None:
         """
         title: Visit UnaryOp nodes.
@@ -34,68 +83,73 @@ class UnaryOpVisitorMixin(VisitorMixinBase):
           node:
             type: astx.UnaryOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         if node.op_code in {"+", "-"}:
-            self.visit_child(node.operand)
+            self.services.visit_child(node.operand)
             value = require_lowered_value(
-                safe_pop(self.result_stack),
+                safe_pop(self.services.function_state.result_stack),
                 node=node.operand,
                 context="unary sign",
             )
             if node.op_code == "-":
                 value = (
-                    self._llvm.ir_builder.fneg(value)
+                    self.services.llvm.ir_builder.fneg(value)
                     if is_fp_type(value.type)
-                    else resolved_integer_operation(
-                        cast(VisitorCore, self),
-                        node,
-                        ir.Constant(value.type, 0),
-                        value,
-                        "-",
+                    else self.services.numeric.resolved_integer_operation(
+                        node, ir.Constant(value.type, 0), value, "-"
                     )
                 )
-            self.result_stack.append(value)
+            self.services.function_state.result_stack.append(value)
             return
         if node.op_code in {"++", "--"}:
-            target_addr = self._lvalue_address(node.operand)
-            operand_val = self._llvm.ir_builder.load(target_addr)
+            target_addr = self.services.layout.lvalue_address(node.operand)
+            operand_val = self.services.llvm.ir_builder.load(target_addr)
             one = ir.Constant(operand_val.type, 1)
             if is_fp_type(operand_val.type):
                 result = (
-                    self._llvm.ir_builder.fadd
+                    self.services.llvm.ir_builder.fadd
                     if node.op_code == "++"
-                    else self._llvm.ir_builder.fsub
+                    else self.services.llvm.ir_builder.fsub
                 )(operand_val, one)
             else:
-                result = resolved_integer_operation(
-                    cast(VisitorCore, self),
+                result = self.services.numeric.resolved_integer_operation(
                     node,
                     operand_val,
                     one,
                     "+" if node.op_code == "++" else "-",
                 )
-            self._llvm.ir_builder.store(result, target_addr)
-            self.result_stack.append(result)
+            self.services.llvm.ir_builder.store(result, target_addr)
+            self.services.function_state.result_stack.append(result)
             return
 
         if node.op_code == "!":
-            self.visit_child(node.operand)
-            val = safe_pop(self.result_stack)
+            self.services.visit_child(node.operand)
+            val = safe_pop(self.services.function_state.result_stack)
             if val is None:
-                raise Exception("codegen: Invalid unary operand.")
+                raise_lowering_internal_error(
+                    "codegen: Invalid unary operand.", node=node
+                )
             if not is_int_type(val.type) or val.type.width != 1:
-                raise Exception(
-                    "codegen: unary operator '!' must lower a Boolean operand."
+                raise_lowering_internal_error(
+                    (
+                        "codegen: unary operator '!' must lower a "
+                        "Boolean operand."
+                    ),
+                    node=node,
                 )
 
-            result = self._llvm.ir_builder.xor(
+            result = self.services.llvm.ir_builder.xor(
                 val,
-                ir.Constant(self._llvm.BOOLEAN_TYPE, 1),
+                ir.Constant(self.services.llvm.BOOLEAN_TYPE, 1),
                 "nottmp",
             )
 
-            self.result_stack.append(result)
+            self.services.function_state.result_stack.append(result)
             return
 
-        raise Exception(f"Unary operator {node.op_code} not implemented yet.")
+        raise_lowering_error(
+            f"Unary operator {node.op_code} not implemented yet.",
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+            node=node,
+        )

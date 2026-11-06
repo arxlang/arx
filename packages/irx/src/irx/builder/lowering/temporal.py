@@ -1,7 +1,7 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Temporal literal visitor mixins for llvmliteir.
+title: Temporal literal lowering implementations for llvmliteir.
 """
 
 from datetime import datetime
@@ -11,21 +11,98 @@ from typing import cast
 import astx
 
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
 from irx.analysis.resolved_nodes import SemanticInfo
-from irx.builder.core import VisitorCore
-from irx.builder.diagnostics import require_semantic_metadata
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_error,
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
+from irx.builder.lowering.contracts import TemporalServices
+from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class TemporalVisitorMixin(VisitorMixinBase):
+class TemporalLowering:
     """
     title: Lower temporal values and operations to LLVM.
+    attributes:
+      services:
+        type: TemporalServices
     """
 
-    @VisitorCore.visit.dispatch
+    services: TemporalServices
+
+    def __init__(self, services: TemporalServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: TemporalServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no temporal handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.temporal.LiteralDate",
+                "irx.temporal",
+                "lowering",
+                astx.LiteralDate,
+                self.visit,
+                source="irx.builder.lowering.temporal.TemporalLowering.visit",
+            ),
+            contribute_node(
+                "llvm.temporal.LiteralTime",
+                "irx.temporal",
+                "lowering",
+                astx.LiteralTime,
+                self.visit,
+                source="irx.builder.lowering.temporal.TemporalLowering.visit",
+            ),
+            contribute_node(
+                "llvm.temporal.LiteralTimestamp",
+                "irx.temporal",
+                "lowering",
+                astx.LiteralTimestamp,
+                self.visit,
+                source="irx.builder.lowering.temporal.TemporalLowering.visit",
+            ),
+            contribute_node(
+                "llvm.temporal.LiteralDateTime",
+                "irx.temporal",
+                "lowering",
+                astx.LiteralDateTime,
+                self.visit,
+                source="irx.builder.lowering.temporal.TemporalLowering.visit",
+            ),
+        )
+
+    @dispatch
     def visit(self, node: astx.LiteralDate) -> None:
         """
         title: Lower a semantically validated date as epoch days.
@@ -42,9 +119,11 @@ class TemporalVisitorMixin(VisitorMixinBase):
             metadata="dataframe_temporal_value",
             context="date literal",
         )
-        self.result_stack.append(ir.Constant(ir.IntType(32), days))
+        self.services.function_state.result_stack.append(
+            ir.Constant(ir.IntType(32), days)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTime) -> None:
         """
         title: Visit LiteralTime nodes.
@@ -60,60 +139,82 @@ class TemporalVisitorMixin(VisitorMixinBase):
         value = node.value.strip()
         parts = value.split(":")
         if len(parts) not in (hour_minute_count, hour_minute_second_count):
-            raise Exception(
-                f"LiteralTime: invalid time format '{node.value}'. "
-                "Expected 'HH:MM' or 'HH:MM:SS'."
+            raise_lowering_error(
+                (
+                    "LiteralTime: invalid time format '"
+                    f"{node.value}"
+                    "'. Expected 'HH:MM' or 'HH:MM:SS'."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
 
         try:
             hour = int(parts[0])
             minute = int(parts[1])
-        except Exception as exc:
-            raise Exception(
-                f"LiteralTime: invalid hour/minute in '{node.value}'."
-            ) from exc
+        except ValueError as exc:
+            raise_lowering_error(
+                f"LiteralTime: invalid hour/minute in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
+                cause=exc,
+            )
 
         if len(parts) == hour_minute_second_count:
             sec_part = parts[2]
             if "." in sec_part:
-                raise Exception(
-                    "LiteralTime: fractional seconds "
-                    f"not supported in '{node.value}'."
+                raise_lowering_error(
+                    (
+                        "LiteralTime: fractional seconds not supported in '"
+                        f"{node.value}"
+                        "'."
+                    ),
+                    code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                    node=node,
                 )
             try:
                 second = int(sec_part)
-            except Exception as exc:
-                raise Exception(
-                    f"LiteralTime: invalid seconds in '{node.value}'."
-                ) from exc
+            except ValueError as exc:
+                raise_lowering_error(
+                    f"LiteralTime: invalid seconds in '{node.value}'.",
+                    code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                    node=node,
+                    cause=exc,
+                )
         else:
             second = 0
 
         if not (0 <= hour <= max_hour):
-            raise Exception(
-                f"LiteralTime: hour out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTime: hour out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
         if not (0 <= minute <= max_minute_second):
-            raise Exception(
-                f"LiteralTime: minute out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTime: minute out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
         if not (0 <= second <= max_minute_second):
-            raise Exception(
-                f"LiteralTime: second out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTime: second out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
 
-        i32 = self._llvm.INT32_TYPE
+        i32 = self.services.llvm.INT32_TYPE
         const_time = ir.Constant(
-            self._llvm.TIME_TYPE,
+            self.services.llvm.TIME_TYPE,
             [
                 ir.Constant(i32, hour),
                 ir.Constant(i32, minute),
                 ir.Constant(i32, second),
             ],
         )
-        self.result_stack.append(const_time)
+        self.services.function_state.result_stack.append(const_time)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralTimestamp) -> None:
         """
         title: Visit LiteralTimestamp nodes.
@@ -131,16 +232,26 @@ class TemporalVisitorMixin(VisitorMixinBase):
         elif " " in value:
             date_part, time_part = value.split(" ", 1)
         else:
-            raise Exception(
-                "LiteralTimestamp: invalid format '"
-                f"{node.value}'. Expected 'YYYY-MM-DDTHH:MM:SS"
-                "[.fffffffff]' (or space instead of 'T')."
+            raise_lowering_error(
+                (
+                    "LiteralTimestamp: invalid format '"
+                    f"{node.value}"
+                    "'. Expected 'YYYY-MM-DDTHH:MM:SS[.fffffffff]' (or "
+                    "space instead of 'T')."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
 
         if time_part.endswith("Z") or "+" in time_part or "-" in time_part[2:]:
-            raise Exception(
-                "LiteralTimestamp: timezone offsets not supported in '"
-                f"{node.value}'."
+            raise_lowering_error(
+                (
+                    "LiteralTimestamp: timezone offsets not supported in '"
+                    f"{node.value}"
+                    "'."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
 
         try:
@@ -150,15 +261,27 @@ class TemporalVisitorMixin(VisitorMixinBase):
             day = int(d_str)
             datetime(year, month, day)
         except ValueError as exc:
-            raise Exception(
-                "LiteralTimestamp: invalid date in '"
-                f"{node.value}'. Expected valid 'YYYY-MM-DD'."
-            ) from exc
-        except Exception as exc:
-            raise Exception(
-                "LiteralTimestamp: invalid date part in '"
-                f"{node.value}'. Expected 'YYYY-MM-DD'."
-            ) from exc
+            raise_lowering_error(
+                (
+                    "LiteralTimestamp: invalid date in '"
+                    f"{node.value}"
+                    "'. Expected valid 'YYYY-MM-DD'."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
+                cause=exc,
+            )
+        except ValueError as exc:
+            raise_lowering_error(
+                (
+                    "LiteralTimestamp: invalid date part in '"
+                    f"{node.value}"
+                    "'. Expected 'YYYY-MM-DD'."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
+                cause=exc,
+            )
 
         frac_ns = 0
         try:
@@ -176,29 +299,41 @@ class TemporalVisitorMixin(VisitorMixinBase):
             hour = int(h_str)
             minute = int(m_str)
             second = int(s_str)
-        except Exception as exc:
-            raise Exception(
-                "LiteralTimestamp: invalid time part in '"
-                f"{node.value}'. Expected 'HH:MM:SS'"
-                " (optionally with '.fffffffff')."
-            ) from exc
+        except ValueError as exc:
+            raise_lowering_error(
+                (
+                    "LiteralTimestamp: invalid time part in '"
+                    f"{node.value}"
+                    "'. Expected 'HH:MM:SS' (optionally with "
+                    "'.fffffffff')."
+                ),
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
+                cause=exc,
+            )
 
         if not (0 <= hour <= max_hour):
-            raise Exception(
-                f"LiteralTimestamp: hour out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTimestamp: hour out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
         if not (0 <= minute <= max_minute_second):
-            raise Exception(
-                f"LiteralTimestamp: minute out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTimestamp: minute out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
         if not (0 <= second <= max_minute_second):
-            raise Exception(
-                f"LiteralTimestamp: second out of range in '{node.value}'."
+            raise_lowering_error(
+                f"LiteralTimestamp: second out of range in '{node.value}'.",
+                code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
+                node=node,
             )
 
-        i32 = self._llvm.INT32_TYPE
+        i32 = self.services.llvm.INT32_TYPE
         const_ts = ir.Constant(
-            self._llvm.TIMESTAMP_TYPE,
+            self.services.llvm.TIMESTAMP_TYPE,
             [
                 ir.Constant(i32, year),
                 ir.Constant(i32, month),
@@ -209,9 +344,9 @@ class TemporalVisitorMixin(VisitorMixinBase):
                 ir.Constant(i32, frac_ns),
             ],
         )
-        self.result_stack.append(const_ts)
+        self.services.function_state.result_stack.append(const_ts)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.LiteralDateTime) -> None:
         """
         title: Visit LiteralDateTime nodes.
@@ -251,7 +386,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
             year = int(y_str)
             month = int(m_str)
             day = int(d_str)
-        except Exception as exc:
+        except ValueError as exc:
             raise ValueError(
                 f"LiteralDateTime: invalid date part in '{node.value}'. "
                 "Expected 'YYYY-MM-DD'."
@@ -272,7 +407,7 @@ class TemporalVisitorMixin(VisitorMixinBase):
             second = (
                 int(parts[2]) if len(parts) == hour_minute_second_count else 0
             )
-        except Exception as exc:
+        except ValueError as exc:
             raise ValueError(
                 f"LiteralDateTime: invalid time part in '{node.value}'. "
                 "Expected 'HH:MM' or 'HH:MM:SS'."
@@ -300,9 +435,9 @@ class TemporalVisitorMixin(VisitorMixinBase):
                 f"'{node.value}'."
             ) from exc
 
-        i32 = self._llvm.INT32_TYPE
+        i32 = self.services.llvm.INT32_TYPE
         const_dt = ir.Constant(
-            self._llvm.DATETIME_TYPE,
+            self.services.llvm.DATETIME_TYPE,
             [
                 ir.Constant(i32, year),
                 ir.Constant(i32, month),
@@ -312,4 +447,4 @@ class TemporalVisitorMixin(VisitorMixinBase):
                 ir.Constant(i32, second),
             ],
         )
-        self.result_stack.append(const_dt)
+        self.services.function_state.result_stack.append(const_dt)

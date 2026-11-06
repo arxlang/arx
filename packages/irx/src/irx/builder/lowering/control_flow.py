@@ -1,17 +1,19 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Control-flow visitor mixins for llvmliteir.
+title: Control-flow lowering implementations for llvmliteir.
 """
 
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Iterator, Literal, cast
+from typing import Iterator, Literal, cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
 from irx.analysis.resolved_nodes import (
     IterationKind,
@@ -27,11 +29,6 @@ from irx.analysis.types import (
     is_string_type,
     is_unsigned_type,
 )
-from irx.builder.core import (
-    VisitorCore,
-    semantic_assignment_key,
-    semantic_symbol_key,
-)
 from irx.builder.diagnostics import (
     lowered_value_type_name,
     raise_lowering_error,
@@ -40,10 +37,15 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
     resolved_ast_type_name,
 )
-from irx.builder.lowering.sequences import adapt_sequence, read_sequence
-from irx.builder.numeric import resolved_integer_operation
-from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
+from irx.builder.lowering.contracts import ControlFlowServices
 from irx.builder.runtime import safe_pop
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
+from irx.builder.services.representations import (
+    semantic_assignment_key,
+    semantic_symbol_key,
+)
 from irx.builder.state import (
     CleanupAction,
     CleanupEmitter,
@@ -53,15 +55,134 @@ from irx.builder.state import (
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ControlFlowVisitorMixin(VisitorMixinBase):
+class ControlFlowLowering:
     """
     title: Lower resolved control flow through registered LLVM handlers.
     visibility: internal
+    attributes:
+      services:
+        type: ControlFlowServices
     """
+
+    services: ControlFlowServices
+
+    def __init__(self, services: ControlFlowServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: ControlFlowServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no control_flow handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.control_flow.Block",
+                "irx.control_flow",
+                "lowering",
+                astx.Block,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.AssertStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.AssertStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.IfStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.IfStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.WhileStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.WhileStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.ForCountLoopStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.ForCountLoopStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.ForRangeLoopStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.ForRangeLoopStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.ForInLoopStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.ForInLoopStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.WithStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.WithStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.BreakStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.BreakStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+            contribute_node(
+                "llvm.control_flow.ContinueStmt",
+                "irx.control_flow",
+                "lowering",
+                astx.ContinueStmt,
+                self.visit,
+                source="irx.builder.lowering.control_flow.ControlFlowLowering.visit",
+            ),
+        )
 
     def _resolved_context_manager(
         self,
@@ -135,7 +256,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: tuple[ir.Block, Ellipsis]
         """
-        function = self._llvm.ir_builder.function
+        function = self.services.llvm.ir_builder.function
         return tuple(
             function.append_basic_block(f"{prefix}.{role}") for role in roles
         )
@@ -149,9 +270,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: str
         """
-        current_display_name = cast(
-            str | None,
-            getattr(self, "_current_module_display_name", None),
+        current_display_name = (
+            self.services.module_state.current_module_display_name
         )
         if current_display_name:
             return current_display_name
@@ -159,10 +279,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         current: astx.AST | None = node
         while current is not None:
             if isinstance(current, astx.Module):
-                display_names = cast(
-                    dict[int, str],
-                    getattr(self, "_module_display_names", {}),
-                )
+                display_names = self.services.module_state.module_display_names
                 display_name = display_names.get(id(current))
                 if display_name:
                     return display_name
@@ -171,73 +288,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             parent = getattr(current, "parent", None)
             current = parent if isinstance(parent, astx.AST) else None
         return "<module>"
-
-    def _constant_c_string_pointer(
-        self,
-        text: str,
-        *,
-        name_hint: str,
-    ) -> ir.Value:
-        """
-        title: Return one pointer to one internal constant UTF-8 string.
-        parameters:
-          text:
-            type: str
-          name_hint:
-            type: str
-        returns:
-          type: ir.Value
-        """
-        interned_globals = cast(
-            dict[tuple[str, str], ir.GlobalVariable],
-            getattr(self, "_interned_c_strings", {}),
-        )
-        cache_key = (name_hint, text)
-        global_value = interned_globals.get(cache_key)
-
-        if global_value is None:
-            encoded = text.encode("utf8") + b"\0"
-            array_type = ir.ArrayType(self._llvm.INT8_TYPE, len(encoded))
-            normalized_hint = (
-                "".join(
-                    character if character.isalnum() else "_"
-                    for character in name_hint
-                ).strip("_")
-                or "cstring"
-            )
-            counter = cast(
-                int,
-                getattr(self, "_c_string_global_counter", 0),
-            )
-            global_name = f"{normalized_hint}_{counter}"
-            while global_name in self._llvm.module.globals:
-                counter += 1
-                global_name = f"{normalized_hint}_{counter}"
-            setattr(self, "_c_string_global_counter", counter + 1)
-
-            global_value = ir.GlobalVariable(
-                self._llvm.module,
-                array_type,
-                name=global_name,
-            )
-            global_value.linkage = "internal"
-            global_value.global_constant = True
-            global_value.initializer = ir.Constant(
-                array_type,
-                bytearray(encoded),
-            )
-            interned_globals[cache_key] = global_value
-            setattr(self, "_interned_c_strings", interned_globals)
-
-        return self._llvm.ir_builder.gep(
-            global_value,
-            [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-            ],
-            inbounds=True,
-            name=f"{name_hint}_ptr",
-        )
 
     def _lower_assert_message_pointer(self, node: astx.AssertStmt) -> ir.Value:
         """
@@ -249,48 +299,52 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           type: ir.Value
         """
         if node.message is None:
-            return self._constant_c_string_pointer(
+            return self.services.strings.constant(
                 "assertion failed",
                 name_hint="assert_message",
             )
 
-        self.visit_child(node.message)
+        self.services.visit_child(node.message)
         message_value = require_lowered_value(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.message,
             context="assert message",
         )
-        message_source_type = self._resolved_ast_type(node.message)
+        message_source_type = resolved_ast_type(node.message)
         message_type = message_value.type
 
         if (
             isinstance(message_type, ir.PointerType)
-            and message_type.pointee == self._llvm.INT8_TYPE
+            and message_type.pointee == self.services.llvm.INT8_TYPE
         ):
             return message_value
 
         if is_int_type(message_type):
-            int_arg, int_fmt = self._normalize_int_for_printf(
+            int_arg, int_fmt = self.services.strings.integer_format(
                 message_value,
                 unsigned=is_unsigned_type(message_source_type)
                 or is_boolean_type(message_source_type),
             )
-            int_fmt_gv = self._get_or_create_format_global(int_fmt)
-            return self._snprintf_heap(node, int_fmt_gv, [int_arg])
+            int_fmt_gv = self.services.strings.format_global(int_fmt)
+            return self.services.strings.format_heap(
+                node, int_fmt_gv, [int_arg]
+            )
 
         if isinstance(
             message_type, (ir.HalfType, ir.FloatType, ir.DoubleType)
         ):
             if isinstance(message_type, (ir.HalfType, ir.FloatType)):
-                float_arg = self._llvm.ir_builder.fpext(
+                float_arg = self.services.llvm.ir_builder.fpext(
                     message_value,
-                    self._llvm.DOUBLE_TYPE,
+                    self.services.llvm.DOUBLE_TYPE,
                     "assert_msg_to_double",
                 )
             else:
                 float_arg = message_value
-            float_fmt_gv = self._get_or_create_format_global("%.6f")
-            return self._snprintf_heap(node, float_fmt_gv, [float_arg])
+            float_fmt_gv = self.services.strings.format_global("%.6f")
+            return self.services.strings.format_heap(
+                node, float_fmt_gv, [float_arg]
+            )
 
         raise_lowering_error(
             "unsupported AssertStmt message lowering for type "
@@ -306,9 +360,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.AST
         """
-        stack_size_before = len(self.result_stack)
-        self.visit_child(node)
-        del self.result_stack[stack_size_before:]
+        stack_size_before = len(self.services.function_state.result_stack)
+        self.services.visit_child(node)
+        del self.services.function_state.result_stack[stack_size_before:]
 
     @contextmanager
     def _cleanup_scope(
@@ -323,13 +377,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: Iterator[None]
         """
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(cleanup, kind=CleanupKind.FINALLY)
         )
         try:
             yield
         finally:
-            self.cleanup_stack.pop()
+            self.services.exit_state.cleanup_stack.pop()
 
     @contextmanager
     def _loop_scope(
@@ -348,17 +402,17 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: Iterator[None]
         """
-        self.loop_stack.append(
+        self.services.exit_state.loop_stack.append(
             LoopTargets(
                 break_target=break_target,
                 continue_target=continue_target,
-                cleanup_depth=len(self.cleanup_stack),
+                cleanup_depth=len(self.services.exit_state.cleanup_stack),
             )
         )
         try:
             yield
         finally:
-            self.loop_stack.pop()
+            self.services.exit_state.loop_stack.pop()
 
     @contextmanager
     def _temporary_named_value(
@@ -380,26 +434,26 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: Iterator[None]
         """
-        had_previous = key in self.named_values
-        previous_value = self.named_values.get(key)
-        had_const = key in self.const_vars
+        had_previous = key in self.services.function_state.named_values
+        previous_value = self.services.function_state.named_values.get(key)
+        had_const = key in self.services.function_state.const_vars
 
-        self.named_values[key] = value
+        self.services.function_state.named_values[key] = value
         if is_constant:
-            self.const_vars.add(key)
+            self.services.function_state.const_vars.add(key)
 
         try:
             yield
         finally:
             if had_previous:
-                self.named_values[key] = previous_value
+                self.services.function_state.named_values[key] = previous_value
             else:
-                self.named_values.pop(key, None)
+                self.services.function_state.named_values.pop(key, None)
 
             if had_const:
-                self.const_vars.add(key)
+                self.services.function_state.const_vars.add(key)
             else:
-                self.const_vars.discard(key)
+                self.services.function_state.const_vars.discard(key)
 
     @contextmanager
     def _context_target_binding(
@@ -438,17 +492,17 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             node=target,
             context="with target",
         )
-        target_addr = self.create_entry_block_alloca(
+        target_addr = self.services.create_entry_block_alloca(
             target_symbol.name,
             llvm_target_type,
         )
-        target_value = self._cast_ast_value(
+        target_value = self.services.numeric.cast_scalar(
             enter_value,
             source_type=resolution.enter.call.result_type,
             target_type=target_type,
         )
-        self._llvm.ir_builder.store(target_value, target_addr)
-        target_key = semantic_symbol_key(target, target_symbol.name)
+        self.services.llvm.ir_builder.store(target_value, target_addr)
+        target_key = semantic_symbol_key(target)
 
         with self._temporary_named_value(
             target_key,
@@ -484,31 +538,31 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             if method_resolution.function.signature.parameters
             else None
         )
-        lowered_manager = self._cast_ast_value(
+        lowered_manager = self.services.numeric.cast_scalar(
             manager_value,
             source_type=manager_type,
             target_type=receiver_parameter_type,
         )
-        llvm_defaults = cast(Any, self).lower_bound_call_arguments(
+        llvm_defaults = self.services.lower_bound_call_arguments(
             method_resolution.call,
             receiver_value=lowered_manager,
         )
         lowered_args = [lowered_manager, *llvm_defaults]
         callee: ir.Value
         if method_resolution.dispatch_kind is MethodDispatchKind.INDIRECT:
-            callee = cast(Any, self)._indirect_method_callee(
+            callee = self.services.indirect_method_callee(
                 node=node,
                 method_resolution=method_resolution,
                 receiver_value=manager_value,
             )
         else:
-            callee = self._declare_semantic_function(
+            callee = self.services.declare_semantic_function(
                 method_resolution.function
             )
-        cast(Any, self)._apply_calling_convention(
+        self.services.apply_calling_convention(
             method_resolution.function.signature
         )
-        return cast(Any, self).emit_resolved_call(
+        return self.services.exceptions.emit_resolved_call(
             node, callee, method_resolution.function.signature, lowered_args
         )
 
@@ -531,7 +585,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Type
         """
-        llvm_type = self._llvm_type_for_ast_type(type_)
+        llvm_type = self.services.types.llvm_type(type_)
         if llvm_type is None:
             raise_lowering_error(
                 f"cannot lower {context} with type "
@@ -560,33 +614,17 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        self.visit_child(node)
+        self.services.visit_child(node)
         lowered = require_lowered_value(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node,
             context=context,
         )
-        return self._cast_ast_value(
+        return self.services.numeric.cast_scalar(
             lowered,
-            source_type=self._resolved_ast_type(node),
+            source_type=resolved_ast_type(node),
             target_type=target_type,
         )
-
-    def _resolved_iteration(
-        self,
-        node: astx.AST,
-    ) -> ResolvedIteration | None:
-        """
-        title: Return one node's resolved iteration sidecar.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ResolvedIteration | None
-        """
-        semantic = getattr(node, "semantic", None)
-        iteration = getattr(semantic, "resolved_iteration", None)
-        return iteration if isinstance(iteration, ResolvedIteration) else None
 
     def _lower_list_for_in_loop(
         self,
@@ -612,16 +650,16 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             node=node.target,
             context="for-in loop target",
         )
-        target_addr = self.create_entry_block_alloca(
+        target_addr = self.services.create_entry_block_alloca(
             target_name,
             llvm_target_type,
         )
-        index_addr = self.create_entry_block_alloca(
+        index_addr = self.services.create_entry_block_alloca(
             f"{target_name}_iter_index",
-            self._llvm.INT64_TYPE,
+            self.services.llvm.INT64_TYPE,
         )
-        self._llvm.ir_builder.store(
-            ir.Constant(self._llvm.INT64_TYPE, 0),
+        self.services.llvm.ir_builder.store(
+            ir.Constant(self.services.llvm.INT64_TYPE, 0),
             index_addr,
         )
 
@@ -634,20 +672,22 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 context="sequence iteration",
             )
         if sequence is not None:
-            self.visit_child(node.iterable)
+            self.services.visit_child(node.iterable)
             source = require_lowered_value(
-                safe_pop(self.result_stack),
+                safe_pop(self.services.function_state.result_stack),
                 node=node.iterable,
                 context="sequence iteration",
             )
-            list_ptr = adapt_sequence(
-                cast(VisitorCore, self), node.iterable, source, sequence
+            list_ptr = self.services.sequences.adapt(
+                node.iterable, source, sequence
             )
-            length = self._llvm.ir_builder.extract_value(list_ptr, 1)
+            length = self.services.llvm.ir_builder.extract_value(list_ptr, 1)
         else:
-            list_ptr, length = cast(
-                Any, self
-            )._list_pointer_and_length_for_iteration(node.iterable)
+            list_ptr, length = (
+                self.services.list_pointer_and_length_for_iteration(
+                    node.iterable
+                )
+            )
 
         cond_bb, body_bb, advance_bb, exit_bb = self._append_basic_blocks(
             "for.in",
@@ -656,22 +696,22 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             "advance",
             "exit",
         )
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
-        self._llvm.ir_builder.position_at_start(cond_bb)
-        current_index = self._llvm.ir_builder.load(
+        self.services.llvm.ir_builder.position_at_start(cond_bb)
+        current_index = self.services.llvm.ir_builder.load(
             index_addr,
             name="for_in_index",
         )
-        loop_cond = self._llvm.ir_builder.icmp_signed(
+        loop_cond = self.services.llvm.ir_builder.icmp_signed(
             "<",
             current_index,
             length,
             name="for_in_has_item",
         )
-        self._llvm.ir_builder.cbranch(loop_cond, body_bb, exit_bb)
+        self.services.llvm.ir_builder.cbranch(loop_cond, body_bb, exit_bb)
 
-        target_key = semantic_symbol_key(node.target, target_name)
+        target_key = semantic_symbol_key(node.target)
         is_constant = False
         if isinstance(node.target, astx.InlineVariableDeclaration):
             is_constant = (
@@ -684,33 +724,34 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             break_target=exit_bb,
             continue_target=advance_bb,
         ):
-            iteration_depth = len(self.cleanup_stack)
-            self._llvm.ir_builder.position_at_start(body_bb)
+            iteration_depth = len(self.services.exit_state.cleanup_stack)
+            self.services.llvm.ir_builder.position_at_start(body_bb)
             item_value = (
-                read_sequence(
-                    cast(VisitorCore, self),
+                self.services.sequences.read(
                     node.iterable,
                     list_ptr,
                     current_index,
                     iteration.element_type,
                 )
                 if sequence is not None
-                else cast(Any, self)._load_list_element_at_index(
+                else self.services.load_list_element_at_index(
                     base=node.iterable,
                     list_ptr=list_ptr,
                     index=current_index,
                 )
             )
-            item_value = self._cast_ast_value(
+            item_value = self.services.numeric.cast_scalar(
                 item_value,
                 source_type=iteration.element_type,
                 target_type=target_type,
             )
             if is_string_type(iteration.element_type):
-                item_value = self._copy_string_to_heap(node.target, item_value)
-            self._llvm.ir_builder.store(item_value, target_addr)
+                item_value = self.services.strings.copy(
+                    node.target, item_value
+                )
+            self.services.llvm.ir_builder.store(item_value, target_addr)
             if is_string_type(iteration.element_type):
-                cast(Any, self)._register_owned_string_cleanup(
+                self.services.register_owned_string_cleanup(
                     node.target,
                     target_addr,
                 )
@@ -720,21 +761,23 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 is_constant=is_constant,
             ):
                 self._discard_child_results(node.body)
-            if not self._llvm.ir_builder.block.is_terminated:
-                self._emit_active_cleanups(iteration_depth)
-                self._llvm.ir_builder.branch(advance_bb)
-            del self.cleanup_stack[iteration_depth:]
+            if not self.services.llvm.ir_builder.block.is_terminated:
+                self.services.cleanup.emit_active(iteration_depth)
+                self.services.llvm.ir_builder.branch(advance_bb)
+            del self.services.exit_state.cleanup_stack[iteration_depth:]
 
-        self._llvm.ir_builder.position_at_start(advance_bb)
-        next_index = self._llvm.ir_builder.add(
-            self._llvm.ir_builder.load(index_addr, name="for_in_step_index"),
-            ir.Constant(self._llvm.INT64_TYPE, 1),
+        self.services.llvm.ir_builder.position_at_start(advance_bb)
+        next_index = self.services.llvm.ir_builder.add(
+            self.services.llvm.ir_builder.load(
+                index_addr, name="for_in_step_index"
+            ),
+            ir.Constant(self.services.llvm.INT64_TYPE, 1),
             name="for_in_next_index",
         )
-        self._llvm.ir_builder.store(next_index, index_addr)
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.store(next_index, index_addr)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
-        self._llvm.ir_builder.position_at_start(exit_bb)
+        self.services.llvm.ir_builder.position_at_start(exit_bb)
 
     def _zero_value(self, llvm_type: ir.Type) -> ir.Constant:
         """
@@ -791,13 +834,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         zero = self._zero_value(step_value.type)
         if is_fp_type(step_value.type):
             return (
-                self._llvm.ir_builder.fcmp_ordered(
+                self.services.llvm.ir_builder.fcmp_ordered(
                     ">",
                     step_value,
                     zero,
                     "for.range.step.positive",
                 ),
-                self._llvm.ir_builder.fcmp_ordered(
+                self.services.llvm.ir_builder.fcmp_ordered(
                     "<",
                     step_value,
                     zero,
@@ -806,22 +849,22 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             )
         if unsigned:
             return (
-                self._llvm.ir_builder.icmp_unsigned(
+                self.services.llvm.ir_builder.icmp_unsigned(
                     "!=",
                     step_value,
                     zero,
                     "for.range.step.nonzero",
                 ),
-                ir.Constant(self._llvm.BOOLEAN_TYPE, 0),
+                ir.Constant(self.services.llvm.BOOLEAN_TYPE, 0),
             )
         return (
-            self._llvm.ir_builder.icmp_signed(
+            self.services.llvm.ir_builder.icmp_signed(
                 ">",
                 step_value,
                 zero,
                 "for.range.step.positive",
             ),
-            self._llvm.ir_builder.icmp_signed(
+            self.services.llvm.ir_builder.icmp_signed(
                 "<",
                 step_value,
                 zero,
@@ -864,26 +907,18 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         if isinstance(update, astx.UnaryOp) and update.op_code in {"++", "--"}:
             operand = update.operand
             if isinstance(operand, astx.Identifier):
-                return (
-                    semantic_symbol_key(operand, operand.name)
-                    == loop_symbol_key
-                )
+                return semantic_symbol_key(operand) == loop_symbol_key
             return False
 
         if isinstance(update, astx.VariableAssignment):
-            return (
-                semantic_assignment_key(update, update.name) == loop_symbol_key
-            )
+            return semantic_assignment_key(update) == loop_symbol_key
 
         if (
             isinstance(update, astx.BinaryOp)
             and update.op_code == "="
             and isinstance(update.lhs, astx.Identifier)
         ):
-            return (
-                semantic_assignment_key(update, update.lhs.name)
-                == loop_symbol_key
-            )
+            return semantic_assignment_key(update) == loop_symbol_key
 
         return False
 
@@ -915,8 +950,8 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        builder = self._llvm.ir_builder
-        before_end = self._emit_numeric_compare(
+        builder = self.services.llvm.ir_builder
+        before_end = self.services.numeric.emit_numeric_compare(
             "<",
             current_value,
             end_value,
@@ -927,7 +962,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         if step_direction == "positive":
             return before_end
         if step_direction == "zero":
-            return ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
+            return ir.Constant(self.services.llvm.BOOLEAN_TYPE, 0)
 
         if unsigned:
             if step_positive is None:
@@ -936,7 +971,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 )
             return builder.and_(step_positive, before_end, "for.range.cond")
 
-        after_end = self._emit_numeric_compare(
+        after_end = self.services.numeric.emit_numeric_compare(
             ">",
             current_value,
             end_value,
@@ -964,7 +999,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         )
         return builder.or_(positive_path, negative_path, "for.range.cond")
 
-    @cast(DispatchRegistrar, VisitorCore.visit).dispatch
+    @dispatch
     def visit(self, block: astx.Block) -> None:
         """
         title: Visit Block nodes.
@@ -985,41 +1020,48 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           preserve_scope:
             type: bool
         """
-        cleanup_depth = len(self.cleanup_stack)
+        cleanup_depth = len(self.services.exit_state.cleanup_stack)
         try:
             for node in block.nodes:
                 if isinstance(node, (astx.StructDefStmt, astx.ClassDefStmt)):
-                    self.visit_child(node)
+                    self.services.visit_child(node)
 
             result = None
             for node in block.nodes:
-                if self._llvm.ir_builder.block.terminator is not None:
+                if self.services.llvm.ir_builder.block.terminator is not None:
                     break
 
-                stack_size_before = len(self.result_stack)
-                statement_cleanup_depth = len(self.cleanup_stack)
-                self.visit_child(node)
-                if len(self.result_stack) > stack_size_before:
-                    result = self.result_stack.pop()
+                stack_size_before = len(
+                    self.services.function_state.result_stack
+                )
+                statement_cleanup_depth = len(
+                    self.services.exit_state.cleanup_stack
+                )
+                self.services.visit_child(node)
+                if (
+                    len(self.services.function_state.result_stack)
+                    > stack_size_before
+                ):
+                    result = self.services.function_state.result_stack.pop()
 
-                if self._llvm.ir_builder.block.terminator is not None:
+                if self.services.llvm.ir_builder.block.terminator is not None:
                     result = None
                     break
-                self._emit_temporary_cleanups(statement_cleanup_depth)
+                self.services.cleanup.emit_temporary(statement_cleanup_depth)
 
             if (
                 not preserve_scope
-                and self._llvm.ir_builder.block.terminator is None
+                and self.services.llvm.ir_builder.block.terminator is None
             ):
-                self._emit_active_cleanups(cleanup_depth)
+                self.services.cleanup.emit_active(cleanup_depth)
 
             if result is not None:
-                self.result_stack.append(result)
+                self.services.function_state.result_stack.append(result)
         finally:
             if not preserve_scope:
-                del self.cleanup_stack[cleanup_depth:]
+                del self.services.exit_state.cleanup_stack[cleanup_depth:]
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.AssertStmt) -> None:
         """
         title: Visit AssertStmt nodes.
@@ -1027,30 +1069,32 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.AssertStmt
         """
-        condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(node.condition)
+        condition_cleanup_depth = len(self.services.exit_state.cleanup_stack)
+        self.services.visit_child(node.condition)
         condition_value = self._lower_boolean_condition(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.condition,
             context="assert",
         )
-        self._emit_temporary_cleanups(condition_cleanup_depth)
+        self.services.cleanup.emit_temporary(condition_cleanup_depth)
 
         pass_bb, fail_bb = self._append_basic_blocks("assert", "pass", "fail")
-        self._llvm.ir_builder.cbranch(condition_value, pass_bb, fail_bb)
+        self.services.llvm.ir_builder.cbranch(
+            condition_value, pass_bb, fail_bb
+        )
 
-        self._llvm.ir_builder.position_at_start(fail_bb)
+        self.services.llvm.ir_builder.position_at_start(fail_bb)
         message_ptr = self._lower_assert_message_pointer(node)
-        cast(Any, self).raise_runtime_exception(
+        self.services.raise_runtime_exception(
             node,
             "AssertionError",
             message_ptr,
             code="ARX-RUNTIME-ASSERTION-001",
         )
 
-        self._llvm.ir_builder.position_at_start(pass_bb)
+        self.services.llvm.ir_builder.position_at_start(pass_bb)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.IfStmt) -> None:
         """
         title: Visit IfStmt nodes.
@@ -1058,57 +1102,61 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.IfStmt
         """
-        condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(node.condition)
+        condition_cleanup_depth = len(self.services.exit_state.cleanup_stack)
+        self.services.visit_child(node.condition)
         cond_v = self._lower_boolean_condition(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.condition,
             context="if",
         )
-        self._emit_temporary_cleanups(condition_cleanup_depth)
+        self.services.cleanup.emit_temporary(condition_cleanup_depth)
 
-        then_bb = self._llvm.ir_builder.function.append_basic_block(
+        then_bb = self.services.llvm.ir_builder.function.append_basic_block(
             "bb_if_then"
         )
-        else_bb = self._llvm.ir_builder.function.append_basic_block(
+        else_bb = self.services.llvm.ir_builder.function.append_basic_block(
             "bb_if_else"
         )
-        merge_bb = self._llvm.ir_builder.function.append_basic_block(
+        merge_bb = self.services.llvm.ir_builder.function.append_basic_block(
             "bb_if_end"
         )
-        self._llvm.ir_builder.cbranch(cond_v, then_bb, else_bb)
+        self.services.llvm.ir_builder.cbranch(cond_v, then_bb, else_bb)
 
-        self._llvm.ir_builder.position_at_start(then_bb)
-        then_stack_size = len(self.result_stack)
-        self.visit_child(node.then)
-        then_terminated = self._llvm.ir_builder.block.terminator is not None
+        self.services.llvm.ir_builder.position_at_start(then_bb)
+        then_stack_size = len(self.services.function_state.result_stack)
+        self.services.visit_child(node.then)
+        then_terminated = (
+            self.services.llvm.ir_builder.block.terminator is not None
+        )
         then_v = None
-        if len(self.result_stack) > then_stack_size:
-            then_v = self.result_stack.pop()
+        if len(self.services.function_state.result_stack) > then_stack_size:
+            then_v = self.services.function_state.result_stack.pop()
         if not then_terminated:
-            self._llvm.ir_builder.branch(merge_bb)
-            then_bb = self._llvm.ir_builder.block
+            self.services.llvm.ir_builder.branch(merge_bb)
+            then_bb = self.services.llvm.ir_builder.block
 
-        self._llvm.ir_builder.position_at_start(else_bb)
-        else_stack_size = len(self.result_stack)
+        self.services.llvm.ir_builder.position_at_start(else_bb)
+        else_stack_size = len(self.services.function_state.result_stack)
         if node.else_ is not None:
-            self.visit_child(node.else_)
-        else_terminated = self._llvm.ir_builder.block.terminator is not None
+            self.services.visit_child(node.else_)
+        else_terminated = (
+            self.services.llvm.ir_builder.block.terminator is not None
+        )
         else_v = None
-        if len(self.result_stack) > else_stack_size:
-            else_v = self.result_stack.pop()
+        if len(self.services.function_state.result_stack) > else_stack_size:
+            else_v = self.services.function_state.result_stack.pop()
         if not else_terminated:
-            self._llvm.ir_builder.branch(merge_bb)
-            else_bb = self._llvm.ir_builder.block
+            self.services.llvm.ir_builder.branch(merge_bb)
+            else_bb = self.services.llvm.ir_builder.block
 
         then_reaches_merge = not then_terminated
         else_reaches_merge = not else_terminated
         if not then_reaches_merge and not else_reaches_merge:
-            self._llvm.ir_builder.position_at_start(merge_bb)
-            self._llvm.ir_builder.unreachable()
+            self.services.llvm.ir_builder.position_at_start(merge_bb)
+            self.services.llvm.ir_builder.unreachable()
             return
 
-        self._llvm.ir_builder.position_at_start(merge_bb)
+        self.services.llvm.ir_builder.position_at_start(merge_bb)
         if (
             then_reaches_merge
             and else_reaches_merge
@@ -1116,10 +1164,10 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             and else_v is not None
             and then_v.type == else_v.type
         ):
-            phi = self._llvm.ir_builder.phi(then_v.type, "iftmp")
+            phi = self.services.llvm.ir_builder.phi(then_v.type, "iftmp")
             phi.add_incoming(then_v, then_bb)
             phi.add_incoming(else_v, else_bb)
-            self.result_stack.append(phi)
+            self.services.function_state.result_stack.append(phi)
             return
 
         if (
@@ -1127,7 +1175,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             and not else_reaches_merge
             and then_v is not None
         ):
-            self.result_stack.append(then_v)
+            self.services.function_state.result_stack.append(then_v)
             return
 
         if (
@@ -1135,9 +1183,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             and not then_reaches_merge
             and else_v is not None
         ):
-            self.result_stack.append(else_v)
+            self.services.function_state.result_stack.append(else_v)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, expr: astx.WhileStmt) -> None:
         """
         title: Visit WhileStmt nodes.
@@ -1151,31 +1199,31 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             "body",
             "exit",
         )
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
-        self._llvm.ir_builder.position_at_start(cond_bb)
-        condition_cleanup_depth = len(self.cleanup_stack)
-        self.visit_child(expr.condition)
+        self.services.llvm.ir_builder.position_at_start(cond_bb)
+        condition_cleanup_depth = len(self.services.exit_state.cleanup_stack)
+        self.services.visit_child(expr.condition)
         cond_val = self._lower_boolean_condition(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=expr.condition,
             context="while",
         )
-        self._emit_temporary_cleanups(condition_cleanup_depth)
-        self._llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
+        self.services.cleanup.emit_temporary(condition_cleanup_depth)
+        self.services.llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
 
         with self._loop_scope(
             break_target=exit_bb,
             continue_target=cond_bb,
         ):
-            self._llvm.ir_builder.position_at_start(body_bb)
+            self.services.llvm.ir_builder.position_at_start(body_bb)
             self._discard_child_results(expr.body)
-            if not self._llvm.ir_builder.block.is_terminated:
-                self._llvm.ir_builder.branch(cond_bb)
+            if not self.services.llvm.ir_builder.block.is_terminated:
+                self.services.llvm.ir_builder.branch(cond_bb)
 
-        self._llvm.ir_builder.position_at_start(exit_bb)
+        self.services.llvm.ir_builder.position_at_start(exit_bb)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForCountLoopStmt) -> None:
         """
         title: Visit ForCountLoopStmt nodes.
@@ -1183,19 +1231,22 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.ForCountLoopStmt
         """
-        initializer_key = semantic_symbol_key(
-            node.initializer,
-            node.initializer.name,
+        initializer_key = semantic_symbol_key(node.initializer)
+        had_previous = (
+            initializer_key in self.services.function_state.named_values
         )
-        had_previous = initializer_key in self.named_values
-        previous_value = self.named_values.get(initializer_key)
-        had_const = initializer_key in self.const_vars
+        previous_value = self.services.function_state.named_values.get(
+            initializer_key
+        )
+        had_const = initializer_key in self.services.function_state.const_vars
 
-        initializer_stack_size = len(self.result_stack)
-        self.visit_child(node.initializer)
-        del self.result_stack[initializer_stack_size:]
+        initializer_stack_size = len(self.services.function_state.result_stack)
+        self.services.visit_child(node.initializer)
+        del self.services.function_state.result_stack[initializer_stack_size:]
 
-        var_addr = self.named_values.get(initializer_key)
+        var_addr = self.services.function_state.named_values.get(
+            initializer_key
+        )
         if var_addr is None:
             raise_lowering_internal_error(
                 "for-count loop initializer did not create storage",
@@ -1209,31 +1260,33 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             "update",
             "exit",
         )
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
         try:
-            self._llvm.ir_builder.position_at_start(cond_bb)
-            condition_cleanup_depth = len(self.cleanup_stack)
-            self.visit_child(node.condition)
+            self.services.llvm.ir_builder.position_at_start(cond_bb)
+            condition_cleanup_depth = len(
+                self.services.exit_state.cleanup_stack
+            )
+            self.services.visit_child(node.condition)
             cond_val = self._lower_boolean_condition(
-                safe_pop(self.result_stack),
+                safe_pop(self.services.function_state.result_stack),
                 node=node.condition,
                 context="for-count loop",
             )
-            self._emit_temporary_cleanups(condition_cleanup_depth)
-            self._llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
+            self.services.cleanup.emit_temporary(condition_cleanup_depth)
+            self.services.llvm.ir_builder.cbranch(cond_val, body_bb, exit_bb)
 
             with self._loop_scope(
                 break_target=exit_bb,
                 continue_target=update_bb,
             ):
-                self._llvm.ir_builder.position_at_start(body_bb)
+                self.services.llvm.ir_builder.position_at_start(body_bb)
                 self._discard_child_results(node.body)
-                if not self._llvm.ir_builder.block.is_terminated:
-                    self._llvm.ir_builder.branch(update_bb)
+                if not self.services.llvm.ir_builder.block.is_terminated:
+                    self.services.llvm.ir_builder.branch(update_bb)
 
-            self._llvm.ir_builder.position_at_start(update_bb)
-            update_cleanup_depth = len(self.cleanup_stack)
+            self.services.llvm.ir_builder.position_at_start(update_bb)
+            update_cleanup_depth = len(self.services.exit_state.cleanup_stack)
             update_val = self._lower_typed_value(
                 node.update,
                 context="for-count loop update",
@@ -1243,23 +1296,29 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 node.update,
                 loop_symbol_key=initializer_key,
             ):
-                self._llvm.ir_builder.store(update_val, var_addr)
-            self._emit_temporary_cleanups(update_cleanup_depth)
-            self._llvm.ir_builder.branch(cond_bb)
+                self.services.llvm.ir_builder.store(update_val, var_addr)
+            self.services.cleanup.emit_temporary(update_cleanup_depth)
+            self.services.llvm.ir_builder.branch(cond_bb)
 
-            self._llvm.ir_builder.position_at_start(exit_bb)
+            self.services.llvm.ir_builder.position_at_start(exit_bb)
         finally:
             if had_previous:
-                self.named_values[initializer_key] = previous_value
+                self.services.function_state.named_values[initializer_key] = (
+                    previous_value
+                )
             else:
-                self.named_values.pop(initializer_key, None)
+                self.services.function_state.named_values.pop(
+                    initializer_key, None
+                )
 
             if had_const:
-                self.const_vars.add(initializer_key)
+                self.services.function_state.const_vars.add(initializer_key)
             else:
-                self.const_vars.discard(initializer_key)
+                self.services.function_state.const_vars.discard(
+                    initializer_key
+                )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForRangeLoopStmt) -> None:
         """
         title: Visit ForRangeLoopStmt nodes.
@@ -1273,36 +1332,36 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             node=node.variable,
             context="for-range loop variable",
         )
-        var_addr = self.create_entry_block_alloca(
+        var_addr = self.services.create_entry_block_alloca(
             node.variable.name,
             llvm_loop_type,
         )
 
-        start_cleanup_depth = len(self.cleanup_stack)
+        start_cleanup_depth = len(self.services.exit_state.cleanup_stack)
         start_val = self._lower_typed_value(
             node.start,
             context="for-range start expression",
             target_type=loop_type,
         )
-        self._llvm.ir_builder.store(start_val, var_addr)
-        self._emit_temporary_cleanups(start_cleanup_depth)
+        self.services.llvm.ir_builder.store(start_val, var_addr)
+        self.services.cleanup.emit_temporary(start_cleanup_depth)
 
-        end_cleanup_depth = len(self.cleanup_stack)
+        end_cleanup_depth = len(self.services.exit_state.cleanup_stack)
         end_val = self._lower_typed_value(
             node.end,
             context="for-range end expression",
             target_type=loop_type,
         )
-        self._emit_temporary_cleanups(end_cleanup_depth)
+        self.services.cleanup.emit_temporary(end_cleanup_depth)
 
         if not isinstance(node.step, astx.LiteralNone):
-            step_cleanup_depth = len(self.cleanup_stack)
+            step_cleanup_depth = len(self.services.exit_state.cleanup_stack)
             step_val = self._lower_typed_value(
                 node.step,
                 context="for-range step expression",
                 target_type=loop_type,
             )
-            self._emit_temporary_cleanups(step_cleanup_depth)
+            self.services.cleanup.emit_temporary(step_cleanup_depth)
         else:
             step_val = ir.Constant(
                 llvm_loop_type,
@@ -1328,11 +1387,11 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             "step",
             "exit",
         )
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
-        variable_key = semantic_symbol_key(node.variable, node.variable.name)
-        self._llvm.ir_builder.position_at_start(cond_bb)
-        current_value = self._llvm.ir_builder.load(
+        variable_key = semantic_symbol_key(node.variable)
+        self.services.llvm.ir_builder.position_at_start(cond_bb)
+        current_value = self.services.llvm.ir_builder.load(
             var_addr, node.variable.name
         )
         loop_cond = self._for_range_condition(
@@ -1343,13 +1402,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             step_positive=step_positive,
             step_negative=step_negative,
         )
-        self._llvm.ir_builder.cbranch(loop_cond, body_bb, exit_bb)
+        self.services.llvm.ir_builder.cbranch(loop_cond, body_bb, exit_bb)
 
         with self._loop_scope(
             break_target=exit_bb,
             continue_target=step_bb,
         ):
-            self._llvm.ir_builder.position_at_start(body_bb)
+            self.services.llvm.ir_builder.position_at_start(body_bb)
             with self._temporary_named_value(
                 variable_key,
                 var_addr,
@@ -1358,26 +1417,31 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 ),
             ):
                 self._discard_child_results(node.body)
-            if not self._llvm.ir_builder.block.is_terminated:
-                self._llvm.ir_builder.branch(step_bb)
+            if not self.services.llvm.ir_builder.block.is_terminated:
+                self.services.llvm.ir_builder.branch(step_bb)
 
-        self._llvm.ir_builder.position_at_start(step_bb)
-        current_value = self._llvm.ir_builder.load(
+        self.services.llvm.ir_builder.position_at_start(step_bb)
+        current_value = self.services.llvm.ir_builder.load(
             var_addr, node.variable.name
         )
         next_value = (
-            emit_add(self._llvm.ir_builder, current_value, step_val, "nextvar")
+            emit_add(
+                self.services.llvm.ir_builder,
+                current_value,
+                step_val,
+                "nextvar",
+            )
             if is_float_type(loop_type)
-            else resolved_integer_operation(
-                cast(VisitorCore, self), node, current_value, step_val, "+"
+            else self.services.numeric.resolved_integer_operation(
+                node, current_value, step_val, "+"
             )
         )
-        self._llvm.ir_builder.store(next_value, var_addr)
-        self._llvm.ir_builder.branch(cond_bb)
+        self.services.llvm.ir_builder.store(next_value, var_addr)
+        self.services.llvm.ir_builder.branch(cond_bb)
 
-        self._llvm.ir_builder.position_at_start(exit_bb)
+        self.services.llvm.ir_builder.position_at_start(exit_bb)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForInLoopStmt) -> None:
         """
         title: Visit ForInLoopStmt nodes.
@@ -1385,7 +1449,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.ForInLoopStmt
         """
-        iteration = self._resolved_iteration(node)
+        iteration = self.services.resolved_iteration(node)
         if iteration is None:
             raise_lowering_error(
                 "for-in loop is missing resolved iteration metadata",
@@ -1396,7 +1460,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             self._lower_list_for_in_loop(node, iteration)
             return
         if iteration.kind is IterationKind.GENERATOR:
-            cast(Any, self)._lower_generator_for_in_loop(node, iteration)
+            self.services.lower_generator_for_in_loop(node, iteration)
             return
         raise_lowering_error(
             f"for-in lowering does not yet support {iteration.kind.value} "
@@ -1405,7 +1469,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             code=DiagnosticCodes.LOWERING_TYPE_MISMATCH,
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.WithStmt) -> None:
         """
         title: Visit WithStmt nodes.
@@ -1414,9 +1478,9 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             type: astx.WithStmt
         """
         resolution = self._resolved_context_manager(node)
-        self.visit_child(node.manager)
+        self.services.visit_child(node.manager)
         manager_value = require_lowered_value(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.manager,
             context="with manager",
         )
@@ -1431,26 +1495,25 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             """
             title: Emit this with statement's exit call.
             """
-            visitor = cast(Any, self)
-            token = visitor.exception_call(
-                "finally_enter", [visitor.context_value()]
+            token = self.services.exceptions.exception_call(
+                "finally_enter", [self.services.exceptions.context_value()]
             )
 
             def discard() -> None:
                 """
                 title: Discard the replaced completion on explicit exit.
                 """
-                visitor.exception_call(
+                self.services.exceptions.exception_call(
                     "finally_leave",
                     [
-                        visitor.context_value(),
+                        self.services.exceptions.context_value(),
                         token,
                         ir.Constant(ir.IntType(32), 0),
                     ],
                 )
 
-            saved = self.cleanup_stack
-            self.cleanup_stack = [
+            saved = self.services.exit_state.cleanup_stack
+            self.services.exit_state.cleanup_stack = [
                 *saved,
                 CleanupAction(discard, kind=CleanupKind.HANDLER),
             ]
@@ -1460,11 +1523,11 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 manager_value=manager_value,
                 manager_type=resolution.manager_type,
             )
-            self.cleanup_stack = saved
-            visitor.exception_call(
+            self.services.exit_state.cleanup_stack = saved
+            self.services.exceptions.exception_call(
                 "finally_leave",
                 [
-                    visitor.context_value(),
+                    self.services.exceptions.context_value(),
                     token,
                     ir.Constant(ir.IntType(32), 1),
                 ],
@@ -1473,10 +1536,12 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         with self._cleanup_scope(cleanup):
             with self._context_target_binding(node, resolution, enter_value):
                 self._discard_child_results(node.body)
-            if not self._llvm.ir_builder.block.is_terminated:
-                self._emit_active_cleanups(len(self.cleanup_stack) - 1)
+            if not self.services.llvm.ir_builder.block.is_terminated:
+                self.services.cleanup.emit_active(
+                    len(self.services.exit_state.cleanup_stack) - 1
+                )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.BreakStmt) -> None:
         """
         title: Visit BreakStmt nodes.
@@ -1484,7 +1549,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.BreakStmt
         """
-        if not self.loop_stack:
+        if not self.services.exit_state.loop_stack:
             raise_lowering_error(
                 "break statement used outside an active loop",
                 node=node,
@@ -1494,12 +1559,18 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     "for-range loop bodies"
                 ),
             )
-        cast(Any, self).abandon_loop_returns(self.loop_stack[-1])
-        self._emit_active_cleanups(self.loop_stack[-1].cleanup_depth)
-        if not self._llvm.ir_builder.block.is_terminated:
-            self._llvm.ir_builder.branch(self.loop_stack[-1].break_target)
+        self.services.exceptions.abandon_loop_returns(
+            self.services.exit_state.loop_stack[-1]
+        )
+        self.services.cleanup.emit_active(
+            self.services.exit_state.loop_stack[-1].cleanup_depth
+        )
+        if not self.services.llvm.ir_builder.block.is_terminated:
+            self.services.llvm.ir_builder.branch(
+                self.services.exit_state.loop_stack[-1].break_target
+            )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ContinueStmt) -> None:
         """
         title: Visit ContinueStmt nodes.
@@ -1507,7 +1578,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
           node:
             type: astx.ContinueStmt
         """
-        if not self.loop_stack:
+        if not self.services.exit_state.loop_stack:
             raise_lowering_error(
                 "continue statement used outside an active loop",
                 node=node,
@@ -1517,7 +1588,13 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                     "for-range loop bodies"
                 ),
             )
-        cast(Any, self).abandon_loop_returns(self.loop_stack[-1])
-        self._emit_active_cleanups(self.loop_stack[-1].cleanup_depth)
-        if not self._llvm.ir_builder.block.is_terminated:
-            self._llvm.ir_builder.branch(self.loop_stack[-1].continue_target)
+        self.services.exceptions.abandon_loop_returns(
+            self.services.exit_state.loop_stack[-1]
+        )
+        self.services.cleanup.emit_active(
+            self.services.exit_state.loop_stack[-1].cleanup_depth
+        )
+        if not self.services.llvm.ir_builder.block.is_terminated:
+            self.services.llvm.ir_builder.branch(
+                self.services.exit_state.loop_stack[-1].continue_target
+            )

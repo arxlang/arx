@@ -4,12 +4,14 @@ title: Dict key lookup tests (SubscriptExpr on LiteralDict).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import cast
 
 import astx
 import pytest
 
-from irx.analysis import SemanticError
+from irx.analysis import SemanticError, analyze
+from irx.analysis.extensions.literals import DICTIONARY_LOOKUP
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder
@@ -89,13 +91,13 @@ def test_dict_lookup_hit(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.SubscriptExpr(
         value=_make_int_dict(), index=astx.LiteralInt32(2)
     )
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    visitor.visit(analyze(expr))
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     EXPECTED_VAL_FOR_KEY_2 = 20
@@ -112,13 +114,13 @@ def test_dict_lookup_miss(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.SubscriptExpr(
         value=_make_int_dict(), index=astx.LiteralInt32(99)
     )
     with pytest.raises(KeyError, match="not found in dict"):
-        visitor.visit(expr)
+        visitor.visit(analyze(expr))
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -220,72 +222,94 @@ def test_dict_lookup_empty_dict_runtime_key_raises_keyerror(
         builder.translate(module)
 
 
-@pytest.mark.parametrize("builder_class", [LLVMBuilder])
+@pytest.mark.parametrize(
+    "key_literal,index_type,index_literal,comparison_type,instruction",
+    [
+        (
+            astx.LiteralInt32,
+            astx.Int16,
+            astx.LiteralInt16,
+            astx.Int32,
+            "sext i16",
+        ),
+        (
+            astx.LiteralInt8,
+            astx.UInt8,
+            astx.LiteralUInt8,
+            astx.Int16,
+            "zext i8",
+        ),
+    ],
+    ids=["signed-width", "mixed-signedness"],
+)
 def test_dict_lookup_runtime_variable_key_mismatched_integer_widths(
-    builder_class: type[Builder],
+    key_literal: Callable[[int], astx.Literal],
+    index_type: type[astx.DataType],
+    index_literal: Callable[[int], astx.Literal],
+    comparison_type: type[astx.DataType],
+    instruction: str,
 ) -> None:
     """
-    title: SubscriptExpr widens runtime integer keys before switch lookup.
+    title: Dictionary comparison consumes resolved widths and signedness.
     parameters:
-      builder_class:
-        type: type[Builder]
+      key_literal:
+        type: Callable[[int], astx.Literal]
+      index_type:
+        type: type[astx.DataType]
+      index_literal:
+        type: Callable[[int], astx.Literal]
+      comparison_type:
+        type: type[astx.DataType]
+      instruction:
+        type: str
     """
-    builder = builder_class()
-
+    builder = LLVMBuilder()
     key_decl = astx.InlineVariableDeclaration(
-        name="k",
-        type_=astx.Int16(),
-        value=astx.LiteralInt16(2),
+        name="k", type_=index_type(), value=index_literal(2)
     )
     lookup = astx.SubscriptExpr(
-        value=_make_int_dict(), index=astx.Identifier("k")
+        value=astx.LiteralDict(
+            elements={
+                key_literal(1): astx.LiteralInt32(10),
+                key_literal(2): astx.LiteralInt32(20),
+            }
+        ),
+        index=astx.Identifier("k"),
     )
     module = _make_lookup_module(lookup, key_decl)
-
     ir_text = builder.translate(module)
+    plan = lookup.semantic.facts.require(DICTIONARY_LOOKUP)
+    assert isinstance(plan.comparison_type, comparison_type)
+    assert isinstance(plan.index_conversion.source_type, index_type)
+    assert isinstance(plan.key_conversion.target_type, comparison_type)
+    assert isinstance(plan.index_conversion.target_type, comparison_type)
+    assert plan.key_conversion.numeric is not None
+    assert plan.index_conversion.numeric is not None
+    assert plan.key_conversion.numeric.implicit
+    assert plan.index_conversion.numeric.implicit
+    assert instruction in ir_text
+    llvm_type = builder.translator.types.llvm_type(plan.comparison_type)
+    assert f"switch {llvm_type}" in ir_text
 
-    assert "sext i16" in ir_text
-    assert "switch i32" in ir_text
 
-
-@pytest.mark.parametrize("builder_class", [LLVMBuilder])
-def test_dict_lookup_rejects_incompatible_constant_key_type(
-    builder_class: type[Builder],
-) -> None:
+def test_dict_lookup_rejects_incompatible_constant_key_type() -> None:
     """
     title: SubscriptExpr rejects incompatible constant key categories.
-    parameters:
-      builder_class:
-        type: type[Builder]
     """
-    builder = builder_class()
-    visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
-
     expr = astx.SubscriptExpr(
         value=_make_int_dict(), index=astx.LiteralFloat32(2.0)
     )
-    with pytest.raises(TypeError, match="incompatible with dict key type"):
-        visitor.visit(expr)
+    with pytest.raises(SemanticError, match="dict key"):
+        analyze(expr)
 
 
 @pytest.mark.skipif(
     not HAS_LITERAL_TIME, reason="astx.LiteralTime not available"
 )
-@pytest.mark.parametrize("builder_class", [LLVMBuilder])
-def test_dict_lookup_rejects_unsupported_constant_time_keys(
-    builder_class: type[Builder],
-) -> None:
+def test_dict_lookup_rejects_unsupported_constant_time_keys() -> None:
     """
     title: SubscriptExpr rejects unsupported non-numeric constant key types.
-    parameters:
-      builder_class:
-        type: type[Builder]
     """
-    builder = builder_class()
-    visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
-
     expr = astx.SubscriptExpr(
         value=astx.LiteralDict(
             elements={
@@ -295,10 +319,10 @@ def test_dict_lookup_rejects_unsupported_constant_time_keys(
         index=astx.LiteralTime("12:34:56"),
     )
     with pytest.raises(
-        TypeError,
+        SemanticError,
         match="only integer and floating-point dict keys are supported",
     ):
-        visitor.visit(expr)
+        analyze(expr)
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])

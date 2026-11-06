@@ -2,8 +2,6 @@
 title: Lower semantically resolved single-owner file operations.
 """
 
-from typing import Any, cast
-
 import astx
 
 from llvmlite import ir
@@ -19,8 +17,7 @@ from irx.builder.diagnostics import (
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.lowering.control_flow import ControlFlowVisitorMixin
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.lowering.contracts import FileServices
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.file import FILE_ERROR_CAPACITY
 from irx.builder.state import CleanupAction
@@ -29,10 +26,24 @@ from irx.typecheck import typechecked
 
 @private
 @typechecked
-class FileVisitorMixin(VisitorMixinBase):
+class FileLowering:
     """
     title: Focused file lowering using native status and ownership contracts.
+    attributes:
+      services:
+        type: FileServices
     """
+
+    services: FileServices
+
+    def __init__(self, services: FileServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: FileServices
+        """
+        self.services = services
 
     def file_error_buffer(self) -> ir.Value:
         """
@@ -40,12 +51,14 @@ class FileVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        storage = self.create_entry_block_alloca(
+        storage = self.services.create_entry_block_alloca(
             "file_error",
-            ir.ArrayType(self._llvm.INT8_TYPE, FILE_ERROR_CAPACITY),
+            ir.ArrayType(self.services.llvm.INT8_TYPE, FILE_ERROR_CAPACITY),
         )
-        zero = ir.Constant(self._llvm.INT32_TYPE, 0)
-        return self._llvm.ir_builder.gep(storage, [zero, zero], inbounds=True)
+        zero = ir.Constant(self.services.llvm.INT32_TYPE, 0)
+        return self.services.llvm.ir_builder.gep(
+            storage, [zero, zero], inbounds=True
+        )
 
     def file_check(
         self,
@@ -70,76 +83,78 @@ class FileVisitorMixin(VisitorMixinBase):
           cleanup_temporaries:
             type: bool
         """
-        function = self._llvm.ir_builder.function
+        function = self.services.llvm.ir_builder.function
         fail = function.append_basic_block("native.fail")
         success = function.append_basic_block("native.ok")
-        ok = self._llvm.ir_builder.icmp_signed(
+        ok = self.services.llvm.ir_builder.icmp_signed(
             "==",
             status,
-            ir.Constant(self._llvm.INT32_TYPE, 0),
+            ir.Constant(self.services.llvm.INT32_TYPE, 0),
         )
-        self._llvm.ir_builder.cbranch(ok, success, fail)
-        self._llvm.ir_builder.position_at_end(fail)
-        pending = cast(Any, self).exception_call(
-            "pending", [cast(Any, self).context_value()]
+        self.services.llvm.ir_builder.cbranch(ok, success, fail)
+        self.services.llvm.ir_builder.position_at_end(fail)
+        pending = self.services.exceptions.exception_call(
+            "pending", [self.services.exceptions.context_value()]
         )
         existing = function.append_basic_block("native.pending")
         materialize = function.append_basic_block("native.error")
-        self._llvm.ir_builder.cbranch(
-            self._llvm.ir_builder.icmp_signed(
+        self.services.llvm.ir_builder.cbranch(
+            self.services.llvm.ir_builder.icmp_signed(
                 "!=", pending, ir.Constant(ir.IntType(32), 0)
             ),
             existing,
             materialize,
         )
-        self._llvm.ir_builder.position_at_end(existing)
-        cast(Any, self).emit_exception_transfer(node)
-        self._llvm.ir_builder.position_at_end(materialize)
+        self.services.llvm.ir_builder.position_at_end(existing)
+        self.services.exceptions.emit_exception_transfer(node)
+        self.services.llvm.ir_builder.position_at_end(materialize)
         if code == "ARX-RUNTIME-FILE-001":
             os_error = function.append_basic_block("native.oserror")
             value_error = function.append_basic_block("native.valueerror")
-            self._llvm.ir_builder.cbranch(
-                self._llvm.ir_builder.icmp_signed(
+            self.services.llvm.ir_builder.cbranch(
+                self.services.llvm.ir_builder.icmp_signed(
                     ">=", status, ir.Constant(ir.IntType(32), 65536)
                 ),
                 os_error,
                 value_error,
             )
-            self._llvm.ir_builder.position_at_end(os_error)
-            cast(Any, self).raise_runtime_exception(
+            self.services.llvm.ir_builder.position_at_end(os_error)
+            self.services.raise_runtime_exception(
                 node, "OSError", error, code=code
             )
-            self._llvm.ir_builder.position_at_end(value_error)
+            self.services.llvm.ir_builder.position_at_end(value_error)
             overflow = function.append_basic_block("native.overflow")
             other = function.append_basic_block("native.filevalue")
-            self._llvm.ir_builder.cbranch(
-                self._llvm.ir_builder.icmp_signed(
+            self.services.llvm.ir_builder.cbranch(
+                self.services.llvm.ir_builder.icmp_signed(
                     "==", status, ir.Constant(ir.IntType(32), 5)
                 ),
                 overflow,
                 other,
             )
-            self._llvm.ir_builder.position_at_end(overflow)
-            cast(Any, self).raise_runtime_exception(
+            self.services.llvm.ir_builder.position_at_end(overflow)
+            self.services.raise_runtime_exception(
                 node, "OverflowError", error, code=code
             )
-            self._llvm.ir_builder.position_at_end(other)
-            allocation = self._llvm.ir_builder.icmp_signed(
+            self.services.llvm.ir_builder.position_at_end(other)
+            allocation = self.services.llvm.ir_builder.icmp_signed(
                 "==", status, ir.Constant(ir.IntType(32), 4)
             )
-            cast(Any, self).fatal_status(
+            self.services.fatal_status(
                 node,
-                self._llvm.ir_builder.neg(
-                    self._llvm.ir_builder.zext(allocation, ir.IntType(32))
+                self.services.llvm.ir_builder.neg(
+                    self.services.llvm.ir_builder.zext(
+                        allocation, ir.IntType(32)
+                    )
                 ),
             )
-        cast(Any, self).raise_runtime_exception(
+        self.services.raise_runtime_exception(
             node,
             "ValueError" if "FILE" in code else "RuntimeError",
             error,
             code=code,
         )
-        self._llvm.ir_builder.position_at_end(success)
+        self.services.llvm.ir_builder.position_at_end(success)
 
     def file_cleanup(
         self,
@@ -158,16 +173,20 @@ class FileVisitorMixin(VisitorMixinBase):
             type: str | None
         """
         error = self.file_error_buffer()
-        release = self.require_runtime_symbol("file", "irx_file_release")
+        release = self.services.require_runtime_symbol(
+            "file", "irx_file_release"
+        )
 
         def cleanup() -> None:
             """
             title: Release the captured owned handle, checking close failure.
             """
-            status = self._llvm.ir_builder.call(release, [handle, error])
+            status = self.services.llvm.ir_builder.call(
+                release, [handle, error]
+            )
             self.file_check(node, status, error)
 
-        self.cleanup_stack.append(
+        self.services.exit_state.cleanup_stack.append(
             CleanupAction(cleanup, owner_symbol_id=owner_id)
         )
 
@@ -193,10 +212,10 @@ class FileVisitorMixin(VisitorMixinBase):
         )
         values: list[ir.Value] = []
         for expression in resolution.evaluations:
-            self.visit_child(expression)
+            self.services.visit_child(expression)
             values.append(
                 require_lowered_value(
-                    safe_pop(self.result_stack),
+                    safe_pop(self.services.function_state.result_stack),
                     node=expression,
                     context="open argument",
                 )
@@ -210,7 +229,7 @@ class FileVisitorMixin(VisitorMixinBase):
         )
         if ownership.transfer_kind is not OwnershipTransferKind.MOVE:
             self.file_cleanup(node, handle, None)
-        self.result_stack.append(handle)
+        self.services.function_state.result_stack.append(handle)
 
     def create_native_file(
         self,
@@ -237,22 +256,24 @@ class FileVisitorMixin(VisitorMixinBase):
         mode = (
             values[resolution.mode_index]
             if resolution.mode_index is not None
-            else cast(
-                ControlFlowVisitorMixin, self
-            )._constant_c_string_pointer("r", name_hint="file_default_mode")
+            else self.services.strings.constant(
+                "r", name_hint="file_default_mode"
+            )
         )
-        output = self.create_entry_block_alloca(
-            "file_result", self._llvm.OPAQUE_POINTER_TYPE
+        output = self.services.create_entry_block_alloca(
+            "file_result", self.services.llvm.OPAQUE_POINTER_TYPE
         )
         error = self.file_error_buffer()
-        function = self.require_runtime_symbol("file", "irx_file_open")
-        status = self._llvm.ir_builder.call(
+        function = self.services.require_runtime_symbol(
+            "file", "irx_file_open"
+        )
+        status = self.services.llvm.ir_builder.call(
             function,
             [
                 values[resolution.path_index],
                 mode,
                 ir.Constant(
-                    self._llvm.INT32_TYPE, int(resolution.text_options)
+                    self.services.llvm.INT32_TYPE, int(resolution.text_options)
                 ),
                 output,
                 error,
@@ -261,7 +282,7 @@ class FileVisitorMixin(VisitorMixinBase):
         self.file_check(
             node, status, error, cleanup_temporaries=cleanup_temporaries
         )
-        return self._llvm.ir_builder.load(output, name="file_handle")
+        return self.services.llvm.ir_builder.load(output, name="file_handle")
 
     def lower_file_method(self, node: astx.MethodCall) -> None:
         """
@@ -283,37 +304,28 @@ class FileVisitorMixin(VisitorMixinBase):
             metadata="resolved_file_operation",
             context="file method",
         )
-        self.visit_child(node.receiver)
+        self.services.visit_child(node.receiver)
         handle = require_lowered_value(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.receiver,
             context="file receiver",
         )
         if operation.receiver_field is not None:
-            from irx.builder.lowering.classes import (  # noqa: PLC0415
-                ClassVisitorMixin,
-            )
-
-            classes = cast(ClassVisitorMixin, self)
-            classes.class_pin(node.receiver, handle)
-            classes.class_operation(node, "require", handle)
-            address = self._llvm.ir_builder.gep(
+            self.services.class_pin(node.receiver, handle)
+            self.services.class_operation(node, "require", handle)
+            address = self.services.llvm.ir_builder.gep(
                 handle,
                 [
-                    ir.Constant(self._llvm.INT32_TYPE, 0),
+                    ir.Constant(self.services.llvm.INT32_TYPE, 0),
                     ir.Constant(
-                        self._llvm.INT32_TYPE,
+                        self.services.llvm.INT32_TYPE,
                         operation.receiver_field.storage_index,
                     ),
                 ],
             )
-            handle = self._llvm.ir_builder.load(address)
+            handle = self.services.llvm.ir_builder.load(address)
         arguments = [handle]
         if operation.receiver_field is not None:
-            from irx.builder.lowering.functions import (  # noqa: PLC0415
-                FunctionVisitorMixin,
-            )
-
             resolution = require_semantic_metadata(
                 semantic.resolved_call,
                 node=node,
@@ -321,21 +333,19 @@ class FileVisitorMixin(VisitorMixinBase):
                 context="public File method",
             )
             arguments.extend(
-                cast(FunctionVisitorMixin, self).lower_bound_call_arguments(
-                    resolution
-                )
+                self.services.lower_bound_call_arguments(resolution)
             )
         else:
             for expression in node.args:
-                self.visit_child(expression)
+                self.services.visit_child(expression)
                 arguments.append(
                     require_lowered_value(
-                        safe_pop(self.result_stack),
+                        safe_pop(self.services.function_state.result_stack),
                         node=expression,
                         context="file argument",
                     )
                 )
-        builder = self._llvm.ir_builder
+        builder = self.services.llvm.ir_builder
         if operation.name == "write_bytes":
             data = arguments.pop()
             arguments.extend(
@@ -348,45 +358,48 @@ class FileVisitorMixin(VisitorMixinBase):
         output: ir.Value | None = None
         if operation.name in {"read", "write", "read_bytes", "write_bytes"}:
             output_type = (
-                self._llvm.INT8_TYPE.as_pointer()
+                self.services.llvm.INT8_TYPE.as_pointer()
                 if operation.name in {"read", "read_bytes"}
-                else self._llvm.INT64_TYPE
+                else self.services.llvm.INT64_TYPE
             )
-            output = self.create_entry_block_alloca("file_output", output_type)
+            output = self.services.create_entry_block_alloca(
+                "file_output", output_type
+            )
             arguments.append(output)
             if operation.name == "read_bytes":
-                byte_count = self.create_entry_block_alloca(
-                    "file_byte_count", self._llvm.INT64_TYPE
+                byte_count = self.services.create_entry_block_alloca(
+                    "file_byte_count", self.services.llvm.INT64_TYPE
                 )
                 arguments.append(byte_count)
         error = self.file_error_buffer()
         arguments.append(error)
-        function = self.require_runtime_symbol(
+        function = self.services.require_runtime_symbol(
             "file", f"irx_file_{operation.name}"
         )
-        status = self._llvm.ir_builder.call(function, arguments)
+        status = self.services.llvm.ir_builder.call(function, arguments)
         self.file_check(node, status, error)
         if output is not None:
-            result = self._llvm.ir_builder.load(output, name="file_value")
+            result = self.services.llvm.ir_builder.load(
+                output, name="file_value"
+            )
             if operation.name == "read":
-                self._register_owned_string_temporary(node, result)
-            if operation.name == "read_bytes":
-                from irx.builder.lowering.list import (  # noqa: PLC0415
-                    ListVisitorMixin,
+                self.services.cleanup.register_owned_string_temporary(
+                    node, result
                 )
-
-                lists = cast(ListVisitorMixin, self)
+            if operation.name == "read_bytes":
                 assert byte_count is not None
                 count = builder.load(byte_count)
                 descriptor = builder.insert_value(
-                    lists._empty_list_value(node), result, 0
+                    self.services.empty_list_value(node), result, 0
                 )
                 descriptor = builder.insert_value(descriptor, count, 1)
                 descriptor = builder.insert_value(descriptor, count, 2)
-                storage = self.create_entry_block_alloca(
-                    "file_bytes", lists._llvm_list_type()
+                storage = self.services.create_entry_block_alloca(
+                    "file_bytes", self.services.llvm_list_type()
                 )
                 builder.store(descriptor, storage)
-                self._register_owned_list_temporary(node, storage)
+                self.services.cleanup.register_owned_list_temporary(
+                    node, storage
+                )
                 result = descriptor
-            self.result_stack.append(result)
+            self.services.function_state.result_stack.append(result)

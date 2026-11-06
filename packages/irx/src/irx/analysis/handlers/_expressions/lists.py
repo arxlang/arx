@@ -1,5 +1,4 @@
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
+# mypy: disable-error-code=no-redef
 
 """
 title: Resolve owned list expressions and explicitly contextual tensor storage.
@@ -9,11 +8,11 @@ from __future__ import annotations
 
 import astx
 
+from plum import dispatch
 from public import private
 
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.dependencies.expression_list import (
+    ExpressionListAnalysisServices,
 )
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import list_resource_ownership
@@ -33,6 +32,8 @@ from irx.builtins.collections.list import (
     list_supports_owned_element,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
@@ -103,12 +104,38 @@ def infer_list_element(types: list[astx.DataType]) -> astx.DataType | None:
 
 @private
 @typechecked
-class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionListAnalysis:
     """
     title: Resolve list element domains and ownership before lowering.
+    attributes:
+      services:
+        type: ExpressionListAnalysisServices
     """
 
-    @SemanticAnalyzerCore.visit.dispatch
+    services: ExpressionListAnalysisServices
+
+    def __init__(self, services: ExpressionListAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionListAnalysisServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionListAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.ListExpr) -> None:
         """
         title: Analyze elements in evaluation order.
@@ -116,16 +143,16 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ListExpr
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.collection_tensor = None
         info.tensor_temporary_owner = False
         info.resource_ownership = None
-        self._set_type(node, None)
+        self.services.set_type(node, None)
         target = info.literal_context
         info.literal_context = None
         if isinstance(target, astx.TensorType):
             if target.element_type is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor initializer needs a concrete element type",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -143,7 +170,7 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
                         f"expected {target.shape}"
                     )
             except ValueError as error:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     str(error),
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -155,24 +182,26 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
                 shape=shape,
             )
             tensor.loc = node.loc
-            self.visit(tensor)
+            self.services.visit(tensor)
             info.collection_tensor = tensor
             info.tensor_temporary_owner = True
-            self._set_type(node, self._expr_type(tensor))
+            self.services.set_type(node, self.services.expr_type(tensor))
             return
         element_type = list_element_type(target)
         types: list[astx.DataType] = []
         for item in node.elements:
             contextualize_literal(item, element_type)
-            self.visit(item)
-            self._require_value_expression(item, context="list element")
-            item_type = self._expr_type(item)
+            self.services.visit(item)
+            self.services.require_value_expression(
+                item, context="list element"
+            )
+            item_type = self.services.expr_type(item)
             if item_type is not None:
                 types.append(item_type)
         if element_type is None:
             element_type = infer_list_element(types)
         if element_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list expression needs a concrete element type; "
                 "annotate empty "
                 "lists or explicitly cast incompatible elements",
@@ -181,7 +210,7 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if not list_supports_owned_element(element_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned lists support numeric, Boolean, and string elements "
                 "only; "
                 "nested owned containers are unsupported",
@@ -191,24 +220,42 @@ class ExpressionListVisitorMixin(SemanticVisitorMixinBase):
             return
         for item in node.elements:
             validate_assignment(
-                self.context.diagnostics,
+                self.services.context.diagnostics,
                 target_name="list element",
                 target_type=element_type,
-                value_type=self._expr_type(item),
+                value_type=self.services.expr_type(item),
                 node=item,
             )
-        function = self.context.current_function
+        function = self.services.context.current_function
         if function is not None and isinstance(
             function.signature.metadata.get("generator"),
             ResolvedGeneratorFunction,
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned list expressions in generators require "
                 "generator lifecycle cleanup",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
-        self._set_type(node, astx.ListType([element_type]))
-        self._set_resource_ownership(
+        self.services.set_type(node, astx.ListType([element_type]))
+        self.services.set_resource_ownership(
             node, list_resource_ownership(OwnershipKind.OWNED)
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_list." + node_type.__name__,
+                "irx.analysis.expression_list",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionListAnalysis.visit",
+            )
+            for node_type in (astx.ListExpr,)
         )

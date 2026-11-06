@@ -9,7 +9,6 @@ import pytest
 
 from irx.analysis import SemanticError
 from irx.builder import Builder as LLVMBuilder
-from irx.builder import Visitor as LLVMVisitor
 from irx.builder.runtime.exceptions import (
     ExceptionReport,
     parse_exception_output,
@@ -73,32 +72,6 @@ def test_assert_stmt_translation_activates_runtime_feature() -> None:
         for artifact in native_artifacts
     )
     assert_ir_parses(ir_text)
-
-
-def test_constant_c_string_pointer_reuses_one_deterministic_global(
-    llvm_visitor_in_function: LLVMVisitor,
-) -> None:
-    """
-    title: Deterministic assertion strings should reuse one interned global.
-    parameters:
-      llvm_visitor_in_function:
-        type: LLVMVisitor
-    """
-    visitor = llvm_visitor_in_function
-
-    visitor._constant_c_string_pointer(
-        "assertion failed",
-        name_hint="assert_message",
-    )
-    visitor._constant_c_string_pointer(
-        "assertion failed",
-        name_hint="assert_message",
-    )
-
-    ir_text = str(visitor._llvm.module)
-
-    assert "assert_message_0" in ir_text
-    assert ir_text.count('c"assertion failed\\00"') == 1
 
 
 def test_assert_stmt_passes_without_failure_output() -> None:

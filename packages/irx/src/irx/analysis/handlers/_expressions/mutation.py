@@ -1,5 +1,4 @@
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
+# mypy: disable-error-code=no-redef
 
 """
 title: Expression mutation helpers.
@@ -14,9 +13,11 @@ from typing import cast
 
 import astx
 
-from irx.analysis.handlers.base import SemanticAnalyzerCore
-from irx.analysis.handlers.class_helpers import (
-    ClassMemberFormattingVisitorMixin,
+from plum import dispatch
+from public import private
+
+from irx.analysis.dependencies.expression_mutation import (
+    ExpressionMutationAnalysisServices,
 )
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
@@ -36,14 +37,31 @@ from irx.analysis.resolved_nodes import (
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
+class ExpressionMutationAnalysis:
     """
     title: Expression helpers for assignment and mutation targets
+    attributes:
+      services:
+        type: ExpressionMutationAnalysisServices
     """
+
+    services: ExpressionMutationAnalysisServices
+
+    def __init__(self, services: ExpressionMutationAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionMutationAnalysisServices
+        """
+        self.services = services
 
     def _class_member_target_symbol(
         self,
@@ -64,19 +82,19 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         returns:
           type: SemanticSymbol
         """
-        declaring_class = self._member_declaring_class(member)
+        declaring_class = self.services.member_declaring_class(member)
         module_key = (
             declaring_class.module_key
             if declaring_class is not None
-            else self._member_owner_module_key(member)
+            else self.services.member_owner_module_key(member)
         )
         symbol_type = member.type_ or cast(astx.DataType, target_type)
         symbol_kind = (
             "class_static_field" if member.is_static else "class_field"
         )
-        return self.factory.make_variable_symbol(
+        return self.services.factory.make_variable_symbol(
             module_key,
-            self._member_display_name(member),
+            self.services.member_display_name(member),
             symbol_type,
             is_mutable=member.is_mutable,
             declaration=target,
@@ -106,9 +124,9 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         returns:
           type: tuple[SemanticSymbol, str, astx.DataType | None] | None
         """
-        target_type = self._expr_type(target)
+        target_type = self.services.expr_type(target)
         if isinstance(target_type, (astx.SequenceType, astx.GeneratorType)):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "sequence borrows and iterator bindings cannot be reassigned",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -119,7 +137,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 SemanticInfo, getattr(target, "semantic", SemanticInfo())
             ).resolved_symbol
             if symbol is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     invalid_message,
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
@@ -127,7 +145,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 return None
             target_name = symbol.name
             if not symbol.is_mutable:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
@@ -143,7 +161,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             if class_field_access is not None:
                 member = class_field_access.member
-                target_name = self._member_display_name(member)
+                target_name = self.services.member_display_name(member)
                 symbol = self._class_member_target_symbol(
                     target,
                     member,
@@ -154,7 +172,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                         f"Cannot {action} '{target_name}': "
                         "declared as constant"
                     )
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         message,
                         node=node,
                         code=(
@@ -167,7 +185,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 target.value,
                 (astx.BaseFieldAccess, astx.StaticFieldAccess),
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     invalid_message.replace(
                         "a variable or field",
                         "a direct variable or field",
@@ -177,17 +195,17 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 )
                 return None
 
-            symbol = self._root_assignment_symbol(target)
+            symbol = self.services.root_assignment_symbol(target)
             target_name = target.field_name
             if symbol is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     invalid_message,
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
                 )
                 return None
             if not symbol.is_mutable:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Cannot {action} '{symbol.name}': declared as constant",
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
@@ -201,21 +219,21 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 None,
             )
             if resolved_access is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     invalid_message,
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
                 )
                 return None
             member = resolved_access.member
-            target_name = self._member_display_name(member)
+            target_name = self.services.member_display_name(member)
             symbol = self._class_member_target_symbol(
                 target,
                 member,
                 target_type,
             )
             if not member.is_mutable:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
@@ -229,28 +247,28 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 None,
             )
             if resolved_access is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     invalid_message,
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
                 )
                 return None
             member = resolved_access.member
-            target_name = self._member_display_name(member)
+            target_name = self.services.member_display_name(member)
             symbol = self._class_member_target_symbol(
                 target,
                 member,
                 target_type,
             )
             if not member.is_mutable:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Cannot {action} '{target_name}': declared as constant",
                     node=node,
                     code=(DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET),
                 )
             return symbol, target_name, target_type
 
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             invalid_message,
             node=node,
             code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
@@ -291,7 +309,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
         if not isinstance(target_type, (astx.ListType, astx.Bytes)):
             return
         if not is_local:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"cannot assign list storage to field '{target_name}': "
                 "object-field ownership and destruction are not supported",
                 node=node,
@@ -305,7 +323,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             target_ownership is None
             or target_ownership.kind is not OwnershipKind.OWNED
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"cannot replace list '{target_name}' because its storage "
                 "is not locally owned",
                 node=node,
@@ -316,7 +334,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             value_ownership is None
             or value_ownership.kind is not OwnershipKind.OWNED
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"assignment to list '{target_name}' requires a freshly "
                 "owned value; borrowed and static list copies are not "
                 "supported",
@@ -325,8 +343,11 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             return
 
-        if symbol.symbol_id in self.context.active_list_iteration_owners:
-            self.context.diagnostics.add(
+        if (
+            symbol.symbol_id
+            in self.services.context.active_list_iteration_owners
+        ):
+            self.services.context.diagnostics.add(
                 f"cannot replace list '{target_name}' while it is being "
                 "iterated; move the replacement after the loop or use a "
                 "different binding",
@@ -335,7 +356,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             return
 
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             value,
             transfer_resource_ownership(
                 value_ownership,
@@ -343,7 +364,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 transfer_kind=OwnershipTransferKind.MOVE,
             ),
         )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(
                 OwnershipKind.OWNED,
@@ -382,7 +403,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             return
         value_ownership = resource_ownership(value)
         if value_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"string assignment to '{target_name}' is missing value "
                 "ownership metadata",
                 node=value,
@@ -408,7 +429,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 value_kind = OwnershipKind.STATIC
         if not is_local:
             if value_kind is OwnershipKind.OWNED:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"cannot assign owned string storage to field "
                     f"'{target_name}': object-field destruction is not "
                     "supported",
@@ -419,7 +440,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
 
         target_ownership = symbol_resource_ownership(symbol)
         if target_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"string target '{target_name}' is missing ownership metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -429,7 +450,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             target_ownership.kind is OwnershipKind.STATIC
             and value_kind is OwnershipKind.STATIC
         ):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(
                     OwnershipKind.STATIC,
@@ -441,7 +462,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             target_ownership.kind is not OwnershipKind.OWNED
             or value_kind is not OwnershipKind.OWNED
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"assignment to string '{target_name}' must preserve its "
                 "static or owned storage class; borrowed aliases and "
                 "static/owned replacement are not supported",
@@ -450,7 +471,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             return
 
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             value,
             transfer_resource_ownership(
                 value_ownership,
@@ -458,7 +479,7 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
                 transfer_kind=OwnershipTransferKind.MOVE,
             ),
         )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(
                 OwnershipKind.OWNED,
@@ -467,7 +488,19 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             ),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionMutationAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.VariableAssignment) -> None:
         """
         title: Visit VariableAssignment nodes.
@@ -475,45 +508,45 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
           node:
             type: astx.VariableAssignment
         """
-        symbol = self.context.scopes.resolve(node.name)
+        symbol = self.services.context.scopes.resolve(node.name)
         contextualize_literal(
             node.value, symbol.type_ if symbol is not None else None
         )
-        self.visit(node.value)
+        self.services.visit(node.value)
         if symbol is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"cannot assign to unresolved name '{node.name}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
             )
             return
         if isinstance(symbol.type_, (astx.SequenceType, astx.GeneratorType)):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "sequence borrows and iterator bindings cannot be reassigned",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
         if not symbol.is_mutable:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"Cannot assign to '{node.name}': declared as constant",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
             )
-        if self._require_value_expression(
+        if self.services.require_value_expression(
             node.value,
             context=f"Assignment to '{node.name}'",
         ):
             validate_assignment(
-                self.context.diagnostics,
+                self.services.context.diagnostics,
                 target_name=node.name,
                 target_type=symbol.type_,
-                value_type=self._expr_type(node.value),
+                value_type=self.services.expr_type(node.value),
                 node=node,
             )
-        self._set_symbol(node, symbol)
-        self._set_assignment(node, symbol)
-        self._set_type(node, symbol.type_)
+        self.services.set_symbol(node, symbol)
+        self.services.set_assignment(node, symbol)
+        self.services.set_type(node, symbol.type_)
         self._resolve_list_assignment_ownership(
             node,
             node.value,
@@ -529,4 +562,22 @@ class ExpressionMutationVisitorMixin(ClassMemberFormattingVisitorMixin):
             target_name=node.name,
             target_type=symbol.type_,
             is_local=True,
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_mutation." + node_type.__name__,
+                "irx.analysis.expression_mutation",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionMutationAnalysis.visit",
+            )
+            for node_type in (astx.VariableAssignment,)
         )

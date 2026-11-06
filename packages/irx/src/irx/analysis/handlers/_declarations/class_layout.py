@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Declaration class-layout helpers.
@@ -12,18 +10,18 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
 
 import astx
+
+from public import private
 
 from irx.analysis.class_lifecycle import (
     LIFECYCLE_HOOKS,
     field_resource,
     lifecycle_plan,
 )
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.dependencies.declaration_class_layout import (
+    DeclarationClassLayoutAnalysisServices,
 )
 from irx.analysis.module_symbols import (
     mangle_class_descriptor_name,
@@ -56,11 +54,28 @@ _CLASS_HEADER_LAYOUT: tuple[tuple[str, ClassHeaderFieldKind], ...] = (
 )
 
 
+@private
 @typechecked
-class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
+class DeclarationClassLayoutAnalysis:
     """
     title: Declaration helpers for class layouts and family finalization
+    attributes:
+      services:
+        type: DeclarationClassLayoutAnalysisServices
     """
+
+    services: DeclarationClassLayoutAnalysisServices
+
+    def __init__(
+        self, services: DeclarationClassLayoutAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationClassLayoutAnalysisServices
+        """
+        self.services = services
 
     def _build_class_layout(
         self,
@@ -97,7 +112,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             )
             for index, (name, kind) in enumerate(_CLASS_HEADER_LAYOUT)
         )
-        storage_ancestors = self._class_storage_ancestors(bases)
+        storage_ancestors = self.services.class_storage_ancestors(bases)
         instance_fields: list[SemanticClassLayoutField] = []
         field_slots: dict[str, SemanticClassLayoutField] = {}
 
@@ -252,7 +267,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         instance_initializers = tuple(
             SemanticClassFieldInitializer(
                 field=field,
-                source_kind=self._initializer_source_kind(
+                source_kind=self.services.initializer_source_kind(
                     getattr(field.member.declaration, "value", None)
                 ),
                 value=(
@@ -271,7 +286,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         static_initializers = tuple(
             SemanticClassStaticInitializer(
                 storage=storage,
-                source_kind=self._initializer_source_kind(
+                source_kind=self.services.initializer_source_kind(
                     getattr(storage.member.declaration, "value", None)
                 ),
                 value=(
@@ -302,7 +317,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
         """
         return tuple(
             class_
-            for class_ in self.context.classes.values()
+            for class_ in self.services.context.classes.values()
             if class_.is_structurally_resolved
         )
 
@@ -473,11 +488,14 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
 
         for structural_class in ordered_family:
             bases = tuple(
-                self.context.get_class(base.module_key, base.name) or base
+                self.services.context.get_class(base.module_key, base.name)
+                or base
                 for base in structural_class.bases
             )
             mro_ancestors = tuple(
-                self.context.get_class(ancestor.module_key, ancestor.name)
+                self.services.context.get_class(
+                    ancestor.module_key, ancestor.name
+                )
                 or ancestor
                 for ancestor in structural_class.mro[1:]
             )
@@ -497,7 +515,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 for member in structural_class.declared_members
             )
             declared_member_table, declared_method_groups = (
-                self._declared_member_tables(declared_members)
+                self.services.declared_member_tables(declared_members)
             )
             class_stub = replace(
                 structural_class,
@@ -512,7 +530,7 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 method_groups,
                 member_resolution,
                 method_resolution,
-            ) = self._resolve_effective_class_members(
+            ) = self.services.resolve_effective_class_members(
                 class_stub,
                 class_stub.mro,
                 declared_member_table,
@@ -532,14 +550,17 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
             abstract_methods = tuple(
                 member for member in visible_methods if member.is_abstract
             )
-            if abstract_methods and not self._class_is_declared_abstract(
-                structural_class
+            if (
+                abstract_methods
+                and not self.services.class_is_declared_abstract(
+                    structural_class
+                )
             ):
                 method_names = ", ".join(
                     f"{member.owner_name}.{member.name}"
                     for member in abstract_methods
                 )
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{structural_class.name}' must be abstract "
                         "or implement abstract method"
@@ -590,35 +611,32 @@ class DeclarationClassLayoutVisitorMixin(SemanticVisitorMixinBase):
                 mro=(structural_class, *mro_ancestors),
                 is_resolved=True,
                 is_abstract=(
-                    self._class_is_declared_abstract(structural_class)
+                    self.services.class_is_declared_abstract(structural_class)
                     or bool(abstract_methods)
                 ),
             )
             updated = replace(updated, mro=(updated, *mro_ancestors))
-            self.context.register_class(updated)
-            self.bindings.bind_class(
+            self.services.context.register_class(updated)
+            self.services.bindings.bind_class(
                 updated.name,
                 updated,
                 node=updated.declaration,
                 module_key=updated.module_key,
             )
-            self._set_class(updated.declaration, updated)
+            self.services.set_class(updated.declaration, updated)
 
     def _finalize_registered_class_layouts(self) -> None:
         """
         title: Finalize all currently registered class families.
         """
-        if self._class_resolution_stack():
+        if self.services.class_resolution_stack():
             return
-        for class_ in tuple(self.context.classes.values()):
+        for class_ in tuple(self.services.context.classes.values()):
             if class_.is_structurally_resolved:
                 continue
-            self._resolve_class_structure(class_)
+            self.services.resolve_class_structure(class_)
         families = self._class_family_components(self._family_classes())
         for family in families:
             self._finalize_class_family(family)
-        from irx.analysis.exception_types import (  # noqa: PLC0415
-            register_exception_types,
-        )
 
-        register_exception_types(cast(SemanticAnalyzerCore, self))
+        self.services.free_register_exception_types()

@@ -46,16 +46,16 @@ def test_literal_time_hh_mm_ss(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(astx.LiteralTime("12:34:56"))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert const.type == visitor._llvm.TIME_TYPE
     vals = _time_values(const)
     assert vals == [12, 34, 56]
-    assert not visitor.result_stack
+    assert not visitor.function_state.result_stack
 
 
 @pytest.mark.skipif(
@@ -73,16 +73,16 @@ def test_literal_time_hh_mm(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(astx.LiteralTime("08:15"))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert const.type == visitor._llvm.TIME_TYPE
     vals = _time_values(const)
     assert vals == [8, 15, 0]
-    assert not visitor.result_stack
+    assert not visitor.function_state.result_stack
 
 
 @pytest.mark.skipif(
@@ -100,16 +100,16 @@ def test_literal_time_midnight(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(astx.LiteralTime("00:00:00"))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert const.type == visitor._llvm.TIME_TYPE
     vals = _time_values(const)
     assert vals == [0, 0, 0]
-    assert not visitor.result_stack
+    assert not visitor.function_state.result_stack
 
 
 @pytest.mark.skipif(
@@ -127,7 +127,7 @@ def test_literal_time_hour_out_of_range(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     with pytest.raises(Exception, match="hour out of range"):
         visitor.visit(astx.LiteralTime("25:00:00"))
 
@@ -147,6 +147,6 @@ def test_literal_time_fractional_rejected(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     with pytest.raises(Exception, match="fractional seconds"):
         visitor.visit(astx.LiteralTime("12:34:56.789"))

@@ -1,5 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Expression DataFrame visitors.
@@ -11,22 +10,19 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
 
 import astx
 
+from plum import dispatch
+from public import private
+
 from irx.analysis.arrow_conversion import arrow_ownership
-from irx.analysis.class_lifecycle import lifecycle_error
 from irx.analysis.dataframe_literals import dataframe_literal_ipc
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.dependencies.expression_data_frame import (
+    ExpressionDataFrameAnalysisServices,
 )
 from irx.analysis.nullable import (
-    nullable_error,
-    resolve_series_reduction,
     scalar_type,
-    set_operation,
 )
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
@@ -44,16 +40,45 @@ from irx.builtins.collections.dataframe import (
     schema_from_type,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionDataFrameAnalysis:
     """
     title: Expression DataFrame visitors.
+    attributes:
+      services:
+        type: ExpressionDataFrameAnalysisServices
     """
 
-    @SemanticAnalyzerCore.visit.dispatch
+    services: ExpressionDataFrameAnalysisServices
+
+    def __init__(self, services: ExpressionDataFrameAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionDataFrameAnalysisServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionDataFrameAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.NullCheck) -> None:
         """
         title: Resolve a scalar validity test or an owned Series null mask.
@@ -61,11 +86,10 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.NullCheck
         """
-        self.visit(node.value)
-        source = self._expr_type(node.value)
+        self.services.visit(node.value)
+        source = self.services.expr_type(node.value)
         if not isinstance(source, (astx.NullableType, astx.SeriesType)):
-            nullable_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_nullable_error(
                 node,
                 "is_null requires a nullable scalar or Series",
             )
@@ -75,15 +99,14 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             if isinstance(source, astx.SeriesType)
             else astx.Boolean()
         )
-        set_operation(
-            cast(SemanticAnalyzerCore, self),
+        self.services.free_set_operation(
             node,
             "is_null",
             scalar_type(source),
             result,
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.NullFill) -> None:
         """
         title: Resolve eager same-type scalar null replacement.
@@ -91,16 +114,15 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.NullFill
         """
-        self.visit(node.value)
-        source = self._expr_type(node.value)
+        self.services.visit(node.value)
+        source = self.services.expr_type(node.value)
         inner = scalar_type(source)
         contextualize_literal(node.replacement, inner)
-        self.visit(node.replacement)
+        self.services.visit(node.replacement)
         if not isinstance(
             source, (astx.NullableType, astx.SeriesType)
-        ) or not same_type(inner, self._expr_type(node.replacement)):
-            nullable_error(
-                cast(SemanticAnalyzerCore, self),
+        ) or not same_type(inner, self.services.expr_type(node.replacement)):
+            self.services.free_nullable_error(
                 node,
                 "fill_null requires nullable/Series input and a "
                 "matching non-null scalar replacement",
@@ -112,11 +134,9 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             if isinstance(source, astx.SeriesType)
             else inner
         )
-        set_operation(
-            cast(SemanticAnalyzerCore, self), node, "coalesce", inner, result
-        )
+        self.services.free_set_operation(node, "coalesce", inner, result)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SeriesReduction) -> None:
         """
         title: Resolve an explicitly named null-skipping Series reduction.
@@ -124,7 +144,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SeriesReduction
         """
-        resolve_series_reduction(cast(SemanticAnalyzerCore, self), node)
+        self.services.free_resolve_series_reduction(node)
 
     def _dataframe_schema(
         self,
@@ -144,7 +164,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(schema, DataFrameSchema):
             return schema
 
-        resolved_type = self._expr_type(node)
+        resolved_type = self.services.expr_type(node)
         if isinstance(resolved_type, astx.DataFrameType):
             return schema_from_type(resolved_type)
 
@@ -164,7 +184,9 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             type: DataFrameSchema | None
         """
         if schema is not None:
-            self._semantic(node).extras[DATAFRAME_SCHEMA_EXTRA] = schema
+            self.services.semantic(node).extras[DATAFRAME_SCHEMA_EXTRA] = (
+                schema
+            )
 
     def _visit_dataframe_column_access(
         self,
@@ -176,26 +198,26 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameColumnAccess
         """
-        self.visit(node.base)
-        base_type = self._expr_type(node.base)
+        self.services.visit(node.base)
+        base_type = self.services.expr_type(node.base)
         if not isinstance(base_type, astx.DataFrameType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "dataframe column access requires a DataFrame value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
 
         schema = self._dataframe_schema(node.base)
         column = None if schema is None else schema.column(node.column_name)
         if column is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"dataframe has no column '{node.column_name}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
 
         node.type_ = astx.SeriesType(
@@ -203,27 +225,30 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             nullable=column.nullable,
             size=base_type.row_count,
         )
-        self._semantic(node).extras[DATAFRAME_COLUMN_INDEX_EXTRA] = (
+        self.services.semantic(node).extras[DATAFRAME_COLUMN_INDEX_EXTRA] = (
             column.index
         )
-        self._semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = column.type_
-        self._semantic(node).extras[SERIES_NULLABLE_EXTRA] = column.nullable
-        self._set_type(node, node.type_)
-        function = self.context.current_function
+        self.services.semantic(node).extras[SERIES_ELEMENT_TYPE_EXTRA] = (
+            column.type_
+        )
+        self.services.semantic(node).extras[SERIES_NULLABLE_EXTRA] = (
+            column.nullable
+        )
+        self.services.set_type(node, node.type_)
+        function = self.services.context.current_function
         if (
             function is None
             or function.signature.metadata.get("generator") is not None
         ):
-            lifecycle_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_lifecycle_error(
                 node,
                 "Arrow values require a non-generator function",
             )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node, arrow_ownership(node.type_, OwnershipKind.OWNED)
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameLiteral) -> None:
         """
         title: Visit DataFrameLiteral nodes.
@@ -236,32 +261,29 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             isinstance(c.type_, astx.ColumnType) for c in schema.columns
         ):
             try:
-                self._semantic(node).extras["dataframe_literal_ipc"] = (
-                    dataframe_literal_ipc(node)
-                )
+                self.services.semantic(node).extras[
+                    "dataframe_literal_ipc"
+                ] = dataframe_literal_ipc(node)
             except (ValueError, OverflowError) as error:
-                nullable_error(
-                    cast(SemanticAnalyzerCore, self), node, str(error)
-                )
+                self.services.free_nullable_error(node, str(error))
                 return
             self._set_dataframe_schema(node, schema)
-            self._set_type(node, node.type_)
-            function = self.context.current_function
+            self.services.set_type(node, node.type_)
+            function = self.services.context.current_function
             if (
                 function is None
                 or function.signature.metadata.get("generator") is not None
             ):
-                lifecycle_error(
-                    cast(SemanticAnalyzerCore, self),
+                self.services.free_lifecycle_error(
                     node,
                     "Arrow values require a non-generator function",
                 )
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node, arrow_ownership(node.type_, OwnershipKind.OWNED)
             )
             return
         if schema is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "dataframe literals require an explicit static DataFrame type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -272,14 +294,14 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             missing = sorted(declared_names - literal_names)
             extra = sorted(literal_names - declared_names)
             if missing:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "dataframe literal is missing columns: "
                     + ", ".join(missing),
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             if extra:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "dataframe literal has undeclared columns: "
                     + ", ".join(extra),
                     node=node,
@@ -287,7 +309,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                 )
             for column in schema.columns:
                 if not dataframe_column_type_is_supported(column.type_):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "dataframe columns currently support only "
                         "numeric, bool, string and temporal literal values",
                         node=node,
@@ -298,7 +320,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         row_count: int | None = None
         for literal_column in node.columns:
             if literal_column.name in seen_names:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"duplicate dataframe column '{literal_column.name}'",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -308,7 +330,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
             if row_count is None:
                 row_count = len(literal_column.values)
             elif len(literal_column.values) != row_count:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "dataframe literal columns must have the same length",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -324,7 +346,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                     if declared_column is not None
                     else None,
                 )
-                self.visit(value)
+                self.services.visit(value)
                 if declared_column is not None:
                     if declared_column.nullable and isinstance(
                         value, astx.LiteralNone
@@ -342,43 +364,45 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
                             astx.LiteralDateTime,
                         ),
                     ):
-                        self.context.diagnostics.add(
+                        self.services.context.diagnostics.add(
                             "temporal DataFrame values require literal "
                             "constructors or a RecordBatch conversion",
                             node=value,
                             code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                         )
                     validate_assignment(
-                        self.context.diagnostics,
+                        self.services.context.diagnostics,
                         target_name=(
                             f"dataframe column '{literal_column.name}'"
                         ),
                         target_type=declared_column.type_,
-                        value_type=self._expr_type(value),
+                        value_type=self.services.expr_type(value),
                         node=value,
                     )
 
         if schema is not None:
-            self._semantic(node).extras["dataframe_storage_ids"] = tuple(
-                dataframe_record_batch_type_id(c.type_) for c in schema.columns
+            self.services.semantic(node).extras["dataframe_storage_ids"] = (
+                tuple(
+                    dataframe_record_batch_type_id(c.type_)
+                    for c in schema.columns
+                )
             )
         self._set_dataframe_schema(node, schema)
-        self._set_type(node, node.type_)
-        function = self.context.current_function
+        self.services.set_type(node, node.type_)
+        function = self.services.context.current_function
         if (
             function is None
             or function.signature.metadata.get("generator") is not None
         ):
-            lifecycle_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_lifecycle_error(
                 node,
                 "Arrow values require a non-generator function",
             )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node, arrow_ownership(node.type_, OwnershipKind.OWNED)
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameColumnAccess) -> None:
         """
         title: Visit DataFrameColumnAccess nodes.
@@ -388,7 +412,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_dataframe_column_access(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameStringColumnAccess) -> None:
         """
         title: Visit DataFrameStringColumnAccess nodes.
@@ -398,7 +422,7 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
         """
         self._visit_dataframe_column_access(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRowCount) -> None:
         """
         title: Visit DataFrameRowCount nodes.
@@ -406,16 +430,18 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameRowCount
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.DataFrameType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(
+            self.services.expr_type(node.base), astx.DataFrameType
+        ):
+            self.services.context.diagnostics.add(
                 "dataframe nrows requires a DataFrame value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameColumnCount) -> None:
         """
         title: Visit DataFrameColumnCount nodes.
@@ -423,16 +449,18 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameColumnCount
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.DataFrameType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(
+            self.services.expr_type(node.base), astx.DataFrameType
+        ):
+            self.services.context.diagnostics.add(
                 "dataframe ncols requires a DataFrame value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int64())
+        self.services.set_type(node, astx.Int64())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRetain) -> None:
         """
         title: Visit DataFrameRetain nodes.
@@ -440,16 +468,18 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameRetain
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.DataFrameType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(
+            self.services.expr_type(node.base), astx.DataFrameType
+        ):
+            self.services.context.diagnostics.add(
                 "dataframe retain requires a DataFrame value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.DataFrameRelease) -> None:
         """
         title: Visit DataFrameRelease nodes.
@@ -457,28 +487,30 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.DataFrameRelease
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.DataFrameType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(
+            self.services.expr_type(node.base), astx.DataFrameType
+        ):
+            self.services.context.diagnostics.add(
                 "dataframe release requires a DataFrame value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         ownership = resource_ownership(node.base)
         if ownership is not None and ownership.kind is OwnershipKind.OWNED:
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node.base,
                 replace(ownership, transfer_kind=OwnershipTransferKind.MOVE),
             )
         elif not isinstance(node.base, astx.Identifier):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "explicit release requires an owned temporary or local",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SeriesRetain) -> None:
         """
         title: Visit SeriesRetain nodes.
@@ -486,16 +518,16 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SeriesRetain
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.SeriesType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.SeriesType):
+            self.services.context.diagnostics.add(
                 "series retain requires a Series value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.SeriesRelease) -> None:
         """
         title: Visit SeriesRelease nodes.
@@ -503,26 +535,54 @@ class ExpressionDataFrameVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.SeriesRelease
         """
-        self.visit(node.base)
-        if not isinstance(self._expr_type(node.base), astx.SeriesType):
-            self.context.diagnostics.add(
+        self.services.visit(node.base)
+        if not isinstance(self.services.expr_type(node.base), astx.SeriesType):
+            self.services.context.diagnostics.add(
                 "series release requires a Series value",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
         ownership = resource_ownership(node.base)
         if ownership is not None and ownership.kind is OwnershipKind.OWNED:
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node.base,
                 replace(ownership, transfer_kind=OwnershipTransferKind.MOVE),
             )
         elif not isinstance(node.base, astx.Identifier):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "explicit release requires an owned temporary or local",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-
-__all__ = ["ExpressionDataFrameVisitorMixin"]
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_data_frame." + node_type.__name__,
+                "irx.analysis.expression_data_frame",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionDataFrameAnalysis.visit",
+            )
+            for node_type in (
+                astx.NullCheck,
+                astx.NullFill,
+                astx.SeriesReduction,
+                astx.DataFrameLiteral,
+                astx.DataFrameColumnAccess,
+                astx.DataFrameStringColumnAccess,
+                astx.DataFrameRowCount,
+                astx.DataFrameColumnCount,
+                astx.DataFrameRetain,
+                astx.DataFrameRelease,
+                astx.SeriesRetain,
+                astx.SeriesRelease,
+            )
+        )

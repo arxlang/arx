@@ -10,11 +10,13 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, cast
+from typing import cast
 
 import astx
 
 from astx.types import AnyType as AstxAnyType
+from plum import dispatch
+from public import private
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.class_lifecycle import (
@@ -22,10 +24,7 @@ from irx.analysis.class_lifecycle import (
     CONTEXT_EXIT_HOOK,
     class_ownership,
 )
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
-)
+from irx.analysis.dependencies.control_flow import ControlFlowAnalysisServices
 from irx.analysis.iterables import resolve_iteration_capability
 from irx.analysis.normalization import normalize_flags, normalize_operator
 from irx.analysis.numeric_literals import contextualize_literal
@@ -64,14 +63,31 @@ from irx.analysis.validation import (
     validate_call,
 )
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
+class ControlFlowAnalysis:
     """
     title: Process control flow in the current compilation phase.
+    attributes:
+      services:
+        type: ControlFlowAnalysisServices
     """
+
+    services: ControlFlowAnalysisServices
+
+    def __init__(self, services: ControlFlowAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ControlFlowAnalysisServices
+        """
+        self.services = services
 
     def _resolve_return_resource_ownership(
         self,
@@ -83,14 +99,16 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FunctionReturn
         """
-        self._semantic(node).resource_ownership = None
-        if self.context.current_function is None:
+        self.services.semantic(node).resource_ownership = None
+        if self.services.context.current_function is None:
             return
         if node.value is None:
             return
-        return_type = self.context.current_function.signature.return_type
+        return_type = (
+            self.services.context.current_function.signature.return_type
+        )
         if isinstance(return_type, astx.DataFrameType | astx.SeriesType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 arrow_ownership(
                     return_type,
@@ -100,7 +118,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if isinstance(return_type, astx.ClassType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 class_ownership(
                     OwnershipKind.OWNED,
@@ -115,7 +133,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(return_type, astx.GeneratorType):
             ownership = resource_ownership(node.value)
             if ownership is None or ownership.kind is not OwnershipKind.OWNED:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "return a freshly owned generator, "
                     "not a borrowed iterator",
                     node=node,
@@ -127,15 +145,15 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 transfer_kind=OwnershipTransferKind.MOVE,
                 escape_kind=OwnershipEscapeKind.RETURN,
             )
-            self._set_resource_ownership(node.value, moved)
-            self._set_resource_ownership(node, moved)
+            self.services.set_resource_ownership(node.value, moved)
+            self.services.set_resource_ownership(node, moved)
             return
         if not isinstance(return_type, (astx.ListType, astx.Bytes)):
             return
 
         value_ownership = resource_ownership(node.value)
         if value_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "list return expression is missing ownership metadata",
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -159,7 +177,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 or source_ownership is None
                 or source_ownership.kind is not OwnershipKind.OWNED
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "cannot return a borrowed list as an owned result",
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -185,15 +203,15 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 escape_kind=OwnershipEscapeKind.RETURN,
             )
         else:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "cannot return static list storage as an owned result",
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
 
-        self._set_resource_ownership(node.value, moved)
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(node.value, moved)
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(
                 OwnershipKind.OWNED,
@@ -217,7 +235,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             return
         value_ownership = resource_ownership(node.value)
         if value_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "string return expression is missing ownership metadata",
                 node=node.value,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -261,7 +279,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                     escape_kind=OwnershipEscapeKind.RETURN,
                 )
             else:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "cannot return a borrowed string as an owned result",
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -285,8 +303,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 escape_kind=OwnershipEscapeKind.RETURN,
             )
 
-        self._set_resource_ownership(node.value, moved)
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(node.value, moved)
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(
                 OwnershipKind.OWNED,
@@ -308,9 +326,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: ResolvedGeneratorFunction | None
         """
-        function = self.context.current_function
+        function = self.services.context.current_function
         if function is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "Yield statement outside function.",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
@@ -321,7 +339,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(generator, ResolvedGeneratorFunction):
             return generator
 
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"Function '{function.name}' must declare GeneratorType[...] "
             "to use yield",
             node=node,
@@ -340,8 +358,8 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         """
         if value is None:
             return astx.NoneType()
-        self.visit(value)
-        value_type = self._expr_type(value)
+        self.services.visit(value)
+        value_type = self.services.expr_type(value)
         return value_type if value_type is not None else astx.NoneType()
 
     def _resolve_yield(
@@ -362,12 +380,12 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         generator = self._current_generator(node)
         value_type = self._yield_value_type(value)
         if generator is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return None
 
         conversion = None
         if not is_assignable(generator.yield_type, value_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "yield expects "
                 f"{display_type_name(generator.yield_type)} but got "
                 f"{display_type_name(value_type)}",
@@ -392,7 +410,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             site_index=site_index,
             implicit_conversion=conversion,
         )
-        self._set_yield(node, resolved)
+        self.services.set_yield(node, resolved)
         return resolved
 
     def _resolve_context_method(
@@ -416,7 +434,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: ResolvedMethodCall | None
         """
-        resolved_overload = cast(Any, self)._resolve_method_overload(
+        resolved_overload = self.services.resolve_method_overload(
             class_,
             method_name,
             [],
@@ -434,27 +452,31 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 "lowered function"
             )
 
-        visible_function = cast(Any, self)._visible_method_function(
+        visible_function = self.services.visible_method_function(
             class_,
             member,
         )
         if function.template_params:
-            specialized_function = self._resolve_template_method_call_target(
-                function,
-                visible_function,
-                [],
-                node,
+            specialized_function = (
+                self.services.resolve_template_method_call_target(
+                    function,
+                    visible_function,
+                    [],
+                    node,
+                )
             )
             if specialized_function is None:
                 return None
-            visible_function = self._specialize_signature(
+            visible_function = self.services.specialize_signature(
                 visible_function,
-                self._specialization_bindings_map(specialized_function),
+                self.services.specialization_bindings_map(
+                    specialized_function
+                ),
             )
             function = specialized_function
 
         call_resolution = validate_call(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             function=visible_function,
             arg_types=[],
             node=node,
@@ -493,7 +515,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           type: SemanticSymbol | None
         """
         if is_none_type(enter_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "with target requires __enter__ to return a value",
                 node=target,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -501,21 +523,21 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             return None
 
         if isinstance(target, astx.Identifier):
-            symbol = self.registry.declare_local(
+            symbol = self.services.registry.declare_local(
                 target.name,
                 enter_type,
                 is_mutable=False,
                 declaration=target,
                 kind="with",
             )
-            self._set_symbol(target, symbol)
+            self.services.set_symbol(target, symbol)
             return symbol
 
         if not isinstance(
             target,
             (astx.InlineVariableDeclaration, astx.VariableDeclaration),
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "with target must be an identifier or inline variable "
                 "declaration",
                 node=target,
@@ -527,7 +549,7 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             target.value,
             astx.Undefined,
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "with target declaration must not define an initializer",
                 node=target,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -536,9 +558,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(target.type_, AstxAnyType):
             target.type_ = enter_type
         else:
-            self._resolve_declared_type(target.type_, node=target)
+            self.services.resolve_declared_type(target.type_, node=target)
             if not is_assignable(target.type_, enter_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "with target "
                     f"'{target.name}' expects "
                     f"{display_type_name(target.type_)} but __enter__ "
@@ -547,14 +569,14 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
 
-        symbol = self.registry.declare_local(
+        symbol = self.services.registry.declare_local(
             target.name,
             target.type_,
             is_mutable=target.mutability != astx.MutabilityKind.constant,
             declaration=target,
             kind="with",
         )
-        self._set_symbol(target, symbol)
+        self.services.set_symbol(target, symbol)
         return symbol
 
     def _validate_boolean_condition(
@@ -571,19 +593,33 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           label:
             type: str
         """
-        if not self._require_value_expression(condition, context=label):
+        if not self.services.require_value_expression(
+            condition, context=label
+        ):
             return
-        condition_type = self._expr_type(condition)
+        condition_type = self.services.expr_type(condition)
         if condition_type is None or is_boolean_type(condition_type):
             return
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"{label} condition must be Boolean, got "
             f"{display_type_name(condition_type)}",
             node=condition,
             code=DiagnosticCodes.SEMANTIC_INVALID_CONDITION,
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ControlFlowAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.AssertStmt) -> None:
         """
         title: Visit AssertStmt nodes.
@@ -591,32 +627,32 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.AssertStmt
         """
-        self.visit(node.condition)
+        self.services.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="assert")
 
         if node.message is not None:
-            self.visit(node.message)
-            if self._require_value_expression(
+            self.services.visit(node.message)
+            if self.services.require_value_expression(
                 node.message,
                 context="AssertStmt message",
             ):
-                message_type = self._expr_type(node.message)
+                message_type = self.services.expr_type(node.message)
                 if not (
                     is_string_type(message_type)
                     or is_integer_type(message_type)
                     or is_float_type(message_type)
                     or is_boolean_type(message_type)
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "unsupported AssertStmt message type "
                         f"{display_type_name(message_type)}",
                         node=node.message,
                         code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                     )
 
-        self._set_type(node, None)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.FunctionReturn) -> None:
         """
         title: Visit FunctionReturn nodes.
@@ -624,50 +660,52 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FunctionReturn
         """
-        if self.context.current_function is None:
-            self.context.diagnostics.add(
+        if self.services.context.current_function is None:
+            self.services.context.diagnostics.add(
                 "Return statement outside function.",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_RETURN,
             )
             return
-        expected = self.context.current_function.signature.return_type
+        expected = self.services.context.current_function.signature.return_type
         if isinstance(expected, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
         ):
             node.value = astx.Cast(node.value, expected)
             node.value.loc = node.value.value.loc
-        generator = self.context.current_function.signature.metadata.get(
-            "generator"
+        generator = (
+            self.services.context.current_function.signature.metadata.get(
+                "generator"
+            )
         )
         if isinstance(generator, ResolvedGeneratorFunction):
             if node.value is not None:
-                self.visit(node.value)
-            value_type = self._expr_type(node.value)
+                self.services.visit(node.value)
+            value_type = self.services.expr_type(node.value)
             if node.value is not None and not is_none_type(value_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "generator functions may only use bare return or "
                     "return None in this phase",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_RETURN,
                 )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
         if node.value is not None:
             contextualize_literal(node.value, expected)
-            self.visit(node.value)
+            self.services.visit(node.value)
         return_resolution = resolve_return(
-            self.context.diagnostics,
-            function=self.context.current_function,
+            self.services.context.diagnostics,
+            function=self.services.context.current_function,
             value=node.value,
-            value_type=self._expr_type(node.value),
+            value_type=self.services.expr_type(node.value),
             node=node,
         )
-        self._set_return(node, return_resolution)
-        self._set_type(node, return_resolution.expected_type)
+        self.services.set_return(node, return_resolution)
+        self.services.set_type(node, return_resolution.expected_type)
         self._resolve_return_resource_ownership(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.YieldStmt) -> None:
         """
         title: Visit YieldStmt nodes.
@@ -676,9 +714,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.YieldStmt
         """
         self._resolve_yield(node, node.value)
-        self._set_type(node, None)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.YieldExpr) -> None:
         """
         title: Visit YieldExpr nodes.
@@ -687,9 +725,9 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.YieldExpr
         """
         self._resolve_yield(node, node.value)
-        self._set_type(node, astx.NoneType())
+        self.services.set_type(node, astx.NoneType())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.YieldFromExpr) -> None:
         """
         title: Visit YieldFromExpr nodes.
@@ -697,15 +735,15 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.YieldFromExpr
         """
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             "yield from is not supported yet",
             node=node,
             code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
         )
-        self.visit(node.value)
-        self._set_type(node, astx.NoneType())
+        self.services.visit(node.value)
+        self.services.set_type(node, astx.NoneType())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.IfStmt) -> None:
         """
         title: Visit IfStmt nodes.
@@ -713,21 +751,21 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.IfStmt
         """
-        self.visit(node.condition)
+        self.services.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="if")
         known = (
             node.condition.value
             if isinstance(node.condition, astx.LiteralBoolean)
             else None
         )
-        with self.context.constant_diagnostics(known is True):
-            self.visit(node.then)
+        with self.services.context.constant_diagnostics(known is True):
+            self.services.visit(node.then)
         if node.else_ is not None:
-            with self.context.constant_diagnostics(known is False):
-                self.visit(node.else_)
-        self._set_type(node, None)
+            with self.services.context.constant_diagnostics(known is False):
+                self.services.visit(node.else_)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.WhileStmt) -> None:
         """
         title: Visit WhileStmt nodes.
@@ -735,14 +773,14 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.WhileStmt
         """
-        self.visit(node.condition)
+        self.services.visit(node.condition)
         self._validate_boolean_condition(node.condition, label="while")
-        with self.context.in_loop():
-            with self.context.constant_diagnostics(False):
-                self.visit(node.body)
-        self._set_type(node, None)
+        with self.services.context.in_loop():
+            with self.services.context.constant_diagnostics(False):
+                self.services.visit(node.body)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForCountLoopStmt) -> None:
         """
         title: Visit ForCountLoopStmt nodes.
@@ -750,13 +788,13 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ForCountLoopStmt
         """
-        with self.context.scope("for-count"):
+        with self.services.context.scope("for-count"):
             if node.initializer.value is not None:
                 contextualize_literal(
                     node.initializer.value, node.initializer.type_
                 )
-                self.visit(node.initializer.value)
-            symbol = self.registry.declare_local(
+                self.services.visit(node.initializer.value)
+            symbol = self.services.registry.declare_local(
                 node.initializer.name,
                 node.initializer.type_,
                 is_mutable=(
@@ -764,32 +802,34 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 ),
                 declaration=node.initializer,
             )
-            self._set_symbol(node.initializer, symbol)
-            self.visit(node.condition)
+            self.services.set_symbol(node.initializer, symbol)
+            self.services.visit(node.condition)
             self._validate_boolean_condition(
                 node.condition,
                 label="for-count loop",
             )
-            with self.context.constant_diagnostics(False):
-                self.visit(node.update)
+            with self.services.context.constant_diagnostics(False):
+                self.services.visit(node.update)
             if isinstance(node.update, astx.AugAssign):
-                plan = self._semantic(node.update).resolved_aug_assignment
+                plan = self.services.semantic(
+                    node.update
+                ).resolved_aug_assignment
                 if (
                     plan is not None
                     and plan.target.symbol_id != symbol.symbol_id
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "compound count-loop update must target "
                         "the induction binding",
                         node=node.update,
                         code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
                     )
-            with self.context.in_loop():
-                with self.context.constant_diagnostics(False):
-                    self.visit(node.body)
-        self._set_type(node, None)
+            with self.services.context.in_loop():
+                with self.services.context.constant_diagnostics(False):
+                    self.services.visit(node.body)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForRangeLoopStmt) -> None:
         """
         title: Visit ForRangeLoopStmt nodes.
@@ -798,13 +838,13 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             type: astx.ForRangeLoopStmt
         """
         loop_type = node.variable.type_
-        self._resolve_declared_type(loop_type, node=node.variable)
+        self.services.resolve_declared_type(loop_type, node=node.variable)
         if not (is_integer_type(loop_type) or is_float_type(loop_type)):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "for-range requires a numeric variable", node=node
             )
             return
-        self._set_operator(
+        self.services.set_operator(
             node,
             normalize_operator(
                 "+",
@@ -816,20 +856,20 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 ),
             ),
         )
-        with self.context.scope("for-range"):
+        with self.services.context.scope("for-range"):
             for value in (node.start, node.end, node.step):
                 if isinstance(value, astx.LiteralNone):
                     continue
                 contextualize_literal(value, loop_type)
-                self.visit(value)
+                self.services.visit(value)
                 validate_assignment(
-                    self.context.diagnostics,
+                    self.services.context.diagnostics,
                     target_name="range variable",
                     target_type=loop_type,
-                    value_type=self._expr_type(value),
+                    value_type=self.services.expr_type(value),
                     node=value,
                 )
-            symbol = self.registry.declare_local(
+            symbol = self.services.registry.declare_local(
                 node.variable.name,
                 node.variable.type_,
                 is_mutable=(
@@ -837,13 +877,13 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 ),
                 declaration=node.variable,
             )
-            self._set_symbol(node.variable, symbol)
-            with self.context.in_loop():
-                with self.context.constant_diagnostics(False):
-                    self.visit(node.body)
-        self._set_type(node, None)
+            self.services.set_symbol(node.variable, symbol)
+            with self.services.context.in_loop():
+                with self.services.context.constant_diagnostics(False):
+                    self.services.visit(node.body)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ForInLoopStmt) -> None:
         """
         title: Visit ForInLoopStmt nodes.
@@ -851,44 +891,44 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ForInLoopStmt
         """
-        with self.context.scope("for-in"):
-            self.visit(node.iterable)
-            iterable_type = self._expr_type(node.iterable)
+        with self.services.context.scope("for-in"):
+            self.services.visit(node.iterable)
+            iterable_type = self.services.expr_type(node.iterable)
             iteration = resolve_iteration_capability(
                 node.iterable,
                 iterable_type,
             )
             if iteration is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "for-in requires an iterable value, got "
                     f"{display_type_name(iterable_type)}",
                     node=node.iterable,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-                self._set_iteration(node, None)
-                self._set_type(node, None)
+                self.services.set_iteration(node, None)
+                self.services.set_type(node, None)
                 return
 
-            symbol = self._declare_iteration_target(
+            symbol = self.services.declare_iteration_target(
                 node.target,
                 iteration.element_type,
                 kind="for-in",
                 iteration_kind=iteration.kind,
             )
             resolved_iteration = replace(iteration, target_symbol=symbol)
-            self._set_iteration(node.iterable, resolved_iteration)
-            self._set_iteration(node, resolved_iteration)
+            self.services.set_iteration(node.iterable, resolved_iteration)
+            self.services.set_iteration(node, resolved_iteration)
             with (
-                self.context.in_loop(),
-                self.context.list_iteration(
+                self.services.context.in_loop(),
+                self.services.context.list_iteration(
                     iteration.borrowed_owner_symbol_id
                 ),
             ):
-                with self.context.constant_diagnostics(False):
-                    self.visit(node.body)
-        self._set_type(node, None)
+                with self.services.context.constant_diagnostics(False):
+                    self.services.visit(node.body)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.WithStmt) -> None:
         """
         title: Visit WithStmt nodes.
@@ -896,32 +936,32 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.WithStmt
         """
-        self.visit(node.manager)
-        if not self._require_value_expression(
+        self.services.visit(node.manager)
+        if not self.services.require_value_expression(
             node.manager,
             context="with manager",
         ):
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
 
-        manager_type = self._expr_type(node.manager)
-        class_ = self._resolve_class_from_type(
+        manager_type = self.services.expr_type(node.manager)
+        class_ = self.services.resolve_class_from_type(
             manager_type,
             node=node.manager,
             unknown_message="with manager uses unknown class '{name}'",
         )
         if class_ is None:
             if not isinstance(manager_type, astx.ClassType):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "with manager requires a class value, got "
                     f"{display_type_name(manager_type)}",
                     node=node.manager,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
-            with self.context.scope("with"):
-                with self.context.constant_diagnostics(False):
-                    self.visit(node.body)
-            self._set_type(node, None)
+            with self.services.context.scope("with"):
+                with self.services.context.constant_diagnostics(False):
+                    self.services.visit(node.body)
+            self.services.set_type(node, None)
             return
 
         resolved_manager_type = cast(astx.DataType, manager_type)
@@ -939,17 +979,17 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         )
 
         target_symbol = None
-        with self.context.scope("with"):
+        with self.services.context.scope("with"):
             if node.target is not None and enter is not None:
                 target_symbol = self._declare_context_target(
                     node.target,
                     enter.call.result_type,
                 )
-            with self.context.constant_diagnostics(False):
-                self.visit(node.body)
+            with self.services.context.constant_diagnostics(False):
+                self.services.visit(node.body)
 
         if enter is not None and exit_ is not None:
-            self._set_context_manager(
+            self.services.set_context_manager(
                 node,
                 ResolvedContextManager(
                     class_=class_,
@@ -960,10 +1000,10 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
                 ),
             )
         else:
-            self._set_context_manager(node, None)
-        self._set_type(node, None)
+            self.services.set_context_manager(node, None)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.BreakStmt) -> None:
         """
         title: Visit BreakStmt nodes.
@@ -971,15 +1011,15 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.BreakStmt
         """
-        if self.context.loop_depth <= 0:
-            self.context.diagnostics.add(
+        if self.services.context.loop_depth <= 0:
+            self.services.context.diagnostics.add(
                 "Break statement outside loop.",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
-        self._set_type(node, None)
+        self.services.set_type(node, None)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ContinueStmt) -> None:
         """
         title: Visit ContinueStmt nodes.
@@ -987,10 +1027,42 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ContinueStmt
         """
-        if self.context.loop_depth <= 0:
-            self.context.diagnostics.add(
+        if self.services.context.loop_depth <= 0:
+            self.services.context.diagnostics.add(
                 "Continue statement outside loop.",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
             )
-        self._set_type(node, None)
+        self.services.set_type(node, None)
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.control_flow." + node_type.__name__,
+                "irx.analysis.control_flow",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ControlFlowAnalysis.visit",
+            )
+            for node_type in (
+                astx.AssertStmt,
+                astx.FunctionReturn,
+                astx.YieldStmt,
+                astx.YieldExpr,
+                astx.YieldFromExpr,
+                astx.IfStmt,
+                astx.WhileStmt,
+                astx.ForCountLoopStmt,
+                astx.ForRangeLoopStmt,
+                astx.ForInLoopStmt,
+                astx.WithStmt,
+                astx.BreakStmt,
+                astx.ContinueStmt,
+            )
+        )

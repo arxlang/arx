@@ -251,10 +251,10 @@ def test_compound_store_conversion_fails_before_publication(
     builder = visitor._llvm.ir_builder
     address = builder.alloca(ir.DoubleType())
     builder.store(ir.Constant(ir.DoubleType(), 3), address)
-    visitor.named_values[plan.target.symbol_id] = address
+    visitor.function_state.named_values[plan.target.symbol_id] = address
     with pytest.raises(LoweringError, match="conversion"):
         visitor.visit(node)
-    assert visitor.result_stack == []
+    assert visitor.function_state.result_stack == []
     assert (
         len(
             [
@@ -284,10 +284,10 @@ def test_compound_lowering_uses_resolved_target_and_opcode() -> None:
     builder = visitor._llvm.ir_builder
     address = builder.alloca(ir.DoubleType())
     builder.store(ir.Constant(ir.DoubleType(), 3), address)
-    visitor.named_values[plan.target.symbol_id] = address
+    visitor.function_state.named_values[plan.target.symbol_id] = address
     visitor.visit(node)
-    assert len(visitor.result_stack) == 1
-    result = visitor.result_stack.pop()
+    assert len(visitor.function_state.result_stack) == 1
+    result = visitor.function_state.result_stack.pop()
     assert builder.block.instructions[-1].operands[0] is result
     builder.ret_void()
     text = str(visitor._llvm.module)
@@ -311,6 +311,24 @@ def numeric_visitor() -> Visitor:
         function.append_basic_block("entry")
     )
     return visitor
+
+
+def test_identifier_needs_identity_with_matching_raw_storage() -> None:
+    """
+    title: A typed identifier cannot bind storage by source spelling alone.
+    """
+    visitor = numeric_visitor()
+    node = astx.Identifier("value")
+    node.semantic = SemanticInfo(resolved_type=astx.Int32())
+    storage = visitor._llvm.ir_builder.alloca(ir.IntType(32), name="raw_value")
+    visitor.function_state.named_values[node.name] = storage
+    instructions = tuple(visitor._llvm.ir_builder.block.instructions)
+    with pytest.raises(
+        LoweringError, match="missing resolved_symbol metadata"
+    ):
+        visitor.visit(node)
+    assert tuple(visitor._llvm.ir_builder.block.instructions) == instructions
+    assert not visitor.function_state.result_stack
 
 
 @pytest.mark.parametrize("operator", ["+", "<"])
@@ -362,8 +380,8 @@ def test_lowering_obeys_resolved_conversions_and_signedness() -> None:
     )
     visitor = numeric_visitor()
     visitor.visit(expression)
-    assert len(visitor.result_stack) == 1
-    visitor.result_stack.pop()
+    assert len(visitor.function_state.result_stack) == 1
+    visitor.function_state.result_stack.pop()
     visitor._llvm.ir_builder.ret_void()
     text = str(visitor._llvm.module)
     llvm.parse_assembly(text).verify()
@@ -467,8 +485,8 @@ def test_boolean_equality_keeps_identity_operand_conversions() -> None:
     analyze(expression)
     visitor = numeric_visitor()
     visitor.visit(expression)
-    assert len(visitor.result_stack) == 1
-    visitor.result_stack.pop()
+    assert len(visitor.function_state.result_stack) == 1
+    visitor.function_state.result_stack.pop()
     visitor._llvm.ir_builder.ret_void()
     llvm.parse_assembly(str(visitor._llvm.module)).verify()
 
@@ -518,6 +536,6 @@ def test_contextual_literal_lowering_uses_the_semantic_constant() -> None:
     semantic.numeric_constant = expected
     visitor = numeric_visitor()
     visitor.visit(value)
-    (constant,) = visitor.result_stack
+    (constant,) = visitor.function_state.result_stack
     assert isinstance(constant, ir.Constant)
     assert constant.constant == expected

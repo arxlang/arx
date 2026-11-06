@@ -1,7 +1,7 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Module-level visitor mixins for llvmliteir.
+title: Module-level lowering implementations for llvmliteir.
 """
 
 from typing import cast
@@ -9,28 +9,94 @@ from typing import cast
 import astx
 
 from llvmlite import ir
-from plum import Function
+from plum import dispatch
+from public import private
 
 from irx.analysis.resolved_nodes import SemanticClass
-from irx.builder.core import (
-    VisitorCore,
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
+from irx.builder.lowering.contracts import ModuleServices
+from irx.builder.services.representations import (
     semantic_class_key,
     semantic_class_name,
     semantic_struct_key,
     semantic_struct_name,
 )
-from irx.builder.diagnostics import require_semantic_metadata
-from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.types import is_fp_type, is_int_type
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ModuleVisitorMixin(ClassVisitorMixin):
+class ModuleLowering:
     """
     title: Lower modules and imported declarations to LLVM.
     visibility: internal
+    attributes:
+      services:
+        type: ModuleServices
     """
+
+    services: ModuleServices
+
+    def __init__(self, services: ModuleServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: ModuleServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no modules handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.modules.Module",
+                "irx.modules",
+                "lowering",
+                astx.Module,
+                self.visit,
+                source="irx.builder.lowering.modules.ModuleLowering.visit",
+            ),
+            contribute_node(
+                "llvm.modules.StructDefStmt",
+                "irx.modules",
+                "lowering",
+                astx.StructDefStmt,
+                self.visit,
+                source="irx.builder.lowering.modules.ModuleLowering.visit",
+            ),
+            contribute_node(
+                "llvm.modules.ClassDefStmt",
+                "irx.modules",
+                "lowering",
+                astx.ClassDefStmt,
+                self.visit,
+                source="irx.builder.lowering.modules.ModuleLowering.visit",
+            ),
+        )
 
     def _default_global_initializer(self, llvm_type: ir.Type) -> ir.Constant:
         """
@@ -106,9 +172,12 @@ class ModuleVisitorMixin(ClassVisitorMixin):
             return ir.Constant(llvm_type, float(value.value))
         if isinstance(value, astx.LiteralNone):
             return ir.Constant(llvm_type, None)
-        raise Exception(
-            "codegen: static class attribute initializers must be literal "
-            "constants in phase 6"
+        raise_lowering_internal_error(
+            (
+                "codegen: static class attribute initializers must be "
+                "literal constants in phase 6"
+            ),
+            node=value,
         )
 
     def _dispatch_table_initializer(
@@ -129,7 +198,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         if layout is None or layout.dispatch_table_size == 0:
             return None
         dispatch_type = ir.ArrayType(
-            self._llvm.OPAQUE_POINTER_TYPE,
+            self.services.llvm.OPAQUE_POINTER_TYPE,
             layout.dispatch_table_size,
         )
         entries: list[ir.Constant] = []
@@ -137,11 +206,13 @@ class ModuleVisitorMixin(ClassVisitorMixin):
             entry = layout.dispatch_slots.get(slot_index)
             if entry is None:
                 entries.append(
-                    ir.Constant(self._llvm.OPAQUE_POINTER_TYPE, None)
+                    ir.Constant(self.services.llvm.OPAQUE_POINTER_TYPE, None)
                 )
                 continue
-            function = self._declare_semantic_function(entry.function)
-            entries.append(function.bitcast(self._llvm.OPAQUE_POINTER_TYPE))
+            function = self.services.declare_semantic_function(entry.function)
+            entries.append(
+                function.bitcast(self.services.llvm.OPAQUE_POINTER_TYPE)
+            )
         return dispatch_type, ir.Constant(dispatch_type, entries)
 
     def _ensure_identified_type(
@@ -162,16 +233,18 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         returns:
           type: ir.IdentifiedStructType
         """
-        composite_type = self._llvm.module.context.get_identified_type(
+        composite_type = self.services.llvm.module.context.get_identified_type(
             llvm_name
         )
-        self.struct_types[type_key] = composite_type
-        self.llvm_structs_by_qualified_name[type_key] = composite_type
+        self.services.module_state.struct_types[type_key] = composite_type
+        self.services.module_state.llvm_structs_by_qualified_name[type_key] = (
+            composite_type
+        )
         if composite_type.is_opaque:
             composite_type.set_body(*field_types)
         return composite_type
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.Module) -> None:
         """
         title: Visit Module nodes.
@@ -179,9 +252,9 @@ class ModuleVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.Module
         """
-        self._translate_modules([node])
+        self.services.translate_modules([node])
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.StructDefStmt) -> None:
         """
         title: Visit StructDefStmt nodes.
@@ -189,7 +262,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.StructDefStmt
         """
-        struct_key = semantic_struct_key(node, node.name)
+        struct_key = semantic_struct_key(node)
         semantic = getattr(node, "semantic", None)
         resolved_struct = getattr(semantic, "resolved_struct", None)
         fields = (
@@ -199,17 +272,21 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         )
         field_types: list[ir.Type] = []
         for field in fields:
-            llvm_type = self._llvm_type_for_ast_type(field.type_)
+            llvm_type = self.services.types.llvm_type(field.type_)
             if llvm_type is None:
-                raise Exception(
-                    f"codegen: Unknown LLVM type for struct field "
-                    f"'{field.name}'."
+                raise_lowering_internal_error(
+                    (
+                        "codegen: Unknown LLVM type for struct field '"
+                        f"{field.name}"
+                        "'."
+                    ),
+                    node=node,
                 )
             field_types.append(llvm_type)
 
         self._ensure_identified_type(
             struct_key,
-            semantic_struct_name(node, node.name),
+            semantic_struct_name(node),
             field_types,
         )
 
@@ -220,52 +297,67 @@ class ModuleVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.ClassDefStmt
         """
-        class_key = semantic_class_key(node, node.name)
+        class_key = semantic_class_key(node)
         semantic = getattr(node, "semantic", None)
         resolved_class = getattr(semantic, "resolved_class", None)
         layout = getattr(resolved_class, "layout", None)
         initialization = getattr(resolved_class, "initialization", None)
         if layout is None:
-            raise Exception("codegen: unresolved class layout.")
+            raise_lowering_internal_error(
+                "codegen: unresolved class layout.", node=node
+            )
         if initialization is None:
-            raise Exception("codegen: unresolved class initialization.")
+            raise_lowering_internal_error(
+                "codegen: unresolved class initialization.", node=node
+            )
 
         field_types: list[ir.Type] = [
-            self._llvm.OPAQUE_POINTER_TYPE for _ in layout.header_fields
+            self.services.llvm.OPAQUE_POINTER_TYPE
+            for _ in layout.header_fields
         ]
         for field in layout.instance_fields:
-            llvm_type = self._llvm_type_for_ast_type(field.member.type_)
+            llvm_type = self.services.types.llvm_type(field.member.type_)
             if llvm_type is None:
-                raise Exception(
-                    f"codegen: Unknown LLVM type for class field "
-                    f"'{field.member.name}'."
+                raise_lowering_internal_error(
+                    (
+                        "codegen: Unknown LLVM type for class field '"
+                        f"{field.member.name}"
+                        "'."
+                    ),
+                    node=node,
                 )
             field_types.append(llvm_type)
 
         self._ensure_identified_type(
             class_key,
-            semantic_class_name(node, node.name),
+            semantic_class_name(node),
             field_types,
         )
 
-        self.class_field_function(cast(SemanticClass, resolved_class))
+        self.services.class_field_function(cast(SemanticClass, resolved_class))
 
         for static_initializer in initialization.static_initializers:
             storage = static_initializer.storage
-            llvm_type = self._llvm_type_for_ast_type(storage.member.type_)
+            llvm_type = self.services.types.llvm_type(storage.member.type_)
             if llvm_type is None:
-                raise Exception(
-                    f"codegen: Unknown LLVM type for static class field "
-                    f"'{storage.member.name}'."
+                raise_lowering_internal_error(
+                    (
+                        "codegen: Unknown LLVM type for static class field '"
+                        f"{storage.member.name}"
+                        "'."
+                    ),
+                    node=node,
                 )
             initializer = self._literal_global_initializer(
                 static_initializer.value,
                 llvm_type,
             )
-            existing = self._llvm.module.globals.get(storage.global_name)
+            existing = self.services.llvm.module.globals.get(
+                storage.global_name
+            )
             if existing is None:
                 global_var = ir.GlobalVariable(
-                    self._llvm.module,
+                    self.services.llvm.module,
                     llvm_type,
                     name=storage.global_name,
                 )
@@ -278,12 +370,12 @@ class ModuleVisitorMixin(ClassVisitorMixin):
         dispatch_table = self._dispatch_table_initializer(node)
         if dispatch_table is not None:
             dispatch_type, dispatch_initializer = dispatch_table
-            dispatch_global = self._llvm.module.globals.get(
+            dispatch_global = self.services.llvm.module.globals.get(
                 layout.dispatch_global_name
             )
             if dispatch_global is None:
                 dispatch_global = ir.GlobalVariable(
-                    self._llvm.module,
+                    self.services.llvm.module,
                     dispatch_type,
                     name=layout.dispatch_global_name,
                 )
@@ -292,7 +384,7 @@ class ModuleVisitorMixin(ClassVisitorMixin):
             dispatch_global.initializer = dispatch_initializer
 
     # Plum adds dispatch beyond the Callable type inferred for visit.
-    @cast(Function, VisitorCore.visit).dispatch
+    @dispatch
     def visit(self, node: astx.ClassDefStmt) -> None:
         """
         title: Lower methods after module object layouts are declared.
@@ -308,4 +400,4 @@ class ModuleVisitorMixin(ClassVisitorMixin):
                 or bool(getattr(method, "is_abstract", False))
             ):
                 continue
-            self.visit(method)
+            self.services.visit_child(method)

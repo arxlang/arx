@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Declaration block visitors.
@@ -11,19 +9,15 @@ summary: >-
 
 from __future__ import annotations
 
-from typing import cast
-
 import astx
 
-from irx.analysis.arrow_conversion import arrow_local
-from irx.analysis.class_lifecycle import class_local
-from irx.analysis.file_io import resolve_file_local
-from irx.analysis.flow import flow_outcomes
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from plum import dispatch
+from public import private
+
+from irx.analysis.dependencies.declaration_block import (
+    DeclarationBlockAnalysisServices,
 )
-from irx.analysis.nullable import resolve_nullable_global
+from irx.analysis.flow import flow_outcomes
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
@@ -48,14 +42,31 @@ from irx.analysis.types import (
 )
 from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
+class DeclarationBlockAnalysis:
     """
     title: Declaration visitors for modules, blocks, and local declarations
+    attributes:
+      services:
+        type: DeclarationBlockAnalysisServices
     """
+
+    services: DeclarationBlockAnalysisServices
+
+    def __init__(self, services: DeclarationBlockAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationBlockAnalysisServices
+        """
+        self.services = services
 
     def _resolve_local_resource_ownership(
         self,
@@ -70,8 +81,8 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           symbol:
             type: SemanticSymbol
         """
-        self._semantic(node).resource_ownership = None
-        function = self.context.current_function
+        self.services.semantic(node).resource_ownership = None
+        function = self.services.context.current_function
         if (
             function is not None
             and isinstance(
@@ -88,27 +99,27 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 or is_string_type(node.type_)
             )
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "non-scalar locals in generators require lifecycle cleanup",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
         if isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
-            arrow_local(cast(SemanticAnalyzerCore, self), node, symbol)
+            self.services.free_arrow_local(node, symbol)
             return
         if isinstance(node.type_, astx.ClassType):
-            class_local(cast(SemanticAnalyzerCore, self), node, symbol)
+            self.services.free_class_local(node, symbol)
             return
         if isinstance(node.type_, astx.FileType):
-            resolve_file_local(cast(SemanticAnalyzerCore, self), node, symbol)
+            self.services.free_resolve_file_local(node, symbol)
             return
         if is_string_type(node.type_):
             self._resolve_local_string_ownership(node, symbol)
             return
         if isinstance(node.type_, astx.GeneratorType):
             ownership = resource_ownership(node.value)
-            function = self.context.current_function
+            function = self.services.context.current_function
             if (
                 ownership is None
                 or ownership.kind is not OwnershipKind.OWNED
@@ -118,7 +129,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                     ResolvedGeneratorFunction,
                 )
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "generator locals require a fresh owned iterator "
                     "in an ordinary function",
                     node=node,
@@ -126,7 +137,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 )
                 return
             assert node.value is not None
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node.value,
                 transfer_resource_ownership(
                     ownership,
@@ -134,7 +145,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                     transfer_kind=OwnershipTransferKind.MOVE,
                 ),
             )
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 ResourceOwnership(
                     ResourceKind.GENERATOR,
@@ -149,7 +160,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             isinstance(element_type, (astx.ListType, astx.Bytes))
             for element_type in node.type_.element_types
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"list '{node.name}' cannot own dynamic-list elements "
                 "because nested ownership and destruction are not supported",
                 node=node,
@@ -157,9 +168,9 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        function = self.context.current_function
+        function = self.services.context.current_function
         if function is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"module-level owned list '{node.name}' requires module "
                 "lifecycle cleanup, which is not supported yet",
                 node=node,
@@ -172,14 +183,14 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         value = node.value
         if value is None or isinstance(value, astx.Undefined):
             if is_generator:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "owned list locals in generators require generator "
                     "lifecycle cleanup, which is not supported yet",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
                 return
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 list_resource_ownership(
                     OwnershipKind.OWNED,
@@ -190,7 +201,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
 
         initializer_ownership = resource_ownership(value)
         if initializer_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"list initializer for '{node.name}' is missing ownership "
                 "metadata",
                 node=value,
@@ -198,7 +209,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if initializer_ownership.kind is OwnershipKind.BORROWED:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"list initializer for '{node.name}' would copy borrowed "
                 "storage; local list copies are not supported",
                 node=value,
@@ -210,7 +221,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if initializer_ownership.kind is OwnershipKind.STATIC:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"static list storage cannot initialize dynamic list local "
                 f"'{node.name}'",
                 node=value,
@@ -222,7 +233,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if is_generator:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned list locals in generators require generator "
                 "lifecycle cleanup, which is not supported yet",
                 node=node,
@@ -230,7 +241,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             value,
             transfer_resource_ownership(
                 initializer_ownership,
@@ -238,7 +249,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 transfer_kind=OwnershipTransferKind.MOVE,
             ),
         )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             list_resource_ownership(
                 OwnershipKind.OWNED,
@@ -261,7 +272,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         """
         value = node.value
         if value is None or isinstance(value, astx.Undefined):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(
                     OwnershipKind.STATIC,
@@ -272,7 +283,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
 
         initializer_ownership = resource_ownership(value)
         if initializer_ownership is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"string initializer for '{node.name}' is missing ownership "
                 "metadata",
                 node=value,
@@ -295,7 +306,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 and source_ownership is not None
                 and source_ownership.kind is OwnershipKind.STATIC
             ):
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     string_resource_ownership(
                         OwnershipKind.STATIC,
@@ -304,7 +315,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                     ),
                 )
                 return
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"string initializer for '{node.name}' would alias borrowed "
                 "storage; borrowed string copies are not supported",
                 node=value,
@@ -315,7 +326,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         if initializer_ownership.kind is OwnershipKind.STATIC:
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(
                     OwnershipKind.STATIC,
@@ -325,9 +336,9 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        function = self.context.current_function
+        function = self.services.context.current_function
         if function is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"module-level owned string '{node.name}' requires module "
                 "lifecycle cleanup, which is not supported yet",
                 node=node,
@@ -336,7 +347,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             return
         generator = function.signature.metadata.get("generator")
         if isinstance(generator, ResolvedGeneratorFunction):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "owned string locals in generators require generator "
                 "lifecycle cleanup, which is not supported yet",
                 node=node,
@@ -344,7 +355,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             value,
             transfer_resource_ownership(
                 initializer_ownership,
@@ -352,7 +363,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 transfer_kind=OwnershipTransferKind.MOVE,
             ),
         )
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(
                 OwnershipKind.OWNED,
@@ -360,7 +371,19 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             ),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in DeclarationBlockAnalysis"
+        )
+
+    @dispatch
     def visit(self, module: astx.Module) -> None:
         """
         title: Visit Module nodes.
@@ -368,10 +391,10 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           module:
             type: astx.Module
         """
-        with self.context.in_module(module.name):
-            self._visit_module(module, predeclared=False)
+        with self.services.context.in_module(module.name):
+            self.services.visit_module(module, predeclared=False)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, block: astx.Block) -> None:
         """
         title: Visit Block nodes.
@@ -379,13 +402,13 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           block:
             type: astx.Block
         """
-        self._set_type(block, None)
-        self._predeclare_block_structs(block)
+        self.services.set_type(block, None)
+        self.services.predeclare_block_structs(block)
         for node in block.nodes:
-            self.visit(node)
-        self._semantic(block).flow_outcomes = flow_outcomes(block)
+            self.services.visit(node)
+        self.services.semantic(block).flow_outcomes = flow_outcomes(block)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.VariableDeclaration) -> None:
         """
         title: Visit VariableDeclaration nodes.
@@ -393,7 +416,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.VariableDeclaration
         """
-        self._resolve_declared_type(node.type_, node=node)
+        self.services.resolve_declared_type(node.type_, node=node)
         if isinstance(node.type_, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
         ):
@@ -403,29 +426,29 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             node.value, astx.Undefined
         ):
             contextualize_literal(node.value, node.type_)
-            self.visit(node.value)
-            if self._require_value_expression(
+            self.services.visit(node.value)
+            if self.services.require_value_expression(
                 node.value,
                 context=f"Initializer for '{node.name}'",
             ):
                 validate_assignment(
-                    self.context.diagnostics,
+                    self.services.context.diagnostics,
                     target_name=node.name,
                     target_type=node.type_,
-                    value_type=self._expr_type(node.value),
+                    value_type=self.services.expr_type(node.value),
                     node=node,
                 )
-        symbol = self.registry.declare_local(
+        symbol = self.services.registry.declare_local(
             node.name,
             node.type_,
             is_mutable=node.mutability != astx.MutabilityKind.constant,
             declaration=node,
         )
-        self._set_symbol(node, symbol)
+        self.services.set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)
+        self.services.free_resolve_nullable_global(node)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
         """
         title: Visit InlineVariableDeclaration nodes.
@@ -433,7 +456,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.InlineVariableDeclaration
         """
-        self._resolve_declared_type(node.type_, node=node)
+        self.services.resolve_declared_type(node.type_, node=node)
         if isinstance(node.type_, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
         ):
@@ -443,24 +466,47 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
             node.value, astx.Undefined
         ):
             contextualize_literal(node.value, node.type_)
-            self.visit(node.value)
-            if self._require_value_expression(
+            self.services.visit(node.value)
+            if self.services.require_value_expression(
                 node.value,
                 context=f"Initializer for '{node.name}'",
             ):
                 validate_assignment(
-                    self.context.diagnostics,
+                    self.services.context.diagnostics,
                     target_name=node.name,
                     target_type=node.type_,
-                    value_type=self._expr_type(node.value),
+                    value_type=self.services.expr_type(node.value),
                     node=node,
                 )
-        symbol = self.registry.declare_local(
+        symbol = self.services.registry.declare_local(
             node.name,
             node.type_,
             is_mutable=node.mutability != astx.MutabilityKind.constant,
             declaration=node,
         )
-        self._set_symbol(node, symbol)
+        self.services.set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)
+        self.services.free_resolve_nullable_global(node)
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.declaration_block." + node_type.__name__,
+                "irx.analysis.declaration_block",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".DeclarationBlockAnalysis.visit",
+            )
+            for node_type in (
+                astx.Module,
+                astx.Block,
+                astx.VariableDeclaration,
+                astx.InlineVariableDeclaration,
+            )
+        )

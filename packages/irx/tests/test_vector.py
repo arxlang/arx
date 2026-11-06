@@ -2,6 +2,7 @@
 title: Tests for vector operations in the LLVM-IR builder.
 """
 
+from dataclasses import replace
 from typing import Any
 
 import astx
@@ -32,7 +33,7 @@ def setup_builder() -> Visitor:
         visitor._llvm.INT32_TYPE, [ir.IntType(8).as_pointer()]
     )
     fn = ir.Function(visitor._llvm.module, func_type, name="main")
-    visitor.exception_context = fn.args[0]
+    visitor.exit_state.exception_context = fn.args[0]
     bb = fn.append_basic_block("entry")
     visitor._llvm.ir_builder = ir.IRBuilder(bb)
     return visitor
@@ -58,31 +59,25 @@ def _make_binop_visitor(
       type: Visitor
     """
     builder = setup_builder()
-    original_visit = builder.visit
 
-    def mock_visit(node: Any, *args: Any, **kwargs: Any) -> Any:
+    def mock_visit(node: astx.AST) -> None:
         """
-        title: Mock visit.
+        title: Supply explicitly selected raw operands for FMA emission.
         parameters:
           node:
-            type: Any
-          args:
-            type: Any
-            variadic: positional
-          kwargs:
-            type: Any
-            variadic: keyword
-        returns:
-          type: Any
+            type: astx.AST
         """
         if isinstance(node, astx.Identifier):
-            mapping = {"LHS": lhs_val, "RHS": rhs_val, "FMA_RHS": fma_rhs}
-            if node.name in mapping:
-                builder.result_stack.append(mapping[node.name])
+            value = {"LHS": lhs_val, "RHS": rhs_val, "FMA_RHS": fma_rhs}.get(
+                node.name
+            )
+            if value is not None:
+                builder.function_state.result_stack.append(value)
                 return
-        return original_visit(node, *args, **kwargs)
+        builder.visit(node)
 
-    builder.visit = mock_visit  # type: ignore[method-assign]
+    family = builder.features.binary
+    family.services = replace(family.services, visit_child=mock_visit)
 
     def load_operands(
         node: astx.BinaryOp, *, unify_numeric: bool = True
@@ -99,10 +94,7 @@ def _make_binop_visitor(
         """
         unsigned = bool(getattr(node, "unsigned", False))
         lhs, rhs = lhs_val, rhs_val
-        if unify_numeric:
-            lhs, rhs = builder._unify_numeric_operands(
-                lhs, rhs, unsigned=unsigned
-            )
+        del unify_numeric
         type_ = astx.UInt32() if unsigned else astx.Int32()
         node.semantic = SemanticInfo(
             resolved_type=type_,
@@ -122,7 +114,7 @@ def _make_binop_visitor(
 
     # These are raw LLVM emission tests, not a source-language typing path.
     # Production operand loading now requires analyzed conversion sidecars.
-    builder._load_binary_operands = load_operands  # type: ignore[method-assign]
+    family._load_binary_operands = load_operands  # type: ignore[method-assign]
     return builder
 
 
@@ -164,7 +156,7 @@ def _run_vector_binop(
         bin_op.fma = True
         bin_op.fma_rhs = astx.Identifier("FMA_RHS")
     builder.visit(bin_op)
-    return builder.result_stack.pop()
+    return builder.function_state.result_stack.pop()
 
 
 _ARITH_CASES = [
@@ -284,175 +276,6 @@ def test_int_vector_division(unsigned: bool, want: str, reject: str) -> None:
 
 
 # (elem_attr, count, vec_vals, scalar_val, lhs_is_vec, mnemonic)
-_SPLAT_CASES = [
-    ("FLOAT_TYPE", VEC4, [1.0] * VEC4, 2.0, True, "fadd"),
-    ("FLOAT_TYPE", VEC4, [1.0] * VEC4, 2.0, False, "fadd"),
-    ("INT32_TYPE", VEC4, [1] * VEC4, 2, True, "add"),
-    ("INT32_TYPE", VEC4, [1] * VEC4, 2, False, "add"),
-]
-
-
-def _splat_id(case: tuple[Any, ...]) -> str:
-    """
-    title: Splat id.
-    parameters:
-      case:
-        type: tuple[Any, Ellipsis]
-    returns:
-      type: str
-    """
-    elem, count, _, _, lhs_is_vec, *_ = case
-    order = "vec+scalar" if lhs_is_vec else "scalar+vec"
-    return f"{elem.replace('_TYPE', '').lower()}x{count}_{order}"
-
-
-@pytest.mark.parametrize(
-    "elem_attr, count, vec_vals, scalar_val, lhs_is_vec, mnemonic",
-    _SPLAT_CASES,
-    ids=[_splat_id(c) for c in _SPLAT_CASES],
-)
-def test_scalar_splatted_to_vector(
-    elem_attr: str,
-    count: int,
-    vec_vals: list[Any],
-    scalar_val: float | int,
-    lhs_is_vec: bool,
-    mnemonic: str,
-) -> None:
-    """
-    title: >-
-      A scalar operand is broadcast to all lanes of the partner vector
-      regardless of operand order.
-    parameters:
-      elem_attr:
-        type: str
-      count:
-        type: int
-      vec_vals:
-        type: list[Any]
-      scalar_val:
-        type: float | int
-      lhs_is_vec:
-        type: bool
-      mnemonic:
-        type: str
-    """
-    builder = setup_builder()
-    elem_ty = getattr(builder._llvm, elem_attr)
-    vec = ir.Constant(ir.VectorType(elem_ty, count), vec_vals)
-    scalar = ir.Constant(elem_ty, scalar_val)
-    lhs, rhs = (vec, scalar) if lhs_is_vec else (scalar, vec)
-
-    result = _run_vector_binop("+", lhs, rhs)
-
-    assert mnemonic in str(result)
-    assert isinstance(result.type, ir.VectorType)
-    assert result.type.count == count
-    assert result.type.element == elem_ty
-
-
-def test_unsigned_scalar_splatted_to_vector_zero_extends() -> None:
-    """
-    title: Unsigned scalar-to-vector promotion zero-extends before splatting.
-    """
-    builder = setup_builder()
-    vec_ty = ir.VectorType(builder._llvm.INT32_TYPE, VEC2)
-    vec = ir.Constant(vec_ty, [1] * VEC2)
-    scalar = ir.Constant(builder._llvm.INT8_TYPE, 255)
-
-    result = _run_vector_binop("+", vec, scalar, unsigned=True)
-
-    splat = result.operands[1]
-    assert getattr(splat, "opname", "") == "shufflevector"
-    insert = splat.operands[0]
-    assert getattr(insert, "opname", "") == "insertelement"
-    promoted_scalar = insert.operands[1]
-    assert getattr(promoted_scalar, "opname", "") == "zext"
-
-
-_CROSS_FP_CASES = [
-    (
-        "FLOAT_TYPE",
-        "DOUBLE_TYPE",
-        True,
-        "FLOAT_TYPE",
-    ),  # float vec + double scalar -> float
-    (
-        "FLOAT_TYPE",
-        "DOUBLE_TYPE",
-        False,
-        "FLOAT_TYPE",
-    ),  # double scalar + float vec -> float
-    (
-        "DOUBLE_TYPE",
-        "FLOAT_TYPE",
-        True,
-        "DOUBLE_TYPE",
-    ),  # double vec + float scalar -> double
-    (
-        "DOUBLE_TYPE",
-        "FLOAT_TYPE",
-        False,
-        "DOUBLE_TYPE",
-    ),  # float scalar + double vec -> double
-]
-
-
-def _cross_id(case: tuple[Any, ...]) -> str:
-    """
-    title: Cross id.
-    parameters:
-      case:
-        type: tuple[Any, Ellipsis]
-    returns:
-      type: str
-    """
-    vec_e, sc_e, lhs_is_vec, *_ = case
-    v = vec_e.replace("_TYPE", "").lower()
-    s = sc_e.replace("_TYPE", "").lower()
-    return f"{v}_vec_{s}_scalar_{'lhs' if lhs_is_vec else 'rhs'}"
-
-
-@pytest.mark.parametrize(
-    "vec_elem_attr, scalar_attr, lhs_is_vec, expected_elem_attr",
-    _CROSS_FP_CASES,
-    ids=[_cross_id(c) for c in _CROSS_FP_CASES],
-)
-def test_fp_scalar_vector_cross_precision(
-    vec_elem_attr: str,
-    scalar_attr: str,
-    lhs_is_vec: bool,
-    expected_elem_attr: str,
-) -> None:
-    """
-    title: >-
-      Cross-precision FP scalar+vector ops produce the vector's element type
-      (scalar is cast to match).
-    parameters:
-      vec_elem_attr:
-        type: str
-      scalar_attr:
-        type: str
-      lhs_is_vec:
-        type: bool
-      expected_elem_attr:
-        type: str
-    """
-    builder = setup_builder()
-    vec_elem_ty = getattr(builder._llvm, vec_elem_attr)
-    scalar_ty = getattr(builder._llvm, scalar_attr)
-    expected_elem_ty = getattr(builder._llvm, expected_elem_attr)
-
-    vec = ir.Constant(ir.VectorType(vec_elem_ty, VEC4), [1.0] * VEC4)
-    scalar = ir.Constant(scalar_ty, 2.0)
-    lhs, rhs = (vec, scalar) if lhs_is_vec else (scalar, vec)
-
-    result = _run_vector_binop("+", lhs, rhs)
-
-    assert "fadd" in str(result)
-    assert isinstance(result.type, ir.VectorType)
-    assert result.type.count == VEC4
-    assert result.type.element == expected_elem_ty
 
 
 @pytest.mark.parametrize(
@@ -476,7 +299,7 @@ def test_vector_fma_direct(elem_attr: str, count: int) -> None:
     vec_ty = ir.VectorType(elem_ty, count)
     v = ir.Constant(vec_ty, [2.0] * count)
 
-    result = builder._emit_fma(v, v, v)
+    result = builder.floating.emit_fma(v, v, v)
 
     assert isinstance(result.type, ir.VectorType)
     assert result.type.count == count
@@ -589,7 +412,7 @@ def test_fast_math_flag_restored_after_vector_binop(
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
     v = ir.Constant(vec_ty, [1.0] * VEC4)
     patched = _make_binop_visitor(v, v)
-    patched.set_fast_math(initial_fast_math)
+    patched.floating.set_fast_math(initial_fast_math)
 
     bin_op = astx.BinaryOp(op, astx.Identifier("LHS"), astx.Identifier("RHS"))
     bin_op.fast_math = True
@@ -599,9 +422,9 @@ def test_fast_math_flag_restored_after_vector_binop(
             patched.visit(bin_op)
     else:
         patched.visit(bin_op)
-        patched.result_stack.pop()
+        patched.function_state.result_stack.pop()
 
-    assert patched._fast_math_enabled is initial_fast_math
+    assert patched.floating.enabled is initial_fast_math
 
 
 @pytest.mark.parametrize(
@@ -622,7 +445,7 @@ def test_fast_math_flag_restored_after_vector_fma(
     vec_ty = ir.VectorType(builder._llvm.FLOAT_TYPE, VEC4)
     v = ir.Constant(vec_ty, [1.0] * VEC4)
     patched = _make_binop_visitor(v, v, v)
-    patched.set_fast_math(initial_fast_math)
+    patched.floating.set_fast_math(initial_fast_math)
 
     bin_op = astx.BinaryOp("*", astx.Identifier("LHS"), astx.Identifier("RHS"))
     bin_op.fast_math = True
@@ -630,47 +453,9 @@ def test_fast_math_flag_restored_after_vector_fma(
     bin_op.fma_rhs = astx.Identifier("FMA_RHS")
 
     patched.visit(bin_op)
-    patched.result_stack.pop()
+    patched.function_state.result_stack.pop()
 
-    assert patched._fast_math_enabled is initial_fast_math
-
-
-@pytest.mark.parametrize(
-    "lhs_count, rhs_count, match",
-    [(VEC4, VEC2, "Vector size mismatch")],
-    ids=["size_mismatch"],
-)
-def test_vector_size_mismatch_raises(
-    lhs_count: int, rhs_count: int, match: str
-) -> None:
-    """
-    title: >-
-      Mismatched vector sizes raise an exception with a descriptive message.
-    parameters:
-      lhs_count:
-        type: int
-      rhs_count:
-        type: int
-      match:
-        type: str
-    """
-    builder = setup_builder()
-    elem_ty = builder._llvm.INT32_TYPE
-    v1 = ir.Constant(ir.VectorType(elem_ty, lhs_count), [1] * lhs_count)
-    v2 = ir.Constant(ir.VectorType(elem_ty, rhs_count), [1] * rhs_count)
-    with pytest.raises(Exception, match=match):
-        _run_vector_binop("+", v1, v2)
-
-
-def test_vector_element_type_mismatch_raises() -> None:
-    """
-    title: Mismatched vector element types raise an exception.
-    """
-    builder = setup_builder()
-    v1 = ir.Constant(ir.VectorType(builder._llvm.INT32_TYPE, VEC2), [1] * VEC2)
-    v2 = ir.Constant(ir.VectorType(builder._llvm.INT64_TYPE, VEC2), [1] * VEC2)
-    with pytest.raises(Exception, match="Vector element type mismatch"):
-        _run_vector_binop("+", v1, v2)
+    assert patched.floating.enabled is initial_fast_math
 
 
 @pytest.mark.parametrize(

@@ -186,7 +186,7 @@ def test_elif_chain_translate(body: str) -> None:
     # Top-level definitions produce functions, not leftover branch values.
     assert all(
         isinstance(value, ir.Function)
-        for value in builder.translator.result_stack
+        for value in builder.translator.function_state.result_stack
     )
 
 

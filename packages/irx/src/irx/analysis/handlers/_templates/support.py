@@ -12,7 +12,11 @@ from typing import Iterable, cast
 
 import astx
 
-from irx.analysis.handlers.base import SemanticVisitorMixinBase
+from public import private
+
+from irx.analysis.dependencies.template_support import (
+    TemplateSupportAnalysisServices,
+)
 from irx.analysis.module_symbols import specialized_function_basename
 from irx.analysis.resolved_nodes import (
     SemanticFunction,
@@ -28,11 +32,26 @@ from irx.analysis.types import (
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class TemplateSupportVisitorMixin(SemanticVisitorMixinBase):
+class TemplateSupportAnalysis:
     """
     title: Template-specialization support helpers
+    attributes:
+      services:
+        type: TemplateSupportAnalysisServices
     """
+
+    services: TemplateSupportAnalysisServices
+
+    def __init__(self, services: TemplateSupportAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: TemplateSupportAnalysisServices
+        """
+        self.services = services
 
     def _type_identity_name(self, type_: astx.DataType) -> str:
         """

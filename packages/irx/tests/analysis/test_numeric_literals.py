@@ -22,8 +22,12 @@ from irx.analysis import (
     resource_ownership,
 )
 from irx.analysis.class_lifecycle import lifecycle_children
+from irx.analysis.extensions.literals import LITERAL_STORAGE
 from irx.analysis.float_literals import rounded_float
-from irx.analysis.numeric_literals import numeric_constant
+from irx.analysis.numeric_literals import (
+    contextualize_literal,
+    numeric_constant,
+)
 from irx.builtins.collections.list import list_element_type
 
 
@@ -311,3 +315,72 @@ def test_narrow_list_context_checks_all_exact_values(
                 value=expression,
             )
         )
+
+
+@pytest.mark.parametrize(
+    ("elements", "expected"),
+    [
+        ([astx.LiteralInt32(1), astx.LiteralFloat32(0.5)], astx.Float32),
+        (
+            [astx.LiteralInt32((1 << 24) + 1), astx.LiteralFloat32(0.5)],
+            astx.Float64,
+        ),
+        ([astx.LiteralInt8(-1), astx.LiteralUInt8(255)], astx.Int16),
+    ],
+)
+def test_literal_storage_preserves_logical_domains(
+    elements: list[astx.AST], expected: type[astx.DataType]
+) -> None:
+    """
+    title: Literal representation preserves exact values and logical members.
+    parameters:
+      elements:
+        type: list[astx.AST]
+      expected:
+        type: type[astx.DataType]
+    """
+    expression = astx.LiteralList(elements)
+    analyze(expression)
+    info = cast(SemanticInfo, getattr(expression, "semantic"))
+    logical = info.resolved_type
+    assert isinstance(logical, astx.ListType)
+    assert len(logical.element_types) == len(elements)
+    storage = info.facts.require(LITERAL_STORAGE, node=expression)
+    assert type(storage.element_type) is expected
+    assert len(storage.conversions) == len(elements)
+    assert all(
+        conversion is not None
+        and conversion.implicit
+        and not conversion.requires_range_check
+        and type(conversion.target_type) is expected
+        for conversion in storage.conversions
+    )
+
+
+def test_literal_storage_reanalysis_and_signed_set_domain() -> None:
+    """
+    title: Contextual widths reset and signed set values retain their domain.
+    """
+    literal = astx.LiteralList([astx.LiteralInteger(255)])
+    contextualize_literal(literal, astx.ListType([astx.UInt8()]))
+    analyze(literal)
+    first = cast(SemanticInfo, getattr(literal, "semantic")).facts
+    assert isinstance(first.require(LITERAL_STORAGE).element_type, astx.UInt8)
+    analyze(literal)
+    current = cast(SemanticInfo, getattr(literal, "semantic"))
+    assert isinstance(
+        current.facts.require(LITERAL_STORAGE).element_type, astx.Int32
+    )
+    assert isinstance(first.require(LITERAL_STORAGE).element_type, astx.UInt8)
+
+    signed = astx.LiteralSet({astx.LiteralInt8(-1), astx.LiteralUInt8(255)})
+    analyze(signed)
+    info = cast(SemanticInfo, getattr(signed, "semantic"))
+    assert isinstance(
+        info.facts.require(LITERAL_STORAGE).element_type, astx.Int16
+    )
+    invalid = astx.LiteralList(
+        [astx.LiteralInt64(-1), astx.LiteralUInt64((1 << 64) - 1)]
+    )
+    with pytest.raises(SemanticError, match="common storage"):
+        analyze(invalid)

@@ -35,6 +35,7 @@ from irx.diagnostics import (
     NativeCompileError,
     RuntimeFeatureError,
 )
+from irx.native import NativeFeature
 from irx.system import PrintExpr
 from llvmlite import ir
 
@@ -139,10 +140,19 @@ def test_runtime_feature_state_reuses_symbol_declarations() -> None:
     state = RuntimeFeatureState(visitor, registry)
 
     fn_first = state.require_symbol("dummy", "dummy_rt")
+    state.add_native_features((NativeFeature("host"),))
+    assert state.feature("host").name == "host"
+    assert registry.names() == ("dummy",)
     fn_second = state.require_symbol("dummy", "dummy_rt")
-
     assert fn_first is fn_second
     assert state.active_feature_names() == ("dummy",)
+    with pytest.raises(ValueError, match="already exists"):
+        state.add_native_features(
+            (NativeFeature("candidate"), NativeFeature("dummy"))
+        )
+    with pytest.raises(RuntimeFeatureError, match="not registered"):
+        state.feature("candidate")
+    assert state.require_symbol("dummy", "dummy_rt") is fn_first
 
 
 def test_runtime_feature_state_collects_only_active_artifacts() -> None:

@@ -8,20 +8,19 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.class_lifecycle import INITIALIZER_HOOK
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.dependencies.declaration_class_method import (
+    DeclarationClassMethodAnalysisServices,
 )
 from irx.analysis.module_symbols import (
     class_method_symbol_basename,
     qualified_class_method_name,
 )
-from irx.analysis.parameters import resolve_parameter_ownership
 from irx.analysis.resolved_nodes import (
     FunctionSignature,
     ParameterSpec,
@@ -37,11 +36,28 @@ from irx.typecheck import typechecked
 IMPLICIT_METHOD_RECEIVER_NAME = "self"
 
 
+@private
 @typechecked
-class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
+class DeclarationClassMethodAnalysis:
     """
     title: Declaration class-method helpers.
+    attributes:
+      services:
+        type: DeclarationClassMethodAnalysisServices
     """
+
+    services: DeclarationClassMethodAnalysisServices
+
+    def __init__(
+        self, services: DeclarationClassMethodAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationClassMethodAnalysisServices
+        """
+        self.services = services
 
     def _normalize_class_method_signature(
         self,
@@ -58,14 +74,14 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: FunctionSignature
         """
-        signature = self.registry.normalize_function_signature(
+        signature = self.services.registry.normalize_function_signature(
             declaration.prototype,
             definition=declaration,
             validate_ffi=False,
             validate_main=False,
         )
         if signature.is_extern:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"Class method '{class_.name}.{declaration.name}' "
                     "cannot be extern"
@@ -74,7 +90,7 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
             )
         if signature.is_variadic:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"Class method '{class_.name}.{declaration.name}' "
                     "must not be variadic"
@@ -172,13 +188,15 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         """
         lowered_signature = signature
         user_args = tuple(
-            self.factory.make_parameter_symbol(class_.module_key, argument)
+            self.services.factory.make_parameter_symbol(
+                class_.module_key, argument
+            )
             for argument in declaration.prototype.args.nodes
         )
         receiver_args: tuple[SemanticSymbol, ...] = ()
         if not is_static:
             receiver_type = self._make_method_receiver_type(class_)
-            receiver_symbol = self.factory.make_variable_symbol(
+            receiver_symbol = self.services.factory.make_variable_symbol(
                 class_.module_key,
                 IMPLICIT_METHOD_RECEIVER_NAME,
                 receiver_type,
@@ -225,7 +243,7 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
                 },
             )
         semantic_args = (*receiver_args, *user_args)
-        lowered_function = self.factory.make_function(
+        lowered_function = self.services.factory.make_function(
             class_.module_key,
             declaration.prototype,
             signature=lowered_signature,
@@ -260,37 +278,37 @@ class DeclarationClassMethodVisitorMixin(SemanticVisitorMixinBase):
         if not isinstance(declaration, astx.FunctionDef) or function is None:
             return
         if member.is_abstract:
-            with self.context.in_function(function):
-                self._analyze_parameter_defaults(function)
+            with self.services.context.in_function(function):
+                self.services.analyze_parameter_defaults(function)
             return
         if function.template_params:
-            self._prepare_function_template_specializations(function)
-            self._analyze_function_template_specializations(function)
+            self.services.prepare_function_template_specializations(function)
+            self.services.analyze_function_template_specializations(function)
             return
 
         hidden_parameter_count = len(function.args) - len(
             declaration.prototype.args.nodes
         )
-        with self.context.in_function(function):
-            self._analyze_parameter_defaults(function)
-            with self.context.scope("method"):
+        with self.services.context.in_function(function):
+            self.services.analyze_parameter_defaults(function)
+            with self.services.context.scope("method"):
                 for idx, arg_symbol in enumerate(function.args):
-                    self.context.scopes.declare(arg_symbol)
+                    self.services.context.scopes.declare(arg_symbol)
                     if idx < hidden_parameter_count:
                         continue
                     arg_node = declaration.prototype.args.nodes[
                         idx - hidden_parameter_count
                     ]
-                    self._set_symbol(arg_node, arg_symbol)
-                    self._set_type(arg_node, arg_symbol.type_)
-                    resolve_parameter_ownership(
-                        cast(SemanticAnalyzerCore, self), arg_node, arg_symbol
+                    self.services.set_symbol(arg_node, arg_symbol)
+                    self.services.set_type(arg_node, arg_symbol.type_)
+                    self.services.free_resolve_parameter_ownership(
+                        arg_node, arg_symbol
                     )
-                self.visit(declaration.body)
+                self.services.visit(declaration.body)
         if not isinstance(function.return_type, astx.NoneType) and not (
-            self._guarantees_return(declaration.body)
+            self.services.guarantees_return(declaration.body)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"Function '{class_.name}.{member.name}' with return type "
                 f"'{function.return_type}' is missing a return statement",
                 node=declaration,

@@ -41,10 +41,10 @@ def test_literal_tuple_empty(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(astx.LiteralTuple(elements=()))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.LiteralStructType)
@@ -63,7 +63,7 @@ def test_literal_tuple_homogeneous_ints(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(
         astx.LiteralTuple(
@@ -75,7 +75,7 @@ def test_literal_tuple_homogeneous_ints(
         )
     )
 
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.LiteralStructType)
@@ -98,7 +98,7 @@ def test_literal_tuple_heterogeneous_unsupported(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     with pytest.raises(TypeError, match="homogeneous"):
         visitor.visit(

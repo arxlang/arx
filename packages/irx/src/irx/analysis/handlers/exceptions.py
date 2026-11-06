@@ -1,5 +1,3 @@
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 # mypy: disable-error-code=no-redef
 """
 title: Nominal exception statements and lexical handler bindings.
@@ -8,19 +6,16 @@ title: Nominal exception statements and lexical handler bindings.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import cast
 
 import astx
 
+from plum import dispatch
 from public import private
 
 from irx.analysis.class_lifecycle import class_ownership, lifecycle_children
-from irx.analysis.exception_types import exception_class_type, exception_error
+from irx.analysis.dependencies.exception import ExceptionAnalysisServices
+from irx.analysis.exception_types import exception_class_type
 from irx.analysis.flow import flow_outcomes
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
-)
 from irx.analysis.resolved_nodes import (
     ExceptionCauseMode,
     OwnershipKind,
@@ -30,6 +25,8 @@ from irx.analysis.resolved_nodes import (
     ResolvedTry,
     SemanticClass,
 )
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
@@ -53,10 +50,24 @@ def exception_source_nodes(node: astx.AST) -> Iterator[astx.AST]:
 
 @private
 @typechecked
-class ExceptionVisitorMixin(SemanticVisitorMixinBase):
+class ExceptionAnalysis:
     """
     title: Resolve exception statements before backend control-flow emission.
+    attributes:
+      services:
+        type: ExceptionAnalysisServices
     """
+
+    services: ExceptionAnalysisServices
+
+    def __init__(self, services: ExceptionAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExceptionAnalysisServices
+        """
+        self.services = services
 
     def reject_exception_references(
         self, node: astx.AST, symbols: set[str], message: str
@@ -73,16 +84,14 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         for child in exception_source_nodes(node):
             if isinstance(child, astx.Identifier):
-                symbol = self._semantic(child).resolved_symbol
+                symbol = self.services.semantic(child).resolved_symbol
             elif isinstance(child, astx.VariableAssignment):
-                assignment = self._semantic(child).resolved_assignment
+                assignment = self.services.semantic(child).resolved_assignment
                 symbol = assignment.target if assignment is not None else None
             else:
                 continue
             if symbol is not None and symbol.symbol_id in symbols:
-                exception_error(
-                    cast(SemanticAnalyzerCore, self), child, message
-                )
+                self.services.free_exception_error(child, message)
 
     def exception_value(self, node: astx.Expr) -> ResolvedExceptionType | None:
         """
@@ -93,19 +102,18 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: ResolvedExceptionType | None
         """
-        self.visit(node)
-        value_type = self._expr_type(node)
+        self.services.visit(node)
+        value_type = self.services.expr_type(node)
         if isinstance(value_type, astx.ClassType):
-            class_ = self.context.get_class(
+            class_ = self.services.context.get_class(
                 value_type.module_key
-                or self.context.current_module_key
+                or self.services.context.current_module_key
                 or "main",
                 value_type.resolved_name or value_type.name,
             )
             if class_ is not None and class_.exception_type is not None:
                 return class_.exception_type
-        exception_error(
-            cast(SemanticAnalyzerCore, self),
+        self.services.free_exception_error(
             node,
             "raised value or cause must be an exception instance",
         )
@@ -122,30 +130,43 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         """
         class_: SemanticClass | None = None
         if isinstance(node, astx.Identifier):
-            local = self.context.scopes.resolve(node.name)
-            binding = self.bindings.resolve(node.name)
+            local = self.services.context.scopes.resolve(node.name)
+            binding = self.services.bindings.resolve(node.name)
             if local is None and binding is not None:
                 class_ = binding.class_
         elif isinstance(node, astx.FieldAccess):
-            self.visit(node)
-            info = self._semantic(node)
+            self.services.visit(node)
+            info = self.services.semantic(node)
             member = info.resolved_module_member_access
             if member is not None:
                 class_ = member.binding.class_
         if class_ is not None:
-            class_ = self._resolve_class_definition(class_)
-            canonical = self.context.get_class(class_.module_key, class_.name)
+            class_ = self.services.resolve_class_definition(class_)
+            canonical = self.services.context.get_class(
+                class_.module_key, class_.name
+            )
             if canonical is not None and canonical.exception_type is not None:
-                self._set_class(node, canonical)
+                self.services.set_class(node, canonical)
                 return canonical.exception_type
-        exception_error(
-            cast(SemanticAnalyzerCore, self),
+        self.services.free_exception_error(
             node,
             "handler type must name an exception class",
         )
         return None
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExceptionAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.ThrowStmt) -> None:
         """
         title: Resolve explicit raises and dynamic bare re-raises.
@@ -153,13 +174,12 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ThrowStmt
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.resolved_raise = None
-        self._set_type(node, None)
-        self._semantic(node).flow_outcomes = flow_outcomes(node)
-        if self.context.current_function is None:
-            exception_error(
-                cast(SemanticAnalyzerCore, self),
+        self.services.set_type(node, None)
+        self.services.semantic(node).flow_outcomes = flow_outcomes(node)
+        if self.services.context.current_function is None:
+            self.services.free_exception_error(
                 node,
                 "raise requires a function body",
             )
@@ -172,20 +192,19 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
         cause_type = None
         if node.cause is not None:
             if node.exception is None:
-                exception_error(
-                    cast(SemanticAnalyzerCore, self),
+                self.services.free_exception_error(
                     node,
                     "bare raise cannot specify a cause",
                 )
             if isinstance(node.cause, astx.LiteralNone):
-                self.visit(node.cause)
+                self.services.visit(node.cause)
                 mode = ExceptionCauseMode.SUPPRESS
             else:
                 mode = ExceptionCauseMode.EXPLICIT
                 cause_type = self.exception_value(node.cause)
         info.resolved_raise = ResolvedRaise(exception_type, mode, cause_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CatchHandlerStmt) -> None:
         """
         title: Bind a handler-local owned reference and validate its body.
@@ -193,21 +212,19 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.CatchHandlerStmt
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.resolved_exception_handler = None
-        self._set_type(node, None)
-        self._semantic(node).flow_outcomes = flow_outcomes(node)
-        if not getattr(self.context, "exception_region_depth", 0):
-            exception_error(
-                cast(SemanticAnalyzerCore, self),
+        self.services.set_type(node, None)
+        self.services.semantic(node).flow_outcomes = flow_outcomes(node)
+        if not getattr(self.services.context, "exception_region_depth", 0):
+            self.services.free_exception_error(
                 node,
                 "except requires an enclosing try statement",
             )
         resolved: list[ResolvedExceptionType] = []
         if node.types is not None:
             if not node.types.nodes:
-                exception_error(
-                    cast(SemanticAnalyzerCore, self),
+                self.services.free_exception_error(
                     node,
                     "handler type list cannot be empty",
                 )
@@ -215,10 +232,11 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                 item = self.handler_type(reference)
                 if item is not None:
                     resolved.append(item)
-        root = self.context.runtime_exception_types.get("BaseException")
+        root = self.services.context.runtime_exception_types.get(
+            "BaseException"
+        )
         if root is None:
-            exception_error(
-                cast(SemanticAnalyzerCore, self),
+            self.services.free_exception_error(
                 node,
                 "exception handlers require registered BaseException",
             )
@@ -236,36 +254,36 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
             shared_class = next(
                 (
                     item
-                    for item in self.context.classes.values()
+                    for item in self.services.context.classes.values()
                     if item.qualified_name == shared
                 ),
                 root.class_,
             )
             binding = shared_class.exception_type or root
         binding_type = exception_class_type(binding.class_)
-        with self.context.scope("except"):
+        with self.services.context.scope("except"):
             symbol = None
             if node.name is not None:
-                symbol = self.factory.make_variable_symbol(
-                    self.context.current_module_key or "main",
+                symbol = self.services.factory.make_variable_symbol(
+                    self.services.context.current_module_key or "main",
                     node.name.name,
                     binding_type,
                     is_mutable=False,
                     declaration=node,
                     kind="exception",
                 )
-                self.context.scopes.declare(symbol)
-                self._set_symbol(node.name, symbol)
-                self._set_type(node.name, binding_type)
-                self._set_resource_ownership(
+                self.services.context.scopes.declare(symbol)
+                self.services.set_symbol(node.name, symbol)
+                self.services.set_type(node.name, binding_type)
+                self.services.set_resource_ownership(
                     node, class_ownership(OwnershipKind.OWNED)
                 )
             info.resolved_exception_handler = ResolvedExceptionHandler(
                 tuple(resolved), symbol, binding_type
             )
-            self.visit(node.body)
+            self.services.visit(node.body)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.FinallyHandlerStmt) -> None:
         """
         title: Validate a finalizer in its own lexical initialization scope.
@@ -273,18 +291,17 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FinallyHandlerStmt
         """
-        self._set_type(node, None)
-        self._semantic(node).flow_outcomes = flow_outcomes(node)
-        if not self.context.exception_region_depth:
-            exception_error(
-                cast(SemanticAnalyzerCore, self),
+        self.services.set_type(node, None)
+        self.services.semantic(node).flow_outcomes = flow_outcomes(node)
+        if not self.services.context.exception_region_depth:
+            self.services.free_exception_error(
                 node,
                 "finally requires an enclosing try statement",
             )
-        with self.context.scope("finally"):
-            self.visit(node.body)
+        with self.services.context.scope("finally"):
+            self.services.visit(node.body)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.ExceptionHandlerStmt) -> None:
         """
         title: Validate ordered handlers and isolated exceptional scopes.
@@ -292,34 +309,39 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.ExceptionHandlerStmt
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         info.resolved_try = None
-        self._set_type(node, None)
-        self._semantic(node).flow_outcomes = flow_outcomes(node)
-        core = cast(SemanticAnalyzerCore, self)
-        if self.context.current_function is None:
-            exception_error(core, node, "try requires a function body")
+        self.services.set_type(node, None)
+        self.services.semantic(node).flow_outcomes = flow_outcomes(node)
+
+        if self.services.context.current_function is None:
+            self.services.free_exception_error(
+                node, "try requires a function body"
+            )
         from irx.analysis.handlers._declarations.functions import (  # noqa: PLC0415
             _nested_yield_nodes,
         )
 
         if _nested_yield_nodes(node):
-            exception_error(
-                core,
+            self.services.free_exception_error(
                 node,
                 "generator suspension in protected regions is unsupported",
             )
         if not node.handlers.nodes and node.finally_handler is None:
-            exception_error(core, node, "try requires except or finally")
+            self.services.free_exception_error(
+                node, "try requires except or finally"
+            )
         if node.else_body is not None and not node.handlers.nodes:
-            exception_error(core, node, "try else requires an except handler")
-        self.context.exception_region_depth += 1
+            self.services.free_exception_error(
+                node, "try else requires an except handler"
+            )
+        self.services.context.exception_region_depth += 1
         plans: list[ResolvedExceptionHandler] = []
         try:
-            with self.context.scope("try"):
-                self.visit(node.body)
+            with self.services.context.scope("try"):
+                self.services.visit(node.body)
                 if node.else_body is not None:
-                    scope = self.context.scopes.current
+                    scope = self.services.context.scopes.current
                     direct = {id(child) for child in node.body.nodes}
                     conditional = (
                         {
@@ -330,8 +352,8 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                         if scope is not None
                         else set()
                     )
-                    with self.context.scope("else"):
-                        self.visit(node.else_body)
+                    with self.services.context.scope("else"):
+                        self.services.visit(node.else_body)
                         self.reject_exception_references(
                             node.else_body,
                             conditional,
@@ -343,13 +365,17 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                     handler.types is None
                     and index != len(node.handlers.nodes) - 1
                 ):
-                    exception_error(core, handler, "bare except must be last")
-                self.visit(handler)
-                plan = self._semantic(handler).resolved_exception_handler
+                    self.services.free_exception_error(
+                        handler, "bare except must be last"
+                    )
+                self.services.visit(handler)
+                plan = self.services.semantic(
+                    handler
+                ).resolved_exception_handler
                 if plan is not None:
                     plans.append(plan)
             if node.finally_handler is not None:
-                self.visit(node.finally_handler)
+                self.services.visit(node.finally_handler)
                 protected: list[astx.AST] = [node.body, *node.handlers]
                 if node.else_body is not None:
                     protected.append(node.else_body)
@@ -359,11 +385,13 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                         if not isinstance(child, astx.FunctionReturn):
                             continue
                         if child.value is None or not isinstance(
-                            self._expr_type(child.value),
+                            self.services.expr_type(child.value),
                             (astx.ListType, astx.Bytes),
                         ):
                             continue
-                        ownership = self._semantic(child).resource_ownership
+                        ownership = self.services.semantic(
+                            child
+                        ).resource_ownership
                         if (
                             ownership is not None
                             and ownership.source_symbol_id is not None
@@ -376,5 +404,28 @@ class ExceptionVisitorMixin(SemanticVisitorMixinBase):
                     "use a fresh owned list instead",
                 )
         finally:
-            self.context.exception_region_depth -= 1
+            self.services.context.exception_region_depth -= 1
         info.resolved_try = ResolvedTry(tuple(plans))
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.exception." + node_type.__name__,
+                "irx.analysis.exception",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExceptionAnalysis.visit",
+            )
+            for node_type in (
+                astx.ThrowStmt,
+                astx.CatchHandlerStmt,
+                astx.FinallyHandlerStmt,
+                astx.ExceptionHandlerStmt,
+            )
+        )

@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Expression operator visitors.
@@ -20,20 +18,17 @@ from astx.binary_op import (
     SPECIALIZED_BINARY_OP_EXTRA,
     specialize_binary_op,
 )
+from plum import dispatch
+from public import private
 
 from irx.analysis.arrow_conversion import (
     arrow_ownership,
-    resolve_arrow_cast,
-    resolve_arrow_store,
 )
-from irx.analysis.builtin_file import reject_native_file_cast
-from irx.analysis.class_lifecycle import class_ownership, resolve_store
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from irx.analysis.class_lifecycle import class_ownership
+from irx.analysis.dependencies.expression_operator import (
+    ExpressionOperatorAnalysisServices,
 )
 from irx.analysis.normalization import normalize_flags, normalize_operator
-from irx.analysis.nullable import resolve_column_binary, resolve_column_unary
 from irx.analysis.numeric_literals import (
     analyze_constant_cast,
     analyze_constant_operation,
@@ -68,16 +63,45 @@ from irx.analysis.types import (
 from irx.analysis.typing import binary_result_type, unary_result_type
 from irx.analysis.validation import validate_assignment, validate_cast
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionOperatorAnalysis:
     """
     title: Expression visitors for unary, binary, cast, and print operations
+    attributes:
+      services:
+        type: ExpressionOperatorAnalysisServices
     """
 
-    @SemanticAnalyzerCore.visit.dispatch
+    services: ExpressionOperatorAnalysisServices
+
+    def __init__(self, services: ExpressionOperatorAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionOperatorAnalysisServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionOperatorAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.AugAssign) -> None:
         """
         title: Resolve checked compound mutation of one numeric identifier.
@@ -90,23 +114,23 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.AugAssign
         """
-        self._semantic(node).resolved_aug_assignment = None
+        self.services.semantic(node).resolved_aug_assignment = None
         if node.op_code not in {"+=", "-=", "*=", "/=", "%="}:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"unsupported compound assignment '{node.op_code}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
         if not isinstance(node.target, astx.Identifier):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "compound assignment requires an identifier target",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_ASSIGNMENT_TARGET,
             )
             return
-        self.visit(node.target)
-        resolved = self._resolve_mutation_target(
+        self.services.visit(node.target)
+        resolved = self.services.resolve_mutation_target(
             node.target,
             node=node,
             action="assign to",
@@ -116,14 +140,14 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             return
         symbol, target_name, target_type = resolved
         contextualize_literal(node.value, target_type)
-        self.visit(node.value)
-        if not self._require_value_expression(
+        self.services.visit(node.value)
+        if not self.services.require_value_expression(
             node.value, context="Compound assignment"
         ):
             return
-        value_type = self._expr_type(node.value)
+        value_type = self.services.expr_type(node.value)
         if not (is_numeric_type(target_type) and is_numeric_type(value_type)):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "compound assignment requires non-nullable numeric scalars",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -131,7 +155,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             return
         result_type = common_numeric_type(target_type, value_type)
         if result_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "compound operands have no lossless common type; "
                 "use an explicit cast",
                 node=node,
@@ -139,7 +163,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         validate_assignment(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             target_name=target_name,
             target_type=target_type,
             value_type=result_type,
@@ -159,15 +183,17 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             rhs_type=value_type,
             flags=flags,
         )
-        self._set_flags(node, flags)
-        self._set_operator(node, operation)
-        self._set_assignment(node, symbol)
-        self._set_type(node, target_type)
-        self._semantic(node).resolved_aug_assignment = ResolvedAugAssignment(
+        self.services.set_flags(node, flags)
+        self.services.set_operator(node, operation)
+        self.services.set_assignment(node, symbol)
+        self.services.set_type(node, target_type)
+        self.services.semantic(
+            node
+        ).resolved_aug_assignment = ResolvedAugAssignment(
             symbol, operation, ImplicitConversion(result_type, target_type)
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.UnaryOp) -> None:
         """
         title: Visit UnaryOp nodes.
@@ -175,18 +201,18 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.UnaryOp
         """
-        self.visit(node.operand)
-        if not self._require_value_expression(
+        self.services.visit(node.operand)
+        if not self.services.require_value_expression(
             node.operand,
             context=f"Unary operator '{node.op_code}'",
         ):
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        operand_type = self._expr_type(node.operand)
-        if resolve_column_unary(cast(SemanticAnalyzerCore, self), node):
+        operand_type = self.services.expr_type(node.operand)
+        if self.services.free_resolve_column_unary(node):
             return
         if node.op_code in {"+", "-"} and not is_numeric_type(operand_type):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "unary sign requires a numeric operand",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -197,12 +223,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             and operand_type is not None
             and not is_boolean_type(operand_type)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "unary operator '!' requires Boolean operand",
                 node=node,
             )
         if isinstance(operand_type, astx.FileType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "file operators are unsupported",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -210,7 +236,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             return
         result_type = unary_result_type(node.op_code, operand_type)
         if node.op_code in {"++", "--"}:
-            resolved_target = self._resolve_mutation_target(
+            resolved_target = self.services.resolve_mutation_target(
                 node.operand,
                 node=node,
                 action="mutate",
@@ -220,10 +246,10 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             if resolved_target is not None:
                 target_symbol, _target_name, _target_type = resolved_target
-                self._set_assignment(node, target_symbol)
+                self.services.set_assignment(node, target_symbol)
         flags = normalize_flags(node, lhs_type=operand_type)
-        self._set_flags(node, flags)
-        self._set_operator(
+        self.services.set_flags(node, flags)
+        self.services.set_operator(
             node,
             normalize_operator(
                 node.op_code,
@@ -232,10 +258,10 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 flags=flags,
             ),
         )
-        self._set_type(node, result_type)
-        analyze_constant_operation(node, self.context, result_type)
+        self.services.set_type(node, result_type)
+        analyze_constant_operation(node, self.services.context, result_type)
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.BinaryOp) -> None:
         """
         title: Visit BinaryOp nodes.
@@ -243,17 +269,17 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.BinaryOp
         """
-        self._semantic(node).resource_ownership = None
-        self._semantic(node).resolved_resource_store = None
-        self._semantic(node).lifecycle_field_store = False
+        self.services.semantic(node).resource_ownership = None
+        self.services.semantic(node).resolved_resource_store = None
+        self.services.semantic(node).lifecycle_field_store = False
         source_literal = (astx.LiteralInteger, astx.LiteralFloat)
         rhs_visited = False
         if isinstance(node.lhs, source_literal) and not isinstance(
             node.rhs, source_literal
         ):
-            self.visit(node.rhs)
+            self.services.visit(node.rhs)
             rhs_visited = True
-            contextualize_literal(node.lhs, self._expr_type(node.rhs))
+            contextualize_literal(node.lhs, self.services.expr_type(node.rhs))
         explicit = (
             astx.get_template_args(node)
             if node.mode is astx.NumericMode.WRAPPING
@@ -262,8 +288,8 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if explicit is not None and len(explicit) == 1:
             contextualize_literal(node.lhs, explicit[0])
             contextualize_literal(node.rhs, explicit[0])
-        self.visit(node.lhs)
-        target = self._expr_type(node.lhs)
+        self.services.visit(node.lhs)
+        target = self.services.expr_type(node.lhs)
         if not isinstance(node.lhs, source_literal):
             contextualize_literal(node.rhs, target)
         if (
@@ -274,23 +300,23 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             node.rhs = astx.Cast(node.rhs, target)
             node.rhs.loc = node.rhs.value.loc
         if not rhs_visited:
-            with self.context.constant_diagnostics(
+            with self.services.context.constant_diagnostics(
                 node.op_code not in {"&&", "and", "||", "or"}
                 or (
                     isinstance(node.lhs, astx.LiteralBoolean)
                     and node.lhs.value == (node.op_code in {"&&", "and"})
                 )
             ):
-                self.visit(node.rhs)
-        lhs_type = self._expr_type(node.lhs)
-        rhs_type = self._expr_type(node.rhs)
+                self.services.visit(node.rhs)
+        lhs_type = self.services.expr_type(node.lhs)
+        rhs_type = self.services.expr_type(node.rhs)
         if (
             isinstance(lhs_type, astx.FileType)
             or isinstance(rhs_type, astx.FileType)
         ) and not (
             node.op_code == "=" and isinstance(node.lhs, astx.FieldAccess)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "file operators and reassignment are unsupported",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -299,10 +325,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if (
             node.op_code == "="
             and isinstance(node.lhs, astx.SubscriptExpr)
-            and isinstance(self._expr_type(node.lhs.value), astx.SeriesType)
+            and isinstance(
+                self.services.expr_type(node.lhs.value), astx.SeriesType
+            )
         ):
             if (
-                self._resolve_mutation_target(
+                self.services.resolve_mutation_target(
                     node.lhs.value,
                     node=node,
                     action="update",
@@ -336,7 +364,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 )
             )
             if not valid:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "wrapping arithmetic requires one concrete integer type; "
                     "use "
                     "an explicit lossless specialization",
@@ -361,33 +389,35 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 lhs_conversion=ImplicitConversion(lhs_type, chosen),
                 rhs_conversion=ImplicitConversion(rhs_type, chosen),
             )
-            self._set_flags(node, flags)
-            self._set_operator(node, plan)
-            self._set_type(node, chosen)
-            analyze_constant_operation(node, self.context, chosen)
+            self.services.set_flags(node, flags)
+            self.services.set_operator(node, plan)
+            self.services.set_type(node, chosen)
+            analyze_constant_operation(node, self.services.context, chosen)
             return
         if node.op_code == "%" and not (
             is_numeric_type(lhs_type) and is_numeric_type(rhs_type)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "remainder '%' requires non-nullable numeric scalars; "
                 "collection and vector remainder is unsupported",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
-        if resolve_column_binary(cast(SemanticAnalyzerCore, self), node):
+        if self.services.free_resolve_column_binary(node):
             return
         flags = normalize_flags(node, lhs_type=lhs_type, rhs_type=rhs_type)
-        self._set_flags(node, flags)
+        self.services.set_flags(node, flags)
         specialized = specialize_binary_op(node)
         if specialized is not node:
-            setattr(specialized, "semantic", self._semantic(node))
-        self._semantic(node).extras[SPECIALIZED_BINARY_OP_EXTRA] = specialized
+            setattr(specialized, "semantic", self.services.semantic(node))
+        self.services.semantic(node).extras[SPECIALIZED_BINARY_OP_EXTRA] = (
+            specialized
+        )
 
         if node.op_code == "=":
-            resolved_target = self._resolve_mutation_target(
+            resolved_target = self.services.resolve_mutation_target(
                 node.lhs,
                 node=node,
                 action="assign to",
@@ -398,27 +428,25 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             if resolved_target is None:
                 return
             assignment_symbol, target_name, target_type = resolved_target
-            managed_store = resolve_arrow_store(
-                cast(SemanticAnalyzerCore, self), node, assignment_symbol
-            ) or resolve_store(
-                cast(SemanticAnalyzerCore, self), node, assignment_symbol
-            )
-            if self._require_value_expression(
+            managed_store = self.services.free_resolve_arrow_store(
+                node, assignment_symbol
+            ) or self.services.free_resolve_store(node, assignment_symbol)
+            if self.services.require_value_expression(
                 node.rhs,
                 context=f"Assignment to '{target_name}'",
             ):
                 validate_assignment(
-                    self.context.diagnostics,
+                    self.services.context.diagnostics,
                     target_name=target_name,
                     target_type=target_type,
                     value_type=rhs_type,
                     node=node,
                 )
-            self._set_assignment(node, assignment_symbol)
+            self.services.set_assignment(node, assignment_symbol)
             if isinstance(node.lhs, astx.Identifier):
-                self._set_symbol(node.lhs, assignment_symbol)
-            self._set_type(node, target_type)
-            self._set_operator(
+                self.services.set_symbol(node.lhs, assignment_symbol)
+            self.services.set_type(node, target_type)
+            self.services.set_operator(
                 node,
                 normalize_operator(
                     node.op_code,
@@ -430,7 +458,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             if managed_store:
                 return
-            self._resolve_list_assignment_ownership(
+            self.services.resolve_list_assignment_ownership(
                 node,
                 node.rhs,
                 assignment_symbol,
@@ -438,7 +466,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 target_type=target_type,
                 is_local=isinstance(node.lhs, astx.Identifier),
             )
-            self._resolve_string_assignment_ownership(
+            self.services.resolve_string_assignment_ownership(
                 node,
                 node.rhs,
                 assignment_symbol,
@@ -448,17 +476,17 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             return
 
-        lhs_has_value = self._require_value_expression(
+        lhs_has_value = self.services.require_value_expression(
             node.lhs,
             context=f"Operator '{node.op_code}'",
         )
-        rhs_has_value = self._require_value_expression(
+        rhs_has_value = self.services.require_value_expression(
             node.rhs,
             context=f"Operator '{node.op_code}'",
         )
         if not (lhs_has_value and rhs_has_value):
-            self._set_type(node, None)
-            self._set_operator(
+            self.services.set_type(node, None)
+            self.services.set_operator(
                 node,
                 normalize_operator(
                     node.op_code,
@@ -471,12 +499,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             return
 
         if flags.fma and flags.fma_rhs is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "FMA requires a third operand (fma_rhs)",
                 node=node,
             )
         if flags.fma and flags.fma_rhs is not None:
-            self.visit(flags.fma_rhs)
+            self.services.visit(flags.fma_rhs)
 
         if (
             node.op_code in {"&&", "and", "||", "or"}
@@ -484,7 +512,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             and rhs_type is not None
             and not (is_boolean_type(lhs_type) and is_boolean_type(rhs_type))
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"logical operator '{node.op_code}' requires Boolean operands",
                 node=node,
             )
@@ -497,7 +525,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
                 and is_string_type(rhs_type)
             )
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"Invalid operator '{node.op_code}' for operand types",
                 node=node,
             )
@@ -507,7 +535,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             and is_numeric_type(rhs_type)
             and common_numeric_type(lhs_type, rhs_type) is None
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "numeric operands have no lossless common type; use an "
                 "explicit cast",
                 node=node,
@@ -515,9 +543,9 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
             return
         result_type = binary_result_type(node.op_code, lhs_type, rhs_type)
-        self._set_type(node, result_type)
-        analyze_constant_operation(node, self.context, result_type)
-        self._set_operator(
+        self.services.set_type(node, result_type)
+        analyze_constant_operation(node, self.services.context, result_type)
+        self.services.set_operator(
             node,
             normalize_operator(
                 node.op_code,
@@ -528,12 +556,12 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             ),
         )
         if node.op_code == "+" and is_string_type(result_type):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(OwnershipKind.OWNED),
             )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.Cast) -> None:
         """
         title: Visit Cast nodes.
@@ -541,7 +569,7 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.Cast
         """
-        self._semantic(node).resource_ownership = None
+        self.services.semantic(node).resource_ownership = None
         if node.mode is astx.NumericMode.CHECKED and not (
             isinstance(node.value, astx.LiteralInteger)
             and is_float_type(
@@ -551,17 +579,17 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
             )
         ):
             contextualize_literal(node.value, node.target_type)
-        self.visit(node.value)
-        source = self._expr_type(node.value)
+        self.services.visit(node.value)
+        source = self.services.expr_type(node.value)
         target = node.target_type
         if isinstance(source, astx.Bytes) or isinstance(target, astx.Bytes):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "bytes casts are unsupported; "
                 "use bytes(input) for a checked copy",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-            self._set_type(node, target)
+            self.services.set_type(node, target)
             return
         source_scalar = (
             source.value_type
@@ -578,15 +606,15 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(target_scalar, astx.UnionType):
             target_scalar = union_storage_type(target_scalar)
         if target_scalar is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "union has no lossless scalar storage",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        self._semantic(node).numeric_mode = node.mode
+        self.services.semantic(node).numeric_mode = node.mode
         if source_scalar is not None:
-            self._semantic(
+            self.services.semantic(
                 node
             ).numeric_conversion = classify_numeric_conversion(
                 source_scalar, target_scalar
@@ -594,21 +622,21 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if (
             is_numeric_type(source_scalar)
             and is_numeric_type(target_scalar)
-            and self._semantic(node).numeric_conversion is None
+            and self.services.semantic(node).numeric_conversion is None
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "unsupported numeric conversion domain",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
             return
-        analyze_constant_cast(node, self.context)
+        analyze_constant_cast(node, self.services.context)
         if node.mode is astx.NumericMode.WRAPPING and (
             source_scalar is None
             or integer_bounds(source_scalar) is None
             or integer_bounds(target_scalar) is None
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "wrapping_cast requires integer source and destination types",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -617,35 +645,37 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         if isinstance(node.target_type, astx.NullableType) and isinstance(
             node.value, astx.LiteralNone
         ):
-            self._resolve_declared_type(node.target_type, node=node)
-            self._set_type(node, node.target_type)
+            self.services.resolve_declared_type(node.target_type, node=node)
+            self.services.set_type(node, node.target_type)
             return
-        if not self._require_value_expression(
+        if not self.services.require_value_expression(
             node.value,
             context="Cast",
         ):
-            self._set_type(node, cast(astx.DataType | None, node.target_type))
+            self.services.set_type(
+                node, cast(astx.DataType | None, node.target_type)
+            )
             return
-        self._resolve_declared_type(node.target_type, node=node)
-        if resolve_arrow_cast(cast(SemanticAnalyzerCore, self), node):
+        self.services.resolve_declared_type(node.target_type, node=node)
+        if self.services.free_resolve_arrow_cast(node):
             return
-        if reject_native_file_cast(cast(SemanticAnalyzerCore, self), node):
+        if self.services.free_reject_native_file_cast(node):
             return
-        source_type = self._expr_type(node.value)
+        source_type = self.services.expr_type(node.value)
         target_type = cast(astx.DataType | None, node.target_type)
         validate_cast(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             source_type=source_type,
             target_type=target_type,
             node=node,
         )
-        self._set_type(node, target_type)
+        self.services.set_type(node, target_type)
         if isinstance(target_type, astx.ClassType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node, class_ownership(OwnershipKind.BORROWED)
             )
         if isinstance(target_type, astx.DataFrameType | astx.SeriesType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node, arrow_ownership(target_type, OwnershipKind.BORROWED)
             )
         if not is_string_type(target_type):
@@ -653,27 +683,27 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
         source_ownership = resource_ownership(node.value)
         if is_string_type(source_type):
             if source_ownership is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "string cast source is missing ownership metadata",
                     node=node.value,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
                 return
             if source_ownership.kind is OwnershipKind.OWNED:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "identity casts of owned strings are not supported; "
                     "remove the redundant cast to preserve the owner",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            self._set_resource_ownership(node, source_ownership)
+            self.services.set_resource_ownership(node, source_ownership)
             return
-        self._set_resource_ownership(
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(OwnershipKind.OWNED),
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.IsInstanceExpr) -> None:
         """
         title: Visit IsInstanceExpr nodes.
@@ -681,21 +711,21 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.IsInstanceExpr
         """
-        self.visit(node.value)
-        self._resolve_declared_type(node.target_type, node=node)
-        if not self._require_value_expression(
+        self.services.visit(node.value)
+        self.services.resolve_declared_type(node.target_type, node=node)
+        if not self.services.require_value_expression(
             node.value,
             context="IsInstanceExpr",
         ):
-            self._set_type(node, astx.Boolean())
+            self.services.set_type(node, astx.Boolean())
             setattr(node, "static_result", False)
             return
-        value_type = self._expr_type(node.value)
+        value_type = self.services.expr_type(node.value)
         static_result = is_type_member(node.target_type, value_type)
         setattr(node, "static_result", static_result)
-        self._set_type(node, astx.Boolean())
+        self.services.set_type(node, astx.Boolean())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.PrintExpr) -> None:
         """
         title: Visit PrintExpr nodes.
@@ -703,29 +733,29 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.PrintExpr
         """
-        self.visit(node.message)
-        if not self._require_value_expression(
+        self.services.visit(node.message)
+        if not self.services.require_value_expression(
             node.message,
             context="PrintExpr",
         ):
-            self._set_type(node, astx.Int32())
+            self.services.set_type(node, astx.Int32())
             return
-        message_type = self._expr_type(node.message)
+        message_type = self.services.expr_type(node.message)
         if not (
             is_string_type(message_type)
             or is_integer_type(message_type)
             or is_float_type(message_type)
             or is_boolean_type(message_type)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "unsupported PrintExpr message type "
                 f"{display_type_name(message_type)}",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-        self._set_type(node, astx.Int32())
+        self.services.set_type(node, astx.Int32())
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.TypeOfExpr) -> None:
         """
         title: Visit TypeOfExpr nodes.
@@ -733,19 +763,45 @@ class ExpressionOperatorVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.TypeOfExpr
         """
-        self.visit(node.value)
-        if not self._require_value_expression(
+        self.services.visit(node.value)
+        if not self.services.require_value_expression(
             node.value,
             context="TypeOfExpr",
         ):
-            self._set_type(node, astx.String())
-            self._set_resource_ownership(
+            self.services.set_type(node, astx.String())
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(OwnershipKind.STATIC),
             )
             return
-        self._set_type(node, astx.String())
-        self._set_resource_ownership(
+        self.services.set_type(node, astx.String())
+        self.services.set_resource_ownership(
             node,
             string_resource_ownership(OwnershipKind.STATIC),
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_operator." + node_type.__name__,
+                "irx.analysis.expression_operator",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionOperatorAnalysis.visit",
+            )
+            for node_type in (
+                astx.AugAssign,
+                astx.UnaryOp,
+                astx.BinaryOp,
+                astx.Cast,
+                astx.IsInstanceExpr,
+                astx.PrintExpr,
+                astx.TypeOfExpr,
+            )
         )

@@ -123,7 +123,9 @@ def analyze_modules(
 
     for parsed_module in session.ordered_modules():
         invalidate_facts(parsed_module.ast)
-        analyzer._reset_template_analysis_state(parsed_module.ast)
+        analyzer.features.template_state._reset_template_analysis_state(
+            parsed_module.ast
+        )
 
     for parsed_module in session.ordered_modules():
         with analyzer.context.in_module(parsed_module.key):
@@ -141,13 +143,13 @@ def analyze_modules(
 
     for parsed_module in session.ordered_modules():
         with analyzer.context.in_module(parsed_module.key):
-            analyzer._prepare_template_specialization_skeletons(
+            analyzer.features.template._prepare_template_specialization_skeletons(
                 parsed_module.ast
             )
 
     for parsed_module in session.ordered_modules():
         with analyzer.context.in_module(parsed_module.key):
-            analyzer._analyze_prepared_template_specializations(
+            analyzer.features.template._analyze_prepared_template_specializations(
                 parsed_module.ast
             )
 

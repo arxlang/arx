@@ -9,33 +9,116 @@ summary: >-
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import cast
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
 from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
     ResolvedCollectionMethod,
 )
 from irx.analysis.types import same_type
-from irx.builder.core import VisitorCore, uses_unsigned_semantics
-from irx.builder.diagnostics import require_semantic_metadata
-from irx.builder.lowering.sequences import lower_sequence_query
-from irx.builder.lowering.text import lower_text_operation
-from irx.builder.numeric import guard_collection_length
-from irx.builder.protocols import VisitorMixinBase
+from irx.builder.diagnostics import (
+    raise_lowering_internal_error,
+    require_semantic_metadata,
+)
+from irx.builder.lowering.contracts import CollectionServices
 from irx.builder.runtime import safe_pop
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
 from irx.builtins.collections.list import LIST_FIELD_INDICES, list_element_type
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class CollectionVisitorMixin(VisitorMixinBase):
+class CollectionLowering:
     """
-    title: Common collection method visitor mixin.
+    title: Common collection method lowering implementation.
+    attributes:
+      services:
+        type: CollectionServices
     """
+
+    services: CollectionServices
+
+    def __init__(self, services: CollectionServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: CollectionServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no collections handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.collections.CollectionLength",
+                "irx.collections",
+                "lowering",
+                astx.CollectionLength,
+                self.visit,
+                source="irx.builder.lowering.collections.CollectionLowering.visit",
+            ),
+            contribute_node(
+                "llvm.collections.CollectionIsEmpty",
+                "irx.collections",
+                "lowering",
+                astx.CollectionIsEmpty,
+                self.visit,
+                source="irx.builder.lowering.collections.CollectionLowering.visit",
+            ),
+            contribute_node(
+                "llvm.collections.CollectionContains",
+                "irx.collections",
+                "lowering",
+                astx.CollectionContains,
+                self.visit,
+                source="irx.builder.lowering.collections.CollectionLowering.visit",
+            ),
+            contribute_node(
+                "llvm.collections.CollectionIndex",
+                "irx.collections",
+                "lowering",
+                astx.CollectionIndex,
+                self.visit,
+                source="irx.builder.lowering.collections.CollectionLowering.visit",
+            ),
+            contribute_node(
+                "llvm.collections.CollectionCount",
+                "irx.collections",
+                "lowering",
+                astx.CollectionCount,
+                self.visit,
+                source="irx.builder.lowering.collections.CollectionLowering.visit",
+            ),
+        )
 
     def _resolved_collection_method(
         self,
@@ -74,7 +157,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if isinstance(base, astx.LiteralDict):
             return len(base.elements)
 
-        base_type = self._resolved_ast_type(base)
+        base_type = resolved_ast_type(base)
         if isinstance(base_type, astx.TupleType):
             return len(base_type.element_types)
         return None
@@ -88,23 +171,23 @@ class CollectionVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        list_ptr = cast(Any, self)._list_pointer_for_call(
+        list_ptr = self.services.list_pointer_for_call(
             base,
             name="irx_collection_length_value",
         )
-        length_ptr = self._llvm.ir_builder.gep(
+        length_ptr = self.services.llvm.ir_builder.gep(
             list_ptr,
             [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
+                ir.Constant(self.services.llvm.INT32_TYPE, 0),
                 ir.Constant(
-                    self._llvm.INT32_TYPE,
+                    self.services.llvm.INT32_TYPE,
                     LIST_FIELD_INDICES["length"],
                 ),
             ],
             inbounds=True,
             name="irx_collection_length_ptr",
         )
-        length_i64 = self._llvm.ir_builder.load(
+        length_i64 = self.services.llvm.ir_builder.load(
             length_ptr,
             name="irx_collection_length_i64",
         )
@@ -121,9 +204,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         static_length = self._static_collection_length(base)
         if static_length is not None:
-            return ir.Constant(self._llvm.INT64_TYPE, static_length)
+            return ir.Constant(self.services.llvm.INT64_TYPE, static_length)
 
-        if isinstance(self._resolved_ast_type(base), astx.ListType):
+        if isinstance(resolved_ast_type(base), astx.ListType):
             return self._dynamic_list_length(base)
 
         raise TypeError(
@@ -137,7 +220,6 @@ class CollectionVisitorMixin(VisitorMixinBase):
         rhs: ir.Value,
         *,
         lhs_type: astx.DataType | None,
-        unsigned: bool,
         name: str,
         resolution: ResolvedCollectionMethod,
     ) -> ir.Value:
@@ -150,8 +232,6 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: ir.Value
           lhs_type:
             type: astx.DataType | None
-          unsigned:
-            type: bool
           name:
             type: str
           resolution:
@@ -159,8 +239,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        visitor = cast(Any, self)
-        if visitor._is_numeric_value(lhs) and visitor._is_numeric_value(rhs):
+        if self.services.numeric.is_numeric_value(
+            lhs
+        ) and self.services.numeric.is_numeric_value(rhs):
             plan = next(
                 (
                     plan
@@ -187,16 +268,16 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 metadata="rhs conversion",
                 context="collection search",
             )
-            lhs = visitor._cast_ast_value(
+            lhs = self.services.numeric.cast_scalar(
                 lhs, source_type=left.source_type, target_type=left.target_type
             )
-            rhs = visitor._cast_ast_value(
+            rhs = self.services.numeric.cast_scalar(
                 rhs,
                 source_type=right.source_type,
                 target_type=right.target_type,
             )
             unsigned = plan.flags.unsigned
-            return visitor._emit_numeric_compare(
+            return self.services.numeric.emit_numeric_compare(
                 "==",
                 lhs,
                 rhs,
@@ -207,10 +288,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if (
             isinstance(lhs.type, ir.PointerType)
             and isinstance(rhs.type, ir.PointerType)
-            and lhs.type.pointee == self._llvm.INT8_TYPE
-            and rhs.type.pointee == self._llvm.INT8_TYPE
+            and lhs.type.pointee == self.services.llvm.INT8_TYPE
+            and rhs.type.pointee == self.services.llvm.INT8_TYPE
         ):
-            return visitor._handle_string_comparison(lhs, rhs, "==")
+            return self.services.strings.compare(lhs, rhs, "==")
 
         raise TypeError(
             f"collection equality does not support {lhs.type} and {rhs.type}"
@@ -287,23 +368,23 @@ class CollectionVisitorMixin(VisitorMixinBase):
         """
         entries = self._literal_contains_entries(base)
         if not entries:
-            return ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
+            return ir.Constant(self.services.llvm.BOOLEAN_TYPE, 0)
 
-        self.visit_child(value)
-        needle = safe_pop(self.result_stack)
+        self.services.visit_child(value)
+        needle = safe_pop(self.services.function_state.result_stack)
         if needle is None:
             raise TypeError("collection containment requires a value")
 
-        probe_type = self._resolved_ast_type(value)
-        result: ir.Value = ir.Constant(self._llvm.BOOLEAN_TYPE, 0)
+        probe_type = resolved_ast_type(value)
+        result: ir.Value = ir.Constant(self.services.llvm.BOOLEAN_TYPE, 0)
         for index, entry in enumerate(entries):
-            entry_type = self._resolved_ast_type(entry)
+            entry_type = resolved_ast_type(entry)
             if not self._entry_can_match_probe(
                 entry_type, probe_type, resolution
             ):
                 continue
-            self.visit_child(entry)
-            candidate = safe_pop(self.result_stack)
+            self.services.visit_child(entry)
+            candidate = safe_pop(self.services.function_state.result_stack)
             if candidate is None:
                 raise TypeError("collection containment entry is not a value")
             match = self._emit_collection_equal(
@@ -311,11 +392,9 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 needle,
                 resolution=resolution,
                 lhs_type=entry_type,
-                unsigned=uses_unsigned_semantics(entry)
-                or uses_unsigned_semantics(value),
                 name=f"collection_contains_{index}",
             )
-            result = self._llvm.ir_builder.or_(
+            result = self.services.llvm.ir_builder.or_(
                 result,
                 match,
                 name=f"collection_contains_any_{index}",
@@ -344,32 +423,31 @@ class CollectionVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        list_type = self._resolved_ast_type(base)
+        list_type = resolved_ast_type(base)
         element_type = list_element_type(list_type)
         if element_type is None:
             raise TypeError("list search requires a concrete element type")
 
-        list_ptr, length = cast(
-            Any,
-            self,
-        )._list_pointer_and_length_for_iteration(
+        list_ptr, length = self.services.list_pointer_and_length_for_iteration(
             base,
         )
-        guard_collection_length(cast(VisitorCore, self), base, length)
-        self.visit_child(value)
-        needle = safe_pop(self.result_stack)
+        self.services.numeric.guard_collection_length(base, length)
+        self.services.visit_child(value)
+        needle = safe_pop(self.services.function_state.result_stack)
         if needle is None:
             raise TypeError("list search requires a value")
-        builder = self._llvm.ir_builder
-        index_addr = self.create_entry_block_alloca(
+        builder = self.services.llvm.ir_builder
+        index_addr = self.services.create_entry_block_alloca(
             "collection_search_index",
-            self._llvm.INT64_TYPE,
+            self.services.llvm.INT64_TYPE,
         )
-        result_addr = self.create_entry_block_alloca(
+        result_addr = self.services.create_entry_block_alloca(
             "collection_search_result",
-            self._llvm.INT32_TYPE,
+            self.services.llvm.INT32_TYPE,
         )
-        builder.store(ir.Constant(self._llvm.INT64_TYPE, 0), index_addr)
+        builder.store(
+            ir.Constant(self.services.llvm.INT64_TYPE, 0), index_addr
+        )
         builder.store(
             self._initial_list_search_result(method),
             result_addr,
@@ -404,7 +482,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             index_addr,
             name="collection_search_body_i",
         )
-        item = cast(Any, self)._load_list_element_at_index(
+        item = self.services.load_list_element_at_index(
             base=base,
             list_ptr=list_ptr,
             index=body_index,
@@ -414,7 +492,6 @@ class CollectionVisitorMixin(VisitorMixinBase):
             needle,
             resolution=resolution,
             lhs_type=element_type,
-            unsigned=uses_unsigned_semantics(value),
             name="collection_search_match",
         )
         if method is CollectionMethodKind.COUNT:
@@ -436,7 +513,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         builder.position_at_start(advance_block)
         next_index = builder.add(
             builder.load(index_addr, name="collection_search_step_i"),
-            ir.Constant(self._llvm.INT64_TYPE, 1),
+            ir.Constant(self.services.llvm.INT64_TYPE, 1),
             name="collection_search_next_i",
         )
         builder.store(next_index, index_addr)
@@ -461,8 +538,8 @@ class CollectionVisitorMixin(VisitorMixinBase):
           type: ir.Constant
         """
         if method is CollectionMethodKind.INDEX:
-            return ir.Constant(self._llvm.INT32_TYPE, -1)
-        return ir.Constant(self._llvm.INT32_TYPE, 0)
+            return ir.Constant(self.services.llvm.INT32_TYPE, -1)
+        return ir.Constant(self.services.llvm.INT32_TYPE, 0)
 
     def _update_list_count_result(
         self,
@@ -477,11 +554,11 @@ class CollectionVisitorMixin(VisitorMixinBase):
           result_addr:
             type: ir.Value
         """
-        builder = self._llvm.ir_builder
+        builder = self.services.llvm.ir_builder
         current = builder.load(result_addr, name="collection_count_current")
         incremented = builder.add(
             current,
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+            ir.Constant(self.services.llvm.INT32_TYPE, 1),
             name="collection_count_incremented",
         )
         selected = builder.select(
@@ -509,15 +586,15 @@ class CollectionVisitorMixin(VisitorMixinBase):
             type: ir.Value
         """
         if method is CollectionMethodKind.CONTAINS:
-            self._llvm.ir_builder.store(
-                ir.Constant(self._llvm.INT32_TYPE, 1),
+            self.services.llvm.ir_builder.store(
+                ir.Constant(self.services.llvm.INT32_TYPE, 1),
                 result_addr,
             )
             return
-        self._llvm.ir_builder.store(
-            self._llvm.ir_builder.trunc(
+        self.services.llvm.ir_builder.store(
+            self.services.llvm.ir_builder.trunc(
                 index,
-                self._llvm.INT32_TYPE,
+                self.services.llvm.INT32_TYPE,
                 "collection_index_i32",
             ),
             result_addr,
@@ -567,7 +644,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 method=method,
             )
 
-        if isinstance(self._resolved_ast_type(base), astx.ListType):
+        if isinstance(resolved_ast_type(base), astx.ListType):
             result = self._lower_list_search(
                 resolution=resolution,
                 base=base,
@@ -575,10 +652,10 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 method=method,
             )
             if method is CollectionMethodKind.CONTAINS:
-                return self._llvm.ir_builder.icmp_signed(
+                return self.services.llvm.ir_builder.icmp_signed(
                     "!=",
                     result,
-                    ir.Constant(self._llvm.INT32_TYPE, 0),
+                    ir.Constant(self.services.llvm.INT32_TYPE, 0),
                     name="collection_contains_bool",
                 )
             return result
@@ -616,21 +693,21 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if not entries:
             return self._initial_list_search_result(method)
 
-        self.visit_child(value)
-        needle = safe_pop(self.result_stack)
+        self.services.visit_child(value)
+        needle = safe_pop(self.services.function_state.result_stack)
         if needle is None:
             raise TypeError("collection search requires a value")
 
-        probe_type = self._resolved_ast_type(value)
+        probe_type = resolved_ast_type(value)
         result: ir.Value = self._initial_list_search_result(method)
         for index, entry in enumerate(entries):
-            entry_type = self._resolved_ast_type(entry)
+            entry_type = resolved_ast_type(entry)
             if not self._entry_can_match_probe(
                 entry_type, probe_type, resolution
             ):
                 continue
-            self.visit_child(entry)
-            candidate = safe_pop(self.result_stack)
+            self.services.visit_child(entry)
+            candidate = safe_pop(self.services.function_state.result_stack)
             if candidate is None:
                 raise TypeError("collection search entry is not a value")
             match = self._emit_collection_equal(
@@ -638,8 +715,6 @@ class CollectionVisitorMixin(VisitorMixinBase):
                 needle,
                 resolution=resolution,
                 lhs_type=entry_type,
-                unsigned=uses_unsigned_semantics(entry)
-                or uses_unsigned_semantics(value),
                 name=f"collection_sequence_match_{index}",
             )
             if method is CollectionMethodKind.COUNT:
@@ -666,14 +741,14 @@ class CollectionVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        incremented = self._llvm.ir_builder.add(
+        incremented = self.services.llvm.ir_builder.add(
             result,
-            ir.Constant(self._llvm.INT32_TYPE, 1),
+            ir.Constant(self.services.llvm.INT32_TYPE, 1),
             name=f"collection_literal_count_inc_{index}",
         )
         return cast(
             ir.Value,
-            self._llvm.ir_builder.select(
+            self.services.llvm.ir_builder.select(
                 match,
                 incremented,
                 result,
@@ -699,28 +774,28 @@ class CollectionVisitorMixin(VisitorMixinBase):
         returns:
           type: ir.Value
         """
-        not_found = self._llvm.ir_builder.icmp_signed(
+        not_found = self.services.llvm.ir_builder.icmp_signed(
             "==",
             result,
-            ir.Constant(self._llvm.INT32_TYPE, -1),
+            ir.Constant(self.services.llvm.INT32_TYPE, -1),
             name=f"collection_literal_index_open_{index}",
         )
-        should_set = self._llvm.ir_builder.and_(
+        should_set = self.services.llvm.ir_builder.and_(
             match,
             not_found,
             name=f"collection_literal_index_should_set_{index}",
         )
         return cast(
             ir.Value,
-            self._llvm.ir_builder.select(
+            self.services.llvm.ir_builder.select(
                 should_set,
-                ir.Constant(self._llvm.INT32_TYPE, index),
+                ir.Constant(self.services.llvm.INT32_TYPE, index),
                 result,
                 name=f"collection_literal_index_{index}",
             ),
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionLength) -> None:
         """
         title: Visit CollectionLength nodes.
@@ -728,16 +803,18 @@ class CollectionVisitorMixin(VisitorMixinBase):
           node:
             type: astx.CollectionLength
         """
-        if lower_sequence_query(
-            cast(VisitorCore, self), node
-        ) or lower_text_operation(cast(VisitorCore, self), node):
+        if self.services.sequences.lower(node) or self.services.text.lower(
+            node
+        ):
             return
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.LENGTH:
             raise TypeError("collection length has invalid semantic method")
-        self.result_stack.append(self._collection_length_value(node.base))
+        self.services.function_state.result_stack.append(
+            self._collection_length_value(node.base)
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionIsEmpty) -> None:
         """
         title: Visit CollectionIsEmpty nodes.
@@ -749,16 +826,16 @@ class CollectionVisitorMixin(VisitorMixinBase):
         if resolution.method is not CollectionMethodKind.IS_EMPTY:
             raise TypeError("collection emptiness has invalid semantic method")
         length = self._collection_length_value(node.base)
-        self.result_stack.append(
-            self._llvm.ir_builder.icmp_signed(
+        self.services.function_state.result_stack.append(
+            self.services.llvm.ir_builder.icmp_signed(
                 "==",
                 length,
-                ir.Constant(self._llvm.INT64_TYPE, 0),
+                ir.Constant(self.services.llvm.INT64_TYPE, 0),
                 name="collection_is_empty",
             )
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionContains) -> None:
         """
         title: Visit CollectionContains nodes.
@@ -769,7 +846,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.CONTAINS:
             raise TypeError("collection contains has invalid semantic method")
-        self.result_stack.append(
+        self.services.function_state.result_stack.append(
             self._sequence_or_literal_search(
                 resolution=resolution,
                 base=node.base,
@@ -778,7 +855,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             )
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionIndex) -> None:
         """
         title: Visit CollectionIndex nodes.
@@ -789,7 +866,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.INDEX:
             raise TypeError("collection index has invalid semantic method")
-        self.result_stack.append(
+        self.services.function_state.result_stack.append(
             self._sequence_or_literal_search(
                 resolution=resolution,
                 base=node.base,
@@ -798,7 +875,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
             )
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.CollectionCount) -> None:
         """
         title: Visit CollectionCount nodes.
@@ -809,7 +886,7 @@ class CollectionVisitorMixin(VisitorMixinBase):
         resolution = self._resolved_collection_method(node)
         if resolution.method is not CollectionMethodKind.COUNT:
             raise TypeError("collection count has invalid semantic method")
-        self.result_stack.append(
+        self.services.function_state.result_stack.append(
             self._sequence_or_literal_search(
                 resolution=resolution,
                 base=node.base,

@@ -225,6 +225,6 @@ def test_call_lowering_requires_bound_arguments() -> None:
     resolution = cast(SemanticInfo, call.semantic).resolved_call
     assert resolution is not None
     with pytest.raises(LoweringError, match="arguments"):
-        Builder().translator.lower_bound_call_arguments(
+        Builder().translator.features.functions.lower_bound_call_arguments(
             replace(resolution, arguments=None)
         )

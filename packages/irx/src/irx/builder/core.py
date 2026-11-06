@@ -6,13 +6,12 @@ from __future__ import annotations
 
 import ctypes
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 import astx
 
 from llvmlite import binding as llvm
 from llvmlite import ir
-from llvmlite.ir import DoubleType, FloatType, HalfType
 from plum import dispatch
 from public import private
 
@@ -26,355 +25,117 @@ except ImportError:  # pragma: no cover - optional
 from irx.analysis import analyze, analyze_modules
 from irx.analysis.extensions.records import CallPlan
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
-from irx.analysis.module_symbols import (
-    mangle_class_name,
-    mangle_function_name,
-    mangle_namespace_name,
-    mangle_struct_name,
-    qualified_class_name,
-    qualified_struct_name,
-)
-from irx.analysis.ownership import resource_ownership
-from irx.analysis.resolved_nodes import (
-    ClassHeaderFieldKind,
-    FunctionSignature,
-    OwnershipEscapeKind,
-    OwnershipKind,
-    OwnershipTransferKind,
-    ResolvedExceptionType,
-    ResourceKind,
-    SemanticClassLayout,
-    SemanticClassLayoutField,
-)
-from irx.analysis.types import (
-    bit_width,
-    float_promotion_width_for_integer_width,
-    is_boolean_type,
-    is_float_type,
-    is_integer_type,
-    is_unsigned_type,
-)
+from irx.analysis.resolved_nodes import FunctionSignature
 from irx.builder.base import BuilderVisitor
 from irx.builder.diagnostics import (
     raise_lowering_internal_error,
+    require_lowered_value,
     require_semantic_metadata,
 )
 from irx.builder.extensions.calls import (
     LoweringCall,
     default_lowering_configuration,
 )
-from irx.builder.protocols import VisitorProtocol
 from irx.builder.runtime import safe_pop
+from irx.builder.runtime.record_batch_api import is_checked_native_facade
 from irx.builder.runtime.registry import (
     RuntimeFeatureState,
     get_default_runtime_feature_registry,
 )
-from irx.builder.runtime.sequence import sequence_view_type
-from irx.builder.state import (
-    CleanupAction,
-    CleanupKind,
-    ExceptionTarget,
-    LoopTargets,
-    NamedValueMap,
-    PendingReturn,
-    ResultStackValue,
+from irx.builder.services.cleanup import CleanupService
+from irx.builder.services.collections import CollectionEmission
+from irx.builder.services.control_state import (
+    ExceptionModuleState,
+    ExitState,
+    FunctionValueState,
+    GeneratorFrameState,
+    GeneratorModuleState,
+    ModuleEmissionState,
 )
+from irx.builder.services.conversions import NumericEmission
+from irx.builder.services.exceptions import (
+    ExceptionService,
+    RuntimeGuardService,
+)
+from irx.builder.services.floating import FloatingEmission
+from irx.builder.services.layout import LayoutEmission
+from irx.builder.services.representations import (
+    TypeLowering,
+    semantic_class_key,
+    semantic_class_name,
+    semantic_function_key,
+    semantic_function_name,
+    semantic_symbol_key,
+)
+from irx.builder.strings import StringEmission
 from irx.builder.types import (
     VariablesLLVM,
-    is_fp_type,
-    is_int_type,
-)
-from irx.builder.vector import (
-    is_vector,
-    splat_scalar,
-)
-from irx.builtins.collections.list import (
-    LIST_DESTROY_SYMBOL,
-    LIST_RUNTIME_FEATURE,
 )
 from irx.diagnostics import DiagnosticCodes
 from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
-FLOAT16_BITS = 16
-FLOAT32_BITS = 32
-FLOAT64_BITS = 64
-FLOAT128_BITS = 128
-
-
-@private
-@typechecked
-def is_unsigned_node(node: astx.AST) -> bool:
-    """
-    title: Is unsigned node.
-    parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
-    """
-    type_ = getattr(node, "type_", None)
-    return isinstance(type_, astx.UnsignedInteger)
-
-
-@private
-@typechecked
-def uses_unsigned_semantics(node: astx.AST) -> bool:
-    """
-    title: Uses unsigned semantics.
-    parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: bool
-    """
-    semantic = getattr(node, "semantic", None)
-    semantic_flags = getattr(semantic, "semantic_flags", None)
-    semantic_unsigned = getattr(semantic_flags, "unsigned", None)
-    if semantic_unsigned is not None:
-        return cast(bool, semantic_unsigned)
-
-    explicit_unsigned = cast(bool | None, getattr(node, "unsigned", None))
-    if explicit_unsigned is not None:
-        return explicit_unsigned
-    return is_unsigned_node(node)
-
-
-@private
-@typechecked
-def semantic_symbol_key(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic symbol key.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    symbol = getattr(semantic, "resolved_symbol", None)
-    symbol_id = getattr(symbol, "symbol_id", None)
-    if symbol_id is not None:
-        return cast(str, symbol_id)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_assignment_key(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic assignment key.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    assignment = getattr(semantic, "resolved_assignment", None)
-    target = getattr(assignment, "target", None)
-    symbol_id = getattr(target, "symbol_id", None)
-    if symbol_id is not None:
-        return cast(str, symbol_id)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_function_key(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic function key.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    function = getattr(semantic, "resolved_function", None)
-    symbol_id = getattr(function, "symbol_id", None)
-    if symbol_id is not None:
-        return cast(str, symbol_id)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_function_name(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic LLVM function name.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    function = getattr(semantic, "resolved_function", None)
-    signature = getattr(function, "signature", None)
-    signature_symbol_name = getattr(signature, "symbol_name", None)
-    signature_is_extern = getattr(signature, "is_extern", False)
-    module_key = getattr(function, "module_key", None)
-    name = getattr(function, "name", None)
-    if signature_is_extern and isinstance(signature_symbol_name, str):
-        return signature_symbol_name
-    if module_key is not None and name is not None:
-        base_name = (
-            signature_symbol_name
-            if isinstance(signature_symbol_name, str) and signature_symbol_name
-            else name
-        )
-        return mangle_function_name(module_key, base_name)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_struct_key(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic struct key.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    struct = getattr(semantic, "resolved_struct", None)
-    qualified_name = getattr(struct, "qualified_name", None)
-    if qualified_name is not None:
-        return cast(str, qualified_name)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_struct_name(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic LLVM struct name.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    struct = getattr(semantic, "resolved_struct", None)
-    module_key = getattr(struct, "module_key", None)
-    name = getattr(struct, "name", None)
-    if module_key is not None and name is not None:
-        return mangle_struct_name(module_key, name)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_class_key(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic class key.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    class_ = getattr(semantic, "resolved_class", None)
-    qualified_name = getattr(class_, "qualified_name", None)
-    if qualified_name is not None:
-        return cast(str, qualified_name)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_class_name(node: astx.AST, fallback: str) -> str:
-    """
-    title: Semantic LLVM class-object name.
-    parameters:
-      node:
-        type: astx.AST
-      fallback:
-        type: str
-    returns:
-      type: str
-    """
-    semantic = getattr(node, "semantic", None)
-    class_ = getattr(semantic, "resolved_class", None)
-    layout = getattr(class_, "layout", None)
-    llvm_name = getattr(layout, "llvm_name", None)
-    if isinstance(llvm_name, str) and llvm_name:
-        return llvm_name
-    module_key = getattr(class_, "module_key", None)
-    name = getattr(class_, "name", None)
-    if module_key is not None and name is not None:
-        return mangle_class_name(module_key, name)
-    return fallback
-
-
-@private
-@typechecked
-def semantic_flag(node: astx.AST, name: str, default: bool = False) -> bool:
-    """
-    title: Semantic flag.
-    parameters:
-      node:
-        type: astx.AST
-      name:
-        type: str
-      default:
-        type: bool
-    returns:
-      type: bool
-    """
-    semantic = getattr(node, "semantic", None)
-    semantic_flags = getattr(semantic, "semantic_flags", None)
-    if semantic_flags is not None and hasattr(semantic_flags, name):
-        return bool(getattr(semantic_flags, name))
-    return bool(getattr(node, name, default))
-
-
-@private
-@typechecked
-def semantic_fma_rhs(node: astx.AST) -> astx.AST | None:
-    """
-    title: Semantic fma rhs.
-    parameters:
-      node:
-        type: astx.AST
-    returns:
-      type: astx.AST | None
-    """
-    semantic = getattr(node, "semantic", None)
-    semantic_flags = getattr(semantic, "semantic_flags", None)
-    fma_rhs = getattr(semantic_flags, "fma_rhs", None)
-    if fma_rhs is not None:
-        return cast(astx.AST, fma_rhs)
-    return getattr(node, "fma_rhs", None)
+if TYPE_CHECKING:
+    from irx.builder.extensions.calls import CallLoweringServices
+    from irx.builder.lowering.composition import LoweringFeatures
+    from irx.builder.lowering.materialization import MaterializationEmission
+    from irx.builder.lowering.sequences import SequenceEmission
+    from irx.builder.lowering.text import TextEmission
+    from irx.builder.services.values import ValueEmission
 
 
 @private
 @typechecked
 class VisitorCore(BuilderVisitor):
     """
-    title: Maintain shared LLVM visitor state.
+    title: Coordinate one compilation's module, services, and scoped dispatch.
+    summary: >-
+      Concern implementations receive narrow dependency records, not this
+      driver. Function, region, exception, and generator state have separate
+      lifetimes.
     attributes:
-      named_values:
-        type: NamedValueMap
+      module_state:
+        type: ModuleEmissionState
+      exit_state:
+        type: ExitState
+      function_state:
+        type: FunctionValueState
+      exception_module_state:
+        type: ExceptionModuleState
+      generator_frame_state:
+        type: GeneratorFrameState
+      generator_module_state:
+        type: GeneratorModuleState
+      cleanup:
+        type: CleanupService
+      exceptions:
+        type: ExceptionService
+      guards:
+        type: RuntimeGuardService
+      collection:
+        type: CollectionEmission
+      floating:
+        type: FloatingEmission
+      features:
+        type: LoweringFeatures
+      values:
+        type: ValueEmission
+      text:
+        type: TextEmission
+      sequences:
+        type: SequenceEmission
+      materialization:
+        type: MaterializationEmission
+      call_services:
+        type: CallLoweringServices
+      strings:
+        type: StringEmission
+      types:
+        type: TypeLowering
+      numeric:
+        type: NumericEmission
+      layout:
+        type: LayoutEmission
       analysis_configuration:
         type: HandlerConfiguration | None
       lowering_configuration:
@@ -383,127 +144,42 @@ class VisitorCore(BuilderVisitor):
         type: ScopedDispatch
       _llvm:
         type: VariablesLLVM
-      function_protos:
-        type: dict[str, astx.FunctionPrototype]
-      llvm_functions_by_symbol_id:
-        type: dict[str, ir.Function]
-      result_stack:
-        type: list[ResultStackValue]
       runtime_features:
         type: RuntimeFeatureState
-      const_vars:
-        type: set[str]
-      loop_stack:
-        type: list[LoopTargets]
-      cleanup_stack:
-        type: list[CleanupAction]
-      class_construction_stack:
-        type: list[ir.Value]
-      emitting_failure_cleanup:
-        type: bool
-      _set_value_ids:
-        type: dict[int, ir.Value]
-      _buffer_view_global_counter:
-        type: int
-      struct_types:
-        type: dict[str, ir.Type]
-      llvm_structs_by_qualified_name:
-        type: dict[str, ir.IdentifiedStructType]
-      _emitted_function_bodies:
-        type: set[str]
-      _module_display_names:
-        type: dict[int, str]
-      _current_module_display_name:
-        type: str | None
-      _interned_c_strings:
-        type: dict[tuple[str, str], ir.GlobalVariable]
-      _c_string_global_counter:
-        type: int
-      _namespace_globals:
-        type: dict[tuple[str, str], ir.GlobalVariable]
-      entry_function_symbol_id:
-        type: str | None
-      _fast_math_enabled:
-        type: bool
-      _current_function_return_type:
-        type: astx.DataType | None
-      _current_function_signature:
-        type: FunctionSignature | None
-      _generator_frame_types:
-        type: dict[str, ir.IdentifiedStructType]
-      _generator_frame_slots_by_symbol_id:
-        type: dict[str, dict[str, int]]
-      _generator_resume_functions:
-        type: dict[str, ir.Function]
-      _current_generator_frame_ptr:
-        type: ir.Value | None
-      _current_generator_frame_slots:
-        type: dict[str, int]
-      _current_generator_out_ptr:
-        type: ir.Value | None
-      _current_generator_next_state:
-        type: int | None
       target:
         type: llvm.TargetRef
       target_machine:
         type: llvm.TargetMachine
-      runtime_exception_types:
-        type: dict[str, ResolvedExceptionType]
-      exception_context:
-        type: ir.Value | None
-      exception_result_slot:
-        type: ir.Value | None
-      exception_targets:
-        type: list[ExceptionTarget]
-      pending_returns:
-        type: list[PendingReturn]
-      llvm_function_signatures:
-        type: dict[str, FunctionSignature]
     """
 
-    named_values: NamedValueMap
+    module_state: ModuleEmissionState
+    exit_state: ExitState
+    function_state: FunctionValueState
+    exception_module_state: ExceptionModuleState
+    generator_frame_state: GeneratorFrameState
+    generator_module_state: GeneratorModuleState
+    cleanup: CleanupService
+    exceptions: ExceptionService
+    guards: RuntimeGuardService
+    collection: CollectionEmission
+    floating: FloatingEmission
+    features: LoweringFeatures
+    values: ValueEmission
+    text: TextEmission
+    sequences: SequenceEmission
+    materialization: MaterializationEmission
+    call_services: CallLoweringServices
+    strings: StringEmission
+    types: TypeLowering
+    numeric: NumericEmission
+    layout: LayoutEmission
     analysis_configuration: HandlerConfiguration | None
     lowering_configuration: HandlerConfiguration
     call_dispatch: ScopedDispatch
     _llvm: VariablesLLVM
-    function_protos: dict[str, astx.FunctionPrototype]
-    llvm_functions_by_symbol_id: dict[str, ir.Function]
-    result_stack: list[ResultStackValue]
     runtime_features: RuntimeFeatureState
-    const_vars: set[str]
-    loop_stack: list[LoopTargets]
-    cleanup_stack: list[CleanupAction]
-    class_construction_stack: list[ir.Value]
-    emitting_failure_cleanup: bool
-    _set_value_ids: dict[int, ir.Value]
-    _buffer_view_global_counter: int
-    struct_types: dict[str, ir.Type]
-    llvm_structs_by_qualified_name: dict[str, ir.IdentifiedStructType]
-    _emitted_function_bodies: set[str]
-    _module_display_names: dict[int, str]
-    _current_module_display_name: str | None
-    _interned_c_strings: dict[tuple[str, str], ir.GlobalVariable]
-    _c_string_global_counter: int
-    _namespace_globals: dict[tuple[str, str], ir.GlobalVariable]
-    entry_function_symbol_id: str | None
-    _fast_math_enabled: bool
-    _current_function_return_type: astx.DataType | None
-    _current_function_signature: FunctionSignature | None
-    _generator_frame_types: dict[str, ir.IdentifiedStructType]
-    _generator_frame_slots_by_symbol_id: dict[str, dict[str, int]]
-    _generator_resume_functions: dict[str, ir.Function]
-    _current_generator_frame_ptr: ir.Value | None
-    _current_generator_frame_slots: dict[str, int]
-    _current_generator_out_ptr: ir.Value | None
-    _current_generator_next_state: int | None
     target: llvm.TargetRef
     target_machine: llvm.TargetMachine
-    runtime_exception_types: dict[str, ResolvedExceptionType]
-    exception_context: ir.Value | None
-    exception_result_slot: ir.Value | None
-    exception_targets: list[ExceptionTarget]
-    pending_returns: list[PendingReturn]
-    llvm_function_signatures: dict[str, FunctionSignature]
 
     def __init__(
         self,
@@ -533,43 +209,12 @@ class VisitorCore(BuilderVisitor):
             "lowering", CallPlan, LoweringCall
         )
         self.call_dispatch = ScopedDispatch(self.lowering_configuration)
-        self.named_values = {}
-        self.const_vars = set()
-        self.function_protos = {}
-        self.llvm_functions_by_symbol_id = {}
-        self.result_stack = []
-        self.loop_stack = []
-        self.cleanup_stack = []
-        self.class_construction_stack = []
-        self.emitting_failure_cleanup = False
-        self._set_value_ids = {}
-        self._buffer_view_global_counter = 0
-        self.struct_types = {}
-        self.llvm_structs_by_qualified_name = {}
-        self._emitted_function_bodies = set()
-        self._module_display_names = {}
-        self._current_module_display_name = None
-        self._interned_c_strings = {}
-        self._c_string_global_counter = 0
-        self._namespace_globals = {}
-        self.entry_function_symbol_id = None
-        self._fast_math_enabled = False
-        self._current_function_return_type = None
-        self._current_function_signature = None
-        self._generator_frame_types = {}
-        self._generator_frame_slots_by_symbol_id = {}
-        self._generator_resume_functions = {}
-        self._current_generator_frame_ptr = None
-        self._current_generator_frame_slots = {}
-        self._current_generator_out_ptr = None
-        self._current_generator_next_state = None
-        self.runtime_exception_types = {}
-        self.exception_context = None
-        self.exception_result_slot = None
-        self.exception_targets = []
-        self.pending_returns = []
-        self.llvm_function_signatures = {}
-
+        self.module_state = ModuleEmissionState()
+        self.exit_state = ExitState()
+        self.function_state = FunctionValueState()
+        self.exception_module_state = ExceptionModuleState()
+        self.generator_module_state = GeneratorModuleState()
+        self.generator_frame_state = GeneratorFrameState()
         self.initialize()
         self.target = llvm.Target.from_default_triple()
         try:
@@ -590,13 +235,89 @@ class VisitorCore(BuilderVisitor):
 
         self._add_builtins()
         self.runtime_features = RuntimeFeatureState(
-            owner=cast(VisitorProtocol, self),
+            owner=self,
             registry=get_default_runtime_feature_registry(),
             active_features=active_runtime_features,
         )
 
+    def checked_facade_signature(self, signature: FunctionSignature) -> bool:
+        """
+        title: >-
+          Consume registered checked-facade ABI metadata for a resolved call.
+        parameters:
+          signature:
+            type: FunctionSignature
+        returns:
+          type: bool
+        """
+        return any(
+            is_checked_native_facade(
+                signature.symbol_name,
+                name,
+                self.runtime_features.feature(name).metadata.get(
+                    "checked_facade_abi"
+                ),
+            )
+            for name in signature.required_runtime_features
+        )
+
+    def publish_value(self, value: ir.Value) -> None:
+        """
+        title: Publish one semantically produced result in the active function.
+        parameters:
+          value:
+            type: ir.Value
+        """
+        self.function_state.result_stack.append(value)
+
+    def evaluate_value(self, node: astx.AST) -> ir.Value:
+        """
+        title: Evaluate a resolved operand and require its produced value.
+        parameters:
+          node:
+            type: astx.AST
+        returns:
+          type: ir.Value
+        """
+        self.visit_child(node)
+        return require_lowered_value(
+            safe_pop(self.function_state.result_stack),
+            node=node,
+            context="resolved layout operand",
+        )
+
+    def storage_value(self, symbol_id: str) -> ir.Value | None:
+        """
+        title: Look up already allocated storage by its semantic identity.
+        parameters:
+          symbol_id:
+            type: str
+        returns:
+          type: ir.Value | None
+        """
+        value = self.function_state.named_values.get(symbol_id)
+        return value if isinstance(value, ir.Value) else None
+
+    def peek_value(self) -> ir.Value | None:
+        """
+        title: Inspect an already produced class value without consuming it.
+        returns:
+          type: ir.Value | None
+        """
+        values = self.function_state.result_stack
+        return values[-1] if values else None
+
     @dispatch
     def visit(self, node: astx.AST) -> None:
+        """
+        title: Delegate supported syntax through this compiler's node catalog.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        self.features.dispatch.visit(node)
+
+    def reject_node(self, node: astx.AST) -> None:
         """
         title: Fail explicitly when analyzed input has no lowering handler.
         parameters:
@@ -609,249 +330,6 @@ class VisitorCore(BuilderVisitor):
             code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
         )
 
-    def _emit_active_cleanups(
-        self,
-        start_depth: int = 0,
-        excluded_owner_symbol_ids: frozenset[str] = frozenset(),
-    ) -> None:
-        """
-        title: Emit all active cleanup actions in innermost-first order.
-        parameters:
-          start_depth:
-            type: int
-          excluded_owner_symbol_ids:
-            type: frozenset[str]
-        """
-        original = self.cleanup_stack
-        try:
-            for index in reversed(range(start_depth, len(original))):
-                if self._llvm.ir_builder.block.is_terminated:
-                    break
-                cleanup = original[index]
-                # Remove the action before executing it: failures and explicit
-                # finalizer transfers may exit only through remaining regions.
-                self.cleanup_stack = original[:index]
-                if cleanup.owner_symbol_id in excluded_owner_symbol_ids:
-                    continue
-                if (
-                    cleanup.kind is CleanupKind.RESOURCE
-                    and cleanup.fallible
-                    and self.exception_context is not None
-                ):
-                    visitor = cast(Any, self)
-                    token = visitor.exception_call(
-                        "cleanup_enter", [self.exception_context]
-                    )
-                    done = self._llvm.ir_builder.function.append_basic_block(
-                        "cleanup.done"
-                    )
-                    self.exception_targets.append(
-                        ExceptionTarget(done, len(self.cleanup_stack))
-                    )
-                    previous_pending = self.pending_returns
-                    self.pending_returns = []
-                    try:
-                        cleanup.emitter()
-                    finally:
-                        self.pending_returns = previous_pending
-                        self.exception_targets.pop()
-                    if not self._llvm.ir_builder.block.is_terminated:
-                        self._llvm.ir_builder.branch(done)
-                    self._llvm.ir_builder.position_at_end(done)
-                    visitor.exception_call(
-                        "cleanup_leave", [self.exception_context, token]
-                    )
-                else:
-                    cleanup.emitter()
-                if (
-                    cleanup.fallible
-                    and self.exception_context is not None
-                    and not self.emitting_failure_cleanup
-                    and not self._llvm.ir_builder.block.is_terminated
-                ):
-                    cast(Any, self).propagate_pending_exception()
-        finally:
-            self.cleanup_stack = original
-
-    def _emit_temporary_cleanups(self, start_depth: int) -> None:
-        """
-        title: Emit and remove temporary cleanups created after one depth.
-        parameters:
-          start_depth:
-            type: int
-        """
-        new_actions = self.cleanup_stack[start_depth:]
-        retained = [
-            item for item in new_actions if item.owner_symbol_id is not None
-        ]
-        temporaries = [
-            item for item in new_actions if item.owner_symbol_id is None
-        ]
-        self.cleanup_stack[start_depth:] = [*retained, *temporaries]
-        self._emit_active_cleanups(start_depth + len(retained))
-        self.cleanup_stack[start_depth:] = retained
-
-    def _register_owned_list_temporary(
-        self,
-        node: astx.AST,
-        list_ptr: ir.Value,
-    ) -> None:
-        """
-        title: Register cleanup for one non-transferred owned list temporary.
-        parameters:
-          node:
-            type: astx.AST
-          list_ptr:
-            type: ir.Value
-        """
-        ownership = resource_ownership(node)
-        if (
-            ownership is None
-            or ownership.resource_kind is not ResourceKind.LIST
-            or ownership.kind is not OwnershipKind.OWNED
-        ):
-            return
-        if (
-            ownership.transfer_kind is OwnershipTransferKind.MOVE
-            or ownership.escape_kind is OwnershipEscapeKind.RETURN
-        ):
-            return
-        if self._current_generator_frame_ptr is not None:
-            raise_lowering_internal_error(
-                "owned list temporaries in generator frames require "
-                "generator lifecycle cleanup",
-                node=node,
-            )
-
-        destroy_fn = self.require_runtime_symbol(
-            LIST_RUNTIME_FEATURE,
-            LIST_DESTROY_SYMBOL,
-        )
-
-        def destroy_list() -> None:
-            """
-            title: Destroy the captured temporary list storage.
-            """
-            self._llvm.ir_builder.call(destroy_fn, [list_ptr])
-
-        self.cleanup_stack.append(CleanupAction(destroy_list, fallible=False))
-
-    def _register_owned_string_temporary(
-        self,
-        node: astx.AST,
-        pointer: ir.Value,
-    ) -> None:
-        """
-        title: Register cleanup for one non-transferred owned string pointer.
-        parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
-        """
-        ownership = resource_ownership(node)
-        if (
-            ownership is None
-            or ownership.resource_kind is not ResourceKind.STRING
-            or ownership.kind is not OwnershipKind.OWNED
-        ):
-            return
-        if (
-            ownership.transfer_kind is OwnershipTransferKind.MOVE
-            or ownership.escape_kind is OwnershipEscapeKind.RETURN
-        ):
-            return
-        if self._current_generator_frame_ptr is not None:
-            raise_lowering_internal_error(
-                "owned string temporaries in generator frames require "
-                "generator lifecycle cleanup",
-                node=node,
-            )
-
-        free_fn = self.require_runtime_symbol("libc", "free")
-
-        def destroy_string() -> None:
-            """
-            title: Destroy the captured temporary string storage.
-            """
-            self._llvm.ir_builder.call(free_fn, [pointer])
-
-        self.cleanup_stack.append(
-            CleanupAction(destroy_string, fallible=False)
-        )
-
-    def _guard_runtime_condition(
-        self,
-        node: astx.AST,
-        condition: ir.Value,
-        *,
-        code: str,
-        message: str,
-        block_name: str,
-        exception_role: str = "RuntimeError",
-    ) -> None:
-        """
-        title: >-
-          Fail with one structured runtime record unless a condition holds.
-        parameters:
-          node:
-            type: astx.AST
-          condition:
-            type: ir.Value
-          code:
-            type: str
-          message:
-            type: str
-          block_name:
-            type: str
-          exception_role:
-            type: str
-        """
-        function = self._llvm.ir_builder.function
-        fail_block = function.append_basic_block(f"{block_name}.fail")
-        pass_block = function.append_basic_block(f"{block_name}.pass")
-        self._llvm.ir_builder.cbranch(condition, pass_block, fail_block)
-
-        self._llvm.ir_builder.position_at_start(fail_block)
-        cast(Any, self).raise_runtime_exception(
-            node,
-            exception_role,
-            cast(Any, self).exception_string(message),
-            code=code,
-        )
-        self._llvm.ir_builder.position_at_start(pass_block)
-
-    def _guard_heap_allocation(
-        self,
-        node: astx.AST,
-        pointer: ir.Value,
-        *,
-        message: str,
-    ) -> None:
-        """
-        title: Require one heap allocation to return a non-null pointer.
-        parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
-          message:
-            type: str
-        """
-        non_null = self._llvm.ir_builder.icmp_unsigned(
-            "!=",
-            pointer,
-            ir.Constant(pointer.type, None),
-            name="string_allocation_succeeded",
-        )
-        self._guard_runtime_condition(
-            node,
-            non_null,
-            code="ARX-RUNTIME-STRING-001",
-            message=message,
-            block_name="string.allocation",
-        )
-
     def translate(self, node: astx.AST) -> str:
         """
         title: Translate.
@@ -862,12 +340,10 @@ class VisitorCore(BuilderVisitor):
           type: str
         """
         analyzed = analyze(node, configuration=self.analysis_configuration)
-        self._module_display_names = {}
-        self._current_module_display_name = None
-        self._interned_c_strings = {}
-        self._c_string_global_counter = 0
+        self.module_state.module_display_names = {}
+        self.module_state.current_module_display_name = None
         if isinstance(analyzed, astx.Module):
-            self._module_display_names[id(analyzed)] = (
+            self.module_state.module_display_names[id(analyzed)] = (
                 getattr(analyzed, "name", "") or "<module>"
             )
             self._set_entry_function_from_module(analyzed)
@@ -875,22 +351,24 @@ class VisitorCore(BuilderVisitor):
         else:
             metadata = getattr(analyzed, "semantic", None)
             if metadata is not None:
-                self.runtime_exception_types.update(
+                self.exception_module_state.runtime_exception_types.update(
                     metadata.runtime_exception_types
                 )
+            exception_types = (
+                self.exception_module_state.runtime_exception_types.values()
+            )
             declarations = [
-                item.class_.declaration
-                for item in self.runtime_exception_types.values()
+                item.class_.declaration for item in exception_types
             ]
             for declaration in declarations:
-                key = semantic_class_key(declaration, declaration.name)
+                key = semantic_class_key(declaration)
                 type_ = self._llvm.module.context.get_identified_type(
-                    semantic_class_name(declaration, declaration.name)
+                    semantic_class_name(declaration)
                 )
-                self.struct_types[key] = type_
-                self.llvm_structs_by_qualified_name[key] = type_
+                self.module_state.struct_types[key] = type_
+                self.module_state.llvm_structs_by_qualified_name[key] = type_
             for declaration in declarations:
-                cast(VisitorProtocol, self).declare_class(declaration)
+                self.features.modules.declare_class(declaration)
             for declaration in declarations:
                 self.visit(declaration)
             self.visit(analyzed)
@@ -914,16 +392,11 @@ class VisitorCore(BuilderVisitor):
         session = analyze_modules(
             root, resolver, configuration=self.analysis_configuration
         )
-        registry = get_default_runtime_feature_registry().with_native_features(
+        self.runtime_features.add_native_features(
             tuple(session.native_features.values())
         )
-        self.runtime_features = RuntimeFeatureState(
-            owner=cast(VisitorProtocol, self),
-            registry=registry,
-            active_features=self.runtime_features.active_feature_names(),
-        )
         ordered_modules = session.ordered_modules()
-        self._module_display_names = {
+        self.module_state.module_display_names = {
             id(parsed_module.ast): (
                 parsed_module.display_name
                 or getattr(parsed_module.ast, "name", "")
@@ -946,7 +419,7 @@ class VisitorCore(BuilderVisitor):
           module:
             type: astx.Module
         """
-        self.entry_function_symbol_id = None
+        self.module_state.entry_function_symbol_id = None
         for node in module.nodes:
             candidate = None
             if (
@@ -958,118 +431,30 @@ class VisitorCore(BuilderVisitor):
                 candidate = node.prototype
             if candidate is None:
                 continue
-            self.entry_function_symbol_id = semantic_function_key(
-                candidate,
-                "main",
+            self.module_state.entry_function_symbol_id = semantic_function_key(
+                candidate
             )
             return
 
     def llvm_function_name_for_node(
         self,
         node: astx.AST,
-        fallback: str,
     ) -> str:
         """
         title: Return the LLVM symbol name for a function node.
         parameters:
           node:
             type: astx.AST
-          fallback:
-            type: str
         returns:
           type: str
         """
-        function_key = semantic_function_key(node, fallback)
+        function_key = semantic_function_key(node)
         if (
-            self.entry_function_symbol_id is not None
-            and function_key == self.entry_function_symbol_id
+            self.module_state.entry_function_symbol_id is not None
+            and function_key == self.module_state.entry_function_symbol_id
         ):
             return "irx.entry.main"
-        return semantic_function_name(node, fallback)
-
-    def _namespace_global(
-        self,
-        namespace_type: astx.NamespaceType,
-    ) -> ir.GlobalVariable:
-        """
-        title: Return one stable LLVM global backing a namespace handle.
-        parameters:
-          namespace_type:
-            type: astx.NamespaceType
-        returns:
-          type: ir.GlobalVariable
-        """
-        cache_key = (
-            namespace_type.namespace_key,
-            namespace_type.namespace_kind.value,
-        )
-        existing = self._namespace_globals.get(cache_key)
-        if existing is not None:
-            return existing
-
-        global_name = mangle_namespace_name(
-            namespace_type.namespace_key,
-            namespace_type.namespace_kind.value,
-        )
-        module_globals = self._llvm.module.globals
-        global_value = module_globals.get(global_name)
-        if global_value is not None:
-            namespace_global = cast(ir.GlobalVariable, global_value)
-            self._namespace_globals[cache_key] = namespace_global
-            return namespace_global
-
-        namespace_global = ir.GlobalVariable(
-            self._llvm.module,
-            self._llvm.INT8_TYPE,
-            name=global_name,
-        )
-        namespace_global.linkage = "internal"
-        namespace_global.global_constant = True
-        namespace_global.initializer = ir.Constant(self._llvm.INT8_TYPE, 0)
-        self._namespace_globals[cache_key] = namespace_global
-        return namespace_global
-
-    def _namespace_value_for_type(
-        self,
-        namespace_type: astx.NamespaceType,
-    ) -> ir.Value:
-        """
-        title: Return one lowered value for a namespace type.
-        parameters:
-          namespace_type:
-            type: astx.NamespaceType
-        returns:
-          type: ir.Value
-        """
-        namespace_global = self._namespace_global(namespace_type)
-        return namespace_global.bitcast(self._llvm.OPAQUE_POINTER_TYPE)
-
-    def _namespace_value(
-        self,
-        node: astx.AST,
-    ) -> ir.Value | None:
-        """
-        title: Return one lowered namespace value for an analyzed node.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value | None
-        """
-        semantic = getattr(node, "semantic", None)
-        resolved_module = getattr(semantic, "resolved_module", None)
-        if resolved_module is not None:
-            return self._namespace_value_for_type(
-                astx.NamespaceType(
-                    resolved_module.module_key,
-                    namespace_kind=astx.NamespaceKind.MODULE,
-                    display_name=resolved_module.display_name,
-                )
-            )
-        resolved_type = self._resolved_ast_type(node)
-        if isinstance(resolved_type, astx.NamespaceType):
-            return self._namespace_value_for_type(resolved_type)
-        return None
+        return semantic_function_name(node)
 
     def _translate_modules(
         self,
@@ -1101,12 +486,14 @@ class VisitorCore(BuilderVisitor):
         for module in modules:
             metadata = getattr(module, "semantic", None)
             if metadata is not None:
-                self.runtime_exception_types.update(
+                self.exception_module_state.runtime_exception_types.update(
                     metadata.runtime_exception_types
                 )
         present = {id(node) for _, nodes in module_nodes for node in nodes}
         if module_nodes:
-            for exception in self.runtime_exception_types.values():
+            for (
+                exception
+            ) in self.exception_module_state.runtime_exception_types.values():
                 declaration = exception.class_.declaration
                 if id(declaration) not in present:
                     module_nodes[0][1].append(declaration)
@@ -1128,12 +515,12 @@ class VisitorCore(BuilderVisitor):
                     context="nullable global",
                 )
                 type_ = require_semantic_metadata(
-                    self._llvm_type_for_ast_type(node.type_),
+                    self.types.llvm_type(node.type_),
                     node=node,
                     metadata="LLVM type",
                     context="nullable global",
                 )
-                key = semantic_symbol_key(node, node.name)
+                key = semantic_symbol_key(node)
                 storage = ir.GlobalVariable(
                     self._llvm.module, type_, name="nullable_global_" + key
                 )
@@ -1148,44 +535,52 @@ class VisitorCore(BuilderVisitor):
                         ir.Constant(type_.elements[1], payload[1]),
                     ],
                 )
-                self.named_values[key] = storage
+                self.function_state.named_values[key] = storage
                 if storage.global_constant:
-                    self.const_vars.add(key)
+                    self.function_state.const_vars.add(key)
         # Declare pointer identities before any layout asks for a class field
         # type; acyclic reference fields can point to later declarations.
         for module, nodes in module_nodes:
             for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
-                    key = semantic_class_key(node, node.name)
+                    key = semantic_class_key(node)
                     type_ = self._llvm.module.context.get_identified_type(
-                        semantic_class_name(node, node.name)
+                        semantic_class_name(node)
                     )
-                    self.struct_types[key] = type_
-                    self.llvm_structs_by_qualified_name[key] = type_
+                    self.module_state.struct_types[key] = type_
+                    self.module_state.llvm_structs_by_qualified_name[key] = (
+                        type_
+                    )
 
         for module, nodes in module_nodes:
-            self._current_module_display_name = self._module_display_names.get(
-                id(module),
-                getattr(module, "name", "") or "<module>",
+            self.module_state.current_module_display_name = (
+                self.module_state.module_display_names.get(
+                    id(module),
+                    getattr(module, "name", "") or "<module>",
+                )
             )
             for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
-                    cast(VisitorProtocol, self).declare_class(node)
+                    self.features.modules.declare_class(node)
                 elif isinstance(node, astx.StructDefStmt):
                     self.visit(node)
 
         for module, nodes in module_nodes:
-            self._current_module_display_name = self._module_display_names.get(
-                id(module), getattr(module, "name", "") or "<module>"
+            self.module_state.current_module_display_name = (
+                self.module_state.module_display_names.get(
+                    id(module), getattr(module, "name", "") or "<module>"
+                )
             )
             for node in nodes:
                 if isinstance(node, astx.ClassDefStmt):
                     self.visit(node)
 
         for module, nodes in module_nodes:
-            self._current_module_display_name = self._module_display_names.get(
-                id(module),
-                getattr(module, "name", "") or "<module>",
+            self.module_state.current_module_display_name = (
+                self.module_state.module_display_names.get(
+                    id(module),
+                    getattr(module, "name", "") or "<module>",
+                )
             )
             for node in nodes:
                 if isinstance(node, astx.FunctionPrototype):
@@ -1202,9 +597,11 @@ class VisitorCore(BuilderVisitor):
                     self.visit(node.prototype)
 
         for module, nodes in module_nodes:
-            self._current_module_display_name = self._module_display_names.get(
-                id(module),
-                getattr(module, "name", "") or "<module>",
+            self.module_state.current_module_display_name = (
+                self.module_state.module_display_names.get(
+                    id(module),
+                    getattr(module, "name", "") or "<module>",
+                )
             )
             for node in nodes:
                 if isinstance(node, astx.FunctionDef):
@@ -1214,8 +611,8 @@ class VisitorCore(BuilderVisitor):
                         continue
                     self.visit(node)
 
-        cast(Any, self).emit_entry_wrapper()
-        self._current_module_display_name = None
+        self.features.exception_handlers.emit_entry_wrapper()
+        self.module_state.current_module_display_name = None
 
     def activate_runtime_feature(self, feature_name: str) -> None:
         """
@@ -1409,15 +806,17 @@ class VisitorCore(BuilderVisitor):
         returns:
           type: ir.Function | None
         """
-        if name in self.llvm_functions_by_symbol_id:
-            return self.llvm_functions_by_symbol_id[name]
+        if name in self.module_state.llvm_functions_by_symbol_id:
+            return self.module_state.llvm_functions_by_symbol_id[name]
 
         if name in self._llvm.module.globals:
             return cast(ir.Function, self._llvm.module.get_global(name))
 
-        if name in self.function_protos:
-            self.visit(self.function_protos[name])
-            return cast(ir.Function, safe_pop(self.result_stack))
+        if name in self.module_state.function_protos:
+            self.visit(self.module_state.function_protos[name])
+            return cast(
+                ir.Function, safe_pop(self.function_state.result_stack)
+            )
 
         return None
 
@@ -1425,7 +824,7 @@ class VisitorCore(BuilderVisitor):
         self,
         var_name: str,
         type_name: str | ir.Type,
-    ) -> Any:
+    ) -> ir.AllocaInstr:
         """
         title: Create entry block alloca.
         parameters:
@@ -1434,7 +833,7 @@ class VisitorCore(BuilderVisitor):
           type_name:
             type: str | ir.Type
         returns:
-          type: Any
+          type: ir.AllocaInstr
         """
         llvm_type = (
             self._llvm.get_data_type(type_name)
@@ -1449,1893 +848,3 @@ class VisitorCore(BuilderVisitor):
         if current_block is not None:
             self._llvm.ir_builder.position_at_end(current_block)
         return alloca
-
-    def _get_fma_function(self, ty: ir.Type) -> ir.Function:
-        """
-        title: Get fma function.
-        parameters:
-          ty:
-            type: ir.Type
-        returns:
-          type: ir.Function
-        """
-        if isinstance(ty, ir.VectorType):
-            elem_ty = ty.element
-            count = ty.count
-        else:
-            elem_ty = ty
-            count = None
-
-        if isinstance(elem_ty, FloatType):
-            suffix = "f32"
-        elif isinstance(elem_ty, DoubleType):
-            suffix = "f64"
-        elif isinstance(elem_ty, HalfType):
-            suffix = "f16"
-        else:
-            raise Exception("FMA supports only floating-point operands")
-
-        if count is not None:
-            suffix = f"v{count}{suffix}"
-
-        name = f"llvm.fma.{suffix}"
-        if name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(name))
-
-        fn_ty = ir.FunctionType(ty, [ty, ty, ty])
-        fn = ir.Function(self._llvm.module, fn_ty, name)
-        fn.linkage = "external"
-        return fn
-
-    def _emit_fma(
-        self,
-        lhs: ir.Value,
-        rhs: ir.Value,
-        addend: ir.Value,
-    ) -> ir.Value:
-        """
-        title: Emit fma.
-        parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          addend:
-            type: ir.Value
-        returns:
-          type: ir.Value
-        """
-        builder = self._llvm.ir_builder
-        if not isinstance(lhs.type, ir.VectorType) and hasattr(builder, "fma"):
-            inst = builder.fma(lhs, rhs, addend, name="vfma")
-            self._apply_fast_math(inst)
-            return inst
-        fma_fn = self._get_fma_function(lhs.type)
-        inst = builder.call(fma_fn, [lhs, rhs, addend], name="vfma")
-        self._apply_fast_math(inst)
-        return inst
-
-    def set_fast_math(self, enabled: bool) -> None:
-        """
-        title: Set fast math.
-        parameters:
-          enabled:
-            type: bool
-        """
-        self._fast_math_enabled = enabled
-
-    def _apply_fast_math(self, inst: ir.Instruction) -> None:
-        """
-        title: Apply fast math.
-        parameters:
-          inst:
-            type: ir.Instruction
-        """
-        if not self._fast_math_enabled:
-            return
-
-        type_ = inst.type
-        if isinstance(type_, ir.VectorType):
-            if not is_fp_type(type_.element):
-                return
-        elif not is_fp_type(type_):
-            return
-
-        flags = getattr(inst, "flags", None)
-        if flags is None or "fast" in flags:
-            return
-
-        try:
-            flags.append("fast")
-        except (AttributeError, TypeError):
-            return
-
-    def _is_numeric_value(self, value: ir.Value) -> bool:
-        """
-        title: Is numeric value.
-        parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: bool
-        """
-        if is_vector(value):
-            elem_ty = value.type.element
-            return isinstance(elem_ty, ir.IntType) or is_fp_type(elem_ty)
-        return isinstance(value.type, ir.IntType) or is_fp_type(value.type)
-
-    def _resolved_ast_type(
-        self, node: astx.AST | None
-    ) -> astx.DataType | None:
-        """
-        title: Resolved ast type.
-        parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
-        """
-        if node is None:
-            return None
-        semantic = getattr(node, "semantic", None)
-        resolved_type = getattr(semantic, "resolved_type", None)
-        if isinstance(resolved_type, astx.DataType):
-            return resolved_type
-        fallback = getattr(node, "type_", None)
-        return fallback if isinstance(fallback, astx.DataType) else None
-
-    def _llvm_type_for_ast_type(
-        self, type_: astx.DataType | None
-    ) -> ir.Type | None:
-        """
-        title: Llvm type for ast type.
-        parameters:
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: ir.Type | None
-        """
-        if type_ is None:
-            return None
-        if isinstance(type_, astx.SequenceType):
-            return sequence_view_type()
-        if isinstance(type_, astx.NullableType):
-            inner = self._llvm_type_for_ast_type(type_.value_type)
-            return (
-                None
-                if inner is None
-                else ir.LiteralStructType([ir.IntType(1), inner])
-            )
-        if isinstance(type_, astx.UnionType):
-            storage_type = self._union_storage_ast_type(type_)
-            if storage_type is None:
-                return None
-            return self._llvm_type_for_ast_type(storage_type)
-        if isinstance(type_, astx.NamespaceType):
-            return self._llvm.OPAQUE_POINTER_TYPE
-        if isinstance(type_, astx.GeneratorType):
-            return ir.LiteralStructType(
-                [
-                    self._llvm.OPAQUE_POINTER_TYPE,
-                    self._llvm.OPAQUE_POINTER_TYPE,
-                ]
-            )
-        if isinstance(type_, astx.BufferOwnerType):
-            return self._llvm.BUFFER_OWNER_HANDLE_TYPE
-        if isinstance(type_, astx.OpaqueHandleType):
-            return self._llvm.OPAQUE_POINTER_TYPE
-        if isinstance(type_, astx.PointerType):
-            if type_.pointee_type is None:
-                return self._llvm.OPAQUE_POINTER_TYPE
-            pointee_type = self._llvm_type_for_ast_type(type_.pointee_type)
-            if pointee_type is None:
-                return None
-            return pointee_type.as_pointer()
-        if isinstance(type_, (astx.ListType, astx.Bytes)):
-            return ir.LiteralStructType(
-                [
-                    self._llvm.INT8_TYPE.as_pointer(),
-                    self._llvm.INT64_TYPE,
-                    self._llvm.INT64_TYPE,
-                    self._llvm.INT64_TYPE,
-                    self._llvm.INT32_TYPE,
-                ]
-            )
-        if isinstance(type_, astx.BufferViewType):
-            return self._llvm.BUFFER_VIEW_TYPE
-        if isinstance(type_, astx.TensorType):
-            return self._llvm.BUFFER_VIEW_TYPE
-        if isinstance(type_, astx.DataFrameType):
-            return self._llvm.TABLE_HANDLE_TYPE
-        if isinstance(type_, astx.SeriesType):
-            return self._llvm.CHUNKED_ARRAY_HANDLE_TYPE
-        if isinstance(type_, astx.StructType):
-            struct_key = type_.qualified_name
-            if struct_key is None and type_.module_key is not None:
-                struct_key = qualified_struct_name(
-                    type_.module_key,
-                    type_.resolved_name or type_.name,
-                )
-            if struct_key is None:
-                return None
-            return self.struct_types.get(struct_key)
-        if isinstance(type_, astx.ClassType):
-            class_key = type_.qualified_name
-            if class_key is None and type_.module_key is not None:
-                class_key = qualified_class_name(
-                    type_.module_key,
-                    type_.resolved_name or type_.name,
-                )
-            if class_key is None:
-                return None
-            class_type = self.struct_types.get(class_key)
-            if class_type is None:
-                return None
-            return class_type.as_pointer()
-        type_name = type_.__class__.__name__.lower()
-        return self._llvm.get_data_type(type_name)
-
-    def _union_storage_ast_type(
-        self,
-        type_: astx.UnionType,
-    ) -> astx.DataType | None:
-        """
-        title: Return one scalar storage type for a finite union.
-        parameters:
-          type_:
-            type: astx.UnionType
-        returns:
-          type: astx.DataType | None
-        """
-        info = require_semantic_metadata(
-            getattr(type_, "semantic", None),
-            node=type_,
-            metadata="semantic",
-            context="union storage",
-        )
-        return cast(
-            astx.DataType,
-            require_semantic_metadata(
-                info.numeric_storage,
-                node=type_,
-                metadata="numeric_storage",
-                context="union storage",
-            ),
-        )
-
-    def _resolved_class_receiver_field_address(
-        self,
-        *,
-        receiver: astx.AST,
-        member_name: str,
-        layout: SemanticClassLayout,
-        field: SemanticClassLayoutField,
-    ) -> ir.Value:
-        """
-        title: Lower one resolved class-instance field slot to an address.
-        parameters:
-          receiver:
-            type: astx.AST
-          member_name:
-            type: str
-          layout:
-            type: SemanticClassLayout
-          field:
-            type: SemanticClassLayoutField
-        returns:
-          type: ir.Value
-        """
-        self.visit(receiver)
-        base_value = safe_pop(self.result_stack)
-        if base_value is None:
-            raise Exception("codegen: invalid class field access base.")
-        from irx.builder.lowering.classes import (  # noqa: PLC0415
-            ClassVisitorMixin,
-        )
-
-        lifetime = cast(ClassVisitorMixin, self)
-        lifetime.class_operation(receiver, "require", base_value)
-        lifetime.class_pin(receiver, base_value)
-        descriptor_index = next(
-            header.storage_index
-            for header in layout.header_fields
-            if header.kind is ClassHeaderFieldKind.TYPE_DESCRIPTOR
-        )
-        integer = self._llvm.INT32_TYPE
-        descriptor_slot = self._llvm.ir_builder.gep(
-            base_value,
-            [ir.Constant(integer, 0), ir.Constant(integer, descriptor_index)],
-            inbounds=True,
-        )
-        pointer = self._llvm.INT8_TYPE.as_pointer()
-        function_type = ir.FunctionType(pointer, [pointer, integer])
-        descriptor = self._llvm.ir_builder.bitcast(
-            self._llvm.ir_builder.load(descriptor_slot),
-            function_type.as_pointer(),
-        )
-        address = self._llvm.ir_builder.call(
-            descriptor,
-            [
-                lifetime.class_raw(base_value),
-                ir.Constant(integer, field.access_index),
-            ],
-            name=f"{member_name}_raw_addr",
-        )
-        lifetime.class_operation(receiver, "require", address)
-        llvm_field_type = self._llvm_type_for_ast_type(field.member.type_)
-        if llvm_field_type is None:
-            raise_lowering_internal_error(
-                "class field has no LLVM type", node=receiver
-            )
-        return self._llvm.ir_builder.bitcast(
-            address, llvm_field_type.as_pointer(), name=f"{member_name}_addr"
-        )
-
-    def _field_address(self, node: astx.FieldAccess) -> ir.Value:
-        """
-        title: Lower one field-access expression to an address.
-        parameters:
-          node:
-            type: astx.FieldAccess
-        returns:
-          type: ir.Value
-        """
-        semantic = getattr(node, "semantic", None)
-        resolved_class_field_access = getattr(
-            semantic,
-            "resolved_class_field_access",
-            None,
-        )
-        if resolved_class_field_access is not None:
-            return self._resolved_class_receiver_field_address(
-                receiver=node.value,
-                member_name=resolved_class_field_access.member.name,
-                layout=resolved_class_field_access.class_.layout,
-                field=resolved_class_field_access.field,
-            )
-
-        resolved_field_access = getattr(
-            semantic,
-            "resolved_field_access",
-            None,
-        )
-        if resolved_field_access is None:
-            raise Exception("codegen: unresolved field access.")
-
-        if isinstance(node.value, astx.Identifier):
-            base_key = semantic_symbol_key(node.value, node.value.name)
-            base_ptr = self.named_values.get(base_key)
-            if base_ptr is None:
-                raise Exception(f"Unknown variable name: {node.value.name}")
-        elif isinstance(node.value, astx.FieldAccess):
-            base_ptr = self._field_address(node.value)
-        else:
-            self.visit(node.value)
-            base_value = safe_pop(self.result_stack)
-            if base_value is None:
-                raise Exception("codegen: invalid field access base.")
-            base_type = self._resolved_ast_type(node.value)
-            llvm_base_type = self._llvm_type_for_ast_type(base_type)
-            if llvm_base_type is None:
-                llvm_base_type = base_value.type
-            temp_name = f"fieldtmp_{id(node.value)}"
-            base_ptr = self.create_entry_block_alloca(
-                temp_name,
-                llvm_base_type,
-            )
-            self._llvm.ir_builder.store(base_value, base_ptr)
-
-        indices = [
-            ir.Constant(self._llvm.INT32_TYPE, 0),
-            ir.Constant(
-                self._llvm.INT32_TYPE,
-                resolved_field_access.field.index,
-            ),
-        ]
-        source_etype = self._llvm_type_for_ast_type(
-            self._resolved_ast_type(node.value)
-        )
-        if not isinstance(node.value, astx.FieldAccess):
-            return self._llvm.ir_builder.gep(
-                base_ptr,
-                indices,
-                inbounds=True,
-                name=f"{resolved_field_access.field.name}_addr",
-            )
-        if source_etype is not None:
-            typed_ptr = source_etype.as_pointer()
-            if base_ptr.type != typed_ptr:
-                base_ptr = self._llvm.ir_builder.bitcast(
-                    base_ptr,
-                    typed_ptr,
-                    name=f"{resolved_field_access.field.name}_baseptr",
-                )
-        return self._llvm.ir_builder.gep(
-            base_ptr,
-            indices,
-            inbounds=True,
-            name=f"{resolved_field_access.field.name}_addr",
-        )
-
-    def _base_class_field_address(
-        self,
-        node: astx.BaseFieldAccess,
-    ) -> ir.Value:
-        """
-        title: Lower one base-qualified class field access to an address.
-        parameters:
-          node:
-            type: astx.BaseFieldAccess
-        returns:
-          type: ir.Value
-        """
-        semantic = getattr(node, "semantic", None)
-        resolved_base_field_access = getattr(
-            semantic,
-            "resolved_base_class_field_access",
-            None,
-        )
-        if resolved_base_field_access is None:
-            raise Exception("codegen: unresolved base class field access")
-        return self._resolved_class_receiver_field_address(
-            receiver=node.receiver,
-            member_name=resolved_base_field_access.member.name,
-            layout=resolved_base_field_access.receiver_class.layout,
-            field=resolved_base_field_access.field,
-        )
-
-    def _static_class_field_address(
-        self,
-        node: astx.StaticFieldAccess,
-    ) -> ir.Value:
-        """
-        title: Lower one static class field access to a global address.
-        parameters:
-          node:
-            type: astx.StaticFieldAccess
-        returns:
-          type: ir.Value
-        """
-        semantic = getattr(node, "semantic", None)
-        resolved_static_field_access = getattr(
-            semantic,
-            "resolved_static_class_field_access",
-            None,
-        )
-        if resolved_static_field_access is None:
-            raise Exception("codegen: unresolved static class field access")
-        global_name = resolved_static_field_access.storage.global_name
-        global_value = self._llvm.module.globals.get(global_name)
-        if global_value is None:
-            raise Exception(
-                f"codegen: missing static class field global '{global_name}'"
-            )
-        return cast(ir.Value, global_value)
-
-    def _lvalue_address(
-        self,
-        node: astx.AST,
-    ) -> ir.Value:
-        """
-        title: Lower one mutable lvalue target to an address.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: ir.Value
-        """
-        if isinstance(node, astx.Identifier):
-            symbol_key = semantic_symbol_key(node, node.name)
-            address = self.named_values.get(symbol_key)
-            if address is None:
-                raise Exception(f"Unknown variable name: {node.name}")
-            return address
-        if isinstance(node, astx.FieldAccess):
-            return self._field_address(node)
-        if isinstance(node, astx.BaseFieldAccess):
-            return self._base_class_field_address(node)
-        if isinstance(node, astx.StaticFieldAccess):
-            return self._static_class_field_address(node)
-        raise Exception("codegen: invalid mutable target")
-
-    def _bool_value_from_numeric(
-        self,
-        value: ir.Value,
-        source_type: astx.DataType | None,
-        *,
-        name: str,
-    ) -> ir.Value:
-        """
-        title: Convert one numeric value to boolean truthiness.
-        parameters:
-          value:
-            type: ir.Value
-          source_type:
-            type: astx.DataType | None
-          name:
-            type: str
-        returns:
-          type: ir.Value
-        """
-        if is_boolean_type(source_type):
-            return value
-        if is_float_type(source_type):
-            zero = ir.Constant(value.type, 0.0)
-            return self._emit_numeric_compare(
-                "!=",
-                value,
-                zero,
-                unsigned=False,
-                name=name,
-            )
-        if is_integer_type(source_type):
-            zero = ir.Constant(value.type, 0)
-            return self._emit_numeric_compare(
-                "!=",
-                value,
-                zero,
-                unsigned=True,
-                name=name,
-            )
-        raise Exception(f"Unsupported boolean conversion from {source_type!r}")
-
-    def _emit_numeric_compare(
-        self,
-        op_code: str,
-        lhs: ir.Value,
-        rhs: ir.Value,
-        *,
-        unsigned: bool,
-        name: str,
-    ) -> ir.Value:
-        """
-        title: Emit one numeric compare using shared signedness policy.
-        parameters:
-          op_code:
-            type: str
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-          name:
-            type: str
-        returns:
-          type: ir.Value
-        """
-        if is_fp_type(lhs.type):
-            return self._llvm.ir_builder.fcmp_ordered(op_code, lhs, rhs, name)
-        if unsigned:
-            return self._llvm.ir_builder.icmp_unsigned(
-                op_code,
-                lhs,
-                rhs,
-                name,
-            )
-        return self._llvm.ir_builder.icmp_signed(op_code, lhs, rhs, name)
-
-    def _cast_ast_value(
-        self,
-        value: ir.Value,
-        *,
-        source_type: astx.DataType | None,
-        target_type: astx.DataType | None,
-    ) -> ir.Value:
-        """
-        title: Cast one lowered value using semantic scalar types.
-        parameters:
-          value:
-            type: ir.Value
-          source_type:
-            type: astx.DataType | None
-          target_type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Value
-        """
-        if source_type is None or target_type is None:
-            return value
-
-        if isinstance(target_type, astx.NullableType):
-            valid: ir.Value = ir.Constant(ir.IntType(1), 1)
-            if isinstance(source_type, astx.NullableType):
-                valid = self._llvm.ir_builder.extract_value(value, 0)
-                value = self._llvm.ir_builder.extract_value(value, 1)
-                source_type = source_type.value_type
-            value = self._cast_ast_value(
-                value,
-                source_type=source_type,
-                target_type=target_type.value_type,
-            )
-            llvm_type = self._llvm_type_for_ast_type(target_type)
-            if llvm_type is None:
-                raise TypeError("missing nullable storage type")
-            result = self._llvm.ir_builder.insert_value(
-                ir.Constant(llvm_type, None), valid, 0
-            )
-            return self._llvm.ir_builder.insert_value(result, value, 1)
-        if isinstance(source_type, astx.UnionType):
-            source_type = self._union_storage_ast_type(source_type)
-        if isinstance(target_type, astx.UnionType):
-            target_type = self._union_storage_ast_type(target_type)
-        if source_type is None or target_type is None:
-            return value
-
-        target_llvm_type = self._llvm_type_for_ast_type(target_type)
-        if target_llvm_type is None:
-            return value
-        if value.type == target_llvm_type:
-            return value
-
-        builder = self._llvm.ir_builder
-
-        if is_boolean_type(target_type):
-            return self._bool_value_from_numeric(
-                value,
-                source_type,
-                name="boolcast",
-            )
-
-        if is_boolean_type(source_type):
-            if is_integer_type(target_type):
-                return builder.zext(value, target_llvm_type, "bool_zext")
-            if is_float_type(target_type):
-                return builder.uitofp(value, target_llvm_type, "bool_to_fp")
-
-        if is_integer_type(source_type) and is_integer_type(target_type):
-            source_width = bit_width(source_type)
-            target_width = bit_width(target_type)
-
-            if source_width == target_width:
-                return value
-            if source_width < target_width:
-                if is_unsigned_type(source_type):
-                    return builder.zext(value, target_llvm_type, "zext")
-                return builder.sext(value, target_llvm_type, "sext")
-            return builder.trunc(value, target_llvm_type, "trunc")
-
-        if is_integer_type(source_type) and is_float_type(target_type):
-            if is_unsigned_type(source_type):
-                return builder.uitofp(value, target_llvm_type, "uitofp")
-            return builder.sitofp(value, target_llvm_type, "sitofp")
-
-        if is_float_type(source_type) and is_integer_type(target_type):
-            if is_unsigned_type(target_type):
-                return builder.fptoui(value, target_llvm_type, "fptoui")
-            return builder.fptosi(value, target_llvm_type, "fptosi")
-
-        if is_float_type(source_type) and is_float_type(target_type):
-            if bit_width(source_type) < bit_width(target_type):
-                return builder.fpext(value, target_llvm_type, "fpext")
-            return builder.fptrunc(value, target_llvm_type, "fptrunc")
-
-        if isinstance(source_type, astx.ClassType) and isinstance(
-            target_type,
-            astx.ClassType,
-        ):
-            return builder.bitcast(value, target_llvm_type, "classcast")
-
-        raise Exception(
-            f"Unsupported scalar cast from {source_type!r} to {target_type!r}"
-        )
-
-    def _unify_numeric_operands(
-        self,
-        lhs: ir.Value,
-        rhs: ir.Value,
-        unsigned: bool = False,
-    ) -> tuple[ir.Value, ir.Value]:
-        """
-        title: Unify numeric operands for raw LLVM values.
-        summary: >-
-          Raw LLVM fixture/storage adaptation only, not a language conversion
-          policy. Analyzed AST lowering must use resolved operand plans and
-          must never call this helper as a missing-metadata fallback.
-        parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, ir.Value]
-        """
-        lhs_is_vec = is_vector(lhs)
-        rhs_is_vec = is_vector(rhs)
-
-        if lhs_is_vec and rhs_is_vec:
-            if lhs.type.count != rhs.type.count:
-                raise Exception(
-                    "Vector size mismatch: "
-                    f"{lhs.type.count} vs {rhs.type.count}"
-                )
-            if lhs.type.element != rhs.type.element:
-                raise Exception(
-                    "Vector element type mismatch: "
-                    f"{lhs.type.element} vs {rhs.type.element}"
-                )
-            return lhs, rhs
-
-        if lhs_is_vec:
-            target_lanes = lhs.type.count
-            target_scalar_ty = lhs.type.element
-        elif rhs_is_vec:
-            target_lanes = rhs.type.count
-            target_scalar_ty = rhs.type.element
-        else:
-            target_lanes = None
-            lhs_base_ty = lhs.type
-            rhs_base_ty = rhs.type
-            if is_fp_type(lhs_base_ty) or is_fp_type(rhs_base_ty):
-                float_candidates = [
-                    type_
-                    for type_ in (lhs_base_ty, rhs_base_ty)
-                    if is_fp_type(type_)
-                ]
-                integer_width = max(
-                    (
-                        getattr(type_, "width", 0)
-                        for type_ in (lhs_base_ty, rhs_base_ty)
-                        if is_int_type(type_)
-                    ),
-                    default=0,
-                )
-                float_width = max(
-                    (
-                        self._float_bit_width(type_)
-                        for type_ in float_candidates
-                    ),
-                    default=0,
-                )
-                target_width = max(
-                    float_width,
-                    float_promotion_width_for_integer_width(integer_width),
-                )
-                target_scalar_ty = self._float_type_from_width(target_width)
-            else:
-                lhs_width = getattr(lhs_base_ty, "width", 0)
-                rhs_width = getattr(rhs_base_ty, "width", 0)
-                target_scalar_ty = ir.IntType(max(lhs_width, rhs_width, 1))
-
-        lhs = self._cast_value_to_type(
-            lhs, target_scalar_ty, unsigned=unsigned
-        )
-        rhs = self._cast_value_to_type(
-            rhs, target_scalar_ty, unsigned=unsigned
-        )
-
-        if target_lanes:
-            vec_ty = ir.VectorType(target_scalar_ty, target_lanes)
-            if not is_vector(lhs):
-                lhs = splat_scalar(self._llvm.ir_builder, lhs, vec_ty)
-            if not is_vector(rhs):
-                rhs = splat_scalar(self._llvm.ir_builder, rhs, vec_ty)
-
-        return lhs, rhs
-
-    def _select_float_type(self, candidates: list[ir.Type]) -> ir.Type:
-        """
-        title: Select float type.
-        parameters:
-          candidates:
-            type: list[ir.Type]
-        returns:
-          type: ir.Type
-        """
-        if not candidates:
-            return self._llvm.FLOAT_TYPE
-
-        width = max(self._float_bit_width(type_) for type_ in candidates)
-        return self._float_type_from_width(width)
-
-    def _float_type_from_width(self, width: int) -> ir.Type:
-        """
-        title: Float type from width.
-        parameters:
-          width:
-            type: int
-        returns:
-          type: ir.Type
-        """
-        if width <= FLOAT16_BITS and hasattr(self._llvm, "FLOAT16_TYPE"):
-            return self._llvm.FLOAT16_TYPE
-        if width <= FLOAT32_BITS:
-            return self._llvm.FLOAT_TYPE
-        if width <= FLOAT64_BITS:
-            return self._llvm.DOUBLE_TYPE
-        if FP128Type is not None and width >= FLOAT128_BITS:
-            return FP128Type()
-        return self._llvm.FLOAT_TYPE
-
-    def _float_bit_width(self, type_: ir.Type) -> int:
-        """
-        title: Float bit width.
-        parameters:
-          type_:
-            type: ir.Type
-        returns:
-          type: int
-        """
-        if isinstance(type_, DoubleType):
-            return FLOAT64_BITS
-        if isinstance(type_, FloatType):
-            return FLOAT32_BITS
-        if isinstance(type_, HalfType):
-            return FLOAT16_BITS
-        if FP128Type is not None and isinstance(type_, FP128Type):
-            return FLOAT128_BITS
-        raise Exception(f"Unknown floating-point type: {type_}")
-
-    def _cast_value_to_type(
-        self,
-        value: ir.Value,
-        target_scalar_ty: ir.Type,
-        unsigned: bool = False,
-    ) -> ir.Value:
-        """
-        title: Cast value to type.
-        parameters:
-          value:
-            type: ir.Value
-          target_scalar_ty:
-            type: ir.Type
-          unsigned:
-            type: bool
-        returns:
-          type: ir.Value
-        """
-        builder = self._llvm.ir_builder
-        value_is_vec = is_vector(value)
-        if value_is_vec:
-            lanes = value.type.count
-            current_scalar_ty = value.type.element
-            target_ty = ir.VectorType(target_scalar_ty, lanes)
-        else:
-            lanes = None
-            current_scalar_ty = value.type
-            target_ty = target_scalar_ty
-
-        if current_scalar_ty == target_scalar_ty and value.type == target_ty:
-            return value
-
-        current_is_float = is_fp_type(current_scalar_ty)
-        target_is_float = is_fp_type(target_scalar_ty)
-
-        if target_is_float:
-            if current_is_float:
-                current_bits = self._float_bit_width(current_scalar_ty)
-                target_bits = self._float_bit_width(target_scalar_ty)
-                if current_bits == target_bits:
-                    if value.type != target_ty:
-                        return builder.bitcast(value, target_ty)
-                    return value
-                if current_bits < target_bits:
-                    return builder.fpext(value, target_ty, "fpext")
-                return builder.fptrunc(value, target_ty, "fptrunc")
-            if unsigned:
-                return builder.uitofp(value, target_ty, "uitofp")
-            return builder.sitofp(value, target_ty, "sitofp")
-
-        if current_is_float:
-            raise Exception(
-                "Cannot implicitly convert floating-point to integer"
-            )
-
-        current_width = getattr(current_scalar_ty, "width", 0)
-        target_width = getattr(target_scalar_ty, "width", 0)
-        if current_width == target_width:
-            if value.type != target_ty:
-                return builder.bitcast(value, target_ty)
-            return value
-
-        if current_width < target_width:
-            if unsigned:
-                return builder.zext(value, target_ty, "zext")
-            return builder.sext(value, target_ty, "sext")
-
-        return builder.trunc(value, target_ty, "trunc")
-
-    def _common_list_element_type(
-        self, lhs_ty: ir.Type, rhs_ty: ir.Type
-    ) -> ir.Type:
-        """
-        title: Common list element type.
-        parameters:
-          lhs_ty:
-            type: ir.Type
-          rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
-        """
-        if lhs_ty == rhs_ty:
-            return lhs_ty
-
-        if is_int_type(lhs_ty) and is_int_type(rhs_ty):
-            return lhs_ty if lhs_ty.width >= rhs_ty.width else rhs_ty
-
-        lhs_is_fp = is_fp_type(lhs_ty)
-        rhs_is_fp = is_fp_type(rhs_ty)
-        if lhs_is_fp and rhs_is_fp:
-            return self._select_float_type([lhs_ty, rhs_ty])
-
-        if is_int_type(lhs_ty) and rhs_is_fp:
-            return rhs_ty
-        if is_int_type(rhs_ty) and lhs_is_fp:
-            return lhs_ty
-
-        if isinstance(lhs_ty, ir.PointerType) and isinstance(
-            rhs_ty, ir.PointerType
-        ):
-            if lhs_ty == rhs_ty:
-                return lhs_ty
-            raise TypeError(
-                "LiteralList: incompatible pointer types "
-                f"{lhs_ty} and {rhs_ty}"
-            )
-
-        raise TypeError(
-            f"LiteralList: cannot find common type for {lhs_ty} and {rhs_ty}"
-        )
-
-    def _coerce_to(self, value: ir.Value, target_ty: ir.Type) -> ir.Value:
-        """
-        title: Coerce to.
-        parameters:
-          value:
-            type: ir.Value
-          target_ty:
-            type: ir.Type
-        returns:
-          type: ir.Value
-        """
-        if value.type == target_ty:
-            return value
-
-        if isinstance(value, ir.Constant):
-            raw = value.constant
-            if is_int_type(value.type) and is_int_type(target_ty):
-                return ir.Constant(target_ty, int(raw))
-            if is_int_type(value.type) and is_fp_type(target_ty):
-                return ir.Constant(target_ty, float(raw))
-            if is_fp_type(value.type) and is_fp_type(target_ty):
-                return ir.Constant(target_ty, float(raw))
-            if is_fp_type(value.type) and is_int_type(target_ty):
-                return ir.Constant(target_ty, int(raw))
-
-        builder = self._llvm.ir_builder
-        if is_int_type(value.type) and is_int_type(target_ty):
-            if value.type.width < target_ty.width:
-                return builder.sext(value, target_ty, "list_sext")
-            return builder.trunc(value, target_ty, "list_trunc")
-
-        if is_int_type(value.type) and is_fp_type(target_ty):
-            return builder.sitofp(value, target_ty, "list_itofp")
-
-        if is_fp_type(value.type) and is_fp_type(target_ty):
-            if self._float_bit_width(value.type) < self._float_bit_width(
-                target_ty
-            ):
-                return builder.fpext(value, target_ty, "list_fpext")
-            return builder.fptrunc(value, target_ty, "list_fptrunc")
-
-        if is_fp_type(value.type) and is_int_type(target_ty):
-            return builder.fptosi(value, target_ty, "list_fptosi")
-
-        raise TypeError(
-            f"LiteralList: cannot coerce {value.type} to {target_ty}"
-        )
-
-    def _mark_set_value(self, value: ir.Value) -> ir.Value:
-        """
-        title: Mark set value.
-        parameters:
-          value:
-            type: ir.Value
-        returns:
-          type: ir.Value
-        """
-        self._set_value_ids[id(value)] = value
-        return value
-
-    def _is_set_value(self, value: ir.Value | None) -> bool:
-        """
-        title: Is set value.
-        parameters:
-          value:
-            type: ir.Value | None
-        returns:
-          type: bool
-        """
-        if value is None:
-            return False
-        return self._set_value_ids.get(id(value)) is value
-
-    def _try_set_binary_op(
-        self,
-        lhs: ir.Value | None,
-        rhs: ir.Value | None,
-        op_code: str,
-    ) -> bool:
-        """
-        title: Try set binary op.
-        parameters:
-          lhs:
-            type: ir.Value | None
-          rhs:
-            type: ir.Value | None
-          op_code:
-            type: str
-        returns:
-          type: bool
-        """
-        if op_code not in ("|", "&", "-", "^"):
-            return False
-
-        if not (self._is_set_value(lhs) and self._is_set_value(rhs)):
-            return False
-
-        if not (
-            isinstance(lhs, ir.Constant)
-            and isinstance(lhs.type, ir.ArrayType)
-            and isinstance(lhs.type.element, ir.IntType)
-            and isinstance(rhs, ir.Constant)
-            and isinstance(rhs.type, ir.ArrayType)
-            and isinstance(rhs.type.element, ir.IntType)
-        ):
-            return False
-
-        lhs_values: set[int] = {element.constant for element in lhs.constant}
-        rhs_values: set[int] = {element.constant for element in rhs.constant}
-
-        if op_code == "|":
-            result_vals = lhs_values | rhs_values
-        elif op_code == "&":
-            result_vals = lhs_values & rhs_values
-        elif op_code == "-":
-            result_vals = lhs_values - rhs_values
-        else:
-            result_vals = lhs_values ^ rhs_values
-
-        widest = max(lhs.type.element.width, rhs.type.element.width)
-        elem_ty = ir.IntType(widest)
-        consts = [ir.Constant(elem_ty, value) for value in sorted(result_vals)]
-        arr_ty = ir.ArrayType(elem_ty, len(consts))
-        self.result_stack.append(
-            self._mark_set_value(ir.Constant(arr_ty, consts))
-        )
-        return True
-
-    def _subscript_uses_unsigned_semantics(
-        self, node: astx.SubscriptExpr
-    ) -> bool:
-        """
-        title: Subscript uses unsigned semantics.
-        parameters:
-          node:
-            type: astx.SubscriptExpr
-        returns:
-          type: bool
-        """
-        if uses_unsigned_semantics(node.index):
-            return True
-
-        if isinstance(node.value, astx.LiteralDict) and node.value.elements:
-            first_key_node = next(iter(node.value.elements))
-            return uses_unsigned_semantics(first_key_node)
-
-        return False
-
-    def _subscript_compare_type(
-        self, lhs_ty: ir.Type, rhs_ty: ir.Type
-    ) -> ir.Type:
-        """
-        title: Subscript compare type.
-        parameters:
-          lhs_ty:
-            type: ir.Type
-          rhs_ty:
-            type: ir.Type
-        returns:
-          type: ir.Type
-        """
-        if lhs_ty == rhs_ty:
-            if is_int_type(lhs_ty) or is_fp_type(lhs_ty):
-                return lhs_ty
-            raise TypeError(
-                "SubscriptExpr: only integer and floating-point dict keys "
-                "are supported"
-            )
-
-        if is_int_type(lhs_ty) and is_int_type(rhs_ty):
-            return ir.IntType(max(lhs_ty.width, rhs_ty.width))
-
-        if is_fp_type(lhs_ty) and is_fp_type(rhs_ty):
-            return self._select_float_type([lhs_ty, rhs_ty])
-
-        raise TypeError(
-            "SubscriptExpr: key type "
-            f"{rhs_ty} is incompatible with dict key type {lhs_ty}"
-        )
-
-    def _coerce_subscript_key_for_compare(
-        self,
-        key_val: ir.Value,
-        compare_ty: ir.Type,
-        *,
-        unsigned: bool,
-    ) -> ir.Value:
-        """
-        title: Coerce subscript key for compare.
-        parameters:
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
-          unsigned:
-            type: bool
-        returns:
-          type: ir.Value
-        """
-        if key_val.type == compare_ty:
-            return key_val
-
-        if isinstance(key_val, ir.Constant):
-            if is_int_type(key_val.type) and is_int_type(compare_ty):
-                return ir.Constant(compare_ty, int(key_val.constant))
-            if is_fp_type(key_val.type) and is_fp_type(compare_ty):
-                return ir.Constant(compare_ty, float(key_val.constant))
-
-        if (is_int_type(key_val.type) and is_int_type(compare_ty)) or (
-            is_fp_type(key_val.type) and is_fp_type(compare_ty)
-        ):
-            return self._cast_value_to_type(
-                key_val, compare_ty, unsigned=unsigned
-            )
-
-        raise TypeError(
-            "SubscriptExpr: cannot compare dict key type "
-            f"{key_val.type} against {compare_ty}"
-        )
-
-    def _constant_subscript_key_matches(
-        self,
-        entry_key: ir.Constant,
-        key_val: ir.Constant,
-    ) -> bool:
-        """
-        title: Constant subscript key matches.
-        parameters:
-          entry_key:
-            type: ir.Constant
-          key_val:
-            type: ir.Constant
-        returns:
-          type: bool
-        """
-        compare_ty = self._subscript_compare_type(entry_key.type, key_val.type)
-        lhs = cast(
-            ir.Constant,
-            self._coerce_subscript_key_for_compare(
-                entry_key, compare_ty, unsigned=False
-            ),
-        )
-        rhs = cast(
-            ir.Constant,
-            self._coerce_subscript_key_for_compare(
-                key_val, compare_ty, unsigned=False
-            ),
-        )
-        return bool(lhs.constant == rhs.constant)
-
-    def _emit_subscript_miss(self) -> None:
-        """
-        title: Emit subscript miss.
-        """
-        builder = self._llvm.ir_builder
-        exit_fn = self.require_runtime_symbol("libc", "exit")
-        builder.call(exit_fn, [ir.Constant(self._llvm.INT32_TYPE, 1)])
-        builder.unreachable()
-
-    def _emit_runtime_subscript_lookup(
-        self,
-        dict_val: ir.Constant,
-        key_val: ir.Value,
-        *,
-        unsigned: bool,
-    ) -> None:
-        """
-        title: Emit runtime subscript lookup.
-        parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          unsigned:
-            type: bool
-        """
-        key_type = dict_val.type.element.elements[0]
-        compare_ty = self._subscript_compare_type(key_type, key_val.type)
-        key_val = self._coerce_subscript_key_for_compare(
-            key_val, compare_ty, unsigned=unsigned
-        )
-
-        if isinstance(compare_ty, ir.IntType):
-            self._emit_integer_subscript_switch(dict_val, key_val, compare_ty)
-            return
-
-        if is_fp_type(compare_ty):
-            self._emit_float_subscript_select(dict_val, key_val, compare_ty)
-            return
-
-        raise TypeError(
-            "SubscriptExpr: runtime lookup supports only integer and "
-            "floating-point dict keys"
-        )
-
-    def _emit_integer_subscript_switch(
-        self,
-        dict_val: ir.Constant,
-        key_val: ir.Value,
-        compare_ty: ir.Type,
-    ) -> None:
-        """
-        title: Emit integer subscript switch.
-        parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
-        """
-        builder = self._llvm.ir_builder
-        function = builder.function
-        count = dict_val.type.count
-        val_type = dict_val.type.element.elements[1]
-
-        miss_bb = function.append_basic_block("dict.miss")
-        merge_bb = function.append_basic_block("dict.merge")
-
-        case_blocks: list[tuple[ir.Constant, Any]] = []
-        for index in range(count):
-            entry_key = dict_val.constant[index].constant[0]
-            case_key = self._coerce_subscript_key_for_compare(
-                entry_key, compare_ty, unsigned=False
-            )
-            case_bb = function.append_basic_block(f"dict.case.{index}")
-            case_blocks.append((cast(ir.Constant, case_key), case_bb))
-
-        switch = builder.switch(key_val, miss_bb)
-        for case_key, case_bb in case_blocks:
-            switch.add_case(case_key, case_bb)
-
-        with builder.goto_block(miss_bb):
-            self._emit_subscript_miss()
-
-        for _, case_bb in case_blocks:
-            with builder.goto_block(case_bb):
-                builder.branch(merge_bb)
-
-        builder.position_at_end(merge_bb)
-
-        phi = builder.phi(val_type, name="dict.result")
-        for index, (_, case_bb) in enumerate(case_blocks):
-            entry_val = dict_val.constant[index].constant[1]
-            phi.add_incoming(entry_val, case_bb)
-
-        self.result_stack.append(phi)
-
-    def _emit_float_subscript_select(
-        self,
-        dict_val: ir.Constant,
-        key_val: ir.Value,
-        compare_ty: ir.Type,
-    ) -> None:
-        """
-        title: Emit float subscript select.
-        parameters:
-          dict_val:
-            type: ir.Constant
-          key_val:
-            type: ir.Value
-          compare_ty:
-            type: ir.Type
-        """
-        builder = self._llvm.ir_builder
-        count = dict_val.type.count
-
-        zero = ir.Constant(ir.IntType(32), 0)
-        key_field = ir.Constant(ir.IntType(32), 0)
-        val_field = ir.Constant(ir.IntType(32), 1)
-
-        current_bb = builder.block
-        builder.position_at_start(builder.function.entry_basic_block)
-        arr_alloca = builder.alloca(dict_val.type, name="dict_arr")
-        builder.position_at_end(current_bb)
-        builder.store(dict_val, arr_alloca)
-
-        last_idx = ir.Constant(ir.IntType(32), count - 1)
-        last_key_ptr = builder.gep(
-            arr_alloca, [zero, last_idx, key_field], inbounds=True
-        )
-        last_key = builder.load(last_key_ptr, name=f"k_{count - 1}")
-        last_key = self._coerce_subscript_key_for_compare(
-            last_key, compare_ty, unsigned=False
-        )
-        matched = builder.fcmp_ordered(
-            "==", last_key, key_val, name=f"cmp_{count - 1}"
-        )
-
-        last_val_ptr = builder.gep(
-            arr_alloca, [zero, last_idx, val_field], inbounds=True
-        )
-        result: ir.Value = builder.load(last_val_ptr, name=f"v_{count - 1}")
-
-        for index in reversed(range(count - 1)):
-            idx = ir.Constant(ir.IntType(32), index)
-            key_ptr = builder.gep(
-                arr_alloca, [zero, idx, key_field], inbounds=True
-            )
-            key_i = builder.load(key_ptr, name=f"k_{index}")
-            key_i = self._coerce_subscript_key_for_compare(
-                key_i, compare_ty, unsigned=False
-            )
-            cmp = builder.fcmp_ordered(
-                "==", key_i, key_val, name=f"cmp_{index}"
-            )
-            val_ptr = builder.gep(
-                arr_alloca, [zero, idx, val_field], inbounds=True
-            )
-            val_i = builder.load(val_ptr, name=f"v_{index}")
-            result = builder.select(cmp, val_i, result, name=f"sel_{index}")
-            matched = builder.or_(cmp, matched, name=f"match_{index}")
-
-        found_bb = builder.function.append_basic_block("dict.found")
-        miss_bb = builder.function.append_basic_block("dict.miss")
-        builder.cbranch(matched, found_bb, miss_bb)
-
-        with builder.goto_block(miss_bb):
-            self._emit_subscript_miss()
-
-        builder.position_at_end(found_bb)
-        self.result_stack.append(result)
-
-    def _create_string_concat_function(self) -> ir.Function:
-        """
-        title: Create string concat function.
-        returns:
-          type: ir.Function
-        """
-        func_name = "string_concat"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.ASCII_STRING_TYPE,
-            [self._llvm.ASCII_STRING_TYPE, self._llvm.ASCII_STRING_TYPE],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-        func.linkage = "external"
-        return func
-
-    def _create_string_length_function(self) -> ir.Function:
-        """
-        title: Create string length function.
-        returns:
-          type: ir.Function
-        """
-        func_name = "string_length"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.SIZE_T_TYPE,
-            [self._llvm.ASCII_STRING_TYPE],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-        block = func.append_basic_block("entry")
-        builder = ir.IRBuilder(block)
-        strlen_func = self._create_strlen_inline()
-        result = builder.call(strlen_func, [func.args[0]], "len")
-        builder.ret(result)
-        return func
-
-    def _create_string_equals_function(self) -> ir.Function:
-        """
-        title: Create string equals function.
-        returns:
-          type: ir.Function
-        """
-        func_name = "string_equals"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.BOOLEAN_TYPE,
-            [self._llvm.ASCII_STRING_TYPE, self._llvm.ASCII_STRING_TYPE],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-        block = func.append_basic_block("entry")
-        builder = ir.IRBuilder(block)
-        strcmp_func = self._create_strcmp_inline()
-        result = builder.call(strcmp_func, [func.args[0], func.args[1]], "cmp")
-        builder.ret(result)
-        return func
-
-    def _create_string_substring_function(self) -> ir.Function:
-        """
-        title: Create string substring function.
-        returns:
-          type: ir.Function
-        """
-        func_name = "string_substring"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.ASCII_STRING_TYPE,
-            [
-                self._llvm.ASCII_STRING_TYPE,
-                self._llvm.INT32_TYPE,
-                self._llvm.INT32_TYPE,
-            ],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-        func.linkage = "external"
-        return func
-
-    def _handle_string_concatenation(
-        self,
-        node: astx.AST,
-        lhs: ir.Value,
-        rhs: ir.Value,
-    ) -> ir.Value:
-        """
-        title: Handle string concatenation.
-        parameters:
-          node:
-            type: astx.AST
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-        returns:
-          type: ir.Value
-        """
-        strcat_func = self._create_strcat_inline()
-        result = self._llvm.ir_builder.call(
-            strcat_func, [lhs, rhs], "str_concat"
-        )
-        self._guard_heap_allocation(
-            node,
-            result,
-            message="string concatenation allocation failed or overflowed",
-        )
-        return result
-
-    def _copy_string_to_heap(
-        self,
-        node: astx.AST,
-        pointer: ir.Value,
-    ) -> ir.Value:
-        """
-        title: Copy one static string into caller-owned heap storage.
-        parameters:
-          node:
-            type: astx.AST
-          pointer:
-            type: ir.Value
-        returns:
-          type: ir.Value
-        """
-        empty = cast(Any, self)._constant_c_string_pointer(
-            "",
-            name_hint="string_copy_empty",
-        )
-        return self._handle_string_concatenation(node, pointer, empty)
-
-    def _create_strcat_inline(self) -> ir.Function:
-        """
-        title: Create strcat inline.
-        returns:
-          type: ir.Function
-        """
-        func_name = "strcat_inline"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.INT8_TYPE.as_pointer(),
-            [
-                self._llvm.INT8_TYPE.as_pointer(),
-                self._llvm.INT8_TYPE.as_pointer(),
-            ],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-
-        entry = func.append_basic_block("entry")
-        builder = ir.IRBuilder(entry)
-        strlen_func = self._create_string_length_function()
-        len1 = builder.call(strlen_func, [func.args[0]], "len1")
-        len2 = builder.call(strlen_func, [func.args[1]], "len2")
-
-        max_size = ir.Constant(self._llvm.SIZE_T_TYPE, -1)
-        remaining = builder.sub(max_size, len1, "remaining_after_lhs")
-        overflows = builder.icmp_unsigned(
-            ">=",
-            len2,
-            remaining,
-            "string_length_overflows",
-        )
-        allocate_block = func.append_basic_block("allocate")
-        failure_block = func.append_basic_block("allocation_failure")
-        builder.cbranch(overflows, failure_block, allocate_block)
-
-        builder.position_at_start(failure_block)
-        builder.ret(ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None))
-
-        builder.position_at_start(allocate_block)
-        total_len = builder.add(len1, len2, "total_len")
-        total_len = builder.add(
-            total_len,
-            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
-            "total_len_with_null",
-        )
-
-        malloc = self._create_malloc_decl()
-        result_ptr = builder.call(malloc, [total_len], "result")
-        allocation_failed = builder.icmp_unsigned(
-            "==",
-            result_ptr,
-            ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None),
-        )
-        copy_block = func.append_basic_block("copy")
-        builder.cbranch(allocation_failed, failure_block, copy_block)
-
-        builder.position_at_start(copy_block)
-
-        self._generate_strcpy(builder, result_ptr, func.args[0])
-        result_end = builder.gep(result_ptr, [len1], inbounds=True)
-        self._generate_strcpy(builder, result_end, func.args[1])
-
-        builder.ret(result_ptr)
-        return func
-
-    def _generate_strcpy(
-        self,
-        builder: ir.IRBuilder,
-        dest: ir.Value,
-        src: ir.Value,
-    ) -> None:
-        """
-        title: Generate strcpy.
-        parameters:
-          builder:
-            type: ir.IRBuilder
-          dest:
-            type: ir.Value
-          src:
-            type: ir.Value
-        """
-        loop_bb = builder.function.append_basic_block("strcpy_loop")
-        end_bb = builder.function.append_basic_block("strcpy_end")
-
-        index = builder.alloca(self._llvm.SIZE_T_TYPE, name="strcpy_index")
-        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), index)
-        builder.branch(loop_bb)
-
-        builder.position_at_start(loop_bb)
-        idx_val = builder.load(index, "idx_val")
-        src_char_ptr = builder.gep(src, [idx_val], inbounds=True)
-        char_val = builder.load(src_char_ptr, "char_val")
-        dest_char_ptr = builder.gep(dest, [idx_val], inbounds=True)
-        builder.store(char_val, dest_char_ptr)
-
-        is_null = builder.icmp_signed(
-            "==", char_val, ir.Constant(self._llvm.INT8_TYPE, 0)
-        )
-        next_idx = builder.add(idx_val, ir.Constant(self._llvm.SIZE_T_TYPE, 1))
-        builder.store(next_idx, index)
-        builder.cbranch(is_null, end_bb, loop_bb)
-        builder.position_at_start(end_bb)
-
-    def _create_strcmp_inline(self) -> ir.Function:
-        """
-        title: Create strcmp inline.
-        returns:
-          type: ir.Function
-        """
-        func_name = "strcmp_inline"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.BOOLEAN_TYPE,
-            [
-                self._llvm.INT8_TYPE.as_pointer(),
-                self._llvm.INT8_TYPE.as_pointer(),
-            ],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-
-        entry = func.append_basic_block("entry")
-        loop = func.append_basic_block("loop")
-        not_equal = func.append_basic_block("not_equal")
-        equal = func.append_basic_block("equal")
-        builder = ir.IRBuilder(entry)
-
-        index = builder.alloca(self._llvm.SIZE_T_TYPE, name="index")
-        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), index)
-        builder.branch(loop)
-
-        builder.position_at_start(loop)
-        idx_val = builder.load(index, "idx_val")
-        char1_ptr = builder.gep(func.args[0], [idx_val], inbounds=True)
-        char2_ptr = builder.gep(func.args[1], [idx_val], inbounds=True)
-        char1 = builder.load(char1_ptr, "char1")
-        char2 = builder.load(char2_ptr, "char2")
-        chars_equal = builder.icmp_signed("==", char1, char2)
-        char1_null = builder.icmp_signed(
-            "==", char1, ir.Constant(self._llvm.INT8_TYPE, 0)
-        )
-
-        builder.cbranch(
-            chars_equal,
-            builder.function.append_basic_block("check_null"),
-            not_equal,
-        )
-        check_null_bb = builder.function.basic_blocks[-1]
-        builder.position_at_start(check_null_bb)
-        builder.cbranch(
-            char1_null,
-            equal,
-            builder.function.append_basic_block("continue_loop"),
-        )
-        continue_bb = builder.function.basic_blocks[-1]
-        builder.position_at_start(continue_bb)
-        next_idx = builder.add(idx_val, ir.Constant(self._llvm.SIZE_T_TYPE, 1))
-        builder.store(next_idx, index)
-        builder.branch(loop)
-
-        builder.position_at_start(not_equal)
-        builder.ret(ir.Constant(self._llvm.BOOLEAN_TYPE, 0))
-        builder.position_at_start(equal)
-        builder.ret(ir.Constant(self._llvm.BOOLEAN_TYPE, 1))
-        return func
-
-    def _create_strlen_inline(self) -> ir.Function:
-        """
-        title: Create strlen inline.
-        returns:
-          type: ir.Function
-        """
-        func_name = "strlen_inline"
-        if func_name in self._llvm.module.globals:
-            return cast(ir.Function, self._llvm.module.get_global(func_name))
-
-        func_type = ir.FunctionType(
-            self._llvm.SIZE_T_TYPE,
-            [self._llvm.INT8_TYPE.as_pointer()],
-        )
-        func = ir.Function(self._llvm.module, func_type, func_name)
-
-        entry = func.append_basic_block("entry")
-        loop = func.append_basic_block("loop")
-        end = func.append_basic_block("end")
-        builder = ir.IRBuilder(entry)
-
-        counter = builder.alloca(self._llvm.SIZE_T_TYPE, name="counter")
-        builder.store(ir.Constant(self._llvm.SIZE_T_TYPE, 0), counter)
-        builder.branch(loop)
-
-        builder.position_at_start(loop)
-        count_val = builder.load(counter, "count_val")
-        char_ptr = builder.gep(func.args[0], [count_val], inbounds=True)
-        char_val = builder.load(char_ptr, "char_val")
-        is_null = builder.icmp_signed(
-            "==", char_val, ir.Constant(self._llvm.INT8_TYPE, 0)
-        )
-
-        next_count = builder.add(
-            count_val,
-            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
-        )
-        builder.store(next_count, counter)
-        builder.cbranch(is_null, end, loop)
-
-        builder.position_at_start(end)
-        builder.ret(count_val)
-        return func
-
-    def _handle_string_comparison(
-        self,
-        lhs: ir.Value,
-        rhs: ir.Value,
-        op: str,
-    ) -> ir.Value:
-        """
-        title: Handle string comparison.
-        parameters:
-          lhs:
-            type: ir.Value
-          rhs:
-            type: ir.Value
-          op:
-            type: str
-        returns:
-          type: ir.Value
-        """
-        if op == "==":
-            equals_func = self._create_string_equals_function()
-            return self._llvm.ir_builder.call(
-                equals_func, [lhs, rhs], "str_equals"
-            )
-        if op == "!=":
-            equals_func = self._create_string_equals_function()
-            equals_result = self._llvm.ir_builder.call(
-                equals_func, [lhs, rhs], "str_equals"
-            )
-            return self._llvm.ir_builder.xor(
-                equals_result,
-                ir.Constant(self._llvm.BOOLEAN_TYPE, 1),
-                "str_not_equals",
-            )
-        raise Exception(f"String comparison operator {op} not implemented")
-
-    def _normalize_int_for_printf(
-        self,
-        value: ir.Value,
-        *,
-        unsigned: bool = False,
-    ) -> tuple[ir.Value, str]:
-        """
-        title: Normalize int for printf.
-        parameters:
-          value:
-            type: ir.Value
-          unsigned:
-            type: bool
-        returns:
-          type: tuple[ir.Value, str]
-        """
-        int64_width = 64
-        if not is_int_type(value.type):
-            raise Exception("Expected integer value")
-        width = value.type.width
-        if width < int64_width:
-            if width == 1 or unsigned:
-                arg = self._llvm.ir_builder.zext(value, self._llvm.INT64_TYPE)
-                return arg, "%llu"
-            arg = self._llvm.ir_builder.sext(value, self._llvm.INT64_TYPE)
-            return arg, "%lld"
-        if width == int64_width:
-            if unsigned:
-                return value, "%llu"
-            return value, "%lld"
-        raise Exception(
-            "Casting integers wider than 64 bits to string is not supported"
-        )
-
-    def _create_malloc_decl(self) -> ir.Function:
-        """
-        title: Create malloc decl.
-        returns:
-          type: ir.Function
-        """
-        return self.require_runtime_symbol("libc", "malloc")
-
-    def _snprintf_heap(
-        self,
-        node: astx.AST,
-        fmt_gv: ir.GlobalVariable,
-        args: list[ir.Value],
-    ) -> ir.Value:
-        """
-        title: Snprintf heap.
-        parameters:
-          node:
-            type: astx.AST
-          fmt_gv:
-            type: ir.GlobalVariable
-          args:
-            type: list[ir.Value]
-        returns:
-          type: ir.Value
-        """
-        snprintf = self._create_snprintf_decl()
-        malloc = self._create_malloc_decl()
-
-        zero_size = ir.Constant(self._llvm.SIZE_T_TYPE, 0)
-        null_ptr = ir.Constant(self._llvm.INT8_TYPE.as_pointer(), None)
-        fmt_ptr = self._llvm.ir_builder.gep(
-            fmt_gv,
-            [
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-                ir.Constant(self._llvm.INT32_TYPE, 0),
-            ],
-            inbounds=True,
-        )
-
-        needed_i32 = self._llvm.ir_builder.call(
-            snprintf, [null_ptr, zero_size, fmt_ptr, *args]
-        )
-
-        zero_i32 = ir.Constant(self._llvm.INT32_TYPE, 0)
-        format_succeeded = self._llvm.ir_builder.icmp_signed(
-            ">=",
-            needed_i32,
-            zero_i32,
-            name="string_format_size_succeeded",
-        )
-        self._guard_runtime_condition(
-            node,
-            format_succeeded,
-            code="ARX-RUNTIME-STRING-002",
-            message="string formatting size query failed",
-            block_name="string.format.size",
-        )
-        needed_size = self._llvm.ir_builder.zext(
-            needed_i32,
-            self._llvm.SIZE_T_TYPE,
-        )
-        need_szt = self._llvm.ir_builder.add(
-            needed_size,
-            ir.Constant(self._llvm.SIZE_T_TYPE, 1),
-            name="string_format_allocation_size",
-        )
-        mem = self._llvm.ir_builder.call(malloc, [need_szt])
-        self._guard_heap_allocation(
-            node,
-            mem,
-            message="string formatting allocation failed",
-        )
-        written = self._llvm.ir_builder.call(
-            snprintf,
-            [mem, need_szt, fmt_ptr, *args],
-        )
-        write_succeeded = self._llvm.ir_builder.icmp_signed(
-            ">=",
-            written,
-            zero_i32,
-            name="string_format_write_succeeded",
-        )
-        self._guard_runtime_condition(
-            node,
-            write_succeeded,
-            code="ARX-RUNTIME-STRING-002",
-            message="string formatting write failed",
-            block_name="string.format.write",
-        )
-        return mem
-
-    def _create_snprintf_decl(self) -> ir.Function:
-        """
-        title: Create snprintf decl.
-        returns:
-          type: ir.Function
-        """
-        return self.require_runtime_symbol("libc", "snprintf")
-
-    def _get_or_create_format_global(self, fmt: str) -> ir.GlobalVariable:
-        """
-        title: Get or create format global.
-        parameters:
-          fmt:
-            type: str
-        returns:
-          type: ir.GlobalVariable
-        """
-        name = f"fmt_{abs(hash(fmt))}"
-        if name in self._llvm.module.globals:
-            return cast(ir.GlobalVariable, self._llvm.module.get_global(name))
-
-        data = bytearray(fmt + "\0", "utf8")
-        arr_ty = ir.ArrayType(self._llvm.INT8_TYPE, len(data))
-        gv = ir.GlobalVariable(self._llvm.module, arr_ty, name=name)
-        gv.linkage = "internal"
-        gv.global_constant = True
-        gv.initializer = ir.Constant(arr_ty, data)
-        return gv

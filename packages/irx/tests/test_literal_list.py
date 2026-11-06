@@ -10,7 +10,10 @@ from typing import Callable, cast
 import astx
 import pytest
 
+from irx.analysis import SemanticError, analyze
+from irx.analysis.resolved_nodes import SemanticInfo
 from irx.builder import Visitor as LLVMVisitor
+from irx.diagnostics import LoweringError
 from llvmlite import ir
 
 HAS_LITERAL_LIST = hasattr(astx, "LiteralList")
@@ -159,8 +162,10 @@ def test_literal_list_positive_scenarios(
     )
     visitor = cast(LLVMVisitor, request.getfixturevalue(fixture_name))
 
-    visitor.visit(astx.LiteralList(elements=scenario.elements_factory()))
-    const = visitor.result_stack.pop()
+    literal = astx.LiteralList(elements=scenario.elements_factory())
+    analyze(literal)
+    visitor.visit(literal)
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -173,22 +178,15 @@ def test_literal_list_positive_scenarios(
     else:
         assert actual_values == scenario.expected_values
 
-    assert not visitor.result_stack
+    assert not visitor.function_state.result_stack
 
 
-def test_literal_list_incompatible_types_raise(
-    llvm_visitor_in_function: LLVMVisitor,
-) -> None:
+def test_literal_list_incompatible_types_raise() -> None:
     """
-    title: Incompatible LiteralList element types should raise TypeError.
-    parameters:
-      llvm_visitor_in_function:
-        type: LLVMVisitor
+    title: Incompatible literal storage is rejected before lowering.
     """
-    with pytest.raises(
-        TypeError, match="LiteralList: cannot find common type"
-    ):
-        llvm_visitor_in_function.visit(
+    with pytest.raises(SemanticError, match="common storage"):
+        analyze(
             astx.LiteralList(
                 elements=[
                     astx.LiteralUTF8String("hello"),
@@ -196,6 +194,28 @@ def test_literal_list_incompatible_types_raise(
                 ]
             )
         )
+
+
+@pytest.mark.parametrize(
+    "literal",
+    [astx.LiteralList([]), astx.LiteralSet(set())],
+)
+def test_literal_storage_requires_analysis_fact(
+    llvm_visitor: LLVMVisitor,
+    literal: astx.LiteralList | astx.LiteralSet,
+) -> None:
+    """
+    title: Lowering cannot guess storage from a logically typed literal.
+    parameters:
+      llvm_visitor:
+        type: LLVMVisitor
+      literal:
+        type: astx.LiteralList | astx.LiteralSet
+    """
+    literal.semantic = SemanticInfo()
+    with pytest.raises(LoweringError, match="LiteralStorage"):
+        llvm_visitor.visit(literal)
+    assert llvm_visitor.function_state.result_stack == []
 
 
 def test_literal_list_nested_unsupported_raises_at_ast_construction() -> None:

@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Expression module-namespace helpers.
@@ -16,6 +14,9 @@ from typing import cast
 
 import astx
 
+from plum import dispatch
+from public import private
+
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.call_arguments import (
     analyze_numeric_arguments,
@@ -23,13 +24,11 @@ from irx.analysis.call_arguments import (
     contextualize_null_arguments,
 )
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
+from irx.analysis.dependencies.expression_module import (
+    ExpressionModuleAnalysisServices,
+)
 from irx.analysis.extensions.calls import AnalysisCall, AnalysisServices
 from irx.analysis.ffi import ffi_returns_owned_string
-from irx.analysis.file_io import resolve_file_open
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
-)
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -49,23 +48,37 @@ from irx.analysis.resolved_nodes import (
     SemanticFunction,
     SemanticModule,
 )
-from irx.analysis.sequences import resolve_materialization
-from irx.analysis.text import resolve_text_call
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
 from irx.extensions import ScopedDispatch
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionModuleAnalysis:
     """
     title: Expression helpers for module namespaces and function calls
     attributes:
+      services:
+        type: ExpressionModuleAnalysisServices
       call_dispatch:
         type: ScopedDispatch
     """
+
+    services: ExpressionModuleAnalysisServices
+
+    def __init__(self, services: ExpressionModuleAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionModuleAnalysisServices
+        """
+        self.services = services
 
     call_dispatch: ScopedDispatch
 
@@ -85,14 +98,14 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           result_type:
             type: astx.DataType | None
         """
-        self._semantic(node).resource_ownership = None
-        call = self._semantic(node).resolved_call
+        self.services.semantic(node).resource_ownership = None
+        call = self.services.semantic(node).resolved_call
         for index, arg in enumerate(args):
             ownership = resource_ownership(arg)
             if ownership is None:
                 continue
             if ownership.resource_kind is ResourceKind.FILE:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "file arguments cannot cross function-call boundaries",
                     node=arg,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
@@ -106,7 +119,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     and call.sequence_arguments[index] is not None
                 )
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "static list storage cannot cross a function-call "
                     "boundary",
                     node=arg,
@@ -116,7 +129,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                         "dynamic list",
                     ),
                 )
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 arg,
                 transfer_resource_ownership(
                     ownership,
@@ -125,39 +138,39 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 ),
             )
         if isinstance(result_type, astx.ClassType):
-            call = self._semantic(node).resolved_call
+            call = self.services.semantic(node).resolved_call
             if call is not None and call.callee.function.definition is None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "external class results require an ownership ABI",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node, class_ownership(OwnershipKind.OWNED)
             )
         elif isinstance(result_type, astx.DataFrameType | astx.SeriesType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node, arrow_ownership(result_type, OwnershipKind.OWNED)
             )
         elif isinstance(result_type, astx.GeneratorType):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 ResourceOwnership(ResourceKind.GENERATOR, OwnershipKind.OWNED),
             )
         elif isinstance(result_type, (astx.ListType, astx.Bytes)):
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 list_resource_ownership(OwnershipKind.OWNED),
             )
         elif is_string_type(result_type):
-            call = getattr(self._semantic(node), "resolved_call", None)
+            call = getattr(self.services.semantic(node), "resolved_call", None)
             callee = getattr(getattr(call, "callee", None), "function", None)
             if (
                 callee is not None
                 and callee.definition is None
                 and not ffi_returns_owned_string(callee.signature)
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "external string-returning calls require an explicit "
                     "ownership ABI; declare ffi_return_ownership='owned' "
                     "only for malloc-owned UTF-8 results",
@@ -165,7 +178,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
                 return
-            self._set_resource_ownership(
+            self.services.set_resource_ownership(
                 node,
                 string_resource_ownership(OwnershipKind.OWNED),
             )
@@ -204,7 +217,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             return None
         if type_.namespace_kind is not astx.NamespaceKind.MODULE:
             return None
-        return self.factory.make_module(
+        return self.services.factory.make_module(
             type_.namespace_key,
             display_name=type_.display_name,
         )
@@ -225,7 +238,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         module = getattr(semantic, "resolved_module", None)
         if isinstance(module, SemanticModule):
             return module
-        return self._module_namespace_from_type(self._expr_type(node))
+        return self._module_namespace_from_type(self.services.expr_type(node))
 
     def _module_namespace_name(
         self,
@@ -278,13 +291,13 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: SemanticBinding | None
         """
-        binding = self.bindings.resolve(
+        binding = self.services.bindings.resolve(
             member_name,
             module_key=module.module_key,
         )
         if binding is not None:
             return binding
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             (
                 f"module namespace '{namespace_name}' has no member "
                 f"'{member_name}'"
@@ -314,7 +327,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           binding:
             type: SemanticBinding
         """
-        self._set_module_member_access(
+        self.services.set_module_member_access(
             node,
             ResolvedModuleMemberAccess(
                 module=module,
@@ -323,19 +336,19 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             ),
         )
         if binding.function is not None:
-            self._set_function(node, binding.function)
+            self.services.set_function(node, binding.function)
             return
         if binding.module is not None:
-            self._set_module(node, binding.module)
-            self._set_type(
+            self.services.set_module(node, binding.module)
+            self.services.set_type(
                 node,
                 self._module_namespace_type(binding.module),
             )
             return
         if binding.struct is not None:
-            self._set_struct(node, binding.struct)
+            self.services.set_struct(node, binding.struct)
         if binding.class_ is not None:
-            self._set_class(node, binding.class_)
+            self.services.set_class(node, binding.class_)
 
     def _resolve_module_namespace_call(
         self,
@@ -361,7 +374,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             namespace_name=namespace_name,
         )
         if binding is None:
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
         self._set_module_member_resolution(
             node,
@@ -370,7 +383,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             binding=binding,
         )
         if binding.class_ is not None:
-            self.resolve_class_construction(node, binding.class_)
+            self.services.resolve_class_construction(node, binding.class_)
             return
         if binding.function is not None and self.analyze_operation(
             node, binding.function
@@ -378,12 +391,15 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             return
         arg_types.extend(
             analyze_numeric_arguments(
-                node, binding.function, self.visit, self._expr_type
+                node,
+                binding.function,
+                self.services.visit,
+                self.services.expr_type,
             )
         )
         function = binding.function
         if function is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"module namespace '{namespace_name}' member "
                     f"'{node.method_name}' is not callable"
@@ -391,18 +407,20 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
             )
-            self._set_type(node, None)
+            self.services.set_type(node, None)
             return
         target_function = function
         validation_function = function
         if function.template_params:
-            resolved_specialization = self._resolve_template_call_target(
-                function,
-                arg_types,
-                node,
+            resolved_specialization = (
+                self.services.resolve_template_call_target(
+                    function,
+                    arg_types,
+                    node,
+                )
             )
             if resolved_specialization is None:
-                self._set_type(node, None)
+                self.services.set_type(node, None)
                 return
             target_function = resolved_specialization
             validation_function = replace(
@@ -410,7 +428,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 name=function.name,
             )
         call_resolution = validate_call(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             function=validation_function,
             arg_types=arg_types,
             node=node,
@@ -418,13 +436,15 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if validation_function is not target_function:
             call_resolution = replace(
                 call_resolution,
-                callee=self.factory.make_callable_resolution(target_function),
+                callee=self.services.factory.make_callable_resolution(
+                    target_function
+                ),
                 signature=target_function.signature,
                 result_type=target_function.signature.return_type,
             )
-        self._set_function(node, target_function)
-        self._set_call(node, call_resolution)
-        self._set_type(node, call_resolution.result_type)
+        self.services.set_function(node, target_function)
+        self.services.set_call(node, call_resolution)
+        self.services.set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
             list(call_evaluations(node)),
@@ -440,8 +460,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType | None
         """
-        self.visit(node)
-        return self._expr_type(node)
+        self.services.visit(node)
+        return self.services.expr_type(node)
 
     def resolve_call_class(
         self, type_: astx.ClassType, node: astx.AST
@@ -457,7 +477,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: SemanticClass | None
         """
-        return self._resolve_class_from_type(
+        return self.services.resolve_class_from_type(
             type_, node=node, unknown_message="unknown class {name}"
         )
 
@@ -480,37 +500,49 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         operation = function.signature.operation
         if operation is None:
             return False
-        self._set_function(node, function)
-        current = self.context.current_function
+        self.services.set_function(node, function)
+        current = self.services.context.current_function
         services = AnalysisServices(
             analyze_operand=self.analyze_call_operand,
             find_class=self.resolve_call_class,
-            analyze_construction=self.resolve_class_construction,
+            analyze_construction=self.services.resolve_class_construction,
             registered_classes=tuple(
                 declaration
                 for module in (
                     ()
-                    if self.session is None
-                    else self.session.modules.values()
+                    if self.services.session is None
+                    else self.services.session.modules.values()
                 )
                 for declaration in module.native_arrow_classes
             ),
             allowed=current is not None
             and current.signature.metadata.get("generator") is None,
         )
-        self.call_dispatch.visit(
+        self.services.call_dispatch.visit(
             operation,
             AnalysisCall(
                 node,
                 function,
-                self._semantic(node),
-                self.context.diagnostics,
+                self.services.semantic(node),
+                self.services.context.diagnostics,
                 services,
             ),
         )
         return True
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in ExpressionModuleAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.Identifier) -> None:
         """
         title: Visit Identifier nodes.
@@ -518,26 +550,26 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.Identifier
         """
-        self._semantic(node).resource_ownership = None
-        self._semantic(node).lifecycle_self = False
-        symbol = self.context.scopes.resolve(node.name)
+        self.services.semantic(node).resource_ownership = None
+        self.services.semantic(node).lifecycle_self = False
+        symbol = self.services.context.scopes.resolve(node.name)
         if symbol is not None:
-            self._set_symbol(node, symbol)
-            self._set_type(node, symbol.type_)
+            self.services.set_symbol(node, symbol)
+            self.services.set_type(node, symbol.type_)
             if isinstance(symbol.type_, astx.ClassType):
-                function = self.context.current_function
+                function = self.services.context.current_function
                 if (
                     function is not None
                     and function.signature.metadata.get("generator")
                     is not None
                     and symbol.kind != "exception"
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "class references in generators are unsupported",
                         node=node,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     class_ownership(
                         OwnershipKind.BORROWED,
@@ -545,8 +577,8 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                         transfer=OwnershipTransferKind.BORROW,
                     ),
                 )
-                function = self.context.current_function
-                self._semantic(node).lifecycle_self = (
+                function = self.services.context.current_function
+                self.services.semantic(node).lifecycle_self = (
                     node.name == "self"
                     and function is not None
                     and function.signature.metadata.get("method_name")
@@ -555,18 +587,18 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             elif isinstance(
                 symbol.type_, astx.DataFrameType | astx.SeriesType
             ):
-                function = self.context.current_function
+                function = self.services.context.current_function
                 if (
                     function is not None
                     and function.signature.metadata.get("generator")
                     is not None
                 ):
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "Arrow references in generators are unsupported",
                         node=node,
                         code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                     )
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     arrow_ownership(
                         symbol.type_,
@@ -576,7 +608,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     ),
                 )
             elif isinstance(symbol.type_, astx.GeneratorType):
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     ResourceOwnership(
                         ResourceKind.GENERATOR,
@@ -586,7 +618,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                     ),
                 )
             elif isinstance(symbol.type_, astx.FileType):
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     ResourceOwnership(
                         ResourceKind.FILE,
@@ -597,7 +629,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 )
             elif isinstance(symbol.type_, (astx.ListType, astx.Bytes)):
                 declaration_ownership = symbol_resource_ownership(symbol)
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     list_resource_ownership(
                         OwnershipKind.BORROWED,
@@ -612,7 +644,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 )
             elif is_string_type(symbol.type_):
                 declaration_ownership = symbol_resource_ownership(symbol)
-                self._set_resource_ownership(
+                self.services.set_resource_ownership(
                     node,
                     string_resource_ownership(
                         OwnershipKind.BORROWED,
@@ -627,28 +659,28 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 )
             module = self._module_namespace_from_type(symbol.type_)
             if module is not None:
-                self._set_module(node, module)
+                self.services.set_module(node, module)
             return
 
-        binding = self.bindings.resolve(node.name)
+        binding = self.services.bindings.resolve(node.name)
         if binding is not None and binding.module is not None:
-            self._set_module(node, binding.module)
-            self._set_type(
+            self.services.set_module(node, binding.module)
+            self.services.set_type(
                 node,
                 self._module_namespace_type(binding.module),
             )
             return
 
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"cannot resolve name '{node.name}'",
             node=node,
             code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
         )
-        self._set_type(
+        self.services.set_type(
             node, cast(astx.DataType | None, getattr(node, "type_", None))
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.FunctionCall) -> None:
         """
         title: Visit FunctionCall nodes.
@@ -656,7 +688,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.FunctionCall
         """
-        info = self._semantic(node)
+        info = self.services.semantic(node)
         if info.resolved_file_open is not None:
             info.resource_ownership = None
         info.resolved_file_open = None
@@ -667,46 +699,49 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         info.materialization = None
         if (
             node.fn in {"list", "bytes"}
-            and self.bindings.resolve(node.fn) is None
+            and self.services.bindings.resolve(node.fn) is None
         ):
             info.resolved_call = None
             info.resolved_callable = None
             info.resolved_function = None
-            if self.context.scopes.resolve(node.fn) is not None:
-                self.context.diagnostics.add(
+            if self.services.context.scopes.resolve(node.fn) is not None:
+                self.services.context.diagnostics.add(
                     f"name '{node.fn}' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
-            resolve_materialization(cast(SemanticAnalyzerCore, self), node)
+            self.services.free_resolve_materialization(node)
             return
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
         if (
             node.fn in {"int", "ord"}
-            and self.bindings.resolve(node.fn) is None
+            and self.services.bindings.resolve(node.fn) is None
         ):
             info.resolved_call = None
             info.resolved_callable = None
             info.resolved_function = None
-            if self.context.scopes.resolve(node.fn) is not None:
-                self.context.diagnostics.add(
+            if self.services.context.scopes.resolve(node.fn) is not None:
+                self.services.context.diagnostics.add(
                     f"name '{node.fn}' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
-            resolve_text_call(cast(SemanticAnalyzerCore, self), node)
+            self.services.free_resolve_text_call(node)
             return
-        if node.fn == "len" and self.bindings.resolve(node.fn) is None:
+        if (
+            node.fn == "len"
+            and self.services.bindings.resolve(node.fn) is None
+        ):
             info.resource_ownership = None
             info.resolved_call = None
             info.resolved_callable = None
             info.resolved_function = None
-            if self.context.scopes.resolve(node.fn) is not None:
-                self.context.diagnostics.add(
+            if self.services.context.scopes.resolve(node.fn) is not None:
+                self.services.context.diagnostics.add(
                     "name 'len' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
@@ -717,7 +752,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 or node.keywords
                 or astx.get_template_args(node)
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "len expects one positional value and no templates",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
@@ -725,32 +760,32 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
                 return
             query = astx.CollectionLength(node.args[0])
             query.loc = node.loc
-            self.visit(query)
+            self.services.visit(query)
             info.collection_length = query
-            self._set_type(node, self._expr_type(query))
+            self.services.set_type(node, self.services.expr_type(query))
             return
         if node.fn == "open":
-            local = self.context.scopes.resolve(node.fn)
+            local = self.services.context.scopes.resolve(node.fn)
             if local is not None:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "name 'open' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
-            if self.bindings.resolve(node.fn) is None:
-                resolve_file_open(cast(SemanticAnalyzerCore, self), node)
+            if self.services.bindings.resolve(node.fn) is None:
+                self.services.free_resolve_file_open(node)
                 return
-        binding = self.bindings.resolve(node.fn)
+        binding = self.services.bindings.resolve(node.fn)
         if binding is not None and binding.class_ is not None:
-            if self.context.scopes.resolve(node.fn) is not None:
-                self.context.diagnostics.add(
+            if self.services.context.scopes.resolve(node.fn) is not None:
+                self.services.context.diagnostics.add(
                     f"name '{node.fn}' does not resolve to a function",
                     node=node,
                     code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
                 )
                 return
-            self.resolve_class_construction(node, binding.class_)
+            self.services.resolve_class_construction(node, binding.class_)
             return
         if binding is not None and binding.function is not None:
             if self.analyze_operation(node, binding.function):
@@ -759,19 +794,19 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         arg_types = analyze_numeric_arguments(
             node,
             binding.function if binding is not None else None,
-            self.visit,
-            self._expr_type,
+            self.services.visit,
+            self.services.expr_type,
         )
-        binding = self.bindings.resolve(node.fn)
+        binding = self.services.bindings.resolve(node.fn)
         if binding is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"cannot resolve function '{node.fn}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
             )
             return
         if binding.kind != "function" or binding.function is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"name '{node.fn}' does not resolve to a function",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
@@ -781,22 +816,24 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         target_function = function
         validation_function = function
         if function.template_params:
-            resolved_specialization = self._resolve_template_call_target(
-                function,
-                arg_types,
-                node,
+            resolved_specialization = (
+                self.services.resolve_template_call_target(
+                    function,
+                    arg_types,
+                    node,
+                )
             )
             if resolved_specialization is None:
-                self._set_type(node, None)
+                self.services.set_type(node, None)
                 return
             target_function = resolved_specialization
             validation_function = replace(
                 resolved_specialization,
                 name=function.name,
             )
-        self._set_function(node, target_function)
+        self.services.set_function(node, target_function)
         call_resolution = validate_call(
-            self.context.diagnostics,
+            self.services.context.diagnostics,
             function=validation_function,
             arg_types=arg_types,
             node=node,
@@ -804,14 +841,37 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
         if validation_function is not target_function:
             call_resolution = replace(
                 call_resolution,
-                callee=self.factory.make_callable_resolution(target_function),
+                callee=self.services.factory.make_callable_resolution(
+                    target_function
+                ),
                 signature=target_function.signature,
                 result_type=target_function.signature.return_type,
             )
-        self._set_call(node, call_resolution)
-        self._set_type(node, call_resolution.result_type)
+        self.services.set_call(node, call_resolution)
+        self.services.set_type(node, call_resolution.result_type)
         self._resolve_call_resource_ownership(
             node,
             list(call_evaluations(node)),
             call_resolution.result_type,
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.expression_module." + node_type.__name__,
+                "irx.analysis.expression_module",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".ExpressionModuleAnalysis.visit",
+            )
+            for node_type in (
+                astx.Identifier,
+                astx.FunctionCall,
+            )
         )

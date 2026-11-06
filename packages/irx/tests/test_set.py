@@ -11,6 +11,7 @@ from typing import cast
 import astx
 import pytest
 
+from irx.analysis import SemanticError, analyze
 from irx.builder import Builder as LLVMBuilder
 from irx.builder import Visitor as LLVMVisitor
 from irx.builder.base import Builder
@@ -47,7 +48,7 @@ def _make_visitor_in_function(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     fn_ty = ir.FunctionType(visitor._llvm.VOID_TYPE, [])
     fn = ir.Function(visitor._llvm.module, fn_ty, name="_test_dummy")
@@ -66,10 +67,10 @@ def test_literal_set_empty(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
-    visitor.visit(astx.LiteralSet(elements=set()))
-    const = visitor.result_stack.pop()
+    visitor.visit(analyze(astx.LiteralSet(elements=set())))
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -87,18 +88,20 @@ def test_literal_set_homogeneous_ints(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(
-        astx.LiteralSet(
-            elements={
-                astx.LiteralInt32(1),
-                astx.LiteralInt32(2),
-                astx.LiteralInt32(3),
-            }
+        analyze(
+            astx.LiteralSet(
+                elements={
+                    astx.LiteralInt32(1),
+                    astx.LiteralInt32(2),
+                    astx.LiteralInt32(3),
+                }
+            )
         )
     )
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -119,13 +122,17 @@ def test_literal_set_mixed_int_widths(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(
-        astx.LiteralSet(elements={astx.LiteralInt16(1), astx.LiteralInt32(2)})
+        analyze(
+            astx.LiteralSet(
+                elements={astx.LiteralInt16(1), astx.LiteralInt32(2)}
+            )
+        )
     )
 
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -152,12 +159,17 @@ def test_literal_set_non_integer_unsupported(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
-    with pytest.raises(TypeError, match="integer constants"):
+    with pytest.raises(SemanticError, match="integer constants"):
         visitor.visit(
-            astx.LiteralSet(
-                elements={astx.LiteralFloat32(1.0), astx.LiteralFloat32(2.0)}
+            analyze(
+                astx.LiteralSet(
+                    elements={
+                        astx.LiteralFloat32(1.0),
+                        astx.LiteralFloat32(2.0),
+                    }
+                )
             )
         )
 
@@ -187,21 +199,48 @@ def _set_values(const: ir.Value) -> list[int]:
     return _array_i32_values(const)
 
 
+def emit_raw_set_operation(visitor: LLVMVisitor, node: astx.BinaryOp) -> None:
+    """
+    title: Exercise raw constant-set adapters without claiming source support.
+    summary: >-
+      Literal operands still require analyzed storage. Binary composition calls
+      the explicit representation adapter; source subtraction has a separate
+      semantic contract and is not accepted merely because this adapter exists.
+    parameters:
+      visitor:
+        type: LLVMVisitor
+      node:
+        type: astx.BinaryOp
+    """
+    values: list[ir.Value] = []
+    for operand in (node.lhs, node.rhs):
+        if isinstance(operand, astx.BinaryOp):
+            emit_raw_set_operation(visitor, operand)
+        else:
+            visitor.visit(analyze(operand))
+        value = visitor.function_state.result_stack.pop()
+        assert value is not None
+        values.append(value)
+    assert visitor.collection.try_set_binary_op(
+        values[0], values[1], node.op_code
+    )
+
+
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_set_union(builder_class: type[Builder]) -> None:
     """
-    title: BinaryOp | on two LiteralSets produces their union.
+    title: Raw constant-set union preserves all distinct members.
     parameters:
       builder_class:
         type: type[Builder]
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(op_code="|", lhs=_make_set(1, 2), rhs=_make_set(2, 3))
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert isinstance(result.type, ir.ArrayType)
@@ -211,20 +250,20 @@ def test_set_union(builder_class: type[Builder]) -> None:
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_set_intersection(builder_class: type[Builder]) -> None:
     """
-    title: BinaryOp & on two LiteralSets produces their intersection.
+    title: Raw constant-set intersection preserves common members.
     parameters:
       builder_class:
         type: type[Builder]
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(
         op_code="&", lhs=_make_set(1, 2, 3), rhs=_make_set(2, 3, 4)
     )
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert _set_values(result) == [2, 3]
@@ -233,20 +272,20 @@ def test_set_intersection(builder_class: type[Builder]) -> None:
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_set_difference(builder_class: type[Builder]) -> None:
     """
-    title: BinaryOp - on two LiteralSets produces their difference.
+    title: Raw constant-set difference removes right-side members.
     parameters:
       builder_class:
         type: type[Builder]
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(
         op_code="-", lhs=_make_set(1, 2, 3), rhs=_make_set(2, 3)
     )
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert _set_values(result) == [1]
@@ -255,18 +294,18 @@ def test_set_difference(builder_class: type[Builder]) -> None:
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
 def test_set_symmetric_difference(builder_class: type[Builder]) -> None:
     """
-    title: BinaryOp ^ on two LiteralSets produces their symmetric difference.
+    title: Raw symmetric difference excludes common members.
     parameters:
       builder_class:
         type: type[Builder]
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(op_code="^", lhs=_make_set(1, 2), rhs=_make_set(2, 3))
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert _set_values(result) == [1, 3]
@@ -284,11 +323,11 @@ def test_set_disjoint_intersection_is_empty(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(op_code="&", lhs=_make_set(1, 2), rhs=_make_set(3, 4))
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert isinstance(result.type, ir.ArrayType)
@@ -316,8 +355,8 @@ def test_set_union_mixed_widths_in_function(
             elements={astx.LiteralInt32(2), astx.LiteralInt64(4)}
         ),
     )
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert isinstance(result.type, ir.ArrayType)
@@ -338,7 +377,7 @@ def test_nested_set_binary_ops_preserve_set_semantics(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(
         op_code="-",
@@ -349,8 +388,8 @@ def test_nested_set_binary_ops_preserve_set_semantics(
         ),
         rhs=_make_set(1),
     )
-    visitor.visit(expr)
-    result = visitor.result_stack.pop()
+    emit_raw_set_operation(visitor, expr)
+    result = visitor.function_state.result_stack.pop()
 
     assert isinstance(result, ir.Constant)
     assert _set_values(result) == [2, 3]
@@ -364,14 +403,14 @@ def test_literal_list_binary_or_does_not_use_set_semantics(
     builder_class: type[Builder],
 ) -> None:
     """
-    title: LiteralList operands do not opt into set binary operators.
+    title: List storage does not acquire raw set identity.
     parameters:
       builder_class:
         type: type[Builder]
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     expr = astx.BinaryOp(
         op_code="|",
@@ -383,5 +422,9 @@ def test_literal_list_binary_or_does_not_use_set_semantics(
         ),
     )
 
-    with pytest.raises(Exception, match=r"Binary op \| not implemented yet\."):
-        visitor.visit(expr)
+    visitor.visit(analyze(expr.lhs))
+    left = visitor.function_state.result_stack.pop()
+    visitor.visit(analyze(expr.rhs))
+    right = visitor.function_state.result_stack.pop()
+    assert not visitor.collection.try_set_binary_op(left, right, "|")
+    assert not visitor.function_state.result_stack

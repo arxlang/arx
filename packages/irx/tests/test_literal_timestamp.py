@@ -45,9 +45,9 @@ def test_literal_timestamp_basic(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     visitor.visit(astx.LiteralTimestamp("2025-10-30T12:34:56.123"))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert const.type == visitor._llvm.TIMESTAMP_TYPE
@@ -72,9 +72,9 @@ def test_literal_timestamp_fraction_truncated(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     visitor.visit(astx.LiteralTimestamp("2025-01-02 03:04:05.1234567897"))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     vals = _timestamp_values(const)
     assert vals == [2025, 1, 2, 3, 4, 5, 123_456_789]
@@ -93,7 +93,7 @@ def test_literal_timestamp_invalid_date(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     with pytest.raises(Exception, match="invalid date"):
         visitor.visit(astx.LiteralTimestamp("2025-02-30T00:00:00"))
 
@@ -113,6 +113,6 @@ def test_literal_timestamp_timezone_rejected(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     with pytest.raises(Exception, match="timezone"):
         visitor.visit(astx.LiteralTimestamp("2025-10-30T12:34:56Z"))

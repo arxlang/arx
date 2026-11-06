@@ -11,9 +11,11 @@ from typing import cast
 
 import astx
 
+from public import private
+
 from irx.analysis.call_arguments import argument_slots
-from irx.analysis.handlers.class_helpers import (
-    ClassMemberFormattingVisitorMixin,
+from irx.analysis.dependencies.expression_class_support import (
+    ExpressionClassSupportAnalysisServices,
 )
 from irx.analysis.resolved_nodes import (
     ClassMemberKind,
@@ -28,11 +30,28 @@ from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
+class ExpressionClassSupportAnalysis:
     """
     title: Expression class-resolution helpers.
+    attributes:
+      services:
+        type: ExpressionClassSupportAnalysisServices
     """
+
+    services: ExpressionClassSupportAnalysisServices
+
+    def __init__(
+        self, services: ExpressionClassSupportAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionClassSupportAnalysisServices
+        """
+        self.services = services
 
     def _is_subclass_of(
         self,
@@ -159,7 +178,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         member = class_.member_table.get(field_name)
         if member is not None:
             if member.kind is not ClassMemberKind.ATTRIBUTE:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"class member '{class_.name}.{field_name}' "
                         "is not an attribute"
@@ -171,7 +190,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             return member
 
         if field_name in class_.method_groups:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"class member '{class_.name}.{field_name}' "
                     "is not an attribute"
@@ -190,10 +209,11 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         if accessible_hidden:
             return accessible_hidden[0]
         if hidden_members:
-            self.context.diagnostics.add(
+            hidden_name = self.services.member_display_name(hidden_members[0])
+            self.services.context.diagnostics.add(
                 (
                     "class attribute "
-                    f"'{self._member_display_name(hidden_members[0])}' "
+                    f"'{hidden_name}' "
                     "is not accessible from this context"
                 ),
                 node=node,
@@ -201,7 +221,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             )
             return None
 
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             (f"class '{class_.name}' has no attribute '{field_name}'"),
             node=node,
             code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
@@ -285,8 +305,8 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         """
         if member.visibility is astx.VisibilityKind.public:
             return True
-        current_class = self.context.current_class
-        declaring_class = self._member_declaring_class(member)
+        current_class = self.services.context.current_class
+        declaring_class = self.services.member_declaring_class(member)
         if current_class is None or declaring_class is None:
             return False
         if member.visibility is astx.VisibilityKind.private:
@@ -311,13 +331,13 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         returns:
           type: SemanticClass | None
         """
-        binding = self.bindings.resolve(name)
+        binding = self.services.bindings.resolve(name)
         if (
             binding is None
             or binding.kind != "class"
             or binding.class_ is None
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"cannot resolve class '{name}'",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_UNRESOLVED_NAME,
@@ -347,14 +367,14 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         returns:
           type: tuple[SemanticClass, SemanticClass] | None
         """
-        receiver_class = self._resolve_class_from_type(
+        receiver_class = self.services.resolve_class_from_type(
             receiver_type,
             node=node,
             unknown_message=f"{context} requires a class value",
         )
         if receiver_class is None:
             if not isinstance(receiver_type, astx.ClassType):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"{context} requires a class value, got "
                     f"{display_type_name(receiver_type)}",
                     node=node,
@@ -365,7 +385,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         if base_class is None:
             return None
         if not self._is_subclass_of(receiver_class, base_class):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"class '{receiver_class.name}' does not inherit from "
                     f"'{base_class.name}'"
@@ -515,7 +535,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
                 member is not None
                 and member.kind is not ClassMemberKind.METHOD
             ):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"class member '{class_.name}.{method_name}' "
                         "is not a method"
@@ -533,7 +553,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
                 group = hidden_group
             else:
                 missing_label = "static method" if is_static else "method"
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"class '{class_.name}' has no {missing_label} "
                         f"'{method_name}'"
@@ -550,7 +570,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         )
         if not kind_candidates:
             if is_static:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"instance method '{class_.name}.{method_name}' "
                         "requires a receiver"
@@ -559,7 +579,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
                     code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
                 )
             else:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"static method '{class_.name}.{method_name}' "
                         "must be called through the class"
@@ -575,10 +595,11 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             if self._member_is_accessible(candidate)
         )
         if not accessible_candidates:
-            self.context.diagnostics.add(
+            hidden_name = self.services.member_display_name(kind_candidates[0])
+            self.services.context.diagnostics.add(
                 (
                     "class method "
-                    f"'{self._member_display_name(kind_candidates[0])}' "
+                    f"'{hidden_name}' "
                     "is not accessible from this context"
                 ),
                 node=node,
@@ -600,10 +621,10 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             return exact_matches[0], accessible_candidates
         if len(exact_matches) > 1:
             available = ", ".join(
-                self._format_method_signature(candidate)
+                self.services.format_method_signature(candidate)
                 for candidate in accessible_candidates
             )
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"call to '{class_.name}.{method_name}' is ambiguous; "
                     f"available overloads: {available}"
@@ -624,10 +645,10 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             return compatible_matches[0], accessible_candidates
         if len(compatible_matches) > 1:
             available = ", ".join(
-                self._format_method_signature(candidate)
+                self.services.format_method_signature(candidate)
                 for candidate in accessible_candidates
             )
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     f"call to '{class_.name}.{method_name}' is ambiguous; "
                     f"available overloads: {available}"
@@ -643,7 +664,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             is_static=is_static,
         )
         available = ", ".join(
-            self._format_method_signature(candidate)
+            self.services.format_method_signature(candidate)
             for candidate in accessible_candidates
         )
         keywords = cast(
@@ -655,7 +676,7 @@ class ExpressionClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             if keyword_names
             else ""
         )
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             (
                 f"class '{class_.name}' has no exact overload for "
                 f"'{requested}'{keyword_label}; "

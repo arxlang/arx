@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, cast
 import astx
 
 from astx.types import AnyType as AstxAnyType
-from plum import dispatch
 
 from irx.analysis.bindings import VisibleBindings
 from irx.analysis.context import SemanticContext
@@ -75,818 +74,8 @@ from irx.diagnostics import DiagnosticCodes
 from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
-
-# Keep the typed helper contract out of the runtime MRO without defining
-# type-only classes inside TYPE_CHECKING blocks.
-@typechecked
-class SemanticVisitorMixinTypingBase:
-    """
-    title: Type-checking-only base for semantic visitor mixins.
-    attributes:
-      context:
-        type: SemanticContext
-      session:
-        type: CompilationSession | None
-      factory:
-        type: SemanticEntityFactory
-      registry:
-        type: SemanticRegistry
-      bindings:
-        type: VisibleBindings
-    """
-
-    context: SemanticContext
-    session: CompilationSession | None
-    factory: SemanticEntityFactory
-    registry: SemanticRegistry
-    bindings: VisibleBindings
-
-    def visit(self, node: astx.AST) -> None:
-        """
-        title: Visit AST nodes.
-        parameters:
-          node:
-            type: astx.AST
-        """
-        raise NotImplementedError
-
-    def resolve_class_construction(
-        self,
-        node: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall,
-        class_: SemanticClass,
-    ) -> None:
-        """
-        title: Resolve a class-valued callable after ordinary symbol lookup.
-        parameters:
-          node:
-            type: astx.ClassConstruct | astx.FunctionCall | astx.MethodCall
-          class_:
-            type: SemanticClass
-        """
-        del class_
-        raise NotImplementedError
-
-    def _semantic(self, node: astx.AST) -> SemanticInfo:
-        """
-        title: Return one node's semantic sidecar.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticInfo
-        """
-        raise NotImplementedError
-
-    def _set_type(
-        self,
-        node: astx.AST,
-        type_: astx.DataType | None,
-    ) -> astx.DataType | None:
-        """
-        title: Attach one resolved type to a node.
-        parameters:
-          node:
-            type: astx.AST
-          type_:
-            type: astx.DataType | None
-        returns:
-          type: astx.DataType | None
-        """
-        raise NotImplementedError
-
-    def _set_symbol(
-        self,
-        node: astx.AST,
-        symbol: SemanticSymbol | None,
-    ) -> SemanticSymbol | None:
-        """
-        title: Attach one resolved symbol to a node.
-        parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
-        returns:
-          type: SemanticSymbol | None
-        """
-        raise NotImplementedError
-
-    def _set_resource_ownership(
-        self,
-        node: astx.AST,
-        ownership: ResourceOwnership | None,
-    ) -> ResourceOwnership | None:
-        """
-        title: Attach resource ownership metadata to one node.
-        parameters:
-          node:
-            type: astx.AST
-          ownership:
-            type: ResourceOwnership | None
-        returns:
-          type: ResourceOwnership | None
-        """
-        raise NotImplementedError
-
-    def _resolve_call_resource_ownership(
-        self,
-        node: astx.AST,
-        args: list[astx.AST],
-        result_type: astx.DataType | None,
-    ) -> None:
-        """
-        title: Resolve resource borrowing and ownership for one call.
-        parameters:
-          node:
-            type: astx.AST
-          args:
-            type: list[astx.AST]
-          result_type:
-            type: astx.DataType | None
-        """
-        del result_type
-        raise NotImplementedError
-
-    def _set_iteration(
-        self,
-        node: astx.AST,
-        iteration: ResolvedIteration | None,
-    ) -> ResolvedIteration | None:
-        """
-        title: Attach one resolved iterable capability.
-        parameters:
-          node:
-            type: astx.AST
-          iteration:
-            type: ResolvedIteration | None
-        returns:
-          type: ResolvedIteration | None
-        """
-        raise NotImplementedError
-
-    def _set_collection_method(
-        self,
-        node: astx.AST,
-        collection_method: ResolvedCollectionMethod | None,
-    ) -> None:
-        """
-        title: Attach one resolved collection method.
-        parameters:
-          node:
-            type: astx.AST
-          collection_method:
-            type: ResolvedCollectionMethod | None
-        """
-        raise NotImplementedError
-
-    def _declare_iteration_target(
-        self,
-        target: astx.AST,
-        element_type: astx.DataType,
-        *,
-        kind: str,
-        iteration_kind: IterationKind,
-    ) -> SemanticSymbol | None:
-        """
-        title: Declare one loop or comprehension target.
-        parameters:
-          target:
-            type: astx.AST
-          element_type:
-            type: astx.DataType
-          kind:
-            type: str
-          iteration_kind:
-            type: IterationKind
-        returns:
-          type: SemanticSymbol | None
-        """
-        raise NotImplementedError
-
-    def _set_function(
-        self,
-        node: astx.AST,
-        function: SemanticFunction | None,
-    ) -> SemanticFunction | None:
-        """
-        title: Attach one resolved function to a node.
-        parameters:
-          node:
-            type: astx.AST
-          function:
-            type: SemanticFunction | None
-        returns:
-          type: SemanticFunction | None
-        """
-        raise NotImplementedError
-
-    def _set_call(
-        self,
-        node: astx.AST,
-        call: CallResolution | None,
-    ) -> CallResolution | None:
-        """
-        title: Attach one resolved call site.
-        parameters:
-          node:
-            type: astx.AST
-          call:
-            type: CallResolution | None
-        returns:
-          type: CallResolution | None
-        """
-        raise NotImplementedError
-
-    def _set_return(
-        self,
-        node: astx.AST,
-        return_resolution: ReturnResolution | None,
-    ) -> ReturnResolution | None:
-        """
-        title: Attach one resolved return site.
-        parameters:
-          node:
-            type: astx.AST
-          return_resolution:
-            type: ReturnResolution | None
-        returns:
-          type: ReturnResolution | None
-        """
-        raise NotImplementedError
-
-    def _set_generator_function(
-        self,
-        node: astx.AST,
-        generator: ResolvedGeneratorFunction | None,
-    ) -> ResolvedGeneratorFunction | None:
-        """
-        title: Attach one resolved generator-function sidecar.
-        parameters:
-          node:
-            type: astx.AST
-          generator:
-            type: ResolvedGeneratorFunction | None
-        returns:
-          type: ResolvedGeneratorFunction | None
-        """
-        raise NotImplementedError
-
-    def _set_yield(
-        self,
-        node: astx.AST,
-        yield_resolution: ResolvedYield | None,
-    ) -> ResolvedYield | None:
-        """
-        title: Attach one resolved yield-site sidecar.
-        parameters:
-          node:
-            type: astx.AST
-          yield_resolution:
-            type: ResolvedYield | None
-        returns:
-          type: ResolvedYield | None
-        """
-        raise NotImplementedError
-
-    def _set_struct(
-        self,
-        node: astx.AST,
-        struct: SemanticStruct | None,
-    ) -> SemanticStruct | None:
-        """
-        title: Attach one resolved struct to a node.
-        parameters:
-          node:
-            type: astx.AST
-          struct:
-            type: SemanticStruct | None
-        returns:
-          type: SemanticStruct | None
-        """
-        raise NotImplementedError
-
-    def _set_class(
-        self,
-        node: astx.AST,
-        class_: SemanticClass | None,
-    ) -> SemanticClass | None:
-        """
-        title: Attach one resolved class to a node.
-        parameters:
-          node:
-            type: astx.AST
-          class_:
-            type: SemanticClass | None
-        returns:
-          type: SemanticClass | None
-        """
-        raise NotImplementedError
-
-    def _set_module(
-        self,
-        node: astx.AST,
-        module: SemanticModule | None,
-    ) -> SemanticModule | None:
-        """
-        title: Attach one resolved module to a node.
-        parameters:
-          node:
-            type: astx.AST
-          module:
-            type: SemanticModule | None
-        returns:
-          type: SemanticModule | None
-        """
-        raise NotImplementedError
-
-    def _reset_template_analysis_state(
-        self,
-        module: astx.Module,
-    ) -> None:
-        """
-        title: Reset per-run template state attached to one module.
-        parameters:
-          module:
-            type: astx.Module
-        """
-        raise NotImplementedError
-
-    def _resolve_template_call_target(
-        self,
-        function: SemanticFunction,
-        _arg_types: list[astx.DataType | None],
-        node: astx.AST,
-    ) -> SemanticFunction | None:
-        """
-        title: Resolve one template function call target.
-        parameters:
-          function:
-            type: SemanticFunction
-          _arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
-        """
-        raise NotImplementedError
-
-    def _resolve_template_method_call_target(
-        self,
-        function: SemanticFunction,
-        _visible_function: SemanticFunction,
-        _arg_types: list[astx.DataType | None],
-        node: astx.AST,
-    ) -> SemanticFunction | None:
-        """
-        title: Resolve one template method call target.
-        parameters:
-          function:
-            type: SemanticFunction
-          _visible_function:
-            type: SemanticFunction
-          _arg_types:
-            type: list[astx.DataType | None]
-          node:
-            type: astx.AST
-        returns:
-          type: SemanticFunction | None
-        """
-        raise NotImplementedError
-
-    def _specialization_bindings_map(
-        self,
-        function: SemanticFunction,
-    ) -> dict[str, astx.DataType]:
-        """
-        title: Return one specialization binding map.
-        parameters:
-          function:
-            type: SemanticFunction
-        returns:
-          type: dict[str, astx.DataType]
-        """
-        raise NotImplementedError
-
-    def _specialize_signature(
-        self,
-        function: SemanticFunction,
-        bindings: dict[str, astx.DataType],
-    ) -> SemanticFunction:
-        """
-        title: Return one callable wrapper with substituted types.
-        parameters:
-          function:
-            type: SemanticFunction
-          bindings:
-            type: dict[str, astx.DataType]
-        returns:
-          type: SemanticFunction
-        """
-        raise NotImplementedError
-
-    def _prepare_function_template_specializations(
-        self,
-        function: SemanticFunction,
-    ) -> None:
-        """
-        title: Prepare concrete specializations for one template function.
-        parameters:
-          function:
-            type: SemanticFunction
-        """
-        raise NotImplementedError
-
-    def _analyze_function_template_specializations(
-        self,
-        function: SemanticFunction,
-    ) -> None:
-        """
-        title: Analyze prepared specializations for one template function.
-        parameters:
-          function:
-            type: SemanticFunction
-        """
-        raise NotImplementedError
-
-    def _set_imports(
-        self,
-        node: astx.AST,
-        imports: tuple[ResolvedImportBinding, ...],
-    ) -> None:
-        """
-        title: Attach resolved imports to a node.
-        parameters:
-          node:
-            type: astx.AST
-          imports:
-            type: tuple[ResolvedImportBinding, Ellipsis]
-        """
-        raise NotImplementedError
-
-    def _set_flags(self, node: astx.AST, flags: SemanticFlags) -> None:
-        """
-        title: Attach semantic flags to a node.
-        parameters:
-          node:
-            type: astx.AST
-          flags:
-            type: SemanticFlags
-        """
-        raise NotImplementedError
-
-    def _set_operator(
-        self,
-        node: astx.AST,
-        operator: ResolvedOperator | None,
-    ) -> None:
-        """
-        title: Attach one resolved operator to a node.
-        parameters:
-          node:
-            type: astx.AST
-          operator:
-            type: ResolvedOperator | None
-        """
-        raise NotImplementedError
-
-    def _set_assignment(
-        self,
-        node: astx.AST,
-        symbol: SemanticSymbol | None,
-    ) -> None:
-        """
-        title: Attach one resolved assignment target to a node.
-        parameters:
-          node:
-            type: astx.AST
-          symbol:
-            type: SemanticSymbol | None
-        """
-        raise NotImplementedError
-
-    def _set_field_access(
-        self,
-        node: astx.AST,
-        field_access: ResolvedFieldAccess | None,
-    ) -> None:
-        """
-        title: Attach resolved field access metadata.
-        parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedFieldAccess | None
-        """
-        raise NotImplementedError
-
-    def _set_module_member_access(
-        self,
-        node: astx.AST,
-        field_access: ResolvedModuleMemberAccess | None,
-    ) -> None:
-        """
-        title: Attach resolved module-member access metadata.
-        parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedModuleMemberAccess | None
-        """
-        raise NotImplementedError
-
-    def _set_class_field_access(
-        self,
-        node: astx.AST,
-        field_access: ResolvedClassFieldAccess | None,
-    ) -> None:
-        """
-        title: Attach resolved class-field access metadata.
-        parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedClassFieldAccess | None
-        """
-        raise NotImplementedError
-
-    def _set_base_class_field_access(
-        self,
-        node: astx.AST,
-        field_access: ResolvedBaseClassFieldAccess | None,
-    ) -> None:
-        """
-        title: Attach resolved base-class field access metadata.
-        parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedBaseClassFieldAccess | None
-        """
-        raise NotImplementedError
-
-    def _set_static_class_field_access(
-        self,
-        node: astx.AST,
-        field_access: ResolvedStaticClassFieldAccess | None,
-    ) -> None:
-        """
-        title: Attach resolved static class-field access metadata.
-        parameters:
-          node:
-            type: astx.AST
-          field_access:
-            type: ResolvedStaticClassFieldAccess | None
-        """
-        raise NotImplementedError
-
-    def _set_method_call(
-        self,
-        node: astx.AST,
-        method_call: ResolvedMethodCall | None,
-    ) -> None:
-        """
-        title: Attach resolved method-call metadata.
-        parameters:
-          node:
-            type: astx.AST
-          method_call:
-            type: ResolvedMethodCall | None
-        """
-        raise NotImplementedError
-
-    def _set_context_manager(
-        self,
-        node: astx.AST,
-        context_manager: ResolvedContextManager | None,
-    ) -> None:
-        """
-        title: Attach resolved context-manager metadata.
-        parameters:
-          node:
-            type: astx.AST
-          context_manager:
-            type: ResolvedContextManager | None
-        """
-        raise NotImplementedError
-
-    def _set_class_construction(
-        self,
-        node: astx.AST,
-        construction: ResolvedClassConstruction | None,
-    ) -> None:
-        """
-        title: Attach resolved class-construction metadata.
-        parameters:
-          node:
-            type: astx.AST
-          construction:
-            type: ResolvedClassConstruction | None
-        """
-        raise NotImplementedError
-
-    def _resolve_struct_from_type(
-        self,
-        type_: astx.DataType | None,
-        *,
-        node: astx.AST,
-        unknown_message: str,
-    ) -> SemanticStruct | None:
-        """
-        title: Resolve one struct-valued type reference.
-        parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticStruct | None
-        """
-        raise NotImplementedError
-
-    def _resolve_class_from_type(
-        self,
-        type_: astx.DataType | None,
-        *,
-        node: astx.AST,
-        unknown_message: str,
-    ) -> SemanticClass | None:
-        """
-        title: Resolve one class-valued type reference.
-        parameters:
-          type_:
-            type: astx.DataType | None
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-        returns:
-          type: SemanticClass | None
-        """
-        raise NotImplementedError
-
-    def _resolve_declared_type(
-        self,
-        type_: astx.DataType,
-        *,
-        node: astx.AST,
-        unknown_message: str = "Unknown type '{name}'",
-        storage_required: bool = True,
-    ) -> astx.DataType:
-        """
-        title: Resolve one declared type in place.
-        parameters:
-          type_:
-            type: astx.DataType
-          node:
-            type: astx.AST
-          unknown_message:
-            type: str
-          storage_required:
-            type: bool
-        returns:
-          type: astx.DataType
-        """
-        raise NotImplementedError
-
-    def _root_assignment_symbol(
-        self,
-        node: astx.AST | None,
-    ) -> SemanticSymbol | None:
-        """
-        title: Resolve the root symbol for an assignment target chain.
-        parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: SemanticSymbol | None
-        """
-        raise NotImplementedError
-
-    def _predeclare_block_structs(self, block: astx.Block) -> None:
-        """
-        title: Predeclare composite definitions in one block.
-        parameters:
-          block:
-            type: astx.Block
-        """
-        raise NotImplementedError
-
-    def _current_module_key(self) -> ModuleKey:
-        """
-        title: Return the current module key.
-        returns:
-          type: ModuleKey
-        """
-        raise NotImplementedError
-
-    def _imports_supported_here(self, node: astx.AST) -> bool:
-        """
-        title: Return True when imports are allowed here.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
-        """
-        raise NotImplementedError
-
-    def _expr_type(self, node: astx.AST | None) -> astx.DataType | None:
-        """
-        title: Return one node's resolved expression type.
-        parameters:
-          node:
-            type: astx.AST | None
-        returns:
-          type: astx.DataType | None
-        """
-        raise NotImplementedError
-
-    def _require_value_expression(
-        self,
-        node: astx.AST | None,
-        *,
-        context: str,
-    ) -> bool:
-        """
-        title: Require one expression context to receive a non-void value.
-        parameters:
-          node:
-            type: astx.AST | None
-          context:
-            type: str
-        returns:
-          type: bool
-        """
-        raise NotImplementedError
-
-    def _argument_has_default(
-        self,
-        argument: astx.Argument,
-    ) -> bool:
-        """
-        title: Return whether one parameter declares a default value.
-        parameters:
-          argument:
-            type: astx.Argument
-        returns:
-          type: bool
-        """
-        raise NotImplementedError
-
-    def _analyze_parameter_defaults(
-        self,
-        function: SemanticFunction,
-    ) -> None:
-        """
-        title: Analyze one callable's declared parameter default expressions.
-        parameters:
-          function:
-            type: SemanticFunction
-        """
-        raise NotImplementedError
-
-    def _visit_module(
-        self,
-        module: astx.Module,
-        *,
-        predeclared: bool,
-    ) -> None:
-        """
-        title: Visit one module with optional predeclaration.
-        parameters:
-          module:
-            type: astx.Module
-          predeclared:
-            type: bool
-        """
-        raise NotImplementedError
-
-    def _guarantees_return(self, node: astx.AST) -> bool:
-        """
-        title: Return whether a statement subtree has no normal fallthrough.
-        parameters:
-          node:
-            type: astx.AST
-        returns:
-          type: bool
-        """
-        raise NotImplementedError
-
-
-@typechecked
-class SemanticVisitorMixinRuntimeBase:
-    """
-    title: Runtime-empty base for semantic visitor mixins.
-    """
-
-
 if TYPE_CHECKING:
-    SemanticVisitorMixinBase = SemanticVisitorMixinTypingBase
-else:
-    SemanticVisitorMixinBase = SemanticVisitorMixinRuntimeBase
+    from irx.analysis.composition import AnalysisFeatures
 
 
 @typechecked
@@ -897,6 +86,10 @@ class SemanticAnalyzerCore(BaseVisitor):
       Provide shared semantic-analysis state and helper behavior for the
       specialized visitor mixins that implement node-specific rules.
     attributes:
+      features:
+        type: AnalysisFeatures
+      current_ast_module:
+        type: astx.Module | None
       context:
         type: SemanticContext
       configuration:
@@ -913,6 +106,8 @@ class SemanticAnalyzerCore(BaseVisitor):
         type: VisibleBindings
     """
 
+    features: AnalysisFeatures
+    current_ast_module: astx.Module | None
     context: SemanticContext
     configuration: HandlerConfiguration
     call_dispatch: ScopedDispatch
@@ -968,6 +163,10 @@ class SemanticAnalyzerCore(BaseVisitor):
                 session.visible_bindings if session is not None else None
             ),
         )
+        from irx.analysis.composition import AnalysisFeatures  # noqa: PLC0415
+
+        self.current_ast_module = None
+        self.features = AnalysisFeatures(self)
 
     def analyze(self, node: astx.AST) -> astx.AST:
         """
@@ -1019,10 +218,8 @@ class SemanticAnalyzerCore(BaseVisitor):
           type: astx.Module
         """
         if not predeclared:
-            reset_templates = getattr(
-                self,
-                "_reset_template_analysis_state",
-                None,
+            reset_templates = (
+                self.features.template_state._reset_template_analysis_state
             )
             if callable(reset_templates):
                 reset_templates(parsed_module.ast)
@@ -1670,10 +867,11 @@ class SemanticAnalyzerCore(BaseVisitor):
             )
             return None
 
-        resolve_structure = getattr(self, "_resolve_class_structure", None)
-        active_stack: list[SemanticClass] = cast(
-            list[SemanticClass],
-            getattr(self, "_class_resolution_stack", lambda: [])(),
+        resolve_structure = (
+            self.features.declaration_class_member._resolve_class_structure
+        )
+        active_stack = (
+            self.features.declaration_class_support._class_resolution_stack()
         )
         if (
             callable(resolve_structure)
@@ -2121,30 +1319,22 @@ class SemanticAnalyzerCore(BaseVisitor):
             type: bool
         """
         self._set_type(module, None)
-        previous_module = getattr(self, "_current_ast_module", None)
-        setattr(self, "_current_ast_module", module)
+        previous_module = self.current_ast_module
+        self.current_ast_module = module
         try:
             with self.context.scope("module"):
                 if not predeclared:
                     self._predeclare_module_members(module)
-                    prepare_templates = getattr(
-                        self,
-                        "_prepare_template_specialization_skeletons",
-                        None,
+                    self.features.template._prepare_template_specialization_skeletons(
+                        module
                     )
-                    if callable(prepare_templates):
-                        prepare_templates(module)
-                    analyze_templates = getattr(
-                        self,
-                        "_analyze_prepared_template_specializations",
-                        None,
+                    self.features.template._analyze_prepared_template_specializations(
+                        module
                     )
-                    if callable(analyze_templates):
-                        analyze_templates(module)
                 for node in module.nodes:
                     self.visit(node)
         finally:
-            setattr(self, "_current_ast_module", previous_module)
+            self.current_ast_module = previous_module
         main_function = self.context.get_function(
             self._current_module_key(),
             "main",
@@ -2173,8 +1363,7 @@ class SemanticAnalyzerCore(BaseVisitor):
         self._semantic(node).flow_outcomes = outcomes
         return FlowOutcome.NORMAL not in outcomes
 
-    @dispatch
-    def visit(self, node: astx.AST) -> None:
+    def reject_node(self, node: astx.AST) -> None:
         """
         title: Reject unregistered nodes, even when they carry a type.
         parameters:
@@ -2187,3 +1376,12 @@ class SemanticAnalyzerCore(BaseVisitor):
             code=DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE,
             hint="use a supported construct or register an analysis handler",
         )
+
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Traverse through this compiler's explicitly composed handlers.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        self.features.dispatch.visit(node)

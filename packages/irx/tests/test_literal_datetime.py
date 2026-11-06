@@ -71,12 +71,12 @@ def test_literal_datetime_lowers_expected_struct(
         type: list[int]
     """
     llvm_visitor.visit(astx.LiteralDateTime(datetime_str))
-    const = llvm_visitor.result_stack.pop()
+    const = llvm_visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert const.type == llvm_visitor._llvm.DATETIME_TYPE
     assert _datetime_values(const) == expected_values
-    assert not llvm_visitor.result_stack
+    assert not llvm_visitor.function_state.result_stack
 
 
 def test_literal_datetime_translate_smoke(

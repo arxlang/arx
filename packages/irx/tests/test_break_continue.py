@@ -46,7 +46,7 @@ def setup_function_context(visitor: LLVMVisitor) -> None:
     module = visitor._llvm.module
     func_ty = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()])
     func = ir.Function(module, func_ty, name="test_func")
-    visitor.exception_context = func.args[0]
+    visitor.exit_state.exception_context = func.args[0]
     entry_bb = func.append_basic_block("entry")
     visitor._llvm.ir_builder.position_at_end(entry_bb)
 
@@ -61,7 +61,7 @@ def test_break_exits_to_loop_exit_block(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     visitor.visit(
@@ -88,7 +88,7 @@ def test_break_skips_remaining_statements(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     body = astx.Block()
@@ -116,7 +116,7 @@ def test_nested_loop_break_affects_only_inner(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     inner_loop = astx.WhileStmt(
@@ -146,7 +146,7 @@ def test_continue_branches_to_condition(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     visitor.visit(
@@ -173,7 +173,7 @@ def test_continue_skips_remaining_statements(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     body = astx.Block()
@@ -202,11 +202,11 @@ def test_loop_lowering_does_not_consume_preexisting_result_stack_values(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
     setup_function_context(visitor)
 
     marker = ir.Constant(ir.IntType(32), 123)
-    visitor.result_stack.append(marker)
+    visitor.function_state.result_stack.append(marker)
 
     loop = astx.ForCountLoopStmt(
         initializer=astx.InlineVariableDeclaration(
@@ -222,7 +222,7 @@ def test_loop_lowering_does_not_consume_preexisting_result_stack_values(
     analyze(loop)
     visitor.visit(loop)
 
-    assert visitor.result_stack == [marker]
+    assert visitor.function_state.result_stack == [marker]
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -235,7 +235,7 @@ def test_break_outside_loop_raises(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     with pytest.raises(
         LoweringError, match="break statement used outside an active loop"
@@ -256,7 +256,7 @@ def test_continue_outside_loop_raises(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     with pytest.raises(
         LoweringError, match="continue statement used outside an active loop"

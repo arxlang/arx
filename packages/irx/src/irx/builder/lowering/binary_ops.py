@@ -1,7 +1,7 @@
 # mypy: disable-error-code=no-redef
 
 """
-title: Binary-operator visitor mixins for llvmliteir.
+title: Binary-operator lowering implementations for llvmliteir.
 """
 
 from __future__ import annotations
@@ -32,41 +32,235 @@ from astx.binary_op import (
     specialize_binary_op,
 )
 from llvmlite import ir
+from plum import dispatch
+from public import private
 
 from irx.analysis.arrow_conversion import ARROW_RESOURCES
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
     OwnershipTransferKind,
     ResourceKind,
+    SemanticFlags,
     SemanticInfo,
 )
 from irx.analysis.types import is_string_type
-from irx.builder.core import (
-    VisitorCore,
-    semantic_assignment_key,
-    semantic_flag,
-    semantic_fma_rhs,
-    uses_unsigned_semantics,
-)
 from irx.builder.diagnostics import (
+    raise_lowering_error,
     raise_lowering_internal_error,
     require_lowered_value,
     require_semantic_metadata,
 )
-from irx.builder.lowering.classes import ClassVisitorMixin
-from irx.builder.lowering.nullable import NullableVisitorMixin
-from irx.builder.numeric import integer_operation, resolved_integer_operation
+from irx.builder.lowering.contracts import BinaryServices
 from irx.builder.runtime import safe_pop
+from irx.builder.services.representations import (
+    resolved_type as resolved_ast_type,
+)
+from irx.builder.services.representations import (
+    semantic_assignment_key,
+    semantic_info,
+)
 from irx.builder.types import is_fp_type, is_int_type
 from irx.builder.vector import emit_add, emit_int_div, is_vector
+from irx.diagnostics import DiagnosticCodes
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class BinaryOpVisitorMixin(ClassVisitorMixin):
+class BinaryLowering:
     """
     title: Lower binary operations to LLVM.
+    attributes:
+      services:
+        type: BinaryServices
     """
+
+    services: BinaryServices
+
+    def __init__(self, services: BinaryServices) -> None:
+        """
+        title: Bind explicit family-owned emission dependencies.
+        parameters:
+          services:
+            type: BinaryServices
+        """
+        self.services = services
+
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Fail closed for nodes not exported by this feature family.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise_lowering_internal_error(
+            f"no binary_ops handler for {type(node).__name__}", node=node
+        )
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: >-
+          Export explicit concrete signatures without mutating a shared
+          dispatcher.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return (
+            contribute_node(
+                "llvm.binary_ops.AugAssign",
+                "irx.binary_ops",
+                "lowering",
+                astx.AugAssign,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.BinaryOp",
+                "irx.binary_ops",
+                "lowering",
+                astx.BinaryOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.AssignmentBinOp",
+                "irx.binary_ops",
+                "lowering",
+                AssignmentBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.AddBinOp",
+                "irx.binary_ops",
+                "lowering",
+                AddBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.SubBinOp",
+                "irx.binary_ops",
+                "lowering",
+                SubBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.MulBinOp",
+                "irx.binary_ops",
+                "lowering",
+                MulBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.DivBinOp",
+                "irx.binary_ops",
+                "lowering",
+                DivBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.ModBinOp",
+                "irx.binary_ops",
+                "lowering",
+                ModBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.LogicalAndBinOp",
+                "irx.binary_ops",
+                "lowering",
+                LogicalAndBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.LogicalOrBinOp",
+                "irx.binary_ops",
+                "lowering",
+                LogicalOrBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.LtBinOp",
+                "irx.binary_ops",
+                "lowering",
+                LtBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.GtBinOp",
+                "irx.binary_ops",
+                "lowering",
+                GtBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.LeBinOp",
+                "irx.binary_ops",
+                "lowering",
+                LeBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.GeBinOp",
+                "irx.binary_ops",
+                "lowering",
+                GeBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.EqBinOp",
+                "irx.binary_ops",
+                "lowering",
+                EqBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.NeBinOp",
+                "irx.binary_ops",
+                "lowering",
+                NeBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.BitOrBinOp",
+                "irx.binary_ops",
+                "lowering",
+                BitOrBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.BitAndBinOp",
+                "irx.binary_ops",
+                "lowering",
+                BitAndBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+            contribute_node(
+                "llvm.binary_ops.BitXorBinOp",
+                "irx.binary_ops",
+                "lowering",
+                BitXorBinOp,
+                self.visit,
+                source="irx.builder.lowering.binary_ops.BinaryLowering.visit",
+            ),
+        )
 
     def compound_conversion(
         self,
@@ -97,13 +291,13 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 "compound assignment requires a lossless conversion plan",
                 node=node,
             )
-        return self._cast_ast_value(
+        return self.services.numeric.cast_scalar(
             value,
             source_type=numeric.source_type,
             target_type=numeric.target_type,
         )
 
-    @VisitorCore.visit.dispatch  # type: ignore[attr-defined,untyped-decorator]
+    @dispatch
     def visit(self, node: astx.AugAssign) -> None:
         """
         title: Load, compute, and store a resolved scalar compound mutation.
@@ -151,15 +345,17 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             raise_lowering_internal_error(
                 "unsupported resolved compound operator", node=node
             )
-        address = self.named_values.get(plan.target.symbol_id)
+        address = self.services.function_state.named_values.get(
+            plan.target.symbol_id
+        )
         if address is None:
             raise_lowering_internal_error(
                 "compound assignment target has no resolved storage", node=node
             )
-        old = self._llvm.ir_builder.load(address)
-        self.visit_child(node.value)
+        old = self.services.llvm.ir_builder.load(address)
+        self.services.visit_child(node.value)
         rhs = require_lowered_value(
-            safe_pop(self.result_stack),
+            safe_pop(self.services.function_state.result_stack),
             node=node.value,
             context="compound assignment RHS",
         )
@@ -168,7 +364,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         if is_fp_type(lhs.type):
             if op == "%":
                 # LLVM frem may become a platform fmod call at link time.
-                self.runtime_features.activate("libm")
+                self.services.runtime_features.activate("libm")
             instruction = {
                 "+": "fadd",
                 "-": "fsub",
@@ -176,10 +372,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 "/": "fdiv",
                 "%": "frem",
             }[op]
-            result = getattr(self._llvm.ir_builder, instruction)(lhs, rhs)
+            result = getattr(self.services.llvm.ir_builder, instruction)(
+                lhs, rhs
+            )
         elif op in {"+", "-", "*"}:
-            result = integer_operation(
-                cast(VisitorCore, self), node, lhs, rhs, operation, op
+            result = self.services.numeric.integer_operation(
+                node, lhs, rhs, operation, op
             )
         else:
             self._guard_scalar_integer_divisor(
@@ -188,10 +386,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             instruction = ("u" if operation.flags.unsigned else "s") + (
                 "div" if op == "/" else "rem"
             )
-            result = getattr(self._llvm.ir_builder, instruction)(lhs, rhs)
+            result = getattr(self.services.llvm.ir_builder, instruction)(
+                lhs, rhs
+            )
         result = self.compound_conversion(node, result, plan.store_conversion)
-        self._llvm.ir_builder.store(result, address)
-        self.result_stack.append(result)
+        self.services.llvm.ir_builder.store(result, address)
+        self.services.function_state.result_stack.append(result)
 
     def _resolved_binary_variant(self, node: astx.BinaryOp) -> astx.BinaryOp:
         """
@@ -226,19 +426,21 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         returns:
           type: tuple[ir.Value, ir.Value, bool]
         """
-        self.visit_child(node.lhs)
-        llvm_lhs = safe_pop(self.result_stack)
-        self.visit_child(node.rhs)
-        llvm_rhs = safe_pop(self.result_stack)
+        self.services.visit_child(node.lhs)
+        llvm_lhs = safe_pop(self.services.function_state.result_stack)
+        self.services.visit_child(node.rhs)
+        llvm_rhs = safe_pop(self.services.function_state.result_stack)
 
         if llvm_lhs is None or llvm_rhs is None:
-            raise Exception("codegen: Invalid lhs/rhs")
+            raise_lowering_internal_error(
+                "codegen: Invalid lhs/rhs", node=node
+            )
 
-        unsigned = uses_unsigned_semantics(node)
+        unsigned = False
         if (
             unify_numeric
-            and self._is_numeric_value(llvm_lhs)
-            and self._is_numeric_value(llvm_rhs)
+            and self.services.numeric.is_numeric_value(llvm_lhs)
+            and self.services.numeric.is_numeric_value(llvm_rhs)
         ):
             semantic = require_semantic_metadata(
                 getattr(node, "semantic", None),
@@ -271,7 +473,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 metadata="rhs_conversion",
                 context="numeric operands",
             )
-            llvm_lhs = self._cast_ast_value(
+            llvm_lhs = self.services.numeric.cast_scalar(
                 llvm_lhs,
                 source_type=require_semantic_metadata(
                     left.source_type,
@@ -286,7 +488,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                     context="numeric operands",
                 ),
             )
-            llvm_rhs = self._cast_ast_value(
+            llvm_rhs = self.services.numeric.cast_scalar(
                 llvm_rhs,
                 source_type=require_semantic_metadata(
                     right.source_type,
@@ -303,6 +505,23 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             )
 
         return llvm_lhs, llvm_rhs, unsigned
+
+    def operator_flags(self, node: astx.BinaryOp) -> SemanticFlags:
+        """
+        title: Consume normalized operator flags without raw-node fallbacks.
+        parameters:
+          node:
+            type: astx.BinaryOp
+        returns:
+          type: SemanticFlags
+        """
+        operation = require_semantic_metadata(
+            semantic_info(node).resolved_operator,
+            node=node,
+            metadata="resolved_operator",
+            context="binary flags",
+        )
+        return operation.flags
 
     def _emit_vector_add(
         self,
@@ -326,21 +545,21 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             return None
 
         is_float_vec = is_fp_type(llvm_lhs.type.element)
-        prev_fast_math = self._fast_math_enabled
-        if is_float_vec and semantic_flag(node, "fast_math"):
-            self.set_fast_math(True)
+        prev_fast_math = self.services.floating.enabled
+        if is_float_vec and self.operator_flags(node).fast_math:
+            self.services.floating.set_fast_math(True)
         try:
             if is_float_vec:
-                result = self._llvm.ir_builder.fadd(
+                result = self.services.llvm.ir_builder.fadd(
                     llvm_lhs, llvm_rhs, name="vfaddtmp"
                 )
-                self._apply_fast_math(result)
+                self.services.floating.apply_fast_math(result)
             else:
-                result = resolved_integer_operation(
-                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "+"
+                result = self.services.numeric.resolved_integer_operation(
+                    node, llvm_lhs, llvm_rhs, "+"
                 )
         finally:
-            self.set_fast_math(prev_fast_math)
+            self.services.floating.set_fast_math(prev_fast_math)
         return result
 
     def _load_boolean_operands(
@@ -365,9 +584,13 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             or not is_int_type(llvm_rhs.type)
             or llvm_rhs.type.width != 1
         ):
-            raise Exception(
-                "codegen: logical operator "
-                f"'{node.op_code}' must lower Boolean operands."
+            raise_lowering_internal_error(
+                (
+                    "codegen: logical operator '"
+                    f"{node.op_code}"
+                    "' must lower Boolean operands."
+                ),
+                node=node,
             )
         return llvm_lhs, llvm_rhs
 
@@ -388,8 +611,8 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           name:
             type: str
         """
-        self.visit_child(node.lhs)
-        llvm_lhs = safe_pop(self.result_stack)
+        self.services.visit_child(node.lhs)
+        llvm_lhs = safe_pop(self.services.function_state.result_stack)
         if (
             llvm_lhs is None
             or not is_int_type(llvm_lhs.type)
@@ -400,26 +623,26 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 node=node.lhs,
             )
 
-        lhs_block = self._llvm.ir_builder.block
-        function = self._llvm.ir_builder.function
+        lhs_block = self.services.llvm.ir_builder.block
+        function = self.services.llvm.ir_builder.function
         rhs_block = function.append_basic_block(f"logical.{name}.rhs")
         merge_block = function.append_basic_block(f"logical.{name}.merge")
         if short_circuit_value:
-            self._llvm.ir_builder.cbranch(
+            self.services.llvm.ir_builder.cbranch(
                 llvm_lhs,
                 merge_block,
                 rhs_block,
             )
         else:
-            self._llvm.ir_builder.cbranch(
+            self.services.llvm.ir_builder.cbranch(
                 llvm_lhs,
                 rhs_block,
                 merge_block,
             )
 
-        self._llvm.ir_builder.position_at_start(rhs_block)
-        self.visit_child(node.rhs)
-        llvm_rhs = safe_pop(self.result_stack)
+        self.services.llvm.ir_builder.position_at_start(rhs_block)
+        self.services.visit_child(node.rhs)
+        llvm_rhs = safe_pop(self.services.function_state.result_stack)
         if (
             llvm_rhs is None
             or not is_int_type(llvm_rhs.type)
@@ -429,25 +652,25 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 "logical operator rhs must lower to Boolean i1",
                 node=node.rhs,
             )
-        rhs_end_block = self._llvm.ir_builder.block
+        rhs_end_block = self.services.llvm.ir_builder.block
         if rhs_end_block.is_terminated:
             raise_lowering_internal_error(
                 "logical operator rhs terminated its expression block",
                 node=node.rhs,
             )
-        self._llvm.ir_builder.branch(merge_block)
+        self.services.llvm.ir_builder.branch(merge_block)
 
-        self._llvm.ir_builder.position_at_start(merge_block)
-        result = self._llvm.ir_builder.phi(
-            self._llvm.BOOLEAN_TYPE,
+        self.services.llvm.ir_builder.position_at_start(merge_block)
+        result = self.services.llvm.ir_builder.phi(
+            self.services.llvm.BOOLEAN_TYPE,
             name=name,
         )
         result.add_incoming(
-            ir.Constant(self._llvm.BOOLEAN_TYPE, short_circuit_value),
+            ir.Constant(self.services.llvm.BOOLEAN_TYPE, short_circuit_value),
             lhs_block,
         )
         result.add_incoming(llvm_rhs, rhs_end_block)
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
     def _guard_scalar_integer_divisor(
         self,
@@ -481,8 +704,10 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             )
 
         zero = ir.Constant(llvm_rhs.type, 0)
-        valid = self._llvm.ir_builder.icmp_unsigned("!=", llvm_rhs, zero)
-        self._guard_runtime_condition(
+        valid = self.services.llvm.ir_builder.icmp_unsigned(
+            "!=", llvm_rhs, zero
+        )
+        self.services.guards.guard(
             node,
             valid,
             code="ARX-RUNTIME-ARITHMETIC-001",
@@ -494,18 +719,18 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             width = llvm_lhs.type.width
             minimum = ir.Constant(llvm_lhs.type, -(1 << (width - 1)))
             negative_one = ir.Constant(llvm_rhs.type, -1)
-            minimum_lhs = self._llvm.ir_builder.icmp_signed(
+            minimum_lhs = self.services.llvm.ir_builder.icmp_signed(
                 "==", llvm_lhs, minimum
             )
-            negative_one_rhs = self._llvm.ir_builder.icmp_signed(
+            negative_one_rhs = self.services.llvm.ir_builder.icmp_signed(
                 "==", llvm_rhs, negative_one
             )
-            overflow = self._llvm.ir_builder.and_(
+            overflow = self.services.llvm.ir_builder.and_(
                 minimum_lhs, negative_one_rhs
             )
-            self._guard_runtime_condition(
+            self.services.guards.guard(
                 node,
-                self._llvm.ir_builder.not_(overflow),
+                self.services.llvm.ir_builder.not_(overflow),
                 code="ARX-RUNTIME-ARITHMETIC-001",
                 message="integer division or remainder result overflows",
                 block_name="integer.division.overflow",
@@ -534,21 +759,21 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             return None
 
         is_float_vec = is_fp_type(llvm_lhs.type.element)
-        prev_fast_math = self._fast_math_enabled
-        if is_float_vec and semantic_flag(node, "fast_math"):
-            self.set_fast_math(True)
+        prev_fast_math = self.services.floating.enabled
+        if is_float_vec and self.operator_flags(node).fast_math:
+            self.services.floating.set_fast_math(True)
         try:
             if is_float_vec:
-                result = self._llvm.ir_builder.fsub(
+                result = self.services.llvm.ir_builder.fsub(
                     llvm_lhs, llvm_rhs, name="vfsubtmp"
                 )
-                self._apply_fast_math(result)
+                self.services.floating.apply_fast_math(result)
             else:
-                result = resolved_integer_operation(
-                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "-"
+                result = self.services.numeric.resolved_integer_operation(
+                    node, llvm_lhs, llvm_rhs, "-"
                 )
         finally:
-            self.set_fast_math(prev_fast_math)
+            self.services.floating.set_fast_math(prev_fast_math)
         return result
 
     def _emit_vector_mul(
@@ -573,43 +798,54 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             return None
 
         is_float_vec = is_fp_type(llvm_lhs.type.element)
-        set_fast = is_float_vec and semantic_flag(node, "fast_math")
-        if semantic_flag(node, "fma") and is_float_vec:
-            fma_rhs_node = semantic_fma_rhs(node)
+        set_fast = is_float_vec and self.operator_flags(node).fast_math
+        if self.operator_flags(node).fma and is_float_vec:
+            fma_rhs_node = self.operator_flags(node).fma_rhs
             if fma_rhs_node is None:
-                raise Exception("FMA requires a third operand (fma_rhs)")
-            self.visit_child(fma_rhs_node)
-            llvm_fma_rhs = safe_pop(self.result_stack)
-            if llvm_fma_rhs is None:
-                raise Exception("FMA requires a valid third operand")
-            if llvm_fma_rhs.type != llvm_lhs.type:
-                raise Exception(
-                    f"FMA operand type mismatch: "
-                    f"{llvm_lhs.type} vs {llvm_fma_rhs.type}"
+                raise_lowering_internal_error(
+                    "FMA requires a third operand (fma_rhs)", node=node
                 )
-            prev_fast_math = self._fast_math_enabled
+            self.services.visit_child(fma_rhs_node)
+            llvm_fma_rhs = safe_pop(self.services.function_state.result_stack)
+            if llvm_fma_rhs is None:
+                raise_lowering_internal_error(
+                    "FMA requires a valid third operand", node=node
+                )
+            if llvm_fma_rhs.type != llvm_lhs.type:
+                raise_lowering_internal_error(
+                    (
+                        "FMA operand type mismatch: "
+                        f"{llvm_lhs.type}"
+                        " vs "
+                        f"{llvm_fma_rhs.type}"
+                    ),
+                    node=node,
+                )
+            prev_fast_math = self.services.floating.enabled
             if set_fast:
-                self.set_fast_math(True)
+                self.services.floating.set_fast_math(True)
             try:
-                return self._emit_fma(llvm_lhs, llvm_rhs, llvm_fma_rhs)
+                return self.services.floating.emit_fma(
+                    llvm_lhs, llvm_rhs, llvm_fma_rhs
+                )
             finally:
-                self.set_fast_math(prev_fast_math)
+                self.services.floating.set_fast_math(prev_fast_math)
 
-        prev_fast_math = self._fast_math_enabled
+        prev_fast_math = self.services.floating.enabled
         if set_fast:
-            self.set_fast_math(True)
+            self.services.floating.set_fast_math(True)
         try:
             if is_float_vec:
-                result = self._llvm.ir_builder.fmul(
+                result = self.services.llvm.ir_builder.fmul(
                     llvm_lhs, llvm_rhs, name="vfmultmp"
                 )
-                self._apply_fast_math(result)
+                self.services.floating.apply_fast_math(result)
             else:
-                result = resolved_integer_operation(
-                    cast(VisitorCore, self), node, llvm_lhs, llvm_rhs, "*"
+                result = self.services.numeric.resolved_integer_operation(
+                    node, llvm_lhs, llvm_rhs, "*"
                 )
         finally:
-            self.set_fast_math(prev_fast_math)
+            self.services.floating.set_fast_math(prev_fast_math)
         return result
 
     def _emit_vector_div(
@@ -638,32 +874,36 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             return None
 
         is_float_vec = is_fp_type(llvm_lhs.type.element)
-        prev_fast_math = self._fast_math_enabled
-        if is_float_vec and semantic_flag(node, "fast_math"):
-            self.set_fast_math(True)
+        prev_fast_math = self.services.floating.enabled
+        if is_float_vec and self.operator_flags(node).fast_math:
+            self.services.floating.set_fast_math(True)
         try:
             if is_float_vec:
-                result = self._llvm.ir_builder.fdiv(
+                result = self.services.llvm.ir_builder.fdiv(
                     llvm_lhs, llvm_rhs, name="vfdivtmp"
                 )
-                self._apply_fast_math(result)
+                self.services.floating.apply_fast_math(result)
             else:
                 for lane in range(llvm_lhs.type.count):
                     index = ir.Constant(ir.IntType(32), lane)
                     self._guard_scalar_integer_divisor(
                         node,
-                        self._llvm.ir_builder.extract_element(llvm_lhs, index),
-                        self._llvm.ir_builder.extract_element(llvm_rhs, index),
+                        self.services.llvm.ir_builder.extract_element(
+                            llvm_lhs, index
+                        ),
+                        self.services.llvm.ir_builder.extract_element(
+                            llvm_rhs, index
+                        ),
                         unsigned=unsigned,
                     )
                 result = emit_int_div(
-                    self._llvm.ir_builder, llvm_lhs, llvm_rhs, unsigned
+                    self.services.llvm.ir_builder, llvm_lhs, llvm_rhs, unsigned
                 )
         finally:
-            self.set_fast_math(prev_fast_math)
+            self.services.floating.set_fast_math(prev_fast_math)
         return result
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: astx.BinaryOp) -> None:
         """
         title: Visit BinaryOp nodes.
@@ -671,14 +911,18 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.BinaryOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         specialized = self._resolved_binary_variant(node)
         if specialized is node:
-            raise Exception(f"Binary op {node.op_code} not implemented yet.")
-        self.visit_child(specialized)
+            raise_lowering_error(
+                f"Binary op {node.op_code} not implemented yet.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
+        self.services.visit_child(specialized)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: AssignmentBinOp) -> None:
         """
         title: Visit AssignmentBinOp nodes.
@@ -686,7 +930,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: AssignmentBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         var_lhs = node.lhs
         if not isinstance(
@@ -698,17 +942,23 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 astx.StaticFieldAccess,
             ),
         ):
-            raise Exception("destination of '=' must be a variable or field")
+            raise_lowering_internal_error(
+                "destination of '=' must be a variable or field", node=node
+            )
 
         lhs_name = (
             var_lhs.name
             if isinstance(var_lhs, astx.Identifier)
             else getattr(var_lhs, "field_name", "field")
         )
-        lhs_key = semantic_assignment_key(node, lhs_name)
-        if isinstance(var_lhs, astx.Identifier) and lhs_key in self.const_vars:
-            raise Exception(
-                f"Cannot assign to '{lhs_name}': declared as constant"
+        lhs_key = semantic_assignment_key(node)
+        if (
+            isinstance(var_lhs, astx.Identifier)
+            and lhs_key in self.services.function_state.const_vars
+        ):
+            raise_lowering_internal_error(
+                f"Cannot assign to '{lhs_name}': declared as constant",
+                node=node,
             )
 
         semantic = getattr(node, "semantic", None)
@@ -720,88 +970,90 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             and managed.resource_kind
             in {ResourceKind.CLASS, ResourceKind.FILE, *ARROW_RESOURCES}
         ) or (semantic is not None and semantic.lifecycle_field_store):
-            address = self._lvalue_address(var_lhs)
-            self.visit_child(node.rhs)
+            address = self.services.layout.lvalue_address(var_lhs)
+            self.services.visit_child(node.rhs)
             value = require_lowered_value(
-                safe_pop(self.result_stack),
+                safe_pop(self.services.function_state.result_stack),
                 node=node.rhs,
                 context="managed assignment",
             )
-            value = self._cast_ast_value(
+            value = self.services.numeric.cast_scalar(
                 value,
-                source_type=self._resolved_ast_type(node.rhs),
-                target_type=self._resolved_ast_type(node),
+                source_type=resolved_ast_type(node.rhs),
+                target_type=resolved_ast_type(node),
             )
             assert managed is not None
             if managed.resource_kind in {ResourceKind.CLASS, *ARROW_RESOURCES}:
-                value = self.class_acquire(node, value)
-                previous = self._llvm.ir_builder.load(address)
+                value = self.services.class_acquire(node, value)
+                previous = self.services.llvm.ir_builder.load(address)
                 # A failing release still consumes the old reference. Publish
                 # the new generation before checked rollback can revisit it.
-                self._llvm.ir_builder.store(value, address)
+                self.services.llvm.ir_builder.store(value, address)
                 if managed.resource_kind in ARROW_RESOURCES:
                     assert managed.owner_symbol_id is not None
-                    self.arrow_release_binding(
+                    self.services.arrow_release_binding(
                         node, previous, managed.owner_symbol_id
                     )
-                    count = self.arrow_reference_count(managed.owner_symbol_id)
-                    self._llvm.ir_builder.store(
+                    count = self.services.arrow_reference_count(
+                        managed.owner_symbol_id
+                    )
+                    self.services.llvm.ir_builder.store(
                         ir.Constant(ir.IntType(64), 1), count
                     )
                 else:
-                    self.class_operation(node, "release", previous)
+                    self.services.class_operation(node, "release", previous)
             elif managed.resource_kind is ResourceKind.STRING:
                 if managed.transfer_kind is OwnershipTransferKind.COPY:
-                    value = self._copy_string_to_heap(node, value)
-                free = self.require_runtime_symbol("libc", "free")
-                self._llvm.ir_builder.call(
-                    free, [self._llvm.ir_builder.load(address)]
+                    value = self.services.strings.copy(node, value)
+                free = self.services.require_runtime_symbol("libc", "free")
+                self.services.llvm.ir_builder.call(
+                    free, [self.services.llvm.ir_builder.load(address)]
                 )
             if managed.resource_kind not in {
                 ResourceKind.CLASS,
                 *ARROW_RESOURCES,
             }:
-                self._llvm.ir_builder.store(value, address)
-            self.result_stack.append(value)
+                self.services.llvm.ir_builder.store(value, address)
+            self.services.function_state.result_stack.append(value)
             return
-        self.visit_child(node.rhs)
-        llvm_rhs = safe_pop(self.result_stack)
+        self.services.visit_child(node.rhs)
+        llvm_rhs = safe_pop(self.services.function_state.result_stack)
         if llvm_rhs is None:
-            raise Exception("codegen: Invalid rhs expression.")
-        llvm_rhs = self._cast_ast_value(
+            raise_lowering_internal_error(
+                "codegen: Invalid rhs expression.", node=node
+            )
+        llvm_rhs = self.services.numeric.cast_scalar(
             llvm_rhs,
-            source_type=self._resolved_ast_type(node.rhs),
-            target_type=self._resolved_ast_type(node),
+            source_type=resolved_ast_type(node.rhs),
+            target_type=resolved_ast_type(node),
         )
 
-        llvm_lhs = self._lvalue_address(var_lhs)
-        if isinstance(
-            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
-        ):
+        llvm_lhs = self.services.layout.lvalue_address(var_lhs)
+        if isinstance(resolved_ast_type(node), (astx.ListType, astx.Bytes)):
             if not isinstance(var_lhs, astx.Identifier):
                 raise_lowering_internal_error(
                     "list field assignment reached lowering without an "
                     "object-field ownership contract",
                     node=node,
                 )
-            self._destroy_replaced_list(
+            self.services.destroy_replaced_list(
                 node,
                 llvm_lhs,
                 target_name=lhs_name,
             )
-        elif is_string_type(self._resolved_ast_type(node)) and isinstance(
+        elif is_string_type(resolved_ast_type(node)) and isinstance(
             var_lhs,
             astx.Identifier,
         ):
-            self._destroy_replaced_string(
+            self.services.destroy_replaced_string(
                 node,
                 llvm_lhs,
                 target_name=lhs_name,
             )
-        self._llvm.ir_builder.store(llvm_rhs, llvm_lhs)
-        self.result_stack.append(llvm_rhs)
+        self.services.llvm.ir_builder.store(llvm_rhs, llvm_lhs)
+        self.services.function_state.result_stack.append(llvm_rhs)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: AddBinOp) -> None:
         """
         title: Visit AddBinOp nodes.
@@ -809,38 +1061,38 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: AddBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_add(node, llvm_lhs, llvm_rhs)
         if vector_result is not None:
-            self.result_stack.append(vector_result)
+            self.services.function_state.result_stack.append(vector_result)
             return
 
         if (
             isinstance(llvm_lhs.type, ir.PointerType)
             and isinstance(llvm_rhs.type, ir.PointerType)
-            and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
-            and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
+            and llvm_lhs.type.pointee == self.services.llvm.INT8_TYPE
+            and llvm_rhs.type.pointee == self.services.llvm.INT8_TYPE
         ):
-            result = self._handle_string_concatenation(
+            result = self.services.strings.concatenate(
                 node,
                 llvm_lhs,
                 llvm_rhs,
             )
-            self._register_owned_string_temporary(node, result)
+            self.services.cleanup.register_owned_string_temporary(node, result)
         elif is_int_type(llvm_lhs.type):
-            result = resolved_integer_operation(
-                self, node, llvm_lhs, llvm_rhs, "+"
+            result = self.services.numeric.resolved_integer_operation(
+                node, llvm_lhs, llvm_rhs, "+"
             )
         else:
             result = emit_add(
-                self._llvm.ir_builder, llvm_lhs, llvm_rhs, "addtmp"
+                self.services.llvm.ir_builder, llvm_lhs, llvm_rhs, "addtmp"
             )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: SubBinOp) -> None:
         """
         title: Visit SubBinOp nodes.
@@ -848,28 +1100,32 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: SubBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
-        if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
+        if self.services.collection.try_set_binary_op(
+            llvm_lhs, llvm_rhs, node.op_code
+        ):
             return
 
         vector_result = self._emit_vector_sub(node, llvm_lhs, llvm_rhs)
         if vector_result is not None:
-            self.result_stack.append(vector_result)
+            self.services.function_state.result_stack.append(vector_result)
             return
 
         if is_fp_type(llvm_lhs.type):
-            result = self._llvm.ir_builder.fsub(llvm_lhs, llvm_rhs, "subtmp")
-            self._apply_fast_math(result)
-        else:
-            result = resolved_integer_operation(
-                self, node, llvm_lhs, llvm_rhs, "-"
+            result = self.services.llvm.ir_builder.fsub(
+                llvm_lhs, llvm_rhs, "subtmp"
             )
-        self.result_stack.append(result)
+            self.services.floating.apply_fast_math(result)
+        else:
+            result = self.services.numeric.resolved_integer_operation(
+                node, llvm_lhs, llvm_rhs, "-"
+            )
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: MulBinOp) -> None:
         """
         title: Visit MulBinOp nodes.
@@ -877,25 +1133,27 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: MulBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(node)
 
         vector_result = self._emit_vector_mul(node, llvm_lhs, llvm_rhs)
         if vector_result is not None:
-            self.result_stack.append(vector_result)
+            self.services.function_state.result_stack.append(vector_result)
             return
 
         if is_fp_type(llvm_lhs.type):
-            result = self._llvm.ir_builder.fmul(llvm_lhs, llvm_rhs, "multmp")
-            self._apply_fast_math(result)
-        else:
-            result = resolved_integer_operation(
-                self, node, llvm_lhs, llvm_rhs, "*"
+            result = self.services.llvm.ir_builder.fmul(
+                llvm_lhs, llvm_rhs, "multmp"
             )
-        self.result_stack.append(result)
+            self.services.floating.apply_fast_math(result)
+        else:
+            result = self.services.numeric.resolved_integer_operation(
+                node, llvm_lhs, llvm_rhs, "*"
+            )
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: DivBinOp) -> None:
         """
         title: Visit DivBinOp nodes.
@@ -903,7 +1161,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: DivBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
@@ -914,12 +1172,14 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             unsigned=unsigned,
         )
         if vector_result is not None:
-            self.result_stack.append(vector_result)
+            self.services.function_state.result_stack.append(vector_result)
             return
 
         if is_fp_type(llvm_lhs.type):
-            result = self._llvm.ir_builder.fdiv(llvm_lhs, llvm_rhs, "divtmp")
-            self._apply_fast_math(result)
+            result = self.services.llvm.ir_builder.fdiv(
+                llvm_lhs, llvm_rhs, "divtmp"
+            )
+            self.services.floating.apply_fast_math(result)
         elif unsigned:
             self._guard_scalar_integer_divisor(
                 node,
@@ -927,7 +1187,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 llvm_rhs,
                 unsigned=True,
             )
-            result = self._llvm.ir_builder.udiv(llvm_lhs, llvm_rhs, "divtmp")
+            result = self.services.llvm.ir_builder.udiv(
+                llvm_lhs, llvm_rhs, "divtmp"
+            )
         else:
             self._guard_scalar_integer_divisor(
                 node,
@@ -935,10 +1197,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 llvm_rhs,
                 unsigned=False,
             )
-            result = self._llvm.ir_builder.sdiv(llvm_lhs, llvm_rhs, "divtmp")
-        self.result_stack.append(result)
+            result = self.services.llvm.ir_builder.sdiv(
+                llvm_lhs, llvm_rhs, "divtmp"
+            )
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: ModBinOp) -> None:
         """
         title: Visit ModBinOp nodes.
@@ -949,10 +1213,16 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
 
         if is_fp_type(llvm_lhs.type) or is_fp_type(llvm_rhs.type):
-            result = self._llvm.ir_builder.frem(llvm_lhs, llvm_rhs, "fremtmp")
+            result = self.services.llvm.ir_builder.frem(
+                llvm_lhs, llvm_rhs, "fremtmp"
+            )
         elif unsigned:
             self._guard_scalar_integer_divisor(
                 node,
@@ -960,7 +1230,9 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 llvm_rhs,
                 unsigned=True,
             )
-            result = self._llvm.ir_builder.urem(llvm_lhs, llvm_rhs, "uremtmp")
+            result = self.services.llvm.ir_builder.urem(
+                llvm_lhs, llvm_rhs, "uremtmp"
+            )
         else:
             self._guard_scalar_integer_divisor(
                 node,
@@ -968,10 +1240,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
                 llvm_rhs,
                 unsigned=False,
             )
-            result = self._llvm.ir_builder.srem(llvm_lhs, llvm_rhs, "sremtmp")
-        self.result_stack.append(result)
+            result = self.services.llvm.ir_builder.srem(
+                llvm_lhs, llvm_rhs, "sremtmp"
+            )
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: LogicalAndBinOp) -> None:
         """
         title: Visit LogicalAndBinOp nodes.
@@ -979,7 +1253,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LogicalAndBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         self._lower_short_circuit_boolean(
             node,
@@ -987,7 +1261,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             name="andtmp",
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: LogicalOrBinOp) -> None:
         """
         title: Visit LogicalOrBinOp nodes.
@@ -995,7 +1269,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LogicalOrBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         self._lower_short_circuit_boolean(
             node,
@@ -1003,7 +1277,7 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             name="ortmp",
         )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: LtBinOp) -> None:
         """
         title: Visit LtBinOp nodes.
@@ -1011,21 +1285,25 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LtBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
-        result = self._emit_numeric_compare(
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
+        result = self.services.numeric.emit_numeric_compare(
             "<",
             llvm_lhs,
             llvm_rhs,
             unsigned=unsigned,
             name="lttmp",
         )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: GtBinOp) -> None:
         """
         title: Visit GtBinOp nodes.
@@ -1033,21 +1311,25 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: GtBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
-        result = self._emit_numeric_compare(
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
+        result = self.services.numeric.emit_numeric_compare(
             ">",
             llvm_lhs,
             llvm_rhs,
             unsigned=unsigned,
             name="gttmp",
         )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: LeBinOp) -> None:
         """
         title: Visit LeBinOp nodes.
@@ -1055,21 +1337,25 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: LeBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
-        result = self._emit_numeric_compare(
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
+        result = self.services.numeric.emit_numeric_compare(
             "<=",
             llvm_lhs,
             llvm_rhs,
             unsigned=unsigned,
             name="letmp",
         )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: GeBinOp) -> None:
         """
         title: Visit GeBinOp nodes.
@@ -1077,21 +1363,25 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: GeBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
-        result = self._emit_numeric_compare(
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
+        result = self.services.numeric.emit_numeric_compare(
             ">=",
             llvm_lhs,
             llvm_rhs,
             unsigned=unsigned,
             name="getmp",
         )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: EqBinOp) -> None:
         """
         title: Visit EqBinOp nodes.
@@ -1099,31 +1389,35 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: EqBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
 
         if (
             isinstance(llvm_lhs.type, ir.PointerType)
             and isinstance(llvm_rhs.type, ir.PointerType)
-            and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
-            and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
+            and llvm_lhs.type.pointee == self.services.llvm.INT8_TYPE
+            and llvm_rhs.type.pointee == self.services.llvm.INT8_TYPE
         ):
-            result = self._handle_string_comparison(llvm_lhs, llvm_rhs, "==")
+            result = self.services.strings.compare(llvm_lhs, llvm_rhs, "==")
         else:
-            result = self._emit_numeric_compare(
+            result = self.services.numeric.emit_numeric_compare(
                 "==",
                 llvm_lhs,
                 llvm_rhs,
                 unsigned=unsigned,
                 name="eqtmp",
             )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: NeBinOp) -> None:
         """
         title: Visit NeBinOp nodes.
@@ -1131,31 +1425,35 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: NeBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, unsigned = self._load_binary_operands(node)
 
         if is_vector(llvm_lhs) and is_vector(llvm_rhs):
-            raise Exception(f"Vector binop {node.op_code} not implemented.")
+            raise_lowering_error(
+                f"Vector binop {node.op_code} not implemented.",
+                code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+                node=node,
+            )
 
         if (
             isinstance(llvm_lhs.type, ir.PointerType)
             and isinstance(llvm_rhs.type, ir.PointerType)
-            and llvm_lhs.type.pointee == self._llvm.INT8_TYPE
-            and llvm_rhs.type.pointee == self._llvm.INT8_TYPE
+            and llvm_lhs.type.pointee == self.services.llvm.INT8_TYPE
+            and llvm_rhs.type.pointee == self.services.llvm.INT8_TYPE
         ):
-            result = self._handle_string_comparison(llvm_lhs, llvm_rhs, "!=")
+            result = self.services.strings.compare(llvm_lhs, llvm_rhs, "!=")
         else:
-            result = self._emit_numeric_compare(
+            result = self.services.numeric.emit_numeric_compare(
                 "!=",
                 llvm_lhs,
                 llvm_rhs,
                 unsigned=unsigned,
                 name="netmp",
             )
-        self.result_stack.append(result)
+        self.services.function_state.result_stack.append(result)
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: BitOrBinOp) -> None:
         """
         title: Visit BitOrBinOp nodes.
@@ -1163,17 +1461,23 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: BitOrBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,
             unify_numeric=False,
         )
-        if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
+        if self.services.collection.try_set_binary_op(
+            llvm_lhs, llvm_rhs, node.op_code
+        ):
             return
-        raise Exception(f"Binary op {node.op_code} not implemented yet.")
+        raise_lowering_error(
+            f"Binary op {node.op_code} not implemented yet.",
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+            node=node,
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: BitAndBinOp) -> None:
         """
         title: Visit BitAndBinOp nodes.
@@ -1181,17 +1485,23 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
           node:
             type: BitAndBinOp
         """
-        if cast(NullableVisitorMixin, self).lower_column_operation(node):
+        if self.services.lower_column_operation(node):
             return
         llvm_lhs, llvm_rhs, _unsigned = self._load_binary_operands(
             node,
             unify_numeric=False,
         )
-        if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
+        if self.services.collection.try_set_binary_op(
+            llvm_lhs, llvm_rhs, node.op_code
+        ):
             return
-        raise Exception(f"Binary op {node.op_code} not implemented yet.")
+        raise_lowering_error(
+            f"Binary op {node.op_code} not implemented yet.",
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+            node=node,
+        )
 
-    @VisitorCore.visit.dispatch
+    @dispatch
     def visit(self, node: BitXorBinOp) -> None:
         """
         title: Visit BitXorBinOp nodes.
@@ -1203,6 +1513,12 @@ class BinaryOpVisitorMixin(ClassVisitorMixin):
             node,
             unify_numeric=False,
         )
-        if self._try_set_binary_op(llvm_lhs, llvm_rhs, node.op_code):
+        if self.services.collection.try_set_binary_op(
+            llvm_lhs, llvm_rhs, node.op_code
+        ):
             return
-        raise Exception(f"Binary op {node.op_code} not implemented yet.")
+        raise_lowering_error(
+            f"Binary op {node.op_code} not implemented yet.",
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+            node=node,
+        )

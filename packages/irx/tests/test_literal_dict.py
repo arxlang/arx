@@ -28,10 +28,10 @@ def test_literal_dict_empty(builder_class: type[Builder]) -> None:
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(astx.LiteralDict(elements={}))
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -50,7 +50,7 @@ def test_literal_dict_homogeneous_int_constants(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     visitor.visit(
         astx.LiteralDict(
@@ -61,7 +61,7 @@ def test_literal_dict_homogeneous_int_constants(
         )
     )
 
-    const = visitor.result_stack.pop()
+    const = visitor.function_state.result_stack.pop()
 
     assert isinstance(const, ir.Constant)
     assert isinstance(const.type, ir.ArrayType)
@@ -86,7 +86,7 @@ def test_literal_dict_heterogeneous_constants_unsupported(
     """
     builder = builder_class()
     visitor = cast(LLVMVisitor, builder.translator)
-    visitor.result_stack.clear()
+    visitor.function_state.result_stack.clear()
 
     with pytest.raises(TypeError, match="heterogeneous"):
         visitor.visit(

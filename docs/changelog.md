@@ -34,6 +34,14 @@
 
 ## Unreleased
 
+- **Breaking (IRx Python internals):** Analysis and LLVM lowering now compose
+  ordinary concern implementations with explicit dependencies and isolated node
+  dispatch. Shared string, conversion, addressing, cleanup, and exception helpers
+  live in owning services; mutable state is separated by lifetime. Internal
+  visitor helper/mixin import paths are removed without compatibility aliases.
+  Literal aggregate storage and dictionary-key conversions are resolved during
+  analysis; numeric mixtures without safe common storage are rejected there.
+
 - **Breaking:** Replacing a list owner while it is being iterated now fails
   during semantic analysis (`IRX-S013`), including IRx comprehension evaluation.
   Move replacement after iteration or use a different binding. In-place append

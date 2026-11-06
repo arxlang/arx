@@ -12,9 +12,10 @@ from typing import cast
 import astx
 
 from astx.types import AnyType
+from public import private
 
-from irx.analysis.handlers._templates.support import (
-    TemplateSupportVisitorMixin,
+from irx.analysis.dependencies.template_state import (
+    TemplateStateAnalysisServices,
 )
 from irx.analysis.resolved_nodes import SemanticFunction
 from irx.typecheck import typechecked
@@ -26,11 +27,26 @@ _OWNER_MODULE_ATTR = "irx_owner_module"
 _TEMPLATE_PREPARED_ATTR = "irx_template_specializations_prepared"
 
 
+@private
 @typechecked
-class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
+class TemplateStateAnalysis:
     """
     title: Template-specialization state and AST-reset helpers
+    attributes:
+      services:
+        type: TemplateStateAnalysisServices
     """
+
+    services: TemplateStateAnalysisServices
+
+    def __init__(self, services: TemplateStateAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: TemplateStateAnalysisServices
+        """
+        self.services = services
 
     def _clear_semantic_sidecars(self, node: astx.AST) -> None:
         """
@@ -121,7 +137,9 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
             declared = getattr(node, attribute, None)
             if isinstance(declared, astx.DataType):
                 setattr(
-                    node, attribute, self._substitute_type(declared, bindings)
+                    node,
+                    attribute,
+                    self.services.substitute_type(declared, bindings),
                 )
         if isinstance(node, astx.FunctionDef):
             self._substitute_declared_types(node.prototype, bindings)
@@ -131,7 +149,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
                 astx.set_template_args(
                     node,
                     tuple(
-                        self._substitute_type(arg, bindings)
+                        self.services.substitute_type(arg, bindings)
                         for arg in explicit_args
                     ),
                 )
@@ -141,7 +159,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
                 self._substitute_declared_types(argument, bindings)
             node.return_type = cast(
                 AnyType,
-                self._substitute_type(
+                self.services.substitute_type(
                     node.return_type,
                     bindings,
                 ),
@@ -151,21 +169,21 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
                 astx.set_template_args(
                     node,
                     tuple(
-                        self._substitute_type(arg, bindings)
+                        self.services.substitute_type(arg, bindings)
                         for arg in explicit_args
                     ),
                 )
             return
         if isinstance(node, astx.Argument):
-            node.type_ = self._substitute_type(node.type_, bindings)
+            node.type_ = self.services.substitute_type(node.type_, bindings)
             return
         if isinstance(node, astx.VariableDeclaration):
-            node.type_ = self._substitute_type(node.type_, bindings)
+            node.type_ = self.services.substitute_type(node.type_, bindings)
             if node.value is not None:
                 self._substitute_declared_types(node.value, bindings)
             return
         if isinstance(node, astx.Cast):
-            node.target_type = self._substitute_type(
+            node.target_type = self.services.substitute_type(
                 node.target_type,
                 bindings,
             )
@@ -177,7 +195,7 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
             astx.set_template_args(
                 node,
                 tuple(
-                    self._substitute_type(arg, bindings)
+                    self.services.substitute_type(arg, bindings)
                     for arg in explicit_args
                 ),
             )
@@ -212,11 +230,11 @@ class TemplateStateVisitorMixin(TemplateSupportVisitorMixin):
           type: astx.Module | None
         """
         if (
-            self.session is not None
-            and function.module_key in self.session.modules
+            self.services.session is not None
+            and function.module_key in self.services.session.modules
         ):
-            return self.session.module(function.module_key).ast
-        current_module = getattr(self, "_current_ast_module", None)
+            return self.services.session.module(function.module_key).ast
+        current_module = self.services.current_module()
         if isinstance(current_module, astx.Module):
             return current_module
         owner = getattr(function.prototype, _OWNER_MODULE_ATTR, None)

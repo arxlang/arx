@@ -13,8 +13,9 @@ import pytest
 from astx.base import ReprStruct
 from irx.analysis.api import SemanticAnalyzer
 from irx.base.visitors import BaseVisitor, BaseVisitorProtocol
-from irx.builder import Visitor
+from irx.builder import Builder, Visitor
 from irx.diagnostics import DiagnosticCodes, LoweringError, SemanticError
+from llvmlite import binding as llvm
 from plum import dispatch
 from public import private
 from typeguard import TypeCheckError
@@ -177,7 +178,7 @@ def test_unknown_nodes_fail_at_the_responsible_phase(typed: bool) -> None:
         lowering.value.diagnostic.code
         == DiagnosticCodes.LOWERING_MISSING_HANDLER
     )
-    assert not visitor.result_stack
+    assert not visitor.function_state.result_stack
 
 
 def test_structural_traversal_and_scalar_subtypes_are_explicit() -> None:
@@ -200,30 +201,20 @@ def test_structural_traversal_and_scalar_subtypes_are_explicit() -> None:
 
 def test_llvmlite_visitor_inherits_shared_visit_contract() -> None:
     """
-    title: LLVM visitor mixins should override the shared visitor defaults.
+    title: Composed LLVM handlers produce isolated per-compilation values.
     """
     visitor = Visitor()
 
     visitor.visit(astx.LiteralInt32(1))
 
-    assert visitor.result_stack
-
-
-def test_llvmlite_backend_has_no_legacy_bridge_imports() -> None:
-    """
-    title: Builder package should not depend on removed llvmlite legacy code.
-    """
-    package_root = Path(__file__).resolve().parents[1] / "src/irx/builder"
-    legacy_file = (
-        Path(__file__).resolve().parents[1]
-        / "src/irx/builder/_llvmliteir_legacy.py"
-    )
-
-    assert not legacy_file.exists()
-
-    for path in package_root.rglob("*.py"):
-        text = path.read_text()
-        assert "_llvmliteir_legacy" not in text
+    assert visitor.function_state.result_stack[-1].constant == 1
+    second = Visitor()
+    second_value = 2
+    second.visit(astx.LiteralInt32(second_value))
+    assert second.function_state.result_stack[-1].constant == second_value
+    assert visitor.function_state.result_stack[-1].constant == 1
+    assert visitor.features.dispatch is not second.features.dispatch
+    assert visitor._llvm.module is not second._llvm.module
 
 
 def test_llvmlite_backend_avoids_node_specific_private_visit_trampolines() -> (
@@ -237,3 +228,21 @@ def test_llvmlite_backend_avoids_node_specific_private_visit_trampolines() -> (
     for path in package_root.rglob("*.py"):
         text = path.read_text()
         assert "def _visit_" not in text
+
+
+def test_builder_retries_with_fresh_compilation_after_analysis_failure() -> (
+    None
+):
+    """
+    title: A failed compilation cannot retain state in a later translation.
+    """
+    builder = Builder()
+    with pytest.raises(SemanticError):
+        builder.translate(UnknownNode())
+    failed = builder.translator
+    expected_value = 3
+    module = builder.translate(astx.LiteralInt32(expected_value))
+    assert builder.translator is not failed
+    actual_value = builder.translator.function_state.result_stack[-1].constant
+    assert actual_value == expected_value
+    llvm.parse_assembly(module).verify()

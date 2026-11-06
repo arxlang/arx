@@ -9,7 +9,11 @@ from __future__ import annotations
 
 import astx
 
-from irx.analysis.handlers.base import SemanticVisitorMixinBase
+from public import private
+
+from irx.analysis.dependencies.expression_tensor_buffer_support import (
+    ExpressionTensorBufferSupportAnalysisServices,
+)
 from irx.analysis.types import (
     bit_width,
     is_boolean_type,
@@ -35,11 +39,28 @@ from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
+@private
 @typechecked
-class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
+class ExpressionTensorBufferSupportAnalysis:
     """
     title: Tensor and buffer metadata helpers.
+    attributes:
+      services:
+        type: ExpressionTensorBufferSupportAnalysisServices
     """
+
+    services: ExpressionTensorBufferSupportAnalysisServices
+
+    def __init__(
+        self, services: ExpressionTensorBufferSupportAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ExpressionTensorBufferSupportAnalysisServices
+        """
+        self.services = services
 
     def _static_buffer_view_metadata(
         self,
@@ -53,7 +74,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: BufferViewMetadata | None
         """
-        semantic = self._semantic(node)
+        semantic = self.services.semantic(node)
         metadata = semantic.extras.get(BUFFER_VIEW_METADATA_EXTRA)
         if isinstance(metadata, BufferViewMetadata):
             return metadata
@@ -83,12 +104,12 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType | None
         """
-        semantic = self._semantic(node)
+        semantic = self.services.semantic(node)
         element_type = semantic.extras.get(BUFFER_VIEW_ELEMENT_TYPE_EXTRA)
         if isinstance(element_type, astx.DataType):
             return element_type
 
-        view_type = self._expr_type(node)
+        view_type = self.services.expr_type(node)
         if (
             isinstance(view_type, astx.BufferViewType)
             and view_type.element_type is not None
@@ -131,7 +152,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: TensorLayout | None
         """
-        semantic = self._semantic(node)
+        semantic = self.services.semantic(node)
         layout = semantic.extras.get(TENSOR_LAYOUT_EXTRA)
         if isinstance(layout, TensorLayout):
             return layout
@@ -162,12 +183,12 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType | None
         """
-        semantic = self._semantic(node)
+        semantic = self.services.semantic(node)
         element_type = semantic.extras.get(TENSOR_ELEMENT_TYPE_EXTRA)
         if isinstance(element_type, astx.DataType):
             return element_type
 
-        tensor_type = self._expr_type(node)
+        tensor_type = self.services.expr_type(node)
         if (
             isinstance(tensor_type, astx.TensorType)
             and tensor_type.element_type is not None
@@ -210,7 +231,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: int | None
         """
-        semantic = self._semantic(node)
+        semantic = self.services.semantic(node)
         flags = semantic.extras.get(TENSOR_FLAGS_EXTRA)
         if isinstance(flags, int):
             return flags
@@ -277,9 +298,9 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType | None
         """
-        base_type = self._expr_type(base)
+        base_type = self.services.expr_type(base)
         if not isinstance(base_type, astx.BufferViewType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "buffer view indexing requires a BufferViewType base",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -287,13 +308,13 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
 
         metadata = self._static_buffer_view_metadata(base)
         if metadata is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "buffer view indexing requires static descriptor metadata",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
         elif len(indices) != metadata.ndim:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "buffer view indexing index count must match descriptor ndim",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -305,7 +326,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
                 if static_index is None:
                     continue
                 if static_index < 0 or static_index >= extent:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "buffer view index "
                         f"{axis} statically out of bounds for extent {extent}",
                         node=index,
@@ -317,23 +338,23 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             and metadata is not None
             and buffer_view_is_readonly(metadata.flags)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "cannot write through a readonly buffer view",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
 
         for index in indices:
-            index_type = self._expr_type(index)
+            index_type = self.services.expr_type(index)
             if not is_integer_type(index_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "buffer view indices must be integer typed",
                     node=index,
                     code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
                 )
                 continue
             if bit_width(index_type) > bit_width(astx.Int64()):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "buffer view indices must fit 64-bit "
                     "descriptor stride arithmetic",
                     node=index,
@@ -342,7 +363,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
 
         element_type = self._static_buffer_view_element_type(base)
         if element_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "buffer view indexing requires a known element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -353,13 +374,13 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             or is_float_type(element_type)
             or is_boolean_type(element_type)
         ):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "buffer view indexing requires a scalar element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
             return None
-        self._semantic(node).extras[BUFFER_VIEW_ELEMENT_TYPE_EXTRA] = (
+        self.services.semantic(node).extras[BUFFER_VIEW_ELEMENT_TYPE_EXTRA] = (
             element_type
         )
         return element_type
@@ -386,9 +407,9 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: astx.DataType | None
         """
-        base_type = self._expr_type(base)
+        base_type = self.services.expr_type(base)
         if not isinstance(base_type, astx.TensorType):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor indexing requires a TensorType base",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -396,7 +417,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
 
         layout = self._static_tensor_layout(base)
         if layout is not None and len(indices) != layout.ndim:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor indexing index count must match tensor ndim",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -408,7 +429,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
                 if static_index is None:
                     continue
                 if static_index < 0 or static_index >= extent:
-                    self.context.diagnostics.add(
+                    self.services.context.diagnostics.add(
                         "tensor index "
                         f"{axis} statically out of bounds for extent {extent}",
                         node=index,
@@ -417,23 +438,23 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
 
         flags = self._static_tensor_flags(base)
         if is_store and (flags is None or buffer_view_is_readonly(flags)):
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "cannot write through a readonly tensor view",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
 
         for index in indices:
-            index_type = self._expr_type(index)
+            index_type = self.services.expr_type(index)
             if not is_integer_type(index_type):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor indices must be integer typed",
                     node=index,
                     code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
                 )
                 continue
             if bit_width(index_type) > bit_width(astx.Int64()):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "tensor indices must fit 64-bit stride arithmetic",
                     node=index,
                     code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -441,21 +462,23 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
 
         element_type = self._static_tensor_element_type(base)
         if element_type is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor indexing requires a known element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
             return None
         if tensor_element_size_bytes(element_type) is None:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 "tensor indexing requires a fixed-width numeric element type",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
             )
             return None
 
-        self._semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = element_type
+        self.services.semantic(node).extras[TENSOR_ELEMENT_TYPE_EXTRA] = (
+            element_type
+        )
         return element_type
 
     def _validate_buffer_lifetime_operation(
@@ -480,7 +503,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             return
         ownership = buffer_view_ownership(metadata.flags)
         if ownership is BufferOwnership.BORROWED or metadata.owner.is_null:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"buffer {operation} requires an owned or external-owner view",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,
@@ -508,7 +531,7 @@ class ExpressionTensorBufferSupportVisitorMixin(SemanticVisitorMixinBase):
             return
         ownership = buffer_view_ownership(flags)
         if ownership is BufferOwnership.BORROWED:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"tensor {operation} requires an owned or external-owner view",
                 node=node,
                 code=DiagnosticCodes.SEMANTIC_BUFFER_MISUSE,

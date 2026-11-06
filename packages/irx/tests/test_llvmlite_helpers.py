@@ -12,7 +12,6 @@ import pytest
 from irx.builder import (
     Visitor,
     emit_int_div,
-    is_fp_type,
     safe_pop,
     splat_scalar,
 )
@@ -102,7 +101,7 @@ def test_emit_fma_fallback_intrinsic() -> None:
     rhs = ir.Constant(ty, 2.0)
     addend = ir.Constant(ty, 3.0)
 
-    inst = visitor._emit_fma(lhs, rhs, addend)
+    inst = visitor.floating.emit_fma(lhs, rhs, addend)
 
     assert inst.name == "vfma"
     assert "llvm.fma.f32" in proxy.called
@@ -118,16 +117,16 @@ def test_emit_fma_direct_path_calls_apply_fast_math() -> None:
     if not hasattr(visitor._llvm.ir_builder, "fma"):
         pytest.skip("llvmlite IRBuilder has no native fma")
 
-    visitor.set_fast_math(True)
-    apply_fast_math = Mock(wraps=visitor._apply_fast_math)
-    setattr(visitor, "_apply_fast_math", apply_fast_math)
+    visitor.floating.set_fast_math(True)
+    apply_fast_math = Mock(wraps=visitor.floating.apply_fast_math)
+    setattr(visitor.floating, "apply_fast_math", apply_fast_math)
 
     ty = visitor._llvm.FLOAT_TYPE
     lhs = ir.Constant(ty, 1.0)
     rhs = ir.Constant(ty, 2.0)
     addend = ir.Constant(ty, 3.0)
 
-    inst = visitor._emit_fma(lhs, rhs, addend)
+    inst = visitor.floating.emit_fma(lhs, rhs, addend)
 
     apply_fast_math.assert_called_once_with(inst)
 
@@ -170,74 +169,6 @@ def test_emit_int_div_signed_and_unsigned() -> None:
 
     assert getattr(signed, "opname", "") == "sdiv"
     assert getattr(unsigned, "opname", "") == "udiv"
-
-
-def test_unify_promotes_scalar_int_to_vector() -> None:
-    """
-    title: Scalar ints splat to match vector operands and widen width.
-    """
-    visitor = Visitor()
-    _prime_builder(visitor)
-
-    vec_ty = ir.VectorType(ir.IntType(32), 2)
-    vec = ir.Constant(vec_ty, [ir.Constant(ir.IntType(32), 1)] * 2)
-    scalar = ir.Constant(ir.IntType(16), 5)
-
-    promoted_vec, promoted_scalar = visitor._unify_numeric_operands(
-        vec, scalar
-    )
-
-    assert isinstance(promoted_vec.type, ir.VectorType)
-    assert isinstance(promoted_scalar.type, ir.VectorType)
-    assert promoted_vec.type == vec_ty
-    assert promoted_scalar.type == vec_ty
-
-
-def test_unify_vector_float_rank_matches_double() -> None:
-    """
-    title: Double scalar casts down to match float vector element type.
-    summary: >-
-      When a scalar and a vector have different FP precision, the vector's
-      element type wins — the scalar is cast to match, not the other way
-      around.
-    """
-    visitor = Visitor()
-    _prime_builder(visitor)
-
-    float_vec_ty = ir.VectorType(visitor._llvm.FLOAT_TYPE, 2)
-    float_vec = ir.Constant(
-        float_vec_ty,
-        [
-            ir.Constant(visitor._llvm.FLOAT_TYPE, 1.0),
-            ir.Constant(visitor._llvm.FLOAT_TYPE, 2.0),
-        ],
-    )
-    double_scalar = ir.Constant(visitor._llvm.DOUBLE_TYPE, 4.0)
-
-    result_vec, result_scalar = visitor._unify_numeric_operands(
-        float_vec, double_scalar
-    )
-
-    assert result_vec.type.element == visitor._llvm.FLOAT_TYPE
-    assert result_scalar.type.element == visitor._llvm.FLOAT_TYPE
-
-
-def test_unify_int_and_float_scalars_returns_float() -> None:
-    """
-    title: Scalar int plus float promotes both operands to float.
-    """
-    visitor = Visitor()
-    _prime_builder(visitor)
-
-    int_scalar = ir.Constant(visitor._llvm.INT32_TYPE, 7)
-    float_scalar = ir.Constant(visitor._llvm.FLOAT_TYPE, 1.25)
-
-    widened_int, widened_float = visitor._unify_numeric_operands(
-        int_scalar, float_scalar
-    )
-
-    assert is_fp_type(widened_int.type)
-    assert widened_float.type == visitor._llvm.FLOAT_TYPE
 
 
 def test_safe_pop_empty_returns_none() -> None:
@@ -316,8 +247,8 @@ def test_get_fma_function_vector_half_and_cache() -> None:
     visitor = Visitor()
     vec_ty = ir.VectorType(visitor._llvm.FLOAT16_TYPE, 4)
 
-    first = visitor._get_fma_function(vec_ty)
-    second = visitor._get_fma_function(vec_ty)
+    first = visitor.floating.get_fma_function(vec_ty)
+    second = visitor.floating.get_fma_function(vec_ty)
 
     assert first.name == "llvm.fma.v4f16"
     assert first is second
@@ -329,7 +260,7 @@ def test_get_fma_function_invalid_type_raises() -> None:
     """
     visitor = Visitor()
     with pytest.raises(Exception, match="FMA supports only floating-point"):
-        visitor._get_fma_function(ir.IntType(32))
+        visitor.floating.get_fma_function(ir.IntType(32))
 
 
 def test_scalar_vector_float_conversion_fptrunc() -> None:
@@ -382,16 +313,16 @@ def test_set_fast_math_marks_float_ops() -> None:
     lhs = ir.Constant(float_ty, 1.0)
     rhs = ir.Constant(float_ty, 2.0)
 
-    visitor.set_fast_math(True)
+    visitor.floating.set_fast_math(True)
     inst_fast = visitor._llvm.ir_builder.fadd(lhs, rhs)
-    visitor._apply_fast_math(inst_fast)
+    visitor.floating.apply_fast_math(inst_fast)
     assert "fast" in inst_fast.flags
-    visitor._apply_fast_math(inst_fast)
+    visitor.floating.apply_fast_math(inst_fast)
     assert "fast" in inst_fast.flags
 
-    visitor.set_fast_math(False)
+    visitor.floating.set_fast_math(False)
     inst_normal = visitor._llvm.ir_builder.fadd(lhs, rhs)
-    visitor._apply_fast_math(inst_normal)
+    visitor.floating.apply_fast_math(inst_normal)
     assert "fast" not in inst_normal.flags
 
 
@@ -401,13 +332,13 @@ def test_apply_fast_math_noop_for_non_fp_values() -> None:
     """
     visitor = Visitor()
     _prime_builder(visitor)
-    visitor.set_fast_math(True)
+    visitor.floating.set_fast_math(True)
 
     int_ty = ir.IntType(32)
     scalar_add = visitor._llvm.ir_builder.add(
         ir.Constant(int_ty, 1), ir.Constant(int_ty, 2)
     )
-    visitor._apply_fast_math(scalar_add)
+    visitor.floating.apply_fast_math(scalar_add)
     assert "fast" not in scalar_add.flags
 
     vec_ty = ir.VectorType(int_ty, 2)
@@ -415,5 +346,5 @@ def test_apply_fast_math_noop_for_non_fp_values() -> None:
         ir.Constant(vec_ty, [1, 2]),
         ir.Constant(vec_ty, [3, 4]),
     )
-    visitor._apply_fast_math(vector_add)
+    visitor.floating.apply_fast_math(vector_add)
     assert "fast" not in vector_add.flags

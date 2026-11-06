@@ -7,7 +7,11 @@ summary: >-
 
 from __future__ import annotations
 
-from irx.analysis.handlers.base import SemanticVisitorMixinBase
+from public import private
+
+from irx.analysis.dependencies.class_member_formatting import (
+    ClassMemberFormattingAnalysisServices,
+)
 from irx.analysis.resolved_nodes import SemanticClass, SemanticClassMember
 from irx.analysis.types import display_type_name
 from irx.typecheck import typechecked
@@ -15,11 +19,28 @@ from irx.typecheck import typechecked
 CLASS_QUALIFIED_NAME_SEPARATOR = "::class::"
 
 
+@private
 @typechecked
-class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
+class ClassMemberFormattingAnalysis:
     """
     title: Shared class-member semantic helpers.
+    attributes:
+      services:
+        type: ClassMemberFormattingAnalysisServices
     """
+
+    services: ClassMemberFormattingAnalysisServices
+
+    def __init__(
+        self, services: ClassMemberFormattingAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: ClassMemberFormattingAnalysisServices
+        """
+        self.services = services
 
     def _member_owner_module_key(
         self,
@@ -49,7 +70,7 @@ class ClassMemberFormattingVisitorMixin(SemanticVisitorMixinBase):
         returns:
           type: SemanticClass | None
         """
-        return self.context.get_class(
+        return self.services.context.get_class(
             self._member_owner_module_key(member),
             member.owner_name,
         )

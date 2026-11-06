@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Declaration struct visitors.
@@ -15,23 +13,42 @@ from dataclasses import replace
 
 import astx
 
-from irx.analysis.handlers.base import (
-    SemanticAnalyzerCore,
-    SemanticVisitorMixinBase,
+from plum import dispatch
+from public import private
+
+from irx.analysis.dependencies.declaration_struct import (
+    DeclarationStructAnalysisServices,
 )
 from irx.analysis.resolved_nodes import SemanticStruct, SemanticStructField
 from irx.analysis.types import clone_type
 from irx.diagnostics import DiagnosticCodes
+from irx.extensions.handlers import configuration_error
+from irx.extensions.nodes import NodeHandler, contribute_node
 from irx.typecheck import typechecked
 
 DIRECT_STRUCT_CYCLE_LENGTH = 2
 
 
+@private
 @typechecked
-class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
+class DeclarationStructAnalysis:
     """
     title: Declaration visitors for struct fields and recursion checks
+    attributes:
+      services:
+        type: DeclarationStructAnalysisServices
     """
+
+    services: DeclarationStructAnalysisServices
+
+    def __init__(self, services: DeclarationStructAnalysisServices) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationStructAnalysisServices
+        """
+        self.services = services
 
     def _resolve_struct_fields(
         self,
@@ -49,7 +66,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         fields: list[SemanticStructField] = []
 
         if len(list(struct.declaration.attributes)) == 0:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 f"Struct '{struct.name}' must declare at least one field",
                 node=struct.declaration,
                 code=DiagnosticCodes.FFI_INVALID_SIGNATURE,
@@ -57,37 +74,37 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
 
         for index, attr in enumerate(struct.declaration.attributes):
             if attr.name in seen:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Struct field '{attr.name}' already defined.",
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
             seen.add(attr.name)
-            self._resolve_declared_type(
+            self.services.resolve_declared_type(
                 attr.type_,
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
             )
             if isinstance(attr.type_, astx.ClassType):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "class references in struct fields are unsupported",
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if isinstance(attr.type_, astx.DataFrameType | astx.SeriesType):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "Arrow fields require unsupported aggregate destruction",
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if isinstance(attr.type_, astx.FileType):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     "file fields require unsupported aggregate destruction",
                     node=attr,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
             if isinstance(attr.type_, (astx.ListType, astx.Bytes)):
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"struct field '{struct.name}.{attr.name}' cannot own "
                     "dynamic list storage because struct destruction is not "
                     "supported",
@@ -108,13 +125,13 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
             fields=tuple(fields),
             field_indices={field.name: field.index for field in fields},
         )
-        self.context.register_struct(updated)
-        self.bindings.bind_struct(
+        self.services.context.register_struct(updated)
+        self.services.bindings.bind_struct(
             updated.name,
             updated,
             node=updated.declaration,
         )
-        self._set_struct(updated.declaration, updated)
+        self.services.set_struct(updated.declaration, updated)
         return updated
 
     def _find_struct_cycle(
@@ -137,7 +154,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
         """
         seen = {struct.qualified_name for struct in path}
         for attr in current.declaration.attributes:
-            field_struct = self._resolve_struct_from_type(
+            field_struct = self.services.resolve_struct_from_type(
                 attr.type_,
                 node=attr,
                 unknown_message="Unknown field type '{name}'",
@@ -169,7 +186,7 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
             return
 
         if len(cycle) == DIRECT_STRUCT_CYCLE_LENGTH:
-            self.context.diagnostics.add(
+            self.services.context.diagnostics.add(
                 (
                     "direct by-value recursive struct "
                     f"'{struct.name}' is forbidden"
@@ -179,12 +196,24 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
             return
 
         cycle_names = " -> ".join(item.name for item in cycle)
-        self.context.diagnostics.add(
+        self.services.context.diagnostics.add(
             f"mutual by-value recursive structs are forbidden: {cycle_names}",
             node=struct.declaration,
         )
 
-    @SemanticAnalyzerCore.visit.dispatch
+    @dispatch
+    def visit(self, node: astx.AST) -> None:
+        """
+        title: Reject an input outside this feature's explicit support.
+        parameters:
+          node:
+            type: astx.AST
+        """
+        raise configuration_error(
+            f"unsupported {type(node).__name__} in DeclarationStructAnalysis"
+        )
+
+    @dispatch
     def visit(self, node: astx.StructDefStmt) -> None:
         """
         title: Visit StructDefStmt nodes.
@@ -192,9 +221,27 @@ class DeclarationStructVisitorMixin(SemanticVisitorMixinBase):
           node:
             type: astx.StructDefStmt
         """
-        struct = self.registry.register_struct(node)
-        self.bindings.bind_struct(node.name, struct, node=node)
+        struct = self.services.registry.register_struct(node)
+        self.services.bindings.bind_struct(node.name, struct, node=node)
         struct = self._resolve_struct_fields(struct)
-        self._set_struct(node, struct)
+        self.services.set_struct(node, struct)
         self._validate_struct_cycles(struct)
-        self._set_type(node, None)
+        self.services.set_type(node, None)
+
+    def node_handlers(self) -> tuple[NodeHandler, ...]:
+        """
+        title: Export this feature's supported nominal node signatures.
+        returns:
+          type: tuple[NodeHandler, Ellipsis]
+        """
+        return tuple(
+            contribute_node(
+                "irx.analysis.declaration_struct." + node_type.__name__,
+                "irx.analysis.declaration_struct",
+                "analysis",
+                node_type,
+                self.visit,
+                source=__name__ + ".DeclarationStructAnalysis.visit",
+            )
+            for node_type in (astx.StructDefStmt,)
+        )

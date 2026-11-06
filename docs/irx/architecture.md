@@ -210,8 +210,7 @@ In practice:
 
 - `SemanticAnalyzer` inherits `BaseVisitor`
 - `BuilderVisitor` inherits `BaseVisitor`
-- builder-specific protocols such as `builder.VisitorProtocol` extend
-  `BaseVisitorProtocol`
+- native symbol factories use a separate minimal LLVM representation protocol
 
 ## Builder Architecture
 
@@ -223,8 +222,8 @@ For example, `packages/irx/src/irx/builder` exposes:
 
 - `Builder`
 - `Visitor`
-- `VisitorProtocol`
-- optional `VisitorCore` as a module-private implementation class
+
+`VisitorCore` remains an internal implementation class.
 
 This keeps the public API concise without reintroducing legacy class prefixes.
 
@@ -236,11 +235,14 @@ builder:
 - `../packages/irx/src/irx/base/visitors/`: shared visitor protocol and runtime
   scaffold
 - `backend.py`: public backend entry points
-- `core.py`: shared mutable lowering state and backend lifecycle
-- `protocols.py`: typing contract used by mixins and runtime features
+- `core.py`: compilation orchestration and backend lifecycle
+- `protocols.py`: minimal LLVM representation contract for runtime declarations
+- `services/`: explicit representation, conversion, addressing, and exit
+  services
 - `types.py`, `casting.py`, `vector.py`, `strings.py`, `runtime/`: shared IR
   infrastructure
-- `lowering/`: concern-grouped `visit(...)` overloads
+- `lowering/`: ordinary concern implementations, typed dependency records, and
+  the per-compilation composition graph
 - `../packages/irx/src/irx/buffer.py`: the canonical low-level buffer owner/view
   semantic substrate that Arx can target without exposing an array API
 
@@ -388,60 +390,38 @@ Current tensor lowering stays intentionally conservative:
 - fixed-width numeric element types are supported in this phase
 - Arrow C++ backed `Tensor` values remain readonly in this phase
 
-## Why `visit(...)` Remains the Public Lowering Boundary
+## Composed Analysis and Lowering
 
-The codegen layer continues to use method-based Plum multiple dispatch:
+`visit(node)` remains the traversal boundary. Analysis and lowering each build
+ordinary concern objects with explicit, typed dependency records. Their local
+Plum `visit` overloads are exported through nominal node contributions into a
+fresh `ScopedNodeDispatch` with compiler-owned bindings and resolution cache.
+Identical nominal signature shapes share immutable Plum selection metadata,
+never handlers or compilation state: Plum retains constructed functions globally
+and supplies no public disposal API. Selection remains Plum-owned, with no
+parallel specificity algorithm. Imports do not register handlers on a shared
+analyzer or backend visitor. Unknown nodes retain phase-specific failing
+fallbacks; a modeled AST node is not proof of support.
 
-- `visit(self, node: ...)`
+The composition modules wire concrete dependencies and typed callback edges for
+recursive concerns. They are construction roots, not service locators passed to
+handlers. Native symbol factories receive only LLVM representations and the
+destination module. Immutable call-provider metadata remains separate from bound
+node implementations and mutable compilation state; programmatic feature
+inspection still describes the configured call-handler catalog, not all nodes.
 
-This remains the only public dispatch boundary for backend lowering. IRx does
-not use a free-function dispatch registry or a second public API like
-`lower(...)` or `build_node(...)`.
+LLVM services consume semantic types, identities, layouts, and conversion plans.
+They do not repeat name resolution or promotion policy. String globals and
+helper caches belong to their LLVM module. Module declarations, function values,
+cleanup/exception regions, and generator frames have distinct state records;
+scoped function emission restores bindings, result stacks, control transfer
+state, fast-math settings, and generator state even after failure. No runtime
+ABI or Arrow object-layout boundary changes are implied.
 
-That choice keeps backend code readable and local:
-
-- AST-family-specific lowering remains attached to the visitor class.
-- Mixins can group overloads by concern without changing the public surface.
-- Shared lowering state stays on the visitor instance instead of moving into a
-  registry-driven design.
-
-## Core Class and Protocol
-
-`VisitorProtocol` and `VisitorCore` serve different purposes:
-
-- `VisitorProtocol` defines the stable interface that mixins and runtime feature
-  declarations depend on for typing, building on `BaseVisitorProtocol`.
-- `VisitorCore` is the concrete implementation center that owns mutable state,
-  module setup, helper methods, and backend lifecycle.
-
-`VisitorCore` is still internal to the backend package. IRx uses
-`from public import private` for module-level internal helpers and internal
-implementation classes when a clear non-underscored name reads better than an
-underscore-prefixed export. That keeps internal names readable without making
-them part of the intended public surface.
-
-The protocol is not a replacement for the core class. It exists so backend
-subsystems can depend on a narrow contract instead of the full concrete type.
-
-## Visitor Mixins
-
-The final backend visitor is composed from concern-specific mixins plus the
-shared core. Each mixin should contain:
-
-- `@dispatch def visit(self, node: ...)` overloads for one concern
-- a small number of private helpers local to that concern
-
-Examples of concern boundaries include:
-
-- literals
-- variables
-- unary and binary operators
-- control flow
-- functions
-- runtime or domain-specific lowering
-
-This keeps dispatch organization aligned with language structure while still
-sharing one lowering state object.
+To extend a concern, add its typed local overload and explicit node
+contribution. A new concern supplies only its required dependency record and is
+wired once in the owning phase's composition root. Do not reintroduce visitor
+multiple inheritance, global registration, or a universal compiler context.
 
 ## Canonical Loop Lowering
 

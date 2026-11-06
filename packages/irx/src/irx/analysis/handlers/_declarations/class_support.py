@@ -1,6 +1,4 @@
 # mypy: disable-error-code=no-redef
-# mypy: disable-error-code=attr-defined
-# mypy: disable-error-code=untyped-decorator
 
 """
 title: Declaration class-support helpers.
@@ -13,8 +11,10 @@ from __future__ import annotations
 
 import astx
 
-from irx.analysis.handlers.class_helpers import (
-    ClassMemberFormattingVisitorMixin,
+from public import private
+
+from irx.analysis.dependencies.declaration_class_support import (
+    DeclarationClassSupportAnalysisServices,
 )
 from irx.analysis.resolved_nodes import (
     ClassInitializationSourceKind,
@@ -30,11 +30,31 @@ from irx.typecheck import typechecked
 MIN_SHARED_ANCESTOR_BASE_COUNT = 2
 
 
+@private
 @typechecked
-class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
+class DeclarationClassSupportAnalysis:
     """
     title: Declaration helpers for class inheritance and member metadata
+    attributes:
+      services:
+        type: DeclarationClassSupportAnalysisServices
+      active_class_resolution:
+        type: list[SemanticClass]
     """
+
+    services: DeclarationClassSupportAnalysisServices
+
+    def __init__(
+        self, services: DeclarationClassSupportAnalysisServices
+    ) -> None:
+        """
+        title: Bind one feature to explicit compilation-owned dependencies.
+        parameters:
+          services:
+            type: DeclarationClassSupportAnalysisServices
+        """
+        self.services = services
+        self.active_class_resolution: list[SemanticClass] = []
 
     def _visibility_rank(
         self,
@@ -60,12 +80,7 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         returns:
           type: list[SemanticClass]
         """
-        stack = getattr(self, "_active_class_resolution", None)
-        if isinstance(stack, list):
-            return stack
-        created: list[SemanticClass] = []
-        setattr(self, "_active_class_resolution", created)
-        return created
+        return self.active_class_resolution
 
     def _attribute_is_static(
         self,
@@ -368,7 +383,7 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         active_identities = {item.qualified_name for item in active_stack}
 
         for base_type in class_.declaration.bases:
-            base = self._resolve_class_from_type(
+            base = self.services.resolve_class_from_type(
                 base_type,
                 node=base_type,
                 unknown_message="Unknown base class '{name}'",
@@ -376,14 +391,14 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
             if base is None:
                 continue
             if base.qualified_name == class_.qualified_name:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Class '{class_.name}' cannot inherit from itself",
                     node=base_type,
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
                 continue
             if base.qualified_name in seen:
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"Class '{class_.name}' repeats base class '{base.name}'",
                     node=base_type,
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
@@ -393,14 +408,14 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
                 cycle_names = " -> ".join(
                     [item.name for item in active_stack] + [base.name]
                 )
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     f"inheritance cycle is invalid: {cycle_names}",
                     node=base_type,
                     code=DiagnosticCodes.SEMANTIC_DUPLICATE_DECLARATION,
                 )
                 continue
             seen.add(base.qualified_name)
-            resolved.append(self._resolve_class_structure(base))
+            resolved.append(self.services.resolve_class_structure(base))
 
         return tuple(resolved)
 
@@ -446,7 +461,7 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
 
             if candidate is None:
                 base_names = ", ".join(base.name for base in bases)
-                self.context.diagnostics.add(
+                self.services.context.diagnostics.add(
                     (
                         f"Class '{class_.name}' has no consistent MRO "
                         f"for bases {base_names}"
@@ -568,15 +583,15 @@ class DeclarationClassSupportVisitorMixin(ClassMemberFormattingVisitorMixin):
         if not candidates:
             return None
         selected = candidates[0]
-        selected_owner = self.context.get_class(
-            self._member_owner_module_key(selected),
+        selected_owner = self.services.context.get_class(
+            self.services.member_owner_module_key(selected),
             selected.owner_name,
         )
         if selected_owner is None:
             return None
         for candidate in candidates[1:]:
-            owner = self.context.get_class(
-                self._member_owner_module_key(candidate),
+            owner = self.services.context.get_class(
+                self.services.member_owner_module_key(candidate),
                 candidate.owner_name,
             )
             if owner is None:
