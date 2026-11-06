@@ -16,7 +16,38 @@ from irx.builder import (
     safe_pop,
     splat_scalar,
 )
+from llvmlite import binding as llvm
 from llvmlite import ir
+
+
+def test_string_loop_helpers_reuse_only_their_own_module() -> None:
+    """
+    title: String loops reuse module-local helpers without replacing builders.
+    """
+    cached: list[tuple[ir.Function, ir.Function]] = []
+    for visitor in (Visitor(), Visitor()):
+        active_builder = visitor._llvm.ir_builder
+        length = visitor._create_strlen_inline()
+        equality = visitor._create_strcmp_inline()
+        assert length is visitor._create_strlen_inline()
+        assert equality is visitor._create_strcmp_inline()
+        assert length.parent is visitor._llvm.module
+        assert equality.parent is visitor._llvm.module
+
+        pointer = ir.IntType(8).as_pointer()
+        copy = ir.Function(
+            visitor._llvm.module,
+            ir.FunctionType(ir.VoidType(), [pointer, pointer]),
+            "copy_probe",
+        )
+        builder = ir.IRBuilder(copy.append_basic_block("entry"))
+        visitor._generate_strcpy(builder, copy.args[0], copy.args[1])
+        builder.ret_void()
+
+        assert visitor._llvm.ir_builder is active_builder
+        llvm.parse_assembly(str(visitor._llvm.module)).verify()
+        cached.append((length, equality))
+    assert all(left is not right for left, right in zip(*cached))
 
 
 class _NoFmaBuilder:
