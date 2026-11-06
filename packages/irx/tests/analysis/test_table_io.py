@@ -2,6 +2,9 @@
 title: Frontend-independent trusted table calls and checked cast lowering.
 """
 
+import subprocess
+import sys
+
 from typing import Literal, cast
 from unittest.mock import patch
 
@@ -9,24 +12,62 @@ import astx
 import pytest
 
 from irx.analysis import ParsedModule, SemanticError, analyze_modules
-from irx.analysis.extensions.calls import default_analysis_configuration
-from irx.analysis.extensions.records import CALL_PLAN
+from irx.analysis.extensions.records import CALL_PLAN, CallOperation, CallPlan
 from irx.analysis.facts import SemanticFacts
 from irx.analysis.resolved_nodes import OwnershipKind, SemanticInfo
-from irx.analysis.table_io import TableIOCall
-from irx.builder import Builder
-from irx.builder.extensions.calls import (
-    LoweringCall,
-    default_lowering_configuration,
+from irx.analysis.table_io import (
+    ReadTableOperation,
+    TableIOCall,
+    TableOperation,
+    table_operation,
 )
-from irx.builder.lowering.table_io import emit_table_io
-from irx.diagnostics import LoweringError
-from irx.extensions import ConfigurationError, HandlerConfiguration, contribute
+from irx.builder import Builder
+from irx.diagnostics import DiagnosticCodes, LoweringError
 from irx.native import NativeBinding, TableIOOperation
 from irx.typecheck import typechecked
 from llvmlite import binding as llvm
+from llvmlite import ir
+from public import private
 
 from ..conftest import StaticImportResolver
+
+
+@private
+class DerivedReadOperation(ReadTableOperation):
+    """
+    title: A nominal subtype uses the existing static read overload.
+    attributes:
+      name:
+        type: TableIOOperation
+    """
+
+
+@private
+class DerivedTablePlan(TableIOCall):
+    """
+    title: A nominal subtype preserves the static table lowering contract.
+    """
+
+
+@private
+@typechecked
+class UnsupportedPlan(CallPlan):
+    """
+    title: A valid semantic fact without a supported lowering overload.
+    """
+
+    def validate(self) -> None:
+        """
+        title: Accept this empty record without granting lowering support.
+        """
+
+    def dependencies(self) -> tuple[astx.AST, ...]:
+        """
+        title: This unsupported operation has no hidden AST dependencies.
+        returns:
+          type: tuple[astx.AST, Ellipsis]
+        """
+        return ()
 
 
 def io_module(
@@ -299,12 +340,14 @@ def test_table_io_reanalysis_replaces_operands_after_failure() -> None:
 
 def test_reused_builder_does_not_retain_table_runtime_features() -> None:
     """
-    title: A Parquet compilation cannot activate Parquet in a later CSV module.
+    title: Reused and simultaneous builders never share active native features.
     """
     builder = Builder()
+    independent = Builder()
     resolver = StaticImportResolver({})
     parquet, _ = io_module("parquet")
     csv, _ = io_module("csv")
+    llvm.parse_assembly(independent.translate_modules(csv, resolver)).verify()
     for root, uses_parquet in ((parquet, True), (csv, False), (parquet, True)):
         text = builder.translate_modules(root, resolver)
         llvm.parse_assembly(text).verify()
@@ -313,90 +356,15 @@ def test_reused_builder_does_not_retain_table_runtime_features() -> None:
         assert ("parquet" in features) is uses_parquet
         assert ("irx_rb_api_read_parquet" in text) is uses_parquet
         assert ("irx_rb_api_read_csv" in text) is not uses_parquet
-
-
-def test_second_table_operation_composes_without_driver_changes() -> None:
-    """
-    title: Adding the real write provider completes a read-only configuration.
-    """
-    complete = default_analysis_configuration()
-    read_only = HandlerConfiguration(
-        "analysis",
-        tuple(
-            item
-            for item in complete.contributions
-            if item.identity != "table.write"
-        ),
-    )
-    root, read = io_module("csv")
-    resolver = StaticImportResolver({})
-    with pytest.raises(ConfigurationError, match="WriteTableOperation"):
-        analyze_modules(root, resolver, configuration=read_only)
-    writer = next(
-        item
-        for item in complete.contributions
-        if item.identity == "table.write"
-    )
-    extended = read_only.derive(writer)
-    text = Builder(analysis_configuration=extended).translate_modules(
-        root, resolver
-    )
-    llvm.parse_assembly(text).verify()
-    plan = cast(SemanticInfo, getattr(read, "semantic")).facts.require(
-        CALL_PLAN
-    )
-    assert isinstance(plan, TableIOCall) and plan.operation == "read_csv"
-    assert "irx_rb_api_write_csv" in text
-    assert all(
-        item.identity != "table.write" for item in read_only.contributions
-    )
-
-
-@typechecked
-def alternate_emission(plan: TableIOCall, call: LoweringCall) -> None:
-    """
-    title: >-
-      A stateless replacement uses only the public narrow service contract.
-    parameters:
-      plan:
-        type: TableIOCall
-      call:
-        type: LoweringCall
-    """
-    call.services.text("alternate-provider")
-    emit_table_io(plan, call)
-
-
-def test_lowering_replacement_is_local_to_selected_builder() -> None:
-    """
-    title: Two live compilers select different implementations without leakage.
-    """
-    parent = default_lowering_configuration()
-    original = Builder(lowering_configuration=parent)
-    child = parent.derive(
-        contribute(
-            "alternate",
-            "test",
-            "lowering",
-            TableIOCall,
-            LoweringCall,
-            alternate_emission,
-            replaces="table.emit",
+        assert builder.translator.call_visitor is not (
+            independent.translator.call_visitor
         )
-    )
-    selected = Builder(lowering_configuration=child)
-    for builder, marker in (
-        (selected, True),
-        (original, False),
-        (selected, True),
-    ):
-        root, _ = io_module("csv")
-        text = builder.translate_modules(root, StaticImportResolver({}))
-        llvm.parse_assembly(text).verify()
-        assert ("alternate-provider" in text) is marker
+        assert "parquet" not in (
+            independent.translator.runtime_features.active_feature_names()
+        )
 
 
-def test_lowering_requires_registered_operation_plan() -> None:
+def test_lowering_requires_resolved_operation_plan() -> None:
     """
     title: >-
       Missing typed facts fail before falling back to ordinary FFI lowering.
@@ -408,6 +376,125 @@ def test_lowering_requires_registered_operation_plan() -> None:
     with patch("irx.builder.core.analyze_modules", return_value=session):
         with pytest.raises(LoweringError, match="missing semantic fact"):
             Builder().translate_modules(root, resolver)
+
+
+@pytest.mark.parametrize(
+    "operation", [CallOperation(), TableOperation("read_csv")]
+)
+def test_unknown_operations_fail_in_analysis(operation: CallOperation) -> None:
+    """
+    title: Neither a generic operation nor a table name grants visitor support.
+    parameters:
+      operation:
+        type: CallOperation
+    """
+    root, _ = io_module("csv")
+    with patch(
+        "irx.analysis.table_io.table_operation", return_value=operation
+    ):
+        with pytest.raises(SemanticError) as caught:
+            analyze_modules(root, StaticImportResolver({}))
+    diagnostics = caught.value.diagnostics.diagnostics
+    assert any(
+        diagnostic.code == DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE
+        and "unsupported call operation" in diagnostic.message
+        for diagnostic in diagnostics
+    )
+
+
+def test_unknown_plan_fails_before_emitting_a_result() -> None:
+    """
+    title: Typed facts cannot silently fall through to ordinary FFI lowering.
+    """
+    root, read = io_module("csv")
+    resolver = StaticImportResolver({})
+    session = analyze_modules(root, resolver)
+    info = cast(SemanticInfo, getattr(read, "semantic"))
+    info.facts = info.facts.with_fact(
+        CALL_PLAN, UnsupportedPlan(), replace=True
+    )
+    builder = Builder()
+    with patch("irx.builder.core.analyze_modules", return_value=session):
+        with pytest.raises(LoweringError) as caught:
+            builder.translate_modules(root, resolver)
+    assert (
+        caught.value.diagnostic.code
+        == DiagnosticCodes.LOWERING_MISSING_HANDLER
+    )
+    # Function declaration precedes body emission; no call result was pushed.
+    assert len(builder.translator.result_stack) == 1
+    function = builder.translator.result_stack[0]
+    assert isinstance(function, ir.Function)
+    assert function.name == "irx.entry.main"
+
+
+def test_static_call_visitors_accept_nominal_subtypes() -> None:
+    """
+    title: Inherited operation and plan types retain the same checked lowering.
+    """
+
+    def derived_operation(name: TableIOOperation) -> TableOperation:
+        """
+        title: Supply a trusted read subtype without changing call spelling.
+        parameters:
+          name:
+            type: TableIOOperation
+        returns:
+          type: TableOperation
+        """
+        if name.startswith("read_"):
+            return DerivedReadOperation(name)
+        return table_operation(name)
+
+    root, read = io_module("csv")
+    resolver = StaticImportResolver({})
+    with patch(
+        "irx.analysis.table_io.table_operation", side_effect=derived_operation
+    ):
+        session = analyze_modules(root, resolver)
+    info = cast(SemanticInfo, getattr(read, "semantic"))
+    assert info.resolved_function is not None
+    assert isinstance(
+        info.resolved_function.signature.operation, DerivedReadOperation
+    )
+    plan = info.facts.require(CALL_PLAN)
+    assert isinstance(plan, TableIOCall)
+    info.facts = info.facts.with_fact(
+        CALL_PLAN,
+        DerivedTablePlan(
+            plan.operation,
+            plan.arguments,
+            plan.construction,
+            plan.result_handle_index,
+        ),
+        replace=True,
+    )
+    with patch("irx.builder.core.analyze_modules", return_value=session):
+        text = Builder().translate_modules(root, resolver)
+    llvm.parse_assembly(text).verify()
+    assert "irx_rb_api_read_csv" in text
+    assert "irx_rb_api_write_csv" in text
+
+
+def test_analysis_call_visitors_do_not_import_the_backend() -> None:
+    """
+    title: Static analysis composition requires neither LLVM nor the frontend.
+    """
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; "
+            "from irx.analysis import SemanticAnalyzer; "
+            "from irx.analysis.table_io import TableIOAnalysisVisitor; "
+            "assert isinstance(SemanticAnalyzer().call_visitor, "
+            "TableIOAnalysisVisitor); "
+            "assert not any(name in sys.modules "
+            "for name in ('llvmlite', 'irx.builder', 'arx'))",
+        ],
+        check=True,
+        timeout=60,
+    )
 
 
 def test_reanalysis_does_not_retain_privilege_by_call_spelling() -> None:

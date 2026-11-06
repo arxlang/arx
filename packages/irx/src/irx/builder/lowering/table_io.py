@@ -5,6 +5,7 @@ title: Lower resolved tabular operations through registered opaque-handle APIs.
 import astx
 
 from llvmlite import ir
+from plum import dispatch
 from public import private
 
 from irx.analysis.resolved_nodes import SemanticInfo
@@ -13,9 +14,8 @@ from irx.builder.diagnostics import (
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.extensions.calls import LoweringCall
-from irx.extensions import HandlerContribution, contribute
-from irx.typecheck import typechecked
+from irx.builder.extensions.calls import CallLoweringVisitor, LoweringCall
+from irx.typecheck import copy_type, typechecked
 
 
 @private
@@ -199,20 +199,20 @@ def emit_table_io(plan: TableIOCall, call: LoweringCall) -> None:
 
 @private
 @typechecked
-def lowering_contributions() -> tuple[HandlerContribution, ...]:
+class TableIOLoweringVisitor(CallLoweringVisitor):
     """
-    title: >-
-      Register plan emission without importing or mutating the call driver.
-    returns:
-      type: tuple[HandlerContribution, Ellipsis]
+    title: Statically emit table plans through the checked runtime boundary.
     """
-    return (
-        contribute(
-            "table.emit",
-            "irx.table_io",
-            "lowering",
-            TableIOCall,
-            LoweringCall,
-            emit_table_io,
-        ),
-    )
+
+    @copy_type(CallLoweringVisitor.visit)
+    @dispatch
+    def visit(self, plan: TableIOCall, call: LoweringCall) -> None:
+        """
+        title: Lower a validated table plan without configurable providers.
+        parameters:
+          plan:
+            type: TableIOCall
+          call:
+            type: LoweringCall
+        """
+        emit_table_io(plan, call)

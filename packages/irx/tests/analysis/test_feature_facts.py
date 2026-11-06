@@ -5,9 +5,12 @@ title: >-
 
 import copy
 import gc
+import subprocess
+import sys
 import weakref
 
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import cast
 
 import astx
@@ -31,6 +34,56 @@ from typeguard import TypeCheckError
 
 from ..conftest import StaticImportResolver, make_parsed_module
 from .test_table_io import io_module
+
+
+def test_static_fact_contracts_reject_record_mismatches(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Strict mypy preserves typed fact insertion and retrieval boundaries.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    source = """
+from irx.analysis.facts import FactKey, SemanticFact, SemanticFacts
+class Value(SemanticFact):
+    pass
+class Other(SemanticFact):
+    pass
+key = FactKey("test", Value)
+facts = SemanticFacts().with_fact(key, Value())
+value: Value = facts.require(key)
+"""
+    positive = tmp_path / "positive.py"
+    positive.write_text(source, encoding="utf-8")
+    command = [
+        sys.executable,
+        "-m",
+        "mypy",
+        "--strict",
+        "--follow-imports=silent",
+        "--python-version",
+        f"{sys.version_info.major}.{sys.version_info.minor}",
+    ]
+    accepted = subprocess.run(
+        [*command, str(positive)], capture_output=True, text=True, check=False
+    )
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    negative = tmp_path / "negative.py"
+    negative.write_text(
+        source
+        + """facts.with_fact(key, Other())
+wrong: Other = facts.require(key)
+""",
+        encoding="utf-8",
+    )
+    rejected = subprocess.run(
+        [*command, str(negative)], capture_output=True, text=True, check=False
+    )
+    assert rejected.returncode == 1, rejected.stdout + rejected.stderr
+    expected_errors = 2
+    assert rejected.stdout.count("error:") == expected_errors, rejected.stdout
 
 
 @private

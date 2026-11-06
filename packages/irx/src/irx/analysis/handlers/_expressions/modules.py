@@ -23,7 +23,11 @@ from irx.analysis.call_arguments import (
     contextualize_null_arguments,
 )
 from irx.analysis.class_lifecycle import LIFECYCLE_HOOKS, class_ownership
-from irx.analysis.extensions.calls import AnalysisCall, AnalysisServices
+from irx.analysis.extensions.calls import (
+    AnalysisCall,
+    AnalysisServices,
+    CallAnalysisVisitor,
+)
 from irx.analysis.ffi import ffi_returns_owned_string
 from irx.analysis.file_io import resolve_file_open
 from irx.analysis.handlers.base import (
@@ -54,7 +58,6 @@ from irx.analysis.text import resolve_text_call
 from irx.analysis.types import is_string_type
 from irx.analysis.validation import validate_call
 from irx.diagnostics import DiagnosticCodes
-from irx.extensions import ScopedDispatch
 from irx.typecheck import typechecked
 
 
@@ -63,11 +66,11 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
     """
     title: Expression helpers for module namespaces and function calls
     attributes:
-      call_dispatch:
-        type: ScopedDispatch
+      call_visitor:
+        type: CallAnalysisVisitor
     """
 
-    call_dispatch: ScopedDispatch
+    call_visitor: CallAnalysisVisitor
 
     def _resolve_call_resource_ownership(
         self,
@@ -498,7 +501,7 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             allowed=current is not None
             and current.signature.metadata.get("generator") is None,
         )
-        self.call_dispatch.visit(
+        self.call_visitor.visit(
             operation,
             AnalysisCall(
                 node,

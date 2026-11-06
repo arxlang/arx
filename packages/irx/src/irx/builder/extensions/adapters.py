@@ -2,8 +2,7 @@
 title: Bridge existing LLVM services to the narrow call-plan interface.
 summary: >-
   This adapter contains no operation selection or algorithms. It is constructed
-  by the concrete visitor, never imported by semantic analysis or
-  contributions.
+  by the concrete visitor and never imported by semantic analysis.
 """
 
 import astx
@@ -33,7 +32,7 @@ class VisitorCallServices:
 
     def __init__(self, owner: Visitor) -> None:
         """
-        title: Bind one compiler instance, without retaining it in a catalog.
+        title: Bind one compiler instance for resolved call emission.
         parameters:
           owner:
             type: Visitor

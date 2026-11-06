@@ -4,17 +4,19 @@ title: Narrow LLVM services for resolved call-plan emission.
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Protocol, runtime_checkable
 
 import astx
 
 from llvmlite import ir
+from plum import dispatch
 from public import private, public
 
+from irx.analysis.extensions.records import CallPlan
 from irx.analysis.resolved_nodes import ResolvedClassConstruction
+from irx.builder.diagnostics import raise_lowering_internal_error
 from irx.builder.state import CleanupAction
-from irx.extensions import HandlerConfiguration, default_feature_configuration
+from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
 
@@ -188,7 +190,7 @@ class CallLoweringServices(Protocol):
 @dataclass(frozen=True)
 class LoweringCall:
     """
-    title: One lowering invocation, not configuration or semantic state.
+    title: One lowering invocation with compilation-local backend services.
     attributes:
       node:
         type: astx.FunctionCall | astx.MethodCall
@@ -221,13 +223,26 @@ def validate_lowering_call(
     """
 
 
-@public
-@lru_cache(maxsize=1)
+@private
 @typechecked
-def default_lowering_configuration() -> HandlerConfiguration:
+class CallLoweringVisitor:
     """
-    title: Compose built-in LLVM providers without native activation.
-    returns:
-      type: HandlerConfiguration
+    title: Reject unsupported resolved plans through nominal dispatch.
+    summary: Concrete visitors emit plans without rediscovering meaning.
     """
-    return default_feature_configuration().phase("lowering")
+
+    @dispatch
+    def visit(self, plan: CallPlan, call: LoweringCall) -> None:
+        """
+        title: Diagnose missing plan emission at the lowering boundary.
+        parameters:
+          plan:
+            type: CallPlan
+          call:
+            type: LoweringCall
+        """
+        raise_lowering_internal_error(
+            f"no lowering handler for call plan {type(plan).__name__}",
+            node=call.node,
+            code=DiagnosticCodes.LOWERING_MISSING_HANDLER,
+        )

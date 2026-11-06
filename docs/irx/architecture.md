@@ -67,49 +67,32 @@ failures.
 
 See [Semantic Contract](semantic-contract.md) for the concise contract summary.
 
-### Explicit call-handler composition
+### Static call visitors
 
-Table I/O is the first composed handler family. Normal symbol lookup selects a
-trusted operation; its registered analysis handler produces a typed call plan.
-LLVM call lowering dispatches on that plan, not the source name. Handlers use
-small phase-owned service interfaces rather than inheriting the entire compiler.
-Other visitor families have not yet migrated.
+Table I/O uses fixed, phase-owned Plum visitors. Ordinary symbol lookup selects
+an explicitly trusted nominal operation; analysis produces a validated typed
+call plan. LLVM lowering visits that plan, not the source function name. Unknown
+operation/plan types fail at their responsible phase instead of falling through
+to ordinary FFI. Small typed service interfaces preserve the analysis/lowering
+boundary and existing checked native calls and resource cleanup.
 
-Analysis and builders accept explicit, immutable phase configurations.
-Derivation names replacements; duplicate signatures and unavailable invocation
-dependencies are rejected. Each compiler instance builds fresh Plum
-dispatch/cache state, so derived configurations do not mutate parents or live
-compilers. Providers must not capture compilation state. Recursive dispatch is
-supported; concurrent use of one mutable compiler instance is not.
+The concrete analyzer and LLVM visitor construct their call visitors directly.
+There is no provider discovery, configurable handler catalog, feature selection,
+or per-builder handler replacement API. Ordinary visitor inheritance and mixins
+compose supported behavior; compilation state stays with the analyzer/builder or
+the per-call service bundle, not a shared mutable visitor catalog. Analysis
+remains independent of LLVM and the Arx frontend. Importing analysis does not
+activate or compile native code.
 
-Built-in call providers are discovered from direct modules in
-`irx.extensions.builtin`. Each module exports a lightweight `descriptor()`; its
-`FeatureDescriptor` names dependencies, supported backends, contract revision,
-and phase factory references with promised handler identities. Add the
-descriptor and phase-owned implementations, not another central registry entry.
-Dependency closure and phase composition reject conflicts before the selected
-phase compiles an AST. Factories load only for enabled phases. There is no
-filesystem plugin scan or third-party entry-point loading.
+Separate compiler instances keep independent compilation state. Recursive visits
+are supported; simultaneous use of one mutable analyzer/builder is not.
 
-Composition inspection is a programmatic IRx facility, not a public Arx CLI
-command. It describes migrated call handlers, **not all language support**.
-Native activation is unknown until a compilation requests runtime symbols;
-selection never implies activation. CLI exposure is deferred until a concrete
-diagnostic workflow justifies it.
-
-Python hosts inspect the same `default_feature_configuration()` used by the
-compiler. For an explicit selection, construct
-`FeatureConfiguration(discover_builtin_features(), selected=("irx.table_io",))`,
-then pass its `phase("analysis")` and `phase("lowering")` catalogs to the
-existing analyzer/builder configuration arguments. An empty selection disables
-all composed call providers; required disabled dependencies are errors.
-`inspect()` returns a fresh metadata snapshot. For a loaded phase,
-`explain(value_type, context_type)` uses Plum to select the actual contribution,
-including explicit replacements, without executing it.
-
-Lightweight contribution metadata imports neither LLVM, PyArrow, nor Arx.
-Analysis providers do not import the backend. Registering a handler does not
-activate native code; emission still requests registered runtime symbols.
+Typed call facts retain validation, dependency traversal, and invalidation on
+reanalysis. The separate native runtime feature registry still owns native
+symbol activation, artifacts, and linker dependencies; static visitor support
+never activates all native dependencies eagerly. Source identity and semantic
+bindings remain available to future source-debug emission without requiring
+compiler-provider inspection or tracing infrastructure.
 
 The shared visitor now has one typed rejecting fallback. Analysis explicitly
 registers supported scalar literals and structural traversal; a `type_` field
@@ -198,8 +181,8 @@ It currently provides:
 
 - `BaseVisitorProtocol`: the minimal typing contract shared by visitor-style
   classes
-- `BaseVisitor`: a concrete Plum-dispatch scaffold with explicit
-  `NotImplementedError` defaults for the current ASTx node surface
+- `BaseVisitor`: a concrete Plum-dispatch scaffold with one typed
+  `NotImplementedError` fallback for unsupported nodes
 
 This keeps typing and runtime behavior separate:
 

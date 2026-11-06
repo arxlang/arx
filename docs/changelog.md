@@ -34,6 +34,10 @@
 
 ## Unreleased
 
+- **Breaking:** Remove `irx.extensions` compiler-provider catalogs and the
+  analysis/lowering configuration arguments from IRx analysis and builders.
+  Table I/O now uses static Plum visitors; typed semantic plans, checked native
+  calls, and the separate native runtime feature registry remain unchanged.
 - **Breaking:** Replacing a list owner while it is being iterated now fails
   during semantic analysis (`IRX-S013`), including IRx comprehension evaluation.
   Move replacement after iteration or use a different binding. In-place append

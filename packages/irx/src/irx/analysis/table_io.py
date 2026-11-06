@@ -6,11 +6,16 @@ from dataclasses import dataclass
 
 import astx
 
+from plum import dispatch
 from public import private
 
 from irx.analysis.arrow_conversion import arrow_ownership
 from irx.analysis.class_lifecycle import class_ownership
-from irx.analysis.extensions.calls import AnalysisCall, CallAnalysisServices
+from irx.analysis.extensions.calls import (
+    AnalysisCall,
+    CallAnalysisServices,
+    CallAnalysisVisitor,
+)
 from irx.analysis.extensions.records import CALL_PLAN, CallOperation, CallPlan
 from irx.analysis.resolved_nodes import OwnershipKind, SemanticInfo
 from irx.analysis.types import (
@@ -25,9 +30,8 @@ from irx.builtins.collections.dataframe import (
     schema_from_type,
 )
 from irx.diagnostics import DiagnosticCodes
-from irx.extensions import HandlerContribution, contribute
 from irx.native import TableIOOperation
-from irx.typecheck import typechecked
+from irx.typecheck import copy_type, typechecked
 
 
 @private
@@ -586,81 +590,28 @@ def resolve_table_io(
 
 @private
 @typechecked
-def analyze_read(operation: ReadTableOperation, call: AnalysisCall) -> None:
+class TableIOAnalysisVisitor(CallAnalysisVisitor):
     """
-    title: Resolve CSV and Parquet reads through the common table contract.
-    parameters:
-      operation:
-        type: ReadTableOperation
-      call:
-        type: AnalysisCall
+    title: Statically resolve trusted table operations through Plum.
     """
-    resolve_table_io(operation, call)
 
-
-@private
-@typechecked
-def analyze_write(operation: WriteTableOperation, call: AnalysisCall) -> None:
-    """
-    title: >-
-      Resolve CSV and Parquet writes without changing generic call analysis.
-    parameters:
-      operation:
-        type: WriteTableOperation
-      call:
-        type: AnalysisCall
-    """
-    resolve_table_io(operation, call)
-
-
-@private
-@typechecked
-def analyze_auxiliary(
-    operation: AuxiliaryTableOperation, call: AnalysisCall
-) -> None:
-    """
-    title: Resolve existing predicate and streaming operations.
-    parameters:
-      operation:
-        type: AuxiliaryTableOperation
-      call:
-        type: AnalysisCall
-    """
-    resolve_table_io(operation, call)
-
-
-@private
-@typechecked
-def analysis_contributions() -> tuple[HandlerContribution, ...]:
-    """
-    title: >-
-      Export the finite table provider explicitly, without global dispatch.
-    returns:
-      type: tuple[HandlerContribution, Ellipsis]
-    """
-    return (
-        contribute(
-            "table.read",
-            "irx.table_io",
-            "analysis",
-            ReadTableOperation,
-            AnalysisCall,
-            analyze_read,
-        ),
-        contribute(
-            "table.write",
-            "irx.table_io",
-            "analysis",
-            WriteTableOperation,
-            AnalysisCall,
-            analyze_write,
-        ),
-        contribute(
-            "table.auxiliary",
-            "irx.table_io",
-            "analysis",
-            AuxiliaryTableOperation,
-            AnalysisCall,
-            analyze_auxiliary,
-        ),
-    )
+    @copy_type(CallAnalysisVisitor.visit)
+    @dispatch
+    def visit(
+        self,
+        operation: ReadTableOperation
+        | WriteTableOperation
+        | AuxiliaryTableOperation,
+        call: AnalysisCall,
+    ) -> None:
+        """
+        title: Resolve the closed table family with its shared contract.
+        parameters:
+          operation:
+            type: >-
+              ReadTableOperation | WriteTableOperation |
+              AuxiliaryTableOperation
+          call:
+            type: AnalysisCall
+        """
+        resolve_table_io(operation, call)

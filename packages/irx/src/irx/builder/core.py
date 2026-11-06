@@ -24,7 +24,6 @@ except ImportError:  # pragma: no cover - optional
     FP128Type = None
 
 from irx.analysis import analyze, analyze_modules
-from irx.analysis.extensions.records import CallPlan
 from irx.analysis.module_interfaces import ImportResolver, ParsedModule
 from irx.analysis.module_symbols import (
     mangle_class_name,
@@ -59,10 +58,7 @@ from irx.builder.diagnostics import (
     raise_lowering_internal_error,
     require_semantic_metadata,
 )
-from irx.builder.extensions.calls import (
-    LoweringCall,
-    default_lowering_configuration,
-)
+from irx.builder.extensions.calls import CallLoweringVisitor
 from irx.builder.protocols import VisitorProtocol
 from irx.builder.runtime import safe_pop
 from irx.builder.runtime.registry import (
@@ -94,7 +90,6 @@ from irx.builtins.collections.list import (
     LIST_RUNTIME_FEATURE,
 )
 from irx.diagnostics import DiagnosticCodes
-from irx.extensions import HandlerConfiguration, ScopedDispatch
 from irx.typecheck import typechecked
 
 FLOAT16_BITS = 16
@@ -376,12 +371,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     attributes:
       named_values:
         type: NamedValueMap
-      analysis_configuration:
-        type: HandlerConfiguration | None
-      lowering_configuration:
-        type: HandlerConfiguration
-      call_dispatch:
-        type: ScopedDispatch
+      call_visitor:
+        type: CallLoweringVisitor
       _llvm:
         type: VariablesLLVM
       function_protos:
@@ -463,9 +454,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     """
 
     named_values: NamedValueMap
-    analysis_configuration: HandlerConfiguration | None
-    lowering_configuration: HandlerConfiguration
-    call_dispatch: ScopedDispatch
+    call_visitor: CallLoweringVisitor
     _llvm: VariablesLLVM
     function_protos: dict[str, astx.FunctionPrototype]
     llvm_functions_by_symbol_id: dict[str, ir.Function]
@@ -509,31 +498,19 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
     def __init__(
         self,
         active_runtime_features: set[str] | None = None,
-        *,
-        analysis_configuration: HandlerConfiguration | None = None,
-        lowering_configuration: HandlerConfiguration | None = None,
     ) -> None:
         """
         title: Initialize VisitorCore.
         parameters:
           active_runtime_features:
             type: set[str] | None
-          analysis_configuration:
-            type: HandlerConfiguration | None
-          lowering_configuration:
-            type: HandlerConfiguration | None
         """
         super().__init__()
-        self.analysis_configuration = analysis_configuration
-        self.lowering_configuration = (
-            lowering_configuration
-            if lowering_configuration is not None
-            else default_lowering_configuration()
+        from irx.builder.lowering.table_io import (  # noqa: PLC0415
+            TableIOLoweringVisitor,
         )
-        self.lowering_configuration.validate_contract(
-            "lowering", CallPlan, LoweringCall
-        )
-        self.call_dispatch = ScopedDispatch(self.lowering_configuration)
+
+        self.call_visitor = TableIOLoweringVisitor()
         self.named_values = {}
         self.const_vars = set()
         self.function_protos = {}
@@ -862,7 +839,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         returns:
           type: str
         """
-        analyzed = analyze(node, configuration=self.analysis_configuration)
+        analyzed = analyze(node)
         self._module_display_names = {}
         self._current_module_display_name = None
         self._interned_c_strings = {}
@@ -912,9 +889,7 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         returns:
           type: str
         """
-        session = analyze_modules(
-            root, resolver, configuration=self.analysis_configuration
-        )
+        session = analyze_modules(root, resolver)
         registry = get_default_runtime_feature_registry().with_native_features(
             tuple(session.native_features.values())
         )

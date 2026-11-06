@@ -38,7 +38,6 @@ from irx.builder.lowering import (
 from irx.builder.lowering.exceptions import ExceptionVisitorMixin
 from irx.builder.lowering.nullable import NullableVisitorMixin
 from irx.builder.runtime.linking import link_executable
-from irx.extensions import HandlerConfiguration
 from irx.typecheck import typechecked
 
 
@@ -76,26 +75,14 @@ class Visitor(
     def __init__(
         self,
         active_runtime_features: set[str] | None = None,
-        *,
-        analysis_configuration: HandlerConfiguration | None = None,
-        lowering_configuration: HandlerConfiguration | None = None,
     ) -> None:
         """
-        title: >-
-          Bind isolated phase dispatch and per-compilation lowering services.
+        title: Bind static call visitors and per-compilation lowering services.
         parameters:
           active_runtime_features:
             type: set[str] | None
-          analysis_configuration:
-            type: HandlerConfiguration | None
-          lowering_configuration:
-            type: HandlerConfiguration | None
         """
-        super().__init__(
-            active_runtime_features,
-            analysis_configuration=analysis_configuration,
-            lowering_configuration=lowering_configuration,
-        )
+        super().__init__(active_runtime_features)
         from irx.builder.extensions.adapters import (  # noqa: PLC0415
             VisitorCallServices,
         )
@@ -111,33 +98,15 @@ class Builder(BaseBuilder):
     attributes:
       translator:
         type: Visitor
-      analysis_configuration:
-        type: HandlerConfiguration | None
-      lowering_configuration:
-        type: HandlerConfiguration | None
     """
 
     translator: Visitor
-    analysis_configuration: HandlerConfiguration | None
-    lowering_configuration: HandlerConfiguration | None
 
-    def __init__(
-        self,
-        *,
-        analysis_configuration: HandlerConfiguration | None = None,
-        lowering_configuration: HandlerConfiguration | None = None,
-    ) -> None:
+    def __init__(self) -> None:
         """
         title: Initialize Builder.
-        parameters:
-          analysis_configuration:
-            type: HandlerConfiguration | None
-          lowering_configuration:
-            type: HandlerConfiguration | None
         """
         super().__init__()
-        self.analysis_configuration = analysis_configuration
-        self.lowering_configuration = lowering_configuration
         self.translator = self._new_translator()
 
     def _new_translator(self) -> Visitor:
@@ -148,8 +117,6 @@ class Builder(BaseBuilder):
         """
         return Visitor(
             active_runtime_features=set(self.runtime_feature_names),
-            analysis_configuration=self.analysis_configuration,
-            lowering_configuration=self.lowering_configuration,
         )
 
     def translate(self, expr: astx.AST) -> str:
