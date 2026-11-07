@@ -212,6 +212,36 @@ def test_lowering_missing_semantic_metadata_is_structured() -> None:
     )
 
 
+def test_module_lowering_requires_resolved_storage_plan() -> None:
+    """
+    title: Module lowering cannot infer initialization from raw declarations.
+    """
+    module = astx.Module()
+    module.block.append(
+        astx.VariableDeclaration(
+            "value", astx.Int32(), value=astx.LiteralInt32(1)
+        )
+    )
+    with pytest.raises(LoweringError, match="missing module_storage") as error:
+        Visitor()._translate_modules([module])
+    assert error.value.diagnostic.code == (
+        DiagnosticCodes.LOWERING_MISSING_SEMANTIC_METADATA
+    )
+    assert error.value.diagnostic.resolved_source() is None
+
+
+def test_identifier_missing_storage_is_structured() -> None:
+    """
+    title: Missing identifier storage never becomes an unstructured exception.
+    """
+    with pytest.raises(LoweringError, match="no resolved storage") as error:
+        Visitor().visit(astx.Identifier("value"))
+    assert error.value.diagnostic.code == (
+        DiagnosticCodes.LOWERING_MISSING_SEMANTIC_METADATA
+    )
+    assert error.value.diagnostic.resolved_source() is None
+
+
 def test_control_flow_boolean_lowering_failure_is_not_generic_exception() -> (
     None
 ):

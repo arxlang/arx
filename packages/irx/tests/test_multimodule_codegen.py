@@ -4,6 +4,8 @@ title: Tests for multi-module LLVM lowering.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import astx
 
 from irx.analysis.module_symbols import (
@@ -12,6 +14,7 @@ from irx.analysis.module_symbols import (
     mangle_struct_name,
 )
 from irx.builder import Builder
+from llvmlite import binding as llvm
 
 from .conftest import (
     StaticImportResolver,
@@ -19,6 +22,91 @@ from .conftest import (
     make_parsed_module,
     translate_modules_ir,
 )
+
+
+def test_module_globals_have_independent_storage(tmp_path: Path) -> None:
+    """
+    title: Same-named private globals in imported modules keep separate state.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    dependencies = {}
+    for name, initial in (("left", 4), ("right", 40)):
+        dependencies[name] = make_parsed_module(
+            name,
+            astx.VariableDeclaration(
+                "increment",
+                astx.Int32(),
+                value=astx.LiteralInt32(1),
+                mutability=astx.MutabilityKind.constant,
+            ),
+            astx.VariableDeclaration(
+                "state",
+                astx.Int32(),
+                value=astx.LiteralInt32(initial),
+                mutability=astx.MutabilityKind.mutable,
+            ),
+            _int_function(
+                "step",
+                astx.VariableAssignment(
+                    "state",
+                    astx.BinaryOp(
+                        "+",
+                        astx.Identifier("state"),
+                        astx.Identifier("increment"),
+                    ),
+                ),
+                astx.FunctionReturn(astx.Identifier("state")),
+            ),
+        )
+    root = make_parsed_module(
+        "main",
+        astx.ImportFromStmt(
+            [astx.AliasExpr("step", asname="left_step")], module="left"
+        ),
+        astx.ImportFromStmt(
+            [astx.AliasExpr("step", asname="right_step")], module="right"
+        ),
+        _int_function(
+            "main",
+            *[
+                astx.AssertStmt(
+                    astx.BinaryOp(
+                        "==",
+                        astx.FunctionCall(function, []),
+                        astx.LiteralInt32(expected),
+                    )
+                )
+                for function, expected in (
+                    ("left_step", 5),
+                    ("right_step", 41),
+                    ("left_step", 6),
+                    ("right_step", 42),
+                )
+            ],
+            astx.FunctionReturn(astx.LiteralInt32(0)),
+        ),
+    )
+    builder = Builder()
+    text = builder.translate_modules(root, StaticImportResolver(dependencies))
+    module = llvm.parse_assembly(text)
+    module.verify()
+    globals_ = [
+        value
+        for value in module.global_variables
+        if value.name.startswith("module_global_")
+    ]
+    variables_per_module = 2
+    assert len({value.name for value in globals_}) == (
+        len(dependencies) * variables_per_module
+    )
+    assert sum(
+        "internal constant i32 1" in str(value) for value in globals_
+    ) == (len(dependencies))
+    builder._build_from_ir(text, str(tmp_path / "module-globals"))
+    result = builder.run(raise_on_error=False)
+    assert result.returncode == 0, result.stderr
 
 
 def _int_function(

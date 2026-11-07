@@ -133,12 +133,6 @@ def analyze_modules(
             )
 
     for parsed_module in session.ordered_modules():
-        with analyzer.context.in_module(parsed_module.key):
-            analyzer._analyze_prepared_template_specializations(
-                parsed_module.ast
-            )
-
-    for parsed_module in session.ordered_modules():
         analyzer.analyze_parsed_module(parsed_module, predeclared=True)
 
     session.diagnostics.raise_if_errors()

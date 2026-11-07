@@ -41,6 +41,11 @@
 
 ## Unreleased
 
+- Fix numeric/Boolean module scalar storage, including nullable values, checked
+  literal initialization, and updates shared across function calls.
+- **Breaking:** Unsupported module storage and runtime initializers now fail
+  during analysis instead of being silently omitted; use function-local storage
+  or initialize supported scalars inside a function.
 - **Breaking:** Runtime Typeguard instrumentation is disabled by default for
   regular compiler and Python API usage. Local pytest suites, `arx test`, smoke
   tests, and CI enable it automatically. Standalone debugging can opt in with

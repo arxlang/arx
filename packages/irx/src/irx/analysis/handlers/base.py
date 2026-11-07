@@ -2119,15 +2119,33 @@ class SemanticAnalyzerCore(BaseVisitor):
                     )
                     if callable(prepare_templates):
                         prepare_templates(module)
-                    analyze_templates = getattr(
-                        self,
-                        "_analyze_prepared_template_specializations",
-                        None,
-                    )
-                    if callable(analyze_templates):
-                        analyze_templates(module)
+                # Static module storage must be resolved before function or
+                # template bodies, independent of source declaration order.
                 for node in module.nodes:
-                    self.visit(node)
+                    if isinstance(
+                        node,
+                        (
+                            astx.VariableDeclaration,
+                            astx.InlineVariableDeclaration,
+                        ),
+                    ):
+                        self.visit(node)
+                analyze_templates = getattr(
+                    self,
+                    "_analyze_prepared_template_specializations",
+                    None,
+                )
+                if callable(analyze_templates):
+                    analyze_templates(module)
+                for node in module.nodes:
+                    if not isinstance(
+                        node,
+                        (
+                            astx.VariableDeclaration,
+                            astx.InlineVariableDeclaration,
+                        ),
+                    ):
+                        self.visit(node)
         finally:
             setattr(self, "_current_ast_module", previous_module)
         main_function = self.context.get_function(
