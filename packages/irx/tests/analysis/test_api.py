@@ -4,6 +4,7 @@ title: Tests for the semantic-analysis API.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import cast
 
@@ -17,6 +18,7 @@ from astx.binary_op import (
 from irx.analysis import (
     CompilationSession,
     DiagnosticBag,
+    ResolvedModuleStorage,
     SemanticAnalyzer,
     SemanticContract,
     SemanticError,
@@ -30,12 +32,215 @@ from irx.analysis.module_symbols import (
     qualified_struct_name,
 )
 from irx.analysis.resolved_nodes import SemanticInfo
+from typeguard import TypeCheckError
 
 from ..conftest import (
     StaticImportResolver,
     make_module,
     make_parsed_module,
 )
+
+
+@pytest.mark.parametrize(
+    "type_,value,expected",
+    [
+        (astx.Int8(), astx.LiteralInteger(-128), -128),
+        (astx.UInt64(), astx.LiteralInteger((1 << 64) - 1), (1 << 64) - 1),
+        (astx.Float16(), astx.LiteralFloat(Decimal("1.5")), 1.5),
+        (astx.Float32(), astx.LiteralInteger(12), 12.0),
+        (astx.Float64(), astx.LiteralFloat32(0.1), 0.10000000149011612),
+        (astx.Boolean(), astx.LiteralBoolean(False), False),
+        (astx.Int64(), None, 0),
+        (astx.Boolean(), None, False),
+        (astx.Float64(), None, 0.0),
+        (astx.NullableType(astx.Int32()), None, None),
+        (astx.NullableType(astx.Int32()), astx.LiteralNone(), None),
+        (astx.NullableType(astx.Int64()), astx.LiteralInteger(123), 123),
+        (
+            astx.NullableType(astx.Boolean()),
+            astx.LiteralBoolean(False),
+            False,
+        ),
+    ],
+)
+def test_module_scalar_storage_plan(
+    type_: astx.DataType,
+    value: astx.DataType | None,
+    expected: int | float | bool | None,
+) -> None:
+    """
+    title: Module scalar plans preserve contextual constants and null validity.
+    parameters:
+      type_:
+        type: astx.DataType
+      value:
+        type: astx.DataType | None
+      expected:
+        type: int | float | bool | None
+    """
+    declaration = astx.VariableDeclaration(
+        "value",
+        type_,
+        value=astx.Undefined() if value is None else value,
+        mutability=astx.MutabilityKind.mutable,
+    )
+    analyze(make_module("globals", declaration))
+    info = _semantic(declaration)
+    assert info.module_storage is not None
+    assert info.module_storage.symbol is info.resolved_symbol
+    assert info.module_storage.initializer == expected
+    assert type(info.module_storage.initializer) is type(expected)
+
+
+@pytest.mark.parametrize(
+    "type_,value,mutable,message",
+    [
+        (astx.Int8(), astx.LiteralInteger(128), True, "not representable"),
+        (astx.UInt8(), astx.LiteralInteger(-1), True, "not representable"),
+        (astx.Int32(), None, False, "requires a literal initializer"),
+        (astx.String(), astx.LiteralString("static"), True, "module storage"),
+        (
+            astx.Int32(),
+            astx.BinaryOp("+", astx.LiteralInt32(1), astx.LiteralInt32(2)),
+            True,
+            "runtime initialization is unsupported",
+        ),
+        (
+            astx.NullableType(astx.Int32()),
+            astx.FunctionCall("initial", []),
+            True,
+            "runtime initialization is unsupported",
+        ),
+    ],
+)
+def test_module_storage_rejects_unsupported_initializers(
+    type_: astx.DataType,
+    value: astx.DataType | None,
+    mutable: bool,
+    message: str,
+) -> None:
+    """
+    title: Unused module declarations fail before lowering unsupported storage.
+    parameters:
+      type_:
+        type: astx.DataType
+      value:
+        type: astx.DataType | None
+      mutable:
+        type: bool
+      message:
+        type: str
+    """
+    declaration = astx.VariableDeclaration(
+        "value",
+        type_,
+        value=astx.Undefined() if value is None else value,
+        mutability=(
+            astx.MutabilityKind.mutable
+            if mutable
+            else astx.MutabilityKind.constant
+        ),
+    )
+    function = astx.FunctionDef(
+        astx.FunctionPrototype("initial", astx.Arguments(), astx.Int32()),
+        _block(astx.FunctionReturn(astx.LiteralInt32(1))),
+    )
+    module = make_module("globals", declaration, function)
+    with pytest.raises(SemanticError, match=message):
+        analyze(module)
+    assert _semantic(declaration).module_storage is None
+
+
+def test_module_storage_reanalysis_discards_old_plan() -> None:
+    """
+    title: Reusing a declaration cannot retain permission for runtime init.
+    """
+    declaration = astx.VariableDeclaration(
+        "value", astx.Int32(), value=astx.LiteralInt32(1)
+    )
+    module = make_module("globals", declaration)
+    analyze(module)
+    assert _semantic(declaration).module_storage is not None
+    declaration.value = astx.BinaryOp(
+        "+", astx.LiteralInt32(1), astx.LiteralInt32(2)
+    )
+    with pytest.raises(SemanticError, match="runtime initialization"):
+        analyze(module)
+    assert _semantic(declaration).module_storage is None
+    declaration.value = astx.LiteralInt32(1)
+    analyze(
+        _module_with_main(
+            declaration, astx.FunctionReturn(astx.LiteralInt32(0))
+        )
+    )
+    assert _semantic(declaration).module_storage is None
+
+
+def test_conditional_module_declaration_is_rejected() -> None:
+    """
+    title: A module cannot hide a runtime declaration inside a skipped block.
+    """
+    declaration = astx.VariableDeclaration(
+        "value", astx.Int32(), value=astx.LiteralInt32(1)
+    )
+    module = make_module(
+        "globals",
+        astx.IfStmt(astx.LiteralBoolean(False), _block(declaration)),
+    )
+    with pytest.raises(SemanticError, match="declared at module top level"):
+        analyze(module)
+    assert _semantic(declaration).module_storage is None
+
+
+def test_inline_module_storage_plan() -> None:
+    """
+    title: Inline module declarations use the same scalar storage contract.
+    """
+    expected = 7
+    declaration = astx.InlineVariableDeclaration(
+        "value",
+        astx.Int64(),
+        value=astx.LiteralInteger(expected),
+        mutability=astx.MutabilityKind.mutable,
+    )
+    analyze(make_module("globals", declaration))
+    plan = _semantic(declaration).module_storage
+    assert plan is not None and plan.initializer == expected
+
+
+def test_module_constant_writes_remain_semantic_errors() -> None:
+    """
+    title: Adding static storage never permits writes to immutable bindings.
+    """
+    declaration = astx.VariableDeclaration(
+        "value",
+        astx.Int32(),
+        value=astx.LiteralInt32(1),
+        mutability=astx.MutabilityKind.constant,
+    )
+    module = _module_with_main(
+        astx.VariableAssignment("value", astx.LiteralInt32(2)),
+        astx.FunctionReturn(astx.LiteralInt32(0)),
+    )
+    module.nodes.insert(0, declaration)
+    with pytest.raises(SemanticError, match="constant"):
+        analyze(module)
+
+
+def test_module_storage_runtime_types() -> None:
+    """
+    title: Module plans reject untyped symbols and non-scalar initializers.
+    """
+    declaration = astx.VariableDeclaration(
+        "value", astx.Int32(), value=astx.LiteralInt32(1)
+    )
+    analyze(make_module("globals", declaration))
+    symbol = _semantic(declaration).resolved_symbol
+    assert symbol is not None
+    with pytest.raises(TypeCheckError):
+        ResolvedModuleStorage("value", 1)  # type: ignore[arg-type]
+    with pytest.raises(TypeCheckError):
+        ResolvedModuleStorage(symbol, [1])  # type: ignore[arg-type]
 
 
 def _module_with_main(*nodes: astx.AST) -> astx.Module:
@@ -869,6 +1074,7 @@ def test_public_analysis_contract_is_stable() -> None:
         "resolved_imports",
         "resolved_operator",
         "resolved_assignment",
+        "module_storage",
         "resolved_iteration",
         "resolved_context_manager",
         "resolved_field_access",

@@ -299,8 +299,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
         var_key = semantic_assignment_key(expr, var_name)
 
         if var_key in self.const_vars:
-            raise Exception(
-                f"Cannot assign to '{var_name}': declared as constant"
+            raise_lowering_internal_error(
+                f"assignment to constant '{var_name}' reached lowering",
+                node=expr,
             )
 
         self.visit_child(expr.value)
@@ -315,8 +316,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
 
         llvm_var = self.named_values.get(var_key)
         if not llvm_var:
-            raise Exception(
-                f"Identifier '{var_name}' not found in the named values."
+            raise_lowering_internal_error(
+                f"assignment target '{var_name}' has no resolved storage",
+                node=expr,
             )
 
         if isinstance(
@@ -356,7 +358,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
             self.result_stack.append(namespace_value)
             return
 
-        raise Exception(f"Unknown variable name: {node.name}")
+        raise_lowering_internal_error(
+            f"identifier '{node.name}' has no resolved storage", node=node
+        )
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.FieldAccess) -> None:

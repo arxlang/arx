@@ -23,7 +23,7 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
-from irx.analysis.nullable import resolve_nullable_global
+from irx.analysis.module_storage import resolve_module_storage
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
@@ -423,7 +423,7 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)
+        resolve_module_storage(cast(SemanticAnalyzerCore, self), node, symbol)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
@@ -463,4 +463,4 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_nullable_global(cast(SemanticAnalyzerCore, self), node)
+        resolve_module_storage(cast(SemanticAnalyzerCore, self), node, symbol)

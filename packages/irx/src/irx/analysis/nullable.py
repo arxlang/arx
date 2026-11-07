@@ -452,49 +452,6 @@ def resolve_series_reduction(
 
 @private
 @typechecked
-def resolve_nullable_global(
-    analyzer: SemanticAnalyzerCore,
-    node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
-) -> None:
-    """
-    title: >-
-      Resolve POD nullable globals to static validity and payload constants.
-    parameters:
-      analyzer:
-        type: SemanticAnalyzerCore
-      node:
-        type: astx.VariableDeclaration | astx.InlineVariableDeclaration
-    """
-    if (
-        not isinstance(node.type_, astx.NullableType)
-        or analyzer.context.current_function is not None
-        or analyzer.context.current_class is not None
-    ):
-        return
-    value = node.value
-    if isinstance(value, astx.Cast) and isinstance(
-        value.value, astx.LiteralNone
-    ):
-        value = value.value
-    if value is None or isinstance(value, (astx.Undefined, astx.LiteralNone)):
-        payload: tuple[bool, int | float] = (False, 0)
-    elif isinstance(value, astx.Literal) and isinstance(
-        value.value, (int, float, bool)
-    ):
-        payload = (True, value.value)
-    else:
-        nullable_error(
-            analyzer,
-            node,
-            "nullable globals require a numeric/Boolean "
-            "literal or none initializer",
-        )
-        return
-    analyzer._semantic(node).extras["nullable_global"] = payload
-
-
-@private
-@typechecked
 def resolve_series_store(
     analyzer: SemanticAnalyzerCore, node: astx.BinaryOp
 ) -> bool:

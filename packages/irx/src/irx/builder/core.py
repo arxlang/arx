@@ -44,6 +44,7 @@ from irx.analysis.resolved_nodes import (
     ResourceKind,
     SemanticClassLayout,
     SemanticClassLayoutField,
+    SemanticInfo,
 )
 from irx.analysis.types import (
     bit_width,
@@ -1092,38 +1093,60 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
                 if not isinstance(
                     node,
                     (astx.VariableDeclaration, astx.InlineVariableDeclaration),
-                ) or not isinstance(node.type_, astx.NullableType):
+                ):
                     continue
-                info = getattr(node, "semantic", None)
-                payload = require_semantic_metadata(
-                    None
-                    if info is None
-                    else info.extras.get("nullable_global"),
+                info = cast(
+                    SemanticInfo | None, getattr(node, "semantic", None)
+                )
+                plan = require_semantic_metadata(
+                    None if info is None else info.module_storage,
                     node=node,
-                    metadata="nullable_global",
-                    context="nullable global",
+                    metadata="module_storage",
+                    context="module scalar declaration",
                 )
                 type_ = require_semantic_metadata(
-                    self._llvm_type_for_ast_type(node.type_),
+                    self._llvm_type_for_ast_type(plan.symbol.type_),
                     node=node,
                     metadata="LLVM type",
-                    context="nullable global",
+                    context="module scalar declaration",
                 )
-                key = semantic_symbol_key(node, node.name)
+                key = plan.symbol.symbol_id
                 storage = ir.GlobalVariable(
-                    self._llvm.module, type_, name="nullable_global_" + key
+                    self._llvm.module, type_, name="module_global_" + key
                 )
                 storage.linkage = "internal"
-                storage.global_constant = (
-                    node.mutability is astx.MutabilityKind.constant
-                )
-                storage.initializer = ir.Constant(
-                    type_,
-                    [
-                        ir.Constant(ir.IntType(1), int(payload[0])),
-                        ir.Constant(type_.elements[1], payload[1]),
-                    ],
-                )
+                storage.global_constant = not plan.symbol.is_mutable
+                if isinstance(plan.symbol.type_, astx.NullableType):
+                    payload_type = require_semantic_metadata(
+                        self._llvm_type_for_ast_type(
+                            plan.symbol.type_.value_type
+                        ),
+                        node=node,
+                        metadata="LLVM payload type",
+                        context="nullable module scalar",
+                    )
+                    storage.initializer = ir.Constant(
+                        type_,
+                        [
+                            ir.Constant(
+                                ir.IntType(1), plan.initializer is not None
+                            ),
+                            ir.Constant(
+                                payload_type,
+                                0
+                                if plan.initializer is None
+                                else plan.initializer,
+                            ),
+                        ],
+                    )
+                else:
+                    initializer = require_semantic_metadata(
+                        plan.initializer,
+                        node=node,
+                        metadata="scalar initializer",
+                        context="module scalar declaration",
+                    )
+                    storage.initializer = ir.Constant(type_, initializer)
                 self.named_values[key] = storage
                 if storage.global_constant:
                     self.const_vars.add(key)

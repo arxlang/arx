@@ -24,6 +24,139 @@ from llvmlite import ir
 from .test_file_class_native import build_audited_file_program
 
 
+@pytest.fixture(scope="module")
+def scalar_module_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Translate scalar global updates and shadows once for native checks.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Scalar module storage\n```\n"
+        "var zero: i32\n"
+        "var ratio: f64 = -1.25\n"
+        "var flag: bool\n"
+        "var optional: nullable[i32] = none\n"
+        "var valid_false: nullable[bool] = false\n"
+        "@<T: i32 | i64>\n"
+        "fn read_counter(value: T) -> i64:\n"
+        "  return counter\n"
+        "fn bump() -> none:\n"
+        "  counter = counter + 1\n"
+        "  counter += 2\n"
+        "  ++counter\n"
+        "  return none\n"
+        "fn shadow() -> i64:\n"
+        "  var counter: i64 = 100\n"
+        "  counter += 1\n"
+        "  return counter\n"
+        "var counter: i64 = 5\n"
+        "fn main() -> i32:\n"
+        "  assert zero == 0\n"
+        "  assert flag == false\n"
+        "  assert ratio == -1.25\n"
+        "  assert is_null(optional)\n"
+        "  assert not is_null(valid_false)\n"
+        "  assert fill_null(valid_false, true) == false\n"
+        "  optional = 7\n"
+        "  assert fill_null(optional, 0) == 7\n"
+        "  bump()\n"
+        "  assert counter == 9\n"
+        "  assert read_counter(0) == 9\n"
+        "  assert shadow() == 101\n"
+        "  assert counter == 9\n"
+        "  zero = 3\n"
+        "  print(counter)\n"
+        "  return zero - 3\n"
+    )
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_scalar_module_global_storage(
+    scalar_module_ir: tuple[ArxBuilder, str],
+) -> None:
+    """
+    title: Surface module declarations become internal scalar LLVM globals.
+    parameters:
+      scalar_module_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    _, text = scalar_module_ir
+    module = llvm.parse_assembly(text)
+    globals_ = [
+        value
+        for value in module.global_variables
+        if value.name.startswith("module_global_")
+    ]
+    assert len(globals_) == 6
+    assert all(value.linkage.name == "internal" for value in globals_)
+    assert sorted(str(value.global_value_type) for value in globals_) == [
+        "double",
+        "i1",
+        "i32",
+        "i64",
+        "{ i1, i1 }",
+        "{ i1, i32 }",
+    ]
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="clang required")
+def test_scalar_module_global_execution(
+    scalar_module_ir: tuple[ArxBuilder, str], tmp_path: Path
+) -> None:
+    """
+    title: Global updates persist across calls while local shadows stay local.
+    parameters:
+      scalar_module_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+    """
+    builder, text = scalar_module_ir
+    executable = tmp_path / "module-scalars"
+    builder._build_from_ir_result(text, str(executable), True, "auto")
+    result = subprocess.run(
+        [str(executable)], capture_output=True, check=False, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b"9\n"
+    assert result.stderr == b""
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    ['var value: str = "literal"', "var value: i64 = initial()"],
+)
+def test_unsupported_module_storage_fails_before_lowering(
+    declaration: str,
+) -> None:
+    """
+    title: Unused unsupported globals fail with a real declaration location.
+    parameters:
+      declaration:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Unsupported module storage\n```\n"
+        f"{declaration}\n"
+        "fn initial() -> i64:\n  return 1\n"
+        "fn main() -> i32:\n  return 0\n"
+    )
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    assert diagnostics[0].code in {
+        DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+        DiagnosticCodes.SEMANTIC_UNSUPPORTED_NODE,
+    }
+    location = diagnostics[0].resolved_source()
+    assert location is not None and location.line == 4
+
+
 @pytest.mark.parametrize("stop", [105, 110, 120])
 def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
     """

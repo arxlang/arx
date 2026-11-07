@@ -18,6 +18,26 @@ fn average(x: f32, y: f32) -> f32:
   return (x + y) * 0.5
 ````
 
+## Module Scalar State
+
+Module variables support numeric and Boolean scalars, including their supported
+`nullable` forms. Literal initializers are checked and converted during
+analysis; runtime initializer expressions are rejected, even for unused
+variables. A mutable scalar without an initializer starts at zero (`false` for
+Boolean), or `none` for nullable storage. Constants require a literal
+initializer.
+
+Storage exists before function bodies run, and a function can refer to a module
+variable declared later in the file. Function calls share that module's state. A
+local declaration shadows it without changing the module binding; unlike Python,
+assignment to a resolved module variable needs no `global` statement. Same-named
+variables in different modules have independent storage. Variables are not
+importable exports; expose access through functions instead.
+
+Other module storage, including strings, containers, and resource-owning values,
+is rejected rather than silently omitted. Put those declarations inside a
+function; module initialization and owned-resource teardown are not implemented.
+
 ## Package Layout
 
 When a project uses the default `src/` source root, or declares

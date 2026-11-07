@@ -66,6 +66,44 @@ class SemanticSymbol:
 
 @public
 @typechecked
+@dataclass(frozen=True, init=False)
+class ResolvedModuleStorage:
+    """
+    title: Validated static storage for one module scalar binding.
+    summary: >-
+      The symbol supplies identity, declared type and mutability. Initializers
+      are already converted scalar constants; None denotes an invalid nullable
+      payload, never an uninitialized ordinary scalar. No runtime init or owned
+      module lifecycle is authorized by this plan.
+    attributes:
+      symbol:
+        type: SemanticSymbol
+      initializer:
+        type: int | float | bool | None
+    """
+
+    symbol: SemanticSymbol
+    initializer: int | float | bool | None
+
+    def __init__(
+        self,
+        symbol: SemanticSymbol,
+        initializer: int | float | bool | None,
+    ) -> None:
+        """
+        title: Validate runtime argument types for module storage metadata.
+        parameters:
+          symbol:
+            type: SemanticSymbol
+          initializer:
+            type: int | float | bool | None
+        """
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "initializer", initializer)
+
+
+@public
+@typechecked
 class ResourceKind(str, Enum):
     """
     title: Runtime-managed resource categories.
@@ -2258,6 +2296,8 @@ class SemanticInfo:
         type: astx.TensorIndex | None
       numeric_storage:
         type: astx.DataType | None
+      module_storage:
+        type: ResolvedModuleStorage | None
       literal_context:
         type: astx.DataType | None
         description: Expected literal or collection type, consumed on visit.
@@ -2367,6 +2407,7 @@ class SemanticInfo:
     sequence_access: ResolvedSequenceAccess | None = None
     tensor_index: astx.TensorIndex | None = None
     numeric_storage: astx.DataType | None = None
+    module_storage: ResolvedModuleStorage | None = None
     literal_context: astx.DataType | None = None
     numeric_constant: int | float | None = None
     numeric_conversion: NumericConversion | None = None
