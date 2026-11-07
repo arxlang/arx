@@ -27,6 +27,7 @@ from irx.analysis.handlers._declarations.class_methods import (
     DeclarationClassMethodVisitorMixin,
 )
 from irx.analysis.handlers.base import SemanticAnalyzerCore
+from irx.analysis.inference import resolve_initializer_type
 from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
@@ -93,27 +94,48 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
                 continue
             attribute_names.add(attribute.name)
-            self._resolve_declared_type(
-                attribute.type_,
-                node=attribute,
-                unknown_message="Unknown attribute type '{name}'",
-            )
+            inferred = isinstance(attribute.type_, astx.InferredType)
+            if inferred:
+                # Layout precedes the constructor's locals and ownership scope.
+                # Runtime inference needs a separate initializer-typing pass.
+                if not isinstance(attribute.value, astx.Literal):
+                    self.context.diagnostics.add(
+                        "Field inference requires a literal initializer; "
+                        "provide an explicit field type for "
+                        "runtime initialization",
+                        node=attribute,
+                        code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                    )
+                    continue
+                with self.context.in_class(class_):
+                    attribute_type = resolve_initializer_type(
+                        cast(SemanticAnalyzerCore, self), attribute
+                    )
+                if attribute_type is None:
+                    continue
+                self._set_type(attribute, attribute_type)
+            else:
+                attribute_type = self._resolve_declared_type(
+                    attribute.type_,
+                    node=attribute,
+                    unknown_message="Unknown attribute type '{name}'",
+                )
             if self._attribute_is_static(attribute) and isinstance(
-                attribute.type_, (astx.FileType, astx.ClassType)
+                attribute_type, (astx.FileType, astx.ClassType)
             ):
                 self.context.diagnostics.add(
                     "owning static class fields are unsupported",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            if isinstance(attribute.type_, (astx.ListType, astx.Bytes)):
+            if isinstance(attribute_type, (astx.ListType, astx.Bytes)):
                 self.context.diagnostics.add(
                     f"class field '{class_.name}.{attribute.name}' cannot "
                     "own dynamic list storage in this lifecycle subset",
                     node=attribute,
                     code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
                 )
-            elif unsupported_class_field(attribute.type_):
+            elif unsupported_class_field(attribute_type):
                 self.context.diagnostics.add(
                     "this resource kind has no class-field ownership ABI",
                     node=attribute,
@@ -128,8 +150,9 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                 )
             ):
                 with self.context.in_class(class_):
-                    contextualize_literal(attribute.value, attribute.type_)
-                    self.visit(attribute.value)
+                    if not inferred:
+                        contextualize_literal(attribute.value, attribute_type)
+                        self.visit(attribute.value)
                 if self._require_value_expression(
                     attribute.value,
                     context=(
@@ -139,7 +162,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     validate_assignment(
                         self.context.diagnostics,
                         target_name=f"{class_.name}.{attribute.name}",
-                        target_type=attribute.type_,
+                        target_type=attribute_type,
                         value_type=self._expr_type(attribute.value),
                         node=attribute,
                     )
@@ -216,7 +239,7 @@ class DeclarationClassMemberVisitorMixin(DeclarationClassMethodVisitorMixin):
                     is_static=self._attribute_is_static(attribute),
                     is_constant=is_constant,
                     is_mutable=not is_constant,
-                    type_=attribute.type_,
+                    type_=attribute_type,
                 )
             )
 

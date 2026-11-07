@@ -47,7 +47,7 @@ Valid:
 ```
 title: Module docs
 ```
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Entry point for the module.
@@ -65,7 +65,7 @@ conventions still apply.
 Valid:
 
 ````text
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: Function docs
   summary: Function summary
@@ -76,7 +76,7 @@ fn main() -> i32:
 Invalid:
 
 ````text
-fn main() -> i32:
+main: fn() -> i32:
   return 1
   ```
   title: Too late

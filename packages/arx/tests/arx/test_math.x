@@ -5,7 +5,7 @@ summary: Validate bundled stdlib math helpers with the compiled test runner.
 
 import math from stdlib
 
-fn test_abs() -> none:
+test_abs: fn() -> none:
   ```
   title: test_abs
   summary: Verifies zero and representable positive and negative magnitudes.
@@ -17,7 +17,7 @@ fn test_abs() -> none:
   assert math.abs(2147483647) == 2147483647
   assert math.abs(0 - 2147483647) == 2147483647
 
-fn test_min_and_max() -> none:
+test_min_and_max: fn() -> none:
   ```
   title: test_min_and_max
   summary: Verifies bundled minimum and maximum helpers.
@@ -25,7 +25,7 @@ fn test_min_and_max() -> none:
   assert math.min(3, 9) == 3
   assert math.max(3, 9) == 9
 
-fn test_clamp() -> none:
+test_clamp: fn() -> none:
   ```
   title: test_clamp
   summary: Verifies lower, in-range, and upper clamp behavior.
@@ -36,13 +36,13 @@ fn test_clamp() -> none:
   assert math.clamp(0, 0, 2) == 0
   assert math.clamp(2, 0, 2) == 2
 
-fn test_clamp_integer_limits_and_equal_bounds() -> none:
+test_clamp_integer_limits_and_equal_bounds: fn() -> none:
   ```
   title: test_clamp_integer_limits_and_equal_bounds
   summary: Allows the full i32 interval and single-value inclusive intervals.
   ```
-  var minimum: i32 = (0 - 2147483647) - 1
-  var maximum: i32 = 2147483647
+  minimum: i32 = (0 - 2147483647) - 1
+  maximum: i32 = 2147483647
   assert math.clamp(minimum, minimum, maximum) == minimum
   assert math.clamp(maximum, minimum, maximum) == maximum
   assert math.clamp(0, minimum, maximum) == 0
@@ -50,7 +50,7 @@ fn test_clamp_integer_limits_and_equal_bounds() -> none:
   assert math.clamp(maximum, minimum, minimum) == minimum
   assert math.clamp(3, 3, 3) == 3
 
-fn test_square() -> none:
+test_square: fn() -> none:
   ```
   title: test_square
   summary: Verifies representable squares including zero and negative inputs.
@@ -62,7 +62,7 @@ fn test_square() -> none:
   assert math.square(0 - 1) == 1
   assert math.square(46340) == 2147395600
 
-fn test_explicit_wrapping_multiplication() -> none:
+test_explicit_wrapping_multiplication: fn() -> none:
   ```
   title: test_explicit_wrapping_multiplication
   summary: Modulo arithmetic requires explicit wrapping, while square is checked.
@@ -73,12 +73,12 @@ fn test_explicit_wrapping_multiplication() -> none:
   assert wrapping_mul(2147483647, 2147483647) == 1
   assert wrapping_mul((0 - 2147483647) - 1, (0 - 2147483647) - 1) == 0
 
-fn test_template_calls() -> none:
+test_template_calls: fn() -> none:
   ```
   title: test_template_calls
   summary: Preserve inferred narrow types or explicitly select a wider type.
   ```
-  var narrow: i8 = cast(0 - 12, i8)
+  narrow: i8 = cast(0 - 12, i8)
   assert isinstance(math.abs(narrow), i8)
   assert math.abs(narrow) == 12
   assert wrapping_mul(narrow, narrow) == 0 - 112

@@ -39,16 +39,16 @@ def test_compiled_nullable_file_conversion(tmp_path: Path) -> None:
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import (RecordBatch, Schema) from stdlib.arrow
 
-fn keep(frame: {FRAME}) -> {FRAME}:
+keep: fn(frame: {FRAME}) -> {FRAME}:
   return frame
 
-fn main() -> i32:
-  var source: ParquetStream = ParquetStream()
-  var target: ParquetStream = ParquetStream()
-  var options: ParquetOptions = ParquetOptions()
+main: fn() -> i32:
+  source: ParquetStream = ParquetStream()
+  target: ParquetStream = ParquetStream()
+  options: ParquetOptions = ParquetOptions()
   options.set_int("atomic", 1)
   source.open_read("input.parquet", batch_size=2)
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "uint64", true)
   schema.add("label", "utf8", true)
   schema.add("day", "date32[day]", true)
@@ -56,12 +56,12 @@ fn main() -> i32:
   schema.add("stamp", "timestamp[us]", true)
   target.open_write_options("output.parquet", schema, options)
   while source.next():
-    var batch: RecordBatch = source.batch()
-    var frame: {FRAME} = cast(batch, {FRAME})
-    var first: u64 = batch.get_u64(0, 0)
+    batch: RecordBatch = source.batch()
+    frame: {FRAME} = cast(batch, {FRAME})
+    first: u64 = batch.get_u64(0, 0)
     batch.close()
-    var alias: {FRAME} = keep(frame)
-    var converted: RecordBatch = cast(alias, RecordBatch)
+    alias: {FRAME} = keep(frame)
+    converted: RecordBatch = cast(alias, RecordBatch)
     assert converted.get_u64(0, 0) == first
     target.write(converted)
   target.close()
@@ -110,21 +110,21 @@ def test_compiled_nullable_literal_and_filter(tmp_path: Path) -> None:
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
 type Frame = dataframe[id:i64 | none, label:str | none]
-fn main() -> i32:
-  var frame: Frame = dataframe({id: [1, none, 3], label: ["a", none, "c"]})
-  var batch: RecordBatch = cast(frame, RecordBatch)
-  var target: ParquetStream = ParquetStream()
+main: fn() -> i32:
+  frame: Frame = dataframe({id: [1, none, 3], label: ["a", none, "c"]})
+  batch: RecordBatch = cast(frame, RecordBatch)
+  target: ParquetStream = ParquetStream()
   target.open_write("literal.parquet", batch.schema())
   target.write(batch)
   target.close()
-  var source: ParquetStream = ParquetStream()
-  var options: ParquetOptions = ParquetOptions()
+  source: ParquetStream = ParquetStream()
+  options: ParquetOptions = ParquetOptions()
   options.set_text("column", "label")
   options.set_filters(where("id", ">", 1))
   source.open_read_options("literal.parquet", options)
-  var rows: i64 = 0
+  rows: i64 = 0
   while source.next():
-    var result: RecordBatch = source.batch()
+    result: RecordBatch = source.batch()
     rows = rows + result.nrows()
   source.close()
   print(rows)
@@ -158,14 +158,14 @@ def test_compiled_temporal_literals(tmp_path: Path) -> None:
 import ParquetStream from stdlib.parquet
 import RecordBatch from stdlib.arrow
 type Frame = dataframe[day:date | none, clock:time | none, ts:timestamp | none]
-fn main() -> i32:
-  var frame: Frame = dataframe({
+main: fn() -> i32:
+  frame: Frame = dataframe({
     day: [date("1969-12-31"), none],
     clock: [time("01:02:03"), none],
     ts: [timestamp("1969-12-31T23:59:59"), none],
   })
-  var batch: RecordBatch = cast(frame, RecordBatch)
-  var target: ParquetStream = ParquetStream()
+  batch: RecordBatch = cast(frame, RecordBatch)
+  target: ParquetStream = ParquetStream()
   target.open_write("temporal.parquet", batch.schema())
   target.write(batch)
   target.close()
@@ -200,20 +200,20 @@ def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
     source = """
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
-fn keep_dynamic(frame: dataframe[...]) -> dataframe[...]:
+keep_dynamic: fn(frame: dataframe[...]) -> dataframe[...]:
   return frame
-fn main() -> i32:
-  var reader: ParquetStream = ParquetStream()
-  var writer: ParquetStream = ParquetStream()
-  var options: ParquetOptions = ParquetOptions()
+main: fn() -> i32:
+  reader: ParquetStream = ParquetStream()
+  writer: ParquetStream = ParquetStream()
+  options: ParquetOptions = ParquetOptions()
   options.encryption_key_hex("30313233343536373839616263646566")
   reader.open_read("rich.parquet")
   writer.open_write_options("encrypted.parquet", reader.schema(), options)
   while reader.next():
-    var batch: RecordBatch = reader.batch()
-    var frame: dataframe[...] = cast(batch, dataframe[...])
+    batch: RecordBatch = reader.batch()
+    frame: dataframe[...] = cast(batch, dataframe[...])
     batch.close()
-    var saved: dataframe[...] = keep_dynamic(frame)
+    saved: dataframe[...] = keep_dynamic(frame)
     writer.write(cast(saved, RecordBatch))
   writer.close()
   reader.close()

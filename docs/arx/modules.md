@@ -10,7 +10,7 @@ statements such as imports, function definitions, and extern declarations.
 title: Math module example
 summary: Module with one documented function.
 ```
-fn average(x: f32, y: f32) -> f32:
+average: fn(x: f32, y: f32) -> f32:
   ```
   title: average
   summary: Returns the arithmetic mean of x and y.
@@ -185,7 +185,7 @@ Example:
 ```arx
 import math from stdlib
 
-fn main() -> i32:
+main: fn() -> i32:
   return math.square(4) + math.clamp(0 - 3, 0, 2)
 ```
 
@@ -214,7 +214,7 @@ summary: Call one module member through a namespace alias.
 ```
 import geometry.shapes.area as area
 
-fn main() -> f64:
+main: fn() -> f64:
   ```
   title: main
   summary: Demonstrates namespace member access.
@@ -261,7 +261,7 @@ Valid:
 ```
 title: Module docs
 ```
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Entry point for the module.
@@ -275,7 +275,7 @@ Invalid (leading indentation before module docstring):
   ```
   title: Module docs
   ```
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Entry point for the module.

@@ -12,11 +12,11 @@ title: Copy a CSV file
 ```
 import (read_csv, write_csv) from stdlib.csv
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: Read every row and finalize the output
   ```
-  var frame: dataframe[...] = read_csv("input.csv")
+  frame: dataframe[...] = read_csv("input.csv")
   write_csv(frame, "output.csv")
   return 0
 ````
@@ -60,10 +60,10 @@ import Schema from stdlib.arrow
 import read_csv from stdlib.csv
 
 # Inside a function:
-var schema: Schema = Schema()
+schema: Schema = Schema()
 schema.add("id", "int64", nullable=false)
-var loaded: dataframe[...] = read_csv("ids.csv", schema=schema)
-var ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
+loaded: dataframe[...] = read_csv("ids.csv", schema=schema)
+ids: dataframe[id:i64] = cast(loaded, dataframe[id:i64])
 ```
 
 Runtime schemas do not infer compile-time column types. The cast above asserts
@@ -85,10 +85,10 @@ into a DataFrame. It supports either read or write mode.
 import CSVStream from stdlib.csv
 
 # Inside a function:
-var source: CSVStream = CSVStream()
+source: CSVStream = CSVStream()
 source.open_read("large.csv")
 while source.next():
-  var chunk: dataframe[...] = source.frame()
+  chunk: dataframe[...] = source.frame()
   print(chunk.nrows())
 source.close()
 ```

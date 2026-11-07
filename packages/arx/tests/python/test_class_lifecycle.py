@@ -22,10 +22,10 @@ from .file_support import analyze_arx as analyze
 
 COUNTER = """class Counter:
   value: i32 = 0
-  fn __init__(self, value: i32 = 3) -> none:
+  __init__: fn(self, value: i32 = 3) -> none:
     self.value = value
     return none
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print(self.value)
     return none
 """
@@ -45,7 +45,7 @@ def parsed(declarations: str, body: str) -> astx.Module:
     ArxIO.string_to_buffer(
         "```\ntitle: Class lifecycle regression\n```\n"
         + declarations
-        + "\nfn main() -> i32:\n"
+        + "\nmain: fn() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -96,7 +96,7 @@ def test_constructor_forms(tmp_path: Path, arguments: str) -> None:
         type: str
     """
     result = run_class(
-        tmp_path, COUNTER, f"var value: Counter = Counter({arguments})"
+        tmp_path, COUNTER, f"value: Counter = Counter({arguments})"
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == ("3\n" if not arguments else "7\n")
@@ -142,18 +142,18 @@ def test_alias_replacement_and_borrowed_return(tmp_path: Path) -> None:
     """
     declarations = (
         COUNTER
-        + """fn identity(value: Counter) -> Counter:
+        + """identity: fn(value: Counter) -> Counter:
   return value
-fn produce() -> Counter:
-  var local: Counter = Counter(value=4)
+produce: fn() -> Counter:
+  local: Counter = Counter(value=4)
   return identity(local)
 """
     )
     result = run_class(
         tmp_path,
         declarations,
-        """var first: Counter = produce()
-var alias: Counter = first
+        """first: Counter = produce()
+alias: Counter = first
 first = first
 first = Counter(value=8)
 assert alias.value == 4
@@ -172,18 +172,17 @@ def test_keyword_evaluation_order(tmp_path: Path) -> None:
     """
     declarations = """class Pair:
   sum: i32 = 0
-  fn __init__(self, first: i32, second: i32 = 2) -> none:
+  __init__: fn(self, first: i32, second: i32 = 2) -> none:
     self.sum = first + second
     return none
-fn value(number: i32) -> i32:
+value: fn(number: i32) -> i32:
   print(number)
   return number
 """
     result = run_class(
         tmp_path,
         declarations,
-        "var p: Pair = Pair(second=value(2), first=value(1))\n"
-        "assert p.sum == 3",
+        "p: Pair = Pair(second=value(2), first=value(1))\nassert p.sum == 3",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "2\n1\n"
@@ -197,28 +196,28 @@ def test_inheritance_drop_order(tmp_path: Path) -> None:
         type: Path
     """
     declarations = """class Root:
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     print("root init")
     return none
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("root drop")
     return none
 class Left(Root):
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("left drop")
     return none
 class Right(Root):
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("right drop")
     return none
 class Child(Left, Right):
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("child drop")
     return none
-fn produce() -> Root:
+produce: fn() -> Root:
   return Child()
 """
-    result = run_class(tmp_path, declarations, "var value: Root = produce()")
+    result = run_class(tmp_path, declarations, "value: Root = produce()")
     assert result.returncode == 0, result.stderr
     assert (
         result.stdout
@@ -235,17 +234,17 @@ def test_receiver_pin_before_later_argument_effects(tmp_path: Path) -> None:
     """
     declarations = (
         COUNTER.replace(
-            "  fn __del__",
-            """  fn read(self, offset: i32) -> i32:
+            "  __del__: fn",
+            """  read: fn(self, offset: i32) -> i32:
     return self.value + offset
-  fn __del__""",
+  __del__: fn""",
         )
         + """class Holder:
   child: Counter
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.child = Counter(value=1)
     return none
-fn replace_child(holder: Holder) -> i32:
+replace_child: fn(holder: Holder) -> i32:
   holder.child = Counter(value=9)
   return 0
 """
@@ -253,7 +252,7 @@ fn replace_child(holder: Holder) -> i32:
     result = run_class(
         tmp_path,
         declarations,
-        "var holder: Holder = Holder()\n"
+        "holder: Holder = Holder()\n"
         "assert holder.child.read(replace_child(holder)) == 1",
     )
     assert result.returncode == 0, result.stderr
@@ -263,20 +262,20 @@ fn replace_child(holder: Holder) -> i32:
 RESOURCE = """class Log:
   path: str = ""
   handle: file
-  fn __init__(self, path: str, mode: str = "w") -> none:
+  __init__: fn(self, path: str, mode: str = "w") -> none:
     self.path = path
     self.handle = open(self.path, mode=mode)
     return none
-  fn write(self, text: str) -> i64:
+  write: fn(self, text: str) -> i64:
     return self.handle.write(text)
-  fn close(self) -> none:
+  close: fn(self) -> none:
     self.handle.close()
     return none
-fn create(path: str) -> Log:
-  var local: Log = Log(mode="w", path=path)
+create: fn(path: str) -> Log:
+  local: Log = Log(mode="w", path=path)
   return local
-fn write_file() -> none:
-  var log: Log = create("data" + ".txt")
+write_file: fn() -> none:
+  log: Log = create("data" + ".txt")
   assert log.write("saved") == 5
   return none
 """
@@ -293,9 +292,9 @@ def test_owned_file_and_string_fields(tmp_path: Path) -> None:
         tmp_path,
         RESOURCE,
         """write_file()
-var input: file = open("data.txt")
+input: file = open("data.txt")
 assert input.read() == "saved"
-var log: Log = create("explicit.txt")
+log: Log = create("explicit.txt")
 log.close()""",
     )
     assert result.returncode == 0, result.stderr
@@ -325,7 +324,7 @@ def test_public_file_fields_use_class_initialization(
         type: str
     """
     declarations = (
-        "class Log:\n  handle: file\n  fn __init__(self) -> none:\n"
+        "class Log:\n  handle: file\n  __init__: fn(self) -> none:\n"
         + "\n".join("    " + line for line in constructor.splitlines())
         + "\n"
     )
@@ -346,7 +345,7 @@ def test_hooks_cannot_be_called_explicitly(body: str) -> None:
         type: str
     """
     with pytest.raises(SemanticError, match="explicitly"):
-        analyze(parsed(COUNTER, "var value: Counter = Counter()\n" + body))
+        analyze(parsed(COUNTER, "value: Counter = Counter()\n" + body))
 
 
 @pytest.mark.parametrize("name", ["__inti__", "__str__", "__new__"])
@@ -358,7 +357,7 @@ def test_unsupported_dunder_methods_fail_in_analysis(name: str) -> None:
         type: str
     """
     declarations = (
-        f"class Value:\n  fn {name}(self) -> none:\n    return none\n"
+        f"class Value:\n  {name}: fn(self) -> none:\n    return none\n"
     )
     with pytest.raises(
         SemanticError, match="dunder method names are reserved"
@@ -382,14 +381,14 @@ def test_non_protocol_method_names_remain_ordinary(
     """
     declarations = f"""class Value:
   value: i32 = 0
-  fn {name}(self, value: i32) -> i32:
+  {name}: fn(self, value: i32) -> i32:
     self.value = value
     return self.value
 """
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Value = Value()\nassert value.value == 0\n"
+        "value: Value = Value()\nassert value.value == 0\n"
         f"assert value.{name}(7) == 7",
     )
     assert result.returncode == 0, result.stderr
@@ -427,7 +426,7 @@ def test_null_class_reference_is_checked(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Holder = Holder()\nprint(value.child.value)",
+        "value: Holder = Holder()\nprint(value.child.value)",
     )
     assert result.returncode == 1
     assert "ARX-RUNTIME-CLASS-001" in result.stderr
@@ -437,7 +436,7 @@ def test_ordinary_keyword_calls_parse() -> None:
     """
     title: Ordinary method keywords preserve their value expressions.
     """
-    module = parsed(COUNTER, "var c: Counter = Counter()\nc.read(offset=1)")
+    module = parsed(COUNTER, "c: Counter = Counter()\nc.read(offset=1)")
     main = module.nodes[-1]
     assert isinstance(main, astx.FunctionDef)
     call = main.body.nodes[1]
@@ -456,22 +455,21 @@ def test_nonprefix_base_fields_in_hooks(tmp_path: Path) -> None:
   left: i32 = 11
 class Right:
   right: i32 = 0
-  fn __init__(self, value: i32 = 23) -> none:
+  __init__: fn(self, value: i32 = 23) -> none:
     self.right = value
     return none
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print(self.right)
     return none
 class Child(Left, Right):
   child: i32 = 31
-fn produce() -> Right:
+produce: fn() -> Right:
   return Child()
 """
     result = run_class(
         tmp_path,
         declarations,
-        "var base: Right = produce()\n"
-        "assert base.right == 23\nbase.right = 29",
+        "base: Right = produce()\nassert base.right == 23\nbase.right = 29",
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "29\n"
@@ -490,8 +488,8 @@ def test_owned_field_initializers(tmp_path: Path) -> None:
   path: str = "owned.txt"
   handle: file = open(self.path, mode="w")
   child: Counter = Counter(value=17)
-fn write() -> none:
-  var log: Log = Log()
+write: fn() -> none:
+  log: Log = Log()
   assert log.handle.write("saved") == 5
   log.path = "changed"
   log.path = log.path
@@ -502,7 +500,7 @@ fn write() -> none:
         tmp_path,
         declarations,
         "write()\n"
-        'var input: file = open("owned.txt")\nassert input.read() == "saved"',
+        'input: file = open("owned.txt")\nassert input.read() == "saved"',
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout == "17\n"
@@ -519,15 +517,15 @@ def test_partial_constructor_drops_only_completed_hooks(
     """
     declarations = """class Base:
   name: str = "base"
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print(self.name)
     return none
 class Child(Base):
   handle: file
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.handle = open("missing-directory/file.txt", "w")
     return none
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("incomplete")
     return none
 """
@@ -540,7 +538,7 @@ class Child(Base):
 @pytest.mark.parametrize(
     "body",
     [
-        "var alias: Counter = self\n    return none",
+        "alias: Counter = self\n    return none",
         "self.read()\n    return none",
     ],
 )
@@ -553,9 +551,9 @@ def test_lifecycle_self_cannot_escape(body: str) -> None:
     """
     declaration = (
         """class Counter:
-  fn read(self) -> i32:
+  read: fn(self) -> i32:
     return 1
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     """
         + body
         + "\n"
@@ -583,7 +581,7 @@ def test_parameter_rebinding_keeps_caller_reference(tmp_path: Path) -> None:
     """
     declarations = (
         COUNTER
-        + """fn rebind(value: Counter) -> none:
+        + """rebind: fn(value: Counter) -> none:
   value = Counter(value=8)
   assert value.value == 8
   return none
@@ -592,7 +590,7 @@ def test_parameter_rebinding_keeps_caller_reference(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        "var original: Counter = Counter(value=4)\nrebind(original)\n"
+        "original: Counter = Counter(value=4)\nrebind(original)\n"
         "assert original.value == 4\nprint(1)",
     )
     assert result.returncode == 0, result.stderr
@@ -608,12 +606,12 @@ def test_lexical_loop_and_early_return_cleanup(tmp_path: Path) -> None:
     """
     declarations = (
         COUNTER
-        + """fn loop() -> none:
-  for var number: i32 = 0; number < 3; number + 1:
-    var value: Counter = Counter(value=number)
+        + """loop: fn() -> none:
+  for number: i32 = 0; number < 3; number + 1:
+    value: Counter = Counter(value=number)
   return none
-fn early(flag: bool) -> none:
-  var value: Counter = Counter(value=9)
+early: fn(flag: bool) -> none:
+  value: Counter = Counter(value=9)
   if flag:
     return none
   else:
@@ -642,8 +640,7 @@ def test_public_file_fields_can_share_one_object(tmp_path: Path) -> None:
     result = run_class(
         tmp_path,
         declarations,
-        'var log: Log = Log()\nlog.first.write("saved")\n'
-        'log.second.write("!")',
+        'log: Log = Log()\nlog.first.write("saved")\nlog.second.write("!")',
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "log.txt").read_text() == "saved!"
@@ -664,7 +661,7 @@ def test_field_drop_failure_continues_other_fields(tmp_path: Path) -> None:
   first: Counter = Counter(value=1)
   handle: file = open("/dev/full", "w")
   second: Counter = Counter(value=2)
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.handle.write("buffered")
     return none
 """
@@ -687,7 +684,7 @@ def test_base_defaults_use_abi_conversions(tmp_path: Path) -> None:
     """
     declarations = """class Base:
   value: i64 = 0
-  fn __init__(self, value: i64 = 7) -> none:
+  __init__: fn(self, value: i64 = 7) -> none:
     self.value = value
     return none
 class Child(Base):
@@ -696,7 +693,7 @@ class Child(Base):
     result = run_class(
         tmp_path,
         declarations,
-        "var value: Child = Child()\nassert value.value == 7",
+        "value: Child = Child()\nassert value.value == 7",
     )
     assert result.returncode == 0, result.stderr
 
@@ -704,13 +701,12 @@ class Child(Base):
 @pytest.mark.parametrize(
     "declaration",
     [
-        "class Item:\n  @[static]\n"
-        "  fn __init__() -> none:\n    return none\n",
+        "class Item:\n  __init__: static :: fn() -> none:\n    return none\n",
         "class Item:\n"
-        "  fn __del__(self, value: i32) -> none:\n    return none\n",
-        "class Item:\n  fn __init__(self) -> i32:\n    return 1\n",
-        "class Item:\n  fn __init__(self) -> none:\n    return none\n"
-        "  fn __init__(self, value: i32) -> none:\n    return none\n",
+        "  __del__: fn(self, value: i32) -> none:\n    return none\n",
+        "class Item:\n  __init__: fn(self) -> i32:\n    return 1\n",
+        "class Item:\n  __init__: fn(self) -> none:\n    return none\n"
+        "  __init__: fn(self, value: i32) -> none:\n    return none\n",
     ],
 )
 def test_invalid_hook_declarations(declaration: str) -> None:
@@ -746,7 +742,7 @@ def test_constructor_allocation_failure_releases_argument(
         COUNTER
         + """class Holder:
   child: Counter
-  fn __init__(self, child: Counter) -> none:
+  __init__: fn(self, child: Counter) -> none:
     self.child = child
     return none
 """
@@ -816,17 +812,17 @@ def test_failed_replacement_rolls_back_current_field(tmp_path: Path) -> None:
     if not Path("/dev/full").exists():
         pytest.skip("requires the POSIX failing-write device")
     declarations = """class Base:
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print("base")
     return none
 class Failing(Base):
   handle: file = open("/dev/full", "w")
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.handle.write("buffered")
     return none
 class Holder:
   child: Base = Failing()
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.child = Base()
     return none
 """
@@ -856,21 +852,21 @@ def test_constructor_in_hook_can_use_later_class(tmp_path: Path) -> None:
     """
     declarations = """class Holder:
   child: Leaf
-  fn __init__(self) -> none:
+  __init__: fn(self) -> none:
     self.child = Leaf(value=7)
     return none
 class Leaf:
   value: i32 = 0
-  fn __init__(self, value: i32) -> none:
+  __init__: fn(self, value: i32) -> none:
     self.value = value
     return none
-  fn read(self) -> i32:
+  read: fn(self) -> i32:
     return self.value
 """
     result = run_class(
         tmp_path,
         declarations,
-        "var holder: Holder = Holder()\nassert holder.child.read() == 7",
+        "holder: Holder = Holder()\nassert holder.child.read() == 7",
     )
     assert result.returncode == 0, result.stderr
 
@@ -885,10 +881,9 @@ def test_scalar_union_field_is_preserved(tmp_path: Path) -> None:
     declarations = """type Number = i32 | i64
 class Value:
   number: Number = 7
-  @[private]
-  init: i32 = 1
+  init: private :: i32 = 1
 """
-    result = run_class(tmp_path, declarations, "var value: Value = Value()")
+    result = run_class(tmp_path, declarations, "value: Value = Value()")
     assert result.returncode == 0, result.stderr
 
 
@@ -901,19 +896,19 @@ def test_string_field_reads_survive_later_replacement(tmp_path: Path) -> None:
     """
     declarations = """class Log:
   path: str = "old"
-fn replace(log: Log) -> i32:
+replace: fn(log: Log) -> i32:
   log.path = "replacement with different storage"
   return 0
-fn read(text: str, ignored: i32) -> none:
+read: fn(text: str, ignored: i32) -> none:
   assert text == "old"
   return none
 """
     result = run_class(
         tmp_path,
         declarations,
-        """var log: Log = Log()
+        """log: Log = Log()
 read(log.path, replace(log))
-var snapshot: str = log.path
+snapshot: str = log.path
 log.path = "third"
 assert snapshot == "replacement with different storage"
 assert log.path == "third"

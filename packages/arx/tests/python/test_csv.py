@@ -22,27 +22,30 @@ import CSVStream from stdlib.csv
 import Schema from stdlib.arrow
 import RecordBatch as Batch from stdlib.arrow
 
-fn keep(frame: dataframe[id:i64]) -> dataframe[id:i64]:
+keep: fn(frame: dataframe[id:i64]) -> dataframe[id:i64]:
   return frame
 
-fn convert(frame: dataframe[id:i64]) -> Batch:
+convert: fn(frame: dataframe[id:i64]) -> Batch:
   return cast(frame, Batch)
 
-fn main() -> i32:
-  var reader: CSVStream = CSVStream()
+main: fn() -> i32:
+  reader: CSVStream = CSVStream()
   reader.open_read("input.csv", block_size=128)
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64", false)
-  var writer: CSVStream = CSVStream()
+  writer: CSVStream = CSVStream()
   writer.open_write("output.csv", schema)
-  var rows: i64 = 0
+  rows: i64 = 0
   while reader.next():
-    var batch: Batch = reader.batch()
-    var frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
+    batch: const :: auto = reader.batch()
+    frame: auto = cast(batch, dataframe[id:i64])
+    column: const :: auto = frame.id
+    assert series_count(column) == frame.nrows()
+    assert frame.ncols() == 1
     batch.close()
-    var alias: dataframe[id:i64] = keep(frame)
+    alias: const :: auto = keep(frame)
     frame = alias
-    var result: Batch = convert(alias)
+    result: const :: auto = convert(alias)
     rows = rows + result.nrows()
     writer.write(result)
   writer.close()
@@ -148,9 +151,9 @@ class RecordBatch:
   title: Not the native RecordBatch
   ```
   value: i32 = 1
-fn main() -> i32:
-  var batch: RecordBatch = RecordBatch()
-  var frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
+main: fn() -> i32:
+  batch: RecordBatch = RecordBatch()
+  frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
   return 0
 """
     with pytest.raises(SemanticError):

@@ -779,3 +779,85 @@ def test_void_return_can_forward_a_void_call() -> None:
     assert _semantic(call).resolved_call is not None
     assert _semantic(returned).resolved_return.returns_void
     assert isinstance(_semantic(call).resolved_type, astx.NoneType)
+
+
+@pytest.mark.parametrize("mutable", [True, False])
+@pytest.mark.parametrize("operation", ["=", "+=", "++", "--"])
+def test_parameter_binding_policy(mutable: bool, operation: str) -> None:
+    """
+    title: Parameter binding policy covers every supported scalar write form.
+    parameters:
+      mutable:
+        type: bool
+      operation:
+        type: str
+    """
+    argument = astx.Argument(
+        "value",
+        astx.Int32(),
+        mutability=(
+            astx.MutabilityKind.mutable
+            if mutable
+            else astx.MutabilityKind.constant
+        ),
+    )
+    if operation == "=":
+        write = astx.VariableAssignment("value", astx.LiteralInt32(2))
+    elif operation == "+=":
+        write = astx.AugAssign(
+            astx.Identifier("value"), "+=", astx.LiteralInt32(1)
+        )
+    else:
+        write = astx.UnaryOp(operation, astx.Identifier("value"))
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "update", astx.Arguments(argument), astx.Int32()
+        ),
+        _block(write, astx.FunctionReturn(astx.Identifier("value"))),
+    )
+    module = _main_module(astx.FunctionReturn(astx.LiteralInt32(0)))
+    module.block.append(definition)
+    if not mutable:
+        with pytest.raises(SemanticError, match="declared as constant"):
+            analyze(module)
+        return
+    analyze(module)
+    assert _semantic(argument).resolved_symbol is not None
+    assert _semantic(argument).resolved_symbol.is_mutable
+
+
+@pytest.mark.parametrize("definition_first", [False, True])
+def test_definition_controls_parameter_binding(definition_first: bool) -> None:
+    """
+    title: A forward prototype cannot override the definition's local policy.
+    parameters:
+      definition_first:
+        type: bool
+    """
+    prototype = astx.FunctionPrototype(
+        "update",
+        astx.Arguments(astx.Argument("value", astx.Int32())),
+        astx.Int32(),
+    )
+    argument = astx.Argument(
+        "value", astx.Int32(), mutability=astx.MutabilityKind.mutable
+    )
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "update", astx.Arguments(argument), astx.Int32()
+        ),
+        _block(
+            astx.VariableAssignment("value", astx.LiteralInt32(2)),
+            astx.FunctionReturn(astx.Identifier("value")),
+        ),
+    )
+    module = _main_module(astx.FunctionReturn(astx.LiteralInt32(0)))
+    for declaration in (
+        (definition, prototype)
+        if definition_first
+        else (prototype, definition)
+    ):
+        module.block.append(declaration)
+    analyze(module)
+    assert _semantic(definition).resolved_function is not None
+    assert _semantic(definition).resolved_function.args[0].is_mutable

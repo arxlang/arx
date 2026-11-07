@@ -8,24 +8,23 @@ class File:
   title: File
   summary: Owns one native text or binary stream shared by its object references.
   ```
-  @[private]
-  handle: NativeFileHandle
+  handle: private :: NativeFileHandle
 
-  fn read(self) -> str:
+  read: fn(self) -> str:
     ```
     title: read
     summary: Requires readable text mode; returns all remaining text independently.
     ```
     return self.handle.read()
 
-  fn write(self, text: str) -> i64:
+  write: fn(self, text: str) -> i64:
     ```
     title: write
     summary: Requires writable text mode; writes UTF-8 and counts Unicode characters.
     ```
     return self.handle.write(text)
 
-  fn read_bytes(self, size: i64) -> bytes:
+  read_bytes: fn(self, size: i64) -> bytes:
     ```
     title: read_bytes
     summary: >-
@@ -35,7 +34,7 @@ class File:
     ```
     return self.handle.read_bytes(size)
 
-  fn write_bytes(self, data: bytes) -> i64:
+  write_bytes: fn(self, data: bytes) -> i64:
     ```
     title: write_bytes
     summary: >-
@@ -45,7 +44,7 @@ class File:
     ```
     return self.handle.write_bytes(data)
 
-  fn flush(self) -> none:
+  flush: fn(self) -> none:
     ```
     title: flush
     summary: Checks buffered writes without promising durable storage.
@@ -53,7 +52,7 @@ class File:
     self.handle.flush()
     return none
 
-  fn close(self) -> none:
+  close: fn(self) -> none:
     ```
     title: close
     summary: Closes the stream idempotently without freeing its owned wrapper.

@@ -10,7 +10,7 @@ type Float = f32 | f64
 type Real = Integer | Float
 
 @<T: Real>
-fn add(lhs: T, rhs: T) -> T:
+add: fn(lhs: T, rhs: T) -> T:
   ```
   title: add
   summary: Returns the sum of two values with the same template type.
@@ -22,16 +22,15 @@ class Math:
   title: Math
   summary: Hosts one static generic identity helper.
   ```
-  @[public, static]
   @<T: Real>
-  fn identity(value: T) -> T:
+  identity: public static :: fn(value: T) -> T:
     ```
     title: identity
     summary: Returns one value unchanged through a static method.
     ```
     return value
 
-fn test_template_inference() -> none:
+test_template_inference: fn() -> none:
   ```
   title: test_template_inference
   summary: Verifies inferred and explicit integer template calls.
@@ -40,16 +39,16 @@ fn test_template_inference() -> none:
   assert add<int32>(3, 4) == 7
   assert Math.identity<int32>(5) == 5
 
-fn test_template_float_specialization() -> none:
+test_template_float_specialization: fn() -> none:
   ```
   title: test_template_float_specialization
   summary: Verifies explicit floating-point specialization and casting.
   ```
-  var decimal: f64 = add<f64>(1.5, 2.5)
-  var rounded: i32 = cast(decimal, i32)
+  decimal: f64 = add<f64>(1.5, 2.5)
+  rounded: i32 = cast(decimal, i32)
   assert rounded == 4
 
-fn test_composed_numeric_bounds() -> none:
+test_composed_numeric_bounds: fn() -> none:
   ```
   title: test_composed_numeric_bounds
   summary: Reuse composed integer and float bounds without returning a union.

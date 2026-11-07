@@ -45,6 +45,7 @@ from irx.builder.extensions.calls import (
     LoweringCall,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.collection_access import lower_collection_access
 from irx.builder.lowering.materialization import lower_materialization
 from irx.builder.lowering.sequences import adapt_sequence
 from irx.builder.lowering.text import lower_text_operation
@@ -794,6 +795,8 @@ class FunctionVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.MethodCall
         """
+        if lower_collection_access(self, node):
+            return
         if lower_text_operation(cast(VisitorCore, self), node):
             return
         if self.emit_operation(node):

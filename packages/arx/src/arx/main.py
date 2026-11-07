@@ -1148,7 +1148,7 @@ class ArxMain:
         if kwargs.get("run"):
             if emits_executable is False:
                 raise ValueError(
-                    "`--run` requires `fn main` (or disable `--lib`)."
+                    "`--run` requires `main: fn` (or disable `--lib`)."
                 )
             self.run_binary()
 

@@ -4,6 +4,7 @@ title: Collection of ASTx nodes used for types.
 
 from astx.types.base import (
     AnyType,
+    InferredType,
     NoneType,
 )
 from astx.types.boolean import (
@@ -95,6 +96,7 @@ __all__ = [
     "Float64",
     "Floating",
     "GeneratorType",
+    "InferredType",
     "Int8",
     "Int16",
     "Int32",

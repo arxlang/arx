@@ -48,14 +48,14 @@ title: Hello module
 summary: Compiles a small typed Arx program.
 ```
 
-fn add(a: i32, b: i32) -> i32:
+add: fn(a: i32, b: i32) -> i32:
   ```
   title: add
   summary: Adds two values.
   ```
   return a + b
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Prints one result and returns success.
@@ -98,13 +98,13 @@ title: Arrow-backed collections
 summary: Uses a Tensor, DataFrame, and Series.
 ```
 
-fn main() -> i32:
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  var rows: dataframe[id: i32, score: f64] = dataframe({
+main: fn() -> i32:
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })
-  var scores: series[f64] = rows.score
+  scores: series[f64] = rows.score
   assert grid[1, 0] == 3
   assert rows.nrows() == 3
   assert scores[2] == 1.0

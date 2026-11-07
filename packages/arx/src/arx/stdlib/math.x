@@ -10,7 +10,7 @@ summary: >-
 type SignedInteger = i8 | i16 | i32 | i64
 
 @<T: SignedInteger>
-fn abs(value: T) -> T:
+abs: fn(value: T) -> T:
   ```
   title: abs
   summary: >-
@@ -18,14 +18,14 @@ fn abs(value: T) -> T:
     because its positive magnitude is not representable, unlike Python's
     arbitrary-precision integer result.
   ```
-  var zero: T = cast(0, T)
+  zero: T = cast(0, T)
   if value < zero:
     return zero - value
   else:
     return value
 
 @<T: SignedInteger>
-fn min(lhs: T, rhs: T) -> T:
+min: fn(lhs: T, rhs: T) -> T:
   ```
   title: min
   summary: Returns the smaller of two signed integers as T.
@@ -36,7 +36,7 @@ fn min(lhs: T, rhs: T) -> T:
     return rhs
 
 @<T: SignedInteger>
-fn max(lhs: T, rhs: T) -> T:
+max: fn(lhs: T, rhs: T) -> T:
   ```
   title: max
   summary: Returns the larger of two signed integers as T.
@@ -47,7 +47,7 @@ fn max(lhs: T, rhs: T) -> T:
     return rhs
 
 @<T: SignedInteger>
-fn clamp(value: T, lower: T, upper: T) -> T:
+clamp: fn(value: T, lower: T, upper: T) -> T:
   ```
   title: clamp
   summary: >-
@@ -65,7 +65,7 @@ fn clamp(value: T, lower: T, upper: T) -> T:
       return value
 
 @<T: SignedInteger>
-fn square(value: T) -> T:
+square: fn(value: T) -> T:
   ```
   title: square
   summary: >-

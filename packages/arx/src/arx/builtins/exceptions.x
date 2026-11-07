@@ -8,10 +8,8 @@ class BaseException:
   title: Root exception
   summary: Owns an immutable message and private native diagnostic state.
   ```
-  @[private]
-  record: NativeExceptionRecord
-  @[public, constant]
-  message: str = ""
+  record: private :: NativeExceptionRecord
+  message: public const :: str = ""
 
 class Exception(BaseException):
   ```

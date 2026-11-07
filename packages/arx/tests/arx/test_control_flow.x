@@ -3,7 +3,7 @@ title: Repository control-flow tests
 summary: Cover if/elif chains, while loops, for-in loops, and count loops.
 ```
 
-fn classify(value: i32) -> i32:
+classify: fn(value: i32) -> i32:
   ```
   title: classify
   summary: Classifies one integer as negative, zero, or positive.
@@ -15,7 +15,7 @@ fn classify(value: i32) -> i32:
   else:
     return 1
 
-fn while_never_runs() -> i32:
+while_never_runs: fn() -> i32:
   ```
   title: while_never_runs
   summary: Uses one while loop whose body never executes.
@@ -24,7 +24,7 @@ fn while_never_runs() -> i32:
     return 1
   return 0
 
-fn first_range_value(limit: i32) -> i32:
+first_range_value: fn(limit: i32) -> i32:
   ```
   title: first_range_value
   summary: Returns the first value produced by one range loop.
@@ -33,23 +33,23 @@ fn first_range_value(limit: i32) -> i32:
     return i
   return limit
 
-fn make_values() -> list[i32]:
+make_values: fn() -> list[i32]:
   ```
   title: make_values
   summary: Builds one list for function-call iterable coverage.
   ```
   return range(0, 4)
 
-fn skipped_count_loop() -> i32:
+skipped_count_loop: fn() -> i32:
   ```
   title: skipped_count_loop
   summary: Uses one count loop whose body is skipped entirely.
   ```
-  for var i: i32 = 3; i < 3; i + 1:
+  for i: i32 = 3; i < 3; i + 1:
     return 1
   return 0
 
-fn test_if_elif_else_paths() -> none:
+test_if_elif_else_paths: fn() -> none:
   ```
   title: test_if_elif_else_paths
   summary: Covers every branch and ordered condition effects with early stopping.
@@ -59,8 +59,8 @@ fn test_if_elif_else_paths() -> none:
   assert classify(2) == 1
 
   for stop in [1, 2, 3, 4]:
-    var checks: i32 = 0
-    var branch: i32 = 0
+    checks: i32 = 0
+    branch: i32 = 0
     if ++checks == stop:
       branch = 1
     elif ++checks == stop:
@@ -74,14 +74,14 @@ fn test_if_elif_else_paths() -> none:
       assert checks == stop
       assert branch == stop
 
-fn test_while_zero_iteration() -> none:
+test_while_zero_iteration: fn() -> none:
   ```
   title: test_while_zero_iteration
   summary: Verifies the while helper returns the fallthrough value.
   ```
   assert while_never_runs() == 0
 
-fn test_for_range_loop_asserts() -> none:
+test_for_range_loop_asserts: fn() -> none:
   ```
   title: test_for_range_loop_asserts
   summary: Executes one range loop and validates each yielded index.
@@ -90,59 +90,59 @@ fn test_for_range_loop_asserts() -> none:
     assert i < 4, "range loop values should stay below the stop bound"
   assert first_range_value(4) == 0
 
-fn test_for_in_list_asserts() -> none:
+test_for_in_list_asserts: fn() -> none:
   ```
   title: test_for_in_list_asserts
   summary: Executes for-in loops over one list variable and one list literal.
   ```
-  var values: list[i32] = range(0, 4)
-  var total_from_var: i32 = 0
+  values: list[i32] = range(0, 4)
+  total_from_var: i32 = 0
   for value in values:
     total_from_var = total_from_var + value
   assert total_from_var == 6, "for-in over a list variable should sum to 6"
 
-  var total_from_literal: i32 = 0
+  total_from_literal: i32 = 0
   for value in [1, 2, 3]:
     total_from_literal = total_from_literal + value
   assert total_from_literal == 6, "for-in over a list literal should sum to 6"
 
-  var total_from_call: i32 = 0
+  total_from_call: i32 = 0
   for value in make_values():
     total_from_call = total_from_call + value
   assert total_from_call == 6, "for-in over a function call should sum to 6"
 
-fn test_for_count_loop_asserts() -> none:
+test_for_count_loop_asserts: fn() -> none:
   ```
   title: test_for_count_loop_asserts
   summary: Executes one count loop and one skipped count loop.
   ```
-  for var i: i32 = 0; i < 3; i + 1:
+  for i: i32 = 0; i < 3; i + 1:
     assert i < 3, "count loop values should stay below the exit condition"
   assert skipped_count_loop() == 0
 
-  var i: i32 = 42
-  var total: i32 = 0
-  for var i: i32 = 0; i < 4; i += 1:
+  i: i32 = 42
+  total: i32 = 0
+  for i: i32 = 0; i < 4; i += 1:
     total += i * 2
-    for var i: i32 = 100; i < 101; i += 1:
+    for i: i32 = 100; i < 101; i += 1:
       assert i == 100
   assert total == 12
   assert i == 42
 
-fn test_prefix_mutation_values() -> none:
+test_prefix_mutation_values: fn() -> none:
   ```
   title: test_prefix_mutation_values
   summary: Prefix mutation stores and returns the updated value, including loop updates.
   ```
-  var value: i32 = 3
-  var increased: i32 = ++value
+  value: i32 = 3
+  increased: i32 = ++value
   assert value == 4
   assert increased == 4
-  var decreased: i32 = --value
+  decreased: i32 = --value
   assert value == 3
   assert decreased == 3
 
-  var total: i32 = 0
-  for var i: i32 = 0; i < 3; ++i:
+  total: i32 = 0
+  for i: i32 = 0; i < 3; ++i:
     total = total + i
   assert total == 3

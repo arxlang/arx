@@ -15,7 +15,7 @@ import (sum, mean) from .stats
 import helper from ..shared.helpers
 
 
-fn use_namespace_import() -> none:
+use_namespace_import: fn() -> none:
   ```
   title: Namespace import usage
   summary: Calls one imported module member through an alias.

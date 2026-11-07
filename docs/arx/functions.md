@@ -1,7 +1,9 @@
 # Functions
 
-Functions are defined with `fn`, a name, parameters in `()`, and a body after
-`:` with indentation.
+Functions use `name: fn(parameters) -> return_type:` followed by an indented
+body. The name may explicitly use `const ::` before `fn`; it is not a rebindable
+function value. Parameters default to `var` and can use `name: const :: T` to
+prevent callee-side reassignment without restricting the caller's binding.
 
 ## Definition Syntax
 
@@ -10,7 +12,7 @@ Functions are defined with `fn`, a name, parameters in `()`, and a body after
 title: Function definition
 summary: Shows the structure of a function declaration.
 ```
-fn add(x: i32, y: i32) -> i32:
+add: fn(x: i32, y: i32) -> i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -25,14 +27,14 @@ fn add(x: i32, y: i32) -> i32:
 title: Function call example
 summary: Defines a helper function and calls it from main.
 ```
-fn double(v: i32) -> i32:
+double: fn(v: i32) -> i32:
   ```
   title: double
   summary: Returns v multiplied by two.
   ```
   return v * 2
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Calls double with a constant input.
@@ -87,14 +89,14 @@ later parameter is supplied by name.
 title: Default argument example
 summary: Calls a helper using an optional offset.
 ```
-fn add_offset(value: i32, offset: i32 = 1) -> i32:
+add_offset: fn(value: i32, offset: i32 = 1) -> i32:
   ```
   title: add_offset
   summary: Adds an optional offset to value.
   ```
   return value + offset
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Uses the declared default offset.
@@ -104,11 +106,12 @@ fn main() -> i32:
 
 ## Template Functions
 
-Function templates use an `@<...>` block on the line immediately before `fn`.
-Each template parameter must declare a bound, and bounds may be a single type or
-a `|` union of concrete types. Module-local type aliases can name and compose
-these bounds; importing aliases from another module is not supported. Explicit
-template arguments are written between the callee name and `(`.
+Function templates use an `@<...>` block on the line immediately before the
+function declaration. Each template parameter must declare a bound, and bounds
+may be a single type or a `|` union of concrete types. Module-local type aliases
+can name and compose these bounds; importing aliases from another module is not
+supported. Explicit template arguments are written between the callee name and
+`(`.
 
 ````arx
 ```
@@ -120,14 +123,14 @@ type Float = f32 | f64
 type Real = SignedInteger | Float
 
 @<T: Real>
-fn add(x: T, y: T) -> T:
+add: fn(x: T, y: T) -> T:
   ```
   title: add
   summary: Adds two values that share one template-bound type.
   ```
   return x + y
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Calls template specializations through inference and explicit args.
@@ -157,7 +160,7 @@ Example:
 title: Function docstring placement
 summary: Function docstring appears as the first body element.
 ```
-fn add(x: i32, y: i32) -> i32:
+add: fn(x: i32, y: i32) -> i32:
   ```
   title: Add two numbers
   summary: Returns x + y.
@@ -178,7 +181,7 @@ the compiler does not infer a native dependency from a function's name.
 title: Extern prototype example
 summary: Declares an external function signature.
 ```
-extern putchard(x: i32) -> i32
+putchard: extern :: fn(x: i32) -> i32
 ````
 
 ## Native file construction

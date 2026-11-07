@@ -28,3 +28,19 @@ def test_typecastexpr() -> None:
     assert cast_expr.get_struct(simplified=True)
 
     visualize_image(cast_expr.get_struct())
+
+
+def test_inferred_type_is_an_explicit_source_request() -> None:
+    """
+    title: Inference requests are distinct from wildcard and concrete types.
+    """
+    import pytest
+
+    import astx
+
+    annotation = astx.InferredType()
+    assert isinstance(annotation, astx.DataType)
+    assert not isinstance(annotation, astx.types.AnyType)
+    assert annotation is not astx.InferredType()
+    with pytest.raises(TypeError):
+        astx.InferredType("invalid")  # type: ignore[call-arg]

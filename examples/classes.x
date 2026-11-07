@@ -7,11 +7,9 @@ class BaseCounter:
   title: BaseCounter
   summary: Stores one inherited seed value for derived counters.
   ```
-  @[public, mutable]
-  value: int32 = 41
+  value: public var :: int32 = 41
 
-  @[protected]
-  fn read_seed(self) -> int32:
+  read_seed: protected :: fn(self) -> int32:
     ```
     title: read_seed
     summary: Reads the inherited seed value.
@@ -23,28 +21,25 @@ class Counter(BaseCounter):
   title: Counter
   summary: Extends BaseCounter with private state and helper methods.
   ```
-  @[public, static, constant]
-  version: int32 = 3
+  version: public static const :: int32 = 3
 
-  @[private, mutable]
-  internal: int32 = 5
+  internal: private var :: int32 = 5
 
-  @[protected]
-  fn internal_total(self) -> int32:
+  internal_total: protected :: fn(self) -> int32:
     ```
     title: internal_total
     summary: Combines private and inherited state.
     ```
     return self.internal + self.value
 
-  fn get(self) -> int32:
+  get: fn(self) -> int32:
     ```
     title: get
     summary: Returns the inherited public counter value.
     ```
     return self.value
 
-  fn read_internal(self) -> int32:
+  read_internal: fn(self) -> int32:
     ```
     title: read_internal
     summary: Uses a protected helper to expose internal state safely.
@@ -56,35 +51,33 @@ class CounterFactory:
   title: CounterFactory
   summary: Builds Counter instances and exposes static class metadata.
   ```
-  @[public, static]
-  fn make() -> Counter:
+  make: public static :: fn() -> Counter:
     ```
     title: make
     summary: Builds a default counter instance.
     ```
     return Counter()
 
-  @[public, static]
-  fn version_value() -> int32:
+  version_value: public static :: fn() -> int32:
     ```
     title: version_value
     summary: Reads the static class version.
     ```
     return Counter.version
 
-fn take_counter(counter: Counter) -> int32:
+take_counter: fn(counter: Counter) -> int32:
   ```
   title: take_counter
   summary: Combines method and attribute access on a typed class value.
   ```
   return counter.get() + counter.value + counter.read_internal()
 
-fn main() -> int32:
+main: fn() -> int32:
   ```
   title: main
   summary: Exercises class construction, static access, and instance calls.
   ```
-  var direct: Counter = Counter()
-  var built: Counter = CounterFactory.make()
-  var total: int32 = take_counter(direct) + built.get()
+  direct: Counter = Counter()
+  built: Counter = CounterFactory.make()
+  total: int32 = take_counter(direct) + built.get()
   return total + CounterFactory.version_value() + Counter.version

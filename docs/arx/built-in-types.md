@@ -29,8 +29,8 @@ embedded NUL safely.
 ## Parsing text
 
 ```arx
-fn distance(record: str) -> i64:
-  var clean: str = record.strip()
+distance: fn(record: str) -> i64:
+  clean: str = record.strip()
   return int(clean[1:])
 ```
 

@@ -26,6 +26,8 @@ class ExceptionParserMixin(ParserMixinBase):
         returns:
           type: astx.AST
         """
+        if self.is_declaration_start():
+            return self.parse_named_declaration()
         kind = self.tokens.cur_tok.kind
         if kind == TokenKind.kw_raise:
             return self.parse_raise_stmt()

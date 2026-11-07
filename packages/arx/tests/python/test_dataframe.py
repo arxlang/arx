@@ -34,13 +34,13 @@ def test_parse_dataframe_type_constructor_and_column_access() -> None:
     """
     tree = _parse_module(
         """
-        fn main() -> i32:
-          var rows: dataframe[id: i32, score: f64] = dataframe({
+        main: fn() -> i32:
+          rows: dataframe[id: i32, score: f64] = dataframe({
             id: [1, 2, 3],
             score: [0.5, 0.8, 1.0],
           })
-          var score: series[f64] = rows.score
-          var ids: series[i32] = rows["id"]
+          score: series[f64] = rows.score
+          ids: series[i32] = rows["id"]
           return cast(rows.nrows(), i32)
         """
     )
@@ -75,9 +75,9 @@ def test_parse_runtime_schema_dataframe_annotations() -> None:
     """
     tree = _parse_module(
         """
-        extern sink(rows: dataframe[...]) -> none
+        sink: extern :: fn(rows: dataframe[...]) -> none
 
-        fn accept(rows: dataframe[...]) -> i32:
+        accept: fn(rows: dataframe[...]) -> i32:
           return cast(rows.nrows(), i32)
         """
     )
@@ -115,7 +115,7 @@ def test_parse_temporal_constructors(
       kind:
         type: type[astx.AST]
     """
-    tree = _parse_module(f'fn main() -> none:\n  {constructor}("{value}")\n')
+    tree = _parse_module(f'main: fn() -> none:\n  {constructor}("{value}")\n')
     function = tree.nodes[0]
     assert isinstance(function, astx.FunctionDef)
     assert isinstance(function.body.nodes[0], kind)
@@ -129,8 +129,8 @@ def test_reject_untyped_dataframe_literal() -> None:
     with pytest.raises(ParserException, match=r"schema|columns"):
         _parse_module(
             """
-            fn bad() -> none:
-              var rows: dataframe[...] = dataframe({id: [1]})
+            bad: fn() -> none:
+              rows: dataframe[...] = dataframe({id: [1]})
               return none
             """
         )
@@ -143,8 +143,8 @@ def test_dataframe_constructor_requires_declared_columns() -> None:
     with pytest.raises(ParserException, match="missing column 'score'"):
         _parse_module(
             """
-            fn bad() -> none:
-              var rows: dataframe[id: i32, score: f64] = dataframe({
+            bad: fn() -> none:
+              rows: dataframe[id: i32, score: f64] = dataframe({
                 id: [1, 2, 3],
               })
               return none
@@ -158,10 +158,10 @@ def test_dataframe_name_tracking_respects_inner_scope_shadowing() -> None:
     """
     tree = _parse_module(
         """
-        fn main() -> i32:
-          var rows: dataframe[id: i32] = dataframe({id: [1]})
+        main: fn() -> i32:
+          rows: dataframe[id: i32] = dataframe({id: [1]})
           if true:
-            var rows: i32 = 1
+            rows: i32 = 1
             return rows.nrows()
           return 0
         """
@@ -183,8 +183,8 @@ def test_dataframe_string_and_nullable_columns() -> None:
     """
     tree = _parse_module(
         """
-        fn good() -> none:
-          var rows: dataframe[name:str | none] = dataframe({name: [none]})
+        good: fn() -> none:
+          rows: dataframe[name:str | none] = dataframe({name: [none]})
           return none
         """
     )
@@ -196,7 +196,7 @@ def test_dataframe_string_and_nullable_columns() -> None:
     assert rows.type_.columns is not None
     assert rows.type_.columns[0].nullable
     assert isinstance(rows.type_.columns[0].type_, astx.String)
-    _parse_module("fn good(value: series[str]) -> none:\n  return none")
+    _parse_module("good: fn(value: series[str]) -> none:\n  return none")
 
 
 def test_dataframe_invalid_nullable_union() -> None:
@@ -206,7 +206,7 @@ def test_dataframe_invalid_nullable_union() -> None:
     """
     with pytest.raises(ParserException, match=r"type \| none"):
         _parse_module(
-            "fn bad(value: dataframe[x:i64 | str]) -> none:\n  return none"
+            "bad: fn(value: dataframe[x:i64 | str]) -> none:\n  return none"
         )
 
 
@@ -236,7 +236,7 @@ def test_parse_parameterized_columns(annotation: str) -> None:
         type: str
     """
     tree = _parse_module(
-        f"fn accept(frame: dataframe[x:{annotation} | none]) -> i32:\n"
+        f"accept: fn(frame: dataframe[x:{annotation} | none]) -> i32:\n"
         "  return 0\n"
     )
     function = tree.nodes[0]
@@ -270,6 +270,6 @@ def test_reject_invalid_column_parameters(annotation: str) -> None:
     """
     with pytest.raises(ParserException):
         _parse_module(
-            f"fn accept(frame: dataframe[x:{annotation}]) -> i32:\n"
+            f"accept: fn(frame: dataframe[x:{annotation}]) -> i32:\n"
             "  return 0\n"
         )

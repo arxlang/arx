@@ -9,10 +9,9 @@ class Resource:
   title: Resource
   summary: Releases its native token on the final ordinary class-reference exit.
   ```
-  @[private]
-  token: i64 = 0
+  token: private :: i64 = 0
 
-  fn __init__(self, size: i32 = 1) -> none:
+  __init__: fn(self, size: i32 = 1) -> none:
     ```
     title: __init__
     ```
@@ -20,20 +19,20 @@ class Resource:
     assert self.token > 0
     return none
 
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     ```
     title: __del__
     ```
     assert fixture_release(token=self.token) == 0
     return none
 
-  fn note(self, value: f64, label: str) -> i32:
+  note: fn(self, value: f64, label: str) -> i32:
     ```
     title: note
     ```
     return fixture_note(label=label, token=self.token, value=value)
 
-  fn write(self, path: str, kind: i32 = 0) -> i32:
+  write: fn(self, path: str, kind: i32 = 0) -> i32:
     ```
     title: write
     ```

@@ -22,6 +22,7 @@ from public import private
 
 from irx.analysis.arrow_conversion import contains_arrow
 from irx.analysis.class_lifecycle import contains_class
+from irx.analysis.collection_access import resolve_collection_access
 from irx.analysis.collections import (
     collection_contains_types,
     collection_supports_sequence_search,
@@ -1236,6 +1237,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             node=node,
             action="append to",
             invalid_message="list append target must be a variable or field",
+            require_reassignment=False,
         )
         if resolved_target is None:
             self._set_type(node, astx.Int32())
@@ -1310,11 +1312,14 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         """
         info = self._semantic(node)
         info.sequence_access = None
+        info.normalized_collection = None
         info.tensor_index = None
         if info.resolved_text_operation is not None:
             info.resource_ownership = None
         info.resolved_text_operation = None
         self.visit(node.value)
+        if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
+            return
         if isinstance(self._expr_type(node.value), astx.TensorType):
             if node.is_slice:
                 self.context.diagnostics.add(

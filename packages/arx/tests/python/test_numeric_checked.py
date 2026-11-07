@@ -41,7 +41,7 @@ def numeric_program(body: str, definitions: str = "") -> str:
     return (
         "```\ntitle: Checked numeric acceptance\n```\n"
         + definitions
-        + "fn main() -> i32:\n"
+        + "main: fn() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -143,13 +143,13 @@ def compound_binary(
       type: Path
     """
     definitions = """
-fn rhs_once() -> i32:
+rhs_once: fn() -> i32:
   print("rhs once")
   return 2
 
-fn recover(before: i32, rhs: i32, op: i32, expected: i32) -> none:
-  var value: i32 = before
-  var caught: i32 = 0
+recover: fn(before: i32, rhs: i32, op: i32, expected: i32) -> none:
+  value: i32 = before
+  caught: i32 = 0
   try:
     if op == 0:
       value += rhs
@@ -173,12 +173,12 @@ fn recover(before: i32, rhs: i32, op: i32, expected: i32) -> none:
     assert caught == 1
   assert value == expected
 """
-    body = """var start: i32 = 207
-var amount: i32 = 5
+    body = """start: i32 = 207
+amount: i32 = 5
 start -= amount
 start %= 100
 assert start == 2
-var x: i32 = 3
+x: i32 = 3
 x += rhs_once()
 assert x == 5
 x = 3
@@ -190,19 +190,19 @@ x /= 3
 assert x == 2
 x %= 2
 assert x == 0
-var negative: i32 = -5
+negative: i32 = -5
 negative %= 3
 assert negative == -2
 negative /= 2
 assert negative == -1
-var unsigned: u32 = 2147483648
+unsigned: u32 = 2147483648
 unsigned /= cast(2, u8)
 unsigned %= cast(3, u8)
 unsigned += cast(3, u8)
 unsigned -= cast(2, u8)
 unsigned *= cast(2, u8)
 assert unsigned == cast(4, u32)
-var floating: f64 = -5.5
+floating: f64 = -5.5
 floating %= 2.0
 assert floating == -1.5
 floating *= 2.0
@@ -220,15 +220,15 @@ recover(9, 0, 4, 9)
 recover(-2147483648, -1, 3, -2147483648)
 recover(-2147483648, -1, 4, -2147483648)
 recover(1073741824, 0, 5, 1073741825)
-var small: u8 = 255
-var caught: i32 = 0
+small: u8 = 255
+caught: i32 = 0
 try:
   small += 1
 except OverflowError:
   caught += 1
 assert small == cast(255, u8)
-var wide: i32 = 300
-var target: i32 = 5
+wide: i32 = 300
+target: i32 = 5
 try:
   target += cast(wide, i8)
 except OverflowError:
@@ -281,17 +281,17 @@ def remainder_binary(
       type: Path
     """
     source = numeric_program(
-        """var mode: i32 = getchar()
-var divisor: i64 = cast(mode, i64) - 1
+        """mode: i32 = getchar()
+divisor: i64 = cast(mode, i64) - 1
 if mode == 2:
-  var unsigned: u64 = 9
-  var zero: u64 = cast(mode - 2, u64)
+  unsigned: u64 = 9
+  zero: u64 = cast(mode - 2, u64)
   print(unsigned % zero)
 else:
-  var minimum: i64 = -9223372036854775808
+  minimum: i64 = -9223372036854775808
   print(minimum % divisor)
 print(777)""",
-        "extern getchar() -> i32\n",
+        "getchar: extern :: fn() -> i32\n",
     )
     return compile_numeric(
         tmp_path_factory.mktemp("remainder"), source, request.param
@@ -375,7 +375,7 @@ def test_native_integer_overflow(
     right = 2 if operator == "*" else 1
     result = run_numeric(
         tmp_path,
-        f"var left: {name} = {left}\nvar right: {name} = {right}\n"
+        f"left: {name} = {left}\nright: {name} = {right}\n"
         f"left {operator} right\nprint(777)",
         optimization,
     )
@@ -392,17 +392,17 @@ def test_native_integer_overflow(
 @pytest.mark.parametrize(
     "body",
     [
-        "var value: i8 = -128\n-value",
-        "var value: u8 = 1\n-value",
-        "var value: u64 = 18446744073709551615\n++value",
-        "var value: i8 = 127\n++value",
-        "var value: u8 = 0\n--value",
-        "var value: i64 = -9223372036854775808\nvalue / -1",
-        "var value: i32 = 1\nvalue / 0",
-        "var value: i8 = -12\nmath.square(value)",
-        "var value: i8 = -12\ncast(math.square(value), i64)",
-        "var value: i32 = 46341\nmath.square(value)",
-        "var value: i64 = -9223372036854775808\nmath.abs(value)",
+        "value: i8 = -128\n-value",
+        "value: u8 = 1\n-value",
+        "value: u64 = 18446744073709551615\n++value",
+        "value: i8 = 127\n++value",
+        "value: u8 = 0\n--value",
+        "value: i64 = -9223372036854775808\nvalue / -1",
+        "value: i32 = 1\nvalue / 0",
+        "value: i8 = -12\nmath.square(value)",
+        "value: i8 = -12\ncast(math.square(value), i64)",
+        "value: i32 = 46341\nmath.square(value)",
+        "value: i64 = -9223372036854775808\nmath.abs(value)",
     ],
 )
 def test_native_arithmetic_failures(
@@ -430,17 +430,17 @@ def test_native_arithmetic_failures(
 @pytest.mark.parametrize(
     "body",
     [
-        "var value: i32 = 128\ncast(value, i8)",
-        "var value: i8 = -1\ncast(value, u8)",
-        "var value: u64 = 18446744073709551615\ncast(value, i64)",
-        "var value: f64 = 9223372036854775808.0\ncast(value, i64)",
-        "var value: f64 = 18446744073709551616.0\ncast(value, u64)",
-        "var value: f64 = -1.0\ncast(value, u64)",
-        "var value: f64 = 0.0 / 0.0\ncast(value, i32)",
-        "var value: f64 = 1.0 / 0.0\ncast(value, i64)",
-        "var value: f64 = 10000000000000000000000000000000000000000.0\n"
+        "value: i32 = 128\ncast(value, i8)",
+        "value: i8 = -1\ncast(value, u8)",
+        "value: u64 = 18446744073709551615\ncast(value, i64)",
+        "value: f64 = 9223372036854775808.0\ncast(value, i64)",
+        "value: f64 = 18446744073709551616.0\ncast(value, u64)",
+        "value: f64 = -1.0\ncast(value, u64)",
+        "value: f64 = 0.0 / 0.0\ncast(value, i32)",
+        "value: f64 = 1.0 / 0.0\ncast(value, i64)",
+        "value: f64 = 10000000000000000000000000000000000000000.0\n"
         "cast(value, f32)",
-        "var value: u16 = 65535\ncast(value, f16)",
+        "value: u16 = 65535\ncast(value, f16)",
     ],
 )
 def test_native_conversion_failures(
@@ -476,7 +476,7 @@ def test_numeric_common_and_advanced_workflows(
       optimization:
         type: int
     """
-    body = """var narrow: i8 = -12
+    body = """narrow: i8 = -12
 assert math.square<i16>(narrow) == 144
 assert math.square<int64>(narrow) == 144
 assert math.square(cast(narrow, i64)) == 144
@@ -488,48 +488,48 @@ assert wrapping_sub<u8>(0, 1) == 255
 assert math.min(1, narrow) == -12
 assert math.min(narrow, 1) == -12
 assert math.min(rhs=1, lhs=narrow) == -12
-var negative: i32 = -1
-var positive: u32 = 1
+negative: i32 = -1
+positive: u32 = 1
 assert negative < positive
-var precise: f64 = 1.0000000000000002
+precise: f64 = 1.0000000000000002
 assert precise > 1.0
-var fraction: f64 = -0.5
+fraction: f64 = -0.5
 assert cast(fraction, u64) == 0
-var near: f64 = 9223372036854774784.0
+near: f64 = 9223372036854774784.0
 assert cast(near, i64) == 9223372036854774784
-var half: f16 = cast(32767, f16)
+half: f16 = cast(32767, f16)
 assert half == 32768.0
-var small: i8 = 3
+small: i8 = 3
 assert choose(small) == 3
 assert choose(value=small, other=2) == 2
-var dividend: i32 = -5
-var divisor: i32 = 100
+dividend: i32 = -5
+divisor: i32 = 100
 assert dividend / divisor == 0
 assert dividend % divisor == -5
 assert dividend % -divisor == -5
 assert -dividend % -divisor == 5
 assert 17 % 5 * 2 == 4
 assert 17 % (5 * 2) == 7
-var unsigned: u64 = 18446744073709551615
+unsigned: u64 = 18446744073709551615
 assert unsigned % 10 == 5
-var fraction32: f32 = -5.5
-var fraction64: f64 = 5.5
+fraction32: f32 = -5.5
+fraction64: f64 = 5.5
 assert fraction32 % 2.0 == -1.5
 assert fraction64 % -2.0 == 1.5
-var nan_remainder: f64 = fraction64 % 0.0
+nan_remainder: f64 = fraction64 % 0.0
 assert not nan_remainder == nan_remainder
-var negzero_remainder: f64 = -4.0 % 2.0
+negzero_remainder: f64 = -4.0 % 2.0
 assert (1.0 / negzero_remainder) < 0.0
 assert not dividend == divisor and true
 assert not not (dividend < divisor)
 assert 3 - -2 == 5
-var seven: i32 = 7
+seven: i32 = 7
 assert -seven == -7
 assert - -seven == 7
-var minimum8: i8 = -128
-var minimum16: i16 = -32768
-var minimum32: i32 = -2147483648
-var minimum64: i64 = -9223372036854775808
+minimum8: i8 = -128
+minimum16: i16 = -32768
+minimum32: i32 = -2147483648
+minimum64: i64 = -9223372036854775808
 assert cast(minimum8, i64) == -128
 assert cast(minimum16, i64) == -32768
 assert cast(minimum32, i64) == -2147483648
@@ -537,7 +537,7 @@ assert minimum64 == -9223372036854775808
 """
     definitions = """import math from stdlib
 @<T: i8 | i16 | i32 | i64>
-fn choose(value: T, other: T = 3) -> T:
+choose: fn(value: T, other: T = 3) -> T:
   return math.min(value, other)
 """
     result = run_numeric(tmp_path, body, optimization, definitions)
@@ -547,13 +547,13 @@ fn choose(value: T, other: T = 3) -> T:
 @pytest.mark.parametrize(
     "body",
     [
-        "var x: i8 = 128",
-        "var x: u8 = -1",
-        "var x: i64 = 9223372036854775808",
-        "var x: f32 = 16777217",
-        "var x: i64 = 1\nvar y: f64 = 2.0\nx + y",
-        "var x: i64 = -1\nvar y: u64 = 1\nx < y",
-        "var x: i8 = 1\nx + 200",
+        "x: i8 = 128",
+        "x: u8 = -1",
+        "x: i64 = 9223372036854775808",
+        "x: f32 = 16777217",
+        "x: i64 = 1\ny: f64 = 2.0\nx + y",
+        "x: i64 = -1\ny: u64 = 1\nx < y",
+        "x: i8 = 1\nx + 200",
         "2147483647 + 1",
         "cast(2147483647 + 1, i64)",
         "cast(300, i8)",
@@ -563,7 +563,7 @@ fn choose(value: T, other: T = 3) -> T:
         "not 1",
         "wrapping_cast(1.0, i8)",
         "wrapping_add(true, false)",
-        "var a: i8 = 1\nvar b: i16 = 2\nmath.min(a,b)",
+        "a: i8 = 1\nb: i16 = 2\nmath.min(a,b)",
     ],
 )
 def test_invalid_numeric_source_is_rejected(body: str) -> None:
@@ -605,10 +605,10 @@ def test_unevaluated_operations_do_not_fail(
     """
     result = run_numeric(
         tmp_path,
-        """var flag: bool = false
-var unused: bool = flag and ((2147483647 + 1) == 0)
-var skip: bool = not flag or (1 % 0 == 0)
-var double_skip: bool = flag and not (1 % 0 == 0)
+        """flag: bool = false
+unused: bool = flag and ((2147483647 + 1) == 0)
+skip: bool = not flag or (1 % 0 == 0)
+double_skip: bool = flag and not (1 % 0 == 0)
 if flag:
   2147483647 + 1
   -9223372036854775808 % -1
@@ -639,19 +639,19 @@ def test_nullable_and_floating_conversion_contracts(
     result = run_numeric(
         tmp_path,
         """
-var missing: nullable[i64] = cast(none, nullable[i64])
-var narrowed: nullable[i8] = cast(missing, nullable[i8])
+missing: nullable[i64] = cast(none, nullable[i64])
+narrowed: nullable[i8] = cast(missing, nullable[i8])
 assert is_null(narrowed)
-var present: nullable[i64] = 127
+present: nullable[i64] = 127
 assert fill_null(cast(present, nullable[i8]), 0) == 127
-var infinity: f64 = 1.0 / 0.0
-var small_infinity: f32 = cast(infinity, f32)
+infinity: f64 = 1.0 / 0.0
+small_infinity: f32 = cast(infinity, f32)
 assert small_infinity > 0.0
-var nan: f64 = 0.0 / 0.0
-var small_nan: f32 = cast(nan, f32)
+nan: f64 = 0.0 / 0.0
+small_nan: f32 = cast(nan, f32)
 assert !(small_nan == small_nan)
-var zero: f64 = -0.0
-var negative_zero: f32 = cast(zero, f32)
+zero: f64 = -0.0
+negative_zero: f32 = cast(zero, f32)
 assert (1.0 / negative_zero) < 0.0
 """.strip(),
         optimization,
@@ -673,8 +673,8 @@ def test_nullable_conversion_rejects_present_overflow(
     """
     result = run_numeric(
         tmp_path,
-        "var present: nullable[i64] = 128\n"
-        "var narrow: nullable[i8] = cast(present, nullable[i8])\n"
+        "present: nullable[i64] = 128\n"
+        "narrow: nullable[i8] = cast(present, nullable[i8])\n"
         "print(123)",
         optimization,
     )
@@ -692,9 +692,9 @@ def test_contextual_mutation_and_container_literals(tmp_path: Path) -> None:
     """
     result = run_numeric(
         tmp_path,
-        "var value: i8 = 1\n"
+        "value: i8 = 1\n"
         "value = 127\n"
-        "var items: list[i8]\n"
+        "items: list[i8]\n"
         "items.append(127)\n"
         "assert items[0] == value",
     )
@@ -704,9 +704,9 @@ def test_contextual_mutation_and_container_literals(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "body",
     [
-        "var value: i64 | f64 = 1",
-        "var source: series[i8] = series[i8]([1])\n"
-        "var target: series[i64] = cast(source, series[i64])",
+        "value: i64 | f64 = 1",
+        "source: series[i8] = series[i8]([1])\n"
+        "target: series[i64] = cast(source, series[i64])",
     ],
 )
 def test_unsupported_storage_conversions_are_semantic_errors(
@@ -726,8 +726,8 @@ def test_unsupported_storage_conversions_are_semantic_errors(
 @pytest.mark.parametrize(
     "body",
     [
-        "var frame: dataframe[x:i8] = dataframe({x:[128]})",
-        "var frame: dataframe[x:f32] = dataframe({x:[16777217]})",
+        "frame: dataframe[x:i8] = dataframe({x:[128]})",
+        "frame: dataframe[x:f32] = dataframe({x:[16777217]})",
         "if true:\n  2147483647 + 1",
         "true && (2147483647 + 1 == 0)",
     ],
@@ -758,7 +758,7 @@ def test_generic_union_bound_needs_no_runtime_storage(tmp_path: Path) -> None:
         "assert identity<i64>(9223372036854775807) == 9223372036854775807\n"
         "assert identity<f64>(1.0000000000000002) > 1.0",
         definitions="type Number = i64 | f64\n@<T: Number>\n"
-        "fn identity(value: T) -> T:\n  return value\n",
+        "identity: fn(value: T) -> T:\n  return value\n",
     )
     assert result.returncode == 0, result.stderr
 
@@ -780,44 +780,43 @@ def test_exact_decimal_literals_across_contexts(
     definitions = (
         "type Floating = f32 | f64\n"
         "@<T: Floating>\n"
-        "fn precise() -> T:\n"
+        "precise: fn() -> T:\n"
         f"  return {exact}\n"
-        "fn default_value(value: f32 = " + exact + ") -> f32:\n"
+        "default_value: fn(value: f32 = " + exact + ") -> f32:\n"
         "  return value\n"
         "class Constants:\n"
-        "  @[public, static, constant]\n"
-        f"  value: f32 = {exact}\n"
+        f"  value: public static const :: f32 = {exact}\n"
         "class Values:\n"
         "  tiny: i8 = 7\n"
         f"  wide: f64 = {exact}\n"
-        f"  fn __init__(self, tiny: i8 = 9, wide: f64 = {exact}) -> none:\n"
+        f"  __init__: fn(self, tiny: i8 = 9, wide: f64 = {exact}) -> none:\n"
         "    assert self.tiny == 7\n"
         "    assert self.wide == wide\n"
         "    self.tiny = tiny\n"
         "    return none\n"
     )
-    body = f"""var value: f32 = {exact}
+    body = f"""value: f32 = {exact}
 assert value > 1.0
-var negative: f32 = -{exact}
+negative: f32 = -{exact}
 assert negative < -1.0
-var half: f16 = 1.00048828125000000000000000000001
+half: f16 = 1.00048828125000000000000000000001
 assert half > 1.0
-var present: nullable[f32] = {exact}
+present: nullable[f32] = {exact}
 assert fill_null(present, 0.0) == value
-var items: list[f32]
+items: list[f32]
 items.append({exact})
 assert items[0] == value
-var vector: tensor[f32, 1] = [{exact}]
+vector: tensor[f32, 1] = [{exact}]
 assert vector[0] == value
 assert Constants.value == value
 assert default_value() == value
 assert precise<f32>() == value
-var wide: f64 = precise<f64>()
+wide: f64 = precise<f64>()
 assert wide < cast(value, f64)
-var instance: Values = Values()
+instance: Values = Values()
 assert instance.tiny == 9
 assert instance.wide == wide
-var negzero: f32 = -0.0
+negzero: f32 = -0.0
 assert (1.0 / negzero) < 0.0"""
     result = run_numeric(tmp_path, body, optimization, definitions)
     assert result.returncode == 0, result.stderr

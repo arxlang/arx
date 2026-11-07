@@ -248,6 +248,9 @@ class Parser:
     def _parse_parameter_block(self) -> astx.Arguments:
         """
         title: Parse the function parameter block.
+        summary: >-
+          Parameters retain mutable local bindings independently of ASTx
+          defaults.
         visibility: internal
         returns:
           type: astx.Arguments
@@ -264,7 +267,12 @@ class Parser:
             self._consume(TokenKind.colon, ":")
             param_type = self._parse_type_expression()
             args.append(
-                astx.Argument(param_name, param_type, loc=param_token.location)
+                astx.Argument(
+                    param_name,
+                    param_type,
+                    mutability=astx.MutabilityKind.mutable,
+                    loc=param_token.location,
+                )
             )
 
             if self._at(TokenKind.comma):

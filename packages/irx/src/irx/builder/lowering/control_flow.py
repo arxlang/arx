@@ -1237,7 +1237,7 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
             update_val = self._lower_typed_value(
                 node.update,
                 context="for-count loop update",
-                target_type=node.initializer.type_,
+                target_type=self._resolved_ast_type(node.initializer),
             )
             if not self._for_count_update_stores_loop_variable(
                 node.update,

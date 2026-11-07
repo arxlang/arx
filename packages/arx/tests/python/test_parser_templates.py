@@ -40,12 +40,12 @@ def test_parse_template_function_metadata_and_calls() -> None:
             @<
               T: i32 | f64
             >
-            fn add(lhs: T, rhs: T) -> T:
+            add: fn(lhs: T, rhs: T) -> T:
               return lhs + rhs
 
-            fn main() -> i32:
-              var whole: i32 = add(1, 2)
-              var decimal: f64 = add<f64>(1.5, 2.5)
+            main: fn() -> i32:
+              whole: i32 = add(1, 2)
+              decimal: f64 = add<f64>(1.5, 2.5)
               print(decimal)
               return whole
             """
@@ -105,10 +105,10 @@ def test_parse_composed_alias_bounds() -> None:
         "type Float = f32 | f64\n"
         "type Real = Integer | Float\n"
         "@<T: Integer>\n"
-        "fn whole(value: T) -> T:\n"
+        "whole: fn(value: T) -> T:\n"
         "  return value\n"
         "@<T: Real>\n"
-        "fn number(value: T) -> T:\n"
+        "number: fn(value: T) -> T:\n"
         "  return value\n"
     )
     integers = [
@@ -143,12 +143,11 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
             """
             class Math:
               @<T: i32 | f64>
-              @[public, static]
-              fn identity(value: T) -> T:
+              identity: public static :: fn(value: T) -> T:
                 return value
 
-            fn main() -> i32:
-              var decimal: f64 = Math.identity<f64>(1.5)
+            main: fn() -> i32:
+              decimal: f64 = Math.identity<f64>(1.5)
               print(decimal)
               return 0
             """
@@ -189,11 +188,11 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
     "code, expected",
     [
         (
-            "@<T>\nfn add(value: i32) -> i32:\n  return value\n",
+            "@<T>\nadd: fn(value: i32) -> i32:\n  return value\n",
             "template parameter 'T' must declare a bound",
         ),
         (
-            "@<T: i32 | f64> fn add(value: T) -> T:\n  return value\n",
+            "@<T: i32 | f64> add: fn(value: T) -> T:\n  return value\n",
             "template parameter block must appear on its own line",
         ),
         (
@@ -213,20 +212,19 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
             "before functions or methods",
         ),
         (
-            "@<T: i32 | f64>\nextern add(value: i32) -> i32\n",
-            "template parameter blocks are only allowed "
-            "before functions or methods",
+            "@<T: i32 | f64>\nadd: extern :: fn(value: i32) -> i32\n",
+            "extern functions cannot declare templates",
         ),
         (
-            "fn main() -> i32:\n  foo<i32>\n",
+            "main: fn() -> i32:\n  foo<i32>\n",
             "explicit template arguments are only allowed on call expressions",
         ),
         (
-            "fn main() -> i32:\n  value.method<i32>\n",
+            "main: fn() -> i32:\n  value.method<i32>\n",
             "explicit template arguments are only allowed on call expressions",
         ),
         (
-            "fn main() -> i32:\n  Math.identity<f64>\n",
+            "main: fn() -> i32:\n  Math.identity<f64>\n",
             "explicit template arguments are only allowed on call expressions",
         ),
     ],
@@ -258,8 +256,8 @@ def test_parse_class_construction_rejects_template_arguments() -> None:
                 class Counter:
                   value: int32 = 1
 
-                fn main() -> int32:
-                  var counter: Counter = Counter<i32>()
+                main: fn() -> int32:
+                  counter: Counter = Counter<i32>()
                   return 0
                 """
             ).lstrip()
@@ -271,7 +269,7 @@ def test_parse_incomplete_template_call_syntax_raises_parser_error() -> None:
     title: Incomplete explicit template-call syntax must fail cleanly.
     """
     with pytest.raises(ParserException):
-        _parse("fn main() -> i32:\n  foo<\n")
+        _parse("main: fn() -> i32:\n  foo<\n")
 
 
 def test_parse_comparisons_do_not_trigger_template_call_handling() -> None:
@@ -281,9 +279,9 @@ def test_parse_comparisons_do_not_trigger_template_call_handling() -> None:
     tree = _parse(
         dedent(
             """
-            fn main() -> i32:
-              var a32: i32 = 32
-              var ok: bool = (a32 > 0) && (a32 < 100)
+            main: fn() -> i32:
+              a32: i32 = 32
+              ok: bool = (a32 > 0) && (a32 < 100)
               return 0
             """
         ).lstrip()

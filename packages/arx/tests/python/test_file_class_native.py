@@ -102,11 +102,11 @@ def test_counted_file_lifetime(
     ArxIO.string_to_buffer(f'''```
 title: Counted File lifetime
 ```
-fn share(stream: file) -> File:
+share: fn(stream: file) -> File:
   return stream
-fn main() -> i32:
-  var stream: File = {factory}("{path}", "w")
-  var alias: File = share(stream)
+main: fn() -> i32:
+  stream: File = {factory}("{path}", "w")
+  alias: File = share(stream)
   alias.write("saved")
   stream.close()
   alias.close()

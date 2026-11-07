@@ -8,7 +8,7 @@ class ConfigError(ValueError):
   title: Invalid application configuration
   ```
 
-fn require_positive(value: i32) -> i32:
+require_positive: fn(value: i32) -> i32:
   ```
   title: Require a positive setting
   ```
@@ -16,11 +16,11 @@ fn require_positive(value: i32) -> i32:
     raise ConfigError(message="expected a positive setting")
   return value
 
-fn test_catch_and_finalize() -> none:
+test_catch_and_finalize: fn() -> none:
   ```
   title: Catch a custom subtype and finalize after recovery
   ```
-  var state: i32 = 0
+  state: i32 = 0
   try:
     require_positive(0)
   except (OSError, ValueError) as error:
@@ -32,7 +32,7 @@ fn test_catch_and_finalize() -> none:
     state = state + 1
   assert state == 2
 
-fn replacement() -> i32:
+replacement: fn() -> i32:
   ```
   title: A finalizer replaces a pending exception with a return
   ```
@@ -41,18 +41,18 @@ fn replacement() -> i32:
   finally:
     return 7
 
-fn test_finalizer_return() -> none:
+test_finalizer_return: fn() -> none:
   ```
   title: Finalization can replace completion
   ```
   assert replacement() == 7
 
-fn test_runtime_recovery() -> none:
+test_runtime_recovery: fn() -> none:
   ```
   title: Dynamic arithmetic failures are catchable
   ```
-  var divisor: i32 = 0
-  var caught: bool = false
+  divisor: i32 = 0
+  caught: bool = false
   try:
     print(4 / divisor)
   except ZeroDivisionError:

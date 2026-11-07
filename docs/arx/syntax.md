@@ -21,7 +21,7 @@ tokens to 250,000. These are compiler-version resource limits, not a frozen
 language compatibility promise.
 
 ```arx
-fn absolute(value: i32) -> i32:
+absolute: fn(value: i32) -> i32:
   if value < 0:
     return 0 - value
   else:
@@ -61,9 +61,9 @@ case-sensitive.
 
 ## Reserved forms
 
-Lexical reservation does not promise parsing or lowering. In particular, general
-`const`, `then`, and operator declarations remain unavailable even though their
-spellings are recognized.
+Lexical reservation does not promise parsing or lowering. In particular, `then`
+and operator declarations remain unavailable even though their spellings are
+recognized.
 
 ## Numeric literals
 
@@ -101,21 +101,54 @@ backticks are reserved for Douki docstrings, not ordinary string values.
 
 ## Structural forms
 
-### Declaration modifiers
+### Declarations and modifiers
 
-```arx
-@[public, static, constant]
-version: i32 = 1
+Declarations put the name first. Omitted modifiers use context-specific
+defaults; writing the default explicitly has the same meaning:
+
+```text
+count: i32 = 1
+explicit_count: var :: i32 = 1
+limit: const :: i32 = 10
+inferred_count: auto = 1
 ```
 
-Recognized modifiers are `public`, `private`, `protected`, `static`, `constant`,
-`mutable`, `abstract`, and `extern`.
+`var` permits reassignment. `const` requires initialization and prevents binding
+reassignment, compound assignment, and increment/decrement. It does not freeze a
+referenced object, change ownership, or require compile-time evaluation. Locals
+initialize on each call. Module declarations still obey the
+[module storage restrictions](modules.md).
+
+`auto` infers one fixed type from an initializer; it is not dynamic typing.
+Uncontextualized numeric literals use the existing numeric defaults. Inference
+is available for initialized variables, literal-initialized fields, and
+count-loop initializers, not parameters, returns, aliases, or nested type
+arguments. Untyped `none` and ambiguous empty containers need an explicit type.
+Dataframe and tensor literals still need the type context required by their
+constructors; resolved typed function results can be inferred without losing
+their schema or shape.
+
+A modifier group is whitespace-separated and ends with `::`. Duplicate,
+conflicting, unsupported, and target-inappropriate modifiers are errors. Fields
+and methods use inline groups for visibility and `static`/`abstract`/`extern`
+where supported. Class annotations remain separate. See [classes](classes.md).
+
+Functions use `name: fn(...) -> T:`; their fixed declaration policy can be
+written as `name: const :: fn(...) -> T:`. Parameters default to `var`; an
+explicit `const` parameter restricts only the callee's binding. Externs use
+`name: extern :: fn(...) -> T` without a body. See [functions](functions.md).
+
+**Migration:** leading `var name: T`, `fn name(...)`, and `extern name(...)`
+forms were removed. Move the name first; move field/method annotations into the
+inline modifier group, replacing `constant`/`mutable` with `const`/`var`.
+Read-only references, immutable objects, compile-time evaluation, rebindable
+function values, and closures are not introduced by this syntax.
 
 ### Templates
 
 ```arx
 @<T: i32 | f64>
-fn identity(value: T) -> T:
+identity: fn(value: T) -> T:
   return value
 ```
 

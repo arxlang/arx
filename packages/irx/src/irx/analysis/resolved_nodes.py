@@ -2292,6 +2292,8 @@ class SemanticInfo:
         type: ResolvedMaterialization | None
       sequence_access:
         type: ResolvedSequenceAccess | None
+      normalized_collection:
+        type: astx.Expr | None
       tensor_index:
         type: astx.TensorIndex | None
       numeric_storage:
@@ -2405,6 +2407,7 @@ class SemanticInfo:
 
     materialization: ResolvedMaterialization | None = None
     sequence_access: ResolvedSequenceAccess | None = None
+    normalized_collection: astx.Expr | None = None
     tensor_index: astx.TensorIndex | None = None
     numeric_storage: astx.DataType | None = None
     module_storage: ResolvedModuleStorage | None = None

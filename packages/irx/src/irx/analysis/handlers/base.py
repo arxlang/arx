@@ -1057,6 +1057,7 @@ class SemanticAnalyzerCore(BaseVisitor):
             type_ is not None
             and hasattr(node, "type_")
             and not isinstance(node, (astx.LiteralInteger, astx.LiteralFloat))
+            and not isinstance(getattr(node, "type_", None), astx.InferredType)
         ):
             try:
                 setattr(node, "type_", clone_type(type_))
@@ -1098,7 +1099,12 @@ class SemanticAnalyzerCore(BaseVisitor):
         returns:
           type: ResourceOwnership | None
         """
-        self._semantic(node).resource_ownership = ownership
+        info = self._semantic(node)
+        info.resource_ownership = ownership
+        if info.normalized_collection is not None:
+            # Contextual moves must suppress the normalized temporary cleanup,
+            # not only the source wrapper's cleanup.
+            self._set_resource_ownership(info.normalized_collection, ownership)
         return ownership
 
     def _set_iteration(
@@ -1713,11 +1719,20 @@ class SemanticAnalyzerCore(BaseVisitor):
         )
         from irx.analysis.types import (  # noqa: PLC0415
             contains_bytes,
+            contains_inferred_type,
             contains_sequence,
             contains_template_variables,
             is_sequence_element,
         )
 
+        if contains_inferred_type(type_):
+            self.context.diagnostics.add(
+                "InferredType is only valid on initialized variable "
+                "or field declarations",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+            )
+            return type_
         if contains_bytes(type_) and not isinstance(type_, astx.Bytes):
             self.context.diagnostics.add(
                 "bytes inside containers/unions require unsupported "

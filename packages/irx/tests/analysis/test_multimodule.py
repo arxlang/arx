@@ -726,6 +726,7 @@ def test_analyze_modules_keeps_struct_field_access_behavior() -> None:
             astx.VariableDeclaration(
                 name="point",
                 type_=astx.StructType("Point"),
+                mutability=astx.MutabilityKind.mutable,
             ),
             field_access,
             astx.FunctionReturn(astx.LiteralInt32(0)),

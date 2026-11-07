@@ -60,10 +60,10 @@ def signed_limits(width: int) -> str:
             " + cast(65535, i64) * 65536 + 65535"
         )
     return (
-        f"var zero: {type_} = cast(0, {type_})\n"
-        f"var one: {type_} = cast(1, {type_})\n"
-        f"var maximum: {type_} = {maximum}\n"
-        f"var minimum: {type_} = zero - maximum - one\n"
+        f"zero: {type_} = cast(0, {type_})\n"
+        f"one: {type_} = cast(1, {type_})\n"
+        f"maximum: {type_} = {maximum}\n"
+        f"minimum: {type_} = zero - maximum - one\n"
     )
 
 
@@ -82,7 +82,7 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     source = (
         "```\ntitle: Integer helper boundary regression\n```\n"
         "import math from stdlib\n"
-        "fn main() -> i32:\n"
+        "main: fn() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -159,7 +159,7 @@ def test_range_matches_python(tmp_path: Path) -> None:
         body.extend(
             [
                 f'print("{label}")',
-                f"var values{index}: list[i32] = range({arguments})",
+                f"values{index}: list[i32] = range({arguments})",
                 f"for value in values{index}:\n  print(value)",
             ]
         )
@@ -275,15 +275,15 @@ def test_templated_math_checks_each_width(
     "statement,message",
     [
         (
-            "var values: list[i32] = range(0, 4, 0)",
+            "values: list[i32] = range(0, 4, 0)",
             "range() step must not be 0",
         ),
         (
-            "var values: list[i32] = range(4, 4, 0)",
+            "values: list[i32] = range(4, 4, 0)",
             "range() step must not be 0",
         ),
         (
-            "var values: list[i32] = range(4, 0, 0)",
+            "values: list[i32] = range(4, 0, 0)",
             "range() step must not be 0",
         ),
         (

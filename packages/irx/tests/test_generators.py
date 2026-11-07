@@ -656,7 +656,12 @@ def test_generator_frames_reject_owned_non_scalar_locals(
     """
     function = _numbers_function()
     function.body = _block_of(
-        astx.VariableDeclaration("resource", type_, value=value),
+        astx.VariableDeclaration(
+            "resource",
+            type_,
+            value=value,
+            mutability=astx.MutabilityKind.mutable,
+        ),
         astx.YieldStmt(astx.LiteralInt32(1)),
     )
     module = astx.Module()

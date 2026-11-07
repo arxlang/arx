@@ -84,7 +84,15 @@ _BUILTIN_TYPE_NAMES = (
     frozenset(_BUILTIN_TYPE_MAP)
     | frozenset(COLUMN_TYPE_NAMES)
     | frozenset(
-        {"dataframe", "list", "sequence", "series", "tensor", "nullable"}
+        {
+            "dataframe",
+            "list",
+            "sequence",
+            "series",
+            "tensor",
+            "nullable",
+            "auto",
+        }
     )
 )
 
@@ -295,6 +303,19 @@ class TypeParserMixin(ParserMixinBase):
                 raise ParserException("Parser: Expected a type name")
 
             type_name = cast(str, self.tokens.cur_tok.value)
+            if type_name == "auto":
+                if type_context not in {
+                    TypeUseContext.VARIABLE,
+                    TypeUseContext.INLINE_VARIABLE,
+                    TypeUseContext.FIELD,
+                }:
+                    raise ParserException(
+                        "'auto' is only allowed on initialized "
+                        "variable or field declarations.",
+                        self.tokens.cur_tok.location,
+                    )
+                self.tokens.get_next_token()
+                return astx.InferredType()
             template_bound = None
             if allow_template_vars:
                 template_bound = self._lookup_template_bound(type_name)

@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.10.0",
+  "syntax_pack_version": "0.11.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -27,7 +27,7 @@
       "var",
       "while"
     ],
-    "contextual": ["as", "from", "type", "binary", "unary", "operator"]
+    "contextual": ["as", "auto", "from", "type", "binary", "unary", "operator"]
   },
 
   "literals": {
@@ -125,6 +125,7 @@
       "}"
     ],
     "multi_char": [
+      "::",
       "==",
       "!=",
       "<=",
@@ -146,24 +147,40 @@
     "arithmetic": ["+", "-", "*", "/", "%"],
     "logical": ["&&", "||", "and", "or", "!", "not"],
     "type_union": ["|"],
-    "punctuation": ["@", ":", ",", ";", "."]
+    "punctuation": ["@", ":", "::", ",", ";", "."]
   },
 
   "structural_forms": {
-    "annotations": {
-      "start": "@[",
-      "separator": ",",
-      "end": "]",
-      "modifiers": [
+    "declarations": {
+      "variable": "name: [modifiers ::] type [= initializer]",
+      "function": "name: [modifiers ::] fn(parameters) -> type: body",
+      "extern": "name: extern :: fn(parameters) -> type",
+      "modifier_separator": "::",
+      "binding_modifiers": ["var", "const"],
+      "inferred_type": "auto",
+      "inference_contexts": [
+        "variable",
+        "literal_initialized_field",
+        "count_loop_initializer"
+      ],
+      "variable_binding_default": "var",
+      "function_binding_default": "const",
+      "member_modifiers": [
         "public",
         "private",
         "protected",
         "static",
-        "constant",
-        "mutable",
+        "var",
+        "const",
         "abstract",
         "extern"
       ]
+    },
+    "annotations": {
+      "start": "@[",
+      "separator": ",",
+      "end": "]",
+      "modifiers": ["public", "private", "protected", "abstract"]
     },
     "template_parameter_block": {
       "start": "@<",

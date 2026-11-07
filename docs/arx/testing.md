@@ -23,10 +23,10 @@ summary: Uses assertions in compiled tests.
 
 import math from stdlib
 
-fn test_square() -> none:
+test_square: fn() -> none:
   assert math.square(3) == 9
 
-fn test_clamp() -> none:
+test_clamp: fn() -> none:
   assert math.clamp(0 - 3, 0, 2) == 0, "lower bound"
 ````
 

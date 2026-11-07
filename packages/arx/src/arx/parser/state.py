@@ -50,7 +50,7 @@ class TypeUseContext(Enum):
 @dataclass(frozen=True)
 class ParsedAnnotation:
     """
-    title: Parsed modifier annotation attached to the next declaration.
+    title: Parsed declaration modifiers with their source location.
     attributes:
       modifiers:
         type: tuple[str, Ellipsis]
@@ -89,24 +89,24 @@ SUPPORTED_MODIFIERS = frozenset(
         "private",
         "protected",
         "static",
-        "constant",
-        "mutable",
+        "const",
+        "var",
         "abstract",
         "extern",
     }
 )
 
 VISIBILITY_MODIFIERS = frozenset({"public", "private", "protected"})
-FIELD_MUTABILITY_MODIFIERS = frozenset({"constant", "mutable"})
+FIELD_MUTABILITY_MODIFIERS = frozenset({"const", "var"})
 
 CLASS_ALLOWED_MODIFIERS = frozenset(
     {"public", "private", "protected", "abstract"}
 )
 FIELD_ALLOWED_MODIFIERS = frozenset(
-    {"public", "private", "protected", "static", "constant", "mutable"}
+    {"public", "private", "protected", "static", "const", "var"}
 )
 METHOD_ALLOWED_MODIFIERS = frozenset(
-    {"public", "private", "protected", "static", "abstract", "extern"}
+    {"public", "private", "protected", "static", "abstract", "extern", "const"}
 )
 
 VISIBILITY_NAME_MAP = {
@@ -115,8 +115,8 @@ VISIBILITY_NAME_MAP = {
     "protected": astx.VisibilityKind.protected,
 }
 MUTABILITY_NAME_MAP = {
-    "constant": astx.MutabilityKind.constant,
-    "mutable": astx.MutabilityKind.mutable,
+    "const": astx.MutabilityKind.constant,
+    "var": astx.MutabilityKind.mutable,
 }
 
 __all__ = [

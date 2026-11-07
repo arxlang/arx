@@ -8,14 +8,14 @@ function return types.
 - Function parameters must always be typed.
 - Function return type is declared with `-> type` and is always required,
   including `-> none`.
-- Variable declarations must include an explicit type with `var name: type`.
+- Variable declarations must include an explicit type with `name: type`.
 
 ````arx
 ```
 title: Typed function signature
 summary: Demonstrates required parameter annotations.
 ```
-fn add(a: i32, b: i32) -> i32:
+add: fn(a: i32, b: i32) -> i32:
   ```
   title: add
   summary: Returns a + b.
@@ -44,7 +44,7 @@ summary: Demonstrates a finite numeric union alias.
 ```
 type Number = i32 | i64
 
-fn identity(value: Number) -> Number:
+identity: fn(value: Number) -> Number:
   ```
   title: identity
   summary: Returns a numeric union value.

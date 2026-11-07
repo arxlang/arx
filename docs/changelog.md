@@ -1,6 +1,16 @@
 # Release Notes
 ---
 
+## Unreleased
+
+- **Breaking:** declarations are name-first: `value: [var|const ::] T`,
+  `name: fn(...) -> T:`, and `name: extern :: fn(...) -> T`. Fields/methods
+  use inline modifiers instead of member annotations; `const` fixes bindings,
+  not referenced objects. Parameters retain mutable defaults and may explicitly
+  request `const`. Initialized variables and eligible fields support `auto`;
+  function signatures remain explicitly typed. Migrate maintained source rather
+  than relying on compatibility aliases.
+
 ## [1.27.1](https://github.com/arxlang/arx/compare/1.27.0...1.27.1) (2026-11-06)
 
 

@@ -27,7 +27,7 @@ title: ArxPy test module
 """
 FUNCTION_SOURCE = (
     MODULE_DOCSTRING
-    + """fn identity(value: i32) -> i32:
+    + """identity: fn(value: i32) -> i32:
   ```
   title: identity
   ```
@@ -36,7 +36,7 @@ FUNCTION_SOURCE = (
 )
 MAIN_SOURCE = (
     MODULE_DOCSTRING
-    + """fn main() -> i32:
+    + """main: fn() -> i32:
   ```
   title: main
   ```
@@ -76,7 +76,7 @@ def test_parse_error_has_frontend_code_and_location() -> None:
     title: Parser failures cross the facade as located structured diagnostics.
     """
     with pytest.raises(ParseError) as captured:
-        Compiler().parse_string(MODULE_DOCSTRING + "fn broken(")
+        Compiler().parse_string(MODULE_DOCSTRING + "broken: fn(")
 
     [diagnostic] = captured.value.diagnostics
     assert diagnostic.code == "ARX-PARSE-001"
@@ -114,7 +114,7 @@ def test_check_translates_semantic_diagnostics() -> None:
     """
     source = (
         MODULE_DOCSTRING
-        + """fn broken() -> i32:
+        + """broken: fn() -> i32:
   ```
   title: broken
   ```
@@ -315,8 +315,8 @@ def test_file_builtin_through_check_and_build(tmp_path: Path) -> None:
     """
     source = (
         MODULE_DOCSTRING
-        + """fn main() -> i32:
-  var f: file = open("arxpy-file.txt", mode="w")
+        + """main: fn() -> i32:
+  f: file = open("arxpy-file.txt", mode="w")
   assert f.write("ok") == 2
   return 0
 """
@@ -348,17 +348,17 @@ def test_lifecycle_through_facade(tmp_path: Path) -> None:
         MODULE_DOCSTRING
         + """class Counter:
   value: i32 = 0
-  fn __init__(self, value: i32) -> none:
+  __init__: fn(self, value: i32) -> none:
     self.value = value
     return none
-  fn __del__(self) -> none:
+  __del__: fn(self) -> none:
     print(self.value)
     return none
-fn make() -> Counter:
+make: fn() -> Counter:
   return Counter(value=7)
-fn main() -> i32:
-  var counter: Counter = make()
-  var alias: Counter = counter
+main: fn() -> i32:
+  counter: Counter = make()
+  alias: Counter = counter
   return alias.value - 7
 """
     )
@@ -382,7 +382,7 @@ def test_file_builtin_is_available_in_memory(factory: str) -> None:
     compiler = Compiler()
     program = compiler.parse_string(
         MODULE_DOCSTRING + "import File as F from builtins.files\n"
-        "fn make(path: str) -> F:\n"
+        "make: fn(path: str) -> F:\n"
         f"  return {factory}(file=path)\n"
     )
     checked = compiler.check(program)
@@ -398,9 +398,9 @@ def test_keyword_calls_compile_without_filesystem_origin() -> None:
     compiler = Compiler()
     parsed = compiler.parse_string(
         MODULE_DOCSTRING
-        + """fn f(a: i32, b: i32 = a + 1, c: i32 = 4) -> i32:
+        + """f: fn(a: i32, b: i32 = a + 1, c: i32 = 4) -> i32:
   return a + b + c
-fn main() -> i32:
+main: fn() -> i32:
   return f(c=9, a=2)
 """
     )

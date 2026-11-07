@@ -513,25 +513,23 @@ class ParserMixinBase:
 
     def parse_function(
         self,
+        name_token: Token,
+        modifiers: ParsedAnnotation | None,
         template_params: tuple[astx.TemplateParam, ...] = (),
-    ) -> astx.FunctionDef:
+    ) -> astx.FunctionDef | astx.FunctionPrototype:
         """
-        title: Parse one function definition.
+        title: Parse the function definition expression.
         parameters:
+          name_token:
+            type: Token
+          modifiers:
+            type: ParsedAnnotation | None
           template_params:
             type: tuple[astx.TemplateParam, Ellipsis]
         returns:
-          type: astx.FunctionDef
+          type: astx.FunctionDef | astx.FunctionPrototype
         """
-        del template_params
-        raise NotImplementedError
-
-    def parse_extern(self) -> astx.FunctionPrototype:
-        """
-        title: Parse one extern declaration.
-        returns:
-          type: astx.FunctionPrototype
-        """
+        del name_token, modifiers, template_params
         raise NotImplementedError
 
     def parse_import_stmt(
@@ -609,12 +607,20 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
-    def parse_var_expr(self) -> astx.VariableDeclaration:
+    def parse_var_expr(
+        self, name_token: Token, modifiers: ParsedAnnotation | None
+    ) -> astx.VariableDeclaration:
         """
-        title: Parse one typed variable declaration.
+        title: Parse typed variable declarations.
+        parameters:
+          name_token:
+            type: Token
+          modifiers:
+            type: ParsedAnnotation | None
         returns:
           type: astx.VariableDeclaration
         """
+        del name_token, modifiers
         raise NotImplementedError
 
     def parse_assert_stmt(self) -> astx.AssertStmt:
@@ -634,18 +640,19 @@ class ParserMixinBase:
         raise NotImplementedError
 
     def parse_prototype(
-        self,
-        expect_colon: bool,
+        self, name_token: Token, expect_colon: bool
     ) -> astx.FunctionPrototype:
         """
-        title: Parse one function or extern prototype.
+        title: Parse function/extern prototypes.
         parameters:
+          name_token:
+            type: Token
           expect_colon:
             type: bool
         returns:
           type: astx.FunctionPrototype
         """
-        del expect_colon
+        del name_token, expect_colon
         raise NotImplementedError
 
     def _default_value_for_type(
@@ -661,4 +668,104 @@ class ParserMixinBase:
           type: astx.Expr
         """
         del data_type
+        raise NotImplementedError
+
+    def is_declaration_start(self) -> bool:
+        """
+        title: Recognize a same-line name-first declaration.
+        returns:
+          type: bool
+        """
+        raise NotImplementedError
+
+    def parse_inline_modifiers(self) -> ParsedAnnotation | None:
+        """
+        title: Parse optional whitespace-separated declaration modifiers.
+        summary: >-
+          Keep declaration policy outside the type. Reject unknown, repeated,
+          conflicting, and unterminated groups without accepting ignored flags.
+        returns:
+          type: ParsedAnnotation | None
+        """
+        raise NotImplementedError
+
+    def parse_declaration_head(self) -> tuple[Token, ParsedAnnotation | None]:
+        """
+        title: Consume a declaration name, colon, and optional modifier group.
+        returns:
+          type: tuple[Token, ParsedAnnotation | None]
+        """
+        raise NotImplementedError
+
+    def parse_named_declaration(
+        self,
+        *,
+        allow_function: bool = False,
+        template_params: tuple[astx.TemplateParam, ...] = (),
+    ) -> astx.VariableDeclaration | astx.FunctionDef | astx.FunctionPrototype:
+        """
+        title: Dispatch a name-first variable or module function declaration.
+        parameters:
+          allow_function:
+            type: bool
+          template_params:
+            type: tuple[astx.TemplateParam, Ellipsis]
+        returns:
+          type: >-
+            astx.VariableDeclaration | astx.FunctionDef |
+            astx.FunctionPrototype
+        """
+        del allow_function, template_params
+        raise NotImplementedError
+
+    def _validate_modifier_target(
+        self,
+        modifiers: ParsedAnnotation | None,
+        allowed: frozenset[str],
+        target: str,
+    ) -> None:
+        """
+        title: Validate one modifier list against a declaration target.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+          allowed:
+            type: frozenset[str]
+          target:
+            type: str
+        """
+        del modifiers, allowed, target
+        raise NotImplementedError
+
+    def _has_modifier(
+        self,
+        modifiers: ParsedAnnotation | None,
+        expected: str,
+    ) -> bool:
+        """
+        title: Return whether one modifier is present.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+          expected:
+            type: str
+        returns:
+          type: bool
+        """
+        del modifiers, expected
+        raise NotImplementedError
+
+    def _resolve_field_mutability(
+        self,
+        modifiers: ParsedAnnotation | None,
+    ) -> astx.MutabilityKind:
+        """
+        title: Resolve field mutability defaults.
+        parameters:
+          modifiers:
+            type: ParsedAnnotation | None
+        returns:
+          type: astx.MutabilityKind
+        """
+        del modifiers
         raise NotImplementedError

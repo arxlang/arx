@@ -4,12 +4,12 @@ summary: Exercise every Arx scalar accessor, schema inspection and builder reuse
 ```
 import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
-fn main() -> i32:
+main: fn() -> i32:
   ```
   title: main
   summary: Writes a value batch, empty batch and null batch to typed.arrow.
   ```
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("col0", "int8", nullable=true)
   schema.add("col1", "int16", nullable=true)
   schema.add("col2", "int32", nullable=true)
@@ -23,7 +23,7 @@ fn main() -> i32:
   schema.add("col10", "date64[ms]", nullable=true)
   schema.add("col11", "timestamp[us]", nullable=true)
   schema.add("col12", "time64[us]", nullable=true)
-  var builder: BatchBuilder = BatchBuilder(schema)
+  builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i8(0, cast(42, i8))
   builder.append_i16(1, cast(42, i16))
   builder.append_i32(2, 42)
@@ -37,7 +37,7 @@ fn main() -> i32:
   builder.append_date(10, 86400000)
   builder.append_timestamp(11, 123)
   builder.append_time(12, 123)
-  var batch: RecordBatch = builder.finish()
+  batch: RecordBatch = builder.finish()
   assert batch.get_i8(0, 0) == 42
   assert batch.get_i16(1, 0) == 42
   assert batch.get_i32(2, 0) == 42
@@ -56,7 +56,7 @@ fn main() -> i32:
   assert schema.type(0) == 0
   assert schema.type_name(11) == "timestamp[us]"
   assert schema.nullable(0)
-  var writer: IPCWriter = IPCWriter(schema)
+  writer: IPCWriter = IPCWriter(schema)
   schema.close()
   schema.close()
   writer.open_stream("typed.arrow")
@@ -77,7 +77,7 @@ fn main() -> i32:
   builder.append_null(10)
   builder.append_null(11)
   builder.append_null(12)
-  var nulls: RecordBatch = builder.finish()
+  nulls: RecordBatch = builder.finish()
   assert nulls.is_null(0, 0)
   writer.write(nulls)
   writer.close()

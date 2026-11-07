@@ -97,7 +97,7 @@ def test_module_scalar_storage_plan(
     [
         (astx.Int8(), astx.LiteralInteger(128), True, "not representable"),
         (astx.UInt8(), astx.LiteralInteger(-1), True, "not representable"),
-        (astx.Int32(), None, False, "requires a literal initializer"),
+        (astx.Int32(), None, False, "requires an initializer"),
         (astx.String(), astx.LiteralString("static"), True, "module storage"),
         (
             astx.Int32(),
@@ -1075,6 +1075,7 @@ def test_public_analysis_contract_is_stable() -> None:
         "resolved_operator",
         "resolved_assignment",
         "module_storage",
+        "normalized_collection",
         "resolved_iteration",
         "resolved_context_manager",
         "resolved_field_access",
@@ -1104,3 +1105,51 @@ def test_public_analysis_contract_is_stable() -> None:
     semantic_boundary = contract.phase_error_boundaries[0]
     assert semantic_boundary.phase == "semantic"
     assert semantic_boundary.raises == "SemanticError"
+
+
+def test_inferred_declaration_reanalysis_retains_source_request() -> None:
+    """
+    title: Reanalysis resolves fresh types without replacing the marker.
+    """
+    declaration = astx.VariableDeclaration(
+        "value", astx.InferredType(), value=astx.LiteralInteger(1)
+    )
+    analyze(declaration)
+    assert isinstance(declaration.type_, astx.InferredType)
+    first = declaration.semantic.resolved_type
+    assert isinstance(first, astx.Int32)
+    declaration.value = astx.LiteralFloat("2.5")
+    analyze(declaration)
+    assert isinstance(declaration.type_, astx.InferredType)
+    assert isinstance(declaration.semantic.resolved_type, astx.Float32)
+    assert isinstance(first, astx.Int32)
+
+
+@pytest.mark.parametrize("inferred", [False, True])
+def test_declarations_requiring_initializers_fail_closed(
+    inferred: bool,
+) -> None:
+    """
+    title: Direct AST input cannot bypass const or inference initialization.
+    parameters:
+      inferred:
+        type: bool
+    """
+    declaration = astx.VariableDeclaration(
+        "value", astx.InferredType() if inferred else astx.Int32()
+    )
+    with pytest.raises(SemanticError, match="requires an initializer"):
+        analyze(declaration)
+
+
+def test_nested_inference_requests_are_rejected_before_lowering() -> None:
+    """
+    title: Direct AST input cannot hide inference inside a collection type.
+    """
+    declaration = astx.VariableDeclaration(
+        "values",
+        astx.ListType([astx.InferredType()]),
+        mutability=astx.MutabilityKind.mutable,
+    )
+    with pytest.raises(SemanticError, match="only valid on initialized"):
+        analyze(declaration)

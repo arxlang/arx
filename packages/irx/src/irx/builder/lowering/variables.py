@@ -25,6 +25,7 @@ from irx.builder.diagnostics import (
     require_semantic_metadata,
 )
 from irx.builder.lowering.classes import ClassVisitorMixin
+from irx.builder.lowering.collection_access import lower_collection_access
 from irx.builder.runtime import safe_pop
 from irx.builder.state import CleanupAction
 from irx.builtins.collections.list import (
@@ -55,7 +56,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
           storage:
             type: ir.Value
         """
-        if not isinstance(node.type_, astx.GeneratorType):
+        if not isinstance(self._resolved_ast_type(node), astx.GeneratorType):
             return
         ownership = require_semantic_metadata(
             resource_ownership(node),
@@ -100,7 +101,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
           list_ptr:
             type: ir.Value
         """
-        if not isinstance(node.type_, (astx.ListType, astx.Bytes)):
+        if not isinstance(
+            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
+        ):
             return
 
         ownership = resource_ownership(node)
@@ -370,6 +373,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
           node:
             type: astx.FieldAccess
         """
+        if lower_collection_access(self, node):
+            return
         namespace_value = self._namespace_value(node)
         if namespace_value is not None:
             self.visit_child(node.value)
@@ -456,6 +461,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
     def visit(self, node: astx.VariableDeclaration) -> None:
         """
         title: Visit VariableDeclaration nodes.
+        summary: >-
+          Consume analyzed concrete types while source annotations may remain
+          inference requests.
         parameters:
           node:
             type: astx.VariableDeclaration
@@ -465,8 +473,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if existing_storage and self._current_generator_frame_ptr is None:
             raise Exception(f"Identifier already declared: {node.name}")
 
-        type_str = node.type_.__class__.__name__.lower()
-        llvm_type = self._llvm_type_for_ast_type(node.type_)
+        type_str = self._resolved_ast_type(node).__class__.__name__.lower()
+        llvm_type = self._llvm_type_for_ast_type(self._resolved_ast_type(node))
         if llvm_type is None:
             raise Exception(
                 f"codegen: Unknown LLVM type for variable '{node.name}'."
@@ -481,7 +489,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
             init_val = self._cast_ast_value(
                 init_val,
                 source_type=self._resolved_ast_type(node.value),
-                target_type=node.type_,
+                target_type=self._resolved_ast_type(node),
             )
 
             if type_str == "string":
@@ -521,17 +529,21 @@ class VariableVisitorMixin(ClassVisitorMixin):
                         node.name, "stringascii"
                     )
                 )
-            elif isinstance(node.type_, astx.StructType):
+            elif isinstance(self._resolved_ast_type(node), astx.StructType):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
+            elif isinstance(
+                self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
+            ):
                 init_val = cast(
                     ir.Constant,
-                    cast(Any, self)._empty_list_value_for_type(node.type_),
+                    cast(Any, self)._empty_list_value_for_type(
+                        self._resolved_ast_type(node)
+                    ),
                 )
                 alloca = (
                     existing_storage
@@ -539,7 +551,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
             elif isinstance(
-                node.type_,
+                self._resolved_ast_type(node),
                 (astx.ClassType, astx.DataFrameType, astx.SeriesType),
             ):
                 init_val = ir.Constant(llvm_type, None)
@@ -548,14 +560,17 @@ class VariableVisitorMixin(ClassVisitorMixin):
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(node.type_, astx.GeneratorType):
+            elif isinstance(self._resolved_ast_type(node), astx.GeneratorType):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
                     if existing_storage is not None
                     else self.create_entry_block_alloca(node.name, llvm_type)
                 )
-            elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
+            elif isinstance(
+                self._resolved_ast_type(node),
+                astx.DataFrameType | astx.SeriesType,
+            ):
                 init_val = ir.Constant(llvm_type, None)
                 alloca = (
                     existing_storage
@@ -582,7 +597,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
-        if isinstance(node.type_, astx.FileType):
+        if isinstance(self._resolved_ast_type(node), astx.FileType):
             ownership = resource_ownership(node)
             if ownership is None or ownership.owner_symbol_id is None:
                 raise_lowering_internal_error(
@@ -590,7 +605,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
         if isinstance(
-            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+            self._resolved_ast_type(node),
+            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
         ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)
@@ -607,6 +623,9 @@ class VariableVisitorMixin(ClassVisitorMixin):
     def visit(self, node: astx.InlineVariableDeclaration) -> None:
         """
         title: Visit InlineVariableDeclaration nodes.
+        summary: >-
+          Consume analyzed concrete types while source annotations may remain
+          inference requests.
         parameters:
           node:
             type: astx.InlineVariableDeclaration
@@ -616,8 +635,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if existing_storage and self._current_generator_frame_ptr is None:
             raise Exception(f"Identifier already declared: {node.name}")
 
-        type_str = node.type_.__class__.__name__.lower()
-        llvm_type = self._llvm_type_for_ast_type(node.type_)
+        type_str = self._resolved_ast_type(node).__class__.__name__.lower()
+        llvm_type = self._llvm_type_for_ast_type(self._resolved_ast_type(node))
         if llvm_type is None:
             raise Exception(
                 "codegen: Unknown LLVM type for inline variable "
@@ -631,22 +650,29 @@ class VariableVisitorMixin(ClassVisitorMixin):
             init_val = self._cast_ast_value(
                 init_val,
                 source_type=self._resolved_ast_type(node.value),
-                target_type=node.type_,
+                target_type=self._resolved_ast_type(node),
             )
-        elif isinstance(node.type_, astx.StructType):
+        elif isinstance(self._resolved_ast_type(node), astx.StructType):
             init_val = ir.Constant(llvm_type, None)
-        elif isinstance(node.type_, (astx.ListType, astx.Bytes)):
+        elif isinstance(
+            self._resolved_ast_type(node), (astx.ListType, astx.Bytes)
+        ):
             init_val = cast(
                 ir.Constant,
-                cast(Any, self)._empty_list_value_for_type(node.type_),
+                cast(Any, self)._empty_list_value_for_type(
+                    self._resolved_ast_type(node)
+                ),
             )
         elif isinstance(
-            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+            self._resolved_ast_type(node),
+            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
         ):
             init_val = ir.Constant(llvm_type, None)
-        elif isinstance(node.type_, astx.GeneratorType):
+        elif isinstance(self._resolved_ast_type(node), astx.GeneratorType):
             init_val = ir.Constant(llvm_type, None)
-        elif isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
+        elif isinstance(
+            self._resolved_ast_type(node), astx.DataFrameType | astx.SeriesType
+        ):
             init_val = ir.Constant(llvm_type, None)
         elif "float" in type_str:
             init_val = ir.Constant(self._llvm.get_data_type(type_str), 0.0)
@@ -664,7 +690,7 @@ class VariableVisitorMixin(ClassVisitorMixin):
         if node.mutability == astx.MutabilityKind.constant:
             self.const_vars.add(symbol_key)
         self.named_values[symbol_key] = alloca
-        if isinstance(node.type_, astx.FileType):
+        if isinstance(self._resolved_ast_type(node), astx.FileType):
             ownership = resource_ownership(node)
             if ownership is None or ownership.owner_symbol_id is None:
                 raise_lowering_internal_error(
@@ -672,7 +698,8 @@ class VariableVisitorMixin(ClassVisitorMixin):
                 )
             self.file_cleanup(node, init_val, ownership.owner_symbol_id)
         if isinstance(
-            node.type_, (astx.ClassType, astx.DataFrameType, astx.SeriesType)
+            self._resolved_ast_type(node),
+            (astx.ClassType, astx.DataFrameType, astx.SeriesType),
         ):
             acquired = self.class_acquire(node, init_val)
             self._llvm.ir_builder.store(acquired, alloca)

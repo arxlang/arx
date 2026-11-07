@@ -4,16 +4,16 @@ summary: Numeric and Boolean columns constructed entirely by compiled Arx.
 ```
 import (Schema, BatchBuilder, RecordBatch) from stdlib.arrow
 
-fn make_batch() -> RecordBatch:
+make_batch: fn() -> RecordBatch:
   ```
   title: make_batch
   summary: Produces two rows with exact non-nullable Arrow types.
   ```
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64")
   schema.add("score", "float64")
   schema.add("active", "bool")
-  var builder: BatchBuilder = BatchBuilder(schema)
+  builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_i64(0, 7)
   builder.append_f64(1, 1.5)
@@ -22,12 +22,12 @@ fn make_batch() -> RecordBatch:
   builder.append_bool(2, false)
   return builder.finish()
 
-fn verify(batch: RecordBatch) -> none:
+verify: fn(batch: RecordBatch) -> none:
   ```
   title: verify
   summary: Checks the full schema, row count and every value.
   ```
-  var expected: RecordBatch = make_batch()
+  expected: RecordBatch = make_batch()
   assert batch.schema().equals(expected.schema())
   assert batch.nrows() == 2
   assert batch.get_i64(0, 0) == 42

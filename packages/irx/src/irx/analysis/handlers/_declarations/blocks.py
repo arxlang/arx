@@ -23,8 +23,8 @@ from irx.analysis.handlers.base import (
     SemanticAnalyzerCore,
     SemanticVisitorMixinBase,
 )
+from irx.analysis.inference import resolve_initializer_type
 from irx.analysis.module_storage import resolve_module_storage
-from irx.analysis.numeric_literals import contextualize_literal
 from irx.analysis.ownership import (
     list_resource_ownership,
     resource_ownership,
@@ -46,7 +46,6 @@ from irx.analysis.types import (
     is_sequence_element,
     is_string_type,
 )
-from irx.analysis.validation import validate_assignment
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
 
@@ -79,13 +78,14 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 ResolvedGeneratorFunction,
             )
             and not (
-                is_numeric_type(node.type_)
-                or is_boolean_type(node.type_)
-                or is_sequence_element(node.type_)
+                is_numeric_type(symbol.type_)
+                or is_boolean_type(symbol.type_)
+                or is_sequence_element(symbol.type_)
                 or isinstance(
-                    node.type_, (astx.ListType, astx.Bytes, astx.GeneratorType)
+                    symbol.type_,
+                    (astx.ListType, astx.Bytes, astx.GeneratorType),
                 )
-                or is_string_type(node.type_)
+                or is_string_type(symbol.type_)
             )
         ):
             self.context.diagnostics.add(
@@ -94,19 +94,19 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 code=DiagnosticCodes.SEMANTIC_INVALID_OWNERSHIP,
             )
             return
-        if isinstance(node.type_, astx.DataFrameType | astx.SeriesType):
+        if isinstance(symbol.type_, astx.DataFrameType | astx.SeriesType):
             arrow_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
-        if isinstance(node.type_, astx.ClassType):
+        if isinstance(symbol.type_, astx.ClassType):
             class_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
-        if isinstance(node.type_, astx.FileType):
+        if isinstance(symbol.type_, astx.FileType):
             resolve_file_local(cast(SemanticAnalyzerCore, self), node, symbol)
             return
-        if is_string_type(node.type_):
+        if is_string_type(symbol.type_):
             self._resolve_local_string_ownership(node, symbol)
             return
-        if isinstance(node.type_, astx.GeneratorType):
+        if isinstance(symbol.type_, astx.GeneratorType):
             ownership = resource_ownership(node.value)
             function = self.context.current_function
             if (
@@ -143,11 +143,11 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
                 ),
             )
             return
-        if not isinstance(node.type_, (astx.ListType, astx.Bytes)):
+        if not isinstance(symbol.type_, (astx.ListType, astx.Bytes)):
             return
-        if isinstance(node.type_, astx.ListType) and any(
+        if isinstance(symbol.type_, astx.ListType) and any(
             isinstance(element_type, (astx.ListType, astx.Bytes))
-            for element_type in node.type_.element_types
+            for element_type in symbol.type_.element_types
         ):
             self.context.diagnostics.add(
                 f"list '{node.name}' cannot own dynamic-list elements "
@@ -386,81 +386,24 @@ class DeclarationBlockVisitorMixin(SemanticVisitorMixinBase):
         self._semantic(block).flow_outcomes = flow_outcomes(block)
 
     @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.VariableDeclaration) -> None:
+    def visit(
+        self, node: astx.VariableDeclaration | astx.InlineVariableDeclaration
+    ) -> None:
         """
-        title: Visit VariableDeclaration nodes.
+        title: Resolve declaration types before storage publication.
         parameters:
           node:
-            type: astx.VariableDeclaration
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
         """
-        self._resolve_declared_type(node.type_, node=node)
-        if isinstance(node.type_, astx.NullableType) and isinstance(
-            node.value, astx.LiteralNone
-        ):
-            node.value = astx.Cast(node.value, node.type_)
-            node.value.loc = node.value.value.loc
-        if node.value is not None and not isinstance(
-            node.value, astx.Undefined
-        ):
-            contextualize_literal(node.value, node.type_)
-            self.visit(node.value)
-            if self._require_value_expression(
-                node.value,
-                context=f"Initializer for '{node.name}'",
-            ):
-                validate_assignment(
-                    self.context.diagnostics,
-                    target_name=node.name,
-                    target_type=node.type_,
-                    value_type=self._expr_type(node.value),
-                    node=node,
-                )
+        resolved_type = resolve_initializer_type(self, node)
+        if resolved_type is None:
+            return
         symbol = self.registry.declare_local(
             node.name,
-            node.type_,
+            resolved_type,
             is_mutable=node.mutability != astx.MutabilityKind.constant,
             declaration=node,
         )
         self._set_symbol(node, symbol)
         self._resolve_local_resource_ownership(node, symbol)
-        resolve_module_storage(cast(SemanticAnalyzerCore, self), node, symbol)
-
-    @SemanticAnalyzerCore.visit.dispatch
-    def visit(self, node: astx.InlineVariableDeclaration) -> None:
-        """
-        title: Visit InlineVariableDeclaration nodes.
-        parameters:
-          node:
-            type: astx.InlineVariableDeclaration
-        """
-        self._resolve_declared_type(node.type_, node=node)
-        if isinstance(node.type_, astx.NullableType) and isinstance(
-            node.value, astx.LiteralNone
-        ):
-            node.value = astx.Cast(node.value, node.type_)
-            node.value.loc = node.value.value.loc
-        if node.value is not None and not isinstance(
-            node.value, astx.Undefined
-        ):
-            contextualize_literal(node.value, node.type_)
-            self.visit(node.value)
-            if self._require_value_expression(
-                node.value,
-                context=f"Initializer for '{node.name}'",
-            ):
-                validate_assignment(
-                    self.context.diagnostics,
-                    target_name=node.name,
-                    target_type=node.type_,
-                    value_type=self._expr_type(node.value),
-                    node=node,
-                )
-        symbol = self.registry.declare_local(
-            node.name,
-            node.type_,
-            is_mutable=node.mutability != astx.MutabilityKind.constant,
-            declaration=node,
-        )
-        self._set_symbol(node, symbol)
-        self._resolve_local_resource_ownership(node, symbol)
-        resolve_module_storage(cast(SemanticAnalyzerCore, self), node, symbol)
+        resolve_module_storage(self, node, symbol)

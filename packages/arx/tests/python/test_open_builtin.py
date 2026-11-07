@@ -42,7 +42,7 @@ def parse_module(body: str, declarations: str = "") -> astx.Module:
     ArxIO.string_to_buffer(
         "```\ntitle: File I/O regression\n```\n"
         + declarations
-        + "\nfn main() -> i32:\n"
+        + "\nmain: fn() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -98,7 +98,7 @@ def test_open_parameters_and_translation(arguments: str) -> None:
       arguments:
         type: str
     """
-    module = parse_module(f"var f: file = open({arguments})\nf.close()")
+    module = parse_module(f"f: file = open({arguments})\nf.close()")
     llvm.parse_assembly(ArxBuilder().translate(module)).verify()
 
 
@@ -132,7 +132,7 @@ def test_open_rejects_unsupported_arguments(
         type: str
     """
     with pytest.raises(SemanticError, match=message):
-        analyze(parse_module(f"var f: file = open({arguments})"))
+        analyze(parse_module(f"f: file = open({arguments})"))
 
 
 @pytest.mark.parametrize(
@@ -157,20 +157,20 @@ def test_public_file_containers_remain_unsupported() -> None:
     title: The public class retains the existing class-container boundary.
     """
     with pytest.raises((SemanticError, ParserException)):
-        analyze(parse_module("var f: list[file]"))
+        analyze(parse_module("f: list[file]"))
 
 
 def test_open_shadowing() -> None:
     """
     title: User functions and non-callable locals take precedence over open.
     """
-    declarations = "fn open(value: i32) -> i32:\n  return value\n"
+    declarations = "open: fn(value: i32) -> i32:\n  return value\n"
     module = parse_module("assert open(7) == 7", declarations)
     assert "irx_file_open" not in ArxBuilder().translate(module)
     with pytest.raises(SemanticError, match="unknown argument"):
         analyze(parse_module("open(file=7)", declarations))
     with pytest.raises(SemanticError, match="does not resolve to a function"):
-        analyze(parse_module('var open: i32 = 1\nopen("x")'))
+        analyze(parse_module('open: i32 = 1\nopen("x")'))
 
 
 @pytest.mark.parametrize("factory", ["open", "File"])
@@ -187,22 +187,22 @@ def test_open_native_roundtrip_and_cleanup(
     """
     result = execute(
         tmp_path,
-        """var f: file = open("data.txt", "wt")
+        """f: file = open("data.txt", "wt")
 assert f.write("hé😀") == 3
 f.flush()
 f.close()
 f.close()
-var appended: file = open("data.txt", "a")
+appended: file = open("data.txt", "a")
 appended.write("!\\n")
 appended.close()
-var input: file = open("data.txt")
-var data: str = input.read()
+input: file = open("data.txt")
+data: str = input.read()
 assert input.read() == ""
 input.close()
 assert data == "hé😀!\\n"
 open("discarded.txt", "w").write("temporary")
 assert open("discarded.txt").read() == "temporary"
-var automatic: file = open("automatic.txt", "w")
+automatic: file = open("automatic.txt", "w")
 automatic.write("flushed on return")""".replace("open(", factory + "("),
     )
     assert result.returncode == 0, result.stderr
@@ -225,7 +225,7 @@ def test_open_native_reads(tmp_path: Path, content: bytes) -> None:
     expected = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n").decode()
     result = execute(
         tmp_path,
-        'var f: file = open("data.txt")\n'
+        'f: file = open("data.txt")\n'
         f"assert f.read() == {json.dumps(expected)}",
     )
     assert result.returncode == 0, result.stderr
@@ -242,7 +242,7 @@ def test_open_native_bad_text(tmp_path: Path, content: bytes) -> None:
         type: bytes
     """
     (tmp_path / "bad").write_bytes(content)
-    result = execute(tmp_path, 'var f: file = open("bad")\nf.read()')
+    result = execute(tmp_path, 'f: file = open("bad")\nf.read()')
     failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
     assert failure is not None and failure.code == "ARX-RUNTIME-FILE-001"
@@ -264,7 +264,7 @@ def test_open_runtime_mode_is_checked_before_truncation(
     (tmp_path / "keep").write_bytes(b"unchanged")
     result = execute(
         tmp_path,
-        f'var mode: str = "wb+"\nvar f: file = {factory}("keep", mode)',
+        f'mode: str = "wb+"\nf: file = {factory}("keep", mode)',
     )
     assert result.returncode == 1
     assert (tmp_path / "keep").read_bytes() == b"unchanged"
@@ -281,7 +281,7 @@ def test_open_filesystem_failures(tmp_path: Path, arguments: str) -> None:
         type: str
     """
     (tmp_path / "folder").mkdir()
-    result = execute(tmp_path, f"var f: file = open({arguments})")
+    result = execute(tmp_path, f"f: file = open({arguments})")
     failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
     assert failure is not None and failure.code == "ARX-RUNTIME-FILE-001"
@@ -298,16 +298,16 @@ def test_open_keyword_evaluation_order(tmp_path: Path, factory: str) -> None:
       factory:
         type: str
     """
-    declarations = """fn mode() -> str:
+    declarations = """mode: fn() -> str:
   print("mode")
   return "w"
-fn path() -> str:
+path: fn() -> str:
   print("path")
   return "out"
 """
     result = execute(
         tmp_path,
-        f"var f: file = {factory}(mode=mode(), file=path())",
+        f"f: file = {factory}(mode=mode(), file=path())",
         declarations,
     )
     assert result.returncode == 0, result.stderr
@@ -325,15 +325,15 @@ def test_imported_module_can_open(tmp_path: Path) -> None:
         pytest.skip("clang is required")
     helper = tmp_path / "helper.x"
     helper.write_text(
-        "```\ntitle: Helper\n```\nfn create() -> none:\n"
-        '  var f: file = open("created", "w")\n'
+        "```\ntitle: Helper\n```\ncreate: fn() -> none:\n"
+        '  f: file = open("created", "w")\n'
         '  f.write("ok")\n  return none\n',
         encoding="utf-8",
     )
     entry = tmp_path / "main.x"
     entry.write_text(
         "```\ntitle: Entry\n```\nimport create from helper\n"
-        "fn main() -> i32:\n  create()\n  return 0\n",
+        "main: fn() -> i32:\n  create()\n  return 0\n",
         encoding="utf-8",
     )
     executable = tmp_path / "program"
@@ -357,15 +357,15 @@ def test_file_scope_cleanup_on_early_return(tmp_path: Path) -> None:
       tmp_path:
         type: Path
     """
-    declarations = """fn early() -> i32:
-  var f: file = open("early", "w")
+    declarations = """early: fn() -> i32:
+  f: file = open("early", "w")
   f.write("saved")
   return 7
 """
     result = execute(
         tmp_path,
         "assert early() == 7\n"
-        'var source: file = open("early")\n'
+        'source: file = open("early")\n'
         'assert source.read() == "saved"',
         declarations,
     )
@@ -376,11 +376,11 @@ def test_file_scope_cleanup_on_early_return(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "body",
     [
-        'var f: file = open("x")\nf.read(1)',
-        'var f: file = open("x")\nf.write(1)',
-        'var f: file = open("x")\nf.seek(0)',
-        'var f: file = open("x")\nvar other: file = cast(f, file)',
-        'var encoding: str = "utf-8"\nopen("x", encoding=encoding)',
+        'f: file = open("x")\nf.read(1)',
+        'f: file = open("x")\nf.write(1)',
+        'f: file = open("x")\nf.seek(0)',
+        'f: file = open("x")\nother: file = cast(f, file)',
+        'encoding: str = "utf-8"\nopen("x", encoding=encoding)',
     ],
 )
 def test_deferred_file_forms_fail_in_analysis(body: str) -> None:
@@ -402,7 +402,7 @@ def test_closed_file_error_has_real_method_location(tmp_path: Path) -> None:
         type: Path
     """
     result = execute(
-        tmp_path, 'var f: file = open("out", "w")\nf.close()\nf.read()'
+        tmp_path, 'f: file = open("out", "w")\nf.close()\nf.read()'
     )
     failure = parse_exception_output(result.stderr)
     assert result.returncode == 1
@@ -422,8 +422,8 @@ def test_read_string_can_return_after_lexical_file_release(
         type: Path
     """
     (tmp_path / "source").write_text("independent", encoding="utf-8")
-    declarations = """fn load() -> str:
-  var f: file = open("source")
+    declarations = """load: fn() -> str:
+  f: file = open("source")
   return f.read()
 """
     result = execute(tmp_path, 'assert load() == "independent"', declarations)
@@ -438,28 +438,28 @@ def test_read_string_can_return_after_lexical_file_release(
         ('bytes("text")', "integer items"),
         ("bytes(10)", "integer items"),
         ("bytes([1], [2])", "expects one input"),
-        ("var value: bytes = bytes([1])\nvalue.append(2)", "list|class"),
+        ("value: bytes = bytes([1])\nvalue.append(2)", "list|class"),
         (
-            "var value: bytes = bytes([1])\nvar alias: bytes = value",
+            "value: bytes = bytes([1])\nalias: bytes = value",
             "borrowed storage",
         ),
-        ("var value: bytes = cast(bytes([1]), bytes)", "bytes casts"),
-        ("var value: list[bytes]", "nested ownership"),
+        ("value: bytes = cast(bytes([1]), bytes)", "bytes casts"),
+        ("value: list[bytes]", "nested ownership"),
         (
-            'var stream: File = open("x", "rb")\nstream.write_bytes("text")',
+            'stream: File = open("x", "rb")\nstream.write_bytes("text")',
             "requires bytes|expects",
         ),
         (
-            'var stream: File = open("x", "rb")\nstream.read_bytes(true)',
+            'stream: File = open("x", "rb")\nstream.read_bytes(true)',
             "requires|expects",
         ),
-        ('var stream: File = open("x", "rb")\nstream.read_bytes()', "expects"),
+        ('stream: File = open("x", "rb")\nstream.read_bytes()', "expects"),
         (
-            'var stream: File = open("x", "wb", encoding="utf-8")',
+            'stream: File = open("x", "wb", encoding="utf-8")',
             "binary mode",
         ),
-        ('var stream: File = open("x", "ab", errors="strict")', "binary mode"),
-        ("var bytes: i32 = 0\nbytes([1])", "does not resolve"),
+        ('stream: File = open("x", "ab", errors="strict")', "binary mode"),
+        ("bytes: i32 = 0\nbytes([1])", "does not resolve"),
     ],
 )
 def test_binary_semantic_restrictions(body: str, match: str) -> None:
@@ -490,20 +490,20 @@ def binary_failure_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     source = """```
 title: Binary errors
 ```
-extern getchar() -> i32
-fn main() -> i32:
-  var scenario: i32 = getchar()
+getchar: extern :: fn() -> i32
+main: fn() -> i32:
+  scenario: i32 = getchar()
   try:
     if scenario == 0:
-      var negative: i8 = -1
+      negative: i8 = -1
       bytes([negative])
     if scenario == 1:
-      var large: u64 = 18446744073709551615
+      large: u64 = 18446744073709551615
       bytes([large])
     if scenario == 2:
       bytes([0, 255, 256])
     if scenario == 3:
-      var mode: str = "wb"
+      mode: str = "wb"
       open("keep", mode, encoding="utf-8")
     if scenario == 4:
       open("keep", "rb").read()
@@ -520,13 +520,13 @@ fn main() -> i32:
     if scenario == 10:
       open("directory", "wb")
     if scenario == 11:
-      var data: bytes = bytes([0, 255])
+      data: bytes = bytes([0, 255])
       data[2]
     if scenario == 12:
-      var empty: bytes = bytes()
+      empty: bytes = bytes()
       empty[0]
     if scenario == 13:
-      var signed: bytes = bytes([0, 255])
+      signed: bytes = bytes([0, 255])
       signed[-1]
     return 1
   except ValueError:
@@ -586,12 +586,12 @@ def test_binary_failures_are_recoverable(
 @pytest.mark.parametrize(
     "declarations,match",
     [
-        ("extern expose(value: bytes) -> bytes\n", "FFI|unsupported"),
+        ("expose: extern :: fn(value: bytes) -> bytes\n", "FFI|unsupported"),
         ("class Box:\n  data: bytes\n", "field|ownership"),
-        ("fn borrow(data: bytes) -> bytes:\n  return data\n", "borrowed"),
+        ("borrow: fn(data: bytes) -> bytes:\n  return data\n", "borrowed"),
         (
-            "fn pending() -> bytes:\n"
-            "  var data: bytes = bytes([1])\n"
+            "pending: fn() -> bytes:\n"
+            "  data: bytes = bytes([1])\n"
             "  try:\n    return data\n"
             "  finally:\n    print(len(data))\n",
             "finally cannot reuse",

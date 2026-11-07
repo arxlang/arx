@@ -804,3 +804,16 @@ def test_nullable_surface_names_remain_identifiers(name: str) -> None:
     """
     ArxIO.string_to_buffer(name)
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
+
+
+def test_declaration_modifier_separator_locations() -> None:
+    """
+    title: Double colon preserves neighboring punctuation.
+    """
+    ArxIO.string_to_buffer("é: const::i32 = 1; x: i32 = 0")
+    tokens = Lexer().lex().tokens
+    separators = [token for token in tokens if token.value in {":", "::"}]
+    assert [token.value for token in separators] == [":", "::", ":"]
+    assert [
+        (token.location.line, token.location.col) for token in separators
+    ] == [(1, 2), (1, 9), (1, 21)]
