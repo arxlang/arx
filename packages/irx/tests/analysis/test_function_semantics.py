@@ -861,3 +861,41 @@ def test_definition_controls_parameter_binding(definition_first: bool) -> None:
     analyze(module)
     assert _semantic(definition).resolved_function is not None
     assert _semantic(definition).resolved_function.args[0].is_mutable
+
+
+def test_forward_declarations_cannot_disagree_on_visibility() -> None:
+    """
+    title: A forward prototype cannot override a definition's access policy.
+    """
+    prototype = astx.FunctionPrototype(
+        "hidden", astx.Arguments(), astx.Int32()
+    )
+    prototype.visibility = astx.VisibilityKind.private
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype("hidden", astx.Arguments(), astx.Int32()),
+        _block(astx.FunctionReturn(astx.LiteralInt32(0))),
+    )
+    module = _main_module(astx.FunctionReturn(astx.LiteralInt32(0)))
+    module.block.append(prototype)
+    module.block.append(definition)
+    with pytest.raises(SemanticError, match="Conflicting visibility"):
+        analyze(module)
+
+
+def test_top_level_protected_visibility_is_rejected() -> None:
+    """
+    title: Protected visibility has no meaning outside a class.
+    """
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "hidden",
+            astx.Arguments(),
+            astx.Int32(),
+            visibility=astx.VisibilityKind.protected,
+        ),
+        _block(astx.FunctionReturn(astx.LiteralInt32(0))),
+    )
+    module = _main_module(astx.FunctionReturn(astx.LiteralInt32(0)))
+    module.block.append(definition)
+    with pytest.raises(SemanticError, match="cannot use protected visibility"):
+        analyze(module)

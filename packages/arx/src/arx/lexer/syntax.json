@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.13.0",
+  "syntax_pack_version": "0.14.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -153,8 +153,19 @@
   "structural_forms": {
     "declarations": {
       "variable": "name: [modifiers ::] type [= initializer]",
-      "function": "fn name(parameters) -> type: body",
-      "extern": "extern name(parameters) -> type",
+      "function": "fn name(parameters) -> [modifiers ::] type: body",
+      "extern": "extern name(parameters) -> [public|private ::] type",
+      "function_modifiers": ["public", "private"],
+      "method_modifiers": [
+        "public",
+        "private",
+        "protected",
+        "static",
+        "abstract",
+        "extern"
+      ],
+      "callable_visibility_default": "public",
+      "multiline_signature": "Header components may wrap before the body colon; continuation indentation does not change body indentation.",
       "modifier_separator": "::",
       "binding_modifiers": ["var", "const"],
       "inferred_type": "auto",
@@ -186,15 +197,8 @@
       "start": "@[",
       "separator": ",",
       "end": "]",
-      "modifiers": [
-        "public",
-        "private",
-        "protected",
-        "static",
-        "abstract",
-        "extern"
-      ],
-      "targets": ["class", "method"]
+      "modifiers": ["public", "private", "protected", "abstract"],
+      "targets": ["class"]
     },
     "template_parameter_block": {
       "start": "@<",

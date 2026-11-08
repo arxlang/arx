@@ -285,6 +285,15 @@ class ExpressionModuleVisitorMixin(SemanticVisitorMixinBase):
             member_name,
             module_key=module.module_key,
         )
+        if binding is not None and not self.bindings.allows_function_access(
+            binding, self._current_module_key()
+        ):
+            self.context.diagnostics.add(
+                f"Function '{member_name}' is private to its module",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_FIELD_ACCESS,
+            )
+            return None
         if binding is not None:
             return binding
         self.context.diagnostics.add(

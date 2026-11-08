@@ -73,7 +73,12 @@ class DeclarationBox:
   fn read(self) -> int32:
     return self.value
 
-fn increment_local(value: var :: int32) -> int32:
+fn increment_local(
+  value: var :: int32,
+) ->
+  private ::
+  int32
+:
   value += 1
   return value
 

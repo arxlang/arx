@@ -304,12 +304,10 @@ def test_class_program_builds_and_runs(tmp_path: Path) -> None:
                 return self.internal
 
             class CounterFactory:
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 return Counter.version
 
             fn main() -> int32:
@@ -446,8 +444,7 @@ def test_template_program_builds_and_runs(tmp_path: Path) -> None:
 
             class Math:
               @<T: i32 | f64>
-              @[public, static]
-              fn identity(value: T) -> T:
+              fn identity(value: T) -> public static :: T:
                 return value
 
             fn main() -> int32:

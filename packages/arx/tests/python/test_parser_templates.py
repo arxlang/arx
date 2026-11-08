@@ -134,7 +134,7 @@ def test_parse_composed_alias_bounds() -> None:
         assert [type(member) for member in params[0].bound.members] == members
 
 
-def test_parse_template_method_with_mixed_prefix_order() -> None:
+def test_parse_template_method_with_inline_modifiers() -> None:
     """
     title: Parse one template method with modifiers and explicit call args.
     """
@@ -143,8 +143,7 @@ def test_parse_template_method_with_mixed_prefix_order() -> None:
             """
             class Math:
               @<T: i32 | f64>
-              @[public, static]
-              fn identity(value: T) -> T:
+              fn identity(value: T) -> public static :: T:
                 return value
 
             fn main() -> i32:

@@ -1112,3 +1112,77 @@ def test_analyze_modules_rejects_unsupported_import_forms(
 
     with pytest.raises(SemanticError, match=pattern):
         analyze_modules(root, StaticImportResolver({"lib": lib}))
+
+
+@pytest.mark.parametrize("style", ["from", "namespace", "reexport"])
+def test_private_functions_cannot_cross_module_boundaries(style: str) -> None:
+    """
+    title: Private function access cannot bypass visibility through aliases.
+    parameters:
+      style:
+        type: str
+    """
+    private = _int_function(
+        "hidden", astx.FunctionReturn(astx.LiteralInt32(7))
+    )
+    private.prototype.visibility = astx.VisibilityKind.private
+    library = make_parsed_module("lib", private)
+    modules = {"lib": library}
+    if style == "namespace":
+        imported = astx.ImportStmt([astx.AliasExpr("lib", asname="alias")])
+        call: astx.AST = astx.MethodCall(
+            astx.Identifier("alias"), "hidden", []
+        )
+    else:
+        target = "lib"
+        if style == "reexport":
+            modules["facade"] = make_parsed_module(
+                "facade",
+                astx.ImportFromStmt(
+                    module="lib",
+                    names=[astx.AliasExpr("hidden", asname="alias")],
+                ),
+            )
+            target = "facade"
+        imported = astx.ImportFromStmt(
+            module=target,
+            names=[
+                astx.AliasExpr(
+                    "alias" if style == "reexport" else "hidden",
+                    asname="alias",
+                )
+            ],
+        )
+        call = astx.FunctionCall("alias", [])
+    root = make_parsed_module(
+        "app", imported, _int_function("main", astx.FunctionReturn(call))
+    )
+    with pytest.raises(SemanticError, match="private to its module"):
+        analyze_modules(root, StaticImportResolver(modules))
+
+
+def test_public_wrapper_may_call_its_private_helper() -> None:
+    """
+    title: Module-local private helpers remain callable behind public exports.
+    """
+    private = _int_function(
+        "hidden", astx.FunctionReturn(astx.LiteralInt32(7))
+    )
+    private.prototype.visibility = astx.VisibilityKind.private
+    internal_call = astx.FunctionCall("hidden", [])
+    library = make_parsed_module(
+        "lib",
+        private,
+        _int_function("visible", astx.FunctionReturn(internal_call)),
+    )
+    root = make_parsed_module(
+        "app",
+        astx.ImportFromStmt(module="lib", names=[astx.AliasExpr("visible")]),
+        _int_function(
+            "main", astx.FunctionReturn(astx.FunctionCall("visible", []))
+        ),
+    )
+    analyze_modules(root, StaticImportResolver({"lib": library}))
+    resolved = _semantic(internal_call).resolved_function
+    assert resolved is not None
+    assert resolved.visibility is astx.VisibilityKind.private

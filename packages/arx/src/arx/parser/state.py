@@ -108,6 +108,7 @@ CLASS_ALLOWED_MODIFIERS = frozenset(
 FIELD_ALLOWED_MODIFIERS = frozenset(
     {"public", "private", "protected", "static", "const", "var"}
 )
+FUNCTION_ALLOWED_MODIFIERS = frozenset({"public", "private"})
 METHOD_ALLOWED_MODIFIERS = frozenset(
     {"public", "private", "protected", "static", "abstract", "extern"}
 )
@@ -126,6 +127,7 @@ __all__ = [
     "BINDING_MUTABILITY_MODIFIERS",
     "CLASS_ALLOWED_MODIFIERS",
     "FIELD_ALLOWED_MODIFIERS",
+    "FUNCTION_ALLOWED_MODIFIERS",
     "INDENT_SIZE",
     "METHOD_ALLOWED_MODIFIERS",
     "MUTABILITY_NAME_MAP",

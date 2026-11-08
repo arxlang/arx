@@ -32,6 +32,7 @@ from arx.parser.state import (
     BINDING_MUTABILITY_MODIFIERS,
     CLASS_ALLOWED_MODIFIERS,
     FIELD_ALLOWED_MODIFIERS,
+    FUNCTION_ALLOWED_MODIFIERS,
     METHOD_ALLOWED_MODIFIERS,
     MUTABILITY_NAME_MAP,
     SUPPORTED_MODIFIERS,
@@ -67,12 +68,17 @@ class DeclarationParserMixin(ParserMixinBase):
             and following.location.line == token.location.line
         )
 
-    def parse_inline_modifiers(self) -> ParsedAnnotation | None:
+    def parse_inline_modifiers(
+        self, *, allow_layout: bool = False
+    ) -> ParsedAnnotation | None:
         """
         title: Parse optional whitespace-separated declaration modifiers.
         summary: >-
           Keep declaration policy outside the type. Reject unknown, repeated,
           conflicting, and unterminated groups without accepting ignored flags.
+        parameters:
+          allow_layout:
+            type: bool
         returns:
           type: ParsedAnnotation | None
         """
@@ -86,8 +92,11 @@ class DeclarationParserMixin(ParserMixinBase):
         names: list[str] = []
         while index < len(tokens):
             token = tokens[index]
-            if token.location.line != first.location.line:
+            if not allow_layout and token.location.line != first.location.line:
                 break
+            if allow_layout and token.kind == TokenKind.indent:
+                index += 1
+                continue
             if token == Token(TokenKind.operator, "::"):
                 break
             if token.kind not in {
@@ -102,7 +111,10 @@ class DeclarationParserMixin(ParserMixinBase):
         found_separator = (
             index < len(tokens)
             and tokens[index] == Token(TokenKind.operator, "::")
-            and tokens[index].location.line == first.location.line
+            and (
+                allow_layout
+                or tokens[index].location.line == first.location.line
+            )
         )
         if not found_separator:
             if first.kind in {
@@ -117,6 +129,8 @@ class DeclarationParserMixin(ParserMixinBase):
             return None
         modifiers: list[str] = []
         for name in names:
+            if allow_layout:
+                self.skip_callable_layout()
             token = self.tokens.cur_tok
             if name not in SUPPORTED_MODIFIERS:
                 raise ParserException(
@@ -128,6 +142,8 @@ class DeclarationParserMixin(ParserMixinBase):
                 )
             modifiers.append(name)
             self.tokens.get_next_token()
+        if allow_layout:
+            self.skip_callable_layout()
         self._consume_operator("::")
         self._validate_modifier_conflicts(modifiers)
         return ParsedAnnotation(tuple(modifiers), first.location)
@@ -209,6 +225,7 @@ class DeclarationParserMixin(ParserMixinBase):
             return None
 
         self._consume_operator("=")
+        self.skip_callable_layout()
         try:
             return self._coerce_declared_expression(
                 cast(astx.Expr, self.parse_expression()),
@@ -442,10 +459,14 @@ class DeclarationParserMixin(ParserMixinBase):
                 )
 
             if self.tokens.cur_tok.kind == TokenKind.kw_function:
-                methods.append(
-                    self.parse_method_decl(
-                        prefixes.modifiers, prefixes.template_params
+                if prefixes.modifiers is not None:
+                    raise ParserException(
+                        "Method modifier annotations were replaced; use "
+                        "'fn name(...) -> modifiers :: type'.",
+                        prefixes.modifiers.loc,
                     )
+                methods.append(
+                    self.parse_method_decl(prefixes.template_params)
                 )
             elif self.is_declaration_start():
                 if prefixes.modifiers is not None:
@@ -555,42 +576,34 @@ class DeclarationParserMixin(ParserMixinBase):
 
     def parse_method_decl(
         self,
-        modifiers: ParsedAnnotation | None = None,
         template_params: tuple[astx.TemplateParam, ...] = (),
     ) -> astx.FunctionDef:
         """
         title: Parse one class method declaration.
         parameters:
-          modifiers:
-            type: ParsedAnnotation | None
           template_params:
             type: tuple[astx.TemplateParam, Ellipsis]
         returns:
           type: astx.FunctionDef
         """
         method_loc = self.tokens.cur_tok.location
-        self._validate_modifier_target(
-            modifiers, METHOD_ALLOWED_MODIFIERS, "method"
-        )
         self.tokens.get_next_token()  # eat fn
-
-        if template_params and (
-            self._has_modifier(modifiers, "abstract")
-            or self._has_modifier(modifiers, "extern")
-        ):
-            raise ParserException("template methods must define a body")
-
-        is_static = self._has_modifier(modifiers, "static")
         self._push_template_scope(template_params)
         pushed_return_type = False
         try:
-            prototype, receiver_name = self.parse_method_signature(
-                allow_receiver=not is_static
+            prototype, receiver, modifiers = self.parse_callable_signature(
+                is_method=True
             )
+            if template_params and (
+                self._has_modifier(modifiers, "abstract")
+                or self._has_modifier(modifiers, "extern")
+            ):
+                raise ParserException(
+                    "template methods must define a body", prototype.loc
+                )
             if template_params:
                 astx.set_template_params(prototype, template_params)
-            prototype.visibility = self._resolve_visibility(modifiers)
-
+            receiver_name = cast(str, receiver.value) if receiver else None
             declared_names = tuple(arg.name for arg in prototype.args.nodes)
             if receiver_name is not None:
                 declared_names = (receiver_name, *declared_names)
@@ -657,107 +670,7 @@ class DeclarationParserMixin(ParserMixinBase):
         method = astx.FunctionDef(prototype, body, loc=method_loc)
         if template_params:
             astx.set_template_params(method, template_params)
-        self._apply_method_modifiers(method, modifiers)
         return method
-
-    def parse_method_signature(
-        self,
-        *,
-        allow_receiver: bool,
-    ) -> tuple[astx.FunctionPrototype, str | None]:
-        """
-        title: Parse one class method signature.
-        parameters:
-          allow_receiver:
-            type: bool
-        returns:
-          type: tuple[astx.FunctionPrototype, str | None]
-        """
-        if self.tokens.cur_tok.kind != TokenKind.identifier:
-            raise ParserException("Parser: Expected method name in prototype")
-        name_token = self.tokens.cur_tok
-        method_name = cast(str, name_token.value)
-        method_loc = name_token.location
-        self.tokens.get_next_token()
-        self._consume_operator("(")
-
-        args = astx.Arguments()
-        implicit_receiver_name: str | None = None
-        index = 0
-        if not self._is_operator(")"):
-            while True:
-                if self.tokens.cur_tok.kind != TokenKind.identifier:
-                    raise ParserException("Parser: Expected argument name")
-
-                param_name = cast(str, self.tokens.cur_tok.value)
-                param_loc = self.tokens.cur_tok.location
-                self.tokens.get_next_token()  # eat arg name
-
-                if (
-                    index == 0
-                    and param_name == "self"
-                    and not self._is_operator(":")
-                ):
-                    if not allow_receiver:
-                        raise ParserException(
-                            "static method cannot declare implicit receiver "
-                            "'self'"
-                        )
-                    implicit_receiver_name = param_name
-                else:
-                    if not self._is_operator(":"):
-                        raise ParserException(
-                            "Parser: Expected type annotation for argument "
-                            f"'{param_name}'."
-                        )
-
-                    self._consume_operator(":")
-                    param_modifiers = self.parse_inline_modifiers()
-                    self._validate_modifier_target(
-                        param_modifiers,
-                        frozenset({"var", "const"}),
-                        "parameter",
-                    )
-                    param_type = self.parse_type(
-                        allow_union=True, type_context=TypeUseContext.PARAMETER
-                    )
-                    self._append_argument(
-                        args,
-                        param_name,
-                        param_type,
-                        param_loc,
-                        self.resolve_binding_mutability(param_modifiers),
-                    )
-
-                index += 1
-
-                if self._is_operator(","):
-                    self._consume_operator(",")
-                    continue
-
-                break
-
-        self._consume_operator(")")
-
-        if not self._is_operator("->"):
-            raise ParserException(
-                "Parser: Expected return type annotation with '->'."
-            )
-
-        self._consume_operator("->")
-        return_type = self.parse_type(
-            allow_union=True,
-            type_context=TypeUseContext.RETURN,
-        )
-        return (
-            astx.FunctionPrototype(
-                method_name,
-                args,
-                cast(AnyType, return_type),
-                loc=method_loc,
-            ),
-            implicit_receiver_name,
-        )
 
     def parse_declaration_prefixes(
         self,
@@ -1024,7 +937,9 @@ class DeclarationParserMixin(ParserMixinBase):
 
         for modifier in modifiers.modifiers:
             if modifier not in allowed:
-                raise ParserException(f"{target} cannot use '{modifier}'")
+                raise ParserException(
+                    f"{target} cannot use '{modifier}'", modifiers.loc
+                )
 
     def _has_modifier(
         self,
@@ -1165,111 +1080,183 @@ class DeclarationParserMixin(ParserMixinBase):
             setattr(declaration, "is_static", True)
             setattr(declaration, "explicit_is_static", True)
 
-    def _apply_method_modifiers(
+    def apply_callable_modifiers(
         self,
-        declaration: astx.FunctionDef,
+        prototype: astx.FunctionPrototype,
         modifiers: ParsedAnnotation | None,
     ) -> None:
         """
-        title: Attach explicit method modifier metadata to the IRx node.
+        title: >-
+          Attach callable declaration policies without qualifying the return
+          type.
         parameters:
-          declaration:
-            type: astx.FunctionDef
+          prototype:
+            type: astx.FunctionPrototype
           modifiers:
             type: ParsedAnnotation | None
         """
+        prototype.visibility = self._resolve_visibility(modifiers)
         explicit_visibility = self._explicit_visibility(modifiers)
         if explicit_visibility is not None:
             setattr(
-                declaration.prototype,
+                prototype,
                 "explicit_visibility",
                 explicit_visibility,
             )
         if self._has_modifier(modifiers, "static"):
-            setattr(declaration.prototype, "is_static", True)
-            setattr(declaration.prototype, "explicit_is_static", True)
+            setattr(prototype, "is_static", True)
+            setattr(prototype, "explicit_is_static", True)
         if self._has_modifier(modifiers, "abstract"):
-            setattr(declaration.prototype, "is_abstract", True)
-            setattr(declaration.prototype, "explicit_is_abstract", True)
+            setattr(prototype, "is_abstract", True)
+            setattr(prototype, "explicit_is_abstract", True)
         if self._has_modifier(modifiers, "extern"):
-            setattr(declaration.prototype, "is_extern", True)
-            setattr(declaration.prototype, "explicit_is_extern", True)
+            setattr(prototype, "is_extern", True)
+            setattr(prototype, "explicit_is_extern", True)
+
+    def skip_callable_layout(self) -> None:
+        """
+        title: Consume continuation markers inside an unfinished signature.
+        summary: >-
+          Never change indent_level. Body indentation is relative to the fn
+          declaration, not the last continuation line. Callers stop using this
+          helper after the return type, except for a pending body colon.
+        """
+        while self.tokens.cur_tok.kind == TokenKind.indent:
+            self.tokens.get_next_token()
+
+    def parse_callable_signature(
+        self, *, is_method: bool = False
+    ) -> tuple[astx.FunctionPrototype, Token | None, ParsedAnnotation | None]:
+        """
+        title: >-
+          Parse callable arguments, declaration modifiers, and return type.
+        summary: >-
+          Parenthesized parameters and the return tail may span lines. The
+          modifier group belongs to the callable, not the returned value. Keep
+          the next member's indentation intact for bodyless declarations.
+        parameters:
+          is_method:
+            type: bool
+        returns:
+          type: >-
+            tuple[astx.FunctionPrototype, Token | None, ParsedAnnotation |
+            None]
+        """
+        name_token = self.tokens.cur_tok
+        if name_token.kind != TokenKind.identifier:
+            target = "method" if is_method else "function"
+            raise ParserException(
+                f"Parser: Expected {target} name in prototype",
+                name_token.location,
+            )
+        self.tokens.get_next_token()
+        self.skip_callable_layout()
+        self._consume_operator("(")
+        self.skip_callable_layout()
+        args = astx.Arguments()
+        receiver: Token | None = None
+        first = True
+        while not self._is_operator(")"):
+            token = self.tokens.cur_tok
+            if token.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Parser: Expected argument name", token.location
+                )
+            self.tokens.get_next_token()
+            self.skip_callable_layout()
+            if (
+                is_method
+                and first
+                and token.value == "self"
+                and not self._is_operator(":")
+            ):
+                receiver = token
+            else:
+                if not self._is_operator(":"):
+                    raise ParserException(
+                        "Parser: Expected type annotation for argument "
+                        f"'{token.value}'.",
+                        token.location,
+                    )
+                self._consume_operator(":")
+                self.skip_callable_layout()
+                arg_modifiers = self.parse_inline_modifiers(allow_layout=True)
+                self._validate_modifier_target(
+                    arg_modifiers, frozenset({"var", "const"}), "parameter"
+                )
+                self.skip_callable_layout()
+                arg_type = self.parse_type(
+                    allow_union=True, type_context=TypeUseContext.PARAMETER
+                )
+                self.skip_callable_layout()
+                self._append_argument(
+                    args,
+                    cast(str, token.value),
+                    arg_type,
+                    token.location,
+                    self.resolve_binding_mutability(arg_modifiers),
+                )
+            first = False
+            self.skip_callable_layout()
+            if not self._is_operator(","):
+                break
+            self._consume_operator(",")
+            self.skip_callable_layout()
+        self._consume_operator(")")
+        self.skip_callable_layout()
+        if not self._is_operator("->"):
+            raise ParserException(
+                "Parser: Expected return type annotation with '->'.",
+                self.tokens.cur_tok.location,
+            )
+        self._consume_operator("->")
+        self.skip_callable_layout()
+        modifiers = self.parse_inline_modifiers(allow_layout=True)
+        self._validate_modifier_target(
+            modifiers,
+            METHOD_ALLOWED_MODIFIERS
+            if is_method
+            else FUNCTION_ALLOWED_MODIFIERS,
+            "method" if is_method else "function",
+        )
+        if receiver is not None and self._has_modifier(modifiers, "static"):
+            raise ParserException(
+                "static method cannot declare implicit receiver 'self'",
+                receiver.location,
+            )
+        self.skip_callable_layout()
+        return_type = self.parse_type(
+            allow_union=True, type_context=TypeUseContext.RETURN
+        )
+        prototype = astx.FunctionPrototype(
+            cast(str, name_token.value),
+            args,
+            cast(AnyType, return_type),
+            loc=name_token.location,
+        )
+        self.apply_callable_modifiers(prototype, modifiers)
+        # Only a colon may consume layout after the completed type. Otherwise
+        # a bodyless method/extern must leave its next sibling's line marker.
+        if (
+            self.tokens.cur_tok.kind == TokenKind.indent
+            and self._peek_token() == Token(TokenKind.operator, ":")
+        ):
+            self.tokens.get_next_token()
+        return prototype, receiver, modifiers
 
     def parse_prototype(self, expect_colon: bool) -> astx.FunctionPrototype:
         """
-        title: Parse function/extern prototypes.
+        title: Parse function/extern prototypes with declaration modifiers.
         parameters:
           expect_colon:
             type: bool
         returns:
           type: astx.FunctionPrototype
         """
-        if self.tokens.cur_tok.kind != TokenKind.identifier:
-            raise ParserException(
-                "Parser: Expected function name in prototype"
-            )
-        name_token = self.tokens.cur_tok
-        fn_name = cast(str, name_token.value)
-        fn_loc = name_token.location
-        self.tokens.get_next_token()
-        self._consume_operator("(")
-
-        args = astx.Arguments()
-        if not self._is_operator(")"):
-            while True:
-                if self.tokens.cur_tok.kind != TokenKind.identifier:
-                    raise ParserException("Parser: Expected argument name")
-
-                arg_name = cast(str, self.tokens.cur_tok.value)
-                arg_loc = self.tokens.cur_tok.location
-                self.tokens.get_next_token()  # eat arg name
-
-                if not self._is_operator(":"):
-                    raise ParserException(
-                        "Parser: Expected type annotation for argument "
-                        f"'{arg_name}'."
-                    )
-
-                self._consume_operator(":")
-                arg_modifiers = self.parse_inline_modifiers()
-                self._validate_modifier_target(
-                    arg_modifiers, frozenset({"var", "const"}), "parameter"
-                )
-                arg_type = self.parse_type(
-                    allow_union=True, type_context=TypeUseContext.PARAMETER
-                )
-
-                self._append_argument(
-                    args,
-                    arg_name,
-                    arg_type,
-                    arg_loc,
-                    self.resolve_binding_mutability(arg_modifiers),
-                )
-
-                if self._is_operator(","):
-                    self._consume_operator(",")
-                    continue
-
-                break
-
-        self._consume_operator(")")
-
-        if not self._is_operator("->"):
-            raise ParserException(
-                "Parser: Expected return type annotation with '->'."
-            )
-        self._consume_operator("->")
-        ret_type: astx.DataType = self.parse_type(
-            allow_union=True, type_context=TypeUseContext.RETURN
-        )
-
+        prototype, _, _ = self.parse_callable_signature()
         if expect_colon:
             self._consume_operator(":")
-
-        return astx.FunctionPrototype(
-            fn_name, args, cast(AnyType, ret_type), loc=fn_loc
-        )
+        return prototype
 
     def _tensor_bindings_for_arguments(
         self,

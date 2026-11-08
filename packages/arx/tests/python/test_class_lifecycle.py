@@ -701,8 +701,7 @@ class Child(Base):
 @pytest.mark.parametrize(
     "declaration",
     [
-        "class Item:\n  @[static]\n"
-        "  fn __init__() -> none:\n    return none\n",
+        "class Item:\n  fn __init__() -> static :: none:\n    return none\n",
         "class Item:\n"
         "  fn __del__(self, value: i32) -> none:\n    return none\n",
         "class Item:\n  fn __init__(self) -> i32:\n    return 1\n",

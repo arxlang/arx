@@ -1,8 +1,10 @@
 # Classes
 
 Fields start with their names and accept inline declaration modifiers. Methods
-retain `fn name(...) -> type:` and their existing `@[...]` modifier annotations;
-only their parameter declarations gain the optional `var`/`const` modifier slot.
+keep `fn name(...)`, with an optional group after `->`:
+`fn calculate(value: i32) -> public static :: i32:`. The group modifies the
+method declaration, not the return type. Parameter `var`/`const` modifiers
+remain independent.
 
 ## Class Syntax
 
@@ -17,8 +19,7 @@ class Counter(BaseCounter, Audited):
   fn get(self) -> int32:
     return self.value
 
-  @[protected]
-  fn process(self, x: int32) -> int32:
+  fn process(self, x: int32) -> protected :: int32:
     return x + 1
 ```
 
@@ -27,27 +28,26 @@ Optional class-level annotations use the same surface form:
 ```arx
 @[public, abstract]
 class Shape:
-  @[public, abstract]
-  fn area(self) -> float64
+  fn area(self) -> public abstract :: float64
 ```
 
-Template methods retain `@<...>` prefixes and method annotations on their own
-lines before `fn`. These two prefixes may appear in either order:
+Template methods retain `@<...>` prefixes on their own lines before `fn`. Method
+modifiers move into the return tail:
 
 ```arx
 class Math:
   @<T: i32 | f64>
-  @[public, static]
-  fn identity(value: T) -> T:
+  fn identity(value: T) -> public static :: T:
     return value
 ```
 
 ## Modifier Rules
 
-Field modifiers are whitespace-separated in `name: modifiers :: type`. Class and
-method annotations remain comma-separated `@[...]` lists on the line above the
-declaration. Empty, duplicate, conflicting, floating, and invalid-target
-modifiers are rejected.
+Field modifiers are whitespace-separated in `name: modifiers :: type`; method
+modifiers use `fn name(...) -> modifiers :: type`. Only classes retain
+comma-separated `@[...]` annotation lists. Method modifier annotations were
+removed rather than retained as a second spelling. Empty, duplicate,
+conflicting, floating, and invalid-target modifiers are rejected.
 
 Visibility is `public`, `private`, or `protected`. Fields support `static` and
 `var`/`const`; methods retain `static`, `abstract`, and `extern`. Neither `var`
@@ -83,8 +83,7 @@ fn get(self) -> int32:
 ```arx
 value: public var :: int32 = 0
 
-@[public]
-fn get(self) -> int32:
+fn get(self) -> public :: int32:
   return self.value
 ```
 
@@ -103,8 +102,7 @@ class Counter:
     return 1
 
 class CounterFactory:
-  @[public, static]
-  fn make() -> Counter:
+  fn make() -> public static :: Counter:
     return Counter()
 
 fn take_counter(counter: Counter) -> int32:

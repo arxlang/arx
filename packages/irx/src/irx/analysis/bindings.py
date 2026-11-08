@@ -292,3 +292,28 @@ class VisibleBindings:
         current_module_key = self._current_module_key(module_key)
         bindings = self._bindings.get(current_module_key, {})
         return bindings.get(name)
+
+    def allows_function_access(
+        self, binding: SemanticBinding, requesting_module_key: ModuleKey
+    ) -> bool:
+        """
+        title: >-
+          Enforce module-local function visibility without changing linkage.
+        summary: >-
+          Public functions may cross module boundaries. A private function is
+          accessible only from its defining module, including through aliases.
+          Other binding kinds retain their existing access rules.
+        parameters:
+          binding:
+            type: SemanticBinding
+          requesting_module_key:
+            type: ModuleKey
+        returns:
+          type: bool
+        """
+        function = binding.function
+        return (
+            function is None
+            or function.visibility is astx.VisibilityKind.public
+            or function.module_key == requesting_module_key
+        )

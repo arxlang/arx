@@ -1,10 +1,24 @@
 # Functions
 
-Functions retain `fn name(parameters) -> return_type:` followed by an indented
-body. Declaration modifiers apply to parameters, not to the function name:
-`fn distance(record: const :: str) -> i64:`. Parameters default to `var`; an
-explicit `const` prevents callee-side rebinding without restricting the caller's
-binding or freezing a referenced object.
+Functions keep `fn name(parameters) -> return_type:`. Optional declaration
+modifiers precede the return type:
+`fn calculate(value: i32) -> private :: i32:`. The modifier group describes the
+function, not its returned value. Omission means `public`; explicit `public ::`
+is equivalent. `private` restricts access to the defining Arx module, including
+from-imports and namespace calls; it does not change native symbol linkage or
+the extern ABI. `protected`, `static`, `abstract`, and inline `extern` are
+method-only policies.
+
+Parameter bindings are separate: `value: const :: i32` prevents callee-side
+rebinding without restricting the caller's binding or freezing an object.
+Omitted parameter modifiers mean `var`. Callable names do not accept `var` or
+`const`, and return types remain explicit.
+
+Signatures may wrap parameters, modifiers, and the return type across lines,
+including placing the final `:` on its own line. Header continuation does not
+open a block; body indentation is relative to the `fn` declaration. This does
+not introduce general multiline expressions or new wrapping rules inside type
+expressions. See the template example below for a complete wrapped program.
 
 ## Definition Syntax
 
@@ -124,14 +138,18 @@ type Float = f32 | f64
 type Real = SignedInteger | Float
 
 @<T: Real>
-fn add(x: T, y: T) -> T:
+fn add(x: T, y: T) -> private :: T:
   ```
   title: add
   summary: Adds two values that share one template-bound type.
   ```
   return x + y
 
-fn main() -> i32:
+fn main(
+) ->
+  public ::
+  i32
+:
   ```
   title: main
   summary: Calls template specializations through inference and explicit args.

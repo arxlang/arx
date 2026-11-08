@@ -145,8 +145,7 @@ class Derived(Base):
   fn read(self, renamed: i32 = 8, other: i32 = 9) -> i32:
     return renamed * 10 + other
 class Math:
-  @[static]
-  fn combine(a: i32, b: i32 = 3) -> i32:
+  fn combine(a: i32, b: i32 = 3) -> static :: i32:
     return a * 10 + b
   fn choose(self, whole: i32) -> i32:
     return whole

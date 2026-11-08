@@ -1376,12 +1376,10 @@ def test_name_first_binding_modifiers(modifier: str) -> None:
     assert external.args.nodes[0].mutability is expected
     class_ = _parse_module(
         "class Operations:\n"
-        "  @[public, static]\n"
-        f"  fn apply(value: {modifier}i32) -> i32:\n    return value\n"
-        "  @[abstract]\n"
-        f"  fn abstract_apply(self, value: {modifier}i32) -> i32\n"
-        "  @[extern]\n"
-        f"  fn external_apply(self, value: {modifier}i32) -> i32\n"
+        f"  fn apply(value: {modifier}i32) -> public static :: i32:\n"
+        "    return value\n"
+        f"  fn abstract_apply(self, value: {modifier}i32) -> abstract :: i32\n"
+        f"  fn external_apply(self, value: {modifier}i32) -> extern :: i32\n"
     ).nodes[0]
     assert isinstance(class_, astx.ClassDefStmt)
     for method in class_.methods:
@@ -1605,3 +1603,163 @@ def test_auto_remains_a_value_identifier_and_inference_marker() -> None:
     assert isinstance(declaration, astx.VariableDeclaration)
     assert declaration.name == "auto"
     assert isinstance(declaration.type_, astx.InferredType)
+
+
+@pytest.mark.parametrize("modifier", ["", "public :: ", "private :: "])
+def test_callable_declaration_modifiers(modifier: str) -> None:
+    """
+    title: Callable visibility is independent of arguments and return types.
+    parameters:
+      modifier:
+        type: str
+    """
+    module = _parse_module(
+        f"fn calculate(value: const :: i32) -> {modifier}i32:\n"
+        "  return value\n"
+        f"extern external(value: i32) -> {modifier}i32\n"
+    )
+    expected = (
+        astx.VisibilityKind.private
+        if modifier.startswith("private")
+        else astx.VisibilityKind.public
+    )
+    definition, external = module.nodes
+    assert isinstance(definition, astx.FunctionDef)
+    assert isinstance(external, astx.FunctionPrototype)
+    for prototype in (definition.prototype, external):
+        assert prototype.visibility is expected
+        assert isinstance(prototype.return_type, astx.Int32)
+    assert (
+        definition.prototype.args.nodes[0].mutability
+        is astx.MutabilityKind.constant
+    )
+
+
+def test_multiline_callable_headers_keep_body_and_sibling_boundaries() -> None:
+    """
+    title: >-
+      Wrapped headers do not redefine body indentation or swallow siblings.
+    """
+    module = _parse_module(
+        "@[abstract]\nclass Calculator:\n"
+        "  @<T: i32 | i64>\n"
+        "  fn calculate(\n"
+        "    value: const ::\n      T,\n"
+        "    other: var :: T =\n      value,\n"
+        "  )\n  ->\n"
+        "    public\n    static\n    ::\n    T\n  :\n"
+        "    ```\n    title: Calculate\n    ```\n"
+        "    return other\n"
+        "  fn abstract_read(\n    self,\n  ) ->\n    abstract :: i32\n"
+        "  fn native(\n    self\n  ) -> extern :: i32\n"
+        "  fn read(self) -> i32:\n    return 1\n"
+        "extern external(\n  value: i32,\n) ->\n  private ::\n  i32\n"
+        "fn main(\n) ->\n  public ::\n  i32\n:\n"
+        "  return 0\n"
+    )
+    class_, external, main = module.nodes
+    assert isinstance(class_, astx.ClassDefStmt)
+    assert [method.prototype.name for method in class_.methods] == [
+        "calculate",
+        "abstract_read",
+        "native",
+        "read",
+    ]
+    calculate = class_.methods[0]
+    assert getattr(calculate.prototype, "is_static", False)
+    assert len(calculate.prototype.args.nodes) == 2
+    assert len(calculate.body.nodes) == 1
+    assert astx.is_template_node(calculate)
+    assert isinstance(external, astx.FunctionPrototype)
+    assert external.visibility is astx.VisibilityKind.private
+    assert isinstance(main, astx.FunctionDef)
+    assert len(main.body.nodes) == 1
+
+
+@pytest.mark.parametrize(
+    "source, message",
+    [
+        (
+            "fn f() -> static :: i32:\n  return 0",
+            "function cannot use 'static'",
+        ),
+        (
+            "fn f() -> protected :: i32:\n  return 0",
+            "function cannot use 'protected'",
+        ),
+        ("fn f() -> const :: i32:\n  return 0", "function cannot use 'const'"),
+        ("fn f() -> extern :: i32", "function cannot use 'extern'"),
+        ("fn f() -> public public :: i32:\n  return 0", "duplicate modifier"),
+        (
+            "fn f() -> public private :: i32:\n  return 0",
+            "conflicting visibility",
+        ),
+        ("fn f() -> unknown :: i32:\n  return 0", "unknown modifier"),
+        ("fn f() -> :: i32:\n  return 0", "Empty modifier group"),
+        ("fn f() -> private ::\n:\n  return 0", "Expected a type name"),
+        (
+            "fn f() -> private :: auto:\n  return 0",
+            "only allowed on initialized",
+        ),
+        (
+            "fn f(\n  value: i32\n -> i32:\n  return value",
+            "Expected operator '\\)'",
+        ),
+        (
+            "fn f() ->\n  private ::\n  i32\nfn next() -> i32:\n  return 0",
+            "Expected operator ':'",
+        ),
+        (
+            "class C:\n  fn f(self) -> static :: i32:\n    return 0",
+            "static method cannot declare implicit receiver",
+        ),
+        (
+            "class C:\n  fn f(self) -> extern :: i32:\n    return 0",
+            "extern method cannot define a body",
+        ),
+        (
+            "class C:\n  fn f(self) -> var :: i32:\n    return 0",
+            "method cannot use 'var'",
+        ),
+        (
+            "class C:\n  @[private]\n  fn f(self) -> i32:\n    return 0",
+            "Method modifier annotations were replaced",
+        ),
+        (
+            "class C:\n  @<T: i32>\n  fn f(self) -> abstract :: T",
+            "template methods must define a body",
+        ),
+        (
+            "extern f() ->\n  private :: i32\n:\n  return 0",
+            "extern function cannot define a body",
+        ),
+    ],
+)
+def test_callable_modifiers_and_layout_fail_closed(
+    source: str, message: str
+) -> None:
+    """
+    title: >-
+      Invalid header policies and incomplete continuations fail in parsing.
+    parameters:
+      source:
+        type: str
+      message:
+        type: str
+    """
+    with pytest.raises(ParserException, match=message):
+        _parse_module(source)
+
+
+def test_callable_modifier_location_after_unicode_and_continuation() -> None:
+    """
+    title: A continued modifier group retains its actual Unicode source column.
+    """
+    with pytest.raises(
+        ParserException, match="function cannot use 'static'"
+    ) as err:
+        _parse_module(
+            "fn café(\n  value: i32\n) ->\n  static :: i32:\n  return value"
+        )
+    assert err.value.location is not None
+    assert (err.value.location.line, err.value.location.col) == (4, 3)

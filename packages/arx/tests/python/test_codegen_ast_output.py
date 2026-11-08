@@ -577,8 +577,7 @@ def test_literal_loop_runs_with_bounded_stack(
             class BaseCounter:
               value: public var :: int32 = 41
 
-              @[protected]
-              fn read_seed(self) -> int32:
+              fn read_seed(self) -> protected :: int32:
                 return self.value
 
             class Counter(BaseCounter):
@@ -586,8 +585,7 @@ def test_literal_loop_runs_with_bounded_stack(
 
               internal: private var :: int32 = 5
 
-              @[protected]
-              fn internal_total(self) -> int32:
+              fn internal_total(self) -> protected :: int32:
                 return self.internal + self.value
 
               fn get(self) -> int32:
@@ -597,12 +595,10 @@ def test_literal_loop_runs_with_bounded_stack(
                 return self.internal_total()
 
             class CounterFactory:
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 return Counter.version
 
             fn take_counter(counter: Counter) -> int32:
@@ -1695,8 +1691,7 @@ def test_constant_binding_writes_fail_before_lowering(
         ),
         (
             "class Box:\n"
-            "  @[static]\n"
-            "  fn fixed(value: const :: i32) -> i32:\n"
+            "  fn fixed(value: const :: i32) -> static :: i32:\n"
             "    value += 1\n    return value\n",
             "Box.fixed(1)",
         ),
@@ -1830,3 +1825,100 @@ def test_collection_metadata_arguments_fail_before_lowering(
         (ParserException, SemanticError), match="expects no arguments"
     ):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_callable_modifiers_and_multiline_headers_translate() -> None:
+    """
+    title: Callable policies and wrapped signatures survive analysis and LLVM.
+    """
+    ArxIO.string_to_buffer(
+        "class Calculator:\n"
+        "  fn hidden(\n    self, value: const :: i32,\n  ) ->\n"
+        "    private ::\n    i32\n  :\n    return value\n"
+        "  fn read(self) -> public :: i32:\n    return self.hidden(1)\n"
+        "  @<T: i32 | i64>\n"
+        "  fn calculate(\n    value: const :: T,\n  ) ->\n"
+        "    public static ::\n    T\n  :\n    return value\n"
+        "fn helper(\n  value: i32 = 0,\n) ->\n  private ::\n  i32\n:\n"
+        "  return value\n"
+        "fn main() -> public :: i32:\n"
+        "  calculator: Calculator = Calculator()\n"
+        "  return Calculator.calculate(calculator.read()) - helper(1)\n"
+    )
+    text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+
+
+@pytest.mark.parametrize("import_style", ["from", "namespace"])
+def test_private_function_imports_fail_during_analysis(
+    tmp_path: Path, import_style: str
+) -> None:
+    """
+    title: Frontend visibility cannot be bypassed by either import spelling.
+    parameters:
+      tmp_path:
+        type: Path
+      import_style:
+        type: str
+    """
+    (tmp_path / "library.x").write_text(
+        "```\ntitle: Private library\n```\n"
+        "fn hidden() -> private :: i32:\n  return 7\n",
+        encoding="utf-8",
+    )
+    source = (
+        (
+            "import hidden as alias from library\n"
+            "fn main() -> i32:\n  return alias()\n"
+        )
+        if import_style == "from"
+        else (
+            "import library as alias\n"
+            "fn main() -> i32:\n  return alias.hidden()\n"
+        )
+    )
+    ArxIO.string_to_buffer(source)
+    entry = tmp_path / "main.x"
+    entry.write_text(source, encoding="utf-8")
+    root = ParsedModule("main", Parser().parse(Lexer().lex()), str(entry))
+    with pytest.raises(SemanticError, match="private to its module") as error:
+        ArxBuilder().translate_modules(root, FileImportResolver((str(entry),)))
+    diagnostic = next(
+        item
+        for item in error.value.diagnostics.diagnostics
+        if "private to its module" in item.message
+    )
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert location.line == (1 if import_style == "from" else 3)
+
+
+def test_imported_template_can_call_its_private_module_helper(
+    tmp_path: Path,
+) -> None:
+    """
+    title: Template privacy uses the defining module rather than the caller.
+    parameters:
+      tmp_path:
+        type: Path
+    """
+    (tmp_path / "library.x").write_text(
+        "```\ntitle: Private template helpers\n```\n"
+        "@<T: i32 | i64>\n"
+        "fn hidden(value: const :: T) -> private :: T:\n  return value\n"
+        "@<T: i32 | i64>\n"
+        "fn visible(value: const :: T) -> public :: T:\n"
+        "  return hidden(value)\n",
+        encoding="utf-8",
+    )
+    source = (
+        "import visible from library\nfn main() -> i32:\n  return visible(0)\n"
+    )
+    entry = tmp_path / "main.x"
+    entry.write_text(source, encoding="utf-8")
+    ArxIO.string_to_buffer(source)
+    root = ParsedModule("main", Parser().parse(Lexer().lex()), str(entry))
+    text = ArxBuilder().translate_modules(
+        root, FileImportResolver((str(entry),))
+    )
+    llvm.parse_assembly(text).verify()

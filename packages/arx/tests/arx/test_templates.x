@@ -23,8 +23,7 @@ class Math:
   summary: Hosts one static generic identity helper.
   ```
   @<T: Real>
-  @[public, static]
-  fn identity(value: T) -> T:
+  fn identity(value: T) -> public static :: T:
     ```
     title: identity
     summary: Returns one value unchanged through a static method.

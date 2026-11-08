@@ -421,6 +421,7 @@ class SemanticEntityFactory:
             definition=definition,
             module_key=module_key,
             qualified_name=qualified_function_name(module_key, prototype.name),
+            visibility=prototype.visibility,
             template_params=tuple(
                 astx.TemplateParam(
                     param.name,

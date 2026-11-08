@@ -78,8 +78,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: Shape
               summary: Declares one abstract area protocol for shape types.
               ```
-              @[public]
-              fn area(self) -> int32:
+              fn area(self) -> public :: int32:
                 ```
                 title: area
                 summary: >-
@@ -94,8 +93,7 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               ```
               value: public var :: int32 = 41
 
-              @[protected]
-              fn read_seed(self) -> int32:
+              fn read_seed(self) -> protected :: int32:
                 ```
                 title: read_seed
                 summary: Returns the inherited seed value.
@@ -111,24 +109,21 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
 
               internal: private var :: int32 = 5
 
-              @[protected]
-              fn internal_total(self) -> int32:
+              fn internal_total(self) -> protected :: int32:
                 ```
                 title: internal_total
                 summary: Combines private and inherited counter state.
                 ```
                 return self.internal + self.value
 
-              @[public]
-              fn get(self) -> int32:
+              fn get(self) -> public :: int32:
                 ```
                 title: get
                 summary: Returns the inherited public counter value.
                 ```
                 return self.value
 
-              @[public]
-              fn read_internal(self) -> int32:
+              fn read_internal(self) -> public :: int32:
                 ```
                 title: read_internal
                 summary: Exposes the protected internal helper result.
@@ -140,16 +135,14 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: CounterFactory
               summary: Builds counters and exposes static metadata.
               ```
-              @[public, static]
-              fn make() -> Counter:
+              fn make() -> public static :: Counter:
                 ```
                 title: make
                 summary: Constructs one default Counter instance.
                 ```
                 return Counter()
 
-              @[public, static]
-              fn version_value() -> int32:
+              fn version_value() -> public static :: int32:
                 ```
                 title: version_value
                 summary: Returns the static Counter version constant.
@@ -563,8 +556,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   summary: >-
                     Holds one abstract method with an invalid statement body.
                   ```
-                  @[abstract]
-                  fn area(self) -> float64:
+                  fn area(self) -> abstract :: float64:
                     ```
                     title: area
                     summary: >-
@@ -583,8 +575,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one invalid static helper method declaration.
                   ```
-                  @[static]
-                  fn helper(self) -> int32:
+                  fn helper(self) -> static :: int32:
                     ```
                     title: helper
                     summary: Returns one constant while violating static rules.

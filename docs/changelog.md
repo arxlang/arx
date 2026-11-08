@@ -8,10 +8,12 @@
 
 - **Breaking:** variables use `value: [var|const ::] T`, with inline field
   modifiers and initializer-based `auto` inference for supported declarations.
-  Function/method heads stay `fn name(...) -> T:` and externs stay
-  `extern name(...) -> T`. Only parameters gain the optional modifier slot:
-  `fn distance(record: const :: str) -> i64:`. `const` fixes the callee's binding,
-  not the referenced object. Existing method annotation syntax is retained.
+  Function/method heads stay keyword-first, with declaration modifiers in
+  `fn name(...) -> modifiers :: T:`. Method annotations move into this group;
+  classes retain annotations. Externs stay `extern name(...) -> T` and may
+  specify visibility in the same tail. Parameters separately accept `var`/`const`;
+  `const` fixes bindings, not referenced objects. Signatures may span lines
+  without changing body indentation. Private functions are module-local.
 
 ## [1.27.1](https://github.com/arxlang/arx/compare/1.27.0...1.27.1) (2026-11-06)
 

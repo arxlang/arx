@@ -19,24 +19,21 @@ class Counter(BaseCounter):
 
   internal: private var :: int32 = 5
 
-  @[protected]
-  fn internal_total(self) -> int32:
+  fn internal_total(self) -> protected :: int32:
     ```
     title: internal_total
     summary: Combines inherited and private counter state.
     ```
     return self.internal + self.value
 
-  @[public]
-  fn get(self) -> int32:
+  fn get(self) -> public :: int32:
     ```
     title: get
     summary: Returns the inherited public counter value.
     ```
     return self.value
 
-  @[public]
-  fn read_internal(self) -> int32:
+  fn read_internal(self) -> public :: int32:
     ```
     title: read_internal
     summary: Exposes the protected total through one public method.
@@ -48,16 +45,14 @@ class CounterFactory:
   title: CounterFactory
   summary: Builds counters and exposes static class metadata.
   ```
-  @[public, static]
-  fn make() -> Counter:
+  fn make() -> public static :: Counter:
     ```
     title: make
     summary: Builds one default Counter instance.
     ```
     return Counter()
 
-  @[public, static]
-  fn version_value() -> int32:
+  fn version_value() -> public static :: int32:
     ```
     title: version_value
     summary: Returns the static counter version.

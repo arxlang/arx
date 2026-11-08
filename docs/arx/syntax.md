@@ -131,21 +131,28 @@ their schema or shape.
 A variable/parameter modifier group is whitespace-separated and ends with `::`.
 Duplicate, conflicting, unsupported, and target-inappropriate modifiers are
 errors. Fields also support their existing visibility/storage policies through
-inline groups. Classes and methods retain their annotation prefixes. See
+inline groups. Only classes retain modifier annotation prefixes. See
 [classes](classes.md).
 
-Function names and heads do not change: `fn name(...) -> T:`. Only parameter
-slots gain modifiers, for example `fn distance(record: const :: str) -> i64:`.
-Omitted parameter modifiers mean `var`; `const` restricts the callee's binding,
-not the caller's variable or object access. Externs retain
-`extern name(...) -> T` without a body. See [functions](functions.md).
+Functions remain keyword-first: `fn name(...) -> [modifiers ::] T:`. The
+optional group controls the callable declaration, not the return type. Module
+functions accept `public` (the default) or `private`; method-only policies are
+described in [classes](classes.md). Argument binding modifiers remain separate,
+for example `fn distance(record: const :: str) -> private :: i64:`. Externs keep
+`extern name(...) -> [public|private ::] T` without a body.
 
-**Migration:** leading `var name: T` variable declarations were removed; use
-`name: T` or `name: var :: T`. Field modifiers move into the inline group,
-replacing `constant`/`mutable` with `const`/`var`. Function, method, and extern
-heads retain their original syntax; the mistaken `name: fn(...)` form is not
-supported. Read-only references, immutable objects, compile-time evaluation,
-rebindable function values, and closures are not introduced by these changes.
+Callable signatures may wrap parameters, modifier groups, the return type, and
+the closing body colon across lines. Continuation indentation does not change
+block indentation, which remains relative to the `fn` declaration. This is
+signature layout support, not general multiline expression support.
+
+**Migration:** leading `var name: T` declarations were removed; use `name: T` or
+`name: var :: T`. Field modifiers move into inline groups, replacing
+`constant`/`mutable` with `const`/`var`. Method annotations move after `->`, for
+example `fn make() -> public static :: Counter:`. Class annotations and template
+prefixes stay unchanged. The mistaken `name: fn(...)` form is not supported.
+Read-only references, immutable objects, compile-time evaluation, rebindable
+function values, and closures are not introduced by these changes.
 
 ### Templates
 

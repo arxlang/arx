@@ -9,8 +9,7 @@ class BaseCounter:
   ```
   value: public var :: int32 = 41
 
-  @[protected]
-  fn read_seed(self) -> int32:
+  fn read_seed(self) -> protected :: int32:
     ```
     title: read_seed
     summary: Reads the inherited seed value.
@@ -26,8 +25,7 @@ class Counter(BaseCounter):
 
   internal: private var :: int32 = 5
 
-  @[protected]
-  fn internal_total(self) -> int32:
+  fn internal_total(self) -> protected :: int32:
     ```
     title: internal_total
     summary: Combines private and inherited state.
@@ -53,16 +51,14 @@ class CounterFactory:
   title: CounterFactory
   summary: Builds Counter instances and exposes static class metadata.
   ```
-  @[public, static]
-  fn make() -> Counter:
+  fn make() -> public static :: Counter:
     ```
     title: make
     summary: Builds a default counter instance.
     ```
     return Counter()
 
-  @[public, static]
-  fn version_value() -> int32:
+  fn version_value() -> public static :: int32:
     ```
     title: version_value
     summary: Reads the static class version.

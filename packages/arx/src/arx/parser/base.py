@@ -678,15 +678,21 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
-    def parse_inline_modifiers(self) -> ParsedAnnotation | None:
+    def parse_inline_modifiers(
+        self, *, allow_layout: bool = False
+    ) -> ParsedAnnotation | None:
         """
         title: Parse optional whitespace-separated declaration modifiers.
         summary: >-
           Keep declaration policy outside the type. Reject unknown, repeated,
           conflicting, and unterminated groups without accepting ignored flags.
+        parameters:
+          allow_layout:
+            type: bool
         returns:
           type: ParsedAnnotation | None
         """
+        del allow_layout
         raise NotImplementedError
 
     def parse_declaration_head(self) -> tuple[Token, ParsedAnnotation | None]:

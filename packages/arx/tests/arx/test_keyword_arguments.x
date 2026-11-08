@@ -19,8 +19,7 @@ class Counter:
     ```
     return offset
 
-  @[static]
-  fn add(a: i32, b: i32 = 3) -> i32:
+  fn add(a: i32, b: i32 = 3) -> static :: i32:
     ```
     title: add
     ```
