@@ -3,7 +3,7 @@ title: Owned Unicode input parsing
 summary: Parse synthetic direction records without libc workarounds.
 ```
 
-moves: fn(text: str) -> i64:
+fn moves(text: str) -> i64:
   ```
   title: Parse signed direction records with whitespace defaults
   ```
@@ -17,7 +17,7 @@ moves: fn(text: str) -> i64:
       total = total + amount
   return total
 
-words_from_file: fn(path: str) -> list[str]:
+fn words_from_file(path: str) -> list[str]:
   ```
   title: Return independent words after releasing a text file and its contents
   ```
@@ -26,7 +26,7 @@ words_from_file: fn(path: str) -> list[str]:
   source.close()
   return text.split()
 
-normalize: fn(text: str) -> str:
+fn normalize(text: str) -> str:
   ```
   title: Return an independently owned stripped substring
   ```
@@ -39,7 +39,7 @@ class TextTrace:
   text: public var :: str = "left,right,tail"
   order: public var :: i32 = 0
 
-separator: fn(trace: TextTrace) -> str:
+fn separator(trace: TextTrace) -> str:
   ```
   title: Replace source storage while recording argument order
   ```
@@ -47,14 +47,14 @@ separator: fn(trace: TextTrace) -> str:
   trace.order = trace.order * 10 + 1
   return ","
 
-limit: fn(trace: TextTrace) -> i64:
+fn limit(trace: TextTrace) -> i64:
   ```
   title: Record evaluation before a differently ordered named argument
   ```
   trace.order = trace.order * 10 + 2
   return 1
 
-test_text_parsing: fn() -> none:
+fn test_text_parsing() -> none:
   ```
   title: Common input parsing and code-point operations
   ```
@@ -84,7 +84,7 @@ test_text_parsing: fn() -> none:
   fields = []
   assert saved == "a"
 
-test_text_argument_order: fn() -> none:
+fn test_text_argument_order() -> none:
   ```
   title: Preserve receiver storage and evaluate named arguments in source order
   ```
@@ -95,7 +95,7 @@ test_text_argument_order: fn() -> none:
   assert fields[0] == "left"
   assert fields[1] == "right,tail"
 
-test_text_failures: fn() -> none:
+fn test_text_failures() -> none:
   ```
   title: Checked failures preserve owners and remain recoverable
   ```

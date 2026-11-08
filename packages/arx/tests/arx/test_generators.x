@@ -3,7 +3,7 @@ title: Repository generator builtin tests
 summary: Cover the ambient range builtin list output.
 ```
 
-test_range_returns_zero_based_values: fn() -> none:
+fn test_range_returns_zero_based_values() -> none:
   ```
   title: test_range_returns_zero_based_values
   summary: Verifies that range(start, stop) returns zero-based values.
@@ -18,7 +18,7 @@ test_range_returns_zero_based_values: fn() -> none:
   assert third == 2, "range(0, 4)[2] should be 2"
   assert fourth == 3, "range(0, 4)[3] should be 3"
 
-test_range_supports_inline_indexing: fn() -> none:
+fn test_range_supports_inline_indexing() -> none:
   ```
   title: test_range_supports_inline_indexing
   summary: Verifies that range results can be indexed inline.
@@ -26,7 +26,7 @@ test_range_supports_inline_indexing: fn() -> none:
   value: i32 = range(0, 3)[2]
   assert value == 2, "range(0, 3)[2] should be 2"
 
-test_range_supports_custom_step: fn() -> none:
+fn test_range_supports_custom_step() -> none:
   ```
   title: test_range_supports_custom_step
   summary: Verifies that range(start, stop, step) honors custom steps.
@@ -39,7 +39,7 @@ test_range_supports_custom_step: fn() -> none:
   assert second == 4, "range(2, 8, 2)[1] should be 4"
   assert third == 6, "range(2, 8, 2)[2] should be 6"
 
-test_range_supports_descending_step: fn() -> none:
+fn test_range_supports_descending_step() -> none:
   ```
   title: test_range_supports_descending_step
   summary: Verifies that range(start, stop, step) supports negative steps.
@@ -56,7 +56,7 @@ test_range_supports_descending_step: fn() -> none:
   assert fourth == 2, "range(5, 0, -1)[3] should be 2"
   assert fifth == 1, "range(5, 0, -1)[4] should be 1"
 
-test_range_empty_intervals: fn() -> none:
+fn test_range_empty_intervals() -> none:
   ```
   title: test_range_empty_intervals
   summary: Equal endpoints and wrong-direction steps produce empty lists.

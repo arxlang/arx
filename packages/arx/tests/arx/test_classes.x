@@ -19,21 +19,24 @@ class Counter(BaseCounter):
 
   internal: private var :: int32 = 5
 
-  internal_total: protected :: fn(self) -> int32:
+  @[protected]
+  fn internal_total(self) -> int32:
     ```
     title: internal_total
     summary: Combines inherited and private counter state.
     ```
     return self.internal + self.value
 
-  get: public :: fn(self) -> int32:
+  @[public]
+  fn get(self) -> int32:
     ```
     title: get
     summary: Returns the inherited public counter value.
     ```
     return self.value
 
-  read_internal: public :: fn(self) -> int32:
+  @[public]
+  fn read_internal(self) -> int32:
     ```
     title: read_internal
     summary: Exposes the protected total through one public method.
@@ -45,28 +48,30 @@ class CounterFactory:
   title: CounterFactory
   summary: Builds counters and exposes static class metadata.
   ```
-  make: public static :: fn() -> Counter:
+  @[public, static]
+  fn make() -> Counter:
     ```
     title: make
     summary: Builds one default Counter instance.
     ```
     return Counter()
 
-  version_value: public static :: fn() -> int32:
+  @[public, static]
+  fn version_value() -> int32:
     ```
     title: version_value
     summary: Returns the static counter version.
     ```
     return Counter.version
 
-take_counter: fn(counter: Counter) -> int32:
+fn take_counter(counter: Counter) -> int32:
   ```
   title: take_counter
   summary: Combines instance method and field access on one counter.
   ```
   return counter.get() + counter.value + counter.read_internal()
 
-test_class_instance_methods_and_fields: fn() -> none:
+fn test_class_instance_methods_and_fields() -> none:
   ```
   title: test_class_instance_methods_and_fields
   summary: Verifies construction, instance fields, and instance methods.
@@ -76,7 +81,7 @@ test_class_instance_methods_and_fields: fn() -> none:
   assert direct.value == 41
   assert direct.read_internal() == 46
 
-test_class_static_members_and_construction: fn() -> none:
+fn test_class_static_members_and_construction() -> none:
   ```
   title: test_class_static_members_and_construction
   summary: Verifies static factory and static field access.

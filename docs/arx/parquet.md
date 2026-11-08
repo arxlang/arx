@@ -12,7 +12,7 @@ title: Filter and copy Parquet rows
 ```
 import (read_parquet, write_parquet, where) from stdlib.parquet
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Filter exact rows and finalize the destination
   ```

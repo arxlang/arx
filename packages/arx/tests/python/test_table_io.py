@@ -37,7 +37,7 @@ def convenience(tmp_path_factory: pytest.TempPathFactory) -> Path:
 import (read_csv, write_csv as save_csv) from stdlib.csv
 import stdlib.parquet as parquet
 import (ParquetOptions, ParquetFilter, where) from stdlib.parquet
-main: fn() -> i32:
+fn main() -> i32:
   frame: dataframe[...] = read_csv("input.csv", block_size=32)
   options: ParquetOptions = ParquetOptions(compression="gzip", atomic=true)
   parquet.write_parquet(\
@@ -119,7 +119,7 @@ def test_compiled_streaming_frames(tmp_path: Path) -> None:
 import CSVStream from stdlib.csv
 import (ParquetStream, read_parquet, write_parquet) from stdlib.parquet
 import Schema from stdlib.arrow
-main: fn() -> i32:
+fn main() -> i32:
   schema: Schema = Schema()
   schema.add("id", "int64", nullable=false)
   source: CSVStream = CSVStream()
@@ -175,7 +175,7 @@ def checked_cast(tmp_path_factory: pytest.TempPathFactory) -> Path:
         """
 import read_parquet from stdlib.parquet
 import write_csv from stdlib.csv
-main: fn() -> i32:
+fn main() -> i32:
   input: dataframe[...] = read_parquet("input.parquet", batch_size=1)
   checked: dataframe[id:i64] = cast(input, dataframe[id:i64])
   write_csv(checked, "output.csv")
@@ -255,7 +255,7 @@ def test_invalid_table_io_fails_during_analysis(
     source = f"""
 import (read_csv, write_csv) from stdlib.csv
 import (read_parquet, where) from stdlib.parquet
-main: fn() -> i32:
+fn main() -> i32:
   {call}
   return 0
 """
@@ -275,13 +275,13 @@ def test_compiled_table_argument_order_and_return(tmp_path: Path) -> None:
     compile_program(
         """
 import (write_csv, read_csv) from stdlib.csv
-destination: fn() -> str:
+fn destination() -> str:
   print(1)
   return "order.csv"
-source: fn() -> dataframe[...]:
+fn source() -> dataframe[...]:
   print(2)
   return read_csv("input.csv")
-main: fn() -> i32:
+fn main() -> i32:
   write_csv(path=destination(), frame=source())
   return 0
 """,

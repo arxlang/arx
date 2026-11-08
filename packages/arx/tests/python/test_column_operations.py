@@ -28,13 +28,13 @@ def test_extended_column_operations(tmp_path: Path) -> None:
     source = """
 global_value: nullable[i32] = none
 
-missing: fn() -> nullable[i32]:
+fn missing() -> nullable[i32]:
   return none
 
-take: fn(value: nullable[i32] = none) -> bool:
+fn take(value: nullable[i32] = none) -> bool:
   return is_null(value)
 
-main: fn() -> i32:
+fn main() -> i32:
   assert take()
   assert take(none)
   assert take(value=none)
@@ -105,7 +105,7 @@ def test_rich_dataframe_literals(tmp_path: Path) -> None:
     )
     source = """
 import (RecordBatch, IPCWriter) from stdlib.arrow
-main: fn() -> i32:
+fn main() -> i32:
   data: ANNOTATION = dataframe({
     amount:["1.25", "-2.00"], items:[[1,none],[]],
     record:[[1,"hi"],[2,none]], bytes:["ab","cd"], time:[1,2],

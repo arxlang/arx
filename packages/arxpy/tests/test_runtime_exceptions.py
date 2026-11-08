@@ -58,7 +58,7 @@ def test_uncaught_native_exception_is_execution_data(tmp_path: Path) -> None:
     compiler = Compiler()
     program = compiler.parse_string(
         "```\ntitle: Uncaught exception facade acceptance\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         '  raise ValueError("bad input")\n',
     )
     artifact = compiler.compile(program, output=tmp_path / "failure")
@@ -76,7 +76,7 @@ def test_explicit_exception_import_requires_no_filesystem_origin() -> None:
     program = compiler.parse_string(
         "```\ntitle: Imported exception acceptance\n```\n"
         "import ValueError as Problem from builtins.exceptions\n"
-        'fail: fn() -> none:\n  raise Problem("bad input")\n'
+        'fn fail() -> none:\n  raise Problem("bad input")\n'
     )
     checked = compiler.check(program)
     artifact = compiler.compile(checked, kind=ArtifactKind.LLVM_IR)
@@ -104,7 +104,7 @@ def test_imported_exception_identity_is_nominal(tmp_path: Path) -> None:
         "```\ntitle: Nominal exception import acceptance\n```\n"
         "import Problem as LeftProblem from left\n"
         "import right as failures\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         '  try:\n    raise LeftProblem("left")\n'
         '  except failures.Problem:\n    print("wrong")\n'
         "  except ValueError as caught:\n    print(caught.message)\n"

@@ -90,15 +90,20 @@ class ExpressionParserMixin(ParserMixinBase):
             return self.parse_while_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_for:
             return self.parse_for_stmt()
-        if self.tokens.cur_tok.kind in {
-            TokenKind.kw_var,
-            TokenKind.kw_const,
-            TokenKind.kw_function,
-            TokenKind.kw_extern,
-        }:
+        if self.tokens.cur_tok.kind == TokenKind.kw_function:
             raise ParserException(
-                "Leading declaration keywords were removed; use "
-                "'name: [modifiers ::] type' or 'name: fn(...) -> type:'.",
+                "Nested functions and closures are not supported.",
+                self.tokens.cur_tok.location,
+            )
+        if self.tokens.cur_tok.kind == TokenKind.kw_extern:
+            raise ParserException(
+                "Extern declarations are only allowed at module scope.",
+                self.tokens.cur_tok.location,
+            )
+        if self.tokens.cur_tok.kind in {TokenKind.kw_var, TokenKind.kw_const}:
+            raise ParserException(
+                "Leading variable declaration keywords were removed; "
+                "use 'name: [var|const ::] type'.",
                 self.tokens.cur_tok.location,
             )
         if self.tokens.cur_tok.kind == TokenKind.kw_assert:

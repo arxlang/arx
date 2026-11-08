@@ -31,7 +31,7 @@ Run this in a scratch directory: the example creates/truncates `message.txt`.
 ```
 title: Native text file example
 ```
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```

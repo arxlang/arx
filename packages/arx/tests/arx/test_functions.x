@@ -3,28 +3,28 @@ title: Repository function tests
 summary: Cover helper calls, recursion, composition, and none helpers.
 ```
 
-add: fn(lhs: i32, rhs: i32) -> i32:
+fn add(lhs: i32, rhs: i32) -> i32:
   ```
   title: add
   summary: Returns the sum of two integer values.
   ```
   return lhs + rhs
 
-mul_add: fn(lhs: i32, rhs: i32, extra: i32) -> i32:
+fn mul_add(lhs: i32, rhs: i32, extra: i32) -> i32:
   ```
   title: mul_add
   summary: Multiplies two values and adds one extra offset.
   ```
   return (lhs * rhs) + extra
 
-add_offset: fn(value: i32, offset: i32 = 1) -> i32:
+fn add_offset(value: i32, offset: i32 = 1) -> i32:
   ```
   title: add_offset
   summary: Adds an optional integer offset to one value.
   ```
   return value + offset
 
-fib: fn(value: i32) -> i32:
+fn fib(value: i32) -> i32:
   ```
   title: fib
   summary: Returns one recursive Fibonacci value.
@@ -34,14 +34,14 @@ fib: fn(value: i32) -> i32:
   else:
     return fib(value - 1) + fib(value - 2)
 
-note_call: fn() -> none:
+fn note_call() -> none:
   ```
   title: note_call
   summary: Exercises one helper with a none return type.
   ```
   invoked: i32 = 1
 
-test_helper_function_calls: fn() -> none:
+fn test_helper_function_calls() -> none:
   ```
   title: test_helper_function_calls
   summary: Verifies direct helper calls and composed arithmetic.
@@ -51,14 +51,14 @@ test_helper_function_calls: fn() -> none:
   assert add_offset(4) == 5
   assert add_offset(4, 3) == 7
 
-test_recursive_calls: fn() -> none:
+fn test_recursive_calls() -> none:
   ```
   title: test_recursive_calls
   summary: Verifies recursive helper calls remain available in tests.
   ```
   assert fib(6) == 8
 
-test_none_returning_helpers: fn() -> none:
+fn test_none_returning_helpers() -> none:
   ```
   title: test_none_returning_helpers
   summary: Calls one none-returning helper before another assertion.
@@ -70,19 +70,19 @@ test_none_returning_helpers: fn() -> none:
 class DeclarationBox:
   value: auto = 1
   maximum: static const :: auto = 10
-  read: const :: fn(self) -> int32:
+  fn read(self) -> int32:
     return self.value
 
-increment_local: const :: fn(value: var :: int32) -> int32:
+fn increment_local(value: var :: int32) -> int32:
   value += 1
   return value
 
 @<T: int32 | int64>
-fixed_identity: fn(value: const :: T) -> T:
+fn fixed_identity(value: const :: T) -> T:
   result: const :: auto = value
   return result
 
-test_name_first_binding_and_inference: fn() -> none:
+fn test_name_first_binding_and_inference() -> none:
   ```
   title: Name-first binding and inference
   summary: Stable object bindings allow mutation while inferred types remain fixed.

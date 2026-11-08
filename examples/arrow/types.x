@@ -4,7 +4,7 @@ summary: Exercise every Arx scalar accessor, schema inspection and builder reuse
 ```
 import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Writes a value batch, empty batch and null batch to typed.arrow.

@@ -2,7 +2,7 @@
 title: Native text file I/O
 summary: Creates file-io-example.txt in the running program's working directory.
 ```
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Writes UTF-8 text and reads it back with explicit close.

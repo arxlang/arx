@@ -35,7 +35,7 @@ def test_bundled_builtin_package_data_is_present() -> None:
         "generators.x"
     )
     assert (
-        "range: fn(start: i32, stop: i32, step: i32 = 1) -> list[i32]:"
+        "fn range(start: i32, stop: i32, step: i32 = 1) -> list[i32]:"
         in builtins.get_builtin_source("generators")
     )
 
@@ -68,7 +68,7 @@ def test_file_import_resolver_loads_builtins_from_packaged_resources(
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "main.x"
     source.write_text(
-        "main: fn() -> i32:\n  return 0\n",
+        "fn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
 
@@ -113,7 +113,7 @@ def test_file_import_resolver_injects_ambient_range_for_user_modules(
             """
             import value from helper
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return value()
             """
         ).lstrip(),
@@ -123,7 +123,7 @@ def test_file_import_resolver_injects_ambient_range_for_user_modules(
     helper.write_text(
         dedent(
             """
-            value: fn() -> i32:
+            fn value() -> i32:
               values: list[i32] = range(0, 4)
               return 2
             """
@@ -179,7 +179,7 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
             """
             import math from stdlib
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return math.square(range(0, 4)[2])
             """
         ).lstrip(),
@@ -203,14 +203,14 @@ def test_arxmain_compiles_program_using_ambient_range_and_stdlib(
 @pytest.mark.parametrize(
     "source_text",
     [
-        "import generators from builtins\n\nmain: fn() -> i32:\n  return 0\n",
+        "import generators from builtins\n\nfn main() -> i32:\n  return 0\n",
         (
             "import range as rg from builtins.generators\n\n"
-            "main: fn() -> i32:\n  return 0\n"
+            "fn main() -> i32:\n  return 0\n"
         ),
         (
             "import (range as rg) from builtins.generators\n\n"
-            "main: fn() -> i32:\n  return 0\n"
+            "fn main() -> i32:\n  return 0\n"
         ),
     ],
 )
@@ -253,7 +253,7 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
     helper.write_text(
         dedent(
             """
-            value: fn() -> i32:
+            fn value() -> i32:
               values: list[i32] = range(0, 4)
               return 2
             """
@@ -266,7 +266,7 @@ def test_arxmain_compiles_imported_module_using_ambient_range(
             """
             import value from helper
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return value()
             """
         ).lstrip(),
@@ -300,11 +300,11 @@ def test_arxmain_compiles_range_list_creation_with_variable_stop(
     source.write_text(
         dedent(
             """
-            build: fn(n: i32) -> none:
+            fn build(n: i32) -> none:
               xs: list[i32] = range(0, n)
               return none
 
-            main: fn() -> i32:
+            fn main() -> i32:
               build(4)
               return 0
             """
@@ -339,7 +339,7 @@ def test_arxmain_compiles_for_in_over_list_variable(
     source.write_text(
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               xs: list[i32] = range(0, 4)
               total: i32 = 0
               for value in xs:
@@ -377,7 +377,7 @@ def test_arxmain_compiles_for_in_over_list_literal(
     source.write_text(
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               total: i32 = 0
               for value in [1, 2, 3]:
                 total = total + value
@@ -414,7 +414,7 @@ def test_arxmain_rejects_namespaced_range_reference_in_for_loop(
     source.write_text(
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               for value in generators.range(0, 4):
                 return value
               return 0
@@ -450,10 +450,10 @@ def test_ambient_builtin_injection_allows_local_range_definition(
     source.write_text(
         dedent(
             """
-            range: fn(start: i32, stop: i32) -> i32:
+            fn range(start: i32, stop: i32) -> i32:
               return stop
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return range(0, 4)
             """
         ).lstrip(),
@@ -501,7 +501,7 @@ def test_ambient_builtin_injection_allows_imported_range_binding(
     helper.write_text(
         dedent(
             """
-            range: fn(start: i32, stop: i32) -> i32:
+            fn range(start: i32, stop: i32) -> i32:
               return stop
             """
         ).lstrip(),
@@ -513,7 +513,7 @@ def test_ambient_builtin_injection_allows_imported_range_binding(
             """
             import range from helper
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return 0
             """
         ).lstrip(),
@@ -569,7 +569,7 @@ def test_arxmain_rejects_local_builtin_shadowing(tmp_path: Path) -> None:
     source.write_text(
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               print(range(0, 4)[0])
               return 0
             """
@@ -608,7 +608,7 @@ def test_range_builtin_rejects_zero_step_at_runtime(
     entry.write_text(
         dedent(
             """
-            test_zero_step: fn() -> none:
+            fn test_zero_step() -> none:
               values: list[i32] = range(0, 4, 0)
               return none
             """

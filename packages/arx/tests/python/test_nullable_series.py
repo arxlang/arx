@@ -33,32 +33,32 @@ class Sample:
   ```
   value: nullable[i32] = cast(none, nullable[i32])
 
-  set: fn(self, value: i32) -> none:
+  fn set(self, value: i32) -> none:
     ```
     title: Set a present value
     ```
     self.value = value
 
-  get: fn(self) -> nullable[i32]:
+  fn get(self) -> nullable[i32]:
     ```
     title: Return a nullable field
     ```
     return self.value
 
-keep: fn(value: nullable[i32]) -> nullable[i32]:
+fn keep(value: nullable[i32]) -> nullable[i32]:
   return value
 
-lift: fn(value: i32) -> nullable[i32]:
+fn lift(value: i32) -> nullable[i32]:
   return value
 
-consume: fn(value: nullable[i32]) -> i32:
+fn consume(value: nullable[i32]) -> i32:
   return fill_null(value, 0)
 
-values: fn() -> series[i32 | none]:
+fn values() -> series[i32 | none]:
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   return frame.x
 
-main: fn() -> i32:
+fn main() -> i32:
   object: Sample = Sample()
   assert is_null(object.get())
   object.set(6)
@@ -118,9 +118,9 @@ def test_rich_static_schema(tmp_path: Path) -> None:
     )
     source = f"""
 import (RecordBatch, IPCReader, IPCWriter) from stdlib.arrow
-identity: fn(frame: {frame}) -> {frame}:
+fn identity(frame: {frame}) -> {frame}:
   return frame
-main: fn() -> i32:
+fn main() -> i32:
   reader: IPCReader = IPCReader()
   reader.open_file("input.arrow")
   assert reader.next()
@@ -198,7 +198,7 @@ def test_compiled_kernel_failures(
         type: str
     """
     source = f"""
-main: fn() -> i32:
+fn main() -> i32:
   left: dataframe[x:i32 | none] = dataframe({{x:[1, none]}})
   right: dataframe[x:i32 | none] = dataframe({{x:[1]}})
   return {expression}

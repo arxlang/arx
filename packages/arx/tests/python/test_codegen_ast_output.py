@@ -42,19 +42,19 @@ def scalar_module_ir() -> tuple[ArxBuilder, str]:
         "optional: nullable[i32] = none\n"
         "valid_false: nullable[bool] = false\n"
         "@<T: i32 | i64>\n"
-        "read_counter: fn(value: T) -> i64:\n"
+        "fn read_counter(value: T) -> i64:\n"
         "  return counter\n"
-        "bump: fn() -> none:\n"
+        "fn bump() -> none:\n"
         "  counter = counter + 1\n"
         "  counter += 2\n"
         "  ++counter\n"
         "  return none\n"
-        "shadow: fn() -> i64:\n"
+        "fn shadow() -> i64:\n"
         "  counter: i64 = 100\n"
         "  counter += 1\n"
         "  return counter\n"
         "counter: i64 = 5\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  assert zero == 0\n"
         "  assert limit == 10\n"
         "  assert flag == false\n"
@@ -147,8 +147,8 @@ def test_unsupported_module_storage_fails_before_lowering(
     ArxIO.string_to_buffer(
         "```\ntitle: Unsupported module storage\n```\n"
         f"{declaration}\n"
-        "initial: fn() -> i64:\n  return 1\n"
-        "main: fn() -> i32:\n  return 0\n"
+        "fn initial() -> i64:\n  return 1\n"
+        "fn main() -> i32:\n  return 0\n"
     )
     with pytest.raises(SemanticError) as error:
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -172,7 +172,7 @@ def test_iterated_list_replacement_fails_at_assignment(stop: int) -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Iterated owner replacement\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  data: list[i32] = range(0, 10)\n"
         "  for val in data:\n"
         "    if val == 2:\n"
@@ -199,7 +199,7 @@ def test_compound_count_update_stores_once() -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Compound count update\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  total: i32 = 0\n"
         "  for i: i32 = 0; i < 4; i += 1:\n"
         "    total += i\n"
@@ -260,7 +260,7 @@ def test_compound_semantic_restrictions(body: str, message: str) -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Invalid compound assignment\n```\n"
-        f"main: fn() -> i32:\n  {body}\n  return 0\n"
+        f"fn main() -> i32:\n  {body}\n  return 0\n"
     )
     with pytest.raises(SemanticError, match=message):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -272,8 +272,8 @@ def test_scalar_remainder_and_word_not_translate() -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Scalar operators\n```\n"
-        "getchar: extern :: fn() -> i32\n"
-        "main: fn() -> i32:\n"
+        "extern getchar() -> i32\n"
+        "fn main() -> i32:\n"
         "  value: i32 = getchar()\n"
         "  assert not value % 3 == 2\n"
         "  return value % 3\n"
@@ -314,8 +314,8 @@ def test_elif_chain_translate(body: str) -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Conditional chains\n```\n"
-        "choose: fn(value: i32) -> i32:\n" + body + "\n"
-        "main: fn() -> i32:\n  return choose(0)\n"
+        "fn choose(value: i32) -> i32:\n" + body + "\n"
+        "fn main() -> i32:\n  return choose(0)\n"
     )
     builder = ArxBuilder()
     text = builder.translate(Parser().parse(Lexer().lex()))
@@ -333,7 +333,7 @@ def test_elif_condition_requires_boolean() -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Invalid elif condition\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  if false:\n    return 0\n"
         "  elif 1:\n    return 1\n"
         "  return 2\n"
@@ -353,7 +353,7 @@ def test_unsupported_subscript_reports_its_source(expression: str) -> None:
     line = f"  print({expression})"
     source = (
         "```\ntitle: Unsupported indexing\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  café: i32 = 42\n"
         f"{line}\n"
         "  return 0\n"
@@ -377,8 +377,8 @@ def literal_loop_ir() -> tuple[ArxBuilder, str]:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Bounded literal loop storage\n```\n"
-        "getchar: extern :: fn() -> i32\n"
-        "main: fn() -> i32:\n"
+        "extern getchar() -> i32\n"
+        "fn main() -> i32:\n"
         "  count: i32 = getchar() * 200\n"
         "  numbers: list[i32] = range(0, count)\n"
         "  total: i32 = 0\n"
@@ -491,51 +491,51 @@ def test_literal_loop_runs_with_bounded_stack(
     [
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               print(0.0 + 1.0)
               return 0
             """
         ).lstrip(),
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               print(1.0 + 2.0 * (3.0 - 2.0))
               return 0
             """
         ).lstrip(),
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               print(42)
               return 0
             """
         ).lstrip(),
         dedent(
             """
-            main: fn() -> i32:
+            fn main() -> i32:
               print(3.5)
               return 0
             """
         ).lstrip(),
         dedent(
             """
-            average: fn(x: f32, y: f32) -> f32:
+            fn average(x: f32, y: f32) -> f32:
               return (x + y) * 0.5
 
-            main: fn() -> i32:
+            fn main() -> i32:
               print(average(10.0, 20.0))
               return 0
             """
         ).lstrip(),
         dedent(
             """
-            fib: fn(x: i32) -> i32:
+            fn fib(x: i32) -> i32:
               if x < 3:
                 return 1
               else:
                 return fib(x-1)+fib(x-2)
 
-            main: fn() -> i32:
+            fn main() -> i32:
               print(fib(10))
               return 0
             """
@@ -543,10 +543,10 @@ def test_literal_loop_runs_with_bounded_stack(
         dedent(
             """
             @<T: i32 | f64>
-            add: fn(x: T, y: T) -> T:
+            fn add(x: T, y: T) -> T:
               return x + y
 
-            main: fn() -> i32:
+            fn main() -> i32:
               print(add(1, 2))
               print(add<f64>(1.0, 2.0))
               return 0
@@ -556,10 +556,10 @@ def test_literal_loop_runs_with_bounded_stack(
             """
             type Number = i32 | i64
 
-            identity: fn(value: Number) -> Number:
+            fn identity(value: Number) -> Number:
               return value
 
-            main: fn() -> i32:
+            fn main() -> i32:
               value: i64 = identity(5)
               ok: bool = isinstance(value, Number)
               name: str = type(value)
@@ -575,7 +575,8 @@ def test_literal_loop_runs_with_bounded_stack(
             class BaseCounter:
               value: public var :: int32 = 41
 
-              read_seed: protected :: fn(self) -> int32:
+              @[protected]
+              fn read_seed(self) -> int32:
                 return self.value
 
             class Counter(BaseCounter):
@@ -583,26 +584,29 @@ def test_literal_loop_runs_with_bounded_stack(
 
               internal: private var :: int32 = 5
 
-              internal_total: protected :: fn(self) -> int32:
+              @[protected]
+              fn internal_total(self) -> int32:
                 return self.internal + self.value
 
-              get: fn(self) -> int32:
+              fn get(self) -> int32:
                 return self.value
 
-              read_internal: fn(self) -> int32:
+              fn read_internal(self) -> int32:
                 return self.internal_total()
 
             class CounterFactory:
-              make: public static :: fn() -> Counter:
+              @[public, static]
+              fn make() -> Counter:
                 return Counter()
 
-              version_value: public static :: fn() -> int32:
+              @[public, static]
+              fn version_value() -> int32:
                 return Counter.version
 
-            take_counter: fn(counter: Counter) -> int32:
+            fn take_counter(counter: Counter) -> int32:
               return counter.get() + counter.value + counter.read_internal()
 
-            main: fn() -> i32:
+            fn main() -> i32:
               direct: Counter = Counter()
               built: Counter = CounterFactory.make()
               print(take_counter(direct) + built.get())
@@ -611,20 +615,20 @@ def test_literal_loop_runs_with_bounded_stack(
         ).lstrip(),
         dedent(
             """
-            pick: fn(grid: tensor[i32, 2, 2]) -> i32:
+            fn pick(grid: tensor[i32, 2, 2]) -> i32:
               return grid[1, 0] + grid[0, 1]
 
-            main: fn() -> i32:
+            fn main() -> i32:
               grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
               return pick(grid)
             """
         ).lstrip(),
         dedent(
             """
-            accept: fn(values: tensor[i32, ...]) -> i32:
+            fn accept(values: tensor[i32, ...]) -> i32:
               return 0
 
-            main: fn() -> i32:
+            fn main() -> i32:
               values: tensor[i32, 2] = [1, 2]
               return accept(values)
             """
@@ -660,7 +664,7 @@ def test_file_operations_translate_with_checked_cleanup(factory: str) -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: File translate regression\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         f'  output: File = {factory}("output.txt", mode="w")\n'
         '  output.write("ok")\n'
         "  output.close()\n"
@@ -681,10 +685,10 @@ def test_numeric_operand_plans_translate_mixed_widths() -> None:
     """
     ArxIO.string_to_buffer(
         "```\ntitle: Numeric operand plan translation\n```\n"
-        "combine: fn(small: i8, large: i16) -> i16:\n"
+        "fn combine(small: i8, large: i16) -> i16:\n"
         "  ordered: bool = small < large\n"
         "  return small + large\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  return combine(cast(1, i8), cast(2, i16))\n"
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -706,9 +710,9 @@ def test_numeric_union_comparison_has_a_resolved_storage_plan() -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Numeric union comparison translation\n```\n"
         "type Number = i32 | i64\n"
-        "compare: fn(a: Number, b: i32) -> bool:\n"
+        "fn compare(a: Number, b: i32) -> bool:\n"
         "  return a < b\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  result: bool = compare(1, 2)\n"
         "  return 0\n"
     )
@@ -726,7 +730,7 @@ def test_integer_helpers_translate_with_wide_range_arithmetic() -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Integer helper translation\n```\n"
         "import math from stdlib\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  values: list[i32] = range(2147483646, 2147483647, 2)\n"
         "  return math.clamp(math.abs(values[0]), 0, math.square(46340))\n"
     )
@@ -755,7 +759,7 @@ def test_math_templates_translate_concrete_widths(width: int) -> None:
         "```\ntitle: Signed math specialization translation\n```\n"
         "import math as arithmetic from stdlib\n"
         "import square as squared from stdlib.math\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         f"  value: i{width} = cast(0 - 3, i{width})\n"
         f"  zero: i{width} = cast(0, i{width})\n"
         f"  magnitude: i{width} = arithmetic.abs(value)\n"
@@ -786,13 +790,13 @@ title: Lifecycle translate regression
 ```
 class Counter:
   value: i32 = 0
-  __init__: fn(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     self.value = value
     return none
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     print(self.value)
     return none
-main: fn() -> i32:
+fn main() -> i32:
   first: Counter = Counter(value=7)
   alias: Counter = first
   first = Counter()
@@ -817,9 +821,9 @@ def test_keyword_default_holes_translate_verifies() -> None:
     ArxIO.string_to_buffer("""```
 title: Keyword translate regression
 ```
-combine: fn(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
+fn combine(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
   return a * 100 + b * 10 + c
-main: fn() -> i32:
+fn main() -> i32:
   return combine(c=9, a=2) - 239
 """)
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -841,7 +845,7 @@ def test_native_package_translate_verifies(tmp_path: Path) -> None:
     source = (
         "```\ntitle: Native translate regression\n```\n"
         "import fixture_create from native_fixture.bridge\n"
-        "main: fn() -> i32:\n  return cast(fixture_create(size=1), i32)\n"
+        "fn main() -> i32:\n  return cast(fixture_create(size=1), i32)\n"
     )
     path.write_text(source)
     ArxIO.string_to_buffer(source)
@@ -862,7 +866,7 @@ def test_arrow_stdlib_translate_uses_resolved_native_capabilities() -> None:
     """
     ArxIO.string_to_buffer(
         "import (Schema, BatchBuilder) from stdlib.arrow\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  schema: Schema = Schema()\n"
         '  schema.add("id", "int64")\n'
         "  builder: BatchBuilder = BatchBuilder(schema)\n"
@@ -893,7 +897,7 @@ def test_nullable_dataframe_translate_uses_checked_record_batch_abi() -> None:
     """
     ArxIO.string_to_buffer(
         "type Frame = dataframe[id:i64 | none, label:str | none]\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         '  frame: Frame = dataframe({id: [1, none], label: ["a", none]})\n'
         "  return cast(frame.nrows(), i32)\n"
     )
@@ -916,7 +920,7 @@ def test_temporal_dataframe_translate_uses_semantic_epoch_values() -> None:
     title: Temporal DataFrame literals lower to verified checked ABI calls.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  frame: dataframe[day:date, clock:time] = "
         'dataframe({day: [date("1969-12-31")], clock: [time("01:02:03")]})\n'
         "  return cast(frame.nrows(), i32)\n"
@@ -935,7 +939,7 @@ def test_dynamic_dataframe_cannot_silently_narrow() -> None:
     title: Runtime schemas cannot satisfy static contracts without checking.
     """
     ArxIO.string_to_buffer(
-        "narrow: fn(frame: dataframe[...]) -> dataframe[id:i64]:\n"
+        "fn narrow(frame: dataframe[...]) -> dataframe[id:i64]:\n"
         "  return frame\n"
     )
     module = Parser().parse(Lexer().lex(), "unsafe_narrow")
@@ -950,7 +954,7 @@ def test_nullable_series_translate_verifies() -> None:
     title: Nullable kernels consume semantic plans and produce valid LLVM.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
         "  value: nullable[i32] = frame.x[0] + frame.x[1]\n"
         "  assert is_null(value)\n"
@@ -997,7 +1001,7 @@ def test_nullable_semantic_errors(body: str, message: str) -> None:
         type: str
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})\n"
         f"  {body}\n  return 0\n"
     )
@@ -1020,7 +1024,7 @@ def test_table_io_translate_uses_resolved_calls(namespace: bool) -> None:
     )
     prefix = "csv." if namespace else ""
     ArxIO.string_to_buffer(
-        imports + "main: fn() -> i32:\n"
+        imports + "fn main() -> i32:\n"
         f'  source: dataframe[...] = {prefix}read_csv("in.csv")\n'
         "  frame: dataframe[id:i64] = cast(source, dataframe[id:i64])\n"
         f'  {prefix}write_csv(frame=frame, path="out.csv")\n'
@@ -1063,7 +1067,7 @@ def test_format_stream_imports_translate(
     imported = f"{class_name} as Stream" if alias else class_name
     ArxIO.string_to_buffer(
         f"import {imported} from stdlib.{module_name}\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         f"  stream: {local_name} = {local_name}()\n"
         "  stream.close()\n"
         "  return 0\n"
@@ -1086,9 +1090,9 @@ def test_table_io_names_do_not_grant_capabilities() -> None:
     title: Equally named user functions remain ordinary scalar functions.
     """
     ArxIO.string_to_buffer(
-        "read_csv: fn(path: i32) -> i32:\n  return path + 1\n"
-        "write_parquet: fn(frame: i32) -> i32:\n  return frame + 1\n"
-        "main: fn() -> i32:\n  return write_parquet(read_csv(0))\n"
+        "fn read_csv(path: i32) -> i32:\n  return path + 1\n"
+        "fn write_parquet(frame: i32) -> i32:\n  return frame + 1\n"
+        "fn main() -> i32:\n  return write_parquet(read_csv(0))\n"
     )
     builder = ArxBuilder()
     text = builder.translate(Parser().parse(Lexer().lex()))
@@ -1112,7 +1116,7 @@ def owned_list_ir() -> tuple[ArxBuilder, str]:
     """
     source = (Path(__file__).parents[1] / "arx" / "test_lists.x").read_text()
     source += (
-        "\nmain: fn() -> i32:\n"
+        "\nfn main() -> i32:\n"
         "  test_owned_lists()\n"
         "  test_partial_construction()\n"
         "  test_owned_string_elements()\n"
@@ -1181,52 +1185,52 @@ def test_owned_lists_build_and_run(
     ("source", "message"),
     [
         (
-            "main: fn() -> i32:\n  return cast(len([]), i32)\n",
+            "fn main() -> i32:\n  return cast(len([]), i32)\n",
             "annotate empty",
         ),
         (
-            "main: fn() -> i32:\n  return cast(len([[1], [2]]), i32)\n",
+            "fn main() -> i32:\n  return cast(len([[1], [2]]), i32)\n",
             "nested owned",
         ),
         (
-            "main: fn() -> i32:\n  x: i8 = [128][0]\n  return 0\n",
+            "fn main() -> i32:\n  x: i8 = [128][0]\n  return 0\n",
             "representable",
         ),
         (
-            "main: fn() -> i32:\n  x: i8 = [cast(1, i32)][0]\n  return 0\n",
+            "fn main() -> i32:\n  x: i8 = [cast(1, i32)][0]\n  return 0\n",
             "type Int8",
         ),
-        ("main: fn() -> i32:\n  return len([1])\n", "expects Int32"),
+        ("fn main() -> i32:\n  return len([1])\n", "expects Int32"),
         (
-            "main: fn() -> i32:\n  return cast(len(1), i32)\n",
+            "fn main() -> i32:\n  return cast(len(1), i32)\n",
             "requires a collection",
         ),
         (
-            "main: fn() -> i32:\n  return cast(len([1], [2]), i32)\n",
+            "fn main() -> i32:\n  return cast(len([1], [2]), i32)\n",
             "one positional",
         ),
         (
-            "main: fn() -> i32:\n  len: i32 = 1\n  return len([1])\n",
+            "fn main() -> i32:\n  len: i32 = 1\n  return len([1])\n",
             "does not resolve to a function",
         ),
         (
-            "use: fn(x: list[i64]) -> none:\n  return none\n"
-            "main: fn() -> i32:\n  x: list[i32] = [1]\n"
+            "fn use(x: list[i64]) -> none:\n  return none\n"
+            "fn main() -> i32:\n  x: list[i32] = [1]\n"
             "  use(x)\n  return 0\n",
             "ListType",
         ),
         (
-            "escape: fn(x: list[i32]) -> list[i32]:\n  return x\n"
-            "main: fn() -> i32:\n  return 0\n",
+            "fn escape(x: list[i32]) -> list[i32]:\n  return x\n"
+            "fn main() -> i32:\n  return 0\n",
             "borrowed",
         ),
         (
-            "main: fn() -> i32:\n"
+            "fn main() -> i32:\n"
             "  t: tensor[i32, 2, 2] = [[1, 2], [3]]\n  return 0\n",
             "rectangular",
         ),
         (
-            "main: fn() -> i32:\n  t: tensor[i32, 2] = [1]\n  return 0\n",
+            "fn main() -> i32:\n  t: tensor[i32, 2] = [1]\n  return 0\n",
             "shape",
         ),
     ],
@@ -1254,8 +1258,8 @@ def test_text_builtins_can_be_shadowed_by_a_function(name: str) -> None:
         type: str
     """
     ArxIO.string_to_buffer(
-        f"{name}: fn(value: i32) -> i32:\n  return value\n"
-        f"main: fn() -> i32:\n  return {name}(0)\n"
+        f"fn {name}(value: i32) -> i32:\n  return value\n"
+        f"fn main() -> i32:\n  return {name}(0)\n"
     )
     text = ArxBuilder().translate(Parser().parse(Lexer().lex()))
     llvm.parse_assembly(text).verify()
@@ -1272,7 +1276,7 @@ def test_local_text_builtin_shadow_is_not_callable(name: str) -> None:
         type: str
     """
     ArxIO.string_to_buffer(
-        f'main: fn() -> i32:\n  {name}: i32 = 0\n  {name}("1")\n  return 0\n'
+        f'fn main() -> i32:\n  {name}: i32 = 0\n  {name}("1")\n  return 0\n'
     )
     with pytest.raises(SemanticError, match="does not resolve to a function"):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -1287,7 +1291,7 @@ def text_operations_ir() -> tuple[ArxBuilder, str]:
     """
     source = (Path(__file__).parents[1] / "arx" / "test_text.x").read_text()
     source += (
-        "\nmain: fn() -> i32:\n"
+        "\nfn main() -> i32:\n"
         "  test_text_parsing()\n"
         "  test_text_argument_order()\n"
         "  test_text_failures()\n"
@@ -1412,14 +1416,14 @@ def numeric_bounds_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
     if shutil.which("clang") is None:
         pytest.skip("native bounds checks require clang")
     source = """
-getchar: extern :: fn() -> i32
-runtime_read: fn(values: tensor[i64, ...], index: i32) -> i64:
+extern getchar() -> i32
+fn runtime_read(values: tensor[i64, ...], index: i32) -> i64:
   return values[index]
-borrowed_read: fn(values: sequence[i64], index: i32) -> i64:
+fn borrowed_read(values: sequence[i64], index: i32) -> i64:
   return values[index]
-runtime_borrow: fn(values: tensor[i64, ...]) -> i64:
+fn runtime_borrow(values: tensor[i64, ...]) -> i64:
   return borrowed_read(values, 0)
-main: fn() -> i32:
+fn main() -> i32:
   mode: i32 = getchar()
   index: i32 = getchar() - 1
   values: tensor[i64, 2] = [7, 9]
@@ -1513,9 +1517,9 @@ def test_nested_template_literal_context(arguments: str) -> None:
         else "seed: T, values: list[T]"
     )
     ArxIO.string_to_buffer(
-        f"@<T: i32 | i64>\npick: fn({parameters}) -> T:\n"
+        f"@<T: i32 | i64>\nfn pick({parameters}) -> T:\n"
         "  return values[0]\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  typed: i64 = 7\n"
         f"  assert pick({arguments}) == 1\n"
         f"  assert pick<i64>({arguments}) == 1\n"
@@ -1593,19 +1597,19 @@ def test_inferred_declarations_translate(binding: str) -> None:
         "class Box:\n"
         "  value: auto = 3\n"
         "  count: static const :: auto = 1\n"
-        "  read: const :: fn(self) -> i32:\n"
+        "  fn read(self) -> i32:\n"
         "    return self.value\n"
         "@<T: i32 | i64>\n"
-        "identity: fn(value: const :: T) -> T:\n"
+        "fn identity(value: const :: T) -> T:\n"
         "  result: const :: auto = value\n"
         "  return result\n"
-        "optional: fn() -> nullable[i32]:\n"
+        "fn optional() -> nullable[i32]:\n"
         "  return none\n"
-        "frame: fn() -> dataframe[x:i32]:\n"
+        "fn frame() -> dataframe[x:i32]:\n"
         "  return dataframe({x:[1, 2]})\n"
-        "tensor_value: fn() -> tensor[i32, 2]:\n"
+        "fn tensor_value() -> tensor[i32, 2]:\n"
         "  return [1, 2]\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         f"  value: {binding}auto = identity(1)\n"
         f"  box: {binding}auto = Box()\n"
         "  box.value = 4\n"
@@ -1673,7 +1677,49 @@ def test_constant_binding_writes_fail_before_lowering(
         type: str
     """
     ArxIO.string_to_buffer(
-        f"main: fn() -> i32:\n  {declaration}\n  {write}\n  return value\n"
+        f"fn main() -> i32:\n  {declaration}\n  {write}\n  return value\n"
+    )
+    with pytest.raises(SemanticError, match="declared as constant"):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+@pytest.mark.parametrize(
+    "declaration, call",
+    [
+        (
+            "fn fixed(value: const :: i32) -> i32:\n"
+            "  value += 1\n  return value\n",
+            "fixed(1)",
+        ),
+        (
+            "class Box:\n"
+            "  @[static]\n"
+            "  fn fixed(value: const :: i32) -> i32:\n"
+            "    value += 1\n    return value\n",
+            "Box.fixed(1)",
+        ),
+        (
+            "@<T: i32 | i64>\n"
+            "fn fixed(value: const :: T) -> T:\n"
+            "  value += 1\n  return value\n",
+            "fixed<i32>(1)",
+        ),
+    ],
+)
+def test_constant_parameter_writes_fail_before_lowering(
+    declaration: str, call: str
+) -> None:
+    """
+    title: >-
+      Unchanged function heads enforce argument modifiers through analysis.
+    parameters:
+      declaration:
+        type: str
+      call:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        declaration + f"fn main() -> i32:\n  return {call}\n"
     )
     with pytest.raises(SemanticError, match="declared as constant"):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))
@@ -1683,12 +1729,12 @@ def test_constant_binding_writes_fail_before_lowering(
     "source, message",
     [
         (
-            "main: fn() -> i32:\n  x: auto = none\n  return 0",
+            "fn main() -> i32:\n  x: auto = none\n  return 0",
             "Cannot infer a concrete type",
         ),
-        ("main: fn() -> i32:\n  x: auto = []\n  return 0", "element type"),
+        ("fn main() -> i32:\n  x: auto = []\n  return 0", "element type"),
         (
-            "initial: fn() -> i32:\n  return 1\nx: const :: auto = initial()",
+            "fn initial() -> i32:\n  return 1\nx: const :: auto = initial()",
             "runtime initialization is unsupported",
         ),
         (

@@ -59,9 +59,9 @@ def test_keyword_binding_and_middle_defaults(
     """
     execute(
         tmp_path,
-        f"""f: fn(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
+        f"""fn f(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
   return a * 100 + b * 10 + c
-main: fn() -> i32:
+fn main() -> i32:
   assert {call} == 239
   assert f(a=4) == 456
   return 0
@@ -76,9 +76,9 @@ def test_keyword_metadata_preserves_source_order() -> None:
     compiler = Compiler()
     parsed = compiler.parse_string(
         DOC
-        + """f: fn(a: i32, b: i32 = 3, c: i32 = 4) -> i32:
+        + """fn f(a: i32, b: i32 = 3, c: i32 = 4) -> i32:
   return a + b + c
-main: fn() -> i32:
+fn main() -> i32:
   return f(c=9, a=2)
 """
     )
@@ -111,12 +111,12 @@ def test_keyword_and_default_evaluation_order(tmp_path: Path) -> None:
     """
     stdout = execute(
         tmp_path,
-        """mark: fn(value: i32) -> i32:
+        """fn mark(value: i32) -> i32:
   print(value)
   return value
-f: fn(a: i32, b: i32 = mark(a + 1), c: i32 = mark(b + 1)) -> i32:
+fn f(a: i32, b: i32 = mark(a + 1), c: i32 = mark(b + 1)) -> i32:
   return a * 100 + b * 10 + c
-main: fn() -> i32:
+fn main() -> i32:
   assert f(c=mark(9), a=mark(2)) == 239
   assert f(a=mark(4)) == 456
   return 0
@@ -139,25 +139,26 @@ def test_method_keywords_defaults_templates_and_overloads(
         tmp_path,
         """class Base:
   value: i32 = 4
-  read: fn(self, a: i32 = self.value, b: i32 = a + 1) -> i32:
+  fn read(self, a: i32 = self.value, b: i32 = a + 1) -> i32:
     return a * 10 + b
 class Derived(Base):
-  read: fn(self, renamed: i32 = 8, other: i32 = 9) -> i32:
+  fn read(self, renamed: i32 = 8, other: i32 = 9) -> i32:
     return renamed * 10 + other
 class Math:
-  combine: static :: fn(a: i32, b: i32 = 3) -> i32:
+  @[static]
+  fn combine(a: i32, b: i32 = 3) -> i32:
     return a * 10 + b
-  choose: fn(self, whole: i32) -> i32:
+  fn choose(self, whole: i32) -> i32:
     return whole
-  choose: fn(self, decimal: f64) -> i32:
+  fn choose(self, decimal: f64) -> i32:
     return 9
   @<T: i32 | f64>
-  echo: fn(self, value: T, copy: T = value, marker: i32 = 0) -> T:
+  fn echo(self, value: T, copy: T = value, marker: i32 = 0) -> T:
     return copy
 @<T: i32 | f64>
-first: fn(a: T, b: i32, c: T = a) -> T:
+fn first(a: T, b: i32, c: T = a) -> T:
   return c
-main: fn() -> i32:
+fn main() -> i32:
   base: Base = Derived()
   assert base.read(b=7) == 47
   normal: Base = Base()
@@ -197,9 +198,9 @@ def test_invalid_keywords_fail_semantically(arguments: str) -> None:
     compiler = Compiler()
     program = compiler.parse_string(
         DOC
-        + f"""f: fn(a: i32, b: i32 = 2, c: i32 = 3) -> i32:
+        + f"""fn f(a: i32, b: i32 = 2, c: i32 = 3) -> i32:
   return a
-main: fn() -> i32:
+fn main() -> i32:
   return f({arguments})
 """
     )
@@ -229,7 +230,7 @@ def test_invalid_keyword_syntax_and_intrinsics(body: str) -> None:
     compiler = Compiler()
     source = (
         DOC
-        + "main: fn() -> i32:\n"
+        + "fn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -248,9 +249,9 @@ def test_imported_keywords_and_declaration_default_scope(
     """
     (tmp_path / "helper.x").write_text(
         DOC
-        + """seed: fn() -> i32:
+        + """fn seed() -> i32:
   return 4
-combine: fn(a: i32, b: i32 = seed(), c: i32 = b + 1) -> i32:
+fn combine(a: i32, b: i32 = seed(), c: i32 = b + 1) -> i32:
   return a * 100 + b * 10 + c
 """
     )
@@ -259,9 +260,9 @@ combine: fn(a: i32, b: i32 = seed(), c: i32 = b + 1) -> i32:
         DOC
         + """import combine as f from helper
 import helper as helpers
-seed: fn() -> i32:
+fn seed() -> i32:
   return 9
-main: fn() -> i32:
+fn main() -> i32:
   assert f(c=8, a=2) == 248
   assert helpers.combine(c=9, a=3) == 349
   values: list[i32] = range(stop=3, start=0)
@@ -293,17 +294,17 @@ def test_file_keywords_pin_receiver_and_snapshot_strings(
         """class Owner:
   stream: File = File("first", "w")
   text: str = "original"
-  replace: fn(self) -> str:
+  fn replace(self) -> str:
     self.stream = open("second", "w")
     self.text = "changed"
     return "saved"
-prepare: fn(owner: Owner) -> File:
+fn prepare(owner: Owner) -> File:
   owner.text = "after"
   return owner.stream
-write: fn(stream: File, text: str) -> none:
+fn write(stream: File, text: str) -> none:
   stream.write(text=text)
   return none
-main: fn() -> i32:
+fn main() -> i32:
   owner: Owner = Owner()
   owner.stream.write(text=owner.replace())
   write(text=owner.text, stream=prepare(owner=owner))
@@ -325,8 +326,8 @@ def test_extern_fixed_keyword(tmp_path: Path) -> None:
     """
     execute(
         tmp_path,
-        """abs: extern :: fn(value: i32) -> i32
-main: fn() -> i32:
+        """extern abs(value: i32) -> i32
+fn main() -> i32:
   assert abs(value=5) == 5
   return 0
 """,
@@ -344,9 +345,9 @@ def test_keyword_function_lookup_keeps_visible_namespace(
     """
     execute(
         tmp_path,
-        """f: fn(value: i32) -> i32:
+        """fn f(value: i32) -> i32:
   return value
-main: fn() -> i32:
+fn main() -> i32:
   f: i32 = 1
   assert f(value=2) == 2
   assert f == 1
@@ -367,13 +368,13 @@ def test_nested_default_bindings_restore_caller_parameters(
     """
     execute(
         tmp_path,
-        """f: fn(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
+        """fn f(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
   if a == 2:
     assert f(c=9, a=4) == 459
     return a * 100 + b * 10 + c
   else:
     return a * 100 + b * 10 + c
-main: fn() -> i32:
+fn main() -> i32:
   assert f(c=9, a=2) == 239
   return 0
 """,
@@ -394,13 +395,13 @@ def test_default_class_argument_survives_later_default_effects(
         tmp_path,
         """class Owner:
   stream: File = File("first", "w")
-  swap: fn(self) -> i32:
+  fn swap(self) -> i32:
     self.stream = File("second", "w")
     return 7
-  write: fn(self, s: File = self.stream, i: i32 = self.swap()) -> none:
+  fn write(self, s: File = self.stream, i: i32 = self.swap()) -> none:
     s.write(text="default")
     return none
-main: fn() -> i32:
+fn main() -> i32:
   owner: Owner = Owner()
   owner.write()
   assert File("first").read() == "default"
@@ -419,7 +420,7 @@ def test_file_method_keywords_use_declared_binding_errors() -> None:
         compiler.check(
             compiler.parse_string(
                 DOC
-                + """main: fn() -> i32:
+                + """fn main() -> i32:
   stream: File = File("unused")
   stream.write("first", text="duplicate")
   return 0

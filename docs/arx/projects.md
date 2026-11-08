@@ -79,7 +79,7 @@ compiler reserves:
 ```arx
 import math from stdlib
 
-main: fn() -> i32:
+fn main() -> i32:
   return math.square(4)
 ```
 

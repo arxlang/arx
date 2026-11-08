@@ -231,7 +231,7 @@ def tcp(directory: Path) -> None:
             source.write_text(
                 "```\ntitle: TCP example launcher\n```\n"
                 f"import {direction} from tcp\n"
-                "main: fn() -> i32:\n"
+                "fn main() -> i32:\n"
                 f'  return {direction}("127.0.0.1", {port})\n',
                 encoding="utf-8",
             )

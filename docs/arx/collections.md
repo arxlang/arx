@@ -16,7 +16,7 @@ provided by IRx's native Arrow C++ runtime.
 ## Lists
 
 ```arx
-sum_values: fn() -> i32:
+fn sum_values() -> i32:
   values: list[i32] = [0, 1, 2 + 1]
   values.append(4)
   assert len(values) == 4
@@ -67,7 +67,7 @@ elements are signed/unsigned 8-64-bit integers or `f32`/`f64`.
 
 ```arx
 @<T: i32 | i64 | f64>
-first: fn(values: sequence[T]) -> T:
+fn first(values: sequence[T]) -> T:
   return values[0]
 ```
 
@@ -108,10 +108,10 @@ iterator workflow is available to ASTx/IRx hosts, not new Arx `yield` syntax.
 Fixed-shape tensors use one or more integer dimensions:
 
 ```arx
-pick: fn(grid: tensor[i32, 2, 2]) -> i32:
+fn pick(grid: tensor[i32, 2, 2]) -> i32:
   return grid[1, 0]
 
-main: fn() -> i32:
+fn main() -> i32:
   grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   return pick(grid)
 ```
@@ -128,7 +128,7 @@ Rules:
 parameter boundary:
 
 ```arx
-accept: fn(values: tensor[i32, ...]) -> none:
+fn accept(values: tensor[i32, ...]) -> none:
   return none
 ```
 
@@ -140,7 +140,7 @@ is overflow-checked. Rank-one tensors also support `len` and ordered iteration.
 ## DataFrames and Series
 
 ```arx
-main: fn() -> i32:
+fn main() -> i32:
   rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
@@ -219,7 +219,7 @@ zero-based; negative or out-of-range indices fail at runtime.
 ```
 title: Nullable column expressions
 ```
-main: fn() -> i32:
+fn main() -> i32:
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   doubled: series[i32 | none] = frame.x + frame.x
   missing: nullable[i32] = doubled[1]

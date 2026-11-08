@@ -33,7 +33,7 @@ pytestmark = pytest.mark.skipif(
 ROUNDTRIP = """
 import (IPCReader, IPCWriter, RecordBatch, Schema) from stdlib.arrow
 
-check_id: fn(batch: RecordBatch, row: i64) -> none:
+fn check_id(batch: RecordBatch, row: i64) -> none:
   if batch.ncols() == 0:
     return none
   else:
@@ -43,7 +43,7 @@ check_id: fn(batch: RecordBatch, row: i64) -> none:
       assert batch.get_i64(0, row) == 42
       return none
 
-check_text: fn(batch: RecordBatch, row: i64) -> none:
+fn check_text(batch: RecordBatch, row: i64) -> none:
   if batch.ncols() < 2:
     return none
   else:
@@ -53,7 +53,7 @@ check_text: fn(batch: RecordBatch, row: i64) -> none:
       assert batch.get_utf8(1, row) == "λ"
       return none
 
-check_rows: fn(batch: RecordBatch) -> none:
+fn check_rows(batch: RecordBatch) -> none:
   row: i64 = 0
   while row < batch.nrows():
     check_id(batch, row)
@@ -61,7 +61,7 @@ check_rows: fn(batch: RecordBatch) -> none:
     row = row + 1
   return none
 
-main: fn() -> i32:
+fn main() -> i32:
   reader: IPCReader = IPCReader()
   reader.open_FORMAT("input.arrow")
   schema: Schema = reader.schema()

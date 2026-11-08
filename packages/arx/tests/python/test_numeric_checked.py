@@ -41,7 +41,7 @@ def numeric_program(body: str, definitions: str = "") -> str:
     return (
         "```\ntitle: Checked numeric acceptance\n```\n"
         + definitions
-        + "main: fn() -> i32:\n"
+        + "fn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -143,11 +143,11 @@ def compound_binary(
       type: Path
     """
     definitions = """
-rhs_once: fn() -> i32:
+fn rhs_once() -> i32:
   print("rhs once")
   return 2
 
-recover: fn(before: i32, rhs: i32, op: i32, expected: i32) -> none:
+fn recover(before: i32, rhs: i32, op: i32, expected: i32) -> none:
   value: i32 = before
   caught: i32 = 0
   try:
@@ -291,7 +291,7 @@ else:
   minimum: i64 = -9223372036854775808
   print(minimum % divisor)
 print(777)""",
-        "getchar: extern :: fn() -> i32\n",
+        "extern getchar() -> i32\n",
     )
     return compile_numeric(
         tmp_path_factory.mktemp("remainder"), source, request.param
@@ -537,7 +537,7 @@ assert minimum64 == -9223372036854775808
 """
     definitions = """import math from stdlib
 @<T: i8 | i16 | i32 | i64>
-choose: fn(value: T, other: T = 3) -> T:
+fn choose(value: T, other: T = 3) -> T:
   return math.min(value, other)
 """
     result = run_numeric(tmp_path, body, optimization, definitions)
@@ -758,7 +758,7 @@ def test_generic_union_bound_needs_no_runtime_storage(tmp_path: Path) -> None:
         "assert identity<i64>(9223372036854775807) == 9223372036854775807\n"
         "assert identity<f64>(1.0000000000000002) > 1.0",
         definitions="type Number = i64 | f64\n@<T: Number>\n"
-        "identity: fn(value: T) -> T:\n  return value\n",
+        "fn identity(value: T) -> T:\n  return value\n",
     )
     assert result.returncode == 0, result.stderr
 
@@ -780,16 +780,16 @@ def test_exact_decimal_literals_across_contexts(
     definitions = (
         "type Floating = f32 | f64\n"
         "@<T: Floating>\n"
-        "precise: fn() -> T:\n"
+        "fn precise() -> T:\n"
         f"  return {exact}\n"
-        "default_value: fn(value: f32 = " + exact + ") -> f32:\n"
+        "fn default_value(value: f32 = " + exact + ") -> f32:\n"
         "  return value\n"
         "class Constants:\n"
         f"  value: public static const :: f32 = {exact}\n"
         "class Values:\n"
         "  tiny: i8 = 7\n"
         f"  wide: f64 = {exact}\n"
-        f"  __init__: fn(self, tiny: i8 = 9, wide: f64 = {exact}) -> none:\n"
+        f"  fn __init__(self, tiny: i8 = 9, wide: f64 = {exact}) -> none:\n"
         "    assert self.tiny == 7\n"
         "    assert self.wide == wide\n"
         "    self.tiny = tiny\n"

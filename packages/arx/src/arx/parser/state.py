@@ -106,7 +106,7 @@ FIELD_ALLOWED_MODIFIERS = frozenset(
     {"public", "private", "protected", "static", "const", "var"}
 )
 METHOD_ALLOWED_MODIFIERS = frozenset(
-    {"public", "private", "protected", "static", "abstract", "extern", "const"}
+    {"public", "private", "protected", "static", "abstract", "extern"}
 )
 
 VISIBILITY_NAME_MAP = {

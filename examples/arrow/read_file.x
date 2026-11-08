@@ -5,7 +5,7 @@ summary: Compile and run beside a Python-produced python.arrow file.
 import IPCReader from stdlib.arrow
 import verify from data
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Checks the Python-produced schema and values in compiled code.

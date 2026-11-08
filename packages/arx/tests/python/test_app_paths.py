@@ -123,9 +123,9 @@ def test_arxio_file_and_stdin_loaders(
         type: Path
     """
     sample = tmp_path / "sample.x"
-    sample.write_text("main: fn() -> i32:\n  return 1\n", encoding="utf-8")
+    sample.write_text("fn main() -> i32:\n  return 1\n", encoding="utf-8")
     ArxIO.file_to_buffer(str(sample))
-    assert ArxIO.buffer.buffer == "main: fn() -> i32:\n  return 1\n"
+    assert ArxIO.buffer.buffer == "fn main() -> i32:\n  return 1\n"
 
     calls: dict[str, str] = {}
 
@@ -1151,7 +1151,7 @@ def test_main_module_name_helper(tmp_path: Path) -> None:
     sample = tmp_path / "examples" / "sample.x"
     sample.parent.mkdir()
     sample.write_text(
-        "main: fn() -> i32:\n  return 0\n",
+        "fn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
 
@@ -1176,7 +1176,7 @@ def test_main_module_name_helper_uses_package_init_module_name(
         encoding="utf-8",
     )
     module_file.write_text(
-        "helper: fn() -> i32:\n  return 1\n",
+        "fn helper() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
 
@@ -1205,7 +1205,7 @@ def test_main_module_name_helper_uses_src_relative_package_name(
         encoding="utf-8",
     )
     module_file.write_text(
-        "helper: fn() -> i32:\n  return 1\n",
+        "fn helper() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
 
@@ -1232,7 +1232,7 @@ def test_arxmain_get_astx_single_file_returns_module(tmp_path: Path) -> None:
     """
     src = tmp_path / "one.x"
     src.write_text(
-        "```\ntitle: One\n```\nmain: fn() -> i32:\n  return 0\n",
+        "```\ntitle: One\n```\nfn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
     app = main_module.ArxMain(input_files=[str(src)])
@@ -1260,7 +1260,7 @@ def test_arxmain_get_astx_uses_package_init_module_name(
         encoding="utf-8",
     )
     src.write_text(
-        "```\ntitle: Package\n```\nmain: fn() -> i32:\n  return 0\n",
+        "```\ntitle: Package\n```\nfn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
 
@@ -1289,7 +1289,7 @@ def test_arxmain_get_astx_uses_src_relative_module_name(
         encoding="utf-8",
     )
     src.write_text(
-        "```\ntitle: Core\n```\nmain: fn() -> i32:\n  return 0\n",
+        "```\ntitle: Core\n```\nfn main() -> i32:\n  return 0\n",
         encoding="utf-8",
     )
 
@@ -1335,7 +1335,7 @@ def test_arxmain_has_main_entry_block_of_modules() -> None:
     title: _has_main_entry finds main inside a Block of Module nodes.
     """
     ArxIO.string_to_buffer(
-        "```\ntitle: M\n```\nmain: fn() -> i32:\n  return 0\n"
+        "```\ntitle: M\n```\nfn main() -> i32:\n  return 0\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -1366,7 +1366,7 @@ def test_arxmain_format_ast_fallback_cycle_and_exotic_fields() -> None:
     title: Fallback walker reports cycles and unknown field value types.
     """
     ArxIO.string_to_buffer(
-        "```\ntitle: M\n```\nmain: fn() -> i32:\n  return 0\n"
+        "```\ntitle: M\n```\nfn main() -> i32:\n  return 0\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -2478,11 +2478,11 @@ def test_file_import_resolver_rejects_ambiguous_package_and_module_paths(
         encoding="utf-8",
     )
     (src_dir / "samplepkg.x").write_text(
-        "flat: fn() -> i32:\n  return 1\n",
+        "fn flat() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
     (package_dir / "__init__.x").write_text(
-        "packaged: fn() -> i32:\n  return 2\n",
+        "fn packaged() -> i32:\n  return 2\n",
         encoding="utf-8",
     )
 
@@ -2520,12 +2520,12 @@ def test_file_import_resolver_honors_build_src_dir(tmp_path: Path) -> None:
         parents=True, exist_ok=True
     )
     (src_dir / "mypkg" / "__init__.x").write_text(
-        "hello: fn() -> i32:\n  return 1\n",
+        "fn hello() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
     test_file = tests_dir / "test_mypkg.x"
     test_file.write_text(
-        "test_noop: fn() -> none:\n  return\n", encoding="utf-8"
+        "fn test_noop() -> none:\n  return\n", encoding="utf-8"
     )
 
     resolver = main_module.FileImportResolver((str(test_file),))
@@ -2566,7 +2566,7 @@ def test_file_import_resolver_resolves_direct_installed_arx_dependency(
         "local_lib",
         {
             "__init__.x": "",
-            "stats.x": "sum2: fn() -> i32:\n  return 2\n",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
         },
     )
 
@@ -2623,7 +2623,7 @@ def test_file_import_resolver_resolves_transitive_installed_arx_dependency(
         "project_b",
         {
             "__init__.x": "",
-            "tools.x": "helper: fn() -> i32:\n  return 4\n",
+            "tools.x": "fn helper() -> i32:\n  return 4\n",
         },
     )
 
@@ -2652,7 +2652,7 @@ def test_file_import_resolver_skips_inactive_transitive_requirements(
     src_dir = project_root / "src"
     src_dir.mkdir(parents=True)
     source = src_dir / "main.x"
-    source.write_text("main: fn() -> i32:\n  return 0\n", encoding="utf-8")
+    source.write_text("fn main() -> i32:\n  return 0\n", encoding="utf-8")
     _write_resolver_project(
         project_root,
         "app",
@@ -2674,13 +2674,13 @@ def test_file_import_resolver_skips_inactive_transitive_requirements(
         site_packages,
         "arx-optional-lib",
         "optional_lib",
-        {"__init__.x": "", "tools.x": "helper: fn() -> i32:\n  return 1\n"},
+        {"__init__.x": "", "tools.x": "fn helper() -> i32:\n  return 1\n"},
     )
     _write_installed_arx_distribution(
         site_packages,
         "arx-platform-lib",
         "platform_lib",
-        {"__init__.x": "", "tools.x": "helper: fn() -> i32:\n  return 2\n"},
+        {"__init__.x": "", "tools.x": "fn helper() -> i32:\n  return 2\n"},
     )
 
     monkeypatch.syspath_prepend(str(site_packages))
@@ -2724,7 +2724,7 @@ def test_file_import_resolver_honors_installed_package_src_dir(
         "local_lib",
         {
             "__init__.x": "",
-            "stats.x": "sum2: fn() -> i32:\n  return 2\n",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
         },
     )
 
@@ -2756,9 +2756,7 @@ def test_file_import_resolver_local_source_shadows_installed_package(
     source = src_dir / "main.x"
     source.write_text("import sum2 from local_lib.stats\n", encoding="utf-8")
     local_stats = local_package / "stats.x"
-    local_stats.write_text(
-        "sum2: fn() -> i32:\n  return 1\n", encoding="utf-8"
-    )
+    local_stats.write_text("fn sum2() -> i32:\n  return 1\n", encoding="utf-8")
     _write_resolver_project(
         project_root,
         "app",
@@ -2772,7 +2770,7 @@ def test_file_import_resolver_local_source_shadows_installed_package(
         "local_lib",
         {
             "__init__.x": "",
-            "stats.x": "sum2: fn() -> i32:\n  return 2\n",
+            "stats.x": "fn sum2() -> i32:\n  return 2\n",
         },
     )
 
@@ -2801,7 +2799,7 @@ def test_file_import_resolver_ignores_python_only_dependency(
     src_dir = project_root / "src"
     src_dir.mkdir(parents=True)
     source = src_dir / "main.x"
-    source.write_text("main: fn() -> i32:\n  return 0\n", encoding="utf-8")
+    source.write_text("fn main() -> i32:\n  return 0\n", encoding="utf-8")
     _write_resolver_project(
         project_root,
         "app",
@@ -2884,8 +2882,8 @@ def test_file_import_resolver_rejects_ambiguous_installed_module_paths(
         "local_lib",
         {
             "__init__.x": "",
-            "mod.x": "value: fn() -> i32:\n  return 1\n",
-            "mod/__init__.x": "value: fn() -> i32:\n  return 2\n",
+            "mod.x": "fn value() -> i32:\n  return 1\n",
+            "mod/__init__.x": "fn value() -> i32:\n  return 2\n",
         },
     )
 
@@ -2930,7 +2928,7 @@ def test_file_import_resolver_keeps_reserved_namespaces_bundled(
         "stdlib",
         {
             "__init__.x": "",
-            "math.x": "square: fn(value: i32) -> i32:\n  return value\n",
+            "math.x": "fn square(value: i32) -> i32:\n  return value\n",
         },
     )
 
@@ -2979,11 +2977,11 @@ def test_file_import_resolver_supports_nested_relative_imports(
         encoding="utf-8",
     )
     (shapes_dir / "sibling.x").write_text(
-        "helper: fn() -> i32:\n  return 1\n",
+        "fn helper() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
     (shared_dir / "util.x").write_text(
-        "clamp: fn() -> i32:\n  return 2\n",
+        "fn clamp() -> i32:\n  return 2\n",
         encoding="utf-8",
     )
 
@@ -3083,11 +3081,11 @@ def test_file_import_resolver_normalizes_relative_imports(
         encoding="utf-8",
     )
     (package_dir / "core.x").write_text(
-        "import sum2 from .stats\nhelper: fn() -> i32:\n  return 1\n",
+        "import sum2 from .stats\nfn helper() -> i32:\n  return 1\n",
         encoding="utf-8",
     )
     (package_dir / "stats.x").write_text(
-        "sum2: fn() -> i32:\n  return 2\n",
+        "fn sum2() -> i32:\n  return 2\n",
         encoding="utf-8",
     )
 

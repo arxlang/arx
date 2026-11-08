@@ -5,7 +5,7 @@ summary: Creates its input locally and uses the native Arrow Dataset scanner.
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Write nullable columns and select a projected result
   ```

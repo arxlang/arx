@@ -5,7 +5,7 @@ summary: Validate bundled stdlib math helpers with the compiled test runner.
 
 import math from stdlib
 
-test_abs: fn() -> none:
+fn test_abs() -> none:
   ```
   title: test_abs
   summary: Verifies zero and representable positive and negative magnitudes.
@@ -17,7 +17,7 @@ test_abs: fn() -> none:
   assert math.abs(2147483647) == 2147483647
   assert math.abs(0 - 2147483647) == 2147483647
 
-test_min_and_max: fn() -> none:
+fn test_min_and_max() -> none:
   ```
   title: test_min_and_max
   summary: Verifies bundled minimum and maximum helpers.
@@ -25,7 +25,7 @@ test_min_and_max: fn() -> none:
   assert math.min(3, 9) == 3
   assert math.max(3, 9) == 9
 
-test_clamp: fn() -> none:
+fn test_clamp() -> none:
   ```
   title: test_clamp
   summary: Verifies lower, in-range, and upper clamp behavior.
@@ -36,7 +36,7 @@ test_clamp: fn() -> none:
   assert math.clamp(0, 0, 2) == 0
   assert math.clamp(2, 0, 2) == 2
 
-test_clamp_integer_limits_and_equal_bounds: fn() -> none:
+fn test_clamp_integer_limits_and_equal_bounds() -> none:
   ```
   title: test_clamp_integer_limits_and_equal_bounds
   summary: Allows the full i32 interval and single-value inclusive intervals.
@@ -50,7 +50,7 @@ test_clamp_integer_limits_and_equal_bounds: fn() -> none:
   assert math.clamp(maximum, minimum, minimum) == minimum
   assert math.clamp(3, 3, 3) == 3
 
-test_square: fn() -> none:
+fn test_square() -> none:
   ```
   title: test_square
   summary: Verifies representable squares including zero and negative inputs.
@@ -62,7 +62,7 @@ test_square: fn() -> none:
   assert math.square(0 - 1) == 1
   assert math.square(46340) == 2147395600
 
-test_explicit_wrapping_multiplication: fn() -> none:
+fn test_explicit_wrapping_multiplication() -> none:
   ```
   title: test_explicit_wrapping_multiplication
   summary: Modulo arithmetic requires explicit wrapping, while square is checked.
@@ -73,7 +73,7 @@ test_explicit_wrapping_multiplication: fn() -> none:
   assert wrapping_mul(2147483647, 2147483647) == 1
   assert wrapping_mul((0 - 2147483647) - 1, (0 - 2147483647) - 1) == 0
 
-test_template_calls: fn() -> none:
+fn test_template_calls() -> none:
   ```
   title: test_template_calls
   summary: Preserve inferred narrow types or explicitly select a wider type.

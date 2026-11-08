@@ -48,14 +48,14 @@ title: Hello module
 summary: Compiles a small typed Arx program.
 ```
 
-add: fn(a: i32, b: i32) -> i32:
+fn add(a: i32, b: i32) -> i32:
   ```
   title: add
   summary: Adds two values.
   ```
   return a + b
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Prints one result and returns success.
@@ -98,7 +98,7 @@ title: Arrow-backed collections
 summary: Uses a Tensor, DataFrame, and Series.
 ```
 
-main: fn() -> i32:
+fn main() -> i32:
   grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],

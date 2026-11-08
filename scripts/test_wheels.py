@@ -96,7 +96,7 @@ title: Installed wheel scalar smoke
 ```
 import answer from support
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -106,7 +106,7 @@ main: fn() -> i32:
 SUPPORT_MODULE = """```
 title: Installed wheel support module
 ```
-answer: fn(value: i32 = 0) -> i32:
+fn answer(value: i32 = 0) -> i32:
   ```
   title: answer
   ```
@@ -123,27 +123,27 @@ class Counter:
   value: i32 = 0
   destroyed: public static var :: i32 = 0
 
-  __init__: fn(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     ```
     title: __init__
     ```
     self.value = value
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     ```
     Counter.destroyed = Counter.destroyed + 1
     return none
 
-make: fn() -> Counter:
+fn make() -> Counter:
   ```
   title: make
   ```
   return Counter(value=7)
 
-use: fn() -> none:
+fn use() -> none:
   ```
   title: use
   ```
@@ -153,7 +153,7 @@ use: fn() -> none:
   assert alias.value == 7
   return none
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -164,7 +164,7 @@ main: fn() -> i32:
 LIST_MODULE = """```
 title: Installed wheel list smoke
 ```
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -175,7 +175,7 @@ main: fn() -> i32:
 TENSOR_MODULE = """```
 title: Installed wheel tensor smoke
 ```
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -186,7 +186,7 @@ main: fn() -> i32:
 FILE_MODULE = """```
 title: Installed wheel file I/O smoke
 ```
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -203,7 +203,7 @@ NATIVE_MODULE = """```
 title: Installed external native package smoke
 ```
 import Resource from native_fixture.owned
-write_payload: fn() -> none:
+fn write_payload() -> none:
   ```
   title: write_payload
   ```
@@ -211,7 +211,7 @@ write_payload: fn() -> none:
   assert resource.note(label="wheel π", value=cast(2, f64)) == 0
   assert resource.write(path="native-smoke.jpg") == 0
   return none
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   ```
@@ -226,7 +226,7 @@ summary: Run from the repository root; input and output must be distinct files.
 import (Schema, RecordBatch) from stdlib.arrow
 import CSVStream from stdlib.csv
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Convert every CSV batch without discarding rows
   ```
@@ -252,7 +252,7 @@ title: Installed Parquet interoperability and DataFrame smoke
 import ParquetStream from stdlib.parquet
 import (RecordBatch, Schema) from stdlib.arrow
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Convert all Python-produced Parquet batches in compiled Arx
   ```
@@ -275,7 +275,7 @@ main: fn() -> i32:
 NULLABLE_MODULE = """```
 title: Installed wheel nullable Series smoke
 ```
-main: fn() -> i32:
+fn main() -> i32:
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none]})
   values: series[i32 | none] = frame.x + frame.x
   assert is_null(values[1])
@@ -299,7 +299,7 @@ import (read_csv, write_csv, CSVStream) from stdlib.csv
 import Schema from stdlib.arrow
 import (read_parquet, write_parquet, where, ParquetOptions) from stdlib.parquet
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Read chunked data and filter through canonical imports
   ```

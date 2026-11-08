@@ -140,7 +140,7 @@ def test_invalid_prefix_operand(source: str, message: str) -> None:
         "café{operator}",
         "call(\nx\n){operator}",
         "for i: i32 = 0; i < 3; i{operator}:\n  print(i)\n",
-        "main: fn() -> i32:\n  x: i32 = 3\n  x{operator}\n  return x\n",
+        "fn main() -> i32:\n  x: i32 = 3\n  x{operator}\n  return x\n",
     ],
 )
 def test_postfix_mutation_reports_operator(source: str, operator: str) -> None:
@@ -236,7 +236,7 @@ def test_compound_count_update_and_statement_separators() -> None:
     title: Count updates and semicolon-separated statements admit AugAssign.
     """
     tree = _parse_module(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  total: i32 = 0\n"
         "  for i: i32 = 0; i < 3; i += 1:\n"
         "    total += i; total *= 2\n"
@@ -358,7 +358,7 @@ def test_parse_truncated_function_reports_located_parser_error() -> None:
     """
     title: Truncated signatures fail with a located parser diagnostic.
     """
-    ArxIO.string_to_buffer("main: fn( -> i32:\n  return 0\n")
+    ArxIO.string_to_buffer("fn main( -> i32:\n  return 0\n")
 
     with pytest.raises(ParserException) as exc_info:
         Parser().parse(Lexer().lex())
@@ -389,12 +389,12 @@ def test_parser_location_uses_unicode_code_point_columns() -> None:
     """
     title: Parser diagnostics preserve one-based Unicode lexer columns.
     """
-    ArxIO.string_to_buffer("α: fn( -> i32:\n  return 0\n")  # noqa: RUF001
+    ArxIO.string_to_buffer("fn α( -> i32:\n  return 0\n")  # noqa: RUF001
     with pytest.raises(ParserException) as captured:
         Parser().parse(Lexer().lex())
     assert captured.value.location is not None
     assert captured.value.location.line == 1
-    assert captured.value.location.col == 8
+    assert captured.value.location.col == 7
 
 
 def test_parse_if_stmt() -> None:
@@ -583,7 +583,7 @@ def test_elif_branch_bindings_do_not_leak() -> None:
             5,
             1,
         ),
-        ("var elif: i32 = 1\n", "Leading declaration keywords", 1, 1),
+        ("var elif: i32 = 1\n", "Leading variable declaration keywords", 1, 1),
     ],
 )
 def test_invalid_elif_chain(
@@ -615,7 +615,7 @@ def test_parse_fn() -> None:
     title: Test gettok for main tokens.
     """
     ArxIO.string_to_buffer(
-        "math: fn(x: i32) -> i32:\n"
+        "fn math(x: i32) -> i32:\n"
         + "  if 1 > 2:\n"
         + "    a = 1\n"
         + "  else:\n"
@@ -627,7 +627,7 @@ def test_parse_fn() -> None:
     parser = Parser(lexer.lex())
 
     parser.tokens.get_next_token()
-    expr = parser.parse_named_declaration(allow_function=True)
+    expr = parser.parse_function()
     assert expr
     assert isinstance(expr, astx.FunctionDef)
     assert isinstance(expr.prototype, astx.FunctionPrototype)
@@ -652,7 +652,7 @@ def test_parse_assert_stmt() -> None:
     tree = _parse_module(
         dedent(
             """
-            test_ok: fn() -> none:
+            fn test_ok() -> none:
               assert 1 == 1
               return none
             """
@@ -674,7 +674,7 @@ def test_parse_assert_stmt_with_string_message() -> None:
     tree = _parse_module(
         dedent(
             """
-            test_ok: fn() -> none:
+            fn test_ok() -> none:
               assert 1 == 1, "still ok"
               return none
             """
@@ -700,7 +700,7 @@ def test_parse_assert_stmt_rejects_non_string_message() -> None:
         _parse_module(
             dedent(
                 """
-                test_bad: fn() -> none:
+                fn test_bad() -> none:
                   assert 1 == 1, 42
                   return none
                 """
@@ -717,7 +717,7 @@ def test_parse_module_docstring() -> None:
         "title: Module docs\n"
         "summary: Main module reference\n"
         "```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  return 1\n"
     )
 
@@ -735,7 +735,7 @@ def test_parse_module_docstring_must_start_first_line() -> None:
     title: Test module docstring must start at line 1, column 1.
     """
     ArxIO.string_to_buffer(
-        "  ```\n  title: module docs\n  ```\nmain: fn() -> i32:\n  return 1\n"
+        "  ```\n  title: module docs\n  ```\nfn main() -> i32:\n  return 1\n"
     )
 
     lexer = Lexer()
@@ -751,7 +751,7 @@ def test_parse_function_docstring() -> None:
     title: Test function docstring as first body statement.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  ```\n"
         "  title: Function docs\n"
         "  summary: Function summary\n"
@@ -763,7 +763,7 @@ def test_parse_function_docstring() -> None:
     parser = Parser(lexer.lex())
 
     parser.tokens.get_next_token()
-    expr = parser.parse_named_declaration(allow_function=True)
+    expr = parser.parse_function()
 
     assert isinstance(expr, astx.FunctionDef)
     assert len(expr.body.nodes) == 1
@@ -775,8 +775,7 @@ def test_parse_function_docstring_must_be_first_stmt() -> None:
     title: Test function docstring invalid placement after expressions.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n  return 1\n"
-        "  ```\n  title: Function docs\n  ```\n"
+        "fn main() -> i32:\n  return 1\n  ```\n  title: Function docs\n  ```\n"
     )
 
     lexer = Lexer()
@@ -792,7 +791,7 @@ def test_parse_module_docstring_invalid_douki_schema() -> None:
     """
     ArxIO.string_to_buffer(
         "```\nsummary: Missing required title\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  return 1\n"
     )
 
@@ -812,7 +811,7 @@ def test_parse_function_docstring_invalid_douki_schema() -> None:
     title: Test function docstring validation against Douki schema.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  ```\n"
         "  bad_field: this is not allowed by schema\n"
         "  ```\n"
@@ -831,13 +830,13 @@ def test_parse_typed_function_signature() -> None:
     title: Test typed function signature parsing.
     """
     ArxIO.string_to_buffer(
-        "main: fn(arg1: i32, arg2: str) -> i32:\n  return arg1\n"
+        "fn main(arg1: i32, arg2: str) -> i32:\n  return arg1\n"
     )
     lexer = Lexer()
     parser = Parser(lexer.lex())
 
     parser.tokens.get_next_token()
-    fn = parser.parse_named_declaration(allow_function=True)
+    fn = parser.parse_function()
 
     assert isinstance(fn, astx.FunctionDef)
     assert isinstance(fn.prototype.args[0], astx.Argument)
@@ -1026,7 +1025,7 @@ def test_parse_import_statements(
             "Relative imports require a module path after leading '.'.",
         ),
         (
-            "main: fn() -> i32:\n  import std.math\n  return 0\n",
+            "fn main() -> i32:\n  import std.math\n  return 0\n",
             "Import statements are only allowed at module scope.",
         ),
     ],
@@ -1053,7 +1052,7 @@ def test_parse_module_namespace_member_reference() -> None:
             """
             import samplepkg.stats as stats
 
-            main: fn() -> f64:
+            fn main() -> f64:
               return stats.sum2
             """
         ).lstrip()
@@ -1083,7 +1082,7 @@ def test_parse_module_namespace_member_call() -> None:
             """
             import samplepkg.stats as stats
 
-            main: fn() -> f64:
+            fn main() -> f64:
               return stats.sum2(1.0, 2.0)
             """
         ).lstrip()
@@ -1112,7 +1111,7 @@ def test_parse_while_stmt() -> None:
     title: Test while statement parsing.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  a: i32 = 0\n"
         "  while a < 10:\n"
         "    a = a + 1\n"
@@ -1132,7 +1131,7 @@ def test_parse_for_count_stmt() -> None:
     title: Test count-style for parsing.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  for i: i32 = 0; i < 5; i = i + 1:\n"
         "    return i\n"
     )
@@ -1150,7 +1149,7 @@ def test_parse_for_range_builtin_call() -> None:
     title: Test for-in parsing with builtin range calls.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n  for j in range(0, 5):\n    return j\n"
+        "fn main() -> i32:\n  for j in range(0, 5):\n    return j\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -1174,7 +1173,7 @@ def test_parse_for_in_list_variable() -> None:
     title: Test generic for-in parsing with one list variable.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  xs: list[i32] = range(0, 3)\n"
         "  for value in xs:\n"
         "    return value\n"
@@ -1204,7 +1203,7 @@ def test_parse_builtin_cast_and_print() -> None:
     title: Test builtin cast and print node generation.
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n  a: i32 = 1\n  print(cast(a, str))\n  return a\n"
+        "fn main() -> i32:\n  a: i32 = 1\n  print(cast(a, str))\n  return a\n"
     )
     lexer = Lexer()
     parser = Parser()
@@ -1221,7 +1220,7 @@ def test_parse_type_alias_and_union_signature() -> None:
     """
     tree = _parse_module(
         "type Number = i32 | i64\n"
-        "widen: fn(x: Number) -> i32 | i64:\n"
+        "fn widen(x: Number) -> i32 | i64:\n"
         "  return x\n"
     )
 
@@ -1244,7 +1243,7 @@ def test_parse_type_alias_with_cast_isinstance_and_typeof() -> None:
     """
     tree = _parse_module(
         "type Int = i32\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  x: Int = cast(0.0, Int)\n"
         "  ok: bool = isinstance(x, Int)\n"
         "  name: str = type(x)\n"
@@ -1279,7 +1278,7 @@ def test_parse_cast_rejects_union_target() -> None:
     with pytest.raises(ParserException, match="union target types"):
         _parse_module(
             "type Number = i32 | i64\n"
-            "main: fn() -> i32:\n"
+            "fn main() -> i32:\n"
             "  x: Number = cast(0.0, Number)\n"
             "  return 0\n"
         )
@@ -1290,7 +1289,7 @@ def test_cast_result_can_participate_in_binary_expression() -> None:
     title: Cast results are value expressions accepted by binary operators.
     """
     tree = _parse_module(
-        "main: fn() -> bool:\n"
+        "fn main() -> bool:\n"
         "  return cast(2147483648, i32) == cast(2147483648, i32)\n"
     )
     function = tree.nodes[0]
@@ -1309,7 +1308,7 @@ def test_parse_block_with_comment_and_blank_lines(suffix: str) -> None:
         type: str
     """
     ArxIO.string_to_buffer(
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  # section A\n"
         "\n"
         "  a: i32 = 1\n"
@@ -1366,10 +1365,30 @@ def test_name_first_binding_modifiers(modifier: str) -> None:
     )
     assert declaration.mutability is expected
     function = _parse_module(
-        f"apply: const :: fn(value: {modifier}i32) -> i32:\n  return value\n"
+        f"fn apply(value: {modifier}i32) -> i32:\n  return value\n"
     ).nodes[0]
     assert isinstance(function, astx.FunctionDef)
     assert function.prototype.args.nodes[0].mutability is expected
+    external = _parse_module(
+        f"extern apply(value: {modifier}i32) -> i32\n"
+    ).nodes[0]
+    assert isinstance(external, astx.FunctionPrototype)
+    assert external.args.nodes[0].mutability is expected
+    class_ = _parse_module(
+        "class Operations:\n"
+        "  @[public, static]\n"
+        f"  fn apply(value: {modifier}i32) -> i32:\n    return value\n"
+        "  @[abstract]\n"
+        f"  fn abstract_apply(self, value: {modifier}i32) -> i32\n"
+        "  @[extern]\n"
+        f"  fn external_apply(self, value: {modifier}i32) -> i32\n"
+    ).nodes[0]
+    assert isinstance(class_, astx.ClassDefStmt)
+    for method in class_.methods:
+        assert method.prototype.args.nodes[0].mutability is expected
+    assert getattr(class_.methods[0].prototype, "is_static", False) is True
+    assert getattr(class_.methods[1].prototype, "is_abstract", False) is True
+    assert getattr(class_.methods[2].prototype, "is_extern", False) is True
 
 
 @pytest.mark.parametrize(
@@ -1385,23 +1404,35 @@ def test_name_first_binding_modifiers(modifier: str) -> None:
         ("value: static :: i32 = 1\n", "variable cannot use 'static'"),
         (
             "apply: var :: fn() -> i32:\n  return 0\n",
-            "function cannot use 'var'",
+            "Function declarations use",
         ),
         (
-            "apply: extern :: fn() -> i32:\n  return 0\n",
+            "extern apply() -> i32:\n  return 0\n",
             "cannot define a body",
         ),
         (
-            "outer: fn() -> i32:\n  inner: fn() -> i32:\n    return 0\n",
+            "fn outer() -> i32:\n  fn inner() -> i32:\n    return 0\n",
             "Nested functions",
         ),
-        ("var value: i32 = 1\n", "Leading declaration keywords"),
-        ("fn apply() -> i32:\n  return 0\n", "Leading declaration keywords"),
-        ("extern apply() -> i32\n", "Leading declaration keywords"),
+        ("var value: i32 = 1\n", "Leading variable declaration keywords"),
+        ("apply: fn() -> i32:\n  return 0\n", "Function declarations use"),
+        (
+            "apply: const :: fn() -> i32:\n  return 0\n",
+            "Function declarations use",
+        ),
+        ("apply: extern :: fn() -> i32\n", "Function declarations use"),
+        (
+            "class C:\n  apply: fn(self) -> i32:\n    return 0\n",
+            "Method declarations use",
+        ),
+        (
+            "fn apply(value: static :: i32) -> i32:\n  return value\n",
+            "parameter cannot use 'static'",
+        ),
         ("class C:\n  @[constant]\n  value: i32 = 1\n", "unknown modifier"),
         (
             "class C:\n  @[public]\n  value: i32 = 1\n",
-            "Member modifier annotations were replaced",
+            "Field modifier annotations were replaced",
         ),
     ],
 )
@@ -1437,8 +1468,8 @@ def test_inferred_declaration_requires_initializer(source: str) -> None:
 @pytest.mark.parametrize(
     "source",
     [
-        "apply: fn(x: auto) -> i32:\n  return 0",
-        "apply: fn() -> auto:\n  return 0",
+        "fn apply(x: auto) -> i32:\n  return 0",
+        "fn apply() -> auto:\n  return 0",
         "x: list[auto] = []",
         "type Unknown = auto",
     ],
@@ -1461,7 +1492,7 @@ def test_contextual_modifier_names_remain_usable_as_types() -> None:
     module = _parse_module(
         "type static = i32\n"
         "type public = i32\n"
-        "apply: fn(value: public) -> static:\n"
+        "fn apply(value: public) -> static:\n"
         "  result: static = value\n"
         "  return result\n"
     )
@@ -1472,3 +1503,27 @@ def test_contextual_modifier_names_remain_usable_as_types() -> None:
     declaration = function.body.nodes[0]
     assert isinstance(declaration, astx.VariableDeclaration)
     assert isinstance(declaration.type_, astx.Int32)
+
+
+@pytest.mark.parametrize("spacing", ["", " "])
+def test_function_head_preserves_name_and_optional_spacing(
+    spacing: str,
+) -> None:
+    """
+    title: >-
+      Function syntax stays keyword-first while arguments accept modifiers.
+    parameters:
+      spacing:
+        type: str
+    """
+    function = _parse_module(
+        f"fn distance{spacing}(record: const :: str) -> i64:\n"
+        "  return len(record)\n"
+    ).nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    assert function.prototype.name == "distance"
+    assert function.prototype.args.nodes[0].name == "record"
+    assert (
+        function.prototype.args.nodes[0].mutability
+        is astx.MutabilityKind.constant
+    )

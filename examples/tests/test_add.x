@@ -2,14 +2,14 @@
 title: Example compiled test module
 summary: Demonstrates Arx assertions and the `arx test` runner.
 ```
-add: fn(a: i32, b: i32) -> i32:
+fn add(a: i32, b: i32) -> i32:
   ```
   title: add
   summary: Returns the sum of two integer values.
   ```
   return a + b
 
-test_add: fn() -> none:
+fn test_add() -> none:
   ```
   title: test_add
   summary: Verifies the helper function using compiled assertions.

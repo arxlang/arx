@@ -5,7 +5,7 @@ summary: Run from the repository root to copy the bundled CSV through Parquet.
 import (read_csv, write_csv) from stdlib.csv
 import (read_parquet, write_parquet) from stdlib.parquet
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Read every row without explicit sessions or RecordBatches
   ```

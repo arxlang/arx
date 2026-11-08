@@ -4,7 +4,7 @@ summary: Numeric and Boolean columns constructed entirely by compiled Arx.
 ```
 import (Schema, BatchBuilder, RecordBatch) from stdlib.arrow
 
-make_batch: fn() -> RecordBatch:
+fn make_batch() -> RecordBatch:
   ```
   title: make_batch
   summary: Produces two rows with exact non-nullable Arrow types.
@@ -22,7 +22,7 @@ make_batch: fn() -> RecordBatch:
   builder.append_bool(2, false)
   return builder.finish()
 
-verify: fn(batch: RecordBatch) -> none:
+fn verify(batch: RecordBatch) -> none:
   ```
   title: verify
   summary: Checks the full schema, row count and every value.

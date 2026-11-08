@@ -3,28 +3,28 @@ title: Repository tensor tests
 summary: Cover fixed-shape tensor literals, indexing, and helpers.
 ```
 
-pick: fn(grid: tensor[i32, 2, 2]) -> i32:
+fn pick(grid: tensor[i32, 2, 2]) -> i32:
   ```
   title: pick
   summary: Returns the sum of one column-crossing pair of indices.
   ```
   return grid[1, 0] + grid[0, 1]
 
-edge_sum: fn(values: tensor[i32, 4]) -> i32:
+fn edge_sum(values: tensor[i32, 4]) -> i32:
   ```
   title: edge_sum
   summary: Returns the sum of the first and last vector elements.
   ```
   return values[0] + values[3]
 
-accept_runtime_shape: fn(values: tensor[i32, ...]) -> none:
+fn accept_runtime_shape(values: tensor[i32, ...]) -> none:
   ```
   title: accept_runtime_shape
   summary: Accepts a tensor whose shape is supplied at runtime.
   ```
   return none
 
-test_tensor_grid_indexing: fn() -> none:
+fn test_tensor_grid_indexing() -> none:
   ```
   title: test_tensor_grid_indexing
   summary: Verifies two-dimensional tensor literals and indexing.
@@ -32,7 +32,7 @@ test_tensor_grid_indexing: fn() -> none:
   grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   assert pick(grid) == 5
 
-test_tensor_vector_indexing: fn() -> none:
+fn test_tensor_vector_indexing() -> none:
   ```
   title: test_tensor_vector_indexing
   summary: Verifies one-dimensional tensor literals and indexing.

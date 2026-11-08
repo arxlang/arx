@@ -3,14 +3,14 @@ title: DataFrame example
 summary: Demonstrates fixed-width Arrow-backed DataFrame syntax.
 ```
 
-row_count: fn(rows: dataframe[id: i32, score: f64]) -> i32:
+fn row_count(rows: dataframe[id: i32, score: f64]) -> i32:
   ```
   title: row_count
   summary: Returns the number of rows in a static-schema DataFrame.
   ```
   return cast(rows.nrows(), i32)
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Builds a DataFrame and accesses columns by name and string key.

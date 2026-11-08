@@ -56,7 +56,7 @@ architecture, supported types, and current limitations.
 title: Native Arrow-backed collections
 ```
 
-main: fn() -> i32:
+fn main() -> i32:
   grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
   rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],

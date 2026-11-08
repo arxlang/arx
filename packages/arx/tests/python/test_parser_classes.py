@@ -33,11 +33,11 @@ def test_parse_dunder_hooks_preserves_protocol_names() -> None:
     title: Parse protocol methods without imposing semantic hook rules.
     """
     tree = _parse_module("""class Value:
-  __init__: fn(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     return none
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     return none
-  __inti__: fn(self) -> none:
+  fn __inti__(self) -> none:
     return none
 """)
     declaration = tree.block[0]
@@ -78,7 +78,8 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: Shape
               summary: Declares one abstract area protocol for shape types.
               ```
-              area: public :: fn(self) -> int32:
+              @[public]
+              fn area(self) -> int32:
                 ```
                 title: area
                 summary: >-
@@ -93,7 +94,8 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               ```
               value: public var :: int32 = 41
 
-              read_seed: protected :: fn(self) -> int32:
+              @[protected]
+              fn read_seed(self) -> int32:
                 ```
                 title: read_seed
                 summary: Returns the inherited seed value.
@@ -109,21 +111,24 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
 
               internal: private var :: int32 = 5
 
-              internal_total: protected :: fn(self) -> int32:
+              @[protected]
+              fn internal_total(self) -> int32:
                 ```
                 title: internal_total
                 summary: Combines private and inherited counter state.
                 ```
                 return self.internal + self.value
 
-              get: public :: fn(self) -> int32:
+              @[public]
+              fn get(self) -> int32:
                 ```
                 title: get
                 summary: Returns the inherited public counter value.
                 ```
                 return self.value
 
-              read_internal: public :: fn(self) -> int32:
+              @[public]
+              fn read_internal(self) -> int32:
                 ```
                 title: read_internal
                 summary: Exposes the protected internal helper result.
@@ -135,28 +140,30 @@ def test_parse_complex_class_module_with_irx_class_nodes() -> None:
               title: CounterFactory
               summary: Builds counters and exposes static metadata.
               ```
-              make: public static :: fn() -> Counter:
+              @[public, static]
+              fn make() -> Counter:
                 ```
                 title: make
                 summary: Constructs one default Counter instance.
                 ```
                 return Counter()
 
-              version_value: public static :: fn() -> int32:
+              @[public, static]
+              fn version_value() -> int32:
                 ```
                 title: version_value
                 summary: Returns the static Counter version constant.
                 ```
                 return Counter.version
 
-            take_counter: fn(counter: Counter) -> int32:
+            fn take_counter(counter: Counter) -> int32:
               ```
               title: take_counter
               summary: Combines method and attribute access on one counter.
               ```
               return counter.get() + counter.value + counter.read_internal()
 
-            main: fn() -> int32:
+            fn main() -> int32:
               ```
               title: main
               summary: Exercises class construction and static member access.
@@ -395,7 +402,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
 
               value: int32 = 0
 
-            main: fn() -> int32:
+            fn main() -> int32:
               ```
               title: main
               summary: Checks that visible locals shadow class expressions.
@@ -541,7 +548,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one non-abstract method missing a body.
                   ```
-                  area: fn(self) -> float64
+                  fn area(self) -> float64
                 """
             ).lstrip(),
             "method declaration without a body requires "
@@ -556,7 +563,8 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   summary: >-
                     Holds one abstract method with an invalid statement body.
                   ```
-                  area: abstract :: fn(self) -> float64:
+                  @[abstract]
+                  fn area(self) -> float64:
                     ```
                     title: area
                     summary: >-
@@ -575,7 +583,8 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   title: Bad
                   summary: Holds one invalid static helper method declaration.
                   ```
-                  helper: static :: fn(self) -> int32:
+                  @[static]
+                  fn helper(self) -> int32:
                     ```
                     title: helper
                     summary: Returns one constant while violating static rules.
@@ -595,7 +604,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
                   ```
                   value: int32 = 0
 
-                main: fn() -> int32:
+                fn main() -> int32:
                   ```
                   title: main
                   summary: Triggers one invalid class-construction call.
@@ -609,7 +618,7 @@ def test_parse_visible_local_names_shadow_class_expressions() -> None:
         (
             dedent(
                 """
-                main: fn() -> int32:
+                fn main() -> int32:
                   ```
                   title: main
                   summary: Triggers one missing-type parser error.

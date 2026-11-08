@@ -3,78 +3,78 @@ title: Apache Arrow interoperability
 summary: RecordBatches, schemas, IPC, TCP and C Data interoperability.
 ```
 
-irx_rb_api_schema_new: extern :: fn() -> ArrowSchemaHandle
-irx_rb_api_batch_new: extern :: fn() -> ArrowBatchHandle
-irx_rb_api_reader_new: extern :: fn() -> ArrowReaderHandle
-irx_rb_api_builder_new: extern :: fn(schema: ArrowSchemaHandle) -> ArrowBuilderHandle
-irx_rb_api_writer_new: extern :: fn(schema: ArrowSchemaHandle) -> ArrowWriterHandle
-irx_rb_api_schema_destroy: extern :: fn(box: ArrowSchemaHandle) -> none
-irx_rb_api_schema_close: extern :: fn(box: ArrowSchemaHandle) -> none
-irx_rb_api_batch_destroy: extern :: fn(box: ArrowBatchHandle) -> none
-irx_rb_api_batch_close: extern :: fn(box: ArrowBatchHandle) -> none
-irx_rb_api_builder_destroy: extern :: fn(box: ArrowBuilderHandle) -> none
-irx_rb_api_builder_close: extern :: fn(box: ArrowBuilderHandle) -> none
-irx_rb_api_reader_destroy: extern :: fn(box: ArrowReaderHandle) -> none
-irx_rb_api_reader_close: extern :: fn(box: ArrowReaderHandle) -> none
-irx_rb_api_writer_destroy: extern :: fn(box: ArrowWriterHandle) -> none
-irx_rb_api_writer_close: extern :: fn(box: ArrowWriterHandle) -> none
-irx_rb_api_schema_add_name: extern :: fn(box: ArrowSchemaHandle, name: str, type: str, nullable: i32) -> none
-irx_rb_api_schema_count: extern :: fn(box: ArrowSchemaHandle) -> i32
-irx_rb_api_schema_name: extern :: fn(box: ArrowSchemaHandle, col: i32) -> str
-irx_rb_api_schema_type: extern :: fn(box: ArrowSchemaHandle, col: i32) -> i32
-irx_rb_api_schema_nullable: extern :: fn(box: ArrowSchemaHandle, col: i32) -> i32
-irx_rb_api_schema_type_name: extern :: fn(box: ArrowSchemaHandle, col: i32) -> str
-irx_rb_api_schema_equal: extern :: fn(box: ArrowSchemaHandle, other: ArrowSchemaHandle) -> i32
-irx_rb_api_builder_finish: extern :: fn(box: ArrowBuilderHandle, out: ArrowBatchHandle) -> none
-irx_rb_api_batch_rows: extern :: fn(box: ArrowBatchHandle) -> i64
-irx_rb_api_batch_columns: extern :: fn(box: ArrowBatchHandle) -> i32
-irx_rb_api_batch_schema: extern :: fn(box: ArrowBatchHandle, out: ArrowSchemaHandle) -> none
-irx_rb_api_batch_null: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i32
-irx_rb_api_append_u8: extern :: fn(box: ArrowBuilderHandle, col: i32, value: u8) -> none
-irx_rb_api_get_u8: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> u8
-irx_rb_api_append_u16: extern :: fn(box: ArrowBuilderHandle, col: i32, value: u16) -> none
-irx_rb_api_get_u16: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> u16
-irx_rb_api_append_u32: extern :: fn(box: ArrowBuilderHandle, col: i32, value: u32) -> none
-irx_rb_api_get_u32: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> u32
-irx_rb_api_append_u64: extern :: fn(box: ArrowBuilderHandle, col: i32, value: u64) -> none
-irx_rb_api_get_u64: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> u64
-irx_rb_api_append_i8: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i8) -> none
-irx_rb_api_get_i8: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i8
-irx_rb_api_append_i16: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i16) -> none
-irx_rb_api_get_i16: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i16
-irx_rb_api_append_i32: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i32) -> none
-irx_rb_api_get_i32: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i32
-irx_rb_api_append_i64: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i64) -> none
-irx_rb_api_get_i64: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i64
-irx_rb_api_append_f32: extern :: fn(box: ArrowBuilderHandle, col: i32, value: f32) -> none
-irx_rb_api_get_f32: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> f32
-irx_rb_api_append_f64: extern :: fn(box: ArrowBuilderHandle, col: i32, value: f64) -> none
-irx_rb_api_get_f64: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> f64
-irx_rb_api_append_bool: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i32) -> none
-irx_rb_api_get_bool: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i32
-irx_rb_api_append_date: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i64) -> none
-irx_rb_api_get_date: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i64
-irx_rb_api_append_timestamp: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i64) -> none
-irx_rb_api_get_timestamp: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i64
-irx_rb_api_append_time: extern :: fn(box: ArrowBuilderHandle, col: i32, value: i64) -> none
-irx_rb_api_get_time: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> i64
-irx_rb_api_append_utf8: extern :: fn(box: ArrowBuilderHandle, col: i32, value: str) -> none
-irx_rb_api_get_utf8: extern :: fn(box: ArrowBatchHandle, col: i32, row: i64) -> str
-irx_rb_api_append_null: extern :: fn(box: ArrowBuilderHandle, col: i32) -> none
-irx_rb_api_reader_file: extern :: fn(box: ArrowReaderHandle, path: str) -> none
-irx_rb_api_reader_stream: extern :: fn(box: ArrowReaderHandle, path: str) -> none
-irx_rb_api_reader_tcp: extern :: fn(box: ArrowReaderHandle, host: str, port: i32, timeout: i32) -> none
-irx_rb_api_writer_file: extern :: fn(box: ArrowWriterHandle, path: str) -> none
-irx_rb_api_writer_stream: extern :: fn(box: ArrowWriterHandle, path: str) -> none
-irx_rb_api_writer_tcp: extern :: fn(box: ArrowWriterHandle, host: str, port: i32, timeout: i32) -> none
-irx_rb_api_writer_write: extern :: fn(box: ArrowWriterHandle, batch: ArrowBatchHandle) -> none
-irx_rb_api_reader_next: extern :: fn(box: ArrowReaderHandle) -> i32
-irx_rb_api_reader_batch: extern :: fn(box: ArrowReaderHandle, out: ArrowBatchHandle) -> none
-irx_rb_api_reader_schema: extern :: fn(box: ArrowReaderHandle, out: ArrowSchemaHandle) -> none
-irx_rb_api_batch_export_stream: extern :: fn(box: ArrowBatchHandle, address: i64) -> i32
-irx_rb_api_batch_export: extern :: fn(box: ArrowBatchHandle, array: i64, schema: i64) -> i32
-irx_rb_api_batch_import: extern :: fn(box: ArrowBatchHandle, array: i64, schema: i64) -> none
-irx_rb_api_reader_import: extern :: fn(box: ArrowReaderHandle, address: i64) -> none
+extern irx_rb_api_schema_new() -> ArrowSchemaHandle
+extern irx_rb_api_batch_new() -> ArrowBatchHandle
+extern irx_rb_api_reader_new() -> ArrowReaderHandle
+extern irx_rb_api_builder_new(schema: ArrowSchemaHandle) -> ArrowBuilderHandle
+extern irx_rb_api_writer_new(schema: ArrowSchemaHandle) -> ArrowWriterHandle
+extern irx_rb_api_schema_destroy(box: ArrowSchemaHandle) -> none
+extern irx_rb_api_schema_close(box: ArrowSchemaHandle) -> none
+extern irx_rb_api_batch_destroy(box: ArrowBatchHandle) -> none
+extern irx_rb_api_batch_close(box: ArrowBatchHandle) -> none
+extern irx_rb_api_builder_destroy(box: ArrowBuilderHandle) -> none
+extern irx_rb_api_builder_close(box: ArrowBuilderHandle) -> none
+extern irx_rb_api_reader_destroy(box: ArrowReaderHandle) -> none
+extern irx_rb_api_reader_close(box: ArrowReaderHandle) -> none
+extern irx_rb_api_writer_destroy(box: ArrowWriterHandle) -> none
+extern irx_rb_api_writer_close(box: ArrowWriterHandle) -> none
+extern irx_rb_api_schema_add_name(box: ArrowSchemaHandle, name: str, type: str, nullable: i32) -> none
+extern irx_rb_api_schema_count(box: ArrowSchemaHandle) -> i32
+extern irx_rb_api_schema_name(box: ArrowSchemaHandle, col: i32) -> str
+extern irx_rb_api_schema_type(box: ArrowSchemaHandle, col: i32) -> i32
+extern irx_rb_api_schema_nullable(box: ArrowSchemaHandle, col: i32) -> i32
+extern irx_rb_api_schema_type_name(box: ArrowSchemaHandle, col: i32) -> str
+extern irx_rb_api_schema_equal(box: ArrowSchemaHandle, other: ArrowSchemaHandle) -> i32
+extern irx_rb_api_builder_finish(box: ArrowBuilderHandle, out: ArrowBatchHandle) -> none
+extern irx_rb_api_batch_rows(box: ArrowBatchHandle) -> i64
+extern irx_rb_api_batch_columns(box: ArrowBatchHandle) -> i32
+extern irx_rb_api_batch_schema(box: ArrowBatchHandle, out: ArrowSchemaHandle) -> none
+extern irx_rb_api_batch_null(box: ArrowBatchHandle, col: i32, row: i64) -> i32
+extern irx_rb_api_append_u8(box: ArrowBuilderHandle, col: i32, value: u8) -> none
+extern irx_rb_api_get_u8(box: ArrowBatchHandle, col: i32, row: i64) -> u8
+extern irx_rb_api_append_u16(box: ArrowBuilderHandle, col: i32, value: u16) -> none
+extern irx_rb_api_get_u16(box: ArrowBatchHandle, col: i32, row: i64) -> u16
+extern irx_rb_api_append_u32(box: ArrowBuilderHandle, col: i32, value: u32) -> none
+extern irx_rb_api_get_u32(box: ArrowBatchHandle, col: i32, row: i64) -> u32
+extern irx_rb_api_append_u64(box: ArrowBuilderHandle, col: i32, value: u64) -> none
+extern irx_rb_api_get_u64(box: ArrowBatchHandle, col: i32, row: i64) -> u64
+extern irx_rb_api_append_i8(box: ArrowBuilderHandle, col: i32, value: i8) -> none
+extern irx_rb_api_get_i8(box: ArrowBatchHandle, col: i32, row: i64) -> i8
+extern irx_rb_api_append_i16(box: ArrowBuilderHandle, col: i32, value: i16) -> none
+extern irx_rb_api_get_i16(box: ArrowBatchHandle, col: i32, row: i64) -> i16
+extern irx_rb_api_append_i32(box: ArrowBuilderHandle, col: i32, value: i32) -> none
+extern irx_rb_api_get_i32(box: ArrowBatchHandle, col: i32, row: i64) -> i32
+extern irx_rb_api_append_i64(box: ArrowBuilderHandle, col: i32, value: i64) -> none
+extern irx_rb_api_get_i64(box: ArrowBatchHandle, col: i32, row: i64) -> i64
+extern irx_rb_api_append_f32(box: ArrowBuilderHandle, col: i32, value: f32) -> none
+extern irx_rb_api_get_f32(box: ArrowBatchHandle, col: i32, row: i64) -> f32
+extern irx_rb_api_append_f64(box: ArrowBuilderHandle, col: i32, value: f64) -> none
+extern irx_rb_api_get_f64(box: ArrowBatchHandle, col: i32, row: i64) -> f64
+extern irx_rb_api_append_bool(box: ArrowBuilderHandle, col: i32, value: i32) -> none
+extern irx_rb_api_get_bool(box: ArrowBatchHandle, col: i32, row: i64) -> i32
+extern irx_rb_api_append_date(box: ArrowBuilderHandle, col: i32, value: i64) -> none
+extern irx_rb_api_get_date(box: ArrowBatchHandle, col: i32, row: i64) -> i64
+extern irx_rb_api_append_timestamp(box: ArrowBuilderHandle, col: i32, value: i64) -> none
+extern irx_rb_api_get_timestamp(box: ArrowBatchHandle, col: i32, row: i64) -> i64
+extern irx_rb_api_append_time(box: ArrowBuilderHandle, col: i32, value: i64) -> none
+extern irx_rb_api_get_time(box: ArrowBatchHandle, col: i32, row: i64) -> i64
+extern irx_rb_api_append_utf8(box: ArrowBuilderHandle, col: i32, value: str) -> none
+extern irx_rb_api_get_utf8(box: ArrowBatchHandle, col: i32, row: i64) -> str
+extern irx_rb_api_append_null(box: ArrowBuilderHandle, col: i32) -> none
+extern irx_rb_api_reader_file(box: ArrowReaderHandle, path: str) -> none
+extern irx_rb_api_reader_stream(box: ArrowReaderHandle, path: str) -> none
+extern irx_rb_api_reader_tcp(box: ArrowReaderHandle, host: str, port: i32, timeout: i32) -> none
+extern irx_rb_api_writer_file(box: ArrowWriterHandle, path: str) -> none
+extern irx_rb_api_writer_stream(box: ArrowWriterHandle, path: str) -> none
+extern irx_rb_api_writer_tcp(box: ArrowWriterHandle, host: str, port: i32, timeout: i32) -> none
+extern irx_rb_api_writer_write(box: ArrowWriterHandle, batch: ArrowBatchHandle) -> none
+extern irx_rb_api_reader_next(box: ArrowReaderHandle) -> i32
+extern irx_rb_api_reader_batch(box: ArrowReaderHandle, out: ArrowBatchHandle) -> none
+extern irx_rb_api_reader_schema(box: ArrowReaderHandle, out: ArrowSchemaHandle) -> none
+extern irx_rb_api_batch_export_stream(box: ArrowBatchHandle, address: i64) -> i32
+extern irx_rb_api_batch_export(box: ArrowBatchHandle, array: i64, schema: i64) -> i32
+extern irx_rb_api_batch_import(box: ArrowBatchHandle, array: i64, schema: i64) -> none
+extern irx_rb_api_reader_import(box: ArrowReaderHandle, address: i64) -> none
 
 class Schema:
   ```
@@ -83,7 +83,7 @@ class Schema:
   ```
   handle: private :: ArrowSchemaHandle
 
-  __init__: fn(self) -> none:
+  fn __init__(self) -> none:
     ```
     title: __init__
     summary: Creates one native owner.
@@ -91,7 +91,7 @@ class Schema:
     self.handle = irx_rb_api_schema_new()
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the native box at the last class reference.
@@ -99,7 +99,7 @@ class Schema:
     irx_rb_api_schema_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Releases native resources idempotently; aliases observe closure.
@@ -107,14 +107,14 @@ class Schema:
     irx_rb_api_schema_close(self.handle)
     return none
 
-  native_handle: fn(self) -> ArrowSchemaHandle:
+  fn native_handle(self) -> ArrowSchemaHandle:
     ```
     title: native_handle
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
 
-  add: fn(self, name: str, type_name: str, nullable: bool = false) -> none:
+  fn add(self, name: str, type_name: str, nullable: bool = false) -> none:
     ```
     title: add
     summary: Adds a field using a checked Arrow scalar type name.
@@ -122,42 +122,42 @@ class Schema:
     irx_rb_api_schema_add_name(self.handle, name, type_name, cast(nullable, i32))
     return none
 
-  nfields: fn(self) -> i32:
+  fn nfields(self) -> i32:
     ```
     title: nfields
     summary: Returns the field count.
     ```
     return irx_rb_api_schema_count(self.handle)
 
-  name: fn(self, col: i32) -> str:
+  fn name(self, col: i32) -> str:
     ```
     title: name
     summary: Inspects one field without erasing Arrow type information.
     ```
     return irx_rb_api_schema_name(self.handle, col)
 
-  type: fn(self, col: i32) -> i32:
+  fn type(self, col: i32) -> i32:
     ```
     title: type
     summary: Inspects one field without erasing Arrow type information.
     ```
     return irx_rb_api_schema_type(self.handle, col)
 
-  type_name: fn(self, col: i32) -> str:
+  fn type_name(self, col: i32) -> str:
     ```
     title: type_name
     summary: Inspects one field without erasing Arrow type information.
     ```
     return irx_rb_api_schema_type_name(self.handle, col)
 
-  nullable: fn(self, col: i32) -> bool:
+  fn nullable(self, col: i32) -> bool:
     ```
     title: nullable
     summary: Returns whether the schema permits null values.
     ```
     return irx_rb_api_schema_nullable(self.handle, col) != 0
 
-  equals: fn(self, other: Schema) -> bool:
+  fn equals(self, other: Schema) -> bool:
     ```
     title: equals
     summary: Compares names, types, nullability and metadata exactly.
@@ -172,7 +172,7 @@ class RecordBatch:
   ```
   handle: private :: ArrowBatchHandle
 
-  __init__: fn(self) -> none:
+  fn __init__(self) -> none:
     ```
     title: __init__
     summary: Creates one native owner.
@@ -180,7 +180,7 @@ class RecordBatch:
     self.handle = irx_rb_api_batch_new()
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the native box at the last class reference.
@@ -188,7 +188,7 @@ class RecordBatch:
     irx_rb_api_batch_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Releases native resources idempotently; aliases observe closure.
@@ -196,28 +196,28 @@ class RecordBatch:
     irx_rb_api_batch_close(self.handle)
     return none
 
-  native_handle: fn(self) -> ArrowBatchHandle:
+  fn native_handle(self) -> ArrowBatchHandle:
     ```
     title: native_handle
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
 
-  nrows: fn(self) -> i64:
+  fn nrows(self) -> i64:
     ```
     title: nrows
     summary: Returns the row count.
     ```
     return irx_rb_api_batch_rows(self.handle)
 
-  ncols: fn(self) -> i32:
+  fn ncols(self) -> i32:
     ```
     title: ncols
     summary: Returns the column count.
     ```
     return irx_rb_api_batch_columns(self.handle)
 
-  schema: fn(self) -> Schema:
+  fn schema(self) -> Schema:
     ```
     title: schema
     summary: Returns an independently owned schema snapshot.
@@ -226,129 +226,129 @@ class RecordBatch:
     irx_rb_api_batch_schema(self.handle, result.native_handle())
     return result
 
-  is_null: fn(self, col: i32, row: i64) -> bool:
+  fn is_null(self, col: i32, row: i64) -> bool:
     ```
     title: is_null
     summary: Checks validity before using a typed getter.
     ```
     return irx_rb_api_batch_null(self.handle, col, row) != 0
 
-  get_u8: fn(self, col: i32, row: i64) -> u8:
+  fn get_u8(self, col: i32, row: i64) -> u8:
     ```
     title: Read an unsigned 8-bit value; reject null slots.
     ```
     return irx_rb_api_get_u8(self.handle, col, row)
 
-  get_u16: fn(self, col: i32, row: i64) -> u16:
+  fn get_u16(self, col: i32, row: i64) -> u16:
     ```
     title: Read an unsigned 16-bit value; reject null slots.
     ```
     return irx_rb_api_get_u16(self.handle, col, row)
 
-  get_u32: fn(self, col: i32, row: i64) -> u32:
+  fn get_u32(self, col: i32, row: i64) -> u32:
     ```
     title: Read an unsigned 32-bit value; reject null slots.
     ```
     return irx_rb_api_get_u32(self.handle, col, row)
 
-  get_u64: fn(self, col: i32, row: i64) -> u64:
+  fn get_u64(self, col: i32, row: i64) -> u64:
     ```
     title: Read an unsigned 64-bit value; reject null slots.
     ```
     return irx_rb_api_get_u64(self.handle, col, row)
 
-  get_i8: fn(self, col: i32, row: i64) -> i8:
+  fn get_i8(self, col: i32, row: i64) -> i8:
     ```
     title: get_i8
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_i8(self.handle, col, row)
 
-  get_i16: fn(self, col: i32, row: i64) -> i16:
+  fn get_i16(self, col: i32, row: i64) -> i16:
     ```
     title: get_i16
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_i16(self.handle, col, row)
 
-  get_i32: fn(self, col: i32, row: i64) -> i32:
+  fn get_i32(self, col: i32, row: i64) -> i32:
     ```
     title: get_i32
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_i32(self.handle, col, row)
 
-  get_i64: fn(self, col: i32, row: i64) -> i64:
+  fn get_i64(self, col: i32, row: i64) -> i64:
     ```
     title: get_i64
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_i64(self.handle, col, row)
 
-  get_f32: fn(self, col: i32, row: i64) -> f32:
+  fn get_f32(self, col: i32, row: i64) -> f32:
     ```
     title: get_f32
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_f32(self.handle, col, row)
 
-  get_f64: fn(self, col: i32, row: i64) -> f64:
+  fn get_f64(self, col: i32, row: i64) -> f64:
     ```
     title: get_f64
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_f64(self.handle, col, row)
 
-  get_bool: fn(self, col: i32, row: i64) -> bool:
+  fn get_bool(self, col: i32, row: i64) -> bool:
     ```
     title: get_bool
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_bool(self.handle, col, row) != 0
 
-  get_date: fn(self, col: i32, row: i64) -> i64:
+  fn get_date(self, col: i32, row: i64) -> i64:
     ```
     title: get_date
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_date(self.handle, col, row)
 
-  get_timestamp: fn(self, col: i32, row: i64) -> i64:
+  fn get_timestamp(self, col: i32, row: i64) -> i64:
     ```
     title: get_timestamp
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_timestamp(self.handle, col, row)
 
-  get_time: fn(self, col: i32, row: i64) -> i64:
+  fn get_time(self, col: i32, row: i64) -> i64:
     ```
     title: get_time
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_time(self.handle, col, row)
 
-  get_utf8: fn(self, col: i32, row: i64) -> str:
+  fn get_utf8(self, col: i32, row: i64) -> str:
     ```
     title: get_utf8
     summary: Reads a non-null value with a checked Arrow type and bounds.
     ```
     return irx_rb_api_get_utf8(self.handle, col, row)
 
-  export_stream: fn(self, address: i64) -> i32:
+  fn export_stream(self, address: i64) -> i32:
     ```
     title: export_stream
     summary: Exports to a caller-owned ArrowArrayStream address; returns native status.
     ```
     return irx_rb_api_batch_export_stream(self.handle, address)
 
-  export_c: fn(self, array: i64, schema: i64) -> i32:
+  fn export_c(self, array: i64, schema: i64) -> i32:
     ```
     title: export_c
     summary: Exports to caller-owned C Data structs; returns native status.
     ```
     return irx_rb_api_batch_export(self.handle, array, schema)
 
-  import_c: fn(self, array: i64, schema: i64) -> none:
+  fn import_c(self, array: i64, schema: i64) -> none:
     ```
     title: import_c
     summary: Moves C Data from trusted addresses into this batch.
@@ -364,7 +364,7 @@ class BatchBuilder:
   ```
   handle: private :: ArrowBuilderHandle
 
-  __init__: fn(self, schema: Schema) -> none:
+  fn __init__(self, schema: Schema) -> none:
     ```
     title: __init__
     summary: Creates one native owner.
@@ -372,7 +372,7 @@ class BatchBuilder:
     self.handle = irx_rb_api_builder_new(schema.native_handle())
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the native box at the last class reference.
@@ -380,7 +380,7 @@ class BatchBuilder:
     irx_rb_api_builder_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Releases native resources idempotently; aliases observe closure.
@@ -388,42 +388,42 @@ class BatchBuilder:
     irx_rb_api_builder_close(self.handle)
     return none
 
-  native_handle: fn(self) -> ArrowBuilderHandle:
+  fn native_handle(self) -> ArrowBuilderHandle:
     ```
     title: native_handle
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
 
-  append_u8: fn(self, col: i32, value: u8) -> none:
+  fn append_u8(self, col: i32, value: u8) -> none:
     ```
     title: Append an unsigned 8-bit value without signed narrowing.
     ```
     irx_rb_api_append_u8(self.handle, col, value)
     return none
 
-  append_u16: fn(self, col: i32, value: u16) -> none:
+  fn append_u16(self, col: i32, value: u16) -> none:
     ```
     title: Append an unsigned 16-bit value without signed narrowing.
     ```
     irx_rb_api_append_u16(self.handle, col, value)
     return none
 
-  append_u32: fn(self, col: i32, value: u32) -> none:
+  fn append_u32(self, col: i32, value: u32) -> none:
     ```
     title: Append an unsigned 32-bit value without signed narrowing.
     ```
     irx_rb_api_append_u32(self.handle, col, value)
     return none
 
-  append_u64: fn(self, col: i32, value: u64) -> none:
+  fn append_u64(self, col: i32, value: u64) -> none:
     ```
     title: Append an unsigned 64-bit value without signed narrowing.
     ```
     irx_rb_api_append_u64(self.handle, col, value)
     return none
 
-  append_i8: fn(self, col: i32, value: i8) -> none:
+  fn append_i8(self, col: i32, value: i8) -> none:
     ```
     title: append_i8
     summary: Appends a value with exact Arrow type validation.
@@ -431,7 +431,7 @@ class BatchBuilder:
     irx_rb_api_append_i8(self.handle, col, value)
     return none
 
-  append_i16: fn(self, col: i32, value: i16) -> none:
+  fn append_i16(self, col: i32, value: i16) -> none:
     ```
     title: append_i16
     summary: Appends a value with exact Arrow type validation.
@@ -439,7 +439,7 @@ class BatchBuilder:
     irx_rb_api_append_i16(self.handle, col, value)
     return none
 
-  append_i32: fn(self, col: i32, value: i32) -> none:
+  fn append_i32(self, col: i32, value: i32) -> none:
     ```
     title: append_i32
     summary: Appends a value with exact Arrow type validation.
@@ -447,7 +447,7 @@ class BatchBuilder:
     irx_rb_api_append_i32(self.handle, col, value)
     return none
 
-  append_i64: fn(self, col: i32, value: i64) -> none:
+  fn append_i64(self, col: i32, value: i64) -> none:
     ```
     title: append_i64
     summary: Appends a value with exact Arrow type validation.
@@ -455,7 +455,7 @@ class BatchBuilder:
     irx_rb_api_append_i64(self.handle, col, value)
     return none
 
-  append_f32: fn(self, col: i32, value: f32) -> none:
+  fn append_f32(self, col: i32, value: f32) -> none:
     ```
     title: append_f32
     summary: Appends a value with exact Arrow type validation.
@@ -463,7 +463,7 @@ class BatchBuilder:
     irx_rb_api_append_f32(self.handle, col, value)
     return none
 
-  append_f64: fn(self, col: i32, value: f64) -> none:
+  fn append_f64(self, col: i32, value: f64) -> none:
     ```
     title: append_f64
     summary: Appends a value with exact Arrow type validation.
@@ -471,7 +471,7 @@ class BatchBuilder:
     irx_rb_api_append_f64(self.handle, col, value)
     return none
 
-  append_bool: fn(self, col: i32, value: bool) -> none:
+  fn append_bool(self, col: i32, value: bool) -> none:
     ```
     title: append_bool
     summary: Appends a value with exact Arrow type validation.
@@ -479,7 +479,7 @@ class BatchBuilder:
     irx_rb_api_append_bool(self.handle, col, cast(value, i32))
     return none
 
-  append_date: fn(self, col: i32, value: i64) -> none:
+  fn append_date(self, col: i32, value: i64) -> none:
     ```
     title: append_date
     summary: Appends a value with exact Arrow type validation.
@@ -487,7 +487,7 @@ class BatchBuilder:
     irx_rb_api_append_date(self.handle, col, value)
     return none
 
-  append_timestamp: fn(self, col: i32, value: i64) -> none:
+  fn append_timestamp(self, col: i32, value: i64) -> none:
     ```
     title: append_timestamp
     summary: Appends a value with exact Arrow type validation.
@@ -495,7 +495,7 @@ class BatchBuilder:
     irx_rb_api_append_timestamp(self.handle, col, value)
     return none
 
-  append_time: fn(self, col: i32, value: i64) -> none:
+  fn append_time(self, col: i32, value: i64) -> none:
     ```
     title: append_time
     summary: Appends a value with exact Arrow type validation.
@@ -503,7 +503,7 @@ class BatchBuilder:
     irx_rb_api_append_time(self.handle, col, value)
     return none
 
-  append_utf8: fn(self, col: i32, value: str) -> none:
+  fn append_utf8(self, col: i32, value: str) -> none:
     ```
     title: append_utf8
     summary: Appends a value with exact Arrow type validation.
@@ -511,7 +511,7 @@ class BatchBuilder:
     irx_rb_api_append_utf8(self.handle, col, value)
     return none
 
-  append_null: fn(self, col: i32) -> none:
+  fn append_null(self, col: i32) -> none:
     ```
     title: append_null
     summary: Appends null only to a nullable field.
@@ -519,7 +519,7 @@ class BatchBuilder:
     irx_rb_api_append_null(self.handle, col)
     return none
 
-  finish: fn(self) -> RecordBatch:
+  fn finish(self) -> RecordBatch:
     ```
     title: finish
     summary: Finishes equal-length columns and resets the builder for reuse.
@@ -529,9 +529,9 @@ class BatchBuilder:
     return result
 
 
-irx_rb_api_reader_csv: extern :: fn(box: ArrowReaderHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
-irx_rb_api_reader_csv_as: extern :: fn(box: ArrowReaderHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
-irx_rb_api_writer_csv: extern :: fn(box: ArrowWriterHandle, path: str, delimiter: str, header: i32) -> none
+extern irx_rb_api_reader_csv(box: ArrowReaderHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_reader_csv_as(box: ArrowReaderHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_writer_csv(box: ArrowWriterHandle, path: str, delimiter: str, header: i32) -> none
 
 class IPCReader:
   ```
@@ -540,7 +540,7 @@ class IPCReader:
   ```
   handle: private :: ArrowReaderHandle
 
-  __init__: fn(self) -> none:
+  fn __init__(self) -> none:
     ```
     title: __init__
     summary: Creates one native owner.
@@ -548,7 +548,7 @@ class IPCReader:
     self.handle = irx_rb_api_reader_new()
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the native box at the last class reference.
@@ -556,7 +556,7 @@ class IPCReader:
     irx_rb_api_reader_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Releases native resources idempotently; aliases observe closure.
@@ -564,14 +564,14 @@ class IPCReader:
     irx_rb_api_reader_close(self.handle)
     return none
 
-  native_handle: fn(self) -> ArrowReaderHandle:
+  fn native_handle(self) -> ArrowReaderHandle:
     ```
     title: native_handle
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
 
-  open_file: fn(self, path: str) -> none:
+  fn open_file(self, path: str) -> none:
     ```
     title: open_file
     summary: Opens Arrow IPC file format at a filesystem path.
@@ -579,7 +579,7 @@ class IPCReader:
     irx_rb_api_reader_file(self.handle, path)
     return none
 
-  open_stream: fn(self, path: str) -> none:
+  fn open_stream(self, path: str) -> none:
     ```
     title: open_stream
     summary: Opens Arrow IPC stream format at a filesystem path.
@@ -587,7 +587,7 @@ class IPCReader:
     irx_rb_api_reader_stream(self.handle, path)
     return none
 
-  connect: fn(self, host: str, port: i32, timeout_ms: i32 = 30000) -> none:
+  fn connect(self, host: str, port: i32, timeout_ms: i32 = 30000) -> none:
     ```
     title: connect
     summary: Connects to a numeric IP address for IPC streaming over TCP.
@@ -595,14 +595,14 @@ class IPCReader:
     irx_rb_api_reader_tcp(self.handle, host, port, timeout_ms)
     return none
 
-  next: fn(self) -> bool:
+  fn next(self) -> bool:
     ```
     title: next
     summary: Advances one batch; false means an orderly end, not an empty batch.
     ```
     return irx_rb_api_reader_next(self.handle) == 0
 
-  batch: fn(self) -> RecordBatch:
+  fn batch(self) -> RecordBatch:
     ```
     title: batch
     summary: Returns an independently owned snapshot.
@@ -611,7 +611,7 @@ class IPCReader:
     irx_rb_api_reader_batch(self.handle, result.native_handle())
     return result
 
-  schema: fn(self) -> Schema:
+  fn schema(self) -> Schema:
     ```
     title: schema
     summary: Returns an independently owned snapshot.
@@ -620,7 +620,7 @@ class IPCReader:
     irx_rb_api_reader_schema(self.handle, result.native_handle())
     return result
 
-  import_stream: fn(self, address: i64) -> none:
+  fn import_stream(self, address: i64) -> none:
     ```
     title: import_stream
     summary: Moves a caller-provided ArrowArrayStream into this reader.
@@ -636,7 +636,7 @@ class IPCWriter:
   ```
   handle: private :: ArrowWriterHandle
 
-  __init__: fn(self, schema: Schema) -> none:
+  fn __init__(self, schema: Schema) -> none:
     ```
     title: __init__
     summary: Creates one native owner.
@@ -644,7 +644,7 @@ class IPCWriter:
     self.handle = irx_rb_api_writer_new(schema.native_handle())
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the native box at the last class reference.
@@ -652,7 +652,7 @@ class IPCWriter:
     irx_rb_api_writer_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Releases native resources idempotently; aliases observe closure.
@@ -660,14 +660,14 @@ class IPCWriter:
     irx_rb_api_writer_close(self.handle)
     return none
 
-  native_handle: fn(self) -> ArrowWriterHandle:
+  fn native_handle(self) -> ArrowWriterHandle:
     ```
     title: native_handle
     summary: Borrows the opaque handle for trusted native integrations only.
     ```
     return self.handle
 
-  open_file: fn(self, path: str) -> none:
+  fn open_file(self, path: str) -> none:
     ```
     title: open_file
     summary: Opens Arrow IPC file format at a filesystem path.
@@ -675,7 +675,7 @@ class IPCWriter:
     irx_rb_api_writer_file(self.handle, path)
     return none
 
-  open_stream: fn(self, path: str) -> none:
+  fn open_stream(self, path: str) -> none:
     ```
     title: open_stream
     summary: Opens Arrow IPC stream format at a filesystem path.
@@ -683,7 +683,7 @@ class IPCWriter:
     irx_rb_api_writer_stream(self.handle, path)
     return none
 
-  connect: fn(self, host: str, port: i32, timeout_ms: i32 = 30000) -> none:
+  fn connect(self, host: str, port: i32, timeout_ms: i32 = 30000) -> none:
     ```
     title: connect
     summary: Connects to a numeric IP address for IPC streaming over TCP.
@@ -691,7 +691,7 @@ class IPCWriter:
     irx_rb_api_writer_tcp(self.handle, host, port, timeout_ms)
     return none
 
-  write: fn(self, batch: RecordBatch) -> none:
+  fn write(self, batch: RecordBatch) -> none:
     ```
     title: write
     summary: Writes one batch with exact schema validation.

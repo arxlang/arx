@@ -30,8 +30,8 @@ FUZZ_ALPHABET = (
 )
 FUZZ_SEEDS = (
     "",
-    "main: fn() -> i32:\n  return 0\n",
-    "add: fn(a: i32, b: i32) -> i32:\n  return a + b\n",
+    "fn main() -> i32:\n  return 0\n",
+    "fn add(a: i32, b: i32) -> i32:\n  return a + b\n",
     "if true:\n  x: i32 = 1\nelse:\n  x: i32 = 2\n",
     "class Point:\n  x: i32\n  y: i32\n",
     "import std.math\n",

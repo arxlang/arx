@@ -3,7 +3,7 @@ title: Bounded binary file IO without text conversion
 summary: Creates binary-output.dat, replacing any existing content.
 ```
 
-read_prefix: fn(path: str, size: i64) -> bytes:
+fn read_prefix(path: str, size: i64) -> bytes:
   ```
   title: Return owned bytes that outlive the local File.
   ```
@@ -11,7 +11,7 @@ read_prefix: fn(path: str, size: i64) -> bytes:
   data: bytes = source.read_bytes(size)
   return data
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Round-trip every byte, then append an independent copy.
   ```

@@ -39,10 +39,10 @@ def test_compiled_nullable_file_conversion(tmp_path: Path) -> None:
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import (RecordBatch, Schema) from stdlib.arrow
 
-keep: fn(frame: {FRAME}) -> {FRAME}:
+fn keep(frame: {FRAME}) -> {FRAME}:
   return frame
 
-main: fn() -> i32:
+fn main() -> i32:
   source: ParquetStream = ParquetStream()
   target: ParquetStream = ParquetStream()
   options: ParquetOptions = ParquetOptions()
@@ -110,7 +110,7 @@ def test_compiled_nullable_literal_and_filter(tmp_path: Path) -> None:
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
 type Frame = dataframe[id:i64 | none, label:str | none]
-main: fn() -> i32:
+fn main() -> i32:
   frame: Frame = dataframe({id: [1, none, 3], label: ["a", none, "c"]})
   batch: RecordBatch = cast(frame, RecordBatch)
   target: ParquetStream = ParquetStream()
@@ -158,7 +158,7 @@ def test_compiled_temporal_literals(tmp_path: Path) -> None:
 import ParquetStream from stdlib.parquet
 import RecordBatch from stdlib.arrow
 type Frame = dataframe[day:date | none, clock:time | none, ts:timestamp | none]
-main: fn() -> i32:
+fn main() -> i32:
   frame: Frame = dataframe({
     day: [date("1969-12-31"), none],
     clock: [time("01:02:03"), none],
@@ -200,9 +200,9 @@ def test_compiled_recursive_copy_with_encryption(tmp_path: Path) -> None:
     source = """
 import (ParquetStream, ParquetOptions, where) from stdlib.parquet
 import RecordBatch from stdlib.arrow
-keep_dynamic: fn(frame: dataframe[...]) -> dataframe[...]:
+fn keep_dynamic(frame: dataframe[...]) -> dataframe[...]:
   return frame
-main: fn() -> i32:
+fn main() -> i32:
   reader: ParquetStream = ParquetStream()
   writer: ParquetStream = ParquetStream()
   options: ParquetOptions = ParquetOptions()

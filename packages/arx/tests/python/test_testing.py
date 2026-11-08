@@ -32,7 +32,7 @@ def test_arx_test_runner_parses_ambient_range_in_test_modules(
     entry.write_text(
         dedent(
             """
-            test_range_values: fn() -> none:
+            fn test_range_values() -> none:
               values: list[i32] = range(0, 4)
               value: i32 = values[2]
               assert value == 2, "range(0, 4)[2] should be 2"
@@ -66,7 +66,7 @@ def test_arx_test_runner_lists_matching_tests_across_files(
     (tests_dir / "test_a.x").write_text(
         dedent(
             """
-            test_alpha: fn() -> none:
+            fn test_alpha() -> none:
               return none
             """
         ).lstrip(),
@@ -75,7 +75,7 @@ def test_arx_test_runner_lists_matching_tests_across_files(
     (tests_dir / "test_b.x").write_text(
         dedent(
             """
-            test_beta: fn() -> none:
+            fn test_beta() -> none:
               return none
             """
         ).lstrip(),
@@ -120,11 +120,11 @@ def test_arx_test_runner_honors_exclude_glob(
     tests_dir = tmp_path / "tests"
     tests_dir.mkdir()
     (tests_dir / "test_keep.x").write_text(
-        "test_keep_one: fn() -> none:\n  return none\n",
+        "fn test_keep_one() -> none:\n  return none\n",
         encoding="utf-8",
     )
     (tests_dir / "test_skip.x").write_text(
-        "test_skip_one: fn() -> none:\n  return none\n",
+        "fn test_skip_one() -> none:\n  return none\n",
         encoding="utf-8",
     )
 
@@ -157,10 +157,10 @@ def test_arx_test_runner_honors_custom_patterns(
     (tests_dir / "check_math.x").write_text(
         dedent(
             """
-            check_add: fn() -> none:
+            fn check_add() -> none:
               return none
 
-            ignored: fn() -> none:
+            fn ignored() -> none:
               return none
             """
         ).lstrip(),
@@ -200,11 +200,11 @@ def test_arx_test_runner_uses_path_qualified_names_for_same_stem_files(
     unit_dir.mkdir()
     integration_dir.mkdir()
     (unit_dir / "test_math.x").write_text(
-        "test_add: fn() -> none:\n  return none\n",
+        "fn test_add() -> none:\n  return none\n",
         encoding="utf-8",
     )
     (integration_dir / "test_math.x").write_text(
-        "test_mul: fn() -> none:\n  return none\n",
+        "fn test_mul() -> none:\n  return none\n",
         encoding="utf-8",
     )
 
@@ -241,14 +241,14 @@ def test_arx_test_runner_accepts_none_test_signatures(
     (tests_dir / "test_noneforms.x").write_text(
         dedent(
             """
-            test_no_return: fn() -> none:
+            fn test_no_return() -> none:
               x: i32 = 1
 
-            test_bare_return: fn() -> none:
+            fn test_bare_return() -> none:
               x: i32 = 1
               return
 
-            test_return_none: fn() -> none:
+            fn test_return_none() -> none:
               x: i32 = 1
               return none
             """
@@ -283,7 +283,7 @@ def test_arx_test_runner_rejects_invalid_test_signature(
     entry.write_text(
         dedent(
             """
-            test_bad: fn(value: i32) -> none:
+            fn test_bad(value: i32) -> none:
               return none
             """
         ).lstrip(),
@@ -312,7 +312,7 @@ def test_arx_test_runner_rejects_non_none_return_type(
     entry.write_text(
         dedent(
             """
-            test_bad: fn() -> i32:
+            fn test_bad() -> i32:
               return 0
             """
         ).lstrip(),
@@ -325,7 +325,7 @@ def test_arx_test_runner_rejects_non_none_return_type(
     assert summary.exit_code == 2
     assert "in v1" not in err
     assert "must return none" in err
-    assert "test_bad: fn() -> none:" in err
+    assert "fn test_bad() -> none:" in err
 
 
 def test_arx_test_runner_rejects_module_scope_variable_declarations(
@@ -347,7 +347,7 @@ def test_arx_test_runner_rejects_module_scope_variable_declarations(
             """
             seed: i32 = 1
 
-            test_uses_seed: fn() -> none:
+            fn test_uses_seed() -> none:
               return none
             """
         ).lstrip(),
@@ -378,12 +378,12 @@ def test_arx_test_runner_rejects_module_level_executable_code(
     entry.write_text(
         dedent(
             """
-            helper: fn() -> none:
+            fn helper() -> none:
               return none
 
             helper()
 
-            test_after: fn() -> none:
+            fn test_after() -> none:
               return none
             """
         ).lstrip(),
@@ -413,14 +413,14 @@ def test_arx_test_runner_builds_one_wrapper_per_selected_test(
     entry.write_text(
         dedent(
             """
-            helper: fn() -> i32:
+            fn helper() -> i32:
               return 1
 
-            test_first: fn() -> none:
+            fn test_first() -> none:
               helper()
               return none
 
-            test_second: fn() -> none:
+            fn test_second() -> none:
               helper()
               return none
             """
@@ -536,16 +536,16 @@ def test_arx_test_runner_preserves_supported_shared_declarations(
     entry.write_text(
         dedent(
             """
-            putchard: extern :: fn(value: i32) -> i32
+            extern putchard(value: i32) -> i32
 
-            helper: fn() -> i32:
+            fn helper() -> i32:
               return 1
 
-            test_first: fn() -> none:
+            fn test_first() -> none:
               helper()
               return none
 
-            test_second: fn() -> none:
+            fn test_second() -> none:
               helper()
               return none
             """
@@ -695,7 +695,7 @@ def test_arx_test_runner_supports_package_relative_imports(
     (package_dir / "stats.x").write_text(
         dedent(
             """
-            sum2: fn() -> i32:
+            fn sum2() -> i32:
               return 2
             """
         ).lstrip(),
@@ -706,7 +706,7 @@ def test_arx_test_runner_supports_package_relative_imports(
             """
             import sum2 from .stats
 
-            addtwo: fn() -> i32:
+            fn addtwo() -> i32:
               return sum2()
             """
         ).lstrip(),
@@ -717,7 +717,7 @@ def test_arx_test_runner_supports_package_relative_imports(
             """
             import addtwo from samplepkg.core
 
-            test_addtwo: fn() -> none:
+            fn test_addtwo() -> none:
               addtwo()
               return none
             """
@@ -830,7 +830,7 @@ def test_arx_test_runner_reports_machine_readable_failures(
     entry.write_text(
         dedent(
             """
-            test_fail: fn() -> none:
+            fn test_fail() -> none:
               return none
             """
         ).lstrip(),
@@ -930,14 +930,14 @@ def test_arx_test_runner_end_to_end_with_assertions(
     entry.write_text(
         dedent(
             r"""
-            helper: fn(value: i32) -> i32:
+            fn helper(value: i32) -> i32:
               return value
 
-            test_pass: fn() -> none:
+            fn test_pass() -> none:
               assert helper(1) == 1
               return none
 
-            test_fail: fn() -> none:
+            fn test_fail() -> none:
               assert helper(2) == 3, "bad\nmessage|with pipe\\slash"
               return none
             """

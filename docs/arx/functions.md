@@ -1,9 +1,10 @@
 # Functions
 
-Functions use `name: fn(parameters) -> return_type:` followed by an indented
-body. The name may explicitly use `const ::` before `fn`; it is not a rebindable
-function value. Parameters default to `var` and can use `name: const :: T` to
-prevent callee-side reassignment without restricting the caller's binding.
+Functions retain `fn name(parameters) -> return_type:` followed by an indented
+body. Declaration modifiers apply to parameters, not to the function name:
+`fn distance(record: const :: str) -> i64:`. Parameters default to `var`; an
+explicit `const` prevents callee-side rebinding without restricting the caller's
+binding or freezing a referenced object.
 
 ## Definition Syntax
 
@@ -12,7 +13,7 @@ prevent callee-side reassignment without restricting the caller's binding.
 title: Function definition
 summary: Shows the structure of a function declaration.
 ```
-add: fn(x: i32, y: i32) -> i32:
+fn add(x: i32, y: i32) -> i32:
   ```
   title: add
   summary: Returns x plus y.
@@ -27,14 +28,14 @@ add: fn(x: i32, y: i32) -> i32:
 title: Function call example
 summary: Defines a helper function and calls it from main.
 ```
-double: fn(v: i32) -> i32:
+fn double(v: i32) -> i32:
   ```
   title: double
   summary: Returns v multiplied by two.
   ```
   return v * 2
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Calls double with a constant input.
@@ -89,14 +90,14 @@ later parameter is supplied by name.
 title: Default argument example
 summary: Calls a helper using an optional offset.
 ```
-add_offset: fn(value: i32, offset: i32 = 1) -> i32:
+fn add_offset(value: i32, offset: i32 = 1) -> i32:
   ```
   title: add_offset
   summary: Adds an optional offset to value.
   ```
   return value + offset
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Uses the declared default offset.
@@ -123,14 +124,14 @@ type Float = f32 | f64
 type Real = SignedInteger | Float
 
 @<T: Real>
-add: fn(x: T, y: T) -> T:
+fn add(x: T, y: T) -> T:
   ```
   title: add
   summary: Adds two values that share one template-bound type.
   ```
   return x + y
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Calls template specializations through inference and explicit args.
@@ -160,7 +161,7 @@ Example:
 title: Function docstring placement
 summary: Function docstring appears as the first body element.
 ```
-add: fn(x: i32, y: i32) -> i32:
+fn add(x: i32, y: i32) -> i32:
   ```
   title: Add two numbers
   summary: Returns x + y.
@@ -181,7 +182,7 @@ the compiler does not infer a native dependency from a function's name.
 title: Extern prototype example
 summary: Declares an external function signature.
 ```
-putchard: extern :: fn(x: i32) -> i32
+extern putchard(x: i32) -> i32
 ````
 
 ## Native file construction

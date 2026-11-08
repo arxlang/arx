@@ -3,14 +3,14 @@ title: Nullable scalar and Series tests
 summary: Validate null-preserving indexing and owned column kernels.
 ```
 
-nullable_values: fn() -> series[i32 | none]:
+fn nullable_values() -> series[i32 | none]:
   ```
   title: Return an independently owned column
   ```
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   return frame.x
 
-test_nullable_series: fn() -> none:
+fn test_nullable_series() -> none:
   ```
   title: Nullable arithmetic and masks
   ```

@@ -337,7 +337,7 @@ class ArxTestRunner:
             got = type(return_type).__name__
             raise TestRunError(
                 f"test '{name}' must return none (got '{got}'); "
-                f"declare it as `{name}: fn() -> none:`."
+                f"declare it as `fn {name}() -> none:`."
             )
 
     def _top_level_node_error(self, node: astx.AST) -> str:

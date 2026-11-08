@@ -42,7 +42,7 @@ def parse_module(body: str, declarations: str = "") -> astx.Module:
     ArxIO.string_to_buffer(
         "```\ntitle: File I/O regression\n```\n"
         + declarations
-        + "\nmain: fn() -> i32:\n"
+        + "\nfn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -164,7 +164,7 @@ def test_open_shadowing() -> None:
     """
     title: User functions and non-callable locals take precedence over open.
     """
-    declarations = "open: fn(value: i32) -> i32:\n  return value\n"
+    declarations = "fn open(value: i32) -> i32:\n  return value\n"
     module = parse_module("assert open(7) == 7", declarations)
     assert "irx_file_open" not in ArxBuilder().translate(module)
     with pytest.raises(SemanticError, match="unknown argument"):
@@ -298,10 +298,10 @@ def test_open_keyword_evaluation_order(tmp_path: Path, factory: str) -> None:
       factory:
         type: str
     """
-    declarations = """mode: fn() -> str:
+    declarations = """fn mode() -> str:
   print("mode")
   return "w"
-path: fn() -> str:
+fn path() -> str:
   print("path")
   return "out"
 """
@@ -325,7 +325,7 @@ def test_imported_module_can_open(tmp_path: Path) -> None:
         pytest.skip("clang is required")
     helper = tmp_path / "helper.x"
     helper.write_text(
-        "```\ntitle: Helper\n```\ncreate: fn() -> none:\n"
+        "```\ntitle: Helper\n```\nfn create() -> none:\n"
         '  f: file = open("created", "w")\n'
         '  f.write("ok")\n  return none\n',
         encoding="utf-8",
@@ -333,7 +333,7 @@ def test_imported_module_can_open(tmp_path: Path) -> None:
     entry = tmp_path / "main.x"
     entry.write_text(
         "```\ntitle: Entry\n```\nimport create from helper\n"
-        "main: fn() -> i32:\n  create()\n  return 0\n",
+        "fn main() -> i32:\n  create()\n  return 0\n",
         encoding="utf-8",
     )
     executable = tmp_path / "program"
@@ -357,7 +357,7 @@ def test_file_scope_cleanup_on_early_return(tmp_path: Path) -> None:
       tmp_path:
         type: Path
     """
-    declarations = """early: fn() -> i32:
+    declarations = """fn early() -> i32:
   f: file = open("early", "w")
   f.write("saved")
   return 7
@@ -422,7 +422,7 @@ def test_read_string_can_return_after_lexical_file_release(
         type: Path
     """
     (tmp_path / "source").write_text("independent", encoding="utf-8")
-    declarations = """load: fn() -> str:
+    declarations = """fn load() -> str:
   f: file = open("source")
   return f.read()
 """
@@ -490,8 +490,8 @@ def binary_failure_program(tmp_path_factory: pytest.TempPathFactory) -> Path:
     source = """```
 title: Binary errors
 ```
-getchar: extern :: fn() -> i32
-main: fn() -> i32:
+extern getchar() -> i32
+fn main() -> i32:
   scenario: i32 = getchar()
   try:
     if scenario == 0:
@@ -586,11 +586,11 @@ def test_binary_failures_are_recoverable(
 @pytest.mark.parametrize(
     "declarations,match",
     [
-        ("expose: extern :: fn(value: bytes) -> bytes\n", "FFI|unsupported"),
+        ("extern expose(value: bytes) -> bytes\n", "FFI|unsupported"),
         ("class Box:\n  data: bytes\n", "field|ownership"),
-        ("borrow: fn(data: bytes) -> bytes:\n  return data\n", "borrowed"),
+        ("fn borrow(data: bytes) -> bytes:\n  return data\n", "borrowed"),
         (
-            "pending: fn() -> bytes:\n"
+            "fn pending() -> bytes:\n"
             "  data: bytes = bytes([1])\n"
             "  try:\n    return data\n"
             "  finally:\n    print(len(data))\n",

@@ -5,14 +5,14 @@ summary: Demonstrates union aliases, isinstance, type, and cast.
 
 type Number = i32 | i64
 
-identity: fn(value: Number) -> Number:
+fn identity(value: Number) -> Number:
   ```
   title: identity
   summary: Returns a numeric union value.
   ```
   return value
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Calls type-aware builtins with a union alias.

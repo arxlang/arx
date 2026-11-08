@@ -9,7 +9,7 @@ class Trace:
   ```
   value: public var :: i32 = 0
 
-record: fn(log: Trace, value: i32) -> i32:
+fn record(log: Trace, value: i32) -> i32:
   ```
   title: Record exactly one element evaluation
   ```
@@ -18,25 +18,25 @@ record: fn(log: Trace, value: i32) -> i32:
     raise ValueError("failed element")
   return value
 
-make: fn(log: Trace) -> list[i32]:
+fn make(log: Trace) -> list[i32]:
   ```
   title: Return owned expression storage
   ```
   return [record(log, 1), record(log, 2) + 1, cast(4, i32)]
 
-count: fn(values: list[i32]) -> i64:
+fn count(values: list[i32]) -> i64:
   ```
   title: Borrow a list through a call
   ```
   return len(values)
 
-first_word: fn(values: list[str]) -> str:
+fn first_word(values: list[str]) -> str:
   ```
   title: Return an independent copy of a list element
   ```
   return values[0]
 
-first_iteration: fn(values: list[str]) -> str:
+fn first_iteration(values: list[str]) -> str:
   ```
   title: Copy a string iteration value out of a borrowed list
   ```
@@ -44,7 +44,7 @@ first_iteration: fn(values: list[str]) -> str:
     return word
   return "empty"
 
-test_owned_lists: fn() -> none:
+fn test_owned_lists() -> none:
   ```
   title: Build, borrow, move, and replace owned lists
   ```
@@ -63,7 +63,7 @@ test_owned_lists: fn() -> none:
   narrow: i8 = [1, 2][0]
   assert narrow == 1
 
-test_partial_construction: fn() -> none:
+fn test_partial_construction() -> none:
   ```
   title: Stop at a failed element and preserve the assignment destination
   ```
@@ -78,7 +78,7 @@ test_partial_construction: fn() -> none:
   assert log.value == 19
   assert values[0] == 7
 
-test_owned_string_elements: fn() -> none:
+fn test_owned_string_elements() -> none:
   ```
   title: Copy inserted and indexed strings across independent owner lifetimes
   ```
@@ -95,7 +95,7 @@ test_owned_string_elements: fn() -> none:
   values = []
   assert retained == "stable"
 
-return_iterated_list: fn() -> list[i32]:
+fn return_iterated_list() -> list[i32]:
   ```
   title: Return the iterated owner without losing its storage
   ```
@@ -104,7 +104,7 @@ return_iterated_list: fn() -> list[i32]:
     return values
   return values
 
-test_iteration_owner_boundaries: fn() -> none:
+fn test_iteration_owner_boundaries() -> none:
   ```
   title: Preserve append bounds and replace only independent or released owners
   ```

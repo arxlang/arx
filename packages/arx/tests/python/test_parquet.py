@@ -23,10 +23,10 @@ import ParquetStream from stdlib.parquet
 import CSVStream from stdlib.csv
 import (RecordBatch, Schema) from stdlib.arrow
 
-keep: fn(frame: dataframe[id:i64]) -> dataframe[id:i64]:
+fn keep(frame: dataframe[id:i64]) -> dataframe[id:i64]:
   return frame
 
-check_mode: fn(v: i64, r: ParquetStream, w: ParquetStream, \
+fn check_mode(v: i64, r: ParquetStream, w: ParquetStream, \
 c: CSVStream, b: RecordBatch) -> none:
   if v == 1001:
     w.next()
@@ -46,12 +46,12 @@ c: CSVStream, b: RecordBatch) -> none:
         else:
           return none
 
-output_schema: fn() -> Schema:
+fn output_schema() -> Schema:
   schema: Schema = Schema()
   schema.add("id", "int64", false)
   return schema
 
-main: fn() -> i32:
+fn main() -> i32:
   source: ParquetStream = ParquetStream()
   source.open_read("input.parquet", batch_size=7)
   input_schema: Schema = source.schema()

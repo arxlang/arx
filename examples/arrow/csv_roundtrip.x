@@ -5,7 +5,7 @@ summary: Run from the repository root; input and output must be distinct files.
 import (Schema, RecordBatch) from stdlib.arrow
 import CSVStream from stdlib.csv
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Convert every CSV batch without discarding rows
   ```

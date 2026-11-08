@@ -82,7 +82,7 @@ def run_helpers(tmp_path: Path, body: str) -> subprocess.CompletedProcess[str]:
     source = (
         "```\ntitle: Integer helper boundary regression\n```\n"
         "import math from stdlib\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )

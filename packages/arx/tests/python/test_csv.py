@@ -22,13 +22,13 @@ import CSVStream from stdlib.csv
 import Schema from stdlib.arrow
 import RecordBatch as Batch from stdlib.arrow
 
-keep: fn(frame: dataframe[id:i64]) -> dataframe[id:i64]:
+fn keep(frame: dataframe[id:i64]) -> dataframe[id:i64]:
   return frame
 
-convert: fn(frame: dataframe[id:i64]) -> Batch:
+fn convert(frame: dataframe[id:i64]) -> Batch:
   return cast(frame, Batch)
 
-main: fn() -> i32:
+fn main() -> i32:
   reader: CSVStream = CSVStream()
   reader.open_read("input.csv", block_size=128)
   schema: Schema = Schema()
@@ -151,7 +151,7 @@ class RecordBatch:
   title: Not the native RecordBatch
   ```
   value: i32 = 1
-main: fn() -> i32:
+fn main() -> i32:
   batch: RecordBatch = RecordBatch()
   frame: dataframe[id:i64] = cast(batch, dataframe[id:i64])
   return 0

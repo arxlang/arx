@@ -29,7 +29,7 @@ embedded NUL safely.
 ## Parsing text
 
 ```arx
-distance: fn(record: str) -> i64:
+fn distance(record: str) -> i64:
   clean: str = record.strip()
   return int(clean[1:])
 ```

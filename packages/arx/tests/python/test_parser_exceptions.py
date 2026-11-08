@@ -28,7 +28,7 @@ def parse_exception_source(body: str) -> astx.Module:
     """
     source = (
         "```\ntitle: Exception syntax fixture\n```\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n"
     )

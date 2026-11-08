@@ -11,7 +11,7 @@ class Resource:
   ```
   token: private :: i64 = 0
 
-  __init__: fn(self, size: i32 = 1) -> none:
+  fn __init__(self, size: i32 = 1) -> none:
     ```
     title: __init__
     ```
@@ -19,20 +19,20 @@ class Resource:
     assert self.token > 0
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     ```
     assert fixture_release(token=self.token) == 0
     return none
 
-  note: fn(self, value: f64, label: str) -> i32:
+  fn note(self, value: f64, label: str) -> i32:
     ```
     title: note
     ```
     return fixture_note(label=label, token=self.token, value=value)
 
-  write: fn(self, path: str, kind: i32 = 0) -> i32:
+  fn write(self, path: str, kind: i32 = 0) -> i32:
     ```
     title: write
     ```

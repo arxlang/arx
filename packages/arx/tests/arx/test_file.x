@@ -3,13 +3,13 @@ title: Compiled public File regression
 summary: Verifies the builtin class, factory adapter, aliases, and lowercase type.
 ```
 
-make_file: fn(path: str) -> File:
+fn make_file(path: str) -> File:
   ```
   title: make_file
   ```
   return File(file=path, mode="w", encoding="utf-8")
 
-test_file: fn() -> none:
+fn test_file() -> none:
   ```
   title: test_file
   ```

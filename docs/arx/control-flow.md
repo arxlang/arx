@@ -13,7 +13,7 @@ match. A chain may have any number of `elif` clauses and an optional final
 title: Conditional chain example
 summary: Classifies an integer using ordered comparisons.
 ```
-classify: fn(value: i32) -> i32:
+fn classify(value: i32) -> i32:
   ```
   title: classify
   summary: Classifies one integer as negative, zero, or positive.
@@ -33,7 +33,7 @@ classify: fn(value: i32) -> i32:
 title: While loop example
 summary: Repeats while condition is true.
 ```
-count_to_ten: fn() -> i32:
+fn count_to_ten() -> i32:
   ```
   title: count_to_ten
   summary: Increments value until it reaches ten.
@@ -56,7 +56,7 @@ For-in loops iterate over list-valued expressions, including builtin
 title: Range-style for loop
 summary: Iterates from start to end with the builtin range helper.
 ```
-range_loop: fn(n: i32) -> i32:
+fn range_loop(n: i32) -> i32:
   ```
   title: range_loop
   summary: Sums values produced by a range loop.
@@ -74,7 +74,7 @@ You can also iterate over a list literal or a list variable:
 title: List for-in loop
 summary: Iterates over one list variable and one list literal.
 ```
-list_loop: fn() -> i32:
+fn list_loop() -> i32:
   ```
   title: list_loop
   summary: Sums values from two list-valued loop inputs.
@@ -102,7 +102,7 @@ Count-style loops follow:
 title: Count-style for loop
 summary: Uses initializer, condition, and update expressions.
 ```
-count_loop: fn() -> i32:
+fn count_loop() -> i32:
   ```
   title: count_loop
   summary: Sums numbers from 0 to 4.

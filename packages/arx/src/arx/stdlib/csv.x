@@ -5,21 +5,21 @@ summary: Native Arrow-backed file I/O and scoped streaming.
 
 import (Schema, RecordBatch) from stdlib.arrow
 
-irx_rb_api_csv_frame: extern :: fn(box: ArrowCsvHandle) -> dataframe[...]
-irx_rb_api_csv_write_frame: extern :: fn(box: ArrowCsvHandle, frame: dataframe[...]) -> none
-read_csv: extern :: fn(path: str) -> dataframe[...]
-write_csv: extern :: fn(frame: dataframe[...], path: str) -> none
+extern irx_rb_api_csv_frame(box: ArrowCsvHandle) -> dataframe[...]
+extern irx_rb_api_csv_write_frame(box: ArrowCsvHandle, frame: dataframe[...]) -> none
+extern read_csv(path: str) -> dataframe[...]
+extern write_csv(frame: dataframe[...], path: str) -> none
 
-irx_rb_api_csv_new: extern :: fn() -> ArrowCsvHandle
-irx_rb_api_csv_destroy: extern :: fn(box: ArrowCsvHandle) -> none
-irx_rb_api_csv_close: extern :: fn(box: ArrowCsvHandle) -> none
-irx_rb_api_csv_next: extern :: fn(box: ArrowCsvHandle) -> i32
-irx_rb_api_csv_batch: extern :: fn(box: ArrowCsvHandle, out: ArrowBatchHandle) -> none
-irx_rb_api_csv_schema: extern :: fn(box: ArrowCsvHandle, out: ArrowSchemaHandle) -> none
-irx_rb_api_csv_write: extern :: fn(box: ArrowCsvHandle, batch: ArrowBatchHandle) -> none
-irx_rb_api_csv_open_read: extern :: fn(box: ArrowCsvHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
-irx_rb_api_csv_open_read_as: extern :: fn(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
-irx_rb_api_csv_open_write: extern :: fn(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
+extern irx_rb_api_csv_new() -> ArrowCsvHandle
+extern irx_rb_api_csv_destroy(box: ArrowCsvHandle) -> none
+extern irx_rb_api_csv_close(box: ArrowCsvHandle) -> none
+extern irx_rb_api_csv_next(box: ArrowCsvHandle) -> i32
+extern irx_rb_api_csv_batch(box: ArrowCsvHandle, out: ArrowBatchHandle) -> none
+extern irx_rb_api_csv_schema(box: ArrowCsvHandle, out: ArrowSchemaHandle) -> none
+extern irx_rb_api_csv_write(box: ArrowCsvHandle, batch: ArrowBatchHandle) -> none
+extern irx_rb_api_csv_open_read(box: ArrowCsvHandle, path: str, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_csv_open_read_as(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32, block_size: i32) -> none
+extern irx_rb_api_csv_open_write(box: ArrowCsvHandle, path: str, schema: ArrowSchemaHandle, delimiter: str, header: i32) -> none
 
 class CSVStream:
   ```
@@ -28,7 +28,7 @@ class CSVStream:
   ```
   handle: private :: ArrowCsvHandle
 
-  __init__: fn(self) -> none:
+  fn __init__(self) -> none:
     ```
     title: __init__
     summary: Creates a closed file owner.
@@ -36,7 +36,7 @@ class CSVStream:
     self.handle = irx_rb_api_csv_new()
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Releases the session at the last class reference.
@@ -44,7 +44,7 @@ class CSVStream:
     irx_rb_api_csv_destroy(self.handle)
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Closes the active session and checks finalization errors.
@@ -52,7 +52,7 @@ class CSVStream:
     irx_rb_api_csv_close(self.handle)
     return none
 
-  open_read: fn(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+  fn open_read(self, path: str, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
     ```
     title: open_read
     summary: Opens a closed owner for reading with the file schema.
@@ -60,7 +60,7 @@ class CSVStream:
     irx_rb_api_csv_open_read(self.handle, path, delimiter, cast(header, i32), block_size)
     return none
 
-  open_read_as: fn(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
+  fn open_read_as(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true, block_size: i32 = 1048576) -> none:
     ```
     title: open_read_as
     summary: Parses text using explicit physical column types.
@@ -68,7 +68,7 @@ class CSVStream:
     irx_rb_api_csv_open_read_as(self.handle, path, schema.native_handle(), delimiter, cast(header, i32), block_size)
     return none
 
-  open_write: fn(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true) -> none:
+  fn open_write(self, path: str, schema: Schema, delimiter: str = ",", header: bool = true) -> none:
     ```
     title: open_write
     summary: Validates options and schema before creating or truncating output.
@@ -76,14 +76,14 @@ class CSVStream:
     irx_rb_api_csv_open_write(self.handle, path, schema.native_handle(), delimiter, cast(header, i32))
     return none
 
-  next: fn(self) -> bool:
+  fn next(self) -> bool:
     ```
     title: next
     summary: Advances in read mode; false means EOF, not an empty batch.
     ```
     return irx_rb_api_csv_next(self.handle) == 0
 
-  batch: fn(self) -> RecordBatch:
+  fn batch(self) -> RecordBatch:
     ```
     title: batch
     summary: Returns an independently owned current batch in read mode.
@@ -92,7 +92,7 @@ class CSVStream:
     irx_rb_api_csv_batch(self.handle, result.native_handle())
     return result
 
-  schema: fn(self) -> Schema:
+  fn schema(self) -> Schema:
     ```
     title: schema
     summary: Returns an independent schema in either open mode.
@@ -101,7 +101,7 @@ class CSVStream:
     irx_rb_api_csv_schema(self.handle, result.native_handle())
     return result
 
-  write: fn(self, batch: RecordBatch) -> none:
+  fn write(self, batch: RecordBatch) -> none:
     ```
     title: write
     summary: Writes an exact-schema batch in write mode.
@@ -109,13 +109,13 @@ class CSVStream:
     irx_rb_api_csv_write(self.handle, batch.native_handle())
     return none
 
-  frame: fn(self) -> dataframe[...]:
+  fn frame(self) -> dataframe[...]:
     ```
     title: Return an independently owned DataFrame for the current batch.
     ```
     return irx_rb_api_csv_frame(self.handle)
 
-  write: fn(self, frame: dataframe[...]) -> none:
+  fn write(self, frame: dataframe[...]) -> none:
     ```
     title: Write every chunk without consuming or mutating the DataFrame.
     ```

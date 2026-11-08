@@ -15,7 +15,7 @@ function return types.
 title: Typed function signature
 summary: Demonstrates required parameter annotations.
 ```
-add: fn(a: i32, b: i32) -> i32:
+fn add(a: i32, b: i32) -> i32:
   ```
   title: add
   summary: Returns a + b.
@@ -44,7 +44,7 @@ summary: Demonstrates a finite numeric union alias.
 ```
 type Number = i32 | i64
 
-identity: fn(value: Number) -> Number:
+fn identity(value: Number) -> Number:
   ```
   title: identity
   summary: Returns a numeric union value.

@@ -112,7 +112,7 @@ def test_arxmain_compiles_program_using_bundled_stdlib(
             """
             import math from stdlib
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return math.square(4) + math.clamp(0 - 3, 0, 2)
             """
         ).lstrip(),
@@ -143,7 +143,7 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
     local_stdlib = tmp_path / "stdlib"
     local_stdlib.mkdir()
     (local_stdlib / "math.x").write_text(
-        "square: fn(value: i32) -> i32:\n  return value\n",
+        "fn square(value: i32) -> i32:\n  return value\n",
         encoding="utf-8",
     )
 
@@ -153,7 +153,7 @@ def test_arxmain_rejects_local_stdlib_shadowing(tmp_path: Path) -> None:
             """
             import math from stdlib
 
-            main: fn() -> i32:
+            fn main() -> i32:
               return math.square(4)
             """
         ).lstrip(),
@@ -212,7 +212,7 @@ def test_math_templates_reject_unsupported_types(
     ArxIO.string_to_buffer(
         "```\ntitle: Unsupported math specialization\n```\n"
         "import math from stdlib\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         f"  value: {type_} = {value}\n"
         f"  math.{helper}{specialization}({arguments})\n"
         "  return 0\n"
@@ -239,7 +239,7 @@ def test_math_templates_require_consistent_inference(call: str) -> None:
     ArxIO.string_to_buffer(
         "```\ntitle: Mixed-width math inference\n```\n"
         "import math from stdlib\n"
-        "main: fn() -> i32:\n"
+        "fn main() -> i32:\n"
         "  small: i8 = cast(1, i8)\n"
         "  wide: i64 = cast(2, i64)\n"
         f"  math.{call}\n"

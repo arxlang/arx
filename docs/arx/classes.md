@@ -1,7 +1,8 @@
 # Classes
 
-Fields and methods start with their names. Optional inline modifiers appear
-after the colon and before `::`; class-level modifiers retain annotation lines.
+Fields start with their names and accept inline declaration modifiers. Methods
+retain `fn name(...) -> type:` and their existing `@[...]` modifier annotations;
+only their parameter declarations gain the optional `var`/`const` modifier slot.
 
 ## Class Syntax
 
@@ -13,10 +14,11 @@ class Counter(BaseCounter, Audited):
 
   internal: private :: int32 = 1
 
-  get: fn(self) -> int32:
+  fn get(self) -> int32:
     return self.value
 
-  process: protected :: fn(self, x: int32) -> int32:
+  @[protected]
+  fn process(self, x: int32) -> int32:
     return x + 1
 ```
 
@@ -25,31 +27,34 @@ Optional class-level annotations use the same surface form:
 ```arx
 @[public, abstract]
 class Shape:
-  area: public abstract :: fn(self) -> float64
+  @[public, abstract]
+  fn area(self) -> float64
 ```
 
-Template methods use the same `@<...>` prefix as module functions, on its own
-line immediately above the name-first method declaration:
+Template methods retain `@<...>` prefixes and method annotations on their own
+lines before `fn`. These two prefixes may appear in either order:
 
 ```arx
 class Math:
   @<T: i32 | f64>
-  identity: public static :: fn(value: T) -> T:
+  @[public, static]
+  fn identity(value: T) -> T:
     return value
 ```
 
 ## Modifier Rules
 
-Field and method modifiers are whitespace-separated in `name: modifiers :: ...`.
-Class annotations remain comma-separated `@[...]` lists on the line above the
-class. Empty, duplicate, conflicting, floating, and invalid-target modifiers are
-rejected.
+Field modifiers are whitespace-separated in `name: modifiers :: type`. Class and
+method annotations remain comma-separated `@[...]` lists on the line above the
+declaration. Empty, duplicate, conflicting, floating, and invalid-target
+modifiers are rejected.
 
 Visibility is `public`, `private`, or `protected`. Fields support `static` and
-`var`/`const`; methods support `static`, `abstract`, `extern`, and an optional
-explicit `const` for their fixed declaration identity. Method `const` does not
-make a receiver read-only or a method pure. Class `const` fields require an
-initializer at their declaration, not deferred assignment in `__init__`.
+`var`/`const`; methods retain `static`, `abstract`, and `extern`. Neither `var`
+nor `const` modifies a method name. Parameters use `name: [var|const ::] type`
+inside the existing method signature. The implicit `self` receiver is unchanged.
+Class `const` fields require declaration-site initialization, not deferred
+assignment in `__init__`.
 
 `override`, `virtual`, `final`, `sealed`, `readonly`, and `inline` remain
 unsupported. See the
@@ -71,14 +76,15 @@ For example, these declarations are equivalent semantically:
 ```arx
 value: int32 = 0
 
-get: fn(self) -> int32:
+fn get(self) -> int32:
   return self.value
 ```
 
 ```arx
 value: public var :: int32 = 0
 
-get: public :: fn(self) -> int32:
+@[public]
+fn get(self) -> int32:
   return self.value
 ```
 
@@ -93,17 +99,18 @@ literal defaults; an optional `__del__` hook runs at final release.
 class Counter:
   version: public static const :: int32 = 3
 
-  get: fn(self) -> int32:
+  fn get(self) -> int32:
     return 1
 
 class CounterFactory:
-  make: public static :: fn() -> Counter:
+  @[public, static]
+  fn make() -> Counter:
     return Counter()
 
-take_counter: fn(counter: Counter) -> int32:
+fn take_counter(counter: Counter) -> int32:
   return counter.get()
 
-main: fn() -> int32:
+fn main() -> int32:
   counter: Counter = CounterFactory.make()
   return take_counter(counter) + Counter.version
 ```
@@ -121,15 +128,15 @@ This surface syntax maps directly onto IRx-owned class nodes:
 class Counter:
   value: i32 = 0
 
-  __init__: fn(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     self.value = value
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     print(self.value)
     return none
 
-main: fn() -> i32:
+fn main() -> i32:
   counter: Counter = Counter(value=7)
   alias: Counter = counter
   counter = Counter(3)

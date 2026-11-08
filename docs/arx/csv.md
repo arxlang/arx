@@ -12,7 +12,7 @@ title: Copy a CSV file
 ```
 import (read_csv, write_csv) from stdlib.csv
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Read every row and finalize the output
   ```

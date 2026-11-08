@@ -11,7 +11,7 @@ class TextLog:
   path: str = ""
   handle: File
 
-  __init__: fn(self, path: str) -> none:
+  fn __init__(self, path: str) -> none:
     ```
     title: __init__
     summary: Copies the path and opens exactly one owned stream.
@@ -20,7 +20,7 @@ class TextLog:
     self.handle = File(self.path, mode="w")
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     summary: Observes fields before compiler-generated field cleanup.
@@ -28,7 +28,7 @@ class TextLog:
     print(self.path)
     return none
 
-  write: fn(self, text: str) -> none:
+  fn write(self, text: str) -> none:
     ```
     title: write
     summary: Writes text through a borrowed receiver.
@@ -36,7 +36,7 @@ class TextLog:
     self.handle.write(text)
     return none
 
-write_log: fn() -> none:
+fn write_log() -> none:
   ```
   title: write_log
   summary: Both aliases share one object and one final destructor call.
@@ -46,7 +46,7 @@ write_log: fn() -> none:
   alias.write("hello\n")
   return none
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: main
   summary: Reads text after the final class reference has closed the writer.

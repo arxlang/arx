@@ -16,7 +16,7 @@ summary: >-
 # 3) After your review, this exact file will be the implementation contract.
 # -----------------------------------------------------------------------------
 
-irx_feature_proposal: fn(arg1: i32, arg2: str) -> i32:
+fn irx_feature_proposal(arg1: i32, arg2: str) -> i32:
   ```
   title: IRx feature proposal entrypoint
   summary: Covers every new IRx-backed language feature candidate.

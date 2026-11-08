@@ -21,7 +21,7 @@ tokens to 250,000. These are compiler-version resource limits, not a frozen
 language compatibility promise.
 
 ```arx
-absolute: fn(value: i32) -> i32:
+fn absolute(value: i32) -> i32:
   if value < 0:
     return 0 - value
   else:
@@ -128,27 +128,30 @@ Dataframe and tensor literals still need the type context required by their
 constructors; resolved typed function results can be inferred without losing
 their schema or shape.
 
-A modifier group is whitespace-separated and ends with `::`. Duplicate,
-conflicting, unsupported, and target-inappropriate modifiers are errors. Fields
-and methods use inline groups for visibility and `static`/`abstract`/`extern`
-where supported. Class annotations remain separate. See [classes](classes.md).
+A variable/parameter modifier group is whitespace-separated and ends with `::`.
+Duplicate, conflicting, unsupported, and target-inappropriate modifiers are
+errors. Fields also support their existing visibility/storage policies through
+inline groups. Classes and methods retain their annotation prefixes. See
+[classes](classes.md).
 
-Functions use `name: fn(...) -> T:`; their fixed declaration policy can be
-written as `name: const :: fn(...) -> T:`. Parameters default to `var`; an
-explicit `const` parameter restricts only the callee's binding. Externs use
-`name: extern :: fn(...) -> T` without a body. See [functions](functions.md).
+Function names and heads do not change: `fn name(...) -> T:`. Only parameter
+slots gain modifiers, for example `fn distance(record: const :: str) -> i64:`.
+Omitted parameter modifiers mean `var`; `const` restricts the callee's binding,
+not the caller's variable or object access. Externs retain
+`extern name(...) -> T` without a body. See [functions](functions.md).
 
-**Migration:** leading `var name: T`, `fn name(...)`, and `extern name(...)`
-forms were removed. Move the name first; move field/method annotations into the
-inline modifier group, replacing `constant`/`mutable` with `const`/`var`.
-Read-only references, immutable objects, compile-time evaluation, rebindable
-function values, and closures are not introduced by this syntax.
+**Migration:** leading `var name: T` variable declarations were removed; use
+`name: T` or `name: var :: T`. Field modifiers move into the inline group,
+replacing `constant`/`mutable` with `const`/`var`. Function, method, and extern
+heads retain their original syntax; the mistaken `name: fn(...)` form is not
+supported. Read-only references, immutable objects, compile-time evaluation,
+rebindable function values, and closures are not introduced by these changes.
 
 ### Templates
 
 ```arx
 @<T: i32 | f64>
-identity: fn(value: T) -> T:
+fn identity(value: T) -> T:
   return value
 ```
 

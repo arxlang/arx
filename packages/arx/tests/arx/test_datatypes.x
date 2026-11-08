@@ -3,7 +3,7 @@ title: Repository datatype tests
 summary: Cover scalar types, casts, defaults, strings, booleans, and none helpers.
 ```
 
-choose: fn(flag: bool, when_true: i32, when_false: i32) -> i32:
+fn choose(flag: bool, when_true: i32, when_false: i32) -> i32:
   ```
   title: choose
   summary: Returns one branch-selected integer value.
@@ -13,7 +13,7 @@ choose: fn(flag: bool, when_true: i32, when_false: i32) -> i32:
   else:
     return when_false
 
-tag_value: fn(text: str, flag: bool) -> i32:
+fn tag_value(text: str, flag: bool) -> i32:
   ```
   title: tag_value
   summary: Uses typed string and boolean parameters in one branch.
@@ -23,7 +23,7 @@ tag_value: fn(text: str, flag: bool) -> i32:
   else:
     return 0
 
-widened_total: fn() -> i32:
+fn widened_total() -> i32:
   ```
   title: widened_total
   summary: Casts across numeric widths and normalizes them to i32.
@@ -42,14 +42,14 @@ widened_total: fn() -> i32:
   ff: i32 = cast(f, i32)
   return aa + bb + cc + dd + ee + ff
 
-touch: fn() -> none:
+fn touch() -> none:
   ```
   title: touch
   summary: Exercises one helper with a none return type.
   ```
   sentinel: bool = true
 
-fail_if_evaluated: fn() -> bool:
+fn fail_if_evaluated() -> bool:
   ```
   title: fail_if_evaluated
   summary: Fails when a short-circuited Boolean right operand is evaluated.
@@ -57,7 +57,7 @@ fail_if_evaluated: fn() -> bool:
   assert false
   return true
 
-test_boolean_and_string_paths: fn() -> none:
+fn test_boolean_and_string_paths() -> none:
   ```
   title: test_boolean_and_string_paths
   summary: Covers bool parameters, string parameters, and defaults.
@@ -70,14 +70,14 @@ test_boolean_and_string_paths: fn() -> none:
   assert tag_value("ok", true) == 1
   assert tag_value(empty_text, false) == 0
 
-test_numeric_casts_and_widths: fn() -> none:
+fn test_numeric_casts_and_widths() -> none:
   ```
   title: test_numeric_casts_and_widths
   summary: Covers integer and floating-point cast combinations.
   ```
   assert widened_total() == 40
 
-test_fixed_width_integer_wrapping: fn() -> none:
+fn test_fixed_width_integer_wrapping() -> none:
   ```
   title: test_fixed_width_integer_wrapping
   summary: Confirms explicitly wrapping arithmetic and casts use modulo semantics.
@@ -88,7 +88,7 @@ test_fixed_width_integer_wrapping: fn() -> none:
   assert wrapping_sub(minimum, 1) == maximum
   assert wrapping_mul(65536, 65536) == 0
 
-test_none_helpers: fn() -> none:
+fn test_none_helpers() -> none:
   ```
   title: test_none_helpers
   summary: Confirms none-returning helpers can be invoked in tests.
@@ -96,7 +96,7 @@ test_none_helpers: fn() -> none:
   touch()
   assert choose(true, 1, 0) == 1
 
-test_boolean_short_circuit_evaluation: fn() -> none:
+fn test_boolean_short_circuit_evaluation() -> none:
   ```
   title: test_boolean_short_circuit_evaluation
   summary: Confirms Boolean operands evaluate left to right and short circuit.
@@ -106,7 +106,7 @@ test_boolean_short_circuit_evaluation: fn() -> none:
   assert not false or fail_if_evaluated()
   assert not (false and not fail_if_evaluated())
 
-test_scalar_remainder_and_negation: fn() -> none:
+fn test_scalar_remainder_and_negation() -> none:
   ```
   title: test_scalar_remainder_and_negation
   summary: Remainder truncates rather than implementing Python floor modulo.

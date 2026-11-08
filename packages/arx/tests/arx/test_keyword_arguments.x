@@ -2,7 +2,7 @@
 title: Compiled named call regression
 summary: Verifies functions, methods, static calls, and dependent default holes.
 ```
-combine: fn(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
+fn combine(a: i32, b: i32 = a + 1, c: i32 = b + 1) -> i32:
   ```
   title: combine
   ```
@@ -13,19 +13,20 @@ class Counter:
   title: Counter
   ```
   value: i32 = 7
-  read: fn(self, offset: i32 = self.value) -> i32:
+  fn read(self, offset: i32 = self.value) -> i32:
     ```
     title: read
     ```
     return offset
 
-  add: static :: fn(a: i32, b: i32 = 3) -> i32:
+  @[static]
+  fn add(a: i32, b: i32 = 3) -> i32:
     ```
     title: add
     ```
     return a + b
 
-test_keyword_arguments: fn() -> none:
+fn test_keyword_arguments() -> none:
   ```
   title: test_keyword_arguments
   ```

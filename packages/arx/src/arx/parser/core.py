@@ -207,16 +207,18 @@ class ParserCore(ParserMixinBase):
                         "annotation must be followed by a declaration"
                     )
                 if prefixes.template_params:
-                    if not self.is_declaration_start():
+                    if self.tokens.cur_tok.kind == TokenKind.kw_extern:
+                        raise ParserException(
+                            "extern functions cannot declare templates",
+                            self.tokens.cur_tok.location,
+                        )
+                    if self.tokens.cur_tok.kind != TokenKind.kw_function:
                         raise ParserException(
                             "template parameter blocks are only allowed "
                             "before functions or methods"
                         )
                     tree.nodes.append(
-                        self.parse_named_declaration(
-                            allow_function=True,
-                            template_params=prefixes.template_params,
-                        )
+                        self.parse_function(prefixes.template_params)
                     )
                     allow_module_docstring = False
                     continue
@@ -243,10 +245,18 @@ class ParserCore(ParserMixinBase):
                 allow_module_docstring = False
                 continue
 
+            if self.tokens.cur_tok.kind == TokenKind.kw_function:
+                tree.nodes.append(self.parse_function())
+                allow_module_docstring = False
+                continue
+
+            if self.tokens.cur_tok.kind == TokenKind.kw_extern:
+                tree.nodes.append(self.parse_extern())
+                allow_module_docstring = False
+                continue
+
             if self.is_declaration_start():
-                tree.nodes.append(
-                    self.parse_named_declaration(allow_function=True)
-                )
+                tree.nodes.append(self.parse_named_declaration())
                 allow_module_docstring = False
                 continue
 

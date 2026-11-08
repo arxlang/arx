@@ -10,21 +10,21 @@ class File:
   ```
   handle: private :: NativeFileHandle
 
-  read: fn(self) -> str:
+  fn read(self) -> str:
     ```
     title: read
     summary: Requires readable text mode; returns all remaining text independently.
     ```
     return self.handle.read()
 
-  write: fn(self, text: str) -> i64:
+  fn write(self, text: str) -> i64:
     ```
     title: write
     summary: Requires writable text mode; writes UTF-8 and counts Unicode characters.
     ```
     return self.handle.write(text)
 
-  read_bytes: fn(self, size: i64) -> bytes:
+  fn read_bytes(self, size: i64) -> bytes:
     ```
     title: read_bytes
     summary: >-
@@ -34,7 +34,7 @@ class File:
     ```
     return self.handle.read_bytes(size)
 
-  write_bytes: fn(self, data: bytes) -> i64:
+  fn write_bytes(self, data: bytes) -> i64:
     ```
     title: write_bytes
     summary: >-
@@ -44,7 +44,7 @@ class File:
     ```
     return self.handle.write_bytes(data)
 
-  flush: fn(self) -> none:
+  fn flush(self) -> none:
     ```
     title: flush
     summary: Checks buffered writes without promising durable storage.
@@ -52,7 +52,7 @@ class File:
     self.handle.flush()
     return none
 
-  close: fn(self) -> none:
+  fn close(self) -> none:
     ```
     title: close
     summary: Closes the stream idempotently without freeing its owned wrapper.

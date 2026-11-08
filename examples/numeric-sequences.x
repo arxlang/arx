@@ -4,7 +4,7 @@ summary: One generic consumer over lists, tensors, ranges, and typed columns.
 ```
 
 @<T: i32 | i64 | f64>
-first: fn(values: sequence[T]) -> T:
+fn first(values: sequence[T]) -> T:
   ```
   title: Read the first item without converting or copying the collection.
   ```
@@ -13,7 +13,7 @@ first: fn(values: sequence[T]) -> T:
     return item
   return values[0]
 
-runtime_item: fn(values: tensor[i64, ...], index: i64) -> i64:
+fn runtime_item(values: tensor[i64, ...], index: i64) -> i64:
   ```
   title: Use runtime tensor shape with checked nonnegative indexing.
   ```
@@ -21,14 +21,14 @@ runtime_item: fn(values: tensor[i64, ...], index: i64) -> i64:
   return values[index]
 
 @<T: i32 | i64 | f64>
-column_first: fn(values: series[T]) -> T:
+fn column_first(values: series[T]) -> T:
   ```
   title: Infer template variables nested in Series declarations.
   ```
   return first(values)
 
 @<T: i32 | i64 | f64>
-list_first: fn(values: list[T]) -> T:
+fn list_first(values: list[T]) -> T:
   ```
   title: Infer template variables nested in owned list declarations.
   ```
@@ -37,13 +37,13 @@ list_first: fn(values: list[T]) -> T:
   return values[0]
 
 @<T: i32 | i64 | f64>
-nullable_first: fn(values: sequence[nullable[T]]) -> nullable[T]:
+fn nullable_first(values: sequence[nullable[T]]) -> nullable[T]:
   ```
   title: Preserve the column validity contract separately from numeric bits.
   ```
   return values[0]
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Exercise the same consumers with inferred and explicit type arguments.
   ```

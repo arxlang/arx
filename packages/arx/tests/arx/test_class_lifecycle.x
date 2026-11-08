@@ -10,27 +10,27 @@ class Counter:
   value: i32 = 0
   destroyed: public static var :: i32 = 0
 
-  __init__: fn(self, value: i32 = 1) -> none:
+  fn __init__(self, value: i32 = 1) -> none:
     ```
     title: __init__
     ```
     self.value = value
     return none
 
-  __del__: fn(self) -> none:
+  fn __del__(self) -> none:
     ```
     title: __del__
     ```
     Counter.destroyed = Counter.destroyed + 1
     return none
 
-make_counter: fn() -> Counter:
+fn make_counter() -> Counter:
   ```
   title: make_counter
   ```
   return Counter(value=7)
 
-use_aliases: fn() -> none:
+fn use_aliases() -> none:
   ```
   title: use_aliases
   ```
@@ -42,7 +42,7 @@ use_aliases: fn() -> none:
   assert counter.value == 1
   return none
 
-test_class_lifecycle: fn() -> none:
+fn test_class_lifecycle() -> none:
   ```
   title: test_class_lifecycle
   ```

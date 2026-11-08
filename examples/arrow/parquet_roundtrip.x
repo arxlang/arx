@@ -5,7 +5,7 @@ summary: Creates local input and output files and processes every batch.
 import ParquetStream from stdlib.parquet
 import (BatchBuilder, RecordBatch, Schema) from stdlib.arrow
 
-main: fn() -> i32:
+fn main() -> i32:
   ```
   title: Write input, convert batches and verify output
   ```

@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.11.0",
+  "syntax_pack_version": "0.12.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -153,8 +153,8 @@
   "structural_forms": {
     "declarations": {
       "variable": "name: [modifiers ::] type [= initializer]",
-      "function": "name: [modifiers ::] fn(parameters) -> type: body",
-      "extern": "name: extern :: fn(parameters) -> type",
+      "function": "fn name(parameters) -> type: body",
+      "extern": "extern name(parameters) -> type",
       "modifier_separator": "::",
       "binding_modifiers": ["var", "const"],
       "inferred_type": "auto",
@@ -164,7 +164,8 @@
         "count_loop_initializer"
       ],
       "variable_binding_default": "var",
-      "function_binding_default": "const",
+      "parameter": "name: [var|const ::] type [= default]",
+      "parameter_binding_default": "var",
       "member_modifiers": [
         "public",
         "private",
@@ -180,7 +181,15 @@
       "start": "@[",
       "separator": ",",
       "end": "]",
-      "modifiers": ["public", "private", "protected", "abstract"]
+      "modifiers": [
+        "public",
+        "private",
+        "protected",
+        "static",
+        "abstract",
+        "extern"
+      ],
+      "targets": ["class", "method"]
     },
     "template_parameter_block": {
       "start": "@<",

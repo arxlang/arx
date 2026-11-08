@@ -5,7 +5,7 @@ summary: A Python peer listens; each Arx function connects as a client.
 import (IPCReader, IPCWriter) from stdlib.arrow
 import (make_batch, verify) from data
 
-send: fn(host: str, port: i32) -> i32:
+fn send(host: str, port: i32) -> i32:
   ```
   title: send
   summary: Sends two batches and an explicit Arrow stream end marker.
@@ -17,7 +17,7 @@ send: fn(host: str, port: i32) -> i32:
   writer.close()
   return 0
 
-receive: fn(host: str, port: i32) -> i32:
+fn receive(host: str, port: i32) -> i32:
   ```
   title: receive
   summary: Pulls and verifies batches without buffering the entire stream.

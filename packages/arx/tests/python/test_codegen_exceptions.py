@@ -35,7 +35,7 @@ def exception_source(body: str, definitions: str = "") -> str:
     return (
         "```\ntitle: Native exception acceptance\n```\n"
         + definitions
-        + "main: fn() -> i32:\n"
+        + "fn main() -> i32:\n"
         + "\n".join("  " + line for line in body.splitlines())
         + "\n  return 0\n"
     )
@@ -110,7 +110,7 @@ def test_exception_common_workflow(tmp_path: Path, optimization: int) -> None:
         '  print("accepted")\n'
         "finally:\n"
         '  print("finished")',
-        "positive_count: fn(value: i32) -> i32:\n"
+        "fn positive_count(value: i32) -> i32:\n"
         "  if value < 0:\n"
         '    raise ValueError("count must be nonnegative")\n'
         "  return value\n",
@@ -209,9 +209,9 @@ def test_finally_replaces_pending_return(
     result = run_exception(
         tmp_path,
         "print(replace_return())\nprint(replace_error())",
-        "replace_return: fn() -> i32:\n"
+        "fn replace_return() -> i32:\n"
         "  try:\n    return 1\n  finally:\n    return 2\n"
-        "replace_error: fn() -> i32:\n"
+        "fn replace_error() -> i32:\n"
         '  try:\n    raise ValueError("suppressed")\n'
         "  finally:\n    return 3\n",
         optimization,
@@ -246,7 +246,7 @@ def test_bare_raise_uses_dynamic_handler_state(
         "    again()\n"
         "except ValueError as error:\n"
         "  print(error.message)",
-        "again: fn() -> none:\n  raise\n",
+        "fn again() -> none:\n  raise\n",
         optimization,
     )
     assert result.returncode == 0, result.stderr
@@ -342,10 +342,10 @@ def test_exception_unwinds_owned_class_before_caller_handler(
         "class Resource:\n"
         "  ```\n  title: Tracked owner\n  ```\n"
         "  marker: i32 = 0\n"
-        "  __del__: fn(self) -> none:\n"
+        "  fn __del__(self) -> none:\n"
         "    ```\n    title: Release tracked owner\n    ```\n"
         '    print("released")\n    return none\n'
-        "fail: fn() -> none:\n"
+        "fn fail() -> none:\n"
         "  resource: Resource = Resource()\n"
         '  raise ValueError("failure")\n',
         optimization,
@@ -373,10 +373,10 @@ def test_finally_releases_abandoned_owned_return(
         "class Resource:\n"
         "  ```\n  title: Returned owner\n  ```\n"
         "  marker: i32 = 0\n"
-        "  __del__: fn(self) -> none:\n"
+        "  fn __del__(self) -> none:\n"
         "    ```\n    title: Release abandoned result\n    ```\n"
         '    print("released")\n    return none\n'
-        "produce: fn() -> Resource:\n"
+        "fn produce() -> Resource:\n"
         "  try:\n    return Resource()\n"
         '  finally:\n    raise ValueError("replacement")\n',
         optimization,
@@ -401,7 +401,7 @@ def test_recursive_exception_propagation(
     result = run_exception(
         tmp_path,
         'try:\n  print(descend(4))\nexcept ValueError:\n  print("caught")',
-        "descend: fn(depth: i32) -> i32:\n"
+        "fn descend(depth: i32) -> i32:\n"
         "  try:\n"
         "    if depth == 0:\n"
         '      raise ValueError("bottom")\n'
@@ -430,11 +430,11 @@ def test_failing_argument_stops_later_evaluations(
         tmp_path,
         "try:\n  consume(fail(), later())\n"
         'except ValueError:\n  print("caught")',
-        "fail: fn() -> i32:\n"
+        "fn fail() -> i32:\n"
         '  raise ValueError("first")\n'
-        "later: fn() -> i32:\n"
+        "fn later() -> i32:\n"
         '  print("wrong-later")\n  return 2\n'
-        "consume: fn(first: i32, second: i32) -> none:\n"
+        "fn consume(first: i32, second: i32) -> none:\n"
         '  print("wrong-call")\n  return none\n',
         optimization,
     )
@@ -466,7 +466,7 @@ def test_uncaught_exception_chaining(
     result = run_exception(
         tmp_path,
         "fail()",
-        "fail: fn() -> none:\n"
+        "fn fail() -> none:\n"
         '  try:\n    raise ValueError("original|é")\n'
         "  except ValueError as first:\n"
         '    raise TypeError("replacement")' + suffix[chain] + "\n",
@@ -533,7 +533,7 @@ def test_finally_replaces_moved_return(
     result = run_exception(
         tmp_path,
         'try:\n  make()\nexcept ValueError:\n  print("caught")',
-        f"make: fn() -> {kind}:\n"
+        f"fn make() -> {kind}:\n"
         f"  value: {kind} = {initializer}\n"
         "  try:\n    return value\n"
         '  finally:\n    raise ValueError("replacement")\n',
@@ -560,9 +560,9 @@ def test_cleanup_failure_preserves_primary_exception(
         "fail()",
         "class Resource:\n  ```\n  title: Fallible destructor\n  ```\n"
         "  value: i32 = 1\n"
-        "  __del__: fn(self) -> none:\n"
+        "  fn __del__(self) -> none:\n"
         '    print("release")\n    raise TypeError("secondary")\n'
-        "fail: fn() -> none:\n  owner: Resource = Resource()\n"
+        "fn fail() -> none:\n  owner: Resource = Resource()\n"
         '  raise ValueError("primary")\n',
         optimization,
     )
@@ -621,11 +621,11 @@ def test_failed_constructor_rolls_back_initialized_fields(
         'try:\n  Container()\nexcept ValueError:\n  print("caught")',
         "class Resource:\n  ```\n  title: Initialized child\n  ```\n"
         "  value: i32 = 1\n"
-        '  __del__: fn(self) -> none:\n    print("child")\n'
+        '  fn __del__(self) -> none:\n    print("child")\n'
         "class Container:\n  ```\n  title: Partial owner\n  ```\n"
         "  child: Resource = Resource()\n"
-        '  __init__: fn(self) -> none:\n    raise ValueError("init")\n'
-        '  __del__: fn(self) -> none:\n    print("wrong-parent")\n',
+        '  fn __init__(self) -> none:\n    raise ValueError("init")\n'
+        '  fn __del__(self) -> none:\n    print("wrong-parent")\n',
         optimization,
     )
     assert result.returncode == 0, result.stderr
@@ -650,13 +650,13 @@ def test_finalizer_local_catch_preserves_pending_return(
     definitions = (
         "class Resource:\n  ```\n  title: Returned owner\n  ```\n"
         "  marker: public :: i32 = 7\n"
-        '  __del__: fn(self) -> none:\n    print("released")\n'
+        '  fn __del__(self) -> none:\n    print("released")\n'
         if kind == "Resource"
         else ""
     )
     initializer = "Resource()" if kind == "Resource" else '"retained"'
     definitions += (
-        f"make: fn() -> {kind}:\n"
+        f"fn make() -> {kind}:\n"
         f"  value: {kind} = {initializer}\n"
         "  try:\n    return value\n"
         '  finally:\n    try:\n      raise ValueError("handled")\n'
@@ -696,7 +696,7 @@ def test_try_local_owner_survives_else(
     definitions = (
         "class Resource:\n  ```\n  title: Else owner\n  ```\n"
         "  marker: public :: i32 = 7\n"
-        '  __del__: fn(self) -> none:\n    print("released")\n'
+        '  fn __del__(self) -> none:\n    print("released")\n'
         if kind == "Resource"
         else ""
     )
@@ -735,12 +735,12 @@ def test_return_cleanup_failure_preserves_outer_handler_owners(
         "print(run())",
         "class Outer:\n  ```\n  title: Handler owner\n  ```\n"
         "  marker: public :: i32 = 7\n"
-        '  __del__: fn(self) -> none:\n    print("outer")\n'
+        '  fn __del__(self) -> none:\n    print("outer")\n'
         "class Inner:\n  ```\n  title: Failing cleanup\n  ```\n"
         "  marker: i32 = 0\n"
-        '  __del__: fn(self) -> none:\n    print("inner")\n'
+        '  fn __del__(self) -> none:\n    print("inner")\n'
         '    raise TypeError("cleanup")\n'
-        "run: fn() -> i32:\n  outer: Outer = Outer()\n"
+        "fn run() -> i32:\n  outer: Outer = Outer()\n"
         "  try:\n    inner: Inner = Inner()\n    return 1\n"
         "  except TypeError:\n    print(outer.marker)\n"
         "  return 2\n",
@@ -767,9 +767,9 @@ def test_cleanup_after_try_cannot_reenter_completed_handler(
         'try:\n  run()\nexcept TypeError:\n  print("caught")',
         "class Resource:\n  ```\n  title: Outer cleanup\n  ```\n"
         "  marker: i32 = 0\n"
-        '  __del__: fn(self) -> none:\n    print("release")\n'
+        '  fn __del__(self) -> none:\n    print("release")\n'
         '    raise TypeError("cleanup")\n'
-        "run: fn() -> none:\n  owner: Resource = Resource()\n"
+        "fn run() -> none:\n  owner: Resource = Resource()\n"
         "  try:\n    return none\n"
         '  except TypeError:\n    print("wrong")\n'
         '  finally:\n    print("finally")\n',

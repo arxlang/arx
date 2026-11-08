@@ -30,7 +30,7 @@ FIXTURE = Path(__file__).parents[1] / "fixtures" / "native-package"
 DOC = "```\ntitle: Native dependency consumer\n```\n"
 BODY = """import Resource from native_fixture.owned
 import native_fixture.bridge as bridge
-exercise: fn() -> i32:
+fn exercise() -> i32:
   resource: Resource = Resource(size=2)
   alias: Resource = resource
   assert alias.note(label="Unicode π", value=cast(2, f64)) == 0
@@ -39,7 +39,7 @@ exercise: fn() -> i32:
   assert resource.write(kind=2, path="invalid") == 2
   assert bridge.fixture_alive() == 1
   return 0
-main: fn() -> i32:
+fn main() -> i32:
   assert bridge.fixture_create(size=0) == 0
   assert exercise() == 0
   assert bridge.fixture_alive() == 0
@@ -136,7 +136,7 @@ def execute(source: Path, work: Path) -> None:
         for name in get_default_runtime_feature_registry().names()
     )
     compiler.compile(
-        compiler.parse_string(DOC + "main: fn() -> i32:\n  return 0\n"),
+        compiler.parse_string(DOC + "fn main() -> i32:\n  return 0\n"),
         kind=ArtifactKind.LLVM_IR,
     )
 
@@ -472,13 +472,11 @@ def test_local_shadow_does_not_inherit_native_metadata(
         'dependencies=["arx-native-fixture"]\n'
     )
     (local / "__init__.x").write_text(DOC)
-    (local / "bridge.x").write_text(
-        DOC + "fixture_alive: extern :: fn() -> i32\n"
-    )
+    (local / "bridge.x").write_text(DOC + "extern fixture_alive() -> i32\n")
     source = app / "main.x"
     source.write_text(
         DOC + "import fixture_alive from native_fixture.bridge\n"
-        "main: fn() -> i32:\n  return fixture_alive()\n"
+        "fn main() -> i32:\n  return fixture_alive()\n"
     )
     compiler = Compiler()
     artifact = compiler.compile(

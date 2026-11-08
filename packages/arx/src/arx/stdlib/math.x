@@ -10,7 +10,7 @@ summary: >-
 type SignedInteger = i8 | i16 | i32 | i64
 
 @<T: SignedInteger>
-abs: fn(value: T) -> T:
+fn abs(value: T) -> T:
   ```
   title: abs
   summary: >-
@@ -25,7 +25,7 @@ abs: fn(value: T) -> T:
     return value
 
 @<T: SignedInteger>
-min: fn(lhs: T, rhs: T) -> T:
+fn min(lhs: T, rhs: T) -> T:
   ```
   title: min
   summary: Returns the smaller of two signed integers as T.
@@ -36,7 +36,7 @@ min: fn(lhs: T, rhs: T) -> T:
     return rhs
 
 @<T: SignedInteger>
-max: fn(lhs: T, rhs: T) -> T:
+fn max(lhs: T, rhs: T) -> T:
   ```
   title: max
   summary: Returns the larger of two signed integers as T.
@@ -47,7 +47,7 @@ max: fn(lhs: T, rhs: T) -> T:
     return rhs
 
 @<T: SignedInteger>
-clamp: fn(value: T, lower: T, upper: T) -> T:
+fn clamp(value: T, lower: T, upper: T) -> T:
   ```
   title: clamp
   summary: >-
@@ -65,7 +65,7 @@ clamp: fn(value: T, lower: T, upper: T) -> T:
       return value
 
 @<T: SignedInteger>
-square: fn(value: T) -> T:
+fn square(value: T) -> T:
   ```
   title: square
   summary: >-

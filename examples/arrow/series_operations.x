@@ -2,7 +2,7 @@
 title: Checked Series slicing, reductions and updates
 summary: Preserve nullable values and independent column snapshots.
 ```
-main: fn() -> i32:
+fn main() -> i32:
   frame: dataframe[x:i32 | none] = dataframe({x:[1, none, 3]})
   column: series[i32 | none] = frame.x
   reversed: series[i32 | none] = column[::-1]

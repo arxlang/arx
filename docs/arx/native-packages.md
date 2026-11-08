@@ -67,9 +67,9 @@ external module might declare the following functions, implemented by its shim:
 ```
 title: Example external native bridge
 ```
-demo_create: extern :: fn(size: i32) -> i64
-demo_write: extern :: fn(token: i64, filename: str) -> i32
-demo_release: extern :: fn(token: i64) -> i32
+extern demo_create(size: i32) -> i64
+extern demo_write(token: i64, filename: str) -> i32
+extern demo_release(token: i64) -> i32
 ````
 
 Use positive checked table tokens, with `0` indicating creation failure—not
