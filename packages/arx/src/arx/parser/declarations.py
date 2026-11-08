@@ -29,9 +29,9 @@ from arx.exceptions import ParserException
 from arx.lexer import Token, TokenKind
 from arx.parser.base import ParserMixinBase
 from arx.parser.state import (
+    BINDING_MUTABILITY_MODIFIERS,
     CLASS_ALLOWED_MODIFIERS,
     FIELD_ALLOWED_MODIFIERS,
-    FIELD_MUTABILITY_MODIFIERS,
     METHOD_ALLOWED_MODIFIERS,
     MUTABILITY_NAME_MAP,
     SUPPORTED_MODIFIERS,
@@ -264,7 +264,7 @@ class DeclarationParserMixin(ParserMixinBase):
         template_params: tuple[astx.TemplateParam, ...] = (),
     ) -> astx.FunctionDef:
         """
-        title: Parse the function definition expression.
+        title: Parse a function definition.
         parameters:
           template_params:
             type: tuple[astx.TemplateParam, Ellipsis]
@@ -307,7 +307,7 @@ class DeclarationParserMixin(ParserMixinBase):
 
     def parse_extern(self) -> astx.FunctionPrototype:
         """
-        title: Parse the extern expression.
+        title: Parse an extern declaration.
         returns:
           type: astx.FunctionPrototype
         """
@@ -342,6 +342,7 @@ class DeclarationParserMixin(ParserMixinBase):
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected class name after 'class'.")
 
+        self.validate_type_declaration_name("class")
         class_name = cast(str, self.tokens.cur_tok.value)
         self.tokens.get_next_token()  # eat class name
 
@@ -530,7 +531,7 @@ class DeclarationParserMixin(ParserMixinBase):
                 f"Inferred field '{name}' requires an explicit initializer.",
                 field_loc,
             )
-        mutability = self._resolve_field_mutability(modifiers)
+        mutability = self.resolve_binding_mutability(modifiers)
         visibility = self._resolve_visibility(modifiers)
         if initializer is None:
             field = astx.VariableDeclaration(
@@ -725,7 +726,7 @@ class DeclarationParserMixin(ParserMixinBase):
                         param_name,
                         param_type,
                         param_loc,
-                        self._resolve_field_mutability(param_modifiers),
+                        self.resolve_binding_mutability(param_modifiers),
                     )
 
                 index += 1
@@ -865,6 +866,7 @@ class DeclarationParserMixin(ParserMixinBase):
                     "Parser: Expected template parameter name."
                 )
 
+            self.validate_type_declaration_name("template parameter")
             param_name = cast(str, self.tokens.cur_tok.value)
             param_loc = self.tokens.cur_tok.location
             if param_name in seen_names:
@@ -993,7 +995,7 @@ class DeclarationParserMixin(ParserMixinBase):
             )
 
         mutability = [
-            name for name in modifiers if name in FIELD_MUTABILITY_MODIFIERS
+            name for name in modifiers if name in BINDING_MUTABILITY_MODIFIERS
         ]
         if len(mutability) > 1:
             raise ParserException(
@@ -1081,12 +1083,13 @@ class DeclarationParserMixin(ParserMixinBase):
                 return VISIBILITY_NAME_MAP[modifier]
         return None
 
-    def _resolve_field_mutability(
+    def resolve_binding_mutability(
         self,
         modifiers: ParsedAnnotation | None,
     ) -> astx.MutabilityKind:
         """
-        title: Resolve field mutability defaults.
+        title: >-
+          Resolve Arx binding mutability for variables, fields, and parameters.
         parameters:
           modifiers:
             type: ParsedAnnotation | None
@@ -1096,7 +1099,7 @@ class DeclarationParserMixin(ParserMixinBase):
         if modifiers is None:
             return astx.MutabilityKind.mutable
         for modifier in modifiers.modifiers:
-            if modifier in FIELD_MUTABILITY_MODIFIERS:
+            if modifier in BINDING_MUTABILITY_MODIFIERS:
                 return MUTABILITY_NAME_MAP[modifier]
         return astx.MutabilityKind.mutable
 
@@ -1115,7 +1118,7 @@ class DeclarationParserMixin(ParserMixinBase):
         if modifiers is None:
             return None
         for modifier in modifiers.modifiers:
-            if modifier in FIELD_MUTABILITY_MODIFIERS:
+            if modifier in BINDING_MUTABILITY_MODIFIERS:
                 return MUTABILITY_NAME_MAP[modifier]
         return None
 
@@ -1241,7 +1244,7 @@ class DeclarationParserMixin(ParserMixinBase):
                     arg_name,
                     arg_type,
                     arg_loc,
-                    self._resolve_field_mutability(arg_modifiers),
+                    self.resolve_binding_mutability(arg_modifiers),
                 )
 
                 if self._is_operator(","):

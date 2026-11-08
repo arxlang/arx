@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+- Reject `auto` as a class, type-alias, or template-parameter name to prevent
+  collisions with inference; it remains a contextual value identifier.
+
 - **Breaking:** variables use `value: [var|const ::] T`, with inline field
   modifiers and initializer-based `auto` inference for supported declarations.
   Function/method heads stay `fn name(...) -> T:` and externs stay

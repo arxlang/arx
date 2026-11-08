@@ -13,12 +13,14 @@ import astx
 import pytest
 
 from arx.codegen import ArxBuilder
+from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.main import FileImportResolver, inject_ambient_builtin_imports
 from arx.parser import Parser
 from irx.analysis.module_interfaces import ParsedModule
 from irx.analysis.resolved_nodes import OwnershipTransferKind, SemanticInfo
+from irx.analysis.types import same_type
 from irx.diagnostics import DiagnosticCodes, SemanticError
 from llvmlite import binding as llvm
 from llvmlite import ir
@@ -1757,4 +1759,74 @@ def test_inference_rejects_ambiguous_or_unsupported_storage(
     """
     ArxIO.string_to_buffer(source)
     with pytest.raises(SemanticError, match=message):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_collection_access_paths_have_equivalent_semantics() -> None:
+    """
+    title: Typed frontend operations and inferred normalization resolve alike.
+    """
+    ArxIO.string_to_buffer(
+        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1, 2]})\n"
+        "fn main() -> i32:\n"
+        "  typed_list: list[i32] = [1]\n"
+        "  inferred_list: auto = [1]\n"
+        "  typed_list.append(2)\n"
+        "  inferred_list.append(2)\n"
+        "  typed_frame: dataframe[x:i32] = frame()\n"
+        "  inferred_frame: auto = frame()\n"
+        "  typed_frame.x\n"
+        "  inferred_frame.x\n"
+        '  typed_frame["x"]\n'
+        '  inferred_frame["x"]\n'
+        "  typed_frame.nrows()\n"
+        "  inferred_frame.nrows()\n"
+        "  typed_frame.ncols()\n"
+        "  inferred_frame.ncols()\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex())
+    main = module.nodes[-1]
+    assert isinstance(main, astx.FunctionDef)
+    operations = [
+        node
+        for node in main.body.nodes
+        if not isinstance(
+            node, (astx.VariableDeclaration, astx.FunctionReturn)
+        )
+    ]
+    assert len(operations) == 10
+    text = ArxBuilder().translate(module)
+    llvm.parse_assembly(text).verify()
+    for typed, inferred in zip(operations[::2], operations[1::2]):
+        typed_info = typed.semantic
+        inferred_info = inferred.semantic
+        assert isinstance(typed_info, SemanticInfo)
+        assert isinstance(inferred_info, SemanticInfo)
+        assert typed_info.normalized_collection is None
+        normalized = inferred_info.normalized_collection
+        assert normalized is not None
+        assert type(normalized) is type(typed)
+        assert same_type(typed_info.resolved_type, inferred_info.resolved_type)
+
+
+@pytest.mark.parametrize("annotation", ["dataframe[x:i32]", "auto"])
+def test_collection_metadata_arguments_fail_before_lowering(
+    annotation: str,
+) -> None:
+    """
+    title: Both collection paths reject unsupported arguments before LLVM.
+    parameters:
+      annotation:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
+        "fn main() -> i32:\n"
+        f"  table: {annotation} = frame()\n"
+        "  table.nrows(1)\n  return 0\n"
+    )
+    with pytest.raises(
+        (ParserException, SemanticError), match="expects no arguments"
+    ):
         ArxBuilder().translate(Parser().parse(Lexer().lex()))

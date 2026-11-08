@@ -51,6 +51,9 @@ class TypeUseContext(Enum):
 class ParsedAnnotation:
     """
     title: Parsed declaration modifiers with their source location.
+    summary: >-
+      Shared payload for an annotation prefix and an inline declaration
+      modifier group; this record does not distinguish their surface spelling.
     attributes:
       modifiers:
         type: tuple[str, Ellipsis]
@@ -97,7 +100,7 @@ SUPPORTED_MODIFIERS = frozenset(
 )
 
 VISIBILITY_MODIFIERS = frozenset({"public", "private", "protected"})
-FIELD_MUTABILITY_MODIFIERS = frozenset({"const", "var"})
+BINDING_MUTABILITY_MODIFIERS = frozenset({"const", "var"})
 
 CLASS_ALLOWED_MODIFIERS = frozenset(
     {"public", "private", "protected", "abstract"}
@@ -120,9 +123,9 @@ MUTABILITY_NAME_MAP = {
 }
 
 __all__ = [
+    "BINDING_MUTABILITY_MODIFIERS",
     "CLASS_ALLOWED_MODIFIERS",
     "FIELD_ALLOWED_MODIFIERS",
-    "FIELD_MUTABILITY_MODIFIERS",
     "INDENT_SIZE",
     "METHOD_ALLOWED_MODIFIERS",
     "MUTABILITY_NAME_MAP",

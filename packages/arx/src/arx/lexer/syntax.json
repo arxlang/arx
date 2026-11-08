@@ -1,5 +1,5 @@
 {
-  "syntax_pack_version": "0.12.0",
+  "syntax_pack_version": "0.13.0",
   "language": "arx",
   "status": "draft",
   "source_of_truth": "Canonical lexical source for editor tooling and lexer tables.",
@@ -158,6 +158,11 @@
       "modifier_separator": "::",
       "binding_modifiers": ["var", "const"],
       "inferred_type": "auto",
+      "inferred_type_reserved_in": [
+        "class_name",
+        "type_alias_name",
+        "template_parameter_name"
+      ],
       "inference_contexts": [
         "variable",
         "literal_initialized_field",

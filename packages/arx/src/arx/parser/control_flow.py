@@ -248,7 +248,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
-        title: Parse the `while` expression.
+        title: Parse a while statement.
         returns:
           type: astx.WhileStmt
         """
@@ -263,7 +263,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_for_stmt(self) -> astx.AST:
         """
-        title: Parse for-loop expressions.
+        title: Parse a for statement.
         returns:
           type: astx.AST
         """
@@ -417,7 +417,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
-            mutability=self._resolve_field_mutability(modifiers),
+            mutability=self.resolve_binding_mutability(modifiers),
             loc=var_loc,
         )
 
@@ -475,7 +475,7 @@ class ControlFlowParserMixin(ParserMixinBase):
             name=name,
             type_=var_type,
             value=value,
-            mutability=self._resolve_field_mutability(modifiers),
+            mutability=self.resolve_binding_mutability(modifiers),
             loc=var_loc,
         )
         self._declare_value_name(name)
@@ -529,7 +529,7 @@ class ControlFlowParserMixin(ParserMixinBase):
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
-        title: Parse the return expression.
+        title: Parse a return statement.
         returns:
           type: astx.FunctionReturn
         """

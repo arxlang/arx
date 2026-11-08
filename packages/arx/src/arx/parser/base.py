@@ -68,6 +68,16 @@ class ParserMixinBase:
     value_scopes: list[set[str]]
     tokens: TokenList
 
+    def validate_type_declaration_name(self, target: str) -> None:
+        """
+        title: Reject inference markers as names of declared types.
+        parameters:
+          target:
+            type: str
+        """
+        del target
+        raise NotImplementedError
+
     def parse_statement(self) -> astx.AST:
         """
         title: Parse a statement without admitting it as an expression operand.
@@ -516,7 +526,7 @@ class ParserMixinBase:
         template_params: tuple[astx.TemplateParam, ...] = (),
     ) -> astx.FunctionDef:
         """
-        title: Parse the function definition expression.
+        title: Parse a function definition.
         parameters:
           template_params:
             type: tuple[astx.TemplateParam, Ellipsis]
@@ -579,7 +589,7 @@ class ParserMixinBase:
 
     def parse_if_stmt(self) -> astx.IfStmt:
         """
-        title: Parse one if expression.
+        title: Parse an if statement.
         returns:
           type: astx.IfStmt
         """
@@ -587,7 +597,7 @@ class ParserMixinBase:
 
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
-        title: Parse one while expression.
+        title: Parse a while statement.
         returns:
           type: astx.WhileStmt
         """
@@ -595,7 +605,7 @@ class ParserMixinBase:
 
     def parse_for_stmt(self) -> astx.AST:
         """
-        title: Parse one for-loop expression.
+        title: Parse a for statement.
         returns:
           type: astx.AST
         """
@@ -627,7 +637,7 @@ class ParserMixinBase:
 
     def parse_return_function(self) -> astx.FunctionReturn:
         """
-        title: Parse one return expression.
+        title: Parse a return statement.
         returns:
           type: astx.FunctionReturn
         """
@@ -732,12 +742,13 @@ class ParserMixinBase:
         del modifiers, expected
         raise NotImplementedError
 
-    def _resolve_field_mutability(
+    def resolve_binding_mutability(
         self,
         modifiers: ParsedAnnotation | None,
     ) -> astx.MutabilityKind:
         """
-        title: Resolve field mutability defaults.
+        title: >-
+          Resolve Arx binding mutability for variables, fields, and parameters.
         parameters:
           modifiers:
             type: ParsedAnnotation | None
@@ -749,7 +760,7 @@ class ParserMixinBase:
 
     def parse_extern(self) -> astx.FunctionPrototype:
         """
-        title: Parse the extern expression.
+        title: Parse an extern declaration.
         returns:
           type: astx.FunctionPrototype
         """

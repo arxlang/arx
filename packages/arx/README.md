@@ -20,8 +20,8 @@ Arx exposes data-oriented types backed by IRx's native Arrow C++ runtime:
 
 ```arx
 fn main() -> i32:
-  var grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
-  var rows: dataframe[id: i32, score: f64] = dataframe({
+  grid: tensor[i32, 2, 2] = [[1, 2], [3, 4]]
+  rows: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })

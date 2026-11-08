@@ -47,11 +47,11 @@ fn first(grid: tensor[i32, 2, 2]) -> i32:
   return grid[0, 0]
 
 fn rows() -> i32:
-  var frame: dataframe[id: i32, score: f64] = dataframe({
+  frame: dataframe[id: i32, score: f64] = dataframe({
     id: [1, 2, 3],
     score: [0.5, 0.8, 1.0],
   })
-  var scores: series[f64] = frame.score
+  scores: series[f64] = frame.score
   return cast(frame.nrows(), i32)
 ```
 
@@ -185,16 +185,16 @@ title: Write a RecordBatch
 import (Schema, BatchBuilder, RecordBatch, IPCWriter) from stdlib.arrow
 
 fn main() -> i32:
-  var schema: Schema = Schema()
+  schema: Schema = Schema()
   schema.add("id", "int64")
   schema.add("score", "float64")
   schema.add("active", "bool")
-  var builder: BatchBuilder = BatchBuilder(schema)
+  builder: BatchBuilder = BatchBuilder(schema)
   builder.append_i64(0, 42)
   builder.append_f64(1, 1.5)
   builder.append_bool(2, true)
-  var batch: RecordBatch = builder.finish()
-  var writer: IPCWriter = IPCWriter(schema)
+  batch: RecordBatch = builder.finish()
+  writer: IPCWriter = IPCWriter(schema)
   writer.open_file("example.arrow")
   writer.write(batch)
   writer.close()

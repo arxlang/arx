@@ -597,13 +597,22 @@ def test_a_parameter_read_lowers_to_a_variable() -> None:
     summary: >-
       The reference carries no type: the prototype already declares it, and
       reconciling a variable with its context is IRx's to do, unlike a literal
-      whose width this stage chooses.
+      whose width this stage chooses. The frontend explicitly selects mutable
+      parameter bindings independently of ASTx's constructor default.
     """
-    definition = _from_source("def sample(a):\n    return a\n", i64(i64))
+    module = _module_from_source("def sample(a):\n    return a\n", i64(i64))
+    definition = module.block[0]
+    assert isinstance(definition, astx.FunctionDef)
     (returned,) = definition.body.nodes
     assert isinstance(returned, astx.FunctionReturn)
     assert isinstance(returned.value, astx.Variable)
     assert returned.value.name == "a"
+    argument = definition.prototype.args.nodes[0]
+    assert argument.mutability is astx.MutabilityKind.mutable
+    analyze(module)
+    assert isinstance(argument.semantic, SemanticInfo)
+    assert argument.semantic.resolved_symbol is not None
+    assert argument.semantic.resolved_symbol.is_mutable
 
 
 def test_operand_literals_take_the_expected_width() -> None:

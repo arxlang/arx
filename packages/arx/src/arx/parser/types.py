@@ -102,6 +102,25 @@ class TypeParserMixin(ParserMixinBase):
     title: Type parser mixin.
     """
 
+    def validate_type_declaration_name(self, target: str) -> None:
+        """
+        title: Reject inference markers as names of declared types.
+        summary: >-
+          Auto remains a contextual value identifier, but cannot name a class,
+          type alias, or template parameter because type positions interpret it
+          as an inference request.
+        parameters:
+          target:
+            type: str
+        """
+        if self.tokens.cur_tok.value == "auto":
+            raise ParserException(
+                f"'auto' is reserved for type inference and cannot name "
+                f"a {target}; choose another name.",
+                self.tokens.cur_tok.location,
+                code="ARX-PARSE-TYPE-NAME-001",
+            )
+
     def is_type_alias_decl_start(self) -> bool:
         """
         title: Return whether the current token starts a type alias.
@@ -161,6 +180,7 @@ class TypeParserMixin(ParserMixinBase):
         if self.tokens.cur_tok.kind != TokenKind.identifier:
             raise ParserException("Parser: Expected type alias name.")
 
+        self.validate_type_declaration_name("type alias")
         alias_name = cast(str, self.tokens.cur_tok.value)
         self._validate_type_alias_name(alias_name)
         self.tokens.get_next_token()  # eat alias name

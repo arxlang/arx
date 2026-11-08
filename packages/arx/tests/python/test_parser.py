@@ -1527,3 +1527,81 @@ def test_function_head_preserves_name_and_optional_spacing(
         function.prototype.args.nodes[0].mutability
         is astx.MutabilityKind.constant
     )
+
+
+@pytest.mark.parametrize(
+    "source, target, line, column",
+    [
+        ("class auto:\n  value: i32 = 0\n", "class", 1, 7),
+        ("type auto = i32\n", "type alias", 1, 6),
+        (
+            "@<auto: i32>\nfn identity(value: i32) -> i32:\n  return value\n",
+            "template parameter",
+            1,
+            3,
+        ),
+        (
+            "@<Té: i32, auto: i32>\n"
+            "fn identity(value: Té) -> Té:\n  return value\n",
+            "template parameter",
+            1,
+            12,
+        ),
+    ],
+)
+def test_inference_marker_cannot_name_a_type(
+    source: str, target: str, line: int, column: int
+) -> None:
+    """
+    title: Type declarations cannot shadow inference, even when never used.
+    parameters:
+      source:
+        type: str
+      target:
+        type: str
+      line:
+        type: int
+      column:
+        type: int
+    """
+    with pytest.raises(
+        ParserException, match=f"cannot name a {target}"
+    ) as err:
+        _parse_module(source)
+    assert err.value.code == "ARX-PARSE-TYPE-NAME-001"
+    assert err.value.location is not None
+    assert (err.value.location.line, err.value.location.col) == (line, column)
+
+
+def test_auto_remains_a_value_identifier_and_inference_marker() -> None:
+    """
+    title: Restrict type names without reserving auto in value positions.
+    """
+    module = _parse_module(
+        "class Auto:\n  auto: auto = 1\n"
+        "type auto_type = i32\n"
+        "@<auto_T: auto_type>\n"
+        "fn identity(auto: auto_T) -> auto_T:\n  return auto\n"
+        "fn auto(value: auto_type) -> auto_type:\n  return value\n"
+        "fn apply() -> i32:\n  auto: auto = auto(1)\n  return auto\n"
+    )
+    class_ = module.nodes[0]
+    assert isinstance(class_, astx.ClassDefStmt)
+    assert class_.name == "Auto"
+    assert class_.attributes[0].name == "auto"
+    assert isinstance(class_.attributes[0].type_, astx.InferredType)
+    identity = module.nodes[1]
+    assert isinstance(identity, astx.FunctionDef)
+    assert identity.prototype.args.nodes[0].name == "auto"
+    assert isinstance(
+        identity.prototype.args.nodes[0].type_, astx.TemplateTypeVar
+    )
+    function = module.nodes[2]
+    assert isinstance(function, astx.FunctionDef)
+    assert function.prototype.name == "auto"
+    apply = module.nodes[3]
+    assert isinstance(apply, astx.FunctionDef)
+    declaration = apply.body.nodes[0]
+    assert isinstance(declaration, astx.VariableDeclaration)
+    assert declaration.name == "auto"
+    assert isinstance(declaration.type_, astx.InferredType)

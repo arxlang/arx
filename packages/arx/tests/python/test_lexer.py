@@ -25,6 +25,26 @@ def test_class_hook_spellings_are_identifiers(name: str) -> None:
     assert Lexer().get_token() == Token(kind=TokenKind.identifier, value=name)
 
 
+def test_auto_is_contextual_not_a_reserved_token() -> None:
+    """
+    title: Auto remains an identifier despite its type-name restriction.
+    """
+    manifest = load_syntax_manifest()
+    assert "auto" in manifest.contextual_keywords
+    assert "auto" not in manifest.reserved_keywords
+    assert manifest.data["structural_forms"]["declarations"][
+        "inferred_type_reserved_in"
+    ] == ["class_name", "type_alias_name", "template_parameter_name"]
+    ArxIO.string_to_buffer("auto auto_type Auto")
+    assert [token.value for token in Lexer().lex()][:-1] == [
+        "auto",
+        "auto_type",
+        "Auto",
+    ]
+    ArxIO.string_to_buffer("auto")
+    assert Lexer().get_token() == Token(TokenKind.identifier, "auto")
+
+
 def test_token_name() -> None:
     """
     title: Test token name.

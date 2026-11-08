@@ -39,7 +39,7 @@ def documented_program(page: str, title: str) -> str:
     returns:
       type: str
     """
-    document = (ROOT / "docs" / "arx" / page).read_text(encoding="utf-8")
+    document = (ROOT / "docs" / page).read_text(encoding="utf-8")
     programs: list[str] = re.findall(
         r"^````arx\n(.*?)^````$", document, re.MULTILINE | re.DOTALL
     )
@@ -56,13 +56,14 @@ def documented_program(page: str, title: str) -> str:
 @pytest.mark.parametrize(
     "page,title,stdout",
     [
-        ("getting-started.md", "Hello module", "42"),
-        ("getting-started.md", "Arrow-backed collections", ""),
-        ("functions.md", "Template function example", "3"),
-        ("file-io.md", "Native text file example", "hello"),
-        ("collections.md", "Nullable column expressions", ""),
-        ("csv.md", "Copy a CSV file", ""),
-        ("parquet.md", "Filter and copy Parquet rows", ""),
+        ("arx/getting-started.md", "Hello module", "42"),
+        ("arx/getting-started.md", "Arrow-backed collections", ""),
+        ("arx/functions.md", "Template function example", "3"),
+        ("arx/file-io.md", "Native text file example", "hello"),
+        ("arx/collections.md", "Nullable column expressions", ""),
+        ("arx/csv.md", "Copy a CSV file", ""),
+        ("arx/parquet.md", "Filter and copy Parquet rows", ""),
+        ("apache-arrow.md", "Write a RecordBatch", ""),
     ],
 )
 def test_documented_program(
@@ -92,11 +93,11 @@ def test_documented_program(
     builder._build_from_ir_result(text, str(binary), True, "auto")
 
     # All examples run in isolation, including their truncating file writes.
-    if page == "csv.md":
+    if page == "arx/csv.md":
         (tmp_path / "input.csv").write_text(
             "id,name\n1,one\n2,two\n", encoding="utf-8"
         )
-    if page == "parquet.md":
+    if page == "arx/parquet.md":
         parquet.write_table(  # type: ignore[no-untyped-call]
             pa.table({"id": [5, 15, 20], "name": ["skip", "one", "two"]}),
             tmp_path / "events.parquet",
@@ -114,13 +115,54 @@ def test_documented_program(
     assert result.stdout.strip() == stdout
     assert not result.stderr
 
-    if page == "file-io.md":
+    if page == "arx/file-io.md":
         assert (tmp_path / "message.txt").read_bytes() == b"hello\n"
-    if page == "csv.md":
+    if page == "arx/csv.md":
         assert csv.read_csv(tmp_path / "output.csv").equals(  # type: ignore[attr-defined]
             csv.read_csv(tmp_path / "input.csv")  # type: ignore[attr-defined]
         )
-    if page == "parquet.md":
+    if page == "arx/parquet.md":
         assert parquet.read_table(  # type: ignore[no-untyped-call]
             tmp_path / "selected.parquet"
         ).equals(pa.table({"name": ["one", "two"]}))
+
+    if page == "apache-arrow.md":
+        with pa.ipc.open_file(tmp_path / "example.arrow") as reader:
+            assert reader.read_all().equals(
+                pa.table(
+                    {"id": [42], "score": [1.5], "active": [True]},
+                    schema=pa.schema(
+                        [
+                            pa.field("id", pa.int64(), nullable=False),
+                            pa.field("score", pa.float64(), nullable=False),
+                            pa.field("active", pa.bool_(), nullable=False),
+                        ]
+                    ),
+                )
+            )
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "docs/apache-arrow.md",
+        "docs/arx/datatypes.md",
+        "docs/index.md",
+        "packages/arx/README.md",
+    ],
+)
+def test_declaration_documentation_uses_supported_grammar(page: str) -> None:
+    """
+    title: Parse relevant Arx fences directly instead of grepping other syntax.
+    parameters:
+      page:
+        type: str
+    """
+    document = (ROOT / page).read_text(encoding="utf-8")
+    snippets = re.findall(
+        r"^(`{3,4})arx\n(.*?)^\1$", document, re.MULTILINE | re.DOTALL
+    )
+    assert snippets, page
+    for _, source in snippets:
+        ArxIO.string_to_buffer(source)
+        Parser().parse(Lexer().lex(), "documentation")
