@@ -1982,8 +1982,11 @@ class ResolvedContextManager:
     """
     title: Resolved context-manager metadata.
     summary: >-
-      Capture the manager class, resolved ``__enter__``/``__exit__`` methods,
-      and optional target binding for one ``with`` statement.
+      Capture analyzed bindings and calls for one resource scope. The manager
+      binding pins its identity; value_binding owns the actual enter result,
+      including when no source target is requested. Exit receives a Boolean
+      completion value and returns none. Lowering reuses ordinary declaration
+      ownership and call plans without resolving the protocol again.
     attributes:
       class_:
         type: SemanticClass
@@ -1993,6 +1996,16 @@ class ResolvedContextManager:
         type: ResolvedMethodCall
       exit:
         type: ResolvedMethodCall
+      manager_binding:
+        type: astx.VariableDeclaration
+      enter_call:
+        type: astx.MethodCall
+      value_binding:
+        type: astx.VariableDeclaration | None
+      success_binding:
+        type: astx.VariableDeclaration
+      exit_call:
+        type: astx.MethodCall
       target_symbol:
         type: SemanticSymbol | None
     """
@@ -2001,6 +2014,11 @@ class ResolvedContextManager:
     manager_type: astx.DataType
     enter: ResolvedMethodCall
     exit: ResolvedMethodCall
+    manager_binding: astx.VariableDeclaration
+    enter_call: astx.MethodCall
+    value_binding: astx.VariableDeclaration | None
+    success_binding: astx.VariableDeclaration
+    exit_call: astx.MethodCall
     target_symbol: SemanticSymbol | None = None
 
 

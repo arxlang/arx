@@ -31,6 +31,7 @@ def build_file_runtime_feature() -> RuntimeFeature:
     symbols: dict[str, ExternalSymbolSpec] = {}
     for name in (
         "open",
+        "require_open",
         "read",
         "write",
         "read_bytes",

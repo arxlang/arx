@@ -121,6 +121,87 @@ def test_loop_transfers_reject_expression_positions(source: str) -> None:
         _parse_module(source)
 
 
+@pytest.mark.parametrize("binding", ["", " as café"])
+def test_resource_scope_syntax(binding: str) -> None:
+    """
+    title: Resource scopes preserve manager expressions and target locations.
+    parameters:
+      binding:
+        type: str
+    """
+    line = f'  with factory("é"){binding}:'
+    module = _parse_module(
+        f"fn run() -> none:\n{line}\n    print(1)\n  print(2)\n"
+    )
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    scope, following = function.body.nodes
+    assert isinstance(scope, astx.WithStmt)
+    assert isinstance(scope.manager, astx.FunctionCall)
+    assert scope.manager.fn == "factory"
+    assert (scope.loc.line, scope.loc.col) == (2, 3)
+    assert len(scope.body.nodes) == 1
+    assert following is not None
+    if binding:
+        assert isinstance(scope.target, astx.Identifier)
+        assert scope.target.name == "café"
+        assert (scope.target.loc.line, scope.target.loc.col) == (
+            2,
+            line.index("café") + 1,
+        )
+    else:
+        assert scope.target is None
+
+
+def test_resource_target_shadows_class_only_inside_body() -> None:
+    """
+    title: Entered names use value scope, not parser-owned type inference.
+    """
+    module = _parse_module(
+        "class Alias:\n  value: i32\n"
+        "fn run() -> none:\n"
+        "  with Alias() as Alias:\n    Alias.work()\n"
+        "  Alias.work()\n"
+    )
+    function = module.nodes[1]
+    assert isinstance(function, astx.FunctionDef)
+    scope, outside = function.body.nodes
+    assert isinstance(scope, astx.WithStmt)
+    assert isinstance(scope.body.nodes[0], astx.MethodCall)
+    assert isinstance(outside, astx.StaticMethodCall)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "with resource as:\n  print(1)",
+        "with resource as (first, second):\n  print(1)",
+        "with first, second:\n  print(1)",
+        "with resource as value = 1:\n  print(1)",
+        "with resource:\nprint(1)",
+        "with:\n  print(1)",
+    ],
+)
+def test_resource_scope_rejects_invalid_headers(source: str) -> None:
+    """
+    title: Resource headers require one expression and an indented body.
+    parameters:
+      source:
+        type: str
+    """
+    with pytest.raises(ParserException) as error:
+        _parse_module(source)
+    assert error.value.location is not None
+
+
+def test_resource_scope_is_not_an_operand() -> None:
+    """
+    title: Resource scopes cannot appear as initializer expressions.
+    """
+    with pytest.raises(ParserException, match="not expression operands"):
+        _parse_module("value: i32 = with resource:\n  print(1)")
+
+
 def test_binop_precedence() -> None:
     """
     title: Test BinOp precedence.

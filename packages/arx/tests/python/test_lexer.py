@@ -122,6 +122,23 @@ def test_loop_transfer_keywords(word: str, kind: TokenKind) -> None:
     assert lexer.get_token().kind is TokenKind.eof
 
 
+def test_with_keyword_and_contextual_as() -> None:
+    """
+    title: With is reserved while as and longer names remain identifiers.
+    """
+    assert "with" in load_syntax_manifest().reserved_keywords
+    assert "as" in load_syntax_manifest().contextual_keywords
+    ArxIO.string_to_buffer("é with as with_value withé")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.identifier, "é")
+    keyword = lexer.get_token()
+    assert keyword.kind is TokenKind.kw_with
+    assert keyword.get_name() == "with"
+    assert (keyword.location.line, keyword.location.col) == (1, 3)
+    for name in ("as", "with_value", "withé"):
+        assert lexer.get_token() == Token(TokenKind.identifier, name)
+
+
 def test_get_tok_simple() -> None:
     """
     title: Test get_token.

@@ -297,6 +297,18 @@ def test_with_exception_runs_exit_before_handler(tmp_path: Path) -> None:
         value=astx.LiteralInt32(0),
     )
     setattr(state, "is_static", True)
+    exit_method = function(
+        "__exit__",
+        block(
+            astx.BinaryOp(
+                "=",
+                astx.StaticFieldAccess("Manager", "state"),
+                astx.LiteralInt32(EXIT_STATE),
+            )
+        ),
+        astx.NoneType(),
+    )
+    exit_method.prototype.args.append(astx.Argument("success", astx.Boolean()))
     manager = astx.ClassDefStmt(
         "Manager",
         attributes=[state],
@@ -304,17 +316,7 @@ def test_with_exception_runs_exit_before_handler(tmp_path: Path) -> None:
             function(
                 "__enter__", block(astx.FunctionReturn(astx.LiteralInt32(1)))
             ),
-            function(
-                "__exit__",
-                block(
-                    astx.BinaryOp(
-                        "=",
-                        astx.StaticFieldAccess("Manager", "state"),
-                        astx.LiteralInt32(EXIT_STATE),
-                    )
-                ),
-                astx.NoneType(),
-            ),
+            exit_method,
         ],
     )
     main = function(

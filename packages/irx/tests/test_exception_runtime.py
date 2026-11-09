@@ -286,6 +286,16 @@ def test_finally_replacement_and_cleanup_priority(
     runtime.test_raise(ctx, second, None, 0)
     if cleanup:
         runtime.irx_exception_cleanup_leave(ctx, scope)
+        third = runtime.test_object(b"Third", b"three")
+        fourth = runtime.test_object(b"Fourth", b"four")
+        scope = runtime.irx_exception_cleanup_enter(ctx)
+        runtime.test_raise(ctx, third, None, 0)
+        nested = runtime.irx_exception_cleanup_enter(ctx)
+        runtime.test_raise(ctx, fourth, None, 0)
+        runtime.irx_exception_cleanup_leave(ctx, nested)
+        runtime.irx_exception_cleanup_leave(ctx, scope)
+        runtime.test_release(ctx, third)
+        runtime.test_release(ctx, fourth)
     else:
         runtime.irx_exception_finally_leave(ctx, scope, 1)
     runtime.test_release(ctx, first)
@@ -298,6 +308,12 @@ def test_finally_replacement_and_cleanup_priority(
         item.role == ("cleanup" if cleanup else "context")
         for item in report.related
     )
+    if cleanup:
+        assert [(item.role, item.message) for item in report.related] == [
+            ("cleanup", "two"),
+            ("cleanup", "four"),
+            ("cleanup", "three"),
+        ]
     runtime.irx_exception_context_destroy(ctx)
 
 

@@ -24,6 +24,8 @@ from irx.analysis.call_arguments import (
     call_evaluations,
 )
 from irx.analysis.class_lifecycle import (
+    CONTEXT_ENTER_HOOK,
+    CONTEXT_EXIT_HOOK,
     INITIALIZER_HOOK,
     class_ownership,
     constructor_arguments,
@@ -344,9 +346,13 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             node=node,
             binding_function=function,
         )
-        if is_native_file_class(
+        native_file_primitive = is_native_file_class(
             cast(SemanticAnalyzerCore, self), class_
-        ) and not validate_file_method_arguments(
+        ) and node.method_name not in {
+            CONTEXT_ENTER_HOOK.name,
+            CONTEXT_EXIT_HOOK.name,
+        }
+        if native_file_primitive and not validate_file_method_arguments(
             cast(SemanticAnalyzerCore, self), node, public=True
         ):
             return
@@ -375,7 +381,7 @@ class ExpressionClassAccessVisitorMixin(ExpressionClassSupportVisitorMixin):
             list(call_evaluations(node)),
             call_resolution.result_type,
         )
-        if is_native_file_class(cast(SemanticAnalyzerCore, self), class_):
+        if native_file_primitive:
             if class_.layout is None:
                 raise TypeError(
                     "native File method requires a resolved layout"

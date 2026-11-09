@@ -272,6 +272,13 @@ int32_t irx_file_write_bytes(irx_file* handle, const unsigned char* data,
   return 0;
 }
 
+int32_t irx_file_require_open(irx_file* handle, char* error) {
+  irx_file_clear_error(error);
+  if (handle == NULL || handle->stream == NULL)
+    return irx_file_error(error, IRX_FILE_CLOSED, "enter on a closed file");
+  return 0;
+}
+
 int32_t irx_file_flush(irx_file* handle, char* error) {
   irx_file_clear_error(error);
   if (handle == NULL || handle->stream == NULL)

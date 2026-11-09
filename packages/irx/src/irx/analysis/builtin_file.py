@@ -18,11 +18,20 @@ from irx.analysis.resolved_nodes import (
     ResolvedNativeFileInitialization,
     SemanticClass,
 )
-from irx.analysis.types import is_string_type
+from irx.analysis.types import is_boolean_type, is_string_type
 from irx.typecheck import typechecked
 
 NATIVE_FILE_METHODS = frozenset(
-    {"read", "write", "read_bytes", "write_bytes", "flush", "close"}
+    {
+        "read",
+        "write",
+        "read_bytes",
+        "write_bytes",
+        "flush",
+        "close",
+        "__enter__",
+        "__exit__",
+    }
 )
 
 
@@ -155,7 +164,20 @@ def validate_native_file_class(
             and not astx.is_template_node(prototype)
         )
         valid = valid and prototype.visibility is astx.VisibilityKind.public
-        if method.name == "write":
+        if method.name == "__enter__":
+            valid = valid and (
+                not parameters
+                and isinstance(prototype.return_type, astx.ClassType)
+                and prototype.return_type.name
+                in {class_.name, class_.qualified_name}
+            )
+        elif method.name == "__exit__":
+            valid = valid and (
+                len(parameters) == 1
+                and is_boolean_type(parameters[0].type_)
+                and isinstance(prototype.return_type, astx.NoneType)
+            )
+        elif method.name == "write":
             valid = valid and (
                 len(parameters) == 1
                 and is_string_type(parameters[0].type_)

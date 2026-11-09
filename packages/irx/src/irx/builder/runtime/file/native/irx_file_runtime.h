@@ -36,6 +36,8 @@ int32_t irx_file_read_bytes(irx_file* file, int64_t size,
 int32_t irx_file_write_bytes(irx_file* file, const unsigned char* data,
                              int64_t size, int64_t* out_count, char* error);
 int32_t irx_file_flush(irx_file* file, char* error);
+/* Check open state without reading, writing, or flushing. No output slots. */
+int32_t irx_file_require_open(irx_file* file, char* error);
 int32_t irx_file_close(irx_file* file, char* error);
 int32_t irx_file_release(irx_file* file, char* error);
 #ifdef __cplusplus

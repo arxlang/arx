@@ -10,7 +10,6 @@ summary: >-
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, cast
 
 import astx
 
@@ -38,15 +37,12 @@ from irx.analysis.ownership import (
 )
 from irx.analysis.resolved_nodes import (
     ImplicitConversion,
-    MethodDispatchKind,
     OwnershipEscapeKind,
     OwnershipKind,
     OwnershipTransferKind,
     ResolvedContextManager,
     ResolvedGeneratorFunction,
-    ResolvedMethodCall,
     ResolvedYield,
-    SemanticClass,
     SemanticSymbol,
 )
 from irx.analysis.types import (
@@ -61,7 +57,6 @@ from irx.analysis.types import (
 from irx.analysis.validation import (
     resolve_return,
     validate_assignment,
-    validate_call,
 )
 from irx.diagnostics import DiagnosticCodes
 from irx.typecheck import typechecked
@@ -395,126 +390,70 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
         self._set_yield(node, resolved)
         return resolved
 
-    def _resolve_context_method(
+    def _declare_context_target(
         self,
         node: astx.WithStmt,
-        class_: SemanticClass,
-        method_name: str,
-        manager_type: astx.DataType,
-    ) -> ResolvedMethodCall | None:
+        enter_call: astx.MethodCall,
+    ) -> astx.VariableDeclaration | None:
         """
-        title: Resolve one context-manager protocol method.
+        title: Bind an already analyzed enter result with ordinary ownership.
+        summary: >-
+          Even an ignored owning result needs a local owner. Source targets
+          retain their declared type and mutability; identifier targets are
+          immutable bindings, not immutable objects.
         parameters:
           node:
             type: astx.WithStmt
-          class_:
-            type: SemanticClass
-          method_name:
-            type: str
-          manager_type:
-            type: astx.DataType
+          enter_call:
+            type: astx.MethodCall
         returns:
-          type: ResolvedMethodCall | None
+          type: astx.VariableDeclaration | None
         """
-        resolved_overload = cast(Any, self)._resolve_method_overload(
-            class_,
-            method_name,
-            [],
-            is_static=False,
-            node=node,
-        )
-        if resolved_overload is None:
+        enter_type = self._expr_type(enter_call)
+        if enter_type is None:
             return None
-
-        member, candidates = resolved_overload
-        function = member.lowered_function
-        if function is None:
-            raise TypeError(
-                f"context manager method '{method_name}' must have a "
-                "lowered function"
-            )
-
-        visible_function = cast(Any, self)._visible_method_function(
-            class_,
-            member,
-        )
-        if function.template_params:
-            specialized_function = self._resolve_template_method_call_target(
-                function,
-                visible_function,
-                [],
-                node,
-            )
-            if specialized_function is None:
-                return None
-            visible_function = self._specialize_signature(
-                visible_function,
-                self._specialization_bindings_map(specialized_function),
-            )
-            function = specialized_function
-
-        call_resolution = validate_call(
-            self.context.diagnostics,
-            function=visible_function,
-            arg_types=[],
-            node=node,
-            binding_function=function,
-        )
-        dispatch_kind = MethodDispatchKind.DIRECT
-        if member.dispatch_slot is not None:
-            dispatch_kind = MethodDispatchKind.INDIRECT
-
-        return ResolvedMethodCall(
-            class_=class_,
-            member=member,
-            function=function,
-            overload_key=(member.signature_key or member.qualified_name),
-            dispatch_kind=dispatch_kind,
-            call=call_resolution,
-            candidates=candidates,
-            receiver_type=manager_type,
-            receiver_class=class_,
-            slot_index=member.dispatch_slot,
-        )
-
-    def _declare_context_target(
-        self,
-        target: astx.AST,
-        enter_type: astx.DataType,
-    ) -> SemanticSymbol | None:
-        """
-        title: Declare one with-statement target binding.
-        parameters:
-          target:
-            type: astx.AST
-          enter_type:
-            type: astx.DataType
-        returns:
-          type: SemanticSymbol | None
-        """
+        target = node.target
         if is_none_type(enter_type):
-            self.context.diagnostics.add(
-                "with target requires __enter__ to return a value",
-                node=target,
-                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-            )
+            if target is not None:
+                self.context.diagnostics.add(
+                    "with target requires __enter__ to return a value",
+                    node=target,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
             return None
 
+        name = "$with.value"
+        type_ = enter_type
+        mutability = astx.MutabilityKind.constant
         if isinstance(target, astx.Identifier):
-            symbol = self.registry.declare_local(
-                target.name,
-                enter_type,
-                is_mutable=False,
-                declaration=target,
-                kind="with",
-            )
-            self._set_symbol(target, symbol)
-            return symbol
-
-        if not isinstance(
-            target,
-            (astx.InlineVariableDeclaration, astx.VariableDeclaration),
+            name = target.name
+        elif isinstance(
+            target, (astx.VariableDeclaration, astx.InlineVariableDeclaration)
         ):
+            if target.value is not None and not isinstance(
+                target.value, astx.Undefined
+            ):
+                self.context.diagnostics.add(
+                    "with target declaration must not define an initializer",
+                    node=target,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                )
+                return None
+            name = target.name
+            mutability = target.mutability
+            if type(target.type_) is not AstxAnyType and not isinstance(
+                target.type_, astx.InferredType
+            ):
+                type_ = target.type_
+                self._resolve_declared_type(type_, node=target)
+                validate_assignment(
+                    self.context.diagnostics,
+                    target_name=name,
+                    target_type=type_,
+                    value_type=enter_type,
+                    node=target,
+                )
+        elif target is not None:
             self.context.diagnostics.add(
                 "with target must be an identifier or inline variable "
                 "declaration",
@@ -523,39 +462,26 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
             )
             return None
 
-        if target.value is not None and not isinstance(
-            target.value,
-            astx.Undefined,
-        ):
-            self.context.diagnostics.add(
-                "with target declaration must not define an initializer",
-                node=target,
-                code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-            )
-
-        if isinstance(target.type_, AstxAnyType):
-            target.type_ = enter_type
-        else:
-            self._resolve_declared_type(target.type_, node=target)
-            if not is_assignable(target.type_, enter_type):
-                self.context.diagnostics.add(
-                    "with target "
-                    f"'{target.name}' expects "
-                    f"{display_type_name(target.type_)} but __enter__ "
-                    f"returns {display_type_name(enter_type)}",
-                    node=target,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-
+        binding = astx.VariableDeclaration(
+            name,
+            type_,
+            mutability=mutability,
+            value=enter_call,
+            loc=node.loc if target is None else target.loc,
+        )
         symbol = self.registry.declare_local(
-            target.name,
-            target.type_,
-            is_mutable=target.mutability != astx.MutabilityKind.constant,
-            declaration=target,
+            name,
+            type_,
+            is_mutable=mutability != astx.MutabilityKind.constant,
+            declaration=binding,
             kind="with",
         )
-        self._set_symbol(target, symbol)
-        return symbol
+        self._set_symbol(binding, symbol)
+        self._resolve_local_resource_ownership(binding, symbol)
+        if target is not None:
+            self._set_symbol(target, symbol)
+            self._set_resource_ownership(target, resource_ownership(binding))
+        return binding
 
     def _validate_boolean_condition(
         self,
@@ -881,77 +807,134 @@ class ControlFlowVisitorMixin(SemanticVisitorMixinBase):
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.WithStmt) -> None:
         """
-        title: Visit WithStmt nodes.
+        title: Resolve a pinned manager, owning enter result, and checked exit.
+        summary: >-
+          __enter__ is called without explicit arguments using normal defaults.
+          __exit__ takes exactly one Boolean completion argument and returns
+          none. Manager and entered-value lifetimes use ordinary local stores;
+          each source manager and enter call is analyzed once.
         parameters:
           node:
             type: astx.WithStmt
         """
-        self.visit(node.manager)
-        if not self._require_value_expression(
-            node.manager,
-            context="with manager",
-        ):
-            self._set_type(node, None)
+        self._set_context_manager(node, None)
+        self._set_type(node, None)
+        if self.context.current_function is None:
+            self.context.diagnostics.add(
+                "with scopes require a function body",
+                node=node,
+                code=DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW,
+            )
             return
-
-        manager_type = self._expr_type(node.manager)
-        class_ = self._resolve_class_from_type(
-            manager_type,
-            node=node.manager,
-            unknown_message="with manager uses unknown class '{name}'",
-        )
-        if class_ is None:
-            if not isinstance(manager_type, astx.ClassType):
-                self.context.diagnostics.add(
-                    "with manager requires a class value, got "
-                    f"{display_type_name(manager_type)}",
-                    node=node.manager,
-                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
-                )
-            with self.context.scope("with"):
-                with self.context.constant_diagnostics(False):
-                    self.visit(node.body)
-            self._set_type(node, None)
-            return
-
-        resolved_manager_type = cast(astx.DataType, manager_type)
-        enter = self._resolve_context_method(
-            node,
-            class_,
-            CONTEXT_ENTER_HOOK.name,
-            resolved_manager_type,
-        )
-        exit_ = self._resolve_context_method(
-            node,
-            class_,
-            CONTEXT_EXIT_HOOK.name,
-            resolved_manager_type,
-        )
-
-        target_symbol = None
+        errors_before = len(self.context.diagnostics.diagnostics)
         with self.context.scope("with"):
-            if node.target is not None and enter is not None:
-                target_symbol = self._declare_context_target(
-                    node.target,
-                    enter.call.result_type,
+            self.visit(node.manager)
+            if not self._require_value_expression(
+                node.manager, context="with manager"
+            ):
+                return
+            manager_type = self._expr_type(node.manager)
+            if manager_type is None:
+                return
+            class_ = self._resolve_class_from_type(
+                manager_type,
+                node=node.manager,
+                unknown_message="with manager uses unknown class '{name}'",
+            )
+            if class_ is None:
+                if not isinstance(manager_type, astx.ClassType):
+                    self.context.diagnostics.add(
+                        "with manager requires a class value, got "
+                        f"{display_type_name(manager_type)}",
+                        node=node.manager,
+                        code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
+                    )
+                return
+
+            manager_binding = astx.VariableDeclaration(
+                "$with.manager",
+                manager_type,
+                mutability=astx.MutabilityKind.constant,
+                value=node.manager,
+                loc=node.manager.loc,
+            )
+            manager_symbol = self.registry.declare_local(
+                manager_binding.name,
+                manager_type,
+                is_mutable=False,
+                declaration=manager_binding,
+            )
+            self._set_symbol(manager_binding, manager_symbol)
+            self._resolve_local_resource_ownership(
+                manager_binding, manager_symbol
+            )
+            enter_call = astx.MethodCall(
+                astx.Identifier(manager_binding.name, loc=node.manager.loc),
+                CONTEXT_ENTER_HOOK.name,
+                [],
+            )
+            enter_call.loc = node.loc
+            self.visit(enter_call)
+            enter = self._semantic(enter_call).resolved_method_call
+            if enter is None:
+                return
+            value_binding = self._declare_context_target(node, enter_call)
+            success_binding = astx.VariableDeclaration(
+                "$with.success",
+                astx.Boolean(),
+                mutability=astx.MutabilityKind.constant,
+                value=astx.LiteralBoolean(False),
+                loc=node.loc,
+            )
+            self.visit(success_binding)
+            exit_call = astx.MethodCall(
+                astx.Identifier(manager_binding.name, loc=node.manager.loc),
+                CONTEXT_EXIT_HOOK.name,
+                [astx.Identifier(success_binding.name, loc=node.loc)],
+            )
+            exit_call.loc = node.loc
+            self.visit(exit_call)
+            exit_ = self._semantic(exit_call).resolved_method_call
+            if exit_ is None:
+                return
+            signature = exit_.call.signature
+            if (
+                len(signature.parameters) != 1
+                or not is_boolean_type(signature.parameters[0].type_)
+                or not is_none_type(signature.return_type)
+                or signature.is_variadic
+            ):
+                self.context.diagnostics.add(
+                    "context __exit__ must take exactly one bool completion "
+                    "argument and return none; exception suppression is "
+                    "unsupported",
+                    node=node,
+                    code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
                 )
             with self.context.constant_diagnostics(False):
                 self.visit(node.body)
-
-        if enter is not None and exit_ is not None:
+            if len(self.context.diagnostics.diagnostics) != errors_before:
+                return
+            target_symbol = (
+                None
+                if node.target is None
+                else self._semantic(node.target).resolved_symbol
+            )
             self._set_context_manager(
                 node,
                 ResolvedContextManager(
                     class_=class_,
-                    manager_type=resolved_manager_type,
+                    manager_type=manager_type,
                     enter=enter,
                     exit=exit_,
+                    manager_binding=manager_binding,
+                    enter_call=enter_call,
+                    value_binding=value_binding,
+                    success_binding=success_binding,
+                    exit_call=exit_call,
                     target_symbol=target_symbol,
                 ),
             )
-        else:
-            self._set_context_manager(node, None)
-        self._set_type(node, None)
 
     @SemanticAnalyzerCore.visit.dispatch
     def visit(self, node: astx.BreakStmt) -> None:

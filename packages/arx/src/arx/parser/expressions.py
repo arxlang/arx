@@ -90,6 +90,11 @@ class ExpressionParserMixin(ParserMixinBase):
             return self.parse_while_stmt()
         if self.tokens.cur_tok.kind == TokenKind.kw_for:
             return self.parse_for_stmt()
+        if self.tokens.cur_tok.kind == TokenKind.kw_with:
+            raise ParserException(
+                "Resource scopes are statements, not expression operands.",
+                self.tokens.cur_tok.location,
+            )
         if self.tokens.cur_tok.kind in {
             TokenKind.kw_break,
             TokenKind.kw_continue,

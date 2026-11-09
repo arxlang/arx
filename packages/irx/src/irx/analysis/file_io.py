@@ -307,6 +307,7 @@ def validate_file_method_arguments(
       type: bool
     """
     arity = {
+        "require_open": 0,
         "read": 0,
         "write": 1,
         "read_bytes": 1,

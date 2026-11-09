@@ -15,7 +15,9 @@ from arx.codegen import ArxBuilder
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.parser import Parser
+from irx.builder.runtime.exceptions import parse_exception_output
 from irx.builder.runtime.features import NativeArtifact
+from irx.builder.runtime.file import feature as file_feature
 from irx.builder.runtime.linking import link_executable
 from llvmlite import binding as llvm
 
@@ -63,6 +65,18 @@ int32_t __wrap_irx_file_release(irx_file* value, char* error) {
 __attribute__((destructor)) static void audit(void) {
   fprintf(stderr, "AUDIT live=%d opened=%d released=%d\n",
           live, opened, released);
+}
+"""
+
+CLOSE_FAILURE = r"""#include <errno.h>
+#include <stdio.h>
+#include "irx_file_runtime.h"
+int32_t __real_irx_file_close(irx_file*, char*);
+int32_t __wrap_irx_file_close(irx_file* file, char* error) {
+  int32_t status = __real_irx_file_close(file, error);
+  if (status) return status;
+  snprintf(error, IRX_FILE_ERROR_CAPACITY, "injected close failure");
+  return IRX_FILE_OS_ERROR | EIO;
 }
 """
 
@@ -138,7 +152,12 @@ fn main() -> i32:
 
 
 def build_audited_file_program(
-    builder: ArxBuilder, text: str, root: Path, fault: int = 0
+    builder: ArxBuilder,
+    text: str,
+    root: Path,
+    fault: int = 0,
+    *,
+    close_failure: bool = False,
 ) -> Path:
     """
     title: >-
@@ -152,6 +171,8 @@ def build_audited_file_program(
         type: Path
       fault:
         type: int
+      close_failure:
+        type: bool
     returns:
       type: Path
     """
@@ -162,6 +183,17 @@ def build_audited_file_program(
     wrapper = root / "audit.c"
     wrapper.write_text(AUDITOR, encoding="utf-8")
     program = root / "program"
+    extra: tuple[NativeArtifact, ...] = ()
+    if close_failure:
+        close_source = root / "close.c"
+        close_source.write_text(CLOSE_FAILURE, encoding="utf-8")
+        extra = (
+            NativeArtifact(
+                "c_source",
+                close_source,
+                include_dirs=(Path(file_feature.__file__).parent / "native",),
+            ),
+        )
     link_executable(
         primary_object=primary,
         output_file=program,
@@ -170,6 +202,7 @@ def build_audited_file_program(
             NativeArtifact(
                 "c_source", wrapper, compile_flags=(f"-DFAULT={fault}",)
             ),
+            *extra,
         ),
         linker_flags=tuple(
             f"-Wl,--wrap={name}"
@@ -181,6 +214,60 @@ def build_audited_file_program(
                 "irx_file_open",
                 "irx_file_release",
             )
-        ),
+        )
+        + (("-Wl,--wrap=irx_file_close",) if close_failure else ()),
     )
     return program
+
+
+@pytest.mark.parametrize("body_failure", [False, True])
+def test_file_scope_close_failure(tmp_path: Path, body_failure: bool) -> None:
+    """
+    title: Checked exit promotes close errors or preserves a body failure.
+    parameters:
+      tmp_path:
+        type: Path
+      body_failure:
+        type: bool
+    """
+    if shutil.which("clang") is None or sys.platform != "linux":
+        pytest.skip("counted close faults require GNU linker wrapping")
+    body = '    raise ValueError("primary body")\n' if body_failure else ""
+    ArxIO.string_to_buffer(
+        "```\ntitle: Checked close failure\n```\n"
+        "fn main() -> i32:\n"
+        '  with open("close-fault.txt", "w") as output:\n'
+        '    output.write("saved")\n' + body + "  return 0\n"
+    )
+    builder = ArxBuilder()
+    executable = build_audited_file_program(
+        builder,
+        builder.translate(Parser().parse(Lexer().lex())),
+        tmp_path,
+        close_failure=True,
+    )
+    result = subprocess.run(
+        [str(executable)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode != 0
+    assert "AUDIT live=0 opened=1 released=1" in result.stderr
+    report = parse_exception_output(result.stderr)
+    assert report is not None, result.stderr
+    if body_failure:
+        assert report.type_name.endswith("::class::ValueError")
+        assert report.message == "primary body"
+        assert any(
+            item.role == "cleanup"
+            and item.type_name.endswith("::class::OSError")
+            and item.message == "injected close failure"
+            for item in report.related
+        )
+    else:
+        assert report.type_name.endswith("::class::OSError")
+        assert report.message == "injected close failure"
+    assert (tmp_path / "close-fault.txt").read_text() == "saved"

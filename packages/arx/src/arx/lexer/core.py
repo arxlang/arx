@@ -64,6 +64,7 @@ class TokenKind(Enum):
     kw_raise = -29
     kw_break = -33
     kw_continue = -34
+    kw_with = -35
 
     # operators
     binary_op = -30
@@ -96,6 +97,7 @@ MAP_NAME_TO_KW_TOKEN = {
     "while": TokenKind.kw_while,
     "break": TokenKind.kw_break,
     "continue": TokenKind.kw_continue,
+    "with": TokenKind.kw_with,
     "try": TokenKind.kw_try,
     "except": TokenKind.kw_except,
     "finally": TokenKind.kw_finally,
@@ -135,6 +137,7 @@ MAP_KW_TOKEN_TO_NAME: dict[TokenKind, str] = {
     TokenKind.kw_while: "while",
     TokenKind.kw_break: "break",
     TokenKind.kw_continue: "continue",
+    TokenKind.kw_with: "with",
     TokenKind.kw_try: "try",
     TokenKind.kw_except: "except",
     TokenKind.kw_finally: "finally",
@@ -410,6 +413,7 @@ class Lexer:
         "while": TokenKind.kw_while,
         "break": TokenKind.kw_break,
         "continue": TokenKind.kw_continue,
+        "with": TokenKind.kw_with,
         "try": TokenKind.kw_try,
         "except": TokenKind.kw_except,
         "finally": TokenKind.kw_finally,

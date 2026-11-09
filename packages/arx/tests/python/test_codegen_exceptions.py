@@ -578,6 +578,132 @@ def test_cleanup_failure_preserves_primary_exception(
     )
 
 
+@pytest.mark.parametrize("optimization", [0, 3])
+@pytest.mark.parametrize("failure", ["body", "exit", "enter"])
+def test_nested_resource_failure_precedence(
+    tmp_path: Path, optimization: int, failure: str
+) -> None:
+    """
+    title: Nested exits see completion and preserve primary and cleanup errors.
+    parameters:
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+      failure:
+        type: str
+    """
+    fail_enter = "true" if failure == "enter" else "false"
+    body = (
+        'with Scope("outer", false):\n'
+        f'  with Scope("inner", {fail_enter}) as value:\n'
+        '    assert value == 7\n    print("body")\n'
+    )
+    if failure == "body":
+        body += '    raise ValueError("body")\n'
+    result = run_exception(
+        tmp_path,
+        body,
+        "class Scope:\n  ```\n  title: Completion-aware failing exit\n  ```\n"
+        "  name: str\n  fail: bool\n"
+        "  fn __init__(self, name: str, fail: bool) -> none:\n"
+        "    self.name = name\n    self.fail = fail\n"
+        "  fn __enter__(self) -> i32:\n"
+        '    if self.fail:\n      raise ValueError("enter")\n'
+        "    return 7\n"
+        "  fn __exit__(self, success: bool) -> none:\n"
+        "    print(self.name)\n"
+        '    if success:\n      print("success")\n'
+        '    else:\n      print("failure")\n'
+        "    raise TypeError(self.name)\n",
+        optimization,
+    )
+    assert result.returncode == 1, result.stderr
+    expected = (
+        ["outer", "failure"]
+        if failure == "enter"
+        else [
+            "body",
+            "inner",
+            "success" if failure == "exit" else "failure",
+            "outer",
+            "failure",
+        ]
+    )
+    assert result.stdout.splitlines() == expected
+    report = parse_exception_output(result.stderr)
+    assert report is not None, result.stderr
+    assert report.message == ("inner" if failure == "exit" else failure)
+    assert report.type_name.endswith(
+        "::class::TypeError" if failure == "exit" else "::class::ValueError"
+    )
+    cleanups = [
+        item.message for item in report.related if item.role == "cleanup"
+    ]
+    assert cleanups == (["inner", "outer"] if failure == "body" else ["outer"])
+
+
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_resource_exit_and_explicit_finally(
+    tmp_path: Path, optimization: int
+) -> None:
+    """
+    title: Finally replacement and implicit exit keep distinct precedence.
+    parameters:
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    result = run_exception(
+        tmp_path,
+        "print(replace_exit())\n"
+        "try:\n  replace_body()\n"
+        "except TypeError as error:\n  print(error.message)\n"
+        "try:\n  fail_finally()\n"
+        "except ValueError as error:\n  print(error.message)\n"
+        "try:\n  while true:\n    with Scope():\n"
+        '      try:\n        raise ValueError("old")\n'
+        "      finally:\n        break\n"
+        "except TypeError as error:\n  print(error.message)\n"
+        "try:\n  for index in [0]:\n    with Scope():\n"
+        '      try:\n        raise ValueError("old")\n'
+        "      finally:\n        continue\n"
+        "except TypeError as error:\n  print(error.message)",
+        "class Scope:\n  ```\n  title: Observe completion before exit\n  ```\n"
+        "  fn __enter__(self) -> none:\n    return none\n"
+        "  fn __exit__(self, success: bool) -> none:\n"
+        '    if success:\n      print("success")\n'
+        '    else:\n      print("failure")\n'
+        '    raise TypeError("exit")\n'
+        "fn replace_exit() -> i32:\n"
+        "  try:\n    with Scope():\n      return 1\n"
+        "  finally:\n    return 2\n"
+        "fn replace_body() -> i32:\n"
+        "  with Scope():\n"
+        '    try:\n      raise ValueError("body")\n'
+        "    finally:\n      return 3\n"
+        "fn fail_finally() -> i32:\n"
+        "  with Scope():\n    try:\n      return 4\n"
+        '    finally:\n      raise ValueError("finally")\n',
+        optimization,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        "success",
+        "2",
+        "success",
+        "exit",
+        "failure",
+        "finally",
+        "success",
+        "exit",
+        "success",
+        "exit",
+    ]
+    assert result.stderr == ""
+
+
 @pytest.mark.parametrize("transfer", ["break", "continue"])
 @pytest.mark.parametrize("optimization", [0, 3])
 def test_loop_transfer_cleanup_failure(

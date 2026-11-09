@@ -45,12 +45,18 @@ class CleanupAction:
         type: CleanupKind
       fallible:
         type: bool
+      completion_slot:
+        type: ir.Value | None
+        description: >-
+          Boolean storage for completion-aware resource exit. Set from pending
+          failure state before implicit cleanup suspends that state.
     """
 
     emitter: CleanupEmitter
     owner_symbol_id: str | None = None
     kind: CleanupKind = CleanupKind.RESOURCE
     fallible: bool = True
+    completion_slot: ir.Value | None = None
 
 
 @typechecked
