@@ -1126,6 +1126,125 @@ def owned_list_ir() -> tuple[ArxBuilder, str]:
     return builder, text
 
 
+@pytest.fixture(scope="module")
+def loop_transfer_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Translate loop transfers and cleanup once for native assertions.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    source = (
+        Path(__file__).parents[1] / "arx" / "test_control_flow.x"
+    ).read_text(encoding="utf-8")
+    source += (
+        "\nfn main() -> i32:\n"
+        "  test_loop_transfers()\n"
+        "  test_loop_transfer_finalizers()\n"
+        "  loop_transfer_owners()\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_loop_transfers_translate(
+    loop_transfer_ir: tuple[ArxBuilder, str],
+) -> None:
+    """
+    title: Source loop transfers use verified IR and registered owner cleanup.
+    parameters:
+      loop_transfer_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    _, text = loop_transfer_ir
+    assert 'call void @"irx_list_destroy"' in text
+    assert "irx_file_release" in text
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="clang required")
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_loop_transfers_execute(
+    loop_transfer_ir: tuple[ArxBuilder, str],
+    tmp_path: Path,
+    optimization: int,
+) -> None:
+    """
+    title: Transfers advance, finalize once, and free pending returns.
+    parameters:
+      loop_transfer_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    builder, text = loop_transfer_ir
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    if sys.platform == "linux":
+        executable = build_audited_file_program(builder, str(module), tmp_path)
+    else:
+        executable = tmp_path / "loop-transfers"
+        builder._build_from_ir_result(
+            str(module), str(executable), True, "auto"
+        )
+    result = subprocess.run(
+        [str(executable)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b""
+    if sys.platform == "linux":
+        assert result.stderr == b"AUDIT live=0 opened=2 released=2\n"
+    else:
+        assert result.stderr == b""
+    assert (tmp_path / "loop-resource.txt").read_text() == "owned"
+
+
+@pytest.mark.parametrize("keyword", ["break", "continue"])
+@pytest.mark.parametrize(
+    "prefix", ["", "fn run() -> none:\n  ", "while false:\n  print(1)\n"]
+)
+def test_loop_transfers_outside_loop_fail_before_lowering(
+    keyword: str, prefix: str
+) -> None:
+    """
+    title: Invalid loop transfers retain their source location in IRx.
+    parameters:
+      keyword:
+        type: str
+      prefix:
+        type: str
+    """
+    source = prefix + keyword
+    ArxIO.string_to_buffer(source)
+    tree = Parser().parse(Lexer().lex())
+    with pytest.raises(SemanticError) as error:
+        ArxBuilder().translate(tree)
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_INVALID_CONTROL_FLOW
+    location = diagnostic.resolved_source()
+    assert location is not None
+    assert (location.line, location.col) == (
+        source.count("\n") + 1,
+        3 if prefix.startswith("fn") else 1,
+    )
+
+
 def test_owned_list_translation(owned_list_ir: tuple[ArxBuilder, str]) -> None:
     """
     title: Expression lists use owned storage and non-truncating shared length.

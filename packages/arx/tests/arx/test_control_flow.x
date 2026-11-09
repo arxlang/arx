@@ -1,6 +1,6 @@
 ```
 title: Repository control-flow tests
-summary: Cover if/elif chains, while loops, for-in loops, and count loops.
+summary: Cover branches, loop transfers, cleanup, and finalizer replacement.
 ```
 
 fn classify(value: i32) -> i32:
@@ -146,3 +146,134 @@ fn test_prefix_mutation_values() -> none:
   for i: i32 = 0; i < 3; ++i:
     total = total + i
   assert total == 3
+
+fn test_loop_transfers() -> none:
+  ```
+  title: Stop searches and skip work in each source loop form.
+  ```
+  current: i32 = 0
+  total: i32 = 0
+  while current < 5:
+    current += 1
+    if current == 1:
+      continue
+    if current == 4:
+      break
+    total += current
+  assert current == 4
+  assert total == 5
+
+  updates: i32 = 0
+  visits: i32 = 0
+  total = 0
+  for i: i32 = 0; i < 8; i += ++updates:
+    visits += 1
+    assert visits < 10
+    if i == 1:
+      continue
+    if i == 6:
+      break
+    total += i
+  assert updates == 3
+  assert visits == 4
+  assert total == 3
+
+  total = 0
+  for outer: i32 = 0; outer < 3; outer += 1:
+    for inner in [1, 2, 3]:
+      if inner == 1:
+        continue
+      if inner == 3:
+        break
+      total += inner + outer
+  assert total == 9
+
+fn replaced_list_return() -> list[i32]:
+  ```
+  title: A finalizer break discards and releases a pending owned return.
+  ```
+  for value in [1]:
+    try:
+      return [value, 2]
+    finally:
+      break
+  return [9]
+
+fn return_after_break() -> i32:
+  ```
+  title: An explicit finalizer return replaces a pending loop exit.
+  ```
+  while true:
+    try:
+      break
+    finally:
+      return 11
+  return 0
+
+fn test_loop_transfer_finalizers() -> none:
+  ```
+  title: Loop exits preserve or replace pending completion as specified.
+  ```
+  count: i32 = 0
+  finalized: i32 = 0
+  while count < 3:
+    count += 1
+    try:
+      break
+    finally:
+      finalized += 1
+      if count < 3:
+        continue
+  assert count == 3
+  assert finalized == 3
+
+  count = 0
+  try:
+    for value in [1, 2]:
+      try:
+        continue
+      finally:
+        count += 1
+        raise ValueError("replace continue")
+  except ValueError:
+    assert count == 1
+  assert count == 1
+
+  handled: i32 = 0
+  escaped: i32 = 0
+  for value in [1, 2, 3]:
+    try:
+      raise ValueError("handled")
+    except ValueError as error:
+      assert error.message == "handled"
+      handled += 1
+      if value < 3:
+        continue
+      break
+    escaped += 1
+  assert handled == 3
+  assert escaped == 0
+
+  returned: list[i32] = replaced_list_return()
+  assert len(returned) == 1
+  assert returned[0] == 9
+  assert return_after_break() == 11
+
+fn loop_transfer_owners() -> none:
+  ```
+  title: Audit iteration owners in the caller's isolated working directory.
+  ```
+  values: list[i32] = [1, 2, 3]
+  for value in values:
+    words: list[str] = ["owned", "text"]
+    stream: File = open("loop-resource.txt", "w")
+    alias: File = stream
+    alias.write(words[0])
+    if value == 1:
+      continue
+    break
+  values = [4]
+  values.append(5)
+  assert len(values) == 2
+  assert values[0] == 4
+  assert values[1] == 5

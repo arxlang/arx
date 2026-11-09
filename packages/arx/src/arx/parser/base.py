@@ -86,6 +86,14 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
+    def parse_loop_transfer(self) -> astx.BreakStmt | astx.ContinueStmt:
+        """
+        title: Parse a statement-only transfer to the enclosing loop.
+        returns:
+          type: astx.BreakStmt | astx.ContinueStmt
+        """
+        raise NotImplementedError
+
     def parse_assignment_or_expression(self) -> astx.AST:
         """
         title: Parse a compound statement or ordinary count-loop expression.

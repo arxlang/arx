@@ -15,6 +15,10 @@
 
 ## Unreleased
 
+- Source loops support `break` and `continue`, including count-loop updates,
+  scoped cleanup, and `finally` completion replacement. **Breaking:** both
+  spellings are now reserved keywords rather than ordinary identifiers.
+
 - DataFrame `nrows()`/`ncols()` signature errors now report consistent semantic
   diagnostics for explicitly typed and inferred receivers, rather than
   annotation-dependent parser errors. Valid calls and return types are unchanged.

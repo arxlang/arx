@@ -31,6 +31,96 @@ def _parse_module(code: str, module_name: str = "main") -> astx.Module:
     return tree
 
 
+@pytest.mark.parametrize(
+    "header",
+    ["while true:", "for i: i32 = 0; i < 3; ++i:", "for i in [1, 2]:"],
+)
+def test_loop_transfers_are_statements(header: str) -> None:
+    """
+    title: Loop transfers retain semicolons and Unicode source locations.
+    parameters:
+      header:
+        type: str
+    """
+    line = '    print("é"); break; continue # trailing comment'
+    module = _parse_module(
+        f"fn main() -> none:\n  {header}\n{line}\n  print(1)\n"
+    )
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    loop = function.body.nodes[0]
+    assert isinstance(
+        loop, (astx.WhileStmt, astx.ForCountLoopStmt, astx.ForInLoopStmt)
+    )
+    assert len(function.body.nodes) == 2
+    _, stop, advance = loop.body.nodes
+    assert isinstance(stop, astx.BreakStmt)
+    assert isinstance(advance, astx.ContinueStmt)
+    for keyword, node in (("break", stop), ("continue", advance)):
+        assert (node.loc.line, node.loc.col) == (3, line.index(keyword) + 1)
+
+
+@pytest.mark.parametrize("keyword", ["break", "continue"])
+@pytest.mark.parametrize("suffix", ["", "\n", " # comment", ";"])
+def test_loop_transfer_statement_endings(keyword: str, suffix: str) -> None:
+    """
+    title: Bare loop transfers terminate at EOF, comments, or separators.
+    parameters:
+      keyword:
+        type: str
+      suffix:
+        type: str
+    """
+    module = _parse_module(f"fn main() -> none:\n  {keyword}{suffix}")
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    node = function.body.nodes[0]
+    assert type(node) is (
+        astx.BreakStmt if keyword == "break" else astx.ContinueStmt
+    )
+    assert (node.loc.line, node.loc.col) == (2, 3)
+
+
+@pytest.mark.parametrize("keyword", ["break", "continue"])
+@pytest.mark.parametrize("suffix", [" 1", "()", " + 1"])
+def test_loop_transfers_reject_operands(keyword: str, suffix: str) -> None:
+    """
+    title: Loop transfers never discard unexpected same-line input.
+    parameters:
+      keyword:
+        type: str
+      suffix:
+        type: str
+    """
+    with pytest.raises(ParserException, match="takes no operand") as error:
+        _parse_module(f"fn main() -> none:\n  {keyword}{suffix}")
+    location = error.value.location
+    assert location is not None
+    assert (location.line, location.col) == (
+        2,
+        3 + len(keyword) + len(suffix) - len(suffix.lstrip()),
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "value: i32 = break",
+        "print(continue)",
+        "for i: i32 = 0; i < 2; break:\n  print(i)",
+    ],
+)
+def test_loop_transfers_reject_expression_positions(source: str) -> None:
+    """
+    title: Transfers cannot become initializer, call, or update values.
+    parameters:
+      source:
+        type: str
+    """
+    with pytest.raises(ParserException, match="not expression operands"):
+        _parse_module(source)
+
+
 def test_binop_precedence() -> None:
     """
     title: Test BinOp precedence.

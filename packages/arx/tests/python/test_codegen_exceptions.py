@@ -578,6 +578,51 @@ def test_cleanup_failure_preserves_primary_exception(
     )
 
 
+@pytest.mark.parametrize("transfer", ["break", "continue"])
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_loop_transfer_cleanup_failure(
+    tmp_path: Path, transfer: str, optimization: int
+) -> None:
+    """
+    title: A failed drop cancels a loop transfer and still cleans outer owners.
+    parameters:
+      tmp_path:
+        type: Path
+      transfer:
+        type: str
+      optimization:
+        type: int
+    """
+    result = run_exception(
+        tmp_path,
+        "try:\n"
+        "  while true:\n"
+        "    remaining: Remaining = Remaining()\n"
+        "    owner: Fallible = Fallible()\n"
+        "    alias: Fallible = owner\n"
+        f"    {transfer}\n"
+        "except ValueError as error:\n"
+        "  print(error.message)\n"
+        'print("after")',
+        "class Remaining:\n"
+        "  fn __del__(self) -> none:\n"
+        '    print("remaining")\n'
+        "class Fallible:\n"
+        "  fn __del__(self) -> none:\n"
+        '    print("release")\n'
+        '    raise ValueError("failed drop")\n',
+        optimization,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        "release",
+        "remaining",
+        "failed drop",
+        "after",
+    ]
+    assert result.stderr == ""
+
+
 @pytest.mark.parametrize("optimization", [0, 3])
 def test_native_list_and_csv_recovery(
     tmp_path: Path, optimization: int

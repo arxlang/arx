@@ -151,9 +151,9 @@ different model. Use the [class lifecycle guide](classes.md) for construction
 and field ownership, and the [file guide](file-io.md) for shared cursor and
 close behavior.
 
-IRx cleanup paths for `break`/`continue` or generators do not establish Arx
-source support for those constructs. Fatal errors do not generally unwind caller
-frames. Do not depend on automatic cleanup to confirm successful writer
+Source `break`/`continue` use lexical exit cleanup; IRx generator support does
+not establish source-level generators. Fatal errors do not generally unwind
+caller frames. Do not depend on automatic cleanup to confirm successful writer
 finalization; follow the [CSV](csv.md) or [Parquet](parquet.md) close contract.
 
 ## Modules and failures

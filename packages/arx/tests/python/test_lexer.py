@@ -94,6 +94,34 @@ def test_elif_keyword_preserves_identifier_boundaries() -> None:
     assert lexer.get_token().kind == TokenKind.eof
 
 
+@pytest.mark.parametrize(
+    "word,kind",
+    [("break", TokenKind.kw_break), ("continue", TokenKind.kw_continue)],
+)
+def test_loop_transfer_keywords(word: str, kind: TokenKind) -> None:
+    """
+    title: Loop keywords preserve identifier boundaries and Unicode columns.
+    parameters:
+      word:
+        type: str
+      kind:
+        type: TokenKind
+    """
+    manifest = load_syntax_manifest()
+    assert word in manifest.reserved_keywords
+    assert lexer_core.MAP_NAME_TO_KW_TOKEN[word] is kind
+    ArxIO.string_to_buffer(f"é {word} {word}_value {word}é {word}2")
+    lexer = Lexer()
+    assert lexer.get_token() == Token(TokenKind.identifier, "é")
+    token = lexer.get_token()
+    assert token.kind is kind
+    assert token.get_name() == word
+    assert (token.location.line, token.location.col) == (1, 3)
+    for name in (f"{word}_value", f"{word}é", f"{word}2"):
+        assert lexer.get_token() == Token(TokenKind.identifier, name)
+    assert lexer.get_token().kind is TokenKind.eof
+
+
 def test_get_tok_simple() -> None:
     """
     title: Test get_token.
