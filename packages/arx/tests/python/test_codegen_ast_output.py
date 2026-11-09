@@ -13,7 +13,6 @@ import astx
 import pytest
 
 from arx.codegen import ArxBuilder
-from arx.exceptions import ParserException
 from arx.io import ArxIO
 from arx.lexer import Lexer
 from arx.main import FileImportResolver, inject_ambient_builtin_imports
@@ -1759,7 +1758,7 @@ def test_inference_rejects_ambiguous_or_unsupported_storage(
 
 def test_collection_access_paths_have_equivalent_semantics() -> None:
     """
-    title: Typed frontend operations and inferred normalization resolve alike.
+    title: Collection paths retain equivalent semantics as metadata is unified.
     """
     ArxIO.string_to_buffer(
         "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1, 2]})\n"
@@ -1798,33 +1797,62 @@ def test_collection_access_paths_have_equivalent_semantics() -> None:
         inferred_info = inferred.semantic
         assert isinstance(typed_info, SemanticInfo)
         assert isinstance(inferred_info, SemanticInfo)
-        assert typed_info.normalized_collection is None
         normalized = inferred_info.normalized_collection
         assert normalized is not None
-        assert type(normalized) is type(typed)
+        if isinstance(typed, astx.MethodCall):
+            # Only metadata pairs change to generic calls on both sides.
+            assert typed.method_name in {"nrows", "ncols"}
+            assert typed_info.normalized_collection is not None
+            assert type(typed_info.normalized_collection) is type(normalized)
+            assert isinstance(typed_info.resolved_type, astx.Int64)
+        else:
+            # List append and both column forms keep their unmigrated paths.
+            assert typed_info.normalized_collection is None
+            assert type(normalized) is type(typed)
         assert same_type(typed_info.resolved_type, inferred_info.resolved_type)
 
 
-@pytest.mark.parametrize("annotation", ["dataframe[x:i32]", "auto"])
+@pytest.mark.parametrize(
+    "operation", ["nrows(1)", "ncols(unexpected=1)", "nrows<i32>()"]
+)
 def test_collection_metadata_arguments_fail_before_lowering(
-    annotation: str,
+    operation: str,
 ) -> None:
     """
-    title: Both collection paths reject unsupported arguments before LLVM.
+    title: >-
+      Explicit and inferred calls share semantic diagnostics and Unicode spans.
     parameters:
-      annotation:
+      operation:
         type: str
     """
-    ArxIO.string_to_buffer(
-        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
-        "fn main() -> i32:\n"
-        f"  table: {annotation} = frame()\n"
-        "  table.nrows(1)\n  return 0\n"
-    )
-    with pytest.raises(
-        (ParserException, SemanticError), match="expects no arguments"
-    ):
-        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+    reports: list[tuple[str, str, int, int]] = []
+    method = operation.split("(", maxsplit=1)[0].split("<", maxsplit=1)[0]
+    for annotation in ("dataframe[x:i32]", "auto"):
+        source = (
+            "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
+            "fn main() -> i32:\n"
+            f"  dátá: {annotation} = frame()\n"
+            f"  0; dátá.{operation}\n  return 0\n"
+        )
+        ArxIO.string_to_buffer(source)
+        module = Parser().parse(Lexer().lex())
+        with pytest.raises(SemanticError) as error:
+            ArxBuilder().translate(module)
+        diagnostics = error.value.diagnostics.diagnostics
+        assert len(diagnostics) == 1
+        diagnostic = diagnostics[0]
+        assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+        assert diagnostic.message == (
+            f"DataFrame {method} expects no arguments or templates"
+        )
+        location = diagnostic.resolved_source()
+        assert location is not None
+        assert location.line == 5
+        assert location.col == source.splitlines()[4].index(method) + 1
+        reports.append(
+            (diagnostic.code, diagnostic.message, location.line, location.col)
+        )
+    assert reports[0] == reports[1]
 
 
 def test_callable_modifiers_and_multiline_headers_translate() -> None:
@@ -1922,3 +1950,94 @@ def test_imported_template_can_call_its_private_module_helper(
         root, FileImportResolver((str(entry),))
     )
     llvm.parse_assembly(text).verify()
+
+
+@pytest.fixture(scope="module")
+def metadata_count_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """
+    title: Compile all metadata receiver forms once, separate from execution.
+    parameters:
+      tmp_path_factory:
+        type: pytest.TempPathFactory
+    returns:
+      type: Path
+    """
+    if shutil.which("clang") is None or shutil.which("c++") is None:
+        pytest.skip("native Clang and C++ toolchains required")
+    ArxIO.string_to_buffer(
+        "```\ntitle: Metadata receiver evaluation and lifetime\n```\n"
+        "calls: i32 = 0\n"
+        "fn frame() -> dataframe[x:i32, y:i32]:\n"
+        "  calls += 1\n"
+        "  return dataframe({x:[1, 2, 3], y:[4, 5, 6]})\n"
+        "fn runtime_counts(rows: dataframe[...]) -> i64:\n"
+        "  return rows.nrows() * 10 + rows.ncols()\n"
+        "fn main() -> i32:\n"
+        "  typed: dataframe[x:i32, y:i32] = frame()\n"
+        "  inferred: auto = frame()\n"
+        "  assert typed.nrows() == 3\n"
+        "  assert inferred.nrows() == 3\n"
+        "  assert typed.ncols() == 2\n"
+        "  assert inferred.ncols() == 2\n"
+        "  assert runtime_counts(typed) == 32\n"
+        "  assert runtime_counts(inferred) == 32\n"
+        "  assert calls == 2\n"
+        "  assert frame().nrows() == 3\n"
+        "  assert calls == 3\n"
+        "  assert frame().ncols() == 2\n"
+        "  assert calls == 4\n"
+        "  return 0\n"
+    )
+    module = Parser().parse(Lexer().lex())
+    builder = ArxBuilder()
+    text = builder.translate(module)
+    parsed_ir = llvm.parse_assembly(text)
+    parsed_ir.verify()
+    # The native main wrapper delegates to this analyzed entry body.
+    main = parsed_ir.get_function("irx.entry.main")
+    released_temporaries = 0
+    for block in main.blocks:
+        calls = [item for item in block.instructions if item.opcode == "call"]
+        released = [
+            next(iter(item.operands))
+            for item in calls
+            if tuple(item.operands)[-1].name == "irx_arrow_table_release"
+        ]
+        for item in calls:
+            operands = tuple(item.operands)
+            if operands[-1].name not in {
+                "irx_arrow_table_num_rows",
+                "irx_arrow_table_num_columns",
+            }:
+                continue
+            # The two factory temporaries must be dropped exactly once in
+            # their expression, unlike loads from the longer-lived bindings.
+            releases = sum(value == operands[0] for value in released)
+            if releases:
+                assert releases == 1
+                released_temporaries += 1
+    assert released_temporaries == 2
+    executable = tmp_path_factory.mktemp("metadata-counts") / "program"
+    builder._build_from_ir_result(text, str(executable), True, "auto")
+    return executable
+
+
+def test_metadata_counts_preserve_evaluation_and_lifetimes(
+    metadata_count_binary: Path,
+) -> None:
+    """
+    title: Static, inferred, runtime-schema, and temporary receivers run alike.
+    parameters:
+      metadata_count_binary:
+        type: Path
+    """
+    result = subprocess.run(
+        [str(metadata_count_binary)],
+        cwd=metadata_count_binary.parent,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b""
+    assert result.stderr == b""

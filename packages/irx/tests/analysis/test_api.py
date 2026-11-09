@@ -32,6 +32,8 @@ from irx.analysis.module_symbols import (
     qualified_struct_name,
 )
 from irx.analysis.resolved_nodes import SemanticInfo
+from irx.diagnostics import DiagnosticCodes
+from public import private
 from typeguard import TypeCheckError
 
 from ..conftest import (
@@ -1153,3 +1155,116 @@ def test_nested_inference_requests_are_rejected_before_lowering() -> None:
     )
     with pytest.raises(SemanticError, match="only valid on initialized"):
         analyze(declaration)
+
+
+@private
+def metadata_module(
+    call: astx.MethodCall, *, runtime_schema: bool = False
+) -> astx.Module:
+    """
+    title: >-
+      Build a metadata-call body without runtime constructors or native setup.
+    parameters:
+      call:
+        type: astx.MethodCall
+      runtime_schema:
+        type: bool
+    returns:
+      type: astx.Module
+    """
+    type_ = astx.DataFrameType(
+        None if runtime_schema else (astx.DataFrameColumn("x", astx.Int32()),)
+    )
+    definition = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "metadata",
+            astx.Arguments(astx.Argument("rows", type_)),
+            astx.Int32(),
+        ),
+        _block(call, astx.FunctionReturn(astx.LiteralInt32(0))),
+    )
+    return make_module("metadata", definition)
+
+
+@pytest.mark.parametrize("method", ["nrows", "ncols"])
+@pytest.mark.parametrize("arguments", ["positional", "keyword", "template"])
+def test_dataframe_metadata_signature_validation(
+    method: str, arguments: str
+) -> None:
+    """
+    title: >-
+      DataFrame metadata signature policy is enforced on generic ASTx input.
+    parameters:
+      method:
+        type: str
+      arguments:
+        type: str
+    """
+    call = astx.MethodCall(
+        astx.Identifier("rows"),
+        method,
+        [astx.LiteralInt32(1)] if arguments == "positional" else [],
+        keywords=(astx.KeywordArgument("ignored", astx.LiteralInt32(1)),)
+        if arguments == "keyword"
+        else (),
+    )
+    if arguments == "template":
+        astx.set_template_args(call, (astx.Int32(),))
+    with pytest.raises(SemanticError) as error:
+        analyze(metadata_module(call))
+    diagnostics = error.value.diagnostics.diagnostics
+    assert len(diagnostics) == 1
+    diagnostic = diagnostics[0]
+    assert diagnostic.code == DiagnosticCodes.SEMANTIC_TYPE_MISMATCH
+    assert (
+        diagnostic.message
+        == f"DataFrame {method} expects no arguments or templates"
+    )
+    assert _semantic(call).normalized_collection is None
+
+
+@pytest.mark.parametrize("method", ["nrows", "ncols"])
+@pytest.mark.parametrize("runtime_schema", [False, True])
+def test_metadata_reanalysis_discards_stale_normalization(
+    method: str, runtime_schema: bool
+) -> None:
+    """
+    title: Validity and receiver changes cannot retain an old canonical count.
+    parameters:
+      method:
+        type: str
+      runtime_schema:
+        type: bool
+    """
+    call = astx.MethodCall(astx.Identifier("rows"), method, [])
+    module = metadata_module(call, runtime_schema=runtime_schema)
+    analyze(module)
+    expected = (
+        astx.DataFrameRowCount
+        if method == "nrows"
+        else astx.DataFrameColumnCount
+    )
+    first = _semantic(call).normalized_collection
+    assert isinstance(first, expected)
+    assert isinstance(_semantic(call).resolved_type, astx.Int64)
+
+    call.args = (astx.LiteralInt32(1),)
+    with pytest.raises(
+        SemanticError, match="expects no arguments or templates"
+    ):
+        analyze(module)
+    assert _semantic(call).normalized_collection is None
+
+    call.args = ()
+    analyze(module)
+    assert isinstance(_semantic(call).normalized_collection, expected)
+    assert _semantic(call).normalized_collection is not first
+    function = module.nodes[0]
+    assert isinstance(function, astx.FunctionDef)
+    argument = function.prototype.args.nodes[0]
+    argument.type_ = astx.Int32()
+    with pytest.raises(
+        SemanticError, match="method call requires a class value"
+    ):
+        analyze(module)
+    assert _semantic(call).normalized_collection is None

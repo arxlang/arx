@@ -180,6 +180,8 @@ class ExpressionParserMixin(ParserMixinBase):
         summary: >-
           Reject same-line postfix increment and decrement at their operator
           token; prefix mutation in a following statement remains valid.
+          DataFrame metadata calls retain ordinary method-call arguments and
+          locations; receiver-type and signature validation belong to IRx.
         returns:
           type: astx.AST
         """
@@ -206,24 +208,6 @@ class ExpressionParserMixin(ParserMixinBase):
             if self._is_operator("("):
                 self._consume_operator("(")
                 args, keywords = self.parse_call_arguments()
-                if self._is_dataframe_expr(expr) and member_name in {
-                    "nrows",
-                    "ncols",
-                }:
-                    if template_args is not None:
-                        raise ParserException(
-                            "DataFrame metadata methods do not accept "
-                            "template arguments."
-                        )
-                    if args or keywords:
-                        raise ParserException(
-                            f"DataFrame {member_name} expects no arguments."
-                        )
-                    if member_name == "nrows":
-                        expr = astx.DataFrameRowCount(expr)
-                    else:
-                        expr = astx.DataFrameColumnCount(expr)
-                    continue
                 if (
                     member_name == "append"
                     and isinstance(expr, astx.Identifier)

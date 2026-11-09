@@ -69,6 +69,71 @@ def test_parse_dataframe_type_constructor_and_column_access() -> None:
     assert ids.value.column_name == "id"
 
 
+@pytest.mark.parametrize(
+    "operation, positional, keywords, templated",
+    [
+        ("nrows()", 0, 0, False),
+        ("ncols(1)", 1, 0, False),
+        ("nrows(ignored=1)", 0, 1, False),
+        ("ncols<i32>()", 0, 0, True),
+    ],
+)
+def test_metadata_calls_preserve_generic_syntax(
+    operation: str, positional: int, keywords: int, templated: bool
+) -> None:
+    """
+    title: Metadata signature validity never depends on a parser type guess.
+    parameters:
+      operation:
+        type: str
+      positional:
+        type: int
+      keywords:
+        type: int
+      templated:
+        type: bool
+    """
+    source = (
+        "fn frame() -> dataframe[x:i32]:\n  return dataframe({x:[1]})\n"
+        "fn main() -> i32:\n"
+        "  typed: dataframe[x:i32] = frame()\n"
+        "  inferred: auto = frame()\n"
+        f"  typed.{operation}\n  inferred.{operation}\n"
+        "  return 0\n"
+    )
+    module = _parse_module(source)
+    function = module.nodes[-1]
+    assert isinstance(function, astx.FunctionDef)
+    method = operation.partition("(")[0].partition("<")[0]
+    for line, receiver, call in zip(
+        (6, 7), ("typed", "inferred"), function.body.nodes[2:4]
+    ):
+        assert isinstance(call, astx.MethodCall)
+        assert isinstance(call.receiver, astx.Identifier)
+        assert call.receiver.name == receiver
+        assert call.method_name == method
+        assert len(call.args) == positional
+        assert len(call.keywords) == keywords
+        if positional:
+            assert isinstance(call.args[0], astx.LiteralInteger)
+            assert call.args[0].value == 1
+        if keywords:
+            assert call.keywords[0].name == "ignored"
+            assert isinstance(call.keywords[0].value, astx.LiteralInteger)
+            assert call.keywords[0].value.value == 1
+        arguments = astx.get_template_args(call)
+        if templated:
+            assert arguments is not None and len(arguments) == 1
+            assert isinstance(arguments[0], astx.Int32)
+        else:
+            assert arguments is None
+        assert call.loc.line == line
+        assert (
+            call.loc.col
+            == source.splitlines()[line - 1].index(call.method_name) + 1
+        )
+
+
 def test_parse_runtime_schema_dataframe_annotations() -> None:
     """
     title: Runtime schemas support owned conversions but not untyped literals.
@@ -93,6 +158,50 @@ def test_parse_runtime_schema_dataframe_annotations() -> None:
     arg_type = function.prototype.args.nodes[0].type_
     assert isinstance(arg_type, astx.DataFrameType)
     assert arg_type.columns is None
+    returned = function.body.nodes[0]
+    assert isinstance(returned, astx.FunctionReturn)
+    assert isinstance(returned.value, astx.Cast)
+    assert isinstance(returned.value.value, astx.MethodCall)
+    assert returned.value.value.method_name == "nrows"
+
+
+def test_metadata_names_remain_columns_when_not_called() -> None:
+    """
+    title: Metadata method names do not steal non-call column access.
+    """
+    module = _parse_module(
+        "fn main() -> i32:\n"
+        "  frame: dataframe[nrows:i32, ncols:i32] = "
+        "dataframe({nrows:[1], ncols:[2]})\n"
+        "  frame.nrows\n  frame.ncols\n  frame.nrows()\n  return 0\n"
+    )
+    main = module.nodes[0]
+    assert isinstance(main, astx.FunctionDef)
+    for name, access in zip(("nrows", "ncols"), main.body.nodes[1:3]):
+        assert isinstance(access, astx.DataFrameColumnAccess)
+        assert access.column_name == name
+    assert isinstance(main.body.nodes[3], astx.MethodCall)
+
+
+@pytest.mark.parametrize(
+    "call", ["frame.nrows(", "frame.nrows(ignored=1, 2)", "frame.ncols<i32()"]
+)
+def test_malformed_metadata_call_syntax_still_fails_in_parser(
+    call: str,
+) -> None:
+    """
+    title: >-
+      Routing signature policy to IRx does not admit malformed call syntax.
+    parameters:
+      call:
+        type: str
+    """
+    with pytest.raises(ParserException):
+        _parse_module(
+            "fn main() -> i32:\n"
+            "  frame: dataframe[x:i32] = dataframe({x:[1]})\n"
+            f"  {call}\n  return 0\n"
+        )
 
 
 @pytest.mark.parametrize(

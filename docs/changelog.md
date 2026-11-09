@@ -15,6 +15,10 @@
 
 ## Unreleased
 
+- DataFrame `nrows()`/`ncols()` signature errors now report consistent semantic
+  diagnostics for explicitly typed and inferred receivers, rather than
+  annotation-dependent parser errors. Valid calls and return types are unchanged.
+
 - Reject `auto` as a class, type-alias, or template-parameter name to prevent
   collisions with inference; it remains a contextual value identifier.
 
