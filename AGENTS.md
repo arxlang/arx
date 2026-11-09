@@ -48,6 +48,26 @@ not aim to recreate Python or make Arx identical to it.
   Arx. Evaluate the user-facing experience before settling on the internal
   implementation; do not expose low-level runtime plumbing as the only way to
   perform a common task.
+- Choose API placement by semantic generality, frequency of use, and natural
+  ownership. Keep builtin scope small and focused on core, broadly applicable
+  operations such as `cast`, `print`, and `len`; justify each new builtin. Put
+  shared algorithms in focused, explicitly imported stdlib modules, such as
+  numeric reductions in `stdlib.math`. Prefer methods for common operations
+  specific to a value's type, such as DataFrame transformations or text editing.
+- Share generic behavior through typed capabilities and adapters rather than
+  requiring artificial inheritance from a common base object. A builtin may
+  delegate type-specific behavior to a focused dunder-style protocol. Resolve
+  hook identity and type/ownership contracts in semantic analysis; preserve
+  checked conversions, failure propagation, and native execution guarantees.
+  Implement a protocol only for a concrete operation that needs it, not as a
+  speculative universal framework. A dunder spelling alone does not establish
+  support; label proposed hooks as unimplemented until verified end to end.
+- Prefer one canonical public call shape for the same contract. Generic
+  functions and specialized methods may coexist when their contracts or
+  workflows meaningfully differ, not as synonymous wrappers. A builtin plus its
+  implementation hook is a protocol, not a redundant public entry point. Do not
+  force every operation into a method or migrate unrelated APIs merely to make
+  their appearance uniform.
 - Propose the public API with a short common-case and advanced example in the PR
   description or executable tests. Keep defaults, return meaning, supported
   options, validation, errors, and relevant ownership next to code. Explain

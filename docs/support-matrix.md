@@ -64,8 +64,8 @@ Not supported: protected regions spanning `yield`, asynchronous exceptions,
 exception groups/`except*`, mutable Python traceback attributes, and exception
 lowering in ArxJIT (whose decorator still runs Python fallback). Direct ASTx
 `WithStmt` cleanup calls its existing zero-argument exit method without
-exception suppression; this does not add Arx `with`, `break`, or `continue`
-syntax.
+exception suppression; Arx `with` syntax is not supported. Source `break` and
+`continue` participate in exception-aware loop cleanup and finalization.
 
 ### Numeric sequence capability boundary
 

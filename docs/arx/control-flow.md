@@ -117,6 +117,34 @@ Compound updates write the induction variable themselves. Ordinary expression
 updates such as `i + 1` remain supported; the loop stores their result into `i`.
 See the [compound assignment contract](specification.md#compound-assignment).
 
+## Break and Continue
+
+`break` exits the nearest enclosing loop. `continue` starts its next iteration;
+in a count loop it runs the update first. Both are operand-free statements and
+are rejected outside loops. They work in `while`, count, and supported for-in
+loops, including nested loops.
+
+````arx
+```
+title: Skip values and stop early
+```
+fn main() -> i32:
+  total: i32 = 0
+  for value in [1, 0, 2, -1, 3]:
+    if value == 0:
+      continue
+    if value < 0:
+      break
+    total += value
+  assert total == 3
+  return 0
+````
+
+Loop transfers release exited-scope owners and run `finally` before advancing or
+leaving the loop. A cleanup failure cancels the transfer and propagates as an
+exception; an explicit finalizer can replace it with another transfer, return,
+or exception. Active iteration borrows end when their loop is exited.
+
 ## Return Statements
 
 - `return expr` returns a value from the current function.

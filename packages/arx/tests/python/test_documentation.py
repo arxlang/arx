@@ -59,6 +59,7 @@ def documented_program(page: str, title: str) -> str:
         ("arx/getting-started.md", "Hello module", "42"),
         ("arx/getting-started.md", "Arrow-backed collections", ""),
         ("arx/functions.md", "Template function example", "3"),
+        ("arx/control-flow.md", "Skip values and stop early", ""),
         ("arx/file-io.md", "Native text file example", "hello"),
         ("arx/collections.md", "Nullable column expressions", ""),
         ("arx/csv.md", "Copy a CSV file", ""),

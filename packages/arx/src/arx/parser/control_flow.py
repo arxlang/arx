@@ -246,6 +246,36 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         return root
 
+    def parse_loop_transfer(self) -> astx.BreakStmt | astx.ContinueStmt:
+        """
+        title: Parse break or continue without accepting a trailing operand.
+        summary: >-
+          Preserve the keyword location and statement boundary. IRx validates
+          loop nesting and resolves cleanup; these are never expressions.
+        returns:
+          type: astx.BreakStmt | astx.ContinueStmt
+        """
+        keyword = self.tokens.cur_tok
+        if keyword.kind not in {TokenKind.kw_break, TokenKind.kw_continue}:
+            raise ParserException(
+                "Expected 'break' or 'continue'.", keyword.location
+            )
+        self.tokens.get_next_token()
+        following = self.tokens.cur_tok
+        if (
+            following.kind not in {TokenKind.indent, TokenKind.eof}
+            and following.location.line == keyword.location.line
+            and not self._is_operator(";")
+        ):
+            raise ParserException(
+                f"'{keyword.value}' takes no operand; end the statement "
+                "with a newline or ';'.",
+                following.location,
+            )
+        if keyword.kind == TokenKind.kw_break:
+            return astx.BreakStmt(loc=keyword.location)
+        return astx.ContinueStmt(loc=keyword.location)
+
     def parse_while_stmt(self) -> astx.WhileStmt:
         """
         title: Parse a while statement.

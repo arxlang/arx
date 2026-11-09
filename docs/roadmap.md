@@ -37,7 +37,7 @@ The current monorepo already provides:
       specification beyond the lexical manifest.
 - [ ] Decide the final `const` declaration behavior; it is currently reserved
       lexically but not a general parsed declaration form.
-- [ ] Add `break` and `continue` to the Arx surface after aligning parser, ASTx,
+- [x] Add `break` and `continue` to the Arx surface after aligning parser, ASTx,
       IRx, and documentation behavior.
 - [ ] Expand string, temporal, and collection operations.
 - [ ] Define constructor arguments and richer class lifecycle behavior.
