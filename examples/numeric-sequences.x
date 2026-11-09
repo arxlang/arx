@@ -60,7 +60,7 @@ fn main() -> i32:
   assert list_first(values) == first(values)
   assert first([3, 5]) == 3
   assert first<i64>([3, 5]) == 3
-  assert first(range(3, 5)) == 3
+  assert first(list(range(3, 5))) == 3
   assert runtime_item(tensor_values, 1) == 9223372036854775807
   assert is_null(nullable_first(frame.missing))
   assert is_null(nullable_first<i64>(frame.missing))

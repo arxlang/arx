@@ -46,10 +46,10 @@ fn count_to_ten() -> i32:
 
 ## For Loop (For-In Style)
 
-For-in loops iterate over list-valued expressions, including builtin
-`range(start, stop[, step])`, list literals, and list variables:
+For-in loops iterate over ranges and supported sequences, including list
+literals and list variables:
 
-`for i in <list-expression>:`
+`for i in <iterable-expression>:`
 
 ````arx
 ```
@@ -67,6 +67,18 @@ fn range_loop(n: i32) -> i32:
   return total
 ````
 
+`range(stop)` and `range(start, stop[, step])` produce immutable `range` values,
+not lists. Named `start`, `stop`, and `step` are supported. Endpoints and
+elements are `i32`; internal arithmetic and `len` use `i64`. Storage is
+constant-size, and each iteration has an independent cursor. Rebinding the input
+does not replace an active cursor's snapshot. Integer indexing is checked;
+negative indices and slicing are unsupported. Zero step raises `AssertionError`,
+even for an empty interval.
+
+Request list storage explicitly with `list(values, max_items=N)`; exceeding the
+bound raises `ValueError` without publishing a truncated prefix. There is no
+implicit allocation when passing a range to a list or numeric-sequence consumer.
+
 You can also iterate over a list literal or a list variable:
 
 ````arx
@@ -79,7 +91,7 @@ fn list_loop() -> i32:
   title: list_loop
   summary: Sums values from two list-valued loop inputs.
   ```
-  values: list[i32] = range(0, 3)
+  values: list[i32] = list(range(3))
   total: i32 = 0
   for value in values:
     total = total + value
@@ -89,7 +101,7 @@ fn list_loop() -> i32:
 ````
 
 The old colon range header syntax was removed. Use builtin `range(...)` or any
-other list-valued expression instead.
+other supported iterable expression instead.
 
 ## For Loop (Count Style)
 
@@ -130,13 +142,13 @@ title: Skip values and stop early
 ```
 fn main() -> i32:
   total: i32 = 0
-  for value in [1, 0, 2, -1, 3]:
+  for value in range(1000000):
     if value == 0:
       continue
-    if value < 0:
+    if value == 4:
       break
     total += value
-  assert total == 3
+  assert total == 6
   return 0
 ````
 

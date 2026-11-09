@@ -1614,6 +1614,8 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
         """
         if type_ is None:
             return None
+        if isinstance(type_, astx.RangeType):
+            return ir.LiteralStructType([ir.IntType(64)] * 3)
         if isinstance(type_, astx.SequenceType):
             return sequence_view_type()
         if isinstance(type_, astx.NullableType):

@@ -7,14 +7,17 @@ from __future__ import annotations
 import shutil
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import astx
 import pytest
 
 from astx.base import SourceLocation
-from irx.analysis import SemanticError, analyze
-from irx.analysis.resolved_nodes import IterationKind
+from irx.analysis import CursorProtocol, SemanticError, analyze
+from irx.analysis.resolved_nodes import (
+    IterationKind,
+    SemanticInfo,
+)
 from irx.builder import Builder
 from irx.diagnostics import DiagnosticCodes, LoweringError
 
@@ -27,6 +30,167 @@ from .test_dynamic_list import (
 from .test_string import assert_executed_string_frees
 
 HAS_CLANG = shutil.which("clang") is not None
+
+
+@pytest.mark.parametrize(
+    "positional,keywords,indices",
+    [
+        ((5,), (), (0,)),
+        ((2, 5), (), (1, 0)),
+        ((2, 5, 2), (), (1, 0, 2)),
+        ((), (("step", 2), ("stop", 5), ("start", 2)), (2, 0, 1)),
+        ((2,), (("stop", 5),), (1, 0)),
+    ],
+)
+def test_range_binding_and_cursor_plan(
+    positional: tuple[int, ...],
+    keywords: tuple[tuple[str, int], ...],
+    indices: tuple[int, ...],
+) -> None:
+    """
+    title: Range calls retain source evaluation and select independent cursors.
+    parameters:
+      positional:
+        type: tuple[int, Ellipsis]
+      keywords:
+        type: tuple[tuple[str, int], Ellipsis]
+      indices:
+        type: tuple[int, Ellipsis]
+    """
+    call = astx.FunctionCall(
+        "range",
+        [astx.LiteralInt32(value) for value in positional],
+        keywords=tuple(
+            astx.KeywordArgument(name, astx.LiteralInt32(value))
+            for name, value in keywords
+        ),
+    )
+    loop = astx.ForInLoopStmt(astx.Identifier("item"), call, _block_of())
+    module = _main_module(loop, astx.FunctionReturn(astx.LiteralInt32(0)))
+    analyze(module)
+    info = cast(SemanticInfo, call.semantic)
+    plan = info.range_construction
+    assert plan is not None and plan.arguments is not None
+    assert plan.arguments.indices == indices
+    assert tuple(id(item) for item in plan.arguments.evaluations) == tuple(
+        id(item)
+        for item in (*call.args, *(key.value for key in call.keywords))
+    )
+    iteration = cast(SemanticInfo, loop.semantic).resolved_iteration
+    assert iteration is not None
+    assert iteration.kind is IterationKind.RANGE
+    assert iteration.cursor_protocol is CursorProtocol.RANGE
+    assert iteration.element_ownership == "value"
+    assert iteration.is_reiterable
+    assert isinstance(iteration.element_type, astx.Int32)
+    analyze(module)
+    assert cast(SemanticInfo, call.semantic).range_construction is not plan
+
+
+@pytest.mark.parametrize(
+    "operands,names,match",
+    [
+        ((), (), "missing required argument"),
+        ((1, 2, 3, 4), (), "range expects"),
+        ((1, 2), ("start",), "duplicate argument"),
+        ((), ("begin",), "unknown argument"),
+    ],
+)
+def test_range_rejects_invalid_binding(
+    operands: tuple[int, ...], names: tuple[str, ...], match: str
+) -> None:
+    """
+    title: Invalid range calls use ordinary binding errors and publish no plan.
+    parameters:
+      operands:
+        type: tuple[int, Ellipsis]
+      names:
+        type: tuple[str, Ellipsis]
+      match:
+        type: str
+    """
+    call = astx.FunctionCall(
+        "range",
+        [astx.LiteralInt32(value) for value in operands],
+        keywords=tuple(
+            astx.KeywordArgument(name, astx.LiteralInt32(1)) for name in names
+        ),
+    )
+    module = _main_module(call, astx.FunctionReturn(astx.LiteralInt32(0)))
+    with pytest.raises(SemanticError, match=match):
+        analyze(module)
+    assert cast(SemanticInfo, call.semantic).range_construction is None
+
+
+def test_range_reanalysis_respects_new_function_identity() -> None:
+    """
+    title: A function named range does not retain builtin plans on reanalysis.
+    """
+    call = astx.FunctionCall("range", [astx.LiteralInt32(3)])
+    module = _main_module(call, astx.FunctionReturn(astx.LiteralInt32(0)))
+    analyze(module)
+    assert cast(SemanticInfo, call.semantic).range_construction is not None
+    module.block.insert(
+        0,
+        astx.FunctionDef(
+            astx.FunctionPrototype(
+                "range",
+                astx.Arguments(astx.Argument("stop", astx.Int32())),
+                return_type=astx.Int32(),
+            ),
+            _block_of(astx.FunctionReturn(astx.LiteralInt32(9))),
+        ),
+    )
+    analyze(module)
+    info = cast(SemanticInfo, call.semantic)
+    assert info.range_construction is None
+    assert info.resolved_call is not None
+    assert isinstance(info.resolved_type, astx.Int32)
+
+
+@pytest.mark.parametrize(
+    "argument",
+    [
+        astx.LiteralBoolean(True),
+        astx.LiteralFloat64(1.0),
+        astx.LiteralInt64(3),
+    ],
+)
+def test_range_rejects_implicit_input_conversion(
+    argument: astx.DataType,
+) -> None:
+    """
+    title: Range inputs neither coerce Boolean nor narrow typed scalar widths.
+    parameters:
+      argument:
+        type: astx.DataType
+    """
+    call = astx.FunctionCall("range", [argument])
+    module = _main_module(call, astx.FunctionReturn(astx.LiteralInt32(0)))
+    with pytest.raises(SemanticError, match="expects Int32"):
+        analyze(module)
+    assert cast(SemanticInfo, call.semantic).range_construction is None
+
+
+@pytest.mark.parametrize(
+    "index", [None, astx.LiteralBoolean(True), astx.LiteralFloat64(0.0)]
+)
+def test_range_rejects_slice_and_noninteger_access(
+    index: astx.Expr | None,
+) -> None:
+    """
+    title: Unsupported range access fails semantically without an access plan.
+    parameters:
+      index:
+        type: astx.Expr | None
+    """
+    access = astx.SubscriptExpr(
+        astx.FunctionCall("range", [astx.LiteralInt32(4)]), index=index
+    )
+    module = _main_module(access, astx.FunctionReturn(astx.LiteralInt32(0)))
+    with pytest.raises(SemanticError, match="range"):
+        analyze(module)
+    assert not cast(SemanticInfo, access.semantic).range_access
 
 
 def _block_of(*nodes: astx.AST) -> astx.Block:

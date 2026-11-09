@@ -16,12 +16,14 @@ from public import private, public
 
 from irx.analysis.ownership import resource_ownership
 from irx.analysis.resolved_nodes import (
+    CursorProtocol,
     IterationKind,
     IterationOrder,
     ResolvedIteration,
     ResourceKind,
 )
 from irx.analysis.sequences import resolve_sequence_access
+from irx.analysis.types import is_string_type
 from irx.builtins.collections.list import list_element_type
 from irx.typecheck import typechecked
 
@@ -85,6 +87,16 @@ def resolve_iteration_capability(
     if iterable_type is None:
         return None
 
+    if isinstance(iterable_type, astx.RangeType):
+        return ResolvedIteration(
+            iterable_node=iterable_node,
+            iterable_type=iterable_type,
+            element_type=astx.Int32(),
+            kind=IterationKind.RANGE,
+            order=IterationOrder.INDEX,
+            cursor_protocol=CursorProtocol.RANGE,
+        )
+
     if isinstance(
         iterable_type,
         (astx.SequenceType, astx.SeriesType, astx.TensorType, astx.Bytes),
@@ -99,6 +111,7 @@ def resolve_iteration_capability(
             kind=IterationKind.SEQUENCE,
             order=IterationOrder.INDEX,
             sequence_access=adapter,
+            cursor_protocol=CursorProtocol.INDEXED,
         )
 
     list_type = list_element_type(iterable_type)
@@ -110,6 +123,10 @@ def resolve_iteration_capability(
             kind=IterationKind.LIST,
             order=IterationOrder.INDEX,
             borrowed_owner_symbol_id=list_iteration_owner(iterable_node),
+            cursor_protocol=CursorProtocol.INDEXED,
+            element_ownership="borrowed"
+            if is_string_type(list_type)
+            else "value",
         )
 
     if isinstance(iterable_type, astx.DictType) and isinstance(
@@ -144,6 +161,7 @@ def resolve_iteration_capability(
             kind=IterationKind.GENERATOR,
             is_reiterable=False,
             order=IterationOrder.STABLE,
+            cursor_protocol=CursorProtocol.GENERATOR,
         )
 
     return None

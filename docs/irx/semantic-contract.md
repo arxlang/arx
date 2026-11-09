@@ -684,13 +684,28 @@ IRx supports an initial typed generator contract for named functions:
   `IterationKind.GENERATOR`
 - `ForInLoopStmt` consumes generator values through the same `ResolvedIteration`
   sidecar used by other iterables
+- `cursor_protocol` selects a closed acquisition/advance/finalization contract.
+  A produced flag distinguishes exhaustion from a nullable scalar item; failures
+  propagate before output slots are read. All cursor exits finalize, including
+  loop transfers, returns, and exceptions
+- generator acquisition consumes the one-shot frame; reacquisition raises
+  `RuntimeError`. Close marks it terminal without freeing its lexical owner.
+  Nested failed acquisition does not invalidate an existing active cursor
 - bare `return` and `return None` terminate a generator
-- non-`None` generator return values, `yield from`, `send`, `throw`, `close`,
-  async generators, and generator expressions are deferred
+- non-`None` generator return values, `yield from`, `send`, `throw`, public
+  `close`, async generators, and generator expressions are deferred
 
 The current LLVM lowering supports straight-line named generator bodies with
 top-level `YieldStmt` nodes. Yield suspension inside nested control flow is
 diagnosed before lowering until frame and cleanup suspension are extended.
+
+`RangeType` is an allocation-free immutable value with i32 endpoints/elements
+and i64 length/position arithmetic. Each `IterationKind.RANGE` acquisition has
+an independent cursor. The unshadowed `range` intrinsic uses normal argument
+validation and a source-ordered bound-call plan; `range_construction` and
+`range_access` sidecars authorize lowering. Range values do not implicitly
+become contiguous sequence views; `list(range_value, max_items=N)` requests
+owned materialization explicitly. A sized excess is rejected before allocation.
 
 ## `main` Contract
 

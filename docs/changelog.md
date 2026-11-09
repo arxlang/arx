@@ -15,6 +15,12 @@
 
 ## Unreleased
 
+- **Breaking:** `range` returns an immutable lazy value rather than a list;
+  use `list(range(...), max_items=N)` when owned list storage is required.
+  Add stop-only and named forms, allocation-free i64 length and checked i32
+  indexing, and independent cursors. IRx one-shot generators now close on every
+  acquired-cursor exit and reject reacquisition with `RuntimeError`.
+
 - Add checked `with manager [as name]:` scopes and File close-on-exit, preserving
   body failures when exit also fails. **Breaking:** `with` is now reserved, and
   IRx context managers require `__exit__(success: bool) -> none` instead of a

@@ -451,17 +451,16 @@ def test_generator_resume_uses_element_slot() -> None:
     title: Resume calls should write into yielded element storage.
     """
     ir_text = Builder().translate(_sum_generator_float_target_module())
-    assert '%"item_yielded" = alloca i32' in ir_text
+    assert '%"cursor.item" = alloca i32' in ir_text
     resume_call = next(
         line
         for line in ir_text.splitlines()
-        if 'call i32 %"generator_resume"' in line
+        if 'i32* %"cursor.item", i1* %"cursor.produced"' in line
     )
-    assert 'i8* %"generator_frame"' in resume_call
     context_and_frame_count = 2
     assert resume_call.count("i8*") == context_and_frame_count
-    assert '%"generator.produced" = alloca i1' in ir_text
-    assert 'i32* %"item_yielded", i1* %"generator.produced"' in ir_text
+    assert '%"cursor.produced" = alloca i1' in ir_text
+    assert 'i32* %"cursor.item", i1* %"cursor.produced"' in ir_text
     assert_ir_parses(ir_text)
 
 
@@ -554,7 +553,137 @@ def test_generator_failure_is_not_exhaustion() -> None:
         astx.FunctionReturn(astx.Identifier("total")),
     )
     assert_ir_parses(Builder().translate(tree))
+    second = main.body.nodes[3]
+    main.body.nodes[3] = astx.ExceptionHandlerStmt(
+        _block_of(second, astx.AssertStmt(astx.LiteralBoolean(False))),
+        [
+            astx.CatchHandlerStmt(
+                _block_of(astx.LiteralInt32(0)),
+                types=[astx.Identifier("RuntimeError")],
+            )
+        ],
+    )
     assert_build_output(Builder(), tree, "11")
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+@pytest.mark.parametrize("transfer", ["break", "continue", "nested"])
+def test_generator_cursor_closes_and_rejects_reacquisition(
+    transfer: str,
+) -> None:
+    """
+    title: Closed one-shot cursors reject reuse while preserving live owners.
+    parameters:
+      transfer:
+        type: str
+    """
+    tree = _sum_generator_module()
+    main = tree.nodes[1]
+    assert isinstance(main, astx.FunctionDef)
+    loop = main.body.nodes[1]
+    assert isinstance(loop, astx.ForInLoopStmt)
+    loop.iterable = astx.Identifier("values")
+    repeated = astx.ForInLoopStmt(
+        astx.Identifier("again"),
+        astx.Identifier("values"),
+        _block_of(astx.AssertStmt(astx.LiteralBoolean(False))),
+    )
+    if transfer == "nested":
+        loop.body.append(
+            astx.ExceptionHandlerStmt(
+                _block_of(repeated),
+                [
+                    astx.CatchHandlerStmt(
+                        _block_of(astx.LiteralInt32(0)),
+                        types=[astx.Identifier("RuntimeError")],
+                    )
+                ],
+            )
+        )
+    else:
+        loop.body.append(
+            astx.BreakStmt() if transfer == "break" else astx.ContinueStmt()
+        )
+    main.body = _block_of(
+        main.body.nodes[0],
+        astx.VariableDeclaration(
+            "values",
+            astx.GeneratorType(astx.Int32()),
+            value=astx.FunctionCall("numbers", []),
+        ),
+        loop,
+        astx.ExceptionHandlerStmt(
+            _block_of(
+                astx.ForInLoopStmt(
+                    astx.Identifier("again"),
+                    astx.Identifier("values"),
+                    _block_of(astx.AssertStmt(astx.LiteralBoolean(False))),
+                ),
+                astx.AssertStmt(astx.LiteralBoolean(False)),
+            ),
+            [
+                astx.CatchHandlerStmt(
+                    _block_of(astx.FunctionReturn(astx.Identifier("total"))),
+                    types=[astx.Identifier("RuntimeError")],
+                )
+            ],
+        ),
+        astx.FunctionReturn(astx.LiteralInt32(99)),
+    )
+    assert_build_output(Builder(), tree, "1" if transfer == "break" else "6")
+
+
+@pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
+def test_nullable_generator_item_is_not_exhaustion() -> None:
+    """
+    title: Nullable payload validity and cursor-produced state remain separate.
+    """
+    type_ = astx.NullableType(astx.Int32())
+    function = astx.FunctionDef(
+        astx.FunctionPrototype(
+            "nullable_items", astx.Arguments(), astx.GeneratorType(type_)
+        ),
+        _block_of(
+            astx.YieldStmt(astx.Cast(astx.LiteralNone(), type_)),
+            astx.YieldStmt(astx.Cast(astx.LiteralInt32(7), type_)),
+        ),
+    )
+    module = make_main_module(
+        astx.VariableDeclaration(
+            "count",
+            astx.Int32(),
+            value=astx.LiteralInt32(0),
+            mutability=astx.MutabilityKind.mutable,
+        ),
+        astx.ForInLoopStmt(
+            astx.Identifier("value"),
+            astx.FunctionCall("nullable_items", []),
+            _block_of(
+                astx.VariableAssignment(
+                    "count",
+                    astx.BinaryOp(
+                        "+", astx.Identifier("count"), astx.LiteralInt32(10)
+                    ),
+                ),
+                astx.IfStmt(
+                    astx.NullCheck(astx.Identifier("value")),
+                    _block_of(
+                        astx.VariableAssignment(
+                            "count",
+                            astx.BinaryOp(
+                                "+",
+                                astx.Identifier("count"),
+                                astx.LiteralInt32(1),
+                            ),
+                        )
+                    ),
+                ),
+            ),
+        ),
+        astx.FunctionReturn(astx.Identifier("count")),
+    )
+    module.block.insert(0, function)
+    assert_build_output(Builder(), module, "21")
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
@@ -671,9 +800,9 @@ def test_generator_frames_reject_owned_non_scalar_locals(
 
 
 @pytest.mark.skipif(not HAS_CLANG, reason="clang is required for build tests")
-def test_materialization_failure_leaves_borrowed_iterator_advanced() -> None:
+def test_materialization_failure_closes_borrowed_iterator() -> None:
     """
-    title: A failed bounded copy consumes its probe without destroying input.
+    title: Failed copies close one-shot state without freeing its owner.
     """
 
     def materialize(limit: int) -> astx.FunctionCall:
@@ -710,36 +839,16 @@ def test_materialization_failure_leaves_borrowed_iterator_advanced() -> None:
                 )
             ],
         ),
-        astx.VariableDeclaration(
-            "remainder",
-            astx.ListType([astx.Int32()]),
-            value=materialize(2**63 - 1),
+        astx.ExceptionHandlerStmt(
+            _block_of(materialize(2**63 - 1)),
+            [
+                astx.CatchHandlerStmt(
+                    _block_of(astx.FunctionReturn(astx.LiteralInt32(0))),
+                    types=[astx.Identifier("RuntimeError")],
+                )
+            ],
         ),
-        astx.AssertStmt(
-            astx.BinaryOp(
-                "==",
-                astx.CollectionLength(astx.Identifier("remainder")),
-                astx.LiteralInt64(2),
-            )
-        ),
-        astx.AssertStmt(
-            astx.BinaryOp(
-                "==",
-                astx.SubscriptExpr(
-                    astx.Identifier("remainder"), astx.LiteralInt32(0)
-                ),
-                astx.LiteralInt32(2),
-            )
-        ),
-        astx.AssertStmt(
-            astx.BinaryOp(
-                "==",
-                astx.SubscriptExpr(
-                    astx.Identifier("remainder"), astx.LiteralInt32(1)
-                ),
-                astx.LiteralInt32(3),
-            )
-        ),
+        astx.AssertStmt(astx.LiteralBoolean(False)),
         astx.FunctionReturn(astx.LiteralInt32(0)),
     )
     module.block.insert(0, _numbers_function())

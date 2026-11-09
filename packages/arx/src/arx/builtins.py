@@ -32,7 +32,6 @@ EXCEPTION_BUILTIN_NAMES = tuple(name for name, _ in EXCEPTION_HIERARCHY)
 BUILTIN_PRINT = "print"
 BUILTIN_RANGE = "range"
 BUILTIN_TYPE = "type"
-_GENERATORS_MODULE = f"{BUILTIN_NAMESPACE}.generators"
 
 
 @dataclass(frozen=True)
@@ -75,7 +74,6 @@ class AmbientBuiltinBinding:
 
 
 _AMBIENT_BUILTIN_BINDINGS = (
-    AmbientBuiltinBinding(name=BUILTIN_RANGE, module=_GENERATORS_MODULE),
     AmbientBuiltinBinding(name=BUILTIN_FILE, module=BUILTIN_FILE_MODULE),
     *(
         AmbientBuiltinBinding(name=name, module=BUILTIN_EXCEPTION_MODULE)

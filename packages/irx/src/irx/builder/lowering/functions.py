@@ -47,6 +47,7 @@ from irx.builder.extensions.calls import (
 from irx.builder.lowering.classes import ClassVisitorMixin
 from irx.builder.lowering.collection_access import lower_collection_access
 from irx.builder.lowering.materialization import lower_materialization
+from irx.builder.lowering.ranges import lower_range_call
 from irx.builder.lowering.sequences import adapt_sequence
 from irx.builder.lowering.text import lower_text_operation
 from irx.builder.runtime import safe_pop
@@ -746,6 +747,14 @@ class FunctionVisitorMixin(ClassVisitorMixin):
         if lower_text_operation(cast(VisitorCore, self), node):
             return
         info = getattr(node, "semantic", None)
+        if (
+            isinstance(info, SemanticInfo)
+            and info.range_construction is not None
+        ):
+            lower_range_call(
+                cast(VisitorCore, self), node, info.range_construction
+            )
+            return
         if isinstance(info, SemanticInfo) and info.materialization is not None:
             lower_materialization(
                 cast(VisitorCore, self), node, info.materialization

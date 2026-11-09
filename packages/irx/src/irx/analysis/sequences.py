@@ -283,7 +283,7 @@ def resolve_materialization(
                 node=limit,
                 code=DiagnosticCodes.SEMANTIC_TYPE_MISMATCH,
             )
-    if iteration.kind is not IterationKind.GENERATOR:
+    if iteration.kind not in {IterationKind.GENERATOR, IterationKind.RANGE}:
         adapter = resolve_sequence_access(source_type, source)
         if adapter is None:
             analyzer.context.diagnostics.add(

@@ -44,6 +44,7 @@ from irx.analysis.ownership import (
     string_resource_ownership,
     symbol_resource_ownership,
 )
+from irx.analysis.ranges import resolve_range_index
 from irx.analysis.resolved_nodes import (
     CollectionMethodKind,
     OwnershipKind,
@@ -657,8 +658,13 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
         info = self._semantic(node)
         info.resolved_text_operation = None
         info.resolved_collection_method = None
+        info.range_access = False
         info.sequence_access = None
         self.visit(node.base)
+        if isinstance(self._expr_type(node.base), astx.RangeType):
+            info.range_access = True
+            self._set_type(node, astx.Int64())
+            return
         if is_string_type(self._expr_type(node.base)):
             set_text_operation(
                 cast(SemanticAnalyzerCore, self),
@@ -1311,6 +1317,7 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             type: astx.SubscriptExpr
         """
         info = self._semantic(node)
+        info.range_access = False
         info.sequence_access = None
         info.normalized_collection = None
         info.tensor_index = None
@@ -1318,6 +1325,9 @@ class ExpressionLiteralVisitorMixin(SemanticVisitorMixinBase):
             info.resource_ownership = None
         info.resolved_text_operation = None
         self.visit(node.value)
+        if isinstance(self._expr_type(node.value), astx.RangeType):
+            resolve_range_index(cast(SemanticAnalyzerCore, self), node)
+            return
         if resolve_collection_access(cast(SemanticAnalyzerCore, self), node):
             return
         if isinstance(self._expr_type(node.value), astx.TensorType):
