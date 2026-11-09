@@ -241,6 +241,7 @@ static int test_close(FILE* f) {
     ]
     for name in (
         "open",
+        "require_open",
         "read",
         "write",
         "read_bytes",
@@ -251,7 +252,7 @@ static int test_close(FILE* f) {
     ):
         function = getattr(lib, f"irx_file_{name}")
         function.restype = ctypes.c_int32
-        if name in {"flush", "close", "release"}:
+        if name in {"flush", "close", "release", "require_open"}:
             function.argtypes = [pointer, error]
     lib.irx_file_test_fault.argtypes = [ctypes.c_int]
     lib.irx_file_test_fault.restype = None
@@ -313,6 +314,7 @@ def test_native_read_and_eof(
         == 0
     )
     try:
+        assert native.irx_file_require_open(handle, error) == 0
         assert read_native(native, handle) == content.replace(
             b"\r\n", b"\n"
         ).replace(b"\r", b"\n")
@@ -326,6 +328,8 @@ def test_native_read_and_eof(
         assert count.value == 0
         assert native.irx_file_close(handle, error) == 0
         assert native.irx_file_close(handle, error) == 0
+        assert native.irx_file_require_open(handle, error) != 0
+        assert b"closed" in error.value
         value = ctypes.c_void_p(123)
         assert native.irx_file_read(handle, ctypes.byref(value), error) != 0
         assert value.value is None
@@ -523,6 +527,8 @@ def test_native_open_allocation_and_nulls(
     )
     assert native.irx_file_open(bytes(path), b"r", 0, None, error) != 0
     assert native.irx_file_release(None, error) == 0
+    assert native.irx_file_require_open(None, error) != 0
+    assert b"closed file" in error.value
     pointer = ctypes.c_void_p(123)
     count = ctypes.c_int64(123)
     assert (

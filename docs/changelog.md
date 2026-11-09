@@ -15,6 +15,11 @@
 
 ## Unreleased
 
+- Add checked `with manager [as name]:` scopes and File close-on-exit, preserving
+  body failures when exit also fails. **Breaking:** `with` is now reserved, and
+  IRx context managers require `__exit__(success: bool) -> none` instead of a
+  zero-argument exit hook; exception suppression is unsupported.
+
 - Source loops support `break` and `continue`, including count-loop updates,
   scoped cleanup, and `finally` completion replacement. **Breaking:** both
   spellings are now reserved keywords rather than ordinary identifiers.

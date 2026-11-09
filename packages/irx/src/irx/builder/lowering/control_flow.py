@@ -15,10 +15,8 @@ from llvmlite import ir
 
 from irx.analysis.resolved_nodes import (
     IterationKind,
-    MethodDispatchKind,
     ResolvedContextManager,
     ResolvedIteration,
-    ResolvedMethodCall,
     SemanticInfo,
 )
 from irx.analysis.types import (
@@ -46,8 +44,6 @@ from irx.builder.protocols import DispatchRegistrar, VisitorMixinBase
 from irx.builder.runtime import safe_pop
 from irx.builder.state import (
     CleanupAction,
-    CleanupEmitter,
-    CleanupKind,
     LoopTargets,
 )
 from irx.builder.types import is_fp_type, is_int_type
@@ -311,27 +307,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
         del self.result_stack[stack_size_before:]
 
     @contextmanager
-    def _cleanup_scope(
-        self,
-        cleanup: CleanupEmitter,
-    ) -> Iterator[None]:
-        """
-        title: Push and pop one active cleanup action.
-        parameters:
-          cleanup:
-            type: CleanupEmitter
-        returns:
-          type: Iterator[None]
-        """
-        self.cleanup_stack.append(
-            CleanupAction(cleanup, kind=CleanupKind.FINALLY)
-        )
-        try:
-            yield
-        finally:
-            self.cleanup_stack.pop()
-
-    @contextmanager
     def _loop_scope(
         self,
         *,
@@ -400,117 +375,6 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
                 self.const_vars.add(key)
             else:
                 self.const_vars.discard(key)
-
-    @contextmanager
-    def _context_target_binding(
-        self,
-        node: astx.WithStmt,
-        resolution: ResolvedContextManager,
-        enter_value: ir.Value | None,
-    ) -> Iterator[None]:
-        """
-        title: Bind a with-statement target for the body duration.
-        parameters:
-          node:
-            type: astx.WithStmt
-          resolution:
-            type: ResolvedContextManager
-          enter_value:
-            type: ir.Value | None
-        returns:
-          type: Iterator[None]
-        """
-        target = node.target
-        target_symbol = resolution.target_symbol
-        if target is None or target_symbol is None:
-            yield
-            return
-
-        if enter_value is None:
-            raise_lowering_internal_error(
-                "with target requires __enter__ to lower to a value",
-                node=target,
-            )
-
-        target_type = target_symbol.type_
-        llvm_target_type = self._require_llvm_type(
-            target_type,
-            node=target,
-            context="with target",
-        )
-        target_addr = self.create_entry_block_alloca(
-            target_symbol.name,
-            llvm_target_type,
-        )
-        target_value = self._cast_ast_value(
-            enter_value,
-            source_type=resolution.enter.call.result_type,
-            target_type=target_type,
-        )
-        self._llvm.ir_builder.store(target_value, target_addr)
-        target_key = semantic_symbol_key(target, target_symbol.name)
-
-        with self._temporary_named_value(
-            target_key,
-            target_addr,
-            is_constant=not target_symbol.is_mutable,
-        ):
-            yield
-
-    def _lower_context_method_call(
-        self,
-        *,
-        node: astx.WithStmt,
-        method_resolution: ResolvedMethodCall,
-        manager_value: ir.Value,
-        manager_type: astx.DataType | None,
-    ) -> ir.Value | None:
-        """
-        title: Lower one resolved context-manager method call.
-        parameters:
-          node:
-            type: astx.WithStmt
-          method_resolution:
-            type: ResolvedMethodCall
-          manager_value:
-            type: ir.Value
-          manager_type:
-            type: astx.DataType | None
-        returns:
-          type: ir.Value | None
-        """
-        receiver_parameter_type = (
-            method_resolution.function.signature.parameters[0].type_
-            if method_resolution.function.signature.parameters
-            else None
-        )
-        lowered_manager = self._cast_ast_value(
-            manager_value,
-            source_type=manager_type,
-            target_type=receiver_parameter_type,
-        )
-        llvm_defaults = cast(Any, self).lower_bound_call_arguments(
-            method_resolution.call,
-            receiver_value=lowered_manager,
-        )
-        lowered_args = [lowered_manager, *llvm_defaults]
-        callee: ir.Value
-        if method_resolution.dispatch_kind is MethodDispatchKind.INDIRECT:
-            callee = cast(Any, self)._indirect_method_callee(
-                node=node,
-                method_resolution=method_resolution,
-                receiver_value=manager_value,
-            )
-        else:
-            callee = self._declare_semantic_function(
-                method_resolution.function
-            )
-        cast(Any, self)._apply_calling_convention(
-            method_resolution.function.signature
-        )
-        return cast(Any, self).emit_resolved_call(
-            node, callee, method_resolution.function.signature, lowered_args
-        )
 
     def _require_llvm_type(
         self,
@@ -1408,73 +1272,53 @@ class ControlFlowVisitorMixin(VisitorMixinBase):
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.WithStmt) -> None:
         """
-        title: Visit WithStmt nodes.
+        title: Lower analyzed resource bindings with implicit exit precedence.
         parameters:
           node:
             type: astx.WithStmt
         """
         resolution = self._resolved_context_manager(node)
-        self.visit_child(node.manager)
-        manager_value = require_lowered_value(
-            safe_pop(self.result_stack),
-            node=node.manager,
-            context="with manager",
-        )
-        enter_value = self._lower_context_method_call(
-            node=node,
-            method_resolution=resolution.enter,
-            manager_value=manager_value,
-            manager_type=resolution.manager_type,
-        )
-
-        def cleanup() -> None:
-            """
-            title: Emit this with statement's exit call.
-            """
-            visitor = cast(Any, self)
-            token = visitor.exception_call(
-                "finally_enter", [visitor.context_value()]
+        depth = len(self.cleanup_stack)
+        try:
+            self._discard_child_results(resolution.manager_binding)
+            self._discard_child_results(
+                resolution.value_binding
+                if resolution.value_binding is not None
+                else resolution.enter_call
             )
-
-            def discard() -> None:
-                """
-                title: Discard the replaced completion on explicit exit.
-                """
-                visitor.exception_call(
-                    "finally_leave",
-                    [
-                        visitor.context_value(),
-                        token,
-                        ir.Constant(ir.IntType(32), 0),
-                    ],
-                )
-
-            saved = self.cleanup_stack
-            self.cleanup_stack = [
-                *saved,
-                CleanupAction(discard, kind=CleanupKind.HANDLER),
-            ]
-            self._lower_context_method_call(
+            self._discard_child_results(resolution.success_binding)
+            key = semantic_symbol_key(
+                resolution.success_binding, resolution.success_binding.name
+            )
+            completion = require_lowered_value(
+                self.named_values.get(key),
                 node=node,
-                method_resolution=resolution.exit,
-                manager_value=manager_value,
-                manager_type=resolution.manager_type,
-            )
-            self.cleanup_stack = saved
-            visitor.exception_call(
-                "finally_leave",
-                [
-                    visitor.context_value(),
-                    token,
-                    ir.Constant(ir.IntType(32), 1),
-                ],
+                context="with completion storage",
             )
 
-        with self._cleanup_scope(cleanup):
-            with self._context_target_binding(node, resolution, enter_value):
-                self._discard_child_results(node.body)
+            def cleanup() -> None:
+                """
+                title: Call checked exit using its precomputed success value.
+                """
+                temporary_depth = len(self.cleanup_stack)
+                try:
+                    self._discard_child_results(resolution.exit_call)
+                    if not self._llvm.ir_builder.block.is_terminated:
+                        self._emit_temporary_cleanups(temporary_depth)
+                finally:
+                    # Failed calls already unwind their operand pins before
+                    # reaching the implicit-cleanup join. Do not replay them
+                    # when that join propagates a newly promoted exit failure.
+                    del self.cleanup_stack[temporary_depth:]
+
+            self.cleanup_stack.append(
+                CleanupAction(cleanup, completion_slot=completion)
+            )
+            self._discard_child_results(node.body)
             if not self._llvm.ir_builder.block.is_terminated:
-                self._emit_active_cleanups(len(self.cleanup_stack) - 1)
+                self._emit_active_cleanups(depth)
+        finally:
+            del self.cleanup_stack[depth:]
 
     @VisitorCore.visit.dispatch
     def visit(self, node: astx.BreakStmt) -> None:

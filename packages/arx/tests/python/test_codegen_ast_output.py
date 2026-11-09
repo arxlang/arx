@@ -1245,6 +1245,137 @@ def test_loop_transfers_outside_loop_fail_before_lowering(
     )
 
 
+@pytest.mark.parametrize(
+    "body,match",
+    [
+        ("with 1:\n  print(1)", "with manager requires a class value"),
+        ("with Scope() as item:\n  item = 2", "constant"),
+        ("with Scope() as item:\n  print(item)\nprint(item)", "resolve name"),
+    ],
+)
+def test_resource_scope_semantic_boundary(body: str, match: str) -> None:
+    """
+    title: Source scopes retain type, binding, and lexical lifetime checks.
+    parameters:
+      body:
+        type: str
+      match:
+        type: str
+    """
+    ArxIO.string_to_buffer(
+        "```\ntitle: Resource scope validation\n```\n"
+        "class Scope:\n  ```\n  title: Simple resource\n  ```\n"
+        "  fn __enter__(self) -> i32:\n    return 1\n"
+        "  fn __exit__(self, success: bool) -> none:\n    return none\n"
+        "fn main() -> i32:\n"
+        + "\n".join("  " + line for line in body.splitlines())
+        + "\n  return 0\n"
+    )
+    with pytest.raises(SemanticError, match=match):
+        ArxBuilder().translate(Parser().parse(Lexer().lex()))
+
+
+def test_resource_scope_rejects_module_level() -> None:
+    """
+    title: Resource scopes cannot hide unsupported owned module storage.
+    """
+    ArxIO.string_to_buffer(
+        '```\ntitle: Module resource scope\n```\nwith open("unused"):\n'
+        "  print(1)\n"
+    )
+    tree = Parser().parse(Lexer().lex())
+    root = ParsedModule("main", inject_ambient_builtin_imports(tree))
+    with pytest.raises(SemanticError, match="with scopes require a function"):
+        ArxBuilder().translate_modules(root, FileImportResolver(()))
+
+
+@pytest.fixture(scope="module")
+def resource_scope_ir() -> tuple[ArxBuilder, str]:
+    """
+    title: Reuse verified resource workflows for ownership and native checks.
+    returns:
+      type: tuple[ArxBuilder, str]
+    """
+    source = (Path(__file__).parents[1] / "arx" / "test_file.x").read_text(
+        encoding="utf-8"
+    )
+    source += (
+        "\nfn main() -> i32:\n"
+        "  test_resource_scopes()\n"
+        "  scoped_file_workflow()\n"
+        "  return 0\n"
+    )
+    ArxIO.string_to_buffer(source)
+    builder = ArxBuilder()
+    text = builder.translate(Parser().parse(Lexer().lex()))
+    llvm.parse_assembly(text).verify()
+    return builder, text
+
+
+def test_resource_scopes_translate(
+    resource_scope_ir: tuple[ArxBuilder, str],
+) -> None:
+    """
+    title: Resource scopes use implicit cleanup and checked open-state queries.
+    parameters:
+      resource_scope_ir:
+        type: tuple[ArxBuilder, str]
+    """
+    _, text = resource_scope_ir
+    assert "irx_exception_cleanup_enter" in text
+    assert "irx_file_require_open" in text
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="clang required")
+@pytest.mark.parametrize("optimization", [0, 3])
+def test_resource_scopes_execute(
+    resource_scope_ir: tuple[ArxBuilder, str],
+    tmp_path: Path,
+    optimization: int,
+) -> None:
+    """
+    title: Entered owners, failed returns, and loop exits release once.
+    parameters:
+      resource_scope_ir:
+        type: tuple[ArxBuilder, str]
+      tmp_path:
+        type: Path
+      optimization:
+        type: int
+    """
+    builder, text = resource_scope_ir
+    module = llvm.parse_assembly(text)
+    tuning = llvm.create_pipeline_tuning_options(speed_level=optimization)
+    with llvm.create_pass_builder(
+        builder.translator.target_machine, tuning
+    ) as passes:
+        with passes.getModulePassManager() as manager:
+            manager.run(module, passes)
+    module.verify()
+    if sys.platform == "linux":
+        executable = build_audited_file_program(builder, str(module), tmp_path)
+    else:
+        executable = tmp_path / "resource-scopes"
+        builder._build_from_ir_result(
+            str(module), str(executable), True, "auto"
+        )
+    result = subprocess.run(
+        [str(executable)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == b""
+    assert result.stderr == (
+        b"AUDIT live=0 opened=2 released=2\n"
+        if sys.platform == "linux"
+        else b""
+    )
+    assert (tmp_path / "scoped-file.txt").read_text() == "hello"
+
+
 def test_owned_list_translation(owned_list_ir: tuple[ArxBuilder, str]) -> None:
     """
     title: Expression lists use owned storage and non-truncating shared length.

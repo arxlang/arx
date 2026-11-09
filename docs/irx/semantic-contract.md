@@ -754,23 +754,34 @@ control flow:
 
 ## Context Manager Contract
 
-`WithStmt(manager, body, target=None)` models a Python-like context-manager
-statement over IRx class values:
+`WithStmt(manager, body, target=None)` models a checked resource scope over IRx
+class values inside a function:
 
-- the manager expression is evaluated exactly once
+- the manager expression is evaluated exactly once and pinned through exit, even
+  if its original binding is reassigned
 - the manager must resolve to a class value
-- semantic analysis resolves zero-argument instance methods named `__enter__`
-  and `__exit__`
-- `__enter__` runs before the body
+- semantic analysis resolves ordinary instance calls to `__enter__` (without
+  explicit arguments, using normal defaults) and `__exit__(success: bool)`; exit
+  must return `none`, not a suppression flag
+- `__enter__` runs before the body; failed entry does not call exit
 - `__exit__` runs on normal fallthrough, exceptional propagation, and before
   structured `return`, `break`, or `continue` transfers leave the body
-- an optional target binds the `__enter__` result for the with-body scope only
+- success means no pending failure, including a return or loop transfer; it is
+  captured before invoking exit, not inferred by the hook from runtime state
+- an optional target binds the actual `__enter__` result for the body scope;
+  identifier targets are immutable bindings, while typed ASTx declarations
+  retain their requested type and mutability
 - targets require `__enter__` to return a non-void value
-- the zero-argument exit contract does not implement Python's
-  `__exit__(exc_type, exc_value, traceback)` suppression semantics
+- entered values use ordinary local ownership and live through exit even when
+  ignored; returned or retained aliases follow normal ownership rules
+- a body failure remains primary if implicit exit fails, retaining secondary
+  diagnostics; exit-only failure propagates normally. Exit cannot suppress
+  failures and does not use explicit `finally` replacement semantics
 
-Lowering consumes the resolved context-manager sidecar instead of rediscovering
-method names in codegen.
+`resolved_context_manager` carries normalized local bindings and analyzed calls.
+Lowering consumes these facts and ordinary local/call ownership machinery rather
+than rediscovering method names or lifetimes. This protocol does not implement
+Python's three-argument exception/suppression interface.
 
 ## Struct Contract
 

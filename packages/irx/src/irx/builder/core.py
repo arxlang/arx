@@ -612,6 +612,24 @@ class VisitorCore(StringIRMixin, BuilderVisitor):
                 self.cleanup_stack = original[:index]
                 if cleanup.owner_symbol_id in excluded_owner_symbol_ids:
                     continue
+                if cleanup.completion_slot is not None:
+                    if (
+                        self.exception_context is None
+                        or cleanup.kind is not CleanupKind.RESOURCE
+                    ):
+                        raise_lowering_internal_error(
+                            "completion-aware resource exit requires an "
+                            "exception context"
+                        )
+                    pending = cast(Any, self).exception_call(
+                        "pending", [self.exception_context]
+                    )
+                    self._llvm.ir_builder.store(
+                        self._llvm.ir_builder.icmp_signed(
+                            "==", pending, ir.Constant(pending.type, 0)
+                        ),
+                        cleanup.completion_slot,
+                    )
                 if (
                     cleanup.kind is CleanupKind.RESOURCE
                     and cleanup.fallible

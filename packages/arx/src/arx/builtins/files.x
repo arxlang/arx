@@ -10,6 +10,25 @@ class File:
   ```
   handle: private :: NativeFileHandle
 
+  fn __enter__(self) -> File:
+    ```
+    title: Enter an open stream without changing its position or buffers.
+    summary: Returns this File identity; closed streams fail before the body.
+    ```
+    self.handle.require_open()
+    return self
+
+  fn __exit__(self, success: bool) -> none:
+    ```
+    title: Check stream closure on every resource-scope exit.
+    summary: >-
+      Closes the shared stream on success or failure. Other aliases become
+      closed too. Partial writes remain possible; this is not rollback or
+      durable publication. The compiler preserves a primary body failure.
+    ```
+    self.handle.close()
+    return none
+
   fn read(self) -> str:
     ```
     title: read

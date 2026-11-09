@@ -246,6 +246,42 @@ class ControlFlowParserMixin(ParserMixinBase):
 
         return root
 
+    def parse_with_stmt(self) -> astx.WithStmt:
+        """
+        title: Parse one manager expression and an optional entered-value name.
+        summary: >-
+          Targets are scoped to the body. IRx resolves protocol signatures, the
+          entered type, ownership, and all-exit finalization.
+        returns:
+          type: astx.WithStmt
+        """
+        location = self.tokens.cur_tok.location
+        self.tokens.get_next_token()
+        manager = self.parse_expression()
+        if not isinstance(manager, astx.Expr):
+            raise ParserException(
+                "Expected a resource-manager expression.", manager.loc
+            )
+        target = None
+        names: tuple[str, ...] = ()
+        if (
+            self.tokens.cur_tok.kind == TokenKind.identifier
+            and self.tokens.cur_tok.value == "as"
+        ):
+            self.tokens.get_next_token()
+            token = self.tokens.cur_tok
+            if token.kind != TokenKind.identifier:
+                raise ParserException(
+                    "Expected one binding name after 'as'.", token.location
+                )
+            name = cast(str, token.value)
+            target = astx.Identifier(name, loc=token.location)
+            names = (name,)
+            self.tokens.get_next_token()
+        self._consume_operator(":")
+        body = self.parse_block(declared_names=names)
+        return astx.WithStmt(manager, body, target=target, loc=location)
+
     def parse_loop_transfer(self) -> astx.BreakStmt | astx.ContinueStmt:
         """
         title: Parse break or continue without accepting a trailing operand.

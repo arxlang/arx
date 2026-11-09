@@ -94,6 +94,14 @@ class ParserMixinBase:
         """
         raise NotImplementedError
 
+    def parse_with_stmt(self) -> astx.WithStmt:
+        """
+        title: Parse a resource scope with an optional entered-value binding.
+        returns:
+          type: astx.WithStmt
+        """
+        raise NotImplementedError
+
     def parse_assignment_or_expression(self) -> astx.AST:
         """
         title: Parse a compound statement or ordinary count-loop expression.

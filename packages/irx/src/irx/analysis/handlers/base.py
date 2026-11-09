@@ -202,6 +202,21 @@ class SemanticVisitorMixinTypingBase:
         del result_type
         raise NotImplementedError
 
+    def _resolve_local_resource_ownership(
+        self,
+        node: astx.VariableDeclaration | astx.InlineVariableDeclaration,
+        symbol: SemanticSymbol,
+    ) -> None:
+        """
+        title: Resolve ownership of an already analyzed local initializer.
+        parameters:
+          node:
+            type: astx.VariableDeclaration | astx.InlineVariableDeclaration
+          symbol:
+            type: SemanticSymbol
+        """
+        raise NotImplementedError
+
     def _set_iteration(
         self,
         node: astx.AST,

@@ -62,10 +62,13 @@ exception machinery and fatal native corruption are not recoverable.
 
 Not supported: protected regions spanning `yield`, asynchronous exceptions,
 exception groups/`except*`, mutable Python traceback attributes, and exception
-lowering in ArxJIT (whose decorator still runs Python fallback). Direct ASTx
-`WithStmt` cleanup calls its existing zero-argument exit method without
-exception suppression; Arx `with` syntax is not supported. Source `break` and
-`continue` participate in exception-aware loop cleanup and finalization.
+lowering in ArxJIT (whose decorator still runs Python fallback).
+
+`with` supports one class manager and an optional identifier target, using
+`__exit__(success: bool) -> none` without exception suppression. Implicit exit
+preserves a body failure and retains exit failures as secondary diagnostics;
+exit-only failures are catchable. Source `break` and `continue` participate in
+exception-aware loop cleanup and finalization.
 
 ### Numeric sequence capability boundary
 

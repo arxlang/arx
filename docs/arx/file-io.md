@@ -35,17 +35,33 @@ fn main() -> i32:
   ```
   title: main
   ```
-  output: File = File("message.txt", mode="w", encoding="utf-8")
-  alias: file = output
-  assert alias.write("hello\n") == 6
-  output.close()
-  alias.close()
-  source: file = open(file="message.txt")
-  text: str = source.read()
-  source.close()
-  print(text)
+  with open("message.txt", mode="w", encoding="utf-8") as output:
+    assert output.write("hello\n") == 6
+  with open(file="message.txt") as source:
+    print(source.read())
   return 0
 ````
+
+## Checked resource scopes
+
+Inside a function, `with manager [as name]:` evaluates one manager once. A
+successful `__enter__` is followed by exactly one `__exit__` on fallthrough,
+return, loop transfer, or failure. Failed acquisition does not call exit. The
+optional name is scoped to the body and cannot be rebound; it does not freeze
+the referenced object. Multiple managers and destructuring targets are
+unsupported; nest scopes instead.
+
+File entry returns the same reference and rejects an already-closed stream
+without reading, writing, or flushing it. Exit performs checked close, including
+buffered write errors; all retained aliases then refer to a closed stream.
+Rebinding the original manager does not change which object gets closed.
+Explicit close inside the body is safe because close is idempotent.
+
+If both the body and implicit exit fail, the body error stays primary and the
+exit error is retained as a secondary diagnostic. An exit-only failure is
+catchable. Exit cannot suppress errors, unlike Python's protocol, and does not
+have explicit `finally`'s completion-replacement behavior. Closure is not
+rollback, atomic publication, or durability: writes may already be visible.
 
 ## Bounded binary workflow
 
@@ -61,8 +77,8 @@ creates/truncates `binary-output.dat` and `binary-empty.dat`; run it in a
 scratch directory. Byte lengths and write counts are bytes, not characters.
 Short writes that make progress are retried; no progress and I/O errors are
 failures. Failure may leave a partially modified external file: there is no
-rollback, atomicity, or durability promise. Explicit flush/close still matter
-for buffered errors.
+rollback, atomicity, or durability promise. Checked scope exit or explicit
+flush/close still matter for buffered errors.
 
 See [byte values](built-in-types.md#byte-values) for immutable-buffer ownership.
 
@@ -102,9 +118,9 @@ Direct creation and I/O failures use `ARX-RUNTIME-FILE-001` and raise typed
 exceptions (including `OSError` for operating-system failures). Class checks use
 `ARX-RUNTIME-CLASS-001`; allocation failure remains unrecoverable. Failed
 creation preserves constructor rollback and completed-base cleanup. See the
-[exception boundary](../support-matrix.md#exception-capability-boundary).
-Explicit close/flush are recommended to observe write errors before later work.
-`with`, iteration, seek/tell, and extra file properties are deferred.
+[exception boundary](../support-matrix.md#exception-capability-boundary). Use
+checked scope exit or explicit close/flush to observe write errors before later
+work. Iteration, seek/tell, and extra file properties are deferred.
 
 For explicit imports, use `import File as TextFile from builtins.files` or
 `import builtins.files as io` followed by `io.File(...)`. These resolve the same

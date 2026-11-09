@@ -191,11 +191,11 @@ def _enter_method() -> astx.FunctionDef:
 
 def _exit_method() -> astx.FunctionDef:
     """
-    title: Build a context __exit__ method.
+    title: Build a completion-aware context __exit__ method.
     returns:
       type: astx.FunctionDef
     """
-    return _method(
+    method = _method(
         "__exit__",
         astx.NoneType(),
         astx.BinaryOp(
@@ -204,6 +204,8 @@ def _exit_method() -> astx.FunctionDef:
             astx.LiteralInt32(EXIT_STATE),
         ),
     )
+    method.prototype.args.append(astx.Argument("success", astx.Boolean()))
+    return method
 
 
 def _exit_with_parameter_method() -> astx.FunctionDef:
@@ -246,6 +248,19 @@ def test_analyze_with_resolves_context_protocol_and_target() -> None:
     assert resolved.exit.member.name == "__exit__"
     assert resolved.target_symbol is not None
     assert isinstance(resolved.target_symbol.type_, astx.Int32)
+    assert resolved.value_binding is not None
+    assert resolved.value_binding.value is resolved.enter_call
+    assert resolved.manager_binding.value is with_stmt.manager
+
+    # Reanalysis rebuilds synthetic calls and drops obsolete successful plans.
+    analyze(module)
+    replacement = _semantic(with_stmt).resolved_context_manager
+    assert replacement is not None and replacement is not resolved
+    assert replacement.enter_call is not resolved.enter_call
+    with_stmt.manager = astx.LiteralInt32(1)
+    with pytest.raises(SemanticError, match="with manager requires"):
+        analyze(module)
+    assert _semantic(with_stmt).resolved_context_manager is None
 
 
 @pytest.mark.parametrize("builder_class", [LLVMBuilder])
@@ -478,9 +493,9 @@ def test_with_target_is_scoped_to_body() -> None:
         analyze(module)
 
 
-def test_analyze_with_rejects_exit_parameters() -> None:
+def test_analyze_with_rejects_non_boolean_exit() -> None:
     """
-    title: Context __exit__ should currently be zero-argument.
+    title: Context exit requires a Boolean completion argument.
     """
     body = astx.Block()
     with_stmt = astx.WithStmt(astx.ClassConstruct("Manager"), body)
@@ -489,7 +504,7 @@ def test_analyze_with_rejects_exit_parameters() -> None:
         _main(with_stmt, astx.FunctionReturn(astx.LiteralInt32(0))),
     )
 
-    with pytest.raises(SemanticError, match="expects 1 arguments but got 0"):
+    with pytest.raises(SemanticError, match="exactly one bool completion"):
         analyze(module)
 
 
@@ -516,4 +531,103 @@ def test_analyze_with_requires_class_manager() -> None:
     )
 
     with pytest.raises(SemanticError, match="with manager requires"):
+        analyze(module)
+
+
+@pytest.mark.parametrize("takes_success", [False, True])
+def test_context_exit_rejects_old_protocol_and_suppression(
+    takes_success: bool,
+) -> None:
+    """
+    title: Neither zero-argument exits nor suppression results are accepted.
+    parameters:
+      takes_success:
+        type: bool
+    """
+    exit_method = (
+        _method(
+            "__exit__",
+            astx.Boolean(),
+            astx.FunctionReturn(astx.LiteralBoolean(True)),
+        )
+        if takes_success
+        else _method("__exit__", astx.NoneType())
+    )
+    if takes_success:
+        exit_method.prototype.args.append(
+            astx.Argument("success", astx.Boolean())
+        )
+    module = _module(
+        _manager_class(_enter_method(), exit_method),
+        _main(astx.WithStmt(astx.ClassConstruct("Manager"), astx.Block())),
+    )
+    with pytest.raises(SemanticError, match="__exit__"):
+        analyze(module)
+
+
+@pytest.mark.parametrize("has_target", [False, True])
+def test_void_enter_requires_no_target(has_target: bool) -> None:
+    """
+    title: Statement-only enter hooks are valid only without a target.
+    parameters:
+      has_target:
+        type: bool
+    """
+    with_stmt = astx.WithStmt(
+        astx.ClassConstruct("Manager"),
+        astx.Block(),
+        target=astx.Identifier("value") if has_target else None,
+    )
+    module = _module(
+        _manager_class(_method("__enter__", astx.NoneType()), _exit_method()),
+        _main(
+            with_stmt,
+            astx.FunctionReturn(astx.StaticFieldAccess("Manager", "state")),
+        ),
+    )
+    if has_target:
+        with pytest.raises(SemanticError, match="return a value"):
+            analyze(module)
+        return
+    assert_jit_int_main_result(LLVMBuilder(), module, EXIT_STATE)
+
+
+def test_typed_context_target_preserves_conversion_and_mutability() -> None:
+    """
+    title: Explicit ASTx targets keep lossless conversion and mutable binding.
+    """
+    body = astx.Block()
+    body.append(
+        astx.BinaryOp("=", astx.Identifier("value"), astx.LiteralFloat64(8.0))
+    )
+    body.append(
+        astx.FunctionReturn(astx.Cast(astx.Identifier("value"), astx.Int32()))
+    )
+    with_stmt = astx.WithStmt(
+        astx.ClassConstruct("Manager"),
+        body,
+        target=astx.VariableDeclaration(
+            "value", astx.Float64(), mutability=astx.MutabilityKind.mutable
+        ),
+    )
+    module = _module(
+        _manager_class(_enter_method(), _exit_method()), _main(with_stmt)
+    )
+    assert_jit_int_main_result(LLVMBuilder(), module, 8)
+
+
+def test_typed_context_target_rejects_incompatible_result() -> None:
+    """
+    title: An explicit ASTx target type is not replaced by enter inference.
+    """
+    with_stmt = astx.WithStmt(
+        astx.ClassConstruct("Manager"),
+        astx.Block(),
+        target=astx.VariableDeclaration("value", astx.Boolean()),
+    )
+    module = _module(
+        _manager_class(_enter_method(), _exit_method()),
+        _main(with_stmt, astx.FunctionReturn(astx.LiteralInt32(0))),
+    )
+    with pytest.raises(SemanticError, match="value"):
         analyze(module)

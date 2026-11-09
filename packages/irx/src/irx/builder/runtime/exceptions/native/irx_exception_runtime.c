@@ -280,20 +280,48 @@ irx_exception_info* irx_exception_pending_info(
   return context && context->pending ? context->pending->info : NULL;
 }
 
+/* Copy only the cleanup spine, retaining explicit cause/context snapshots.
+ * Appending an earlier chain must not overwrite failures within the new exit. */
+static irx_exception_info* irx_exception_copy_cleanup_chain(
+    const irx_exception_info* info, irx_exception_info* earlier, int32_t budget) {
+  irx_exception_info* copy;
+  irx_exception_info* previous;
+  if (!info || !budget) {
+    irx_exception_info_retain(earlier);
+    return earlier;
+  }
+  copy = irx_exception_info_copy(info);
+  if (!copy) return NULL;
+  previous = irx_exception_copy_cleanup_chain(info->cleanup, earlier, budget - 1);
+  if (!previous) {
+    irx_exception_info_release(copy);
+    return NULL;
+  }
+  irx_exception_link(copy, &copy->cleanup, previous);
+  irx_exception_info_release(previous);
+  return copy;
+}
+
 static void irx_exception_record_secondary(irx_exception_value* original,
                                          irx_exception_info* secondary) {
   irx_exception_info* copy = irx_exception_info_copy(original->info);
+  irx_exception_info* next;
   if (!copy) return; /* Reporting exhaustion must not replace the failure. */
-  if (copy->cleanup) {
-    irx_exception_info* next = irx_exception_info_copy(secondary);
-    if (next) {
-      irx_exception_link(next, &next->cleanup, copy->cleanup);
-      irx_exception_link(copy, &copy->cleanup, next);
-      irx_exception_info_release(next);
-    }
-  } else {
-    irx_exception_link(copy, &copy->cleanup, secondary);
+  next = copy->cleanup
+      ? irx_exception_copy_cleanup_chain(
+          secondary, copy->cleanup, IRX_EXCEPTION_MAX_CHAIN)
+      : irx_exception_info_copy(secondary);
+  if (!next) {
+    irx_exception_info_release(copy);
+    return;
   }
+  /* The preserved primary already owns this diagnostic. Keeping it as the
+   * cleanup failure's implicit context would replay previous cleanup records
+   * at every outer exit. Explicit causes and unrelated contexts stay intact. */
+  if (!next->suppress_context && next->context == original->info)
+    irx_exception_link(next, &next->context, NULL);
+  irx_exception_link(copy, &copy->cleanup, next);
+  irx_exception_info_release(next);
   irx_exception_replace_info(original, copy);
 }
 

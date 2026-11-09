@@ -22,13 +22,15 @@ class ExceptionParserMixin(ParserMixinBase):
 
     def parse_statement(self) -> astx.AST:
         """
-        title: Keep exception and loop-transfer statements out of operands.
+        title: Keep exception, resource, and loop statements out of operands.
         returns:
           type: astx.AST
         """
         if self.is_declaration_start():
             return self.parse_named_declaration()
         kind = self.tokens.cur_tok.kind
+        if kind == TokenKind.kw_with:
+            return self.parse_with_stmt()
         if kind in {TokenKind.kw_break, TokenKind.kw_continue}:
             return self.parse_loop_transfer()
         if kind == TokenKind.kw_raise:

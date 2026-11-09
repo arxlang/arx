@@ -158,16 +158,19 @@ Hook rules:
   The supported lifecycle names are `__init__` and `__del__`; unknown names such
   as `__inti__` or `__str__` are semantic errors, including on static methods.
   Lifecycle hooks cannot be declared as fields. Plain `init` and `deinit` are
-  ordinary method names, not compatibility aliases. Existing IRx `__enter__` and
-  `__exit__` context protocols remain recognized and callable, but do not enable
-  Arx `with` syntax.
+  ordinary method names, not compatibility aliases. `with` uses ordinary
+  `__enter__(self)` calls (including defaults) and
+  `__exit__(self, success: bool) -> none`. The Boolean reports body completion,
+  not Python exception arguments; exit cannot suppress failures. See
+  [checked resource scopes](file-io.md#checked-resource-scopes) and the
+  [IRx contract](../irx/semantic-contract.md#context-manager-contract).
 - Dunders identify language-defined behavior, not private visibility or
   inheritance from a universal builtin superclass. Implementations are written
   by users; normal visibility annotations still apply.
 - `__init__(self, ...) -> none` and `__del__(self) -> none` are compiler entry
   points, not ordinary callable methods. Explicit calls are rejected.
-- Hooks cannot be static, abstract, external, overloaded, templated, or
-  variadic. Constructor defaults are existing scalar/string literals, not
+- Lifecycle hooks cannot be static, abstract, external, overloaded, templated,
+  or variadic. Constructor defaults are existing scalar/string literals, not
   resource values.
 - Constructor arguments bind by parameter name, excluding `self`. Unknown,
   duplicate, missing, excessive, and incompatible arguments are errors. Supplied
@@ -180,9 +183,10 @@ Hook rules:
   release reverses those phases, calling each `__del__` before dropping its
   fields in reverse declaration order. This also works through a base-typed
   reference; non-prefix multiple-inheritance views locate concrete storage.
-- Inside hooks, `self` is only a field-access receiver: it cannot be aliased,
-  returned, passed elsewhere, or used to invoke an ordinary self method. This
-  prevents escape during construction and resurrection during destruction.
+- Inside lifecycle hooks, `self` is only a field-access receiver: it cannot be
+  aliased, returned, passed elsewhere, or used to invoke an ordinary self
+  method. This prevents escape during construction and resurrection during
+  destruction.
 
 These names are familiar from Python, but Arx keeps its own lifecycle contract:
 normal final-reference release synchronously runs cleanup, base phases chain

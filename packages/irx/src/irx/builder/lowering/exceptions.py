@@ -897,9 +897,17 @@ class ExceptionVisitorMixin(VisitorMixinBase):
                     *saved,
                     CleanupAction(discard, kind=CleanupKind.HANDLER),
                 ]
-                self.lower_exception_suite(finalizer)
-                self.cleanup_stack = saved
-                self.exception_targets = saved_targets
+                previous_failure = self.emitting_failure_cleanup
+                # The original error is suspended. A return/loop transfer in
+                # this suite starts a new completion; failures in its outer
+                # resource exits must still cancel that completion.
+                self.emitting_failure_cleanup = False
+                try:
+                    self.lower_exception_suite(finalizer)
+                finally:
+                    self.emitting_failure_cleanup = previous_failure
+                    self.cleanup_stack = saved
+                    self.exception_targets = saved_targets
                 if not self._llvm.ir_builder.block.is_terminated:
                     self.exception_call(
                         "finally_leave",

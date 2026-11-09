@@ -68,6 +68,36 @@ def file_declaration() -> astx.ClassDefStmt:
                 astx.FunctionPrototype(name, args, return_type), body
             )
         )
+    entered = astx.Block()
+    entered.append(astx.FunctionReturn(astx.Identifier("self")))
+    exited = astx.Block()
+    exited.append(
+        astx.MethodCall(
+            astx.FieldAccess(astx.Identifier("self"), "storage"),
+            "close",
+            [],
+        )
+    )
+    methods.extend(
+        [
+            astx.FunctionDef(
+                astx.FunctionPrototype(
+                    "__enter__",
+                    astx.Arguments(),
+                    astx.ClassType("NativeStream"),
+                ),
+                entered,
+            ),
+            astx.FunctionDef(
+                astx.FunctionPrototype(
+                    "__exit__",
+                    astx.Arguments(astx.Argument("success", astx.Boolean())),
+                    astx.NoneType(),
+                ),
+                exited,
+            ),
+        ]
+    )
     return astx.ClassDefStmt(
         "NativeStream",
         attributes=[
