@@ -409,7 +409,11 @@ def test_literal_loop_allocations_are_in_entry(
     """
     _, text = literal_loop_ir
     module = llvm.parse_assembly(text)
-    tested = {"irx.entry.main", "builtins__generators__range"}
+    tested = {
+        "irx.entry.main",
+        "builtins__generators__range__Int32",
+        "builtins__generators__range__Int64",
+    }
     found: set[str] = set()
     for function in module.functions:
         if function.name not in tested:
